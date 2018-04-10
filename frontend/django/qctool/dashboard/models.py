@@ -20,4 +20,4 @@ class Job(models.Model):
         self.save()
 
     def __str__(self):
-        return self.name + ' [' + self.status + ']'
+        return self.name + ' (' + self.status + ')'

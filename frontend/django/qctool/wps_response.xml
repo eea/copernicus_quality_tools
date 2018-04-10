@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<wps:ExecuteResponse xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:wps="http://www.opengis.net/wps/1.0.0" statusLocation="http://127.0.0.1/wps_test_status_location.xml" serviceInstance="http://127.0.0.1/wps" xml:lang="en-US" version="1.0.0" service="WPS">
+    <wps:Process wps:processVersion="1">
+        <ows:Identifier>COP15</ows:Identifier>
+        <ows:Title>Run a QC check</ows:Title>
+        <ows:Abstract>Copernicus QC Tool WPS service</ows:Abstract>
+        <wps:Profile>Copernicus:WPS:Checking</wps:Profile>
+    </wps:Process>
+    <wps:Status creationTime="2012-07-04T11:27:09.671+08:00">
+        <wps:ProcessSucceeded></wps:ProcessSucceeded>
+    </wps:Status>
+</wps:ExecuteResponse>

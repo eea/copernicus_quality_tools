@@ -1,0 +1,103 @@
+
+.breadcrumb {
+    margin-top: -19px;
+    color: red;
+}
+
+div .main {
+    padding: 15px;
+    padding-top: 0px;
+}
+
+.tab-content {
+    padding: 10px;
+    padding-bottom: 30px;
+    border-left: 1px solid lightgray;
+    border-right: 1px solid lightgray;
+    border-bottom: 1px solid lightgray;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    box-shadow: 5px 5px 5px #888888;
+}
+
+table.overview tr th {
+    padding-right: 10px;
+    vertical-align: top;
+    border-bottom: 1px solid #dadada;
+}
+
+table.overview tr td {
+    padding-left: 5px;
+    vertical-align: top;
+    /*background-color: #adadad;*/
+    border-bottom: 1px solid #dadada;
+}
+
+.autowidth {
+    /*min-width: 400px;*/
+    width: auto;
+}
+
+.btn-dialog-left {
+    float: left;
+}
+
+
+.date.maxwidth {
+    max-width: 200px;
+}
+
+.caret.mycaret {
+    margin-left: 10px;
+}
+
+#tbl-runs th {
+    background-color: #2D55B4;
+    color: white;
+}
+
+#tbl-data th {
+    background-color: #2D55B4;
+    color: white;
+}
+
+#tbl-selection th {
+    background-color: #2D55B4;
+    color: white;
+}
+
+.table>tbody>tr.active>td, .table>tbody>tr>td.active {
+    background-color: #337ab7;
+    color: #f0f0f0;
+}
+
+.table>tbody>tr.active>td>a, .table>tbody>tr>td.active>a {
+    background-color: #337ab7;
+    color: #004774;
+    text-decoration: underline;
+}
+
+.table>tbody>tr:hover>td, .table>tbody>tr>td:hover {
+    background-color: #f0f0f0;
+    /*color: black;*/
+}
+.table>tbody>tr>td>a, .table>tbody>tr>td>a {
+    text-decoration: underline;
+}
+
+
+.table>tbody>tr.active:hover>td, .table>tbody>tr>td.active:hover {
+    background-color: #337ab7;
+    color: #f0f0f0;
+}
+
+
+.details-dialog .modal-dialog {
+    width: 90vw;
+    height: 80vh;
+}
+
+.bsd-content {
+    overflow-y: auto;
+    max-height: 80vh;
+}
