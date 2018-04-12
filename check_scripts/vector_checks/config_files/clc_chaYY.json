@@ -1,0 +1,70 @@
+{
+  "modify_date": "2018-12-04",
+  "version": "0.01",
+  "dataset": "CLC",
+  "layer": "chaYY",
+  "description": "CORINE Land Cover change layer",
+  "checks":[
+    {
+      "check_id": "V1",
+      "check_name": "file format",
+      "parameters": [
+        {
+          "name": "format",
+          "value": ".gdb",
+          "exceptions": []
+        }
+      ]
+    },
+    {
+      "check_id": "V2",
+      "check_name": "file naming convention",
+      "parameters":[
+        {
+          "name": "file_name",
+          "value": "^clc(\d\d\d\d)_[a-z][a-z]\.gdb$",
+          "dependencies": []
+          "exceptions": []
+        },
+        {
+          "name": "feature_dataset_name",
+          "value": "^[a-z][a-z]$",
+          "dependencies":[],
+          "exceptions": []
+        },
+        {
+          "name": "feature_class_name",
+          "value": "^cha(\d\d)_[a-z][a-z]$",
+          "dependencies":[
+            {
+              "name": "file_name",
+              "value": "(\d\d\d\d)"
+              "position": [-2, null]
+            }
+          ]
+          "exceptions": []
+        }
+      ]
+    },
+    {
+     "check_id": "V11",
+      "check_name": "minimal mapping unit (MMU)",
+      "parameters": [
+        {
+          "name": "area_ha",
+          "value": 5,
+          "exceptions":[
+            {
+              "name": "touching_boundary",
+              "parameters": [{"boundary_layer": "path_to_boundary_layer_DOPLNIT!!!!!!!!!!!!!!!!"}]
+            },
+            {
+              "name": "complex_change",
+              "parameters":[]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
