@@ -1,0 +1,19 @@
+Igor vyrobil virtuální stroj "vm-cop", na kterém běží postgresql s postgisem. Je vytvořena databáze "cop" a user "jiri", do postgresql je možné chodit bez hesla.
+
+Připojení k postgresql:
+
+1. db
+$ psql -h 192.168.2.72 -U jiri -d cop
+
+2.db
+$ psql -h 192.168.2.72 -U jiri -d cop_erika
+
+Připojení do stroje:
+
+$ ssh root@192.168.2.72
+
+Stroj má alokováno 4GB RAM a 100GB disk. Oboje je možno měnit nahoru i dolu. Případně je možné stroj využít na něco dalšího než jen ten postgres.
+
+Příklad ogr2ogr příkazu:
+
+ogr2ogr -overwrite -skipfailures -f "PostgreSQL" PG:"host=myhost user=myuser dbname=mydb password=mypass" "C:\somefolder\BigFileGDB.gdb" "MyFeatureClass"
