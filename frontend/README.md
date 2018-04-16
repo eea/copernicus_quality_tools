@@ -10,3 +10,5 @@ source env/bin/activate
 pip install -r requirements.txt
 python manage.py runserver
 ```
+
+The application should be running at http://127.0.0.1:8000 in your browser
