@@ -12,6 +12,11 @@ from django.shortcuts import render
 
 # Create your views here.
 
+def new_check(request):
+
+    return render(request, 'dashboard/new_check.html')
+
+
 def job_list(request):
 
     form = JobForm()

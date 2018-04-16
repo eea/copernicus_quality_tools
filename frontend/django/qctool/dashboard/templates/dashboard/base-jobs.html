@@ -1,5 +1,4 @@
 {% load staticfiles static sekizai_tags %}
-
 <!doctype html>
 <html>
     <head>
@@ -38,105 +37,27 @@
                             </span></a>
                         </div>
                         <div class="navbar-collapse collapse">
-                                                    <ul class="nav navbar-nav navbar-right">
-
-
-
-    <li class="
-
-        ">
-
-            <a href="/"><span>Overview</span></a>
-
-    </li>
-
-
-    <li class="
-         active
-        ">
-
-            <a href="/warehouse"><span>Warehouse</span></a>
-
-    </li>
-
-
-    <li class="
-
-        ">
-
-            <a href="/processing"><span>Processing</span></a>
-
-    </li>
-
-
-    <li class="
-
-         dropdown">
-
-            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                Apps <span class="caret"></span>
-            </a>
-            <ul class="dropdown-menu">
-
-
-
-    <li class="
-
-        ">
-
-            <a href="/insitu"><span>In-Situ Data</span></a>
-
-    </li>
-
-
-    <li class="
-
-        ">
-
-            <a href="/propole"><span>ProPole</span></a>
-
-    </li>
-
-
-    <li class="
-
-        ">
-
-            <a href="/iti"><span>ITI Processor</span></a>
-
-    </li>
-
-
-
-            </ul>
-
-    </li>
-
-
-    <li class="
-
-        ">
-
-            <a href="/settings"><span>Settings</span></a>
-
-    </li>
-
-
-    <li class="
-
-        ">
-
-            <a href="/accounts/logout"><span>Sign Out (Jiří Kadlec)</span></a>
-
-    </li>
-
-
-
+                            <ul class="nav navbar-nav navbar-right">
+                                <li class="active"><a href="/"><span>Checking</span></a></li>
+                                <li class=""><a href="/new"><span>New Checking Task</span></a></li>
+                                <li class=""><a href="/files"><span>Files</span></a></li>
+                                <!--
+                                <li class="dropdown">
+                                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">Apps<span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            <li class=""><a href="/insitu"><span>Dropdown 1</span></a></li>
+                                            <li class=""><a href="/propole"><span>Dropdown 2</span></a></li>
+                                            <li class=""><a href="/iti"><span>Dropdown 3</span></a></li>
+                                        </ul>
+                                </li>
+                                <li class=""><a href="/settings"><span>Settings</span></a></li>
+                                -->
+                                <li class=""><a href="/accounts/logout"><span>Sign Out (Jiří Kadlec)</span></a>
+                                </li>
                             </ul>
                         </div>
                     </div>
                 </nav>
-                <!--</div>-->
 
                 {% block content %}{% endblock content %}
 

@@ -1,0 +1,89 @@
+{% extends "dashboard/base-jobs.html" %}
+{% load staticfiles sekizai_tags %}
+
+{% block content %}
+
+    <div class="container-fluid main" style="padding-top: 70px;">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="#">Copernicus QC Tool</a></li>
+              <li class="active"><a href="#">Start new check</a></li>
+            </ol>
+
+            <div class="main">
+
+                <div id="tool-canvas">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <div class="panel-title">
+                                Setup new checking
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <h4>Parameters</h4>
+                            <form>
+                                <fieldset></fieldset>
+                                <div class="form-group">
+                                    <label for="select_product">Product Type</label>
+                                    <span>  - </span>
+                                    <select id="select_product" class="form-control">
+                                        <option value="clc_vector">CLC Vector</option>
+                                        <option value="clc_raster">CLC Raster</option>
+                                        <option value="ua_vector">Urban Atlas Vector</option>
+                                        <option value="ua_raster">Urban Atlas Raster</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="select_file">File to Check</label>
+                                    <span>  - </span>
+                                    <select id="select_file" class="form-control">
+                                        <option value="file_1">clc_malta.gdb</option>
+                                        <option value="file_2">clc_slovakia.gdb</option>
+                                        <option value="file_3">test_file_1.gdb</option>
+                                        <option value="file_4">test_file_2.gdb</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="select_file">Select layer</label>
+                                    <span>  - </span>
+                                    <select id="select_layer" class="form-control">
+                                        <option value="layer_1">clc_malta.gdb</option>
+                                        <option value="layer_2">clc_slovakia.gdb</option>
+                                        <option value="layer_3">test_file_1.gdb</option>
+                                    </select>
+                                </div>
+
+                                <button class="btn btn-success" type="button" onclick="run_process();">
+                                    <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                    Run the Checks!
+                                </button>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <br><br><br><br>
+
+
+    {% addtoblock "css" %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />{% endaddtoblock %}
+    {% addtoblock "css" %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />{% endaddtoblock %}
+
+    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" type="text/javascript"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/js/select2.min.js" type="text/javascript"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.js" type="text/javascript"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.min.js" type="text/javascript"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/TableExport/5.0.0/js/tableexport.min.js"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.4.0/bootbox.min.js" type="text/javascript"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="{% static 'dashboard/js/homepage.js' %}" type="text/javascript"></script>{% endaddtoblock %}
+
+{% endblock content %}
