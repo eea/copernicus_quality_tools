@@ -2,9 +2,9 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^wps_execute_test', views.wps_execute_test, name='wps_execute_test'),
+    url(r'^run_wps_execute', views.run_wps_execute, name='run_wps_execute'),
     url(r'^new$', views.new_check, name='new_check'),
-    url(r'^jobs\.json$', views.jobs_json, name='jobs_json'),
+    url(r'^checking_tasks\.json$', views.tasks_json, name='tasks_json'),
     url(r'^$', views.job_list, name='job_list'),
 ]
 

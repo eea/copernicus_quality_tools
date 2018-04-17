@@ -26,9 +26,9 @@
                         <table id="tbl-runs" class="table" data-toggle="table" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-bar" data-toolbar-align="left" data-search-align="left" data-show-filter="true" data-smart-display="true" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="server">
                             <thead>
                             <tr>
-                                <th data-field="name" data-sortable="true">Name of the run</th>
-                                <th data-field="description" data-sortable="true">Description</th>
-                                <th data-field="created_date" data-sortable="true">Created</th>
+                                <th data-field="name" data-sortable="true">Checking Task Name</th>
+                                <th data-field="start" data-sortable="true">Start</th>
+                                <th data-field="end" data-sortable="true">End</th>
                                 <th data-field="status" data-sortable="true">Status</th>
                             </tr>
                             </thead>
@@ -51,8 +51,6 @@
 
 
     <br><br><br><br>
-
-    {% include "dashboard/html-spinner.html" %}
 
 
     {% addtoblock "css" %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />{% endaddtoblock %}

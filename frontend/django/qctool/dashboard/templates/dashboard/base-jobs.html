@@ -38,9 +38,11 @@
                         </div>
                         <div class="navbar-collapse collapse">
                             <ul class="nav navbar-nav navbar-right">
-                                <li class="active"><a href="/"><span>Checking</span></a></li>
+                                {% block menu %}
+                                <li class="active"><a href="/"><span>Checking Tasks</span></a></li>
                                 <li class=""><a href="/new"><span>New Checking Task</span></a></li>
                                 <li class=""><a href="/files"><span>Files</span></a></li>
+                                {% endblock %}
                                 <!--
                                 <li class="dropdown">
                                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">Apps<span class="caret"></span></a>
