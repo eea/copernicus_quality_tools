@@ -23,18 +23,24 @@ function run_process() {
 
     $('#modal-spinner').modal('show');
     var data = {
-        "tools": JSON.stringify(tools_sequence),
-        "name": $("#run_name").val(),
-        "description": $("#run_description").val()
+        "product": $("#select_product").val(),
+        "filepath": $("#select_file").val(),
+        "layer": $("#select_layer").val()
     };
 
-    $.post("/processing/run", data, function(result, textStatus) {
-        $('#modal-spinner').modal('hide');
-        if (result.status=="OK") {
-            var dlg_ok = BootstrapDialog.show({title: 'Process is successfully triggered', message: result.message, buttons: [{label: 'OK', cssClass: 'btn-default', action: function(dialog) {dialog.close();}}]});
-        } else {
-            var dlg_err = BootstrapDialog.show({title: 'Error', message: result.message, buttons: [{label: 'OK', cssClass: 'btn-default', action: function(dialog) {dialog.close();}}]});
-        }
-    }, "json");
+    var wps_base = "http://192.168.2.72:5000/wps?service=WPS&version=1.0.0&request=Execute&identifier=cop_sleep";
+    var wps_url = wps_base + "&DataInputs=delay=1.3;cycles=10;exit_ok=true;filepath=/home/bum/bac;layer_name=my_layer;product_type_name=big_product&lineage=true&status=true&storeExecuteResponse=true"
 
+    $.ajax({
+        type: 'GET',
+        url: wps_url,
+        dataType: 'xml',
+        success: function(xml) {
+            alert(xml);
+            //$(xml).find("wps:ProcessAccepted").each(function() {
+            //    var marker = $(this);
+            //    alert(marker.text());
+            //});
+        }
+    });
 }
