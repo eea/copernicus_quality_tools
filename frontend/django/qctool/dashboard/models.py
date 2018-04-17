@@ -68,9 +68,11 @@ class CheckingSession(models.Model):
 
     status = models.CharField(max_length=200)
 
-    wps_request = models.CharField(max_length=200, null=True)
+    percent_complete = models.CharField(max_length=50, blank=True, null=True)
 
-    wps_status_location = models.CharField(max_length=200, null=True)
+    wps_request = models.CharField(max_length=400, blank=True, null=True)
+
+    wps_status_location = models.CharField(max_length=400, null=True)
 
     result = models.CharField(blank=True, null=True, max_length=200)
 

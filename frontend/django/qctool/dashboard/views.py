@@ -8,6 +8,7 @@ import time
 from xml.etree import ElementTree
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 from .models import *
 from .forms import *
@@ -34,6 +35,64 @@ def job_list(request):
 
 def tasks_json(request):
 
+    all_tasks = CheckingSession.objects.all()
+
+    # refreshing the status of the list
+    namespaces = {'wps': 'http://www.opengis.net/wps/1.0.0'}
+    for obj in all_tasks:
+        status = obj.status
+        if status == 'accepted' or status == 'started':
+            status_location_url = obj.wps_status_location
+            try:
+                r = requests.get(status_location_url)
+                tree = ElementTree.fromstring(r.text)
+                status_tags = tree.findall('wps:Status', namespaces)
+                if len(status_tags) == 0:
+                    # this meens there is no status element --- some exception ...
+                    obj.status = 'error'
+
+                else:
+                    status_tag = status_tags[0]
+
+                    accepted_tags = status_tag.findall('wps:ProcessAccepted', namespaces)
+                    started_tags = status_tag.findall('wps:ProcessStarted', namespaces)
+                    succeeded_tags = status_tag.findall('wps:ProcessSucceeded', namespaces)
+
+                    if len(succeeded_tags) > 0:
+                        print('process succeeded!')
+                        obj.status = 'succeeded'
+                        obj.log_info = succeeded_tags[0].text
+                        obj.end = parse_datetime(status_tag.attrib['creationTime'])
+                        obj.percent_complete = "100"
+                        print(obj.log_info)
+                        print(obj.end)
+
+                    elif len(started_tags) > 0:
+                        print('process started!')
+                        obj.status = 'started'
+
+                        started_tag = started_tags[0]
+                        obj.log_info = started_tag.text
+
+                        # also updating PercentComplete info
+                        if "percentCompleted" in started_tag.attrib:
+                            obj.percent_complete = started_tag.attrib["percentCompleted"]
+                        else:
+                            obj.percent_complete = "50"
+
+                        print(obj.log_info)
+
+                    elif len(accepted_tags) > 0:
+                        obj.status = 'accepted'
+                        obj.log_info = accepted_tags[0].text
+                        print(obj.log_info)
+
+                # save the new status of the object
+                obj.save()
+            except:
+                obj.status = 'error'
+                obj.save()
+
     data = list(CheckingSession.objects.values())
     cnt = len(data)
     resp = {"total": cnt, "rows": data}
@@ -56,7 +115,7 @@ def run_wps_execute(request):
     # try to call WPS on the external server
     wps_server = "http://192.168.2.72:5000"
     wps_base = wps_server + "/wps?service=WPS&version=1.0.0&request=Execute&identifier=cop_sleep";
-    wps_url = wps_base + "&DataInputs=delay=1.3;cycles=10;exit_ok=true;filepath=/home/bum/bac;layer_name=my_layer;product_type_name=big_product&lineage=true&status=true&storeExecuteResponse=true"
+    wps_url = wps_base + "&DataInputs=delay=10;cycles=10;exit_ok=true;filepath=/home/bum/bac;layer_name=my_layer;product_type_name=big_product&lineage=true&status=true&storeExecuteResponse=true"
 
     err = False
     try:
@@ -81,6 +140,7 @@ def run_wps_execute(request):
             task.status = "accepted"
             task.wps_status_location = tree.attrib["statusLocation"]
             task.wps_request = wps_url
+            task.percent_complete = "0"
             task.save()
 
             time.sleep(2)
@@ -99,6 +159,7 @@ def run_wps_execute(request):
             task.wps_status_location = None
             task.wps_request = wps_url
             task.log_info = r.text
+            task.percent_complete = "0"
             task.save()
 
             error_response = {"status": "ERR", "message": "There was an error starting the process. Exception: %s" % r.text}
