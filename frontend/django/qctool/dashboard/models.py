@@ -68,6 +68,10 @@ class CheckingSession(models.Model):
 
     status = models.CharField(max_length=200)
 
+    wps_request = models.CharField(max_length=200)
+
+    wps_status_location = models.CharField(max_length=200)
+
     result = models.CharField(blank=True, null=True, max_length=200)
 
     log_info = models.TextField(blank=True, null=True)

@@ -2,5 +2,4 @@ Django==2.0.4
 django-classy-tags==0.8.0
 django-sekizai==0.10.0
 django-settings-export==1.2.1
-pkg-resources==0.0.0
 pytz==2018.4
