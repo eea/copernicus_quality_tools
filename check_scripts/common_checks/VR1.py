@@ -33,6 +33,7 @@ def run_check(params, ds, fj):
     gdal.UseExceptions()
     ogr.UseExceptions()
 
+    # check for data source existence
     if not os.path.exists(ds):
         return {"STATUS": "FAILED",
                 "MESSAGE": "FILE DOES NOT EXIST IN FILESYSTEM"}

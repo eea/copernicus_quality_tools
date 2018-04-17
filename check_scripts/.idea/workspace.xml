@@ -30,8 +30,8 @@
       <file leaf-file-name="testing_naming_convention.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/testing_naming_convention.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="579">
-              <caret line="50" column="0" lean-forward="true" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
+            <state relative-caret-position="180">
+              <caret line="10" column="160" lean-forward="true" selection-start-line="10" selection-start-column="20" selection-end-line="10" selection-end-column="160" />
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
               </folding>
@@ -39,12 +39,24 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="VR2.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="VR2.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/common_checks/VR2.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="378">
-              <caret line="21" column="7" lean-forward="true" selection-start-line="21" selection-start-column="7" selection-end-line="21" selection-end-column="7" />
+            <state relative-caret-position="342">
+              <caret line="19" column="39" lean-forward="true" selection-start-line="19" selection-start-column="39" selection-end-line="19" selection-end-column="39" />
               <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="VR4.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/common_checks/VR4.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="792">
+              <caret line="44" column="0" lean-forward="true" selection-start-line="44" selection-start-column="0" selection-end-line="44" selection-end-column="0" />
+              <folding>
+                <element signature="e#68#77#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -52,8 +64,8 @@
       <file leaf-file-name="VR1.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/common_checks/VR1.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="360">
-              <caret line="62" column="56" lean-forward="true" selection-start-line="62" selection-start-column="56" selection-end-line="62" selection-end-column="56" />
+            <state relative-caret-position="288">
+              <caret line="31" column="4" lean-forward="true" selection-start-line="31" selection-start-column="4" selection-end-line="33" selection-end-column="23" />
               <folding>
                 <element signature="e#76#85#0" expanded="true" />
               </folding>
@@ -116,7 +128,6 @@
         <option value="$PROJECT_DIR$/vector_checks/config_files/testing_naming_convention.py" />
         <option value="$PROJECT_DIR$/vector_checks/V2.py" />
         <option value="$PROJECT_DIR$/vector_checks/fgdb2pg.py" />
-        <option value="$PROJECT_DIR$/common_checks/VR2.py" />
         <option value="$PROJECT_DIR$/vector_checks/config_files/clc_Y2Y2.json" />
         <option value="$PROJECT_DIR$/vector_checks/config_files/clc_chaYY.json" />
         <option value="$PROJECT_DIR$/vector_checks/config_files/formats.py" />
@@ -128,7 +139,6 @@
         <option value="$PROJECT_DIR$/common_checks/config_files/gdal_ogr_drivers.json" />
         <option value="$PROJECT_DIR$/vector_checks/V1.py" />
         <option value="$PROJECT_DIR$/vector_checks/testing_naming_convention.py" />
-        <option value="$PROJECT_DIR$/common_checks/VR1.py" />
         <option value="$PROJECT_DIR$/testing_naming_convention.py" />
         <option value="$PROJECT_DIR$/config_files/raster/clc_Y2Y2.json" />
         <option value="$PROJECT_DIR$/config_files/raster/waw_100.json" />
@@ -136,6 +146,10 @@
         <option value="$PROJECT_DIR$/config_files/vector/clc_chaYY.json" />
         <option value="$PROJECT_DIR$/config_files/vector/clc_Y1Y1.json" />
         <option value="$PROJECT_DIR$/config_files/vector/clc_Y2Y2.json" />
+        <option value="$PROJECT_DIR$/common_checks/VR2.py" />
+        <option value="$PROJECT_DIR$/config_files/raster/waw_YYYY_020m.json" />
+        <option value="$PROJECT_DIR$/common_checks/VR1.py" />
+        <option value="$PROJECT_DIR$/common_checks/VR4.py" />
       </list>
     </option>
   </component>
@@ -219,6 +233,24 @@
               <option name="myItemId" value="config_files" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="raster" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="check_scripts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="check_scripts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="config_files" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
@@ -241,7 +273,7 @@
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
-  <component name="RunManager" selected="Python.testing_naming_convention (2)">
+  <component name="RunManager" selected="Python.VR4">
     <configuration default="false" name="testing_naming_convention (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -276,23 +308,6 @@
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
     </configuration>
-    <configuration default="false" name="create_formats" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/vector_checks" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="check_scripts" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/vector_checks/create_formats.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <method />
-    </configuration>
     <configuration default="false" name="VR1" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -323,6 +338,23 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="check_scripts" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/testing_naming_convention.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <method />
+    </configuration>
+    <configuration default="false" name="VR4" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/common_checks" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="check_scripts" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/common_checks/VR4.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
@@ -464,17 +496,17 @@
     <list size="5">
       <item index="0" class="java.lang.String" itemvalue="Python.testing_naming_convention (1)" />
       <item index="1" class="java.lang.String" itemvalue="Python.V1" />
-      <item index="2" class="java.lang.String" itemvalue="Python.create_formats" />
-      <item index="3" class="java.lang.String" itemvalue="Python.VR1" />
-      <item index="4" class="java.lang.String" itemvalue="Python.testing_naming_convention (2)" />
+      <item index="2" class="java.lang.String" itemvalue="Python.VR1" />
+      <item index="3" class="java.lang.String" itemvalue="Python.testing_naming_convention (2)" />
+      <item index="4" class="java.lang.String" itemvalue="Python.VR4" />
     </list>
     <recent_temporary>
       <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Python.testing_naming_convention (2)" />
-        <item index="1" class="java.lang.String" itemvalue="Python.VR1" />
-        <item index="2" class="java.lang.String" itemvalue="Python.testing_naming_convention (1)" />
-        <item index="3" class="java.lang.String" itemvalue="Python.V1" />
-        <item index="4" class="java.lang.String" itemvalue="Python.create_formats" />
+        <item index="0" class="java.lang.String" itemvalue="Python.VR4" />
+        <item index="1" class="java.lang.String" itemvalue="Python.testing_naming_convention (2)" />
+        <item index="2" class="java.lang.String" itemvalue="Python.VR1" />
+        <item index="3" class="java.lang.String" itemvalue="Python.testing_naming_convention (1)" />
+        <item index="4" class="java.lang.String" itemvalue="Python.V1" />
       </list>
     </recent_temporary>
   </component>
@@ -500,7 +532,7 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.35083798" sideWeight="0.5021807" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.28830463" sideWeight="0.4978193" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.28830463" sideWeight="0.4978193" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -524,23 +556,6 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/../../Internal/SenL2i10m/cmd_version_rescaling_8bit/open_geojson_test.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="180">
-          <caret line="12" column="0" lean-forward="true" selection-start-line="12" selection-start-column="0" selection-end-line="12" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/vector_checks/fgdb2pg.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="486">
-          <caret line="31" column="27" lean-forward="true" selection-start-line="31" selection-start-column="27" selection-end-line="31" selection-end-column="27" />
-          <folding>
-            <element signature="e#102#117#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/../../Internal/SenL2i10m/cmd_version_rescaling_8bit/valid_values_extent.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -817,34 +832,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/testing_naming_convention.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="579">
-          <caret line="50" column="0" lean-forward="true" selection-start-line="50" selection-start-column="0" selection-end-line="50" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#9#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/vector_checks/V2.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="306">
-          <caret line="17" column="36" lean-forward="false" selection-start-line="17" selection-start-column="36" selection-end-line="17" selection-end-column="36" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/common_checks/VR1.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="360">
-          <caret line="62" column="56" lean-forward="true" selection-start-line="62" selection-start-column="56" selection-end-line="62" selection-end-column="56" />
-          <folding>
-            <element signature="e#76#85#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/config_files/raster/clc_chaYY.json">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -909,11 +896,57 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/testing_naming_convention.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="10" column="160" lean-forward="true" selection-start-line="10" selection-start-column="20" selection-end-line="10" selection-end-column="160" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config_files/raster/waw_YYYY_020m.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="512">
+          <caret line="35" column="20" lean-forward="false" selection-start-line="35" selection-start-column="20" selection-end-line="35" selection-end-column="20" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vector_checks/V2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="306">
+          <caret line="17" column="36" lean-forward="false" selection-start-line="17" selection-start-column="36" selection-end-line="17" selection-end-column="36" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/common_checks/VR1.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="288">
+          <caret line="31" column="4" lean-forward="true" selection-start-line="31" selection-start-column="4" selection-end-line="33" selection-end-column="23" />
+          <folding>
+            <element signature="e#76#85#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/common_checks/VR2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="378">
-          <caret line="21" column="7" lean-forward="true" selection-start-line="21" selection-start-column="7" selection-end-line="21" selection-end-column="7" />
+        <state relative-caret-position="342">
+          <caret line="19" column="39" lean-forward="true" selection-start-line="19" selection-start-column="39" selection-end-line="19" selection-end-column="39" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/common_checks/VR4.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="792">
+          <caret line="44" column="0" lean-forward="true" selection-start-line="44" selection-start-column="0" selection-end-line="44" selection-end-column="0" />
+          <folding>
+            <element signature="e#68#77#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

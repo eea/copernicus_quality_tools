@@ -33,7 +33,7 @@
       "parameters": [
         {
           "name": "EPSG",
-          "value": 3035,
+          "value": [3035],
           "exceptions":[]
             }
           ]

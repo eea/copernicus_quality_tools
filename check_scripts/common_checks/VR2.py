@@ -13,7 +13,7 @@ __email__ = "jiri.tomicek@gisat.cz"
 __status__ = "operational"
 
 
-def nc_check(source, template):
+def run_check(source, template):
     """
     Check if string matches pattern.
     :param source: name of the file/layer
