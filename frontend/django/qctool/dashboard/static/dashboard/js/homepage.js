@@ -38,8 +38,9 @@ function run_process() {
     var wps_url = wps_base + "&DataInputs=delay=1.3;cycles=10;exit_ok=true;filepath=/home/bum/bac;layer_name=my_layer;product_type_name=big_product&lineage=true&status=true&storeExecuteResponse=true"
 
     $.ajax({
-        type: 'GET',
+        type: 'POST',
         url: run_url,
+        data: data,
         dataType: 'json',
         success: function(result) {
             console.log(result);

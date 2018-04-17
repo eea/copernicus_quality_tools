@@ -3,8 +3,11 @@ from __future__ import unicode_literals
 
 import os
 import json
+import random
 import requests
+import sys
 import time
+import traceback
 from xml.etree import ElementTree
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -38,10 +41,10 @@ def tasks_json(request):
     all_tasks = CheckingSession.objects.all()
 
     # refreshing the status of the list
-    namespaces = {'wps': 'http://www.opengis.net/wps/1.0.0'}
+    namespaces = {'wps': 'http://www.opengis.net/wps/1.0.0', 'ows': 'http://schemas.opengis.net/ows/1.0.0'}
     for obj in all_tasks:
         status = obj.status
-        if status == 'accepted' or status == 'started':
+        if status == 'accepted' or status == 'started' or status == 'error' or status == 'failed':
             status_location_url = obj.wps_status_location
             try:
                 r = requests.get(status_location_url)
@@ -57,6 +60,7 @@ def tasks_json(request):
                     accepted_tags = status_tag.findall('wps:ProcessAccepted', namespaces)
                     started_tags = status_tag.findall('wps:ProcessStarted', namespaces)
                     succeeded_tags = status_tag.findall('wps:ProcessSucceeded', namespaces)
+                    failed_tags = status_tag.findall('wps:ProcessFailed', namespaces)
 
                     if len(succeeded_tags) > 0:
                         print('process succeeded!')
@@ -65,7 +69,22 @@ def tasks_json(request):
                         obj.end = parse_datetime(status_tag.attrib['creationTime'])
                         obj.percent_complete = "100"
                         print(obj.log_info)
+
+                    elif len(failed_tags) > 0:
+                        print('process failed!')
+                        obj.status = 'failed'
+                        obj.end = parse_datetime(status_tag.attrib['creationTime'])
                         print(obj.end)
+                        failed_tag = failed_tags[0]
+
+                        # saving the exception text here
+                        exception_tags = failed_tag.findall('wps:ExceptionReport', namespaces)
+                        exception_tag = exception_tags[0]
+                        for sub_tag in exception_tag:
+                            print(sub_tag)
+                            for detail_tag in sub_tag:
+                                print(detail_tag.text)
+                                obj.log_info = detail_tag.text
 
                     elif len(started_tags) > 0:
                         print('process started!')
@@ -89,7 +108,8 @@ def tasks_json(request):
 
                 # save the new status of the object
                 obj.save()
-            except:
+            except Exception:
+                print(traceback.format_exc())
                 obj.status = 'error'
                 obj.save()
 
@@ -113,9 +133,24 @@ def run_wps_execute(request):
     user_id = request.user.id
 
     # try to call WPS on the external server
+    # use random delay (between 5 and 60 seconds)
+    random_delay = int(random.random() * 20.0)
+    random_cycles = int(random.random() * 20.0)
+
+    # use random exit_ok
+    random_01 = random.random()
+    if random_01 < 0.8:
+        random_exit_ok = 'true'
+    else:
+        random_exit_ok = 'false'
+
     wps_server = "http://192.168.2.72:5000"
-    wps_base = wps_server + "/wps?service=WPS&version=1.0.0&request=Execute&identifier=cop_sleep";
-    wps_url = wps_base + "&DataInputs=delay=10;cycles=10;exit_ok=true;filepath=/home/bum/bac;layer_name=my_layer;product_type_name=big_product&lineage=true&status=true&storeExecuteResponse=true"
+    wps_base = wps_server + "/wps?service=WPS&version=1.0.0&request=Execute&identifier=cop_sleep"
+    wps_url = wps_base + "&DataInputs=delay={0};cycles={1};exit_ok={2};filepath={3};layer_name={4};product_type_name={5}&lineage=true&status=true&storeExecuteResponse=true".format(
+        random_delay, random_cycles, random_exit_ok, filepath, product_type_name, layer_name
+    )
+
+    print(wps_url)
 
     err = False
     try:
