@@ -22,17 +22,20 @@
       "parameters":[
         {
           "name": "file_name",
-          "value": "^clc(\d\d\d\d)_[a-z][a-z]\.gdb$",
+          "value": "",
+          "dependencies": [],
           "exceptions": []
         },
         {
           "name": "feature_dataset_name",
-          "value": "^[a-z][a-z]$",
+          "value": "",
+          "dependencies": [],
           "exceptions": []
         },
         {
           "name": "feature_class_name",
-          "value": "^clc(\d\d)_[a-z][a-z]$",
+          "value": "",
+          "dependencies": [],
           "exceptions": []
         }
       ]
