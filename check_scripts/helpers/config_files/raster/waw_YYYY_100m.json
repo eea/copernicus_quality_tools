@@ -6,7 +6,7 @@
   "description": "High Resolution Layer Water and Wetness (100m)",
   "checks":[
     {
-      "check_id": "R1",
+      "check_id": "r1",
       "check_name": "file format",
       "parameters": [
         {
@@ -17,7 +17,7 @@
       ]
     },
     {
-      "check_id": "R2",
+      "check_id": "r2",
       "check_name": "file naming convention",
       "parameters":[
         {
@@ -28,7 +28,7 @@
       ]
     },
     {
-     "check_id": "R4",
+     "check_id": "r4",
       "check_name": "coordinate reference system (CRS)",
       "parameters": [
         {

@@ -6,7 +6,7 @@
   "description": "CORINE Land Cover final status layer",
   "checks":[
     {
-      "check_id": "V1",
+      "check_id": "v1",
       "check_name": "file format",
       "required": true,
       "parameters": [
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "check_id": "V2",
+      "check_id": "v2",
       "check_name": "file naming convention",
       "required": true,
       "parameters":[
@@ -43,7 +43,7 @@
       ]
     },
     {
-     "check_id": "V11",
+     "check_id": "v11",
       "check_name": "minimum mapping unit (MMU)",
       "required": false,
       "parameters": [
