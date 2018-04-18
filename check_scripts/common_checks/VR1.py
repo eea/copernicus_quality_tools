@@ -16,7 +16,7 @@ __email__ = "jiri.tomicek@gisat.cz"
 __status__ = "testing"
 
 
-def run_check(params, ds, fj):
+def run_check(params, ds, drivers):
     """
     File format check.
     :param params: Parameters from config.json file
@@ -24,10 +24,6 @@ def run_check(params, ds, fj):
     :param fj: pathname to gdal_ogr_drivers.json config file
     :return: status + message
     """
-
-    # load FileExtension: driver pairs from config file
-    with open(fj) as js_data:
-        formats = json.load(js_data)
 
     # enable gdal/ogr to use exceptions
     gdal.UseExceptions()
@@ -56,38 +52,38 @@ def run_check(params, ds, fj):
                 "MESSAGE": "FORBIDDEN FILE EXTENSION"}
 
     # in case of vector formats
-    if ds_extension in formats["ogr"]:
+    if ds_extension in drivers["ogr"]:
         try:
             ds_open = ogr.Open(ds)
         except:
             return {"STATUS": "FAILED",
                     "MESSAGE": "FILE CAN NOT BE OPENED"}
 
-        if ds_open.GetDriver().GetName() == formats["ogr"][ds_extension]:
+        if ds_open.GetDriver().GetName() == drivers["ogr"][ds_extension]:
             return {"STATUS": "OK",
                     "MESSAGE": "THE FILE FORMAT CHECK WAS SUCCESSFUL"}
         else:
             return {"STATUS": "FAILED",
                     "MESSAGE": "WRONG FILE FORMAT; FILE FORMAT IS: '%s'; DECLARED FILE FORMAT IS: '%s'" %
-                               (ds_open.GetDriver().GetName(), formats["ogr"][ds_extension])
+                               (ds_open.GetDriver().GetName(), drivers["ogr"][ds_extension])
                     }
 
     # in case of raster formats
-    elif ds_extension in formats["gdal"]:
+    elif ds_extension in drivers["gdal"]:
         try:
             ds_open = gdal.Open(ds)
         except:
             return {"STATUS": "FAILED",
                     "MESSAGE": "FILE CAN NOT BE OPENED"}
 
-        if ds_open.GetDriver().ShortName == formats["gdal"][ds_extension]:
+        if ds_open.GetDriver().ShortName == drivers["gdal"][ds_extension]:
             return {"STATUS": "OK",
                     "MESSAGE": "THE FILE FORMAT CHECK WAS SUCCESSFUL"}
         else:
             return {"STATUS": "FAILED",
                     "MESSAGE": "WRONG FILE FORMAT;"
                                "FILE FORMAT IS: '%s'; DECLARED FILE FORMAT IS: '%s'" %
-                               (ds_open.GetDriver().ShortName, formats["gdal"][ds_extension])
+                               (ds_open.GetDriver().ShortName, drivers["gdal"][ds_extension])
                     }
 
     else:
