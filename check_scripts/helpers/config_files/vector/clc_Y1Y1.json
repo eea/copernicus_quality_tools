@@ -8,6 +8,7 @@
     {
       "check_id": "V1",
       "check_name": "file format",
+      "required": true,
       "parameters": [
         {
           "name": "format",
@@ -19,6 +20,7 @@
     {
       "check_id": "V2",
       "check_name": "file naming convention",
+      "required": true,
       "parameters":[
         {
           "name": "file_name",
@@ -43,6 +45,7 @@
     {
      "check_id": "V11",
       "check_name": "minimal mapping unit (MMU)",
+      "required": false,
       "parameters": [
         {
           "name": "area_ha",

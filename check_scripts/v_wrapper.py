@@ -86,13 +86,16 @@ def run(conig_file, filename, layer):
         config_drivers = os.path.join(general_config_dir, 'gdal_ogr_drivers.json')
         with open(config_drivers) as drivers_data:
             drivers_load = json.load(drivers_data)
-        print v1.run_check(v1_config, filename, drivers_load)
+        v1_status, v1_message = v1.run_check(v1_config, filename, drivers_load).values()
+
 
 
 #     # request for 2. check
 #     if "V2" in list_of_checks:
 #         v2_params = [d for d in json_data["checks"] if d["check_id"] == "V2"]
 #         v2.run_check(v2_params, gdb, fc)
+
+
 
 print run("/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/check_scripts/helpers/config_files/vector/clc_chaYY.json",
           "/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/testing_data/clc2012_mt.gdb",
