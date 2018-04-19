@@ -71,13 +71,22 @@ def run(config_file, filename, checks):
     # get dict of checks and their requirement
     list_of_checks = {check_id["check_id"]: check_id["required"] for check_id in config_data["checks"][:]}
 
-    # verify that required checks are available for appropriate product
+    # list of required checks for appropriate product
+    list_of_required_checks = [ch for ch in list_of_checks if list_of_checks[ch] is True]
+
+    # verify that custom checks are available for appropriate product
+    custom_checks = list()
     checks = [i.lower() for i in checks]
     for ch in checks:
-        if not ch in list_of_checks:
+        if ch not in list_of_checks:
             return {"fatal_error": {"status": "FAILED",
                                     "message": "REQUIRED CHECK WITH ID: '%s' IS NOT ON THE CHECK LIST FOR THE PRODUCT: '%s'."
                                                % (ch, config_data["description"])}}
+        else:
+            custom_checks.append(ch)
+
+    # list of checks to be run (custom chosen + required ones from config. file)
+    list_of_checks = list(set(custom_checks + list_of_required_checks))
 
     # =============================================
     # ****************** CHECKS *******************
@@ -122,6 +131,23 @@ def run(config_file, filename, checks):
         # Potemkin's second check - DELETE!!!
 
     # --------------------
+    # request for 3. check
+    # --------------------
+
+    if "v3" in list_of_checks:
+
+        # get config parameters for V3 check
+        v3_config = [d for d in config_data["checks"] if d["check_id"] == "v3"][0]
+
+        # TODO: finish file naming convention check
+
+        # Potemkin's third check - DELETE!!!
+        res["v3"] = dict()
+        res["v3"]["status"] = "FAILED"
+        res["v3"]["message"] = "NO CHECK WITH ID: V2 WAS FOUND"
+        # Potemkin's third check - DELETE!!!
+
+    # --------------------
     # request for 4. check
     # --------------------
 
@@ -143,4 +169,4 @@ def run(config_file, filename, checks):
 
 print run("/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/check_scripts/helpers/config_files/vector/clc_chaYY.json",
           "/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/testing_data/clc2012_mt.gdb",
-          ["v1", "v2"])
+          ["v1", "v2", "v4"])
