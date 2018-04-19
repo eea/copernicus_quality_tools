@@ -7,7 +7,7 @@ from import_file import import_file
 dir_this = os.path.dirname(os.path.realpath(__file__))  # parent directory of this file
 
 
-def run(conig_file, filename, layer, checks):
+def run(config_file, filename, layer, checks):
 
     dir_this = os.path.dirname(os.path.realpath(__file__))
 
@@ -21,7 +21,7 @@ def run(conig_file, filename, layer, checks):
     v1 = import_file(os.path.join(dir_this, 'common_checks/VR1.py'))
     # v2 = ...
     # v3 = ...
-    # v4 = ...
+    v4 = import_file(os.path.join(dir_this, 'common_checks/VR4.py'))
 
     # -------------------------------
     # basic check of input parameters
@@ -56,7 +56,7 @@ def run(conig_file, filename, layer, checks):
     fgdbopen = None
 
     # check for appropriate config file existence
-    if not os.path.exists(conig_file):
+    if not os.path.exists(config_file):
         return {"fatal_error": {"status": "FAILED",
                                 "message": "APPROPRIATED CONFIG FILE DOES NOT EXIST"}}
 
@@ -64,7 +64,7 @@ def run(conig_file, filename, layer, checks):
     # load data from check config file
     # --------------------------------
 
-    with open(conig_file) as cf:
+    with open(config_file) as cf:
         config_data = json.load(cf)
 
     # get dict of checks and their requirement
@@ -120,6 +120,17 @@ def run(conig_file, filename, layer, checks):
         res["v2"]["message"] = "NO CHECK WITH ID: V2 WAS FOUND"
         # Potemkin's second check - DELETE!!!
 
+    # --------------------
+    # request for 4. check
+    # --------------------
+
+    if "v4" in list_of_checks:
+
+        # get config paramers for V4 check
+        v4_config = [d for d in config_data["checks"] if d["check_id"] == "v4"][0]
+        res["v4"] = dict()
+        (res["v4"]["status"], res["v4"]["message"]) = v4.run_check(v4_config, filename, "v", layer)
+
     # ---------------------
     # request for 11. check
     # ---------------------
@@ -132,4 +143,4 @@ def run(conig_file, filename, layer, checks):
 print run("/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/check_scripts/helpers/config_files/vector/clc_chaYY.json",
           "/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/testing_data/clc2012_mt.gdb",
           "cha12_MT",
-          ["v1", "v2", "v11"])
+          ["v1", "v2", "v4"])

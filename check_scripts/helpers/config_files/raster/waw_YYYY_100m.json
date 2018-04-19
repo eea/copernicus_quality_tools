@@ -29,11 +29,11 @@
     },
     {
      "check_id": "r4",
-      "check_name": "coordinate reference system (CRS)",
+      "check_name": "Coordinate Reference System (CRS)",
       "parameters": [
         {
           "name": "EPSG",
-          "value": 3035,
+          "value": [3035],
           "exceptions":[]
             }
           ]

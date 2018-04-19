@@ -30,9 +30,9 @@ def run_check(params, ds, drivers):
     ogr.UseExceptions()
 
     # check for data source existence
-    if not os.path.exists(ds):
-        return {"STATUS": "FAILED",
-                "MESSAGE": "FILE DOES NOT EXIST IN FILESYSTEM"}
+    # if not os.path.exists(ds):
+    #     return {"STATUS": "FAILED",
+    #             "MESSAGE": "FILE DOES NOT EXIST IN FILESYSTEM"}
 
     # create dict of params
     p = dict()
@@ -41,7 +41,7 @@ def run_check(params, ds, drivers):
 
     if len(p) != 1:
         return {"STATUS": "WARNING",
-                "MESSAGE": "V1 CHECK TAKES EXACTLY 1 INPUT PARAMETER (%d GIVEN)" % len(p)}
+                "MESSAGE": "V1/R1 CHECK TAKES EXACTLY 1 INPUT PARAMETER (%d GIVEN)" % len(p)}
 
     # check: data source name must end with specified extension and must be possible to open with specific driver
     allowed_extensions = p["format"][0]
