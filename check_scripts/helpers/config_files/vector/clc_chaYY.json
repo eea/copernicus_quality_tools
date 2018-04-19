@@ -2,7 +2,7 @@
   "modify_date": "2018-12-04",
   "version": "0.02",
   "dataset": "CLC",
-  "layer": "chaYY",
+  "layer": "cha",
   "description": "CORINE Land Cover change layer",
   "checks":[
     {

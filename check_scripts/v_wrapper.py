@@ -7,7 +7,7 @@ from import_file import import_file
 dir_this = os.path.dirname(os.path.realpath(__file__))  # parent directory of this file
 
 
-def run(config_file, filename, layer, checks):
+def run(config_file, filename, checks):
 
     dir_this = os.path.dirname(os.path.realpath(__file__))
 
@@ -45,27 +45,28 @@ def run(config_file, filename, layer, checks):
         return {"fatal_error": {"status": "FAILED",
                                 "message": "INVALID DATA SOURCE"}}
 
-    # checking the existence of the layer in the data source
-    fcs_in_fgdb = list()
-    for lyr in fgdbopen:
-        fcs_in_fgdb.append(lyr.GetName())
-    if layer not in fcs_in_fgdb:
-        return {"fatal_error": {"status": "FAILED",
-                                "message": "NO SUCH LAYER IN DATA SOURCE"}}
-    lyr = None
-    fgdbopen = None
-
     # check for appropriate config file existence
     if not os.path.exists(config_file):
         return {"fatal_error": {"status": "FAILED",
                                 "message": "APPROPRIATED CONFIG FILE DOES NOT EXIST"}}
 
-    # --------------------------------
     # load data from check config file
-    # --------------------------------
-
     with open(config_file) as cf:
         config_data = json.load(cf)
+
+    # checking the existence of the layer in the data source
+    ln_template = config_data["layer"]
+    fcs_in_fgdb = list()
+    for lyr in fgdbopen:
+        fcs_in_fgdb.append(lyr.GetName())
+    layers = [layer for layer in fcs_in_fgdb if ln_template in layer]
+    if len(layers) != 1:
+        return {"fata_error": {"status": "FAILED",
+                               "message": "THERE IS NOT ONLY ONE MATCHING LAYER IN THE DATA SOURCE"}}
+    else:
+        layer = layers[0]
+    lyr = None
+    fgdbopen = None
 
     # get dict of checks and their requirement
     list_of_checks = {check_id["check_id"]: check_id["required"] for check_id in config_data["checks"][:]}
@@ -129,7 +130,7 @@ def run(config_file, filename, layer, checks):
         # get config paramers for V4 check
         v4_config = [d for d in config_data["checks"] if d["check_id"] == "v4"][0]
         res["v4"] = dict()
-        (res["v4"]["status"], res["v4"]["message"]) = v4.run_check(v4_config, filename, "v", layer)
+        (res["v4"]["status"], res["v4"]["message"]) = v4.run_check(v4_config, filename, "v", layer).values()
 
     # ---------------------
     # request for 11. check
@@ -142,5 +143,4 @@ def run(config_file, filename, layer, checks):
 
 print run("/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/check_scripts/helpers/config_files/vector/clc_chaYY.json",
           "/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/testing_data/clc2012_mt.gdb",
-          "cha12_MT",
-          ["v1", "v2", "v4"])
+          ["v1", "v2"])

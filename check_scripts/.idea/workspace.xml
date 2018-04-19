@@ -18,8 +18,8 @@
       <file leaf-file-name="v_wrapper.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/v_wrapper.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="180">
-              <caret line="67" column="30" lean-forward="false" selection-start-line="67" selection-start-column="30" selection-end-line="67" selection-end-column="30" />
+            <state relative-caret-position="-702">
+              <caret line="9" column="37" lean-forward="false" selection-start-line="9" selection-start-column="31" selection-end-line="9" selection-end-column="37" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
               </folding>
@@ -30,8 +30,8 @@
       <file leaf-file-name="VR4.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/common_checks/VR4.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="18">
-              <caret line="11" column="0" lean-forward="false" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+            <state relative-caret-position="-108">
+              <caret line="21" column="17" lean-forward="true" selection-start-line="21" selection-start-column="17" selection-end-line="21" selection-end-column="17" />
               <folding>
                 <element signature="e#69#78#0" expanded="true" />
               </folding>
@@ -64,8 +64,8 @@
       <file leaf-file-name="VR1.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/common_checks/VR1.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="216">
-              <caret line="45" column="19" lean-forward="false" selection-start-line="45" selection-start-column="19" selection-end-line="45" selection-end-column="19" />
+            <state relative-caret-position="972">
+              <caret line="57" column="15" lean-forward="true" selection-start-line="57" selection-start-column="15" selection-end-line="57" selection-end-column="15" />
               <folding />
             </state>
           </provider>
@@ -133,8 +133,8 @@
         <option value="$PROJECT_DIR$/helpers/config_files/raster/waw_YYYY_100m.json" />
         <option value="$PROJECT_DIR$/helpers/config_files/vector/clc_Y1Y1.json" />
         <option value="$PROJECT_DIR$/helpers/config_files/vector/clc_Y2Y2.json" />
-        <option value="$PROJECT_DIR$/helpers/config_files/vector/clc_chaYY.json" />
         <option value="$PROJECT_DIR$/common_checks/VR4.py" />
+        <option value="$PROJECT_DIR$/helpers/config_files/vector/clc_chaYY.json" />
         <option value="$PROJECT_DIR$/v_wrapper.py" />
       </list>
     </option>
@@ -285,7 +285,7 @@
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../../dromas-czechagri/django/gears/gears/tools/Sentinel2Level2I/wrapper.py" />
   </component>
-  <component name="RunManager" selected="Python.VR4">
+  <component name="RunManager" selected="Python.v_wrapper">
     <configuration default="false" name="VR1" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -514,8 +514,8 @@
     </list>
     <recent_temporary>
       <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Python.VR4" />
-        <item index="1" class="java.lang.String" itemvalue="Python.v_wrapper" />
+        <item index="0" class="java.lang.String" itemvalue="Python.v_wrapper" />
+        <item index="1" class="java.lang.String" itemvalue="Python.VR4" />
         <item index="2" class="java.lang.String" itemvalue="Python.VR1" />
         <item index="3" class="java.lang.String" itemvalue="Python.wrapper" />
         <item index="4" class="java.lang.String" itemvalue="Python.testing_naming_convention (2)" />
@@ -639,13 +639,6 @@
     <entry file="file://$USER_HOME$/Documents/copernicus_quality_tools-master/check_scripts/vector_checks/testing_naming_convention.py" />
     <entry file="file://$USER_HOME$/Documents/copernicus_quality_tools-master/check_scripts/vector_checks/V2.py" />
     <entry file="file://$USER_HOME$/Documents/copernicus_quality_tools-master/check_scripts/common_checks/VR2.py" />
-    <entry file="file://$PROJECT_DIR$/common_checks/VR2.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="22" lean-forward="true" selection-start-line="0" selection-start-column="22" selection-end-line="0" selection-end-column="22" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/vector_checks/V2.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="558">
@@ -684,24 +677,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/helpers/helper.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="468">
-          <caret line="26" column="0" lean-forward="false" selection-start-line="26" selection-start-column="0" selection-end-line="26" selection-end-column="0" />
-          <folding>
-            <element signature="e#48#57#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/common_checks/VR1.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="216">
-          <caret line="45" column="19" lean-forward="false" selection-start-line="45" selection-start-column="19" selection-end-line="45" selection-end-column="19" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/helpers/config_files/raster/waw_YYYY_020m.json">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="467">
@@ -734,28 +709,54 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/helpers/config_files/vector/clc_chaYY.json">
+    <entry file="file://$PROJECT_DIR$/common_checks/VR2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="332">
-          <caret line="73" column="16" lean-forward="false" selection-start-line="73" selection-start-column="16" selection-end-line="73" selection-end-column="16" />
+        <state relative-caret-position="-55">
+          <caret line="0" column="22" lean-forward="true" selection-start-line="0" selection-start-column="22" selection-end-line="0" selection-end-column="22" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/helpers/helper.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="468">
+          <caret line="26" column="0" lean-forward="false" selection-start-line="26" selection-start-column="0" selection-end-line="26" selection-end-column="0" />
+          <folding>
+            <element signature="e#48#57#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/common_checks/VR1.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="972">
+          <caret line="57" column="15" lean-forward="true" selection-start-line="57" selection-start-column="15" selection-end-line="57" selection-end-column="15" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/common_checks/VR4.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="18">
-          <caret line="11" column="0" lean-forward="false" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+        <state relative-caret-position="-108">
+          <caret line="21" column="17" lean-forward="true" selection-start-line="21" selection-start-column="17" selection-end-line="21" selection-end-column="17" />
           <folding>
             <element signature="e#69#78#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/helpers/config_files/vector/clc_chaYY.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="216">
+          <caret line="57" column="24" lean-forward="false" selection-start-line="57" selection-start-column="20" selection-end-line="57" selection-end-column="24" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/v_wrapper.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="180">
-          <caret line="67" column="30" lean-forward="false" selection-start-line="67" selection-start-column="30" selection-end-line="67" selection-end-column="30" />
+        <state relative-caret-position="-702">
+          <caret line="9" column="37" lean-forward="false" selection-start-line="9" selection-start-column="31" selection-end-line="9" selection-end-column="37" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
           </folding>

@@ -25,18 +25,13 @@ def run_check(params, ds, chtype, ln=None):
     :param params: Parameters from config.json file
     :param ds: pathname to data source
     :param chtype: type of check ('v' for vector check, 'r' for raster check)
-    :param layer: name of the layer in data source (default as None)
+    :param ln: name of the layer in data source (default as None)
     :return: status + message
     """
 
     # enable gdal/ogr to use exceptions
     gdal.UseExceptions()
     ogr.UseExceptions()
-
-    # check for data source existence
-    # if not os.path.exists(ds):
-    #     return {"STATUS": "FAILED",
-    #             "MESSAGE": "FILE DOES NOT EXIST IN FILESYSTEM"}
 
     # create dict of params
     p = dict()
@@ -47,6 +42,7 @@ def run_check(params, ds, chtype, ln=None):
         return {"STATUS": "WARNING",
                 "MESSAGE": "V4/R4 CHECK TAKES EXACTLY 1 INPUT PARAMETER (%d GIVEN)" % len(p)}
 
+    # try to open data
     vector_data, raster_data = False, False
     if chtype.lower() == "v":
         try:
@@ -70,12 +66,13 @@ def run_check(params, ds, chtype, ln=None):
         return {"status": "FAILED",
                 "message": "UNSUPPORTED DATA FORMAT"}
 
+    # get Spatial Reference and EPSG code
     epsg = None
     if vector_data and not raster_data:
         layer = dsopen.GetLayer(ln)
         srs = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
         if srs.IsProjected:
-            epsg = srs.GetAttrValue("AUTHORITY", 1)
+            epsg = int(srs.GetAttrValue("AUTHORITY", 1))
         else:
             return {"status": "FAILED",
                     "message": "THE DATA IS NOT PROJECTED"}
@@ -83,15 +80,18 @@ def run_check(params, ds, chtype, ln=None):
     if not vector_data and raster_data:
         srs = osr.SpatialReference(dsopen.GetProjection())
         if srs.IsProjected:
-            epsg = srs.GetAttrValue("AUTHORITY", 1)
+            epsg = int(srs.GetAttrValue("AUTHORITY", 1))
         else:
             return {"status": "FAILED",
                     "message": "THE DATA IS NOT PROJECTED"}
 
-    allowed_epsgs
+    # get list of allowed EPSG codes from config. parameters
+    allowed_epsgs = map(int, p["EPSG"][0])
 
-    print epsg
-    print p["EPSG"][0]
-
-
-print run_check(parametry, data_source_raster, "r", "cha12_MT")
+    # CRS check via EPSG comparison
+    if epsg in allowed_epsgs:
+        return {"status": "OK",
+                "message": "THE CRS CHECK WAS SUCCESSFUL"}
+    else:
+        return {"status": "FAILED",
+                "message": "THE CRS CHECK FAILED: FORBIDDEN EPSG CODE: %d" % epsg}
