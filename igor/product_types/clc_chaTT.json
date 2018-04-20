@@ -1,0 +1,8 @@
+{"description": "Product type: CORINE Land Cover change layer.",
+ "parameters": {
+   "layer_name": "cha"},
+ "checks": [
+   {"check_ident": "vr1",
+    "required": true,
+    "parameters": {
+     "format": [".gdb"]}}]}

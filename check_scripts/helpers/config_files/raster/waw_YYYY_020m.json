@@ -1,0 +1,42 @@
+{
+  "modify_date": "2018-17-04",
+  "version": "0.01",
+  "dataset": "WAW",
+  "layer": "waw_020",
+  "description": "High Resolution Layer Water and Wetness (20m)",
+  "checks":[
+    {
+      "check_id": "r1",
+      "check_name": "file format",
+      "parameters": [
+        {
+          "name": "format",
+          "value": [".tif"],
+          "exceptions": []
+        }
+      ]
+    },
+    {
+      "check_id": "r2",
+      "check_name": "file naming convention",
+      "parameters":[
+        {
+          "name": "file_name",
+          "value": "",
+          "exceptions": []
+        }
+      ]
+    },
+    {
+     "check_id": "r4",
+      "check_name": "Coordinate Reference System (CRS)",
+      "parameters": [
+        {
+          "name": "EPSG",
+          "value": [3035],
+          "exceptions":[]
+            }
+          ]
+        }
+      ]
+}
