@@ -1,0 +1,94 @@
+{
+  "description": "Product type: CORINE Land Cover change layer.",
+  "modify_date": "2018-12-04",
+  "version": "0.02",
+  "dataset": "CLC",
+  "layer": "cha",
+  "checks": [
+    {
+      "qc_check_ident": "v1",
+      "required": true,
+      "parameters": [
+        {
+          "name": "format",
+          "value": [".gdb"],
+          "exceptions": []
+        }
+      ]
+    },
+    {
+      "qc_check_ident": "v2",
+      "check_name": "file naming convention",
+      "required": true,
+      "parameters":[
+        {
+	  "file_name_regex": "^clc[0-9][0-9][0-9][0-9]_[a-z][a-z].gdb$",
+          "dataset_name_regex": "^[a-z][a-z]$",
+	  "class_name_regex": "^cha[0-9][0-9]_[a-z][a-z]$",
+
+
+          "name": "file_name",
+          "value": "^clc[0-9][0-9][0-9][0-9]_[a-z][a-z].gdb$",
+          "dependencies": [],
+          "exceptions": []
+        },
+        {
+          "name": "feature_dataset_name",
+          "value": "^[a-z][a-z]$",
+          "dependencies":[],
+          "exceptions": []
+        },
+        {
+          "name": "feature_class_name",
+          "value": "^cha[0-9][0-9]_[a-z][a-z]$",
+          "dependencies":[
+            {
+              "name": "file_name",
+              "value": "[0-9][0-9][0-9][0-9]",
+              "position": [-2, null]
+            }
+          ],
+          "exceptions": []
+        }
+      ]
+    },
+    {
+      "check_id": "v4",
+      "check_name": "Coordinate Reference System (CRS)",
+      "required": false,
+      "parameters": [
+        {
+          "name": "EPSG",
+          "value": [3035],
+          "dependencies": [],
+          "exceptions": []
+        }
+      ]
+    },
+    {
+     "check_id": "v11",
+      "check_name": "Minimum Mapping Unit (MMU)",
+      "required": false,
+      "parameters": [
+        {
+          "name": "area_ha",
+          "value": 5,
+          "exceptions":[
+            {
+              "name": "touching_boundary",
+              "parameters": [
+                {
+                  "boundary_layer": "path_to_boundary_layer_DOPLNIT!!!!!!!!!!!!!!!!"
+                }
+              ]
+            },
+            {
+              "name": "complex_change",
+              "parameters":[]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
