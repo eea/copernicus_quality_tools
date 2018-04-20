@@ -9,6 +9,7 @@ import sys
 import time
 import traceback
 from xml.etree import ElementTree
+from django.db import connection
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.utils.dateparse import parse_datetime
@@ -35,6 +36,13 @@ def job_list(request):
     #js = json.dumps(jobs)
     #return HttpResponse(js, content_type='application/json')
 
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict"
+    columns = [col[0] for col in cursor.description]
+    return [
+        dict(zip(columns, row))
+        for row in cursor.fetchall()
+        ]
 
 def tasks_json(request):
 
@@ -44,7 +52,7 @@ def tasks_json(request):
     namespaces = {'wps': 'http://www.opengis.net/wps/1.0.0', 'ows': 'http://schemas.opengis.net/ows/1.0.0'}
     for obj in all_tasks:
         status = obj.status
-        if status == 'accepted' or status == 'started' or status == 'error' or status == 'failed':
+        if status == 'accepted' or status == 'started':
             status_location_url = obj.wps_status_location
             try:
                 r = requests.get(status_location_url)
@@ -113,10 +121,51 @@ def tasks_json(request):
                 obj.status = 'error'
                 obj.save()
 
-    data = list(CheckingSession.objects.values())
-    cnt = len(data)
-    resp = {"total": cnt, "rows": data}
-    return JsonResponse(resp, safe=False)
+    # now create the table based on the SQL jquery
+    offset = int(request.GET.get("offset") or 0)
+    limit = int(request.GET.get("limit") or 50)
+    sort = request.GET.get("sort") or "start"
+    sort = "s." + sort
+    order = request.GET.get("order") or ""
+    search = request.GET.get("search") or None
+    cond = ""
+    order = """ ORDER BY %s %s""" % (sort, order)
+
+    # number of all tasks
+    sql = "SELECT Count(id) AS cnt FROM dashboard_checkingsession AS r WHERE 1=1 {0};".format(cond)
+    with connection.cursor() as cur:
+        cur.execute(sql)
+        cnts = dictfetchall(cur)
+    cnt = cnts[0]["cnt"]
+
+    with connection.cursor() as cur:
+        sql = """SELECT s.id, s.name, s.description, s.start, s.end, s.status,
+      s.percent_complete, f.path, s.layer, p.name AS "product_name"
+      FROM dashboard_checkingsession AS s
+      LEFT JOIN dashboard_file AS f ON (s.file_id=f.id)
+      LEFT JOIN dashboard_product AS p ON (s.product_id=p.id)
+      WHERE 1=1 %s
+      GROUP BY s.id, s.name, s.description, s.start, s.end, s.layer
+      %s LIMIT %s;""" % (cond, order, limit)
+        print(sql)
+        cur.execute(sql)
+        results = dictfetchall(cur)
+
+    if results:
+        results = list(results)
+        i = 0
+        for r in results:
+            if r["name"]:
+                results[i]["name"] = """<a title='Details...' href='#' onclick='run_details(%s, %s, %d)'><span class='glyphicon glyphicon-new-window' aria-hidden='true'></span> %s</a>""" % (r["id"], str(r["name"]), True, r["name"])
+            i += 1
+        data = {"total": cnt, "rows": results}
+    else:
+        data = {"total": cnt, "rows": []}
+
+    #data = list(CheckingSession.objects.values())
+    #cnt = len(data)
+    #resp = {"total": cnt, "rows": data}
+    return JsonResponse(data, safe=False)
 
 
 @csrf_exempt
