@@ -52,7 +52,7 @@ class Product(models.Model):
 
 
 class CheckingSession(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey('auth.User', null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     description = models.TextField()
 
