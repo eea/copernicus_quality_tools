@@ -215,7 +215,7 @@ def run_wps_execute(request):
 
             # save info about started checking session into the database
             task = CheckingSession()
-            task.user = request.user
+            task.user = None
             task.name = 'Checking_{0}'.format(n_tasks + 1)
             task.description = 'test'
             task.product = Product.objects.first() #TODO set according to user request
@@ -233,7 +233,7 @@ def run_wps_execute(request):
 
             # save info about checking session with error into the database
             task = CheckingSession()
-            task.user = request.user
+            task.user = None
             task.name = 'Checking_{0}'.format(n_tasks + 1)
             task.description = 'test'
             task.product = Product.objects.first()  # TODO set according to user request
