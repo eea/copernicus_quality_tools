@@ -210,6 +210,25 @@ def run_wps_execute(request):
         # check if WPS response is valid
         n_tasks = CheckingSession.objects.count()
 
+        # get the product and file objects
+        # if DB is empty then add some initial ones
+        products = Product.objects.all()
+        if len(products) == 0:
+            file_formats = FileFormat.objects.all()
+            if len(file_formats) == 0:
+                format1 = FileFormat.objects.create(type='vector', extension='gdb', description='File Geodatabase')
+                format2 = FileFormat.objects.create(type='raster', extension='tiff', description='GeoTiff Raster')
+            Product.objects.create(name='CLC_Status', description='Corine Land Cover Status 1', file_format=format1)
+            Product.objects.create(name='CLC_Status', description='Corine Land Cover Status 1', file_format=format2)
+        files = File.objects.all()
+        if len(files) == 0:
+            File.objects.create(path = 'testdata/file_1.gdb',
+                                storage = '/mnt/cop15',
+                                version = '1',
+                                format = format1,
+                                layers = 'layer1, layer2')
+
+
         if 'statusLocation' in tree.attrib:
             js = json.dumps(result)
 
