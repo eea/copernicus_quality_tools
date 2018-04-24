@@ -7,13 +7,17 @@ Naming convention check.
 
 import re
 
+from qc_tool.wps.registry import register_check_function
+
+
 __author__ = "Jiri Tomicek"
 __copyright__ = "Copyright 2018, GISAT s.r.o., CZ"
 __email__ = "jiri.tomicek@gisat.cz"
 __status__ = "operational"
 
 
-def nc_check(source, template):
+@register_check_function(__name__, "File names match file naming conventions.")
+def run(filepath, params):
     """
     Check if string matches pattern.
     :param source: name of the file/layer
