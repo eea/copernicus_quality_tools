@@ -1,90 +1,40 @@
 {
-  "modify_date": "2018-12-04",
-  "version": "0.02",
-  "dataset": "CLC",
-  "layer": "cha",
   "description": "CORINE Land Cover change layer",
-  "checks":[
+  "parameters": {
+    "layer_prefix": "cha_",
+    "layer_regex": "cha_[0-9]{2}",
+    "layer_count": 1
+  },
+  "checks": [
     {
-      "check_id": "v1",
-      "check_name": "file format",
+      "check_ident": "v1",
       "required": true,
-      "parameters": [
-        {
-          "name": "format",
-          "value": [".gdb"],
-          "exceptions": []
-        }
-      ]
+      "parameters": {
+        "formats": [".gdb"]
+      }
     },
     {
-      "check_id": "v2",
-      "check_name": "file naming convention",
+      "check_ident": "v2",
       "required": true,
-      "parameters":[
-        {
-          "name": "file_name",
-          "value": "^clc[0-9][0-9][0-9][0-9]_[a-z][a-z].gdb$",
-          "dependencies": [],
-          "exceptions": []
-        },
-        {
-          "name": "feature_dataset_name",
-          "value": "^[a-z][a-z]$",
-          "dependencies":[],
-          "exceptions": []
-        },
-        {
-          "name": "feature_class_name",
-          "value": "^cha[0-9][0-9]_[a-z][a-z]$",
-          "dependencies":[
-            {
-              "name": "file_name",
-              "value": "[0-9][0-9][0-9][0-9]",
-              "position": [-2, null]
-            }
-          ],
-          "exceptions": []
-        }
-      ]
+      "parameters": {
+        "file_regex": "^clc[0-9][0-9][0-9][0-9]_[a-z][a-z].gdb$",
+        "feature_dataset_regex": "^[a-z][a-z]$",
+        "feature_class_regex": "^cha[0-9][0-9]_[a-z][a-z]$"
+      }
     },
     {
-      "check_id": "v4",
-      "check_name": "Coordinate Reference System (CRS)",
+      "check_ident": "v4",
       "required": false,
-      "parameters": [
-        {
-          "name": "EPSG",
-          "value": [3035],
-          "dependencies": [],
-          "exceptions": []
-        }
-      ]
+      "parameters": {
+        "epsg": [3035]
+      }
     },
     {
-     "check_id": "v11",
-      "check_name": "Minimum Mapping Unit (MMU)",
+      "check_ident": "v11",
       "required": false,
-      "parameters": [
-        {
-          "name": "area_ha",
-          "value": 5,
-          "exceptions":[
-            {
-              "name": "touching_boundary",
-              "parameters": [
-                {
-                  "boundary_layer": "path_to_boundary_layer_DOPLNIT!!!!!!!!!!!!!!!!"
-                }
-              ]
-            },
-            {
-              "name": "complex_change",
-              "parameters":[]
-            }
-          ]
-        }
-      ]
+      "parameters": {
+        "area_ha": 5
+      }
     }
   ]
 }

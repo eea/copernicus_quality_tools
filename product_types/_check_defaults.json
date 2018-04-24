@@ -1,14 +1,16 @@
 {
-  "gdal": {
-    ".tif": "GTiff",
-    ".jpg": "JPEG"
-  },
-  "ogr": {
-    ".shp": "ESRI Shapefile",
-    ".gdb": "OpenFileGDB",
-    ".geojson": "GeoJSON",
-    ".kml": "KML",
-    ".gml": "GML",
-    ".mdb": "ODBC"
+  "vr1": {
+    "gdal": {
+      ".tif": "GTiff",
+      ".jpg": "JPEG"
+    },
+    "ogr": {
+      ".shp": "ESRI Shapefile",
+      ".gdb": "OpenFileGDB",
+      ".geojson": "GeoJSON",
+      ".kml": "KML",
+      ".gml": "GML",
+      ".mdb": "ODBC"
+    }
   }
 }
