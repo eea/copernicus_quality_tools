@@ -29,7 +29,7 @@ def run_check(filepath, params):
     ds_extension = os.path.splitext(filepath)[1]
     if ds_extension not in params["format"]:
         return {"status": "failed",
-                "message": "forbidden file extension"}
+                "message": "forbidden file extension {:s}".format(ds_extension)}
 
     # try to open file with ogr drivers
     if ds_extension in params["drivers"]:
@@ -52,4 +52,4 @@ def run_check(filepath, params):
                     "message": "file format is invalid"}
     else:
         return {"status": "failed",
-                "message": "forbidden file extension (%s)" % ds_extension}
+                "message": "forbidden file extension {:s}".format(ds_extension)}
