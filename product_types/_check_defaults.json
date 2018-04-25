@@ -1,10 +1,12 @@
 {
-  "vr1": {
-    "gdal": {
+  "r1": {
+    "drivers": {
       ".tif": "GTiff",
       ".jpg": "JPEG"
-    },
-    "ogr": {
+    }
+  },
+  "v1": {
+    "drivers": {
       ".shp": "ESRI Shapefile",
       ".gdb": "OpenFileGDB",
       ".geojson": "GeoJSON",
