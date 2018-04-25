@@ -15,8 +15,8 @@ cd copernicus_quality_tools
 python3 -m venv env
 source env/bin/activate
 pip install -r requirements.txt
+pip install requests
 cd src/qc_tool/frontend
-python manage.py migrate
 python manage.py runserver
 ```
 
