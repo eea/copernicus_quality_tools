@@ -15,40 +15,44 @@ from django.http import JsonResponse
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 from .models import *
-from .forms import *
 
 from django.shortcuts import render
 
 # Create your views here.
+def index(request):
+
+    return render(request, 'dashboard/homepage.html', {'show_button': True})
+
 
 def new_check(request):
 
     return render(request, 'dashboard/new_check.html')
 
 
-def job_list(request):
-
-    form = JobForm()
-
-    return render(request, 'dashboard/homepage.html', {'form': form, 'show_button': True})
-
-    #jobs = Job.objects.filter(pk=1)
-    #js = json.dumps(jobs)
-    #return HttpResponse(js, content_type='application/json')
 
 def dictfetchall(cursor):
-    "Return all rows from a cursor as a dict"
+    """
+    helper function: Return all rows from a cursor as a dict
+    :param cursor: the database cursor
+    :return: the dictionary
+    """
     columns = [col[0] for col in cursor.description]
     return [
         dict(zip(columns, row))
         for row in cursor.fetchall()
         ]
 
+
 def tasks_json(request):
+    """
+    returns all checking jobs in JSON format
+    :param request:
+    :return:
+    """
 
     all_tasks = CheckingSession.objects.all()
 
-    # refreshing the status of the list
+    # refreshing the status of the list, this should be moved to a separate function
     namespaces = {'wps': 'http://www.opengis.net/wps/1.0.0', 'ows': 'http://schemas.opengis.net/ows/1.0.0'}
     for obj in all_tasks:
         status = obj.status
@@ -162,9 +166,7 @@ def tasks_json(request):
     else:
         data = {"total": cnt, "rows": []}
 
-    #data = list(CheckingSession.objects.values())
-    #cnt = len(data)
-    #resp = {"total": cnt, "rows": data}
+    # finally returning the data as a JSON request
     return JsonResponse(data, safe=False)
 
 

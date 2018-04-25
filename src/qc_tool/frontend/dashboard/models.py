@@ -6,24 +6,6 @@ from django.utils import timezone
 
 from django.utils.timezone import now
 
-# Create your models here.
-class Job(models.Model):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    name = models.CharField(max_length=200)
-    description = models.TextField()
-    status = models.TextField()
-    created_date = models.DateTimeField(
-            default=timezone.now)
-    finished_date = models.DateTimeField(
-            blank=True, null=True)
-
-    def publish(self):
-        self.published_date = timezone.now()
-        self.save()
-
-    def __str__(self):
-        return self.name + ' (' + self.status + ')'
-
 
 class FileFormat(models.Model):
     type = models.TextField()
@@ -52,6 +34,10 @@ class Product(models.Model):
 
 
 class CheckingSession(models.Model):
+    """
+    The CheckingSession model: this is the main model for keeping track of
+    the tasks
+    """
     user = models.ForeignKey('auth.User', null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     description = models.TextField()
