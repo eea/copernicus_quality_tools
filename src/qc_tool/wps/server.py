@@ -4,110 +4,76 @@
 
 
 import os
-import flask
+import sys
+from argparse import ArgumentParser
+from pathlib import Path
 
+import flask
 import pywps
 from pywps import Service
 
-import sys
-sys.path.append("/mnt/volume-docker")
-from processes.cop_sleep import CopSleep
+from qc_tool.wps.process import CopSleep
 
 
 app = flask.Flask(__name__)
 
-processes = [
-    CopSleep()
-]
-
-
-# For the process list on the home page
-
-process_descriptor = {}
-for process in processes:
-    abstract = process.abstract
-    identifier = process.identifier
-    process_descriptor[identifier] = abstract
-
-# This is, how you start PyWPS instance
-service = Service(processes, ['pywps.cfg'])
+service = None
 
 
 @app.route("/")
 def hello():
-    server_url = pywps.configuration.get_config_value("server", "url")
-    request_url = flask.request.url
-    return flask.render_template('home.html', request_url=request_url,
-                                 server_url=server_url,
-                                 process_descriptor=process_descriptor)
-
+    return flask.Response("It works!", content_type="text/plain")
 
 @app.route('/wps', methods=['GET', 'POST'])
 def wps():
-
     return service
 
-
-@app.route('/outputs/'+'<filename>')
+@app.route("/output/<filename>")
 def outputfile(filename):
-    targetfile = os.path.join('outputs', filename)
-    if os.path.isfile(targetfile):
-        file_ext = os.path.splitext(targetfile)[1]
-        with open(targetfile, mode='rb') as f:
-            file_bytes = f.read()
-        mime_type = None
-        if 'xml' in file_ext:
-            mime_type = 'text/xml'
-        return flask.Response(file_bytes, content_type=mime_type)
+    wps_output_dir = Path(pywps.configuration.get_config_value("server", "outputpath"))
+    # FIXME: ensure the resulting path can not be rerouted to other tree by using "..".
+    filepath = wps_output_dir.joinpath(filename)
+    if filepath.is_file():
+        file_bytes = filepath.read_bytes()
+        if ".xml" == filepath.suffix:
+            content_type = 'text/xml'
+        else:
+            content_type = None
+        return flask.Response(file_bytes, content_type=content_type)
     else:
         flask.abort(404)
 
+def run_server():
+    global service
 
-@app.route('/static/'+'<filename>')
-def staticfile(filename):
-    targetfile = os.path.join('static', filename)
-    if os.path.isfile(targetfile):
-        with open(targetfile, mode='rb') as f:
-            file_bytes = f.read()
-        mime_type = None
-        return flask.Response(file_bytes, content_type=mime_type)
-    else:
-        flask.abort(404)
+    host = os.environ.get("WPS_HOST", "127.0.0.1")
+    port = int(os.environ.get("WPS_PORT", "5300"))
+    wps_dir = Path(os.environ.get("WPS_DIR", "/mnt/wps"))
+    wps_output_dir = wps_dir.joinpath("output")
+    wps_output_dir.mkdir(exist_ok=True)
+    wps_work_dir = wps_dir.joinpath("work")
+    wps_work_dir.mkdir(exist_ok=True)
+    wps_log_dir = wps_dir.joinpath("log")
+    wps_log_dir.mkdir(exist_ok=True)
+
+    processes = [CopSleep()]
+    config_filepaths = [str(Path(__file__).with_name("pywps.cfg"))]
+    # FIXME:
+    # The same time service reads configuration it opens log file immediately.
+    # So we can not adjust the logging later.
+    # Moreover, the service fails immediately while the path to log file
+    # specified in config file does not even exist yet.
+    service = Service(processes, [])
+
+    config = pywps.configuration.CONFIG
+    config.set("server", "url", "http://{:s}:{:d}/wps".format(host, port))
+    config.set("server", "outputurl", "http://{:s}:{:d}/output".format(host, port))
+    config.set("server", "outputpath", str(wps_output_dir))
+    config.set("server", "workdir", str(wps_work_dir))
+    config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))
+
+    app.run(threaded=True, host=host, port=port)
+
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="""Script for starting an example PyWPS
-                       instance with sample processes""",
-        epilog="""Do not use this service in a production environment.
-         It's intended to be running in test environment only!
-        For more documentation, visit http://pywps.org/doc
-        """
-        )
-    parser.add_argument('-d', '--daemon',
-                        action='store_true', help="run in daemon mode")
-    parser.add_argument('-a','--all-addresses',
-                        action='store_true', help="run flask using IPv4 0.0.0.0 (all network interfaces),"  +  
-                            "otherwise bind to 127.0.0.1 (localhost).  This maybe necessary in systems that only run Flask") 
-    args = parser.parse_args()
-    
-    if args.all_addresses:
-        bind_host='0.0.0.0'
-    else:
-        bind_host='127.0.0.1'
-
-    if args.daemon:
-        pid = None
-        try:
-            pid = os.fork()
-        except OSError as e:
-            raise Exception("%s [%d]" % (e.strerror, e.errno))
-
-        if (pid == 0):
-            os.setsid()
-            app.run(threaded=True,host=bind_host)
-        else:
-            os._exit(0)
-    else:
-        app.run(threaded=True,host=bind_host)
+    run_server()
