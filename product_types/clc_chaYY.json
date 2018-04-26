@@ -15,7 +15,7 @@
     },
     {
       "check_ident": "v2",
-      "required": true,
+      "required": false,
       "parameters": {
         "file_regex": "^clc[0-9][0-9][0-9][0-9]_[a-z][a-z].gdb$",
         "feature_dataset_regex": "^[a-z][a-z]$",

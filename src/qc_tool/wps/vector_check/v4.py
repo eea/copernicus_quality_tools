@@ -47,9 +47,10 @@ def run_check(filepath, params):
     regex = re.compile(params["layer_regex"])
     layers_prefix = [layer.GetName() for layer in dsopen if params["layer_prefix"] in layer.GetName()]
     layers_regex = [layer for layer in layers_prefix if bool(regex.match(layer.lower()))]
-    if not list(set(layers_prefix) - set(layers_regex)) and not len(layers_regex) == int(params["layer_count"]):
+    if not (list(set(layers_prefix) - set(layers_regex)) or len(layers_regex) == int(params["layer_count"])):
+        print (list(set(layers_prefix) - set(layers_regex)), len(layers_regex))
         return {"status": "failed",
-                "message": "Number of matching layers {:d} does not correspond with declared number of layers({:d})".format(
+                "message": "Number of matching layers ({:d}) does not correspond with declared number of layers({:d})".format(
                     len(layers_regex), int(params["layer_count"]))}
 
     # check CRS of all matching layers
@@ -66,6 +67,6 @@ def run_check(filepath, params):
         layer_results = ', '.join(
             "layer {!s}: {!r}".format(key, val) for (key, val) in {ln: res[ln]["message"] for ln in res}.items())
 
-        res_message = "the CRS check failed {:s}".format(layer_results)
+        res_message = "the CRS check failed ({:s})".format(layer_results)
         return {"status": "failed",
                 "message": res_message}

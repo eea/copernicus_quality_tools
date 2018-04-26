@@ -9,6 +9,10 @@ from qc_tool.wps.registry import get_check_function
 
 import qc_tool.wps.common_check.dummy
 import qc_tool.wps.common_check.vr1
+# import raster_check.r1
+# import raster_check.r4
+# import vector_check.v1
+# import vector_check.v4
 
 
 
