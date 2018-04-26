@@ -13,6 +13,7 @@ import pywps
 from pywps import Service
 
 from qc_tool.wps.process import CopSleep
+from qc_tool.wps.process import RunChecks
 
 
 app = flask.Flask(__name__)
@@ -56,7 +57,7 @@ def run_server():
     wps_log_dir = wps_dir.joinpath("log")
     wps_log_dir.mkdir(exist_ok=True)
 
-    processes = [CopSleep()]
+    processes = [CopSleep(), RunChecks()]
     config_filepaths = [str(Path(__file__).with_name("pywps.cfg"))]
     # FIXME:
     # The same time service reads configuration it opens log file immediately.

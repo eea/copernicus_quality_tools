@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 
-from pathlib import PosixPath
+import json
+from pathlib import Path
 from time import sleep
 
 from pywps.app.Process import Process
 from pywps.inout.inputs import LiteralInput
 from pywps.inout.outputs import LiteralOutput
+
+from qc_tool.wps.dispatch import dispatch
 
 
 class CopSleep(Process):
@@ -51,7 +54,7 @@ class CopSleep(Process):
         if "exit_ok" in request.inputs:
             params["exit_ok"] = request.inputs["exit_ok"][0].data
         if "filepath" in request.inputs:
-            params["filepath"] = PosixPath(request.inputs["filepath"][0].data)
+            params["filepath"] = Path(request.inputs["filepath"][0].data)
         if "layer_name" in request.inputs:
             params["layer_name"] = request.inputs["layer_name"][0].data
         if "product_type_name" in request.inputs:
@@ -70,3 +73,44 @@ class CopSleep(Process):
             return response
         else:
             raise Exception("Cop Sleep Process raised exception intentionally.")
+
+
+class RunChecks(Process):
+    # There is also keywork parameter "default" in LiteralInput constructor, however it has no effect.
+    INPUTS = [LiteralInput("filepath", "Local filesystem path to the product to be checked.",
+                           data_type="string", min_occurs=1, max_occurs=1),
+              LiteralInput("product_type_name", "The type of the product denoting group of checks to be performed.",
+                           data_type="string", min_occurs=1, max_occurs=1),
+              LiteralInput("optional_check_idents", "Comma separated identifiers of optional checks to be performed.",
+                           data_type="string", min_occurs=0, max_occurs=1)]
+    OUTPUTS = [LiteralOutput("result", "Result of passed checks in json format.", data_type="string")]
+
+    def __init__(self):
+        super().__init__(self._handler,
+                         identifier="run_checks",
+                         version="None",
+                         title="Run checks process",
+                         abstract="Process performing qc tool checks.",
+                         inputs=self.INPUTS,
+                         outputs=self.OUTPUTS,
+                         store_supported=True,
+                         status_supported=True)
+
+    def _handler(self, request, response):
+        # Prepare parameters.
+        filepath = Path(request.inputs["filepath"][0].data)
+        product_type_name = request.inputs["product_type_name"][0].data
+        if "optional_check_idents" in request.inputs:
+            optional_check_idents = request.inputs["optional_check_idents"][0].data
+            optional_check_idents = optional_check_idents.split(",")
+        else:
+            optional_check_idents = []
+
+        # Call dispatch.
+        params = {}
+        def update_result(suite_result):
+            print("UPDATE!!!!!!!!!!!")
+            response.outputs["result"].data = json.dumps(suite_result)
+        print("DISPATCH!!!!!!!!!!!!!!!!!!!")
+        dispatch(filepath, product_type_name, optional_check_idents, params, update_result)
+        return response

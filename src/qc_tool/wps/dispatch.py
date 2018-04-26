@@ -5,14 +5,15 @@ import json
 from os.path import normpath
 from pathlib import Path
 
-from registry import get_check_function
+from qc_tool.wps.registry import get_check_function
 
-import common_check.vr1
+import qc_tool.wps.common_check.dummy
+import qc_tool.wps.common_check.vr1
 
 
 
 # FIXME: such normalization should be removed in python3.6.
-QC_TOOL_HOME = Path(__file__).joinpath("../../..")
+QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../../.."))))
 PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
 CHECK_DEFAULTS_FILENAME = "_check_defaults.json"
 
@@ -24,10 +25,10 @@ def read_product_types(product_type_dir):
     So for example filenames starting with "_", "." are excluded."""
     raise TodoException()
 
-def dispatch(filepath, product_type_name, optional_check_idents):
+def dispatch(filepath, product_type_name, optional_check_idents, params=None, update_result=None):
     # Read configurations.
     check_defaults_filepath = PRODUCT_TYPES_DIR.joinpath(CHECK_DEFAULTS_FILENAME)
-    check_defaults = json.loads(common_config_filepath.read_text())
+    check_defaults = json.loads(check_defaults_filepath.read_text())
     product_type_filepath = PRODUCT_TYPES_DIR.joinpath("{:s}.json".format(product_type_name))
     product_type = json.loads(product_type_filepath.read_text())
 
@@ -40,7 +41,7 @@ def dispatch(filepath, product_type_name, optional_check_idents):
     if len(incorrect_check_idents) > 0:
         raise ServiceException("Incorrect checks passed, product_type_name={:s}, incorrect_check_idents={:s}.".format(repr(product_type_name), repr(sorted(incorrect_check_idents))))
 
-    # Compile check suite to be performed.
+    # Compile suite of checks to be performed.
     check_suite = [check
                    for check in product_type["checks"]
                    if check["required"] or check["check_ident"] in optional_check_idents]
@@ -49,23 +50,24 @@ def dispatch(filepath, product_type_name, optional_check_idents):
     suite_result = {}
     for check in check_suite:
         # Prepare parameteres.
-        params = {}
+        check_params = {}
+        if params is not None:
+            check_params.update(params)
         if "parameters" in product_type:
-            params.update(product_type["parameters"])
+            check_params.update(product_type["parameters"])
         if check["check_ident"] in check_defaults:
-            params.update(check_defaults[check["check_ident"]])
+            check_params.update(check_defaults[check["check_ident"]])
         if "parameters" in check:
-            params.update(check["parameters"])
+            check_params.update(check["parameters"])
 
         # Run the check.
         func = get_check_function(check["check_ident"])
-        check_result = func(filepath, params)
-        if "fatal_error" in check_result:
-            suite_result.update(check_result)
-            return suite_result
-        else:
-            suite_result[check["check_ident"]] = check_result
-    return suite_result
+        check_result = func(filepath, check_params)
+        suite_result[check["check_ident"]] = check_result
+        if update_result is not None:
+            update_result(suite_result)
+        if check_result["status"] == "fatal":
+            break
 
 
 class ServiceException(Exception):
