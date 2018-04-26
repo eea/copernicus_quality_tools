@@ -21,6 +21,50 @@ $(document).ready(function() {
         document.getElementById("select_product_type").innerHTML = options;
     });
 
+    // when product type is changed
+    $( "#select_product_type" ).change(function() {
+        //populate product type info
+        var optionSelected = $("option:selected", this);
+        var valueSelected = this.value;
+        var detail_url = "product_type_details/" + valueSelected;
+        console.log(detail_url);
+        $.getJSON(detail_url , function(obj) {
+            var checks = obj.product_type.checks
+            $("#tbl_check_details > tbody").html("");
+            var tbody = ''
+            for (var i=0;i<checks.length;i++){
+                tbody += "<tr><td>" + checks[i].check_ident + "</td>" + "<td></td>";
+                var check_params = checks[i].parameters;
+                console.log(check_params);
+                if (check_params) {
+                    var param_values = "";
+                    var num_params = 0;
+                    $.each(check_params, function(key, value) {
+                        if (num_params > 0) {
+                            param_values += ", ";
+                        }
+                        param_values += key + ": " + value;
+                        num_params += 1;
+                    });
+
+                    console.log(param_values);
+                    tbody += "<td>" + param_values + "</td>";
+                } else {
+                    tbody += "<td></td>";
+                }
+                tbody += "<td>" + checks[i].required + "</td>";
+                tbody += "<td><input type=\"checkbox\" checked";
+                if (checks[i].required) {
+                    tbody += " disabled";
+                }
+                tbody += "></td></tr>";
+                //console.log(checks[i].check_ident);
+            }
+            //console.log(tbody);
+            $("#tbl_check_details > tbody").html(tbody);
+        });
+    });
+
 });
 
 $('#tbl-runs').bootstrapTable({

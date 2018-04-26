@@ -85,6 +85,20 @@ def get_product_types(request):
     return JsonResponse({'product_types': out_dict})
 
 
+def get_product_type_details(request, product_type):
+    """
+    returns a table of details about the product type
+    The files are loaded from the directory specified in settings.PRODUCT_TYPES_DIR
+    :param request:
+    :return: list of the product types in JSON format
+    """
+    prod_file = os.path.join(settings.PRODUCT_TYPES_DIR, product_type + ".json")
+    print(prod_file)
+    prod_path = Path(prod_file)
+    prod_info = json.loads(prod_path.read_text())
+    return JsonResponse({'product_type': prod_info})
+
+
 def tasks_json(request):
     """
     returns all checking jobs in JSON format
@@ -237,7 +251,7 @@ def run_wps_execute(request):
     else:
         random_exit_ok = 'false'
 
-    wps_server = settings['WPS_URL'] # "http://192.168.2.72:5000"
+    wps_server = settings.WPS_URL # "http://192.168.2.72:5000"
     wps_base = wps_server + "/wps?service=WPS&version=1.0.0&request=Execute&identifier=cop_sleep"
     wps_url = wps_base + "&DataInputs=delay={0};cycles={1};exit_ok={2};filepath={3};layer_name={4};product_type_name={5}&lineage=true&status=true&storeExecuteResponse=true".format(
         random_delay, random_cycles, random_exit_ok, filepath, product_type_name, layer_name

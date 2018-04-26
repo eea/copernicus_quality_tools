@@ -49,17 +49,44 @@
                                         <option value="ua_raster">Urban Atlas Raster</option>
                                     </select>
                                 </div>
-                                <!--
-                                <div class="form-group">
-                                    <label for="select_file">Select layer</label>
-                                    <span>  - </span>
-                                    <select id="select_layer" class="form-control">
-                                        <option value="layer_1">layer_1</option>
-                                        <option value="layer_2">layer_2</option>
-                                        <option value="layer_3">layer_3</option>
-                                    </select>
-                                </div>
-                                -->
+
+
+                                <table id="tbl_check_details" class="table" data-toggle="table" data-show-refresh="false" data-show-toggle="false" data-toolbar="#runs-bar" data-toolbar-align="left" data-search-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
+                                    <thead>
+                                    <tr>
+                                        <th data-field="name" data-sortable="false">Check</th>
+                                        <th data-field="product_name" data-sortable="false">Description</th>
+                                        <th data-field="start" data-sortable="false">Parameters</th>
+                                        <th data-field="end" data-sortable="false">Required</th>
+                                        <th data-field="percent_complete" data-sortable="false">Selected</th>
+                                    </tr>
+                                    </thead>
+                                   <tbody>
+                                   <tr>
+                                        <td>V1</td>
+                                        <td>File naming convention check</td>
+                                        <td>Parameters</td>
+                                        <td>Yes</td>
+                                        <td><input type="checkbox" checked disabled></td>
+                                   </tr>
+                                   <tr>
+                                        <td>V1</td>
+                                        <td>File format check</td>
+                                        <td>Parameters</td>
+                                        <td>No</td>
+                                        <td><input type="checkbox" checked></td>
+                                   </tr>
+                                   <tr>
+                                        <td>V11</td>
+                                        <td>MMU check</td>
+                                        <td>area_ha=5</td>
+                                        <td>No</td>
+                                        <td><input type="checkbox" checked></td>
+                                   </tr>
+                                   </tbody>
+                                </table>
+                                <br>
+
                                 <button class="btn btn-success" type="button" onclick="run_process();">
                                     <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
                                     Run the Checks!
