@@ -14,6 +14,11 @@ import qc_tool.wps.common_check.vr1
 # import vector_check.v1
 # import vector_check.v4
 
+import qc_tool.wps.raster_check.r1
+import qc_tool.wps.raster_check.r4
+import qc_tool.wps.vector_check.v1
+import qc_tool.wps.vector_check.v4
+
 
 
 # FIXME: such normalization should be removed in python3.6.
