@@ -109,8 +109,6 @@ class RunChecks(Process):
         # Call dispatch.
         params = {}
         def update_result(suite_result):
-            print("UPDATE!!!!!!!!!!!")
             response.outputs["result"].data = json.dumps(suite_result)
-        print("DISPATCH!!!!!!!!!!!!!!!!!!!")
         dispatch(filepath, product_type_name, optional_check_idents, params, update_result)
         return response

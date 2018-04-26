@@ -26,7 +26,7 @@
       "check_ident": "v4",
       "required": false,
       "parameters": {
-          "epsg": [3035]
+          "epsg": [3035, 23033]
       }
     },
     {

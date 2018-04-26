@@ -9,7 +9,7 @@ import ogr
 import re
 import osr
 
-from registry import register_check_function
+from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__, "CRS of layer expressed as EPSG code match reference EPSG code.")

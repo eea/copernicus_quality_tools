@@ -9,15 +9,11 @@ from qc_tool.wps.registry import get_check_function
 
 import qc_tool.wps.common_check.dummy
 import qc_tool.wps.common_check.vr1
-import raster_check.r1
-import raster_check.r4
-import vector_check.v1
-import vector_check.v4
 
-# import qc_tool.wps.raster_check.r1
-# import qc_tool.wps.raster_check.r4
-# import qc_tool.wps.vector_check.v1
-# import qc_tool.wps.vector_check.v4
+import qc_tool.wps.raster_check.r1
+import qc_tool.wps.raster_check.r4
+import qc_tool.wps.vector_check.v1
+import qc_tool.wps.vector_check.v4
 
 
 
@@ -71,11 +67,14 @@ def dispatch(filepath, product_type_name, optional_check_idents, params=None, up
 
         # Run the check.
         func = get_check_function(check["check_ident"])
-        check_result = func(filepath, check_params)
+        # FIXME: currently check functions use os.path for path manipulation
+        #        while upper server stack uses pathlib.
+        #        it is encouraged to choose one or another.
+        check_result = func(str(filepath), check_params)
         suite_result[check["check_ident"]] = check_result
         if update_result is not None:
             update_result(suite_result)
-        if check_result["status"] == "fatal":
+        if check_result["status"] == "aborted":
             break
 
 

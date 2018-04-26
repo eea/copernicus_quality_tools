@@ -14,7 +14,7 @@
     },
     {
       "check_ident": "r2",
-      "required": true
+      "required": false
     },
     {
       "check_ident": "r4",
