@@ -14,6 +14,7 @@ from pathlib import Path
 import flask
 import pywps
 from pywps import Service
+from pywps.configuration import get_config_value
 
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
@@ -53,7 +54,7 @@ def outputfile(filename):
 
 @app.route("/product_types")
 def product_types():
-    product_type_regex = re.compile("[a-z].*\.json$")
+    product_type_regex = re.compile(r"[a-z].*\.json$")
     product_type_filepaths = [path
                               for path in PRODUCT_TYPES_DIR.iterdir()
                               if product_type_regex.match(path.name) is not None]
@@ -64,6 +65,18 @@ def product_types():
         product_type_definition = json.loads(product_type_definition)
         product_types[product_type_name] = product_type_definition
     return flask.Response(json.dumps(product_types), content_type="application/json")
+
+@app.route("/status_document_urls")
+def status_document_urls():
+    status_document_regex = re.compile(r"[a-z0-9-]{36}\.xml")
+    wps_output_dir = Path(get_config_value("server", "outputpath"))
+    wps_output_url = get_config_value("server", "outputurl")
+    # FIXME: compose the url by dedicated functions instead of such plain way.
+    status_document_urls = ["{:s}/{:s}".format(wps_output_url, path.name)
+                            for path in wps_output_dir.iterdir()
+                            if status_document_regex.match(path.name) is not None]
+    return flask.Response(json.dumps(status_document_urls), content_type="application/json")
+
 
 def run_server():
     global service
