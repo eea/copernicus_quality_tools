@@ -30,10 +30,18 @@
                             <h4>Parameters</h4>
                             <form>
                                 <fieldset></fieldset>
+
                                 <div class="form-group">
-                                    <label for="select_product">Product Type</label>
+                                    <label for="select_file">Select File to Check</label>
                                     <span>  - </span>
-                                    <select id="select_product" class="form-control">
+                                    <select id="select_file" class="form-control">
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="select_product_type">Select Product Type</label>
+                                    <span>  - </span>
+                                    <select id="select_product_type" class="form-control">
                                         <!-- read this from the WPS response -->
                                         <option value="clc_vector">CLC Vector</option>
                                         <option value="clc_raster">CLC Raster</option>
@@ -41,17 +49,7 @@
                                         <option value="ua_raster">Urban Atlas Raster</option>
                                     </select>
                                 </div>
-                                <div class="form-group">
-                                    <label for="select_file">File to Check</label>
-                                    <span>  - </span>
-                                    <select id="select_file" class="form-control">
-                                        <!-- read this from the DB of uploaded files -->
-                                        <option value="file_1">clc_malta.gdb</option>
-                                        <option value="file_2">clc_slovakia.gdb</option>
-                                        <option value="file_3">test_file_1.gdb</option>
-                                        <option value="file_4">test_file_2.gdb</option>
-                                    </select>
-                                </div>
+                                <!--
                                 <div class="form-group">
                                     <label for="select_file">Select layer</label>
                                     <span>  - </span>
@@ -61,7 +59,7 @@
                                         <option value="layer_3">layer_3</option>
                                     </select>
                                 </div>
-
+                                -->
                                 <button class="btn btn-success" type="button" onclick="run_process();">
                                     <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
                                     Run the Checks!

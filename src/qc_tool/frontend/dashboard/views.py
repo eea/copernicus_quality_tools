@@ -3,12 +3,15 @@ from __future__ import unicode_literals
 
 import os
 import json
+
 import random
 import requests
 import sys
 import time
 import traceback
+from pathlib import Path
 from xml.etree import ElementTree
+from django.conf import settings
 from django.db import connection
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -41,6 +44,45 @@ def dictfetchall(cursor):
         dict(zip(columns, row))
         for row in cursor.fetchall()
         ]
+
+
+def get_files(request):
+    """
+    returns a list of all files that are available for checking.
+    The files are loaded from the directory specified in settings.CHECKED_FILES_DIR
+    :param request:
+    :return: list of the files in JSON format
+    """
+    out_list = []
+    for root, dirs, files in os.walk(settings.CHECKED_FILES_DIR):
+        for filepath in files:
+            if filepath.endswith('.tif') or filepath.endswith('.zip'):
+                out_list.append(filepath)
+        for dirpath in dirs:
+            if dirpath.endswith('.gdb'):
+                out_list.append(dirpath)
+    return JsonResponse({'files': out_list})
+
+
+def get_product_types(request):
+    """
+    returns a list of all product types that are available for checking.
+    The files are loaded from the directory specified in settings.PRODUCT_TYPES_DIR
+    :param request:
+    :return: list of the product types in JSON format
+    """
+    out_dict = {}
+    for root, dirs, files in os.walk(settings.PRODUCT_TYPES_DIR):
+        for filepath in files:
+            if filepath.endswith('.json') and not os.path.basename(filepath).startswith('_'):
+                product_type_name = os.path.splitext(filepath)[0]
+                filepath_abs = os.path.join(root, filepath)
+
+                prod_path = Path(filepath_abs)
+                prod_info = json.loads(prod_path.read_text())
+                prod_desc = prod_info['description']
+                out_dict[product_type_name] = prod_desc
+    return JsonResponse({'product_types': out_dict})
 
 
 def tasks_json(request):
@@ -195,7 +237,7 @@ def run_wps_execute(request):
     else:
         random_exit_ok = 'false'
 
-    wps_server = "http://192.168.2.72:5000"
+    wps_server = settings['WPS_URL'] # "http://192.168.2.72:5000"
     wps_base = wps_server + "/wps?service=WPS&version=1.0.0&request=Execute&identifier=cop_sleep"
     wps_url = wps_base + "&DataInputs=delay={0};cycles={1};exit_ok={2};filepath={3};layer_name={4};product_type_name={5}&lineage=true&status=true&storeExecuteResponse=true".format(
         random_delay, random_cycles, random_exit_ok, filepath, product_type_name, layer_name

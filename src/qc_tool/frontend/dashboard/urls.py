@@ -4,6 +4,8 @@ from dashboard import views
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('files', views.get_files, name='files'),
+    path('product_types', views.get_product_types, name='product_types'),
     path('run_wps_execute', views.run_wps_execute, name='run_wps_execute'),
     path('new', views.new_check, name='new_check'),
     path('checking_tasks.json', views.tasks_json, name='tasks_json')

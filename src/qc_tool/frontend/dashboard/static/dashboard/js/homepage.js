@@ -1,5 +1,26 @@
 $(document).ready(function() {
 
+    $.getJSON("files", function(obj) {
+
+        var filepaths = obj.files;
+
+        for (var i=0;i<filepaths.length;i++){
+           $('<option/>').val(filepaths[i]).html(filepaths[i]).appendTo('#select_file');
+        }
+    });
+
+    $.getJSON("product_types", function(obj) {
+
+        var prods = obj.product_types;
+
+        var options = '';
+        $.each(prods, function(key, value){
+            options += '<option value=' + key + '>' + value + '</option>';
+        });
+        document.getElementById("select_product_type").options.length = 0;
+        document.getElementById("select_product_type").innerHTML = options;
+    });
+
 });
 
 $('#tbl-runs').bootstrapTable({
