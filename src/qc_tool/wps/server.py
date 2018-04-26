@@ -3,9 +3,12 @@
 # This module is contracted version of <https://github.com/geopython/pywps-flask/blob/master/demo.py>.
 
 
+import json
 import os
+import re
 import sys
 from argparse import ArgumentParser
+from os.path import normpath
 from pathlib import Path
 
 import flask
@@ -14,6 +17,10 @@ from pywps import Service
 
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
+
+
+QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../../.."))))
+PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
 
 
 app = flask.Flask(__name__)
@@ -43,6 +50,20 @@ def outputfile(filename):
         return flask.Response(file_bytes, content_type=content_type)
     else:
         flask.abort(404)
+
+@app.route("/product_types")
+def product_types():
+    product_type_regex = re.compile("[a-z].*\.json$")
+    product_type_filepaths = [path
+                              for path in PRODUCT_TYPES_DIR.iterdir()
+                              if product_type_regex.match(path.name) is not None]
+    product_types = {}
+    for filepath in product_type_filepaths:
+        product_type_name = filepath.stem
+        product_type_definition = filepath.read_text()
+        product_type_definition = json.loads(product_type_definition)
+        product_types[product_type_name] = product_type_definition
+    return flask.Response(json.dumps(product_types), content_type="application/json")
 
 def run_server():
     global service
