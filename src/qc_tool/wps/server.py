@@ -81,8 +81,9 @@ def status_document_urls():
 def run_server():
     global service
 
+    bind_address = os.environ.get("WPS_BIND", "127.0.0.1")
     host = os.environ.get("WPS_HOST", "127.0.0.1")
-    port = int(os.environ.get("WPS_PORT", "5300"))
+    port = int(os.environ.get("WPS_PORT", "5000"))
     wps_dir = Path(os.environ.get("WPS_DIR", "/mnt/wps"))
     wps_output_dir = wps_dir.joinpath("output")
     wps_output_dir.mkdir(exist_ok=True)
@@ -107,7 +108,7 @@ def run_server():
     config.set("server", "workdir", str(wps_work_dir))
     config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))
 
-    app.run(threaded=True, host=host, port=port)
+    app.run(threaded=True, host=bind_address, port=port)
 
 
 if __name__ == "__main__":
