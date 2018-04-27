@@ -1,4 +1,4 @@
-{% extends "dashboard/base-jobs.html" %}
+{% extends "dashboard/base.html" %}
 {% load staticfiles sekizai_tags %}
 
 {% block menu %}
@@ -28,20 +28,20 @@
                         </div>
                         <div class="panel-body">
                             <h4>Parameters</h4>
-                            <form>
+                            <form id = "check_form">
                                 <fieldset></fieldset>
 
                                 <div class="form-group">
                                     <label for="select_file">Select File to Check</label>
                                     <span>  - </span>
-                                    <select id="select_file" class="form-control">
+                                    <select id="select_file" name="select_file" class="form-control">
                                     </select>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="select_product_type">Select Product Type</label>
                                     <span>  - </span>
-                                    <select id="select_product_type" class="form-control">
+                                    <select id="select_product_type" name="select_product_type" class="form-control">
                                         <!-- read this from the WPS response -->
                                         <option value="clc_vector">CLC Vector</option>
                                         <option value="clc_raster">CLC Raster</option>
@@ -49,7 +49,6 @@
                                         <option value="ua_raster">Urban Atlas Raster</option>
                                     </select>
                                 </div>
-
 
                                 <table id="tbl_check_details" class="table" data-toggle="table" data-show-refresh="false" data-show-toggle="false" data-toolbar="#runs-bar" data-toolbar-align="left" data-search-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
                                     <thead>
@@ -62,32 +61,11 @@
                                     </tr>
                                     </thead>
                                    <tbody>
-                                   <tr>
-                                        <td>V1</td>
-                                        <td>File naming convention check</td>
-                                        <td>Parameters</td>
-                                        <td>Yes</td>
-                                        <td><input type="checkbox" checked disabled></td>
-                                   </tr>
-                                   <tr>
-                                        <td>V1</td>
-                                        <td>File format check</td>
-                                        <td>Parameters</td>
-                                        <td>No</td>
-                                        <td><input type="checkbox" checked></td>
-                                   </tr>
-                                   <tr>
-                                        <td>V11</td>
-                                        <td>MMU check</td>
-                                        <td>area_ha=5</td>
-                                        <td>No</td>
-                                        <td><input type="checkbox" checked></td>
-                                   </tr>
                                    </tbody>
                                 </table>
                                 <br>
 
-                                <button class="btn btn-success" type="button" onclick="run_process();">
+                                <button class="btn btn-success" type="button" onclick="run_process()">
                                     <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
                                     Run the Checks!
                                 </button>
@@ -124,6 +102,6 @@
 
     {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap3-dialog/1.35.4/js/bootstrap-dialog.min.js" type="text/javascript"></script>{% endaddtoblock %}
 
-    {% addtoblock "js" %}<script src="{% static 'dashboard/js/homepage.js' %}" type="text/javascript"></script>{% endaddtoblock %}
+    {% addtoblock "js" %}<script src="{% static 'dashboard/js/start_checking.js' %}" type="text/javascript"></script>{% endaddtoblock %}
 
 {% endblock content %}

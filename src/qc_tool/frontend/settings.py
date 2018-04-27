@@ -18,7 +18,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #QC_TOOL_RUNTIME_DIR = os.environ('QC_TOOL_RUNTIME_DIR')
 
 # The WPS server url [use 192.168.2.72 for GISAT vm, http://172.17.0.2:5000 for Docker]
-WPS_URL = 'http://192.168.2.72:5000'
+WPS_SERVER = 'http://192.168.2.72:5000'
 
 
 # Quick-start development settings - unsuitable for production
@@ -30,7 +30,7 @@ SECRET_KEY = '+a8^8cw3%v-+qm8&+4nylx0mkn4tu_7548+#7orp%z5)vxk^r&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.pythonanywhere.com']
+ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1', '.pythonanywhere.com']
 
 
 # Application definition
@@ -75,7 +75,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'sekizai.context_processors.sekizai',
                 'django.template.context_processors.static',
-                'django_settings_export.settings_export'
             ],
         },
     },

@@ -1,4 +1,4 @@
-{% extends "dashboard/base-jobs.html" %}
+{% extends "dashboard/base.html" %}
 {% load staticfiles sekizai_tags %}
 
 {% block content %}
@@ -26,13 +26,14 @@
                         <table id="tbl-runs" class="table" data-toggle="table" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-bar" data-toolbar-align="left" data-search-align="left" data-show-filter="true" data-smart-display="true" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="server">
                             <thead>
                             <tr>
-                                <th data-field="name" data-sortable="true">Checking Task Name</th>
-                                <th data-field="path" data-sortable="true">File Path</th>
-                                <th data-field="product_name" data-sortable="true">Product Type</th>
-                                <th data-field="start" data-sortable="true">Start</th>
-                                <th data-field="end" data-sortable="true">End</th>
+                                <th data-field="uid" data-sortable="true" data-formatter="checkingDetailFormatter">Checking Run ID</th>
+                                <th data-field="filepath" data-sortable="true">File Path</th>
+                                <th data-field="product_type_name" data-sortable="true">Product Type</th>
+                                <th data-field="start_time" data-sortable="true">Start</th>
+                                <th data-field="end_time" data-sortable="true">End</th>
                                 <th data-field="percent_complete" data-sortable="false">% Complete</th>
-                                <th data-field="status" data-sortable="true">Status</th>
+                                <!-- <th data-field="status" data-sortable="true">Status</th>-->
+                                <th data-field="overall_result" data-sortable="true">Result</th>
                             </tr>
                             </thead>
                            <tbody>

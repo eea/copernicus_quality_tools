@@ -25,9 +25,9 @@ class File(models.Model):
 
 
 class Product(models.Model):
-    name = models.TextField()
+    name = models.TextField(unique=True)
     description = models.TextField()
-    file_format = models.ForeignKey(FileFormat, on_delete=models.CASCADE)
+    file_format = models.ForeignKey(FileFormat, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
