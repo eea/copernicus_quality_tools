@@ -35,4 +35,4 @@ def run(filepath, params):
                 "message": "Name conforms to the naming convention"}
     else:
         return {"status": "FAILED",
-                "message": "Name does not conform to the naming convention"}
+                "message": "Name does not conform to the naming convention"} 

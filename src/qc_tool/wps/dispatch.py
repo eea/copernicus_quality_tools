@@ -11,8 +11,10 @@ import qc_tool.wps.common_check.dummy
 import qc_tool.wps.common_check.vr1
 
 import qc_tool.wps.raster_check.r1
+import qc_tool.wps.raster_check.r2
 import qc_tool.wps.raster_check.r4
 import qc_tool.wps.vector_check.v1
+import qc_tool.wps.vector_check.v2
 import qc_tool.wps.vector_check.v4
 
 
