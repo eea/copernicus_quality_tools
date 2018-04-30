@@ -1,0 +1,86 @@
+{% extends "dashboard/base.html" %}
+{% load staticfiles %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />
+{% endblock css %}
+
+{% block content %}
+
+    <div class="container-fluid main" style="padding-top: 70px;">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="{% url 'index' %}">Copernicus QC Tool</a></li>
+              <li class="active"><a href="">Results</a></li>
+            </ol>
+
+            <div class="main">
+                <!-- Nav tabs -->
+                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Result of checking: {{ result.uuid }}</a></li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <p role="tabpanel" class="tab-pane active" id="recent">
+
+                    <div class="panel panel-default"><div class="panel-body">
+                    <dl class="row">
+                      <dt class="col-sm-2">Product Type</dt>
+                      <dd class="col-sm-10">{{product_type_name}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">File Path</dt>
+                      <dd class="col-sm-10">{{filepath}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">Date</dt>
+                      <dd class="col-sm-10">{{start_time}}</dd>
+                    </dl>
+                </div></div>
+
+
+                <table id="tbl-results" class="table" data-toggle="table" data-search-align="right" data-show-refresh="false" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
+                    <thead>
+                    <tr>
+                        <th data-field="check_ident" data-sortable="false">Check</th>
+                        <th data-field="check_result" data-sortable="false">Status</th>
+                        <th data-field="check_message" data-sortable="false">Message</th>
+                    </tr>
+                    </thead>
+                   <tbody>
+                        {% for detail in result.detail %}
+                        <tr>
+                            {% if detail.status == "ok" %}
+                            <td class="success">{{detail.check_ident}}</td>
+                            <td class="success">{{detail.status}}</td>
+                            <td class="success">{{detail.message}}</td>
+                            {% else %}
+                            <td class="danger">{{detail.check_ident}}</td>
+                            <td class="danger">{{detail.status}}</td>
+                            <td class="danger">{{detail.message}}</td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                   </tbody>
+                </table>
+                <br>
+                <a href="{{ status_document_url }}">Show Detailed XML Report..</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <br><br><br><br>
+
+{% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'dashboard/js/homepage.js' %}" type="text/javascript"></script>
+{% endblock js %}
