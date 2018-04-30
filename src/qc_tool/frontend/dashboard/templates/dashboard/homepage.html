@@ -1,5 +1,11 @@
 {% extends "dashboard/base.html" %}
-{% load staticfiles sekizai_tags %}
+{% load staticfiles %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />
+{% endblock css %}
 
 {% block content %}
 
@@ -23,7 +29,14 @@
                 <!-- Tab panes -->
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="recent">
-                        <table id="tbl-runs" class="table" data-toggle="table" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-bar" data-toolbar-align="left" data-search-align="left" data-show-filter="true" data-smart-display="true" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="server">
+                        <div id="runs-toolbar-1">
+                            <a href="{% url 'new_check' %}" class="btn btn-success" role="button">
+                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                Start New Checking
+                            </a>
+                            <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
+                        </div>
+                        <table id="tbl-runs" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="server">
                             <thead>
                             <tr>
                                 <th data-field="uid" data-sortable="true" data-formatter="checkingDetailFormatter">Checking Run ID</th>
@@ -52,21 +65,11 @@
         </div>
     </div>
 
-
-
     <br><br><br><br>
 
-
-    {% addtoblock "css" %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />{% endaddtoblock %}
-    {% addtoblock "css" %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />{% endaddtoblock %}
-
-    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" type="text/javascript"></script>{% endaddtoblock %}
-    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>{% endaddtoblock %}
-    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/js/select2.min.js" type="text/javascript"></script>{% endaddtoblock %}
-    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.js" type="text/javascript"></script>{% endaddtoblock %}
-    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.min.js" type="text/javascript"></script>{% endaddtoblock %}
-    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/TableExport/5.0.0/js/tableexport.min.js"></script>{% endaddtoblock %}
-    {% addtoblock "js" %}<script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.4.0/bootbox.min.js" type="text/javascript"></script>{% endaddtoblock %}
-    {% addtoblock "js" %}<script src="{% static 'dashboard/js/homepage.js' %}" type="text/javascript"></script>{% endaddtoblock %}
-
 {% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'dashboard/js/homepage.js' %}" type="text/javascript"></script>
+{% endblock js %}

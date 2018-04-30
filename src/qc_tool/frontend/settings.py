@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'sekizai',
     'dashboard'
 ]
 
@@ -73,7 +72,6 @@ TEMPLATES = [
                 'django.template.context_processors.csrf',
                 'django.template.context_processors.tz',
                 'django.template.context_processors.request',
-                'sekizai.context_processors.sekizai',
                 'django.template.context_processors.static',
             ],
         },

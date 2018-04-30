@@ -56,7 +56,7 @@ def get_product_types(request):
     :param request:
     :return: list of the product types in JSON format
     """
-    out_dict = {}
+    product_types = {}
     for root, dirs, files in os.walk(settings.PRODUCT_TYPES_DIR):
         for filepath in files:
             if filepath.endswith('.json') and not os.path.basename(filepath).startswith('_'):
@@ -66,8 +66,17 @@ def get_product_types(request):
                 prod_path = Path(filepath_abs)
                 prod_info = json.loads(prod_path.read_text())
                 prod_desc = prod_info['description']
-                out_dict[product_type_name] = prod_desc
-    return JsonResponse({'product_types': out_dict})
+                product_types[product_type_name] = prod_desc
+
+    # product_types_sorted = sorted(product_types, key=product_types.get)
+
+    product_types_sorted = sorted([(value, key) for (key, value) in product_types.items()])
+
+    product_types_list = [];
+    for p in product_types_sorted:
+        product_types_list.append({'name': p[1], 'description': p[0]});
+
+    return JsonResponse({'product_types': product_types_list})
 
 
 def get_product_type_details(request, product_type):

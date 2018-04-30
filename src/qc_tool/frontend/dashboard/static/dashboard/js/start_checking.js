@@ -10,11 +10,9 @@ $(document).ready(function() {
         options += '<option hidden >Select file to check ...</option>';
         for (var i=0;i<filepaths.length;i++){
             options += '<option value=' + filepaths[i] + '>' + filepaths[i] + '</option>';
-
-           //$('<option/>').val(filepaths[i]).html(filepaths[i]).appendTo('#select_file');
-            document.getElementById("select_file").options.length = 0;
-            document.getElementById("select_file").innerHTML = options;
         }
+        document.getElementById("select_file").options.length = 0;
+        document.getElementById("select_file").innerHTML = options;
     });
 
     $.getJSON("product_types", function(obj) {
@@ -23,12 +21,20 @@ $(document).ready(function() {
 
         var options = '';
         options += '<option hidden >Select product type ...</option>';
-        $.each(prods, function(key, value){
-            options += '<option value=' + key + '>' + value + '</option>';
-        });
+        for (var i=0;i<prods.length;i++){
+            options += '<option value=' + prods[i].name + '>' + prods[i].description + '</option>';
+        }
         document.getElementById("select_product_type").options.length = 0;
         document.getElementById("select_product_type").innerHTML = options;
     });
+
+
+    $('#check_form').submit(function(event){
+        event.preventDefault();
+        console.log('check form submit!');
+        run_checks();
+    });
+
 });
 
 
@@ -84,7 +90,11 @@ $( "#select_product_type" ).change(function() {
 
 
 
-function run_process() {
+function run_checks() {
+
+    // run process if form is valid
+
+    console.log("run_checks()");
 
     $('#modal-spinner').modal('show');
 
