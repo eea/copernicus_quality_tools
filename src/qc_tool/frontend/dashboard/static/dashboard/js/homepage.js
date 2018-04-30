@@ -24,7 +24,7 @@ $('#tbl-runs').bootstrapTable({
 
 function checkingDetailFormatter(value, row, index) {
     return [
-            '<a class="like" href="', "http://192.168.2.72:5000/output/", value, '.xml" title="Show check results">',
+            '<a class="like" href="', "result/", value, '" title="Show check results">',
                 value,
             '</a>'].join('');
 }

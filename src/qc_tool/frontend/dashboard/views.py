@@ -115,6 +115,32 @@ def get_product_type_table(request, product_type):
     return JsonResponse({"total": len(checks), "rows": check_list})
 
 
+def get_result(request, result_uuid):
+
+    # fetch the result status document
+    status_doc_url = settings.WPS_SERVER + '/output/' + result_uuid + '.xml'
+    status_doc = parse_status_document(status_doc_url)
+    result_detail = status_doc['result']
+
+    print(result_detail)
+    result_list = []
+    for id, val in result_detail.items():
+        result_list.append({'check_ident': id, 'status': val['status'], 'message': val['message']})
+
+    context = {
+        'product_type_name': status_doc['product_type_name'],
+        'product_type_description': None,
+        'filepath': status_doc['filepath'],
+        'start_time': status_doc['start_time'],
+        'status_document_url': status_doc_url,
+        'result': {
+            'uuid': result_uuid,
+            'detail': result_list
+        }
+    }
+    return render(request, 'dashboard/result.html', context)
+
+
 def get_checking_sessions(request):
     """
     Returns the list of all checking sessions in JSON format
