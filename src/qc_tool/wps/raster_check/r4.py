@@ -33,9 +33,9 @@ def run_check(filepath, params):
         epsg = int(epsg)
     except:
         return {"status": "failed",
-                "message": "The EPSG code {:s} is not an integer number.".format(repr(epsg))}
+                "message": "The EPSG code {:s} is not an integer number.".format(str(epsg))}
     if epsg not in params["epsg"]:
         return {"status": "failed",
-                "message": "EPSG code {:s} is not in applicable codes {:s}.".format(epsg, repr(params["epsg"]))}
+                "message": "EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"]))}
 
     return {"status": "ok"}
