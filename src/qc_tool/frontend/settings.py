@@ -136,5 +136,6 @@ MEDIA_ROOT = os.path.join(os.path.basename(os.path.abspath(os.path.dirname('__FI
 
 dirname = os.path.dirname
 PRODUCT_TYPES_DIR = os.path.join(dirname(dirname(dirname(os.path.abspath('.')))), 'product_types')
-#CHECKED_FILES_DIR = os.path.join(dirname(dirname(dirname(os.path.abspath('.')))), 'testing_data')
+
+# the directory with files for checking. This must be readable both by the Frontend and by the WPS
 CHECKED_FILES_DIR = "/mnt/freenas_pracovni_archiv_01/projects/cop15m/volume-wps/wps/data"

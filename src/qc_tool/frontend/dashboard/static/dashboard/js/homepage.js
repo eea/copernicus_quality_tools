@@ -1,3 +1,16 @@
+function format_rows() {
+    // adding colors to table rows
+    console.log('format_rows')
+    $ ('tbody tr').each(function() {
+        if($(this).find('td:last').text() === 'PASSED') {
+            $(this).find('td').addClass('success');
+        } else if ($(this).find('td:last').text() === 'FAILED'){
+            $(this).find('td').addClass('danger');
+        }
+    });
+}
+
+
 $('#tbl-runs').bootstrapTable({
     cache: false,
     striped: true,
@@ -9,15 +22,15 @@ $('#tbl-runs').bootstrapTable({
     url: "/checking_sessions",
     pageSize: 20,
     pageList: [20, 50, 100, 500],
+    onPageChange: function() {
+        format_rows();
+    },
     onLoadSuccess: function() {
-        // adding colors to table rows
-        $ ('tbody tr').each(function() {
-            if($(this).find('td:last').text() === 'PASSED') {
-                $(this).find('td').addClass('success');
-            } else if ($(this).find('td:last').text() === 'FAILED'){
-                $(this).find('td').addClass('danger');
-            }
-        });
+        format_rows();
+    },
+    onSort: function() {
+        console.log('onSort')
+        format_rows();
     }
 });
 

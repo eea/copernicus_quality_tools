@@ -127,6 +127,9 @@ def get_result(request, result_uuid):
     for id, val in result_detail.items():
         result_list.append({'check_ident': id, 'status': val['status'], 'message': val['message']})
 
+    # sort the results by check_ident
+    result_list_sorted = sorted(result_list, key=lambda x: x['check_ident'])
+
     context = {
         'product_type_name': status_doc['product_type_name'],
         'product_type_description': None,
@@ -135,7 +138,7 @@ def get_result(request, result_uuid):
         'status_document_url': status_doc_url,
         'result': {
             'uuid': result_uuid,
-            'detail': result_list
+            'detail': result_list_sorted
         }
     }
     return render(request, 'dashboard/result.html', context)
@@ -164,8 +167,8 @@ def get_checking_sessions(request):
     # sort by start_time in descending order
     docs_sorted = sorted(docs, key=lambda d: d['start_time'], reverse=True)
 
-    out_dict = {"total": len(docs_sorted), "rows": docs_sorted}
-    return JsonResponse(out_dict)
+    return JsonResponse(docs_sorted, safe=False)
+    # for server-side pagination change code to: return JsonResponse({"total": len(docs_sorted), "rows": docs_sorted})
 
 
 @csrf_exempt
