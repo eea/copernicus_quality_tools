@@ -18,6 +18,12 @@
             </ol>
 
             <div class="main">
+
+                {% if uploaded_file_url %}
+                    <p>File uploaded at: <a href="{{ uploaded_file_url }}">{{ uploaded_file_url }}</a></p>
+                {% endif %}
+
+
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
                     <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Uploaded Files</a></li>
@@ -30,10 +36,20 @@
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="recent">
                         <div id="runs-toolbar-1">
-                            <a href="{% url 'new_check' %}" class="btn btn-success" role="button">
-                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                Upload New File
-                            </a>
+
+                            <form method="post" class=form-inline" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="input-group">
+                                        <label class="btn btn-default btn-file">
+                                            Browse... <input type="file" name="myfile" style="display: none;">
+                                        </label>
+                               <!--<input type="file" name="myfile" class="form-control"></input>-->
+                               <span class="input-group-btn">
+                                   <button class="btn btn-success" type="submit">Upload New File</button>
+                               </span>
+                                </div>
+                            </form>
+
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
                         <table id="tbl-files" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client">

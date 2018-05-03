@@ -132,10 +132,12 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Media or user-uploaded files
-MEDIA_ROOT = os.path.join(os.path.basename(os.path.abspath(os.path.dirname('__FILE__'))))
+# MEDIA_ROOT = os.path.join(os.path.basename(os.path.abspath(os.path.dirname('__FILE__'))))
 
 dirname = os.path.dirname
 PRODUCT_TYPES_DIR = os.path.join(dirname(dirname(dirname(os.path.abspath('.')))), 'product_types')
 
 # the directory with files for checking. This must be readable both by the Frontend and by the WPS
 CHECKED_FILES_DIR = "/mnt/freenas_pracovni_archiv_01/projects/cop15m/volume-wps/wps/data"
+MEDIA_ROOT = CHECKED_FILES_DIR
+MEDIA_URL = '/media/'

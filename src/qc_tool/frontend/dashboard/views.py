@@ -13,6 +13,7 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.core.files.storage import FileSystemStorage
 
 from .helpers import parse_status_document
 
@@ -52,6 +53,15 @@ def get_files_json(request):
 
 
 def get_files(request):
+
+    if request.method == 'POST' and request.FILES['myfile']:
+        myfile = request.FILES['myfile']
+        fs = FileSystemStorage()
+        filename = fs.save(myfile.name, myfile)
+        uploaded_file_url = fs.url(filename)
+        return render(request, 'dashboard/files.html', {
+            'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, filename)
+        })
 
     return render(request, 'dashboard/files.html')
 
