@@ -71,7 +71,7 @@ def product_types():
 @app.route("/check_functions")
 def check_functions():
     function_dict = {ident: get_check_function(ident).description for ident in get_idents()}
-    return flask.Response(json.dumps(function_dict), content_type="appllication/json")
+    return flask.Response(json.dumps(function_dict), content_type="application/json")
 
 @app.route("/status_document_urls")
 def status_document_urls():
