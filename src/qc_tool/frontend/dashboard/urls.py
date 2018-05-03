@@ -5,6 +5,8 @@ from dashboard import views
 urlpatterns = [
     path('', views.index, name='index'),
     path('data/files', views.get_files_json, name='files_json'),
+
+    path('files/upload', views.file_upload, name='file_upload'),
     path('files', views.get_files, name='files'),
     path('product_types', views.get_product_types, name='product_types'),
     path('product_type_details/<product_type>/', views.get_product_type_details, name='product_type_details'),

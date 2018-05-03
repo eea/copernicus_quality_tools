@@ -18,6 +18,7 @@ from django.core.files.storage import FileSystemStorage
 from .helpers import parse_status_document
 
 from django.shortcuts import render
+from django.shortcuts import redirect
 
 
 def index(request):
@@ -54,6 +55,11 @@ def get_files_json(request):
 
 def get_files(request):
 
+    if request.method == 'GET' and 'uploaded_filename' in request.GET:
+        return render(request, 'dashboard/files.html', {
+            'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, request.GET['uploaded_filename'])
+        })
+
     if request.method == 'POST' and request.FILES['myfile']:
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
@@ -64,6 +70,24 @@ def get_files(request):
         })
 
     return render(request, 'dashboard/files.html')
+
+
+def file_upload(request):
+
+    if request.method == 'POST' and request.FILES['myfile']:
+        myfile = request.FILES['myfile']
+        fs = FileSystemStorage()
+        filename = fs.save(myfile.name, myfile)
+        uploaded_file_url = fs.url(filename)
+
+        # REDIRECT THE uploaded FILE return HttpResponseRedirect(....)
+        return redirect('/files?uploaded_filename=' + myfile.name)
+        #return redirect('files', {'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, filename)})
+        #return render(request, 'dashboard/file_upload.html', {
+        #    'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, filename)
+        #})
+
+    return render(request, 'dashboard/file_upload.html')
 
 
 def get_product_types(request):

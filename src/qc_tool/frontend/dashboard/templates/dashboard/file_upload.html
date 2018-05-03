@@ -3,15 +3,13 @@
 
 {% block css %}
   {{ block.super }}
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />
-  <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />-->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap3-dialog/1.35.4/css/bootstrap-dialog.css" type="text/css" media="screen" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.4.5/css/fileinput.min.css" media="all" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block menu %}
 <li class=""><a href="/"><span>Checking Tasks</span></a></li>
-<li class="active"><a href="/new"><span>New Checking Task</span></a></li>
-<li class=""><a href="/files"><span>Files</span></a></li>
+<li class=""><a href="/new"><span>New Checking Task</span></a></li>
+<li class="active"><a href="/files/"><span>Files</span></a></li>
 {% endblock %}
 
 {% block content %}
@@ -21,7 +19,8 @@
 
             <ol class="breadcrumb">
               <li><a href="/">Copernicus QC Tool</a></li>
-              <li class="active"><a href="">New Checking Task</a></li>
+                <li><a href="/files/">Files</a></li>
+              <li class="active"><a href="">Upload New File</a></li>
             </ol>
 
             <div class="main">
@@ -34,51 +33,13 @@
                             </div>
                         </div>
                         <div class="panel-body">
-                            <h4>Parameters</h4>
+                            <h4>Select File to Upload (.gdb or .tif)</h4>
                             <form id = "file_form" method="post" enctype="multipart/form-data">
                                 <fieldset></fieldset>
-
                                 <div class="form-group">
-                                    <label for="select_file">Select File to Upload</label>
-                                    <span>  - </span>
-                                    <select id="select_file" name="select_file" class="form-control" required
-                                    data-error-msg="Please select a product file.">
-                                    </select>
+                                        {% csrf_token %}
+                                        <input id="my-file" name="myfile" type="file" class="file" data-preview-file-type="text">
                                 </div>
-
-                                <div class="form-group">
-                                    <label for="select_product_type">Select Product Type</label>
-                                    <span>  - </span>
-                                    <select id="select_product_type" name="select_product_type" class="form-control" required
-                                    data-error-msg="Please select a product type.">
-                                        <!-- read this from the WPS response -->
-                                        <option value="clc_vector">CLC Vector</option>
-                                        <option value="clc_raster">CLC Raster</option>
-                                        <option value="ua_vector">Urban Atlas Vector</option>
-                                        <option value="ua_raster">Urban Atlas Raster</option>
-                                    </select>
-                                </div>
-
-                                <table id="tbl_check_details" class="table" data-toggle="table" data-show-refresh="false" data-show-toggle="false" data-toolbar="#runs-bar" data-toolbar-align="left" data-search-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
-                                    <thead>
-                                    <tr>
-                                        <th data-field="name" data-sortable="false">Check</th>
-                                        <th data-field="product_name" data-sortable="false">Description</th>
-                                        <th data-field="start" data-sortable="false">Parameters</th>
-                                        <th data-field="end" data-sortable="false">Required</th>
-                                        <th data-field="percent_complete" data-sortable="false">Selected</th>
-                                    </tr>
-                                    </thead>
-                                   <tbody>
-                                   </tbody>
-                                </table>
-                                <br>
-
-                                <button type="submit" class="btn btn-success" type="button">
-                                    <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                    Run the Checks!
-                                </button>
-
                             </form>
                         </div>
                     </div>
@@ -101,7 +62,5 @@
 {% block js %}
     {{ block.super }}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.17.0/jquery.validate.min.js" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap3-dialog/1.35.4/js/bootstrap-dialog.min.js" type="text/javascript"></script>
-    <script src="{% static 'dashboard/js/spin.min.js' %}" type="text/javascript"></script>
-    <script src="{% static 'dashboard/js/start_checking.js' %}" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.4.5/js/fileinput.min.js"></script>
 {% endblock js %}

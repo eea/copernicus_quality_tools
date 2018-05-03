@@ -7,13 +7,19 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />
 {% endblock css %}
 
+{% block menu %}
+<li class=""><a href="/"><span>Checking Tasks</span></a></li>
+<li class="s"><a href="/new"><span>New Checking Task</span></a></li>
+<li class="active"><a href="/files"><span>Files</span></a></li>
+{% endblock %}
+
 {% block content %}
 
     <div class="container-fluid main" style="padding-top: 70px;">
         <div class="row text-left">
 
             <ol class="breadcrumb">
-              <li><a href="#">Copernicus QC Tool</a></li>
+              <li><a href="{% url 'index' %}">Copernicus QC Tool</a></li>
               <li class="active"><a href="">Files</a></li>
             </ol>
 
@@ -36,20 +42,10 @@
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="recent">
                         <div id="runs-toolbar-1">
-
-                            <form method="post" class=form-inline" enctype="multipart/form-data">
-                                {% csrf_token %}
-                                <div class="input-group">
-                                        <label class="btn btn-default btn-file">
-                                            Browse... <input type="file" name="myfile" style="display: none;">
-                                        </label>
-                               <!--<input type="file" name="myfile" class="form-control"></input>-->
-                               <span class="input-group-btn">
-                                   <button class="btn btn-success" type="submit">Upload New File</button>
-                               </span>
-                                </div>
-                            </form>
-
+                            <a href="{% url 'file_upload' %}" class="btn btn-success" role="button">
+                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                Upload New File
+                            </a>
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
                         <table id="tbl-files" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client">
