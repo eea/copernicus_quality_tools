@@ -21,3 +21,6 @@ def register_check_function(ident, description=None):
 
 def get_check_function(check_ident):
     return check_function_registry[check_ident]
+
+def get_idents():
+    return check_function_registry.keys()

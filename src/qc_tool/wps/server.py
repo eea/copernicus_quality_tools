@@ -18,6 +18,8 @@ from pywps.configuration import get_config_value
 
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
+from qc_tool.wps.registry import get_check_function
+from qc_tool.wps.registry import get_idents
 
 
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../../.."))))
@@ -65,6 +67,11 @@ def product_types():
         product_type_definition = json.loads(product_type_definition)
         product_types[product_type_name] = product_type_definition
     return flask.Response(json.dumps(product_types), content_type="application/json")
+
+@app.route("/check_functions")
+def check_functions():
+    function_dict = {ident: get_check_function(ident).description for ident in get_idents()}
+    return flask.Response(json.dumps(function_dict), content_type="appllication/json")
 
 @app.route("/status_document_urls")
 def status_document_urls():
