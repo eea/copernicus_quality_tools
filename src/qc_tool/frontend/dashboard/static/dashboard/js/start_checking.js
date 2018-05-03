@@ -2,14 +2,14 @@ $(document).ready(function() {
 
     $("#tbl_check_details").hide();
 
-    $.getJSON("files", function(obj) {
+    $.getJSON("data/files", function(obj) {
 
-        var filepaths = obj.files;
+        var filepaths = obj;
 
         var options = '';
         options += '<option hidden >Select file to check ...</option>';
         for (var i=0;i<filepaths.length;i++){
-            options += '<option value=' + filepaths[i] + '>' + filepaths[i] + '</option>';
+            options += '<option value=' + filepaths[i].filepath + '>' + filepaths[i].filepath + '</option>';
         }
         document.getElementById("select_file").options.length = 0;
         document.getElementById("select_file").innerHTML = options;

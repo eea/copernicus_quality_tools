@@ -29,7 +29,7 @@ def new_check(request):
     return render(request, 'dashboard/new_check.html')
 
 
-def get_files(request):
+def get_files_json(request):
     """
     returns a list of all files that are available for checking.
     The files are loaded from the directory specified in settings.CHECKED_FILES_DIR
@@ -41,12 +41,19 @@ def get_files(request):
     for root, dirs, files in os.walk(settings.CHECKED_FILES_DIR):
         for filepath in files:
             if filepath.endswith('.tif') or filepath.endswith('.zip'):
-                out_list.append(base_dir + filepath)
+                file_info = {'filename':filepath, 'filepath':base_dir + filepath, 'time':None}
+                out_list.append(file_info)
         for dirpath in dirs:
             if dirpath.endswith('.gdb'):
-                out_list.append(base_dir + dirpath)
+                file_info = {'filename':dirpath, 'filepath':base_dir + dirpath, 'time':None}
+                out_list.append(file_info)
 
-    return JsonResponse({'files': out_list})
+    return JsonResponse(out_list, safe=False)
+
+
+def get_files(request):
+
+    return render(request, 'dashboard/files.html')
 
 
 def get_product_types(request):
