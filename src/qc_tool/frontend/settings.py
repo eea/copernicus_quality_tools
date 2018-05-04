@@ -15,11 +15,8 @@ import os
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-#QC_TOOL_RUNTIME_DIR = os.environ('QC_TOOL_RUNTIME_DIR')
-
-# The WPS server url [use 192.168.2.72 for GISAT vm, http://172.17.0.2:5000 for Docker]
-WPS_SERVER = 'http://192.168.2.72:5000'
-
+# The WPS server url.
+WPS_URL = env["WPS_URL"])
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
@@ -30,7 +27,7 @@ SECRET_KEY = '+a8^8cw3%v-+qm8&+4nylx0mkn4tu_7548+#7orp%z5)vxk^r&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1', '.pythonanywhere.com']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -138,6 +135,6 @@ dirname = os.path.dirname
 PRODUCT_TYPES_DIR = os.path.join(dirname(dirname(dirname(os.path.abspath('.')))), 'product_types')
 
 # the directory with files for checking. This must be readable both by the Frontend and by the WPS
-CHECKED_FILES_DIR = "/mnt/freenas_pracovni_archiv_01/projects/cop15m/volume-wps/wps/data"
-MEDIA_ROOT = CHECKED_FILES_DIR
+INCOMING_DIR = env["INCOMING_DIR"]
+MEDIA_ROOT = INCOMING_DIR
 MEDIA_URL = '/media/'

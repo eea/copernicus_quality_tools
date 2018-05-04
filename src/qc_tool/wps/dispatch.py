@@ -25,13 +25,6 @@ PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
 CHECK_DEFAULTS_FILENAME = "_check_defaults.json"
 
 
-def read_product_types(product_type_dir):
-    """Returns list of product type names.
-
-    Product type names are all items in directory product_type_configs whose names start with alnum character.
-    So for example filenames starting with "_", "." are excluded."""
-    raise TodoException()
-
 def dispatch(filepath, product_type_name, optional_check_idents, params=None, update_result=None):
     # Read configurations.
     check_defaults_filepath = PRODUCT_TYPES_DIR.joinpath(CHECK_DEFAULTS_FILENAME)
@@ -69,6 +62,7 @@ def dispatch(filepath, product_type_name, optional_check_idents, params=None, up
 
         # Run the check.
         func = get_check_function(check["check_ident"])
+	filepath = Path(env["INCOMING_DIR"]).joinpath(filepath)
         # FIXME: currently check functions use os.path for path manipulation
         #        while upper server stack uses pathlib.
         #        it is encouraged to choose one or another.
