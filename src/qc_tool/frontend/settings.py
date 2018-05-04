@@ -10,13 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
-import os
+
+import os.path
+from os import environ
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # The WPS server url.
-WPS_URL = env["WPS_URL"])
+WPS_URL = environ["WPS_URL"]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
@@ -135,6 +138,6 @@ dirname = os.path.dirname
 PRODUCT_TYPES_DIR = os.path.join(dirname(dirname(dirname(os.path.abspath('.')))), 'product_types')
 
 # the directory with files for checking. This must be readable both by the Frontend and by the WPS
-INCOMING_DIR = env["INCOMING_DIR"]
+INCOMING_DIR = environ["INCOMING_DIR"]
 MEDIA_ROOT = INCOMING_DIR
 MEDIA_URL = '/media/'

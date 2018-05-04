@@ -8,6 +8,7 @@ import os
 import re
 import sys
 from argparse import ArgumentParser
+from os import environ
 from os.path import normpath
 from pathlib import Path
 
@@ -88,8 +89,8 @@ def status_document_urls():
 def run_server():
     global service
 
-    port = int(os.environ.get("WPS_PORT"))
-    wps_dir = Path(os.environ.get("WPS_DIR", "/mnt/wps"))
+    port = int(environ["WPS_PORT"])
+    wps_dir = Path(environ["WPS_DIR"])
     wps_output_dir = wps_dir.joinpath("output")
     wps_output_dir.mkdir(exist_ok=True)
     wps_work_dir = wps_dir.joinpath("work")
@@ -107,8 +108,8 @@ def run_server():
     service = Service(processes, [])
 
     config = pywps.configuration.CONFIG
-    config.set("server", "url", env["WPS_URL"])
-    config.set("server", "outputurl", env["WPS_OUTPUT_URL")
+    config.set("server", "url", environ["WPS_URL"])
+    config.set("server", "outputurl", environ["WPS_OUTPUT_URL"])
     config.set("server", "outputpath", str(wps_output_dir))
     config.set("server", "workdir", str(wps_work_dir))
     config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))

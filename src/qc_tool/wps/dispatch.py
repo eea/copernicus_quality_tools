@@ -2,6 +2,7 @@
 
 
 import json
+from os import environ
 from os.path import normpath
 from pathlib import Path
 
@@ -62,7 +63,7 @@ def dispatch(filepath, product_type_name, optional_check_idents, params=None, up
 
         # Run the check.
         func = get_check_function(check["check_ident"])
-	filepath = Path(env["INCOMING_DIR"]).joinpath(filepath)
+        filepath = Path(environ["INCOMING_DIR"]).joinpath(filepath)
         # FIXME: currently check functions use os.path for path manipulation
         #        while upper server stack uses pathlib.
         #        it is encouraged to choose one or another.
