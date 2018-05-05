@@ -17,8 +17,10 @@ sh ./copernicus_quality_tools/docker/run_docker_local.sh $(pwd) $(pwd)/copernicu
 
 ```
 
-The application should be running in a docker container at http://172.17.0.2:8000:8000 in your browser
+The application should be running in a docker container at http://172.17.0.2:8000 in your browser.
+
+The WPS service should be running at http://172.17.0.2:5000 in your browser.
 
 * Note: the run_docker_local.sh script has two arguments. The first one is the parent
 directory of the folder cloned from Github. The second one is the path where the qc
-tool looks for .gdb or .tiff files to be checked and where the user can add new files.
+tool looks for .gdb or .tif files to be checked and where the user can add new files.
