@@ -4,8 +4,6 @@ from __future__ import unicode_literals
 from django.db import models
 from django.utils import timezone
 
-from django.utils.timezone import now
-
 
 class FileFormat(models.Model):
     type = models.TextField()

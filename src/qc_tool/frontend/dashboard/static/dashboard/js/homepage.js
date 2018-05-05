@@ -19,7 +19,7 @@ $('#tbl-runs').bootstrapTable({
     showColumns: true,
     sortName: 'name',
     sortOrder: 'desc',
-    url: "/checking_sessions",
+    url: "data/checking_sessions",
     pageSize: 20,
     pageList: [20, 50, 100, 500],
     onPageChange: function() {

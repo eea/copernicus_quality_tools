@@ -38,18 +38,23 @@ def get_files_json(request):
     :param request:
     :return: list of the files in JSON format
     """
-    base_dir = '/mnt/wps/data/'
+    base_dir = settings.INCOMING_DIR
+    print('base_dir:' + base_dir)
     out_list = []
-    for root, dirs, files in os.walk(settings.CHECKED_FILES_DIR):
+    for root, dirs, files in os.walk(base_dir):
         for filepath in files:
-            if filepath.endswith('.tif') or filepath.endswith('.zip'):
-                file_info = {'filename':filepath, 'filepath':base_dir + filepath, 'time':None}
+            if filepath.lower().endswith('.tif') or filepath.lower().endswith('gdb.zip'):
+                full_path = os.path.join(base_dir, filepath)
+                uploaded_time = time.ctime(os.path.getmtime(full_path))
+                file_info = {'filename':filepath, 'filepath':full_path, 'time':uploaded_time}
                 out_list.append(file_info)
         for dirpath in dirs:
+            print(dirpath)
             if dirpath.endswith('.gdb'):
-                file_info = {'filename':dirpath, 'filepath':base_dir + dirpath, 'time':None}
+                full_path = os.path.join(base_dir, dirpath)
+                uploaded_time = time.ctime(os.path.getmtime(full_path))
+                file_info = {'filename':dirpath, 'filepath':full_path, 'time':uploaded_time}
                 out_list.append(file_info)
-
     return JsonResponse(out_list, safe=False)
 
 
@@ -57,16 +62,15 @@ def get_files(request):
 
     if request.method == 'GET' and 'uploaded_filename' in request.GET:
         return render(request, 'dashboard/files.html', {
-            'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, request.GET['uploaded_filename'])
+            'uploaded_file_url': os.path.join(settings.INCOMING_DIR, request.GET['uploaded_filename'])
         })
 
     if request.method == 'POST' and request.FILES['myfile']:
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
         filename = fs.save(myfile.name, myfile)
-        uploaded_file_url = fs.url(filename)
         return render(request, 'dashboard/files.html', {
-            'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, filename)
+            'uploaded_file_path': os.path.join(settings.INCOMING_DIR, filename)
         })
 
     return render(request, 'dashboard/files.html')
@@ -77,15 +81,8 @@ def file_upload(request):
     if request.method == 'POST' and request.FILES['myfile']:
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
-        filename = fs.save(myfile.name, myfile)
-        uploaded_file_url = fs.url(filename)
-
-        # REDIRECT THE uploaded FILE return HttpResponseRedirect(....)
-        return redirect('/files?uploaded_filename=' + myfile.name)
-        #return redirect('files', {'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, filename)})
-        #return render(request, 'dashboard/file_upload.html', {
-        #    'uploaded_file_url': os.path.join(settings.CHECKED_FILES_DIR, filename)
-        #})
+        fs.save(myfile.name, myfile)
+        return redirect('/files/?uploaded_filename={0}'.format(myfile.name))
 
     return render(request, 'dashboard/file_upload.html')
 
@@ -95,42 +92,34 @@ def get_product_types(request):
     returns a list of all product types that are available for checking.
     The files are loaded from the directory specified in settings.PRODUCT_TYPES_DIR
     :param request:
-    :return: list of the product types in JSON format
+    :return: list of the product types with items {name, description} in JSON format
     """
-    product_types = {}
-    for root, dirs, files in os.walk(settings.PRODUCT_TYPES_DIR):
-        for filepath in files:
-            if filepath.endswith('.json') and not os.path.basename(filepath).startswith('_'):
-                product_type_name = os.path.splitext(filepath)[0]
-                filepath_abs = os.path.join(root, filepath)
+    wps_host = settings.WPS_URL.rsplit('/', 1)[0]
+    product_types_url = wps_host + "/product_types"
+    resp = requests.get(url=product_types_url)
+    product_types_dict = resp.json()
+    product_types_list = []
+    for key, val in product_types_dict.items():
+        product_types_list.append({'name': key, 'description': val['description']})
 
-                prod_path = Path(filepath_abs)
-                prod_info = json.loads(prod_path.read_text())
-                prod_desc = prod_info['description']
-                product_types[product_type_name] = prod_desc
-
-    # product_types_sorted = sorted(product_types, key=product_types.get)
-
-    product_types_sorted = sorted([(value, key) for (key, value) in product_types.items()])
-
-    product_types_list = [];
-    for p in product_types_sorted:
-        product_types_list.append({'name': p[1], 'description': p[0]});
-
-    return JsonResponse({'product_types': product_types_list})
+    product_types_sorted = sorted(product_types_list, key=lambda x: x['description'])
+    return JsonResponse({'product_types': product_types_sorted})
 
 
-def get_product_type_details(request, product_type):
+def get_product_type_details(request, product_type_name):
     """
     returns a table of details about the product type
-    The files are loaded from the directory specified in settings.PRODUCT_TYPES_DIR
     :param request:
-    :return: list of the product types in JSON format
+    :param product_type: the name of the product type for example clc_chaYY
+    :return: details about the product type including the required and optional checks
     """
-    prod_file = os.path.join(settings.PRODUCT_TYPES_DIR, product_type + ".json")
-    prod_path = Path(prod_file)
-    prod_info = json.loads(prod_path.read_text())
-    return JsonResponse({'product_type': prod_info})
+    wps_host = settings.WPS_URL.rsplit('/', 1)[0]
+    product_types_url = wps_host + "/product_types"
+    resp = requests.get(url=product_types_url)
+    product_types = resp.json()
+    product_type_info = product_types[product_type_name]
+
+    return JsonResponse({'product_type': product_type_info})
 
 
 def get_product_type_table(request, product_type):
@@ -159,7 +148,8 @@ def get_product_type_table(request, product_type):
 def get_result(request, result_uuid):
 
     # fetch the result status document
-    status_doc_url = settings.WPS_SERVER + '/output/' + result_uuid + '.xml'
+    wps_host = settings.WPS_URL.rsplit('/', 1)[0]
+    status_doc_url = wps_host + '/output/' + result_uuid + '.xml'
     status_doc = parse_status_document(status_doc_url)
     result_detail = status_doc['result']
 
@@ -193,7 +183,8 @@ def get_checking_sessions(request):
     """
 
     # first, retrieve the URL's
-    status_docs_api = settings.WPS_SERVER + "/status_document_urls"
+    wps_host = settings.WPS_URL.rsplit('/', 1)[0]
+    status_docs_api = wps_host + "/status_document_urls"
     resp = requests.get(url=status_docs_api)
     status_doc_urls = resp.json()
 
@@ -231,8 +222,8 @@ def run_wps_execute(request):
             optional_check_idents = request.GET.get("optional_check_idents")
 
         # calling cop_sleep (-> change it to run_checks)
-        wps_server = settings.WPS_SERVER # "http://192.168.2.72:5000"
-        wps_base = wps_server + "/wps?service=WPS&version=1.0.0&request=Execute&identifier=run_checks&lineage=true&DataInputs="
+        wps_base_url = settings.WPS_URL # "http://192.168.2.72:5000"
+        wps_base = wps_base_url + "?service=WPS&version=1.0.0&request=Execute&identifier=run_checks&lineage=true&DataInputs="
         data_inputs = "filepath={0};product_type_name={1};optional_check_idents={2}".format(filepath, product_type_name, optional_check_idents)
 
         wps_url = wps_base + data_inputs
@@ -243,7 +234,6 @@ def run_wps_execute(request):
         tree = ElementTree.fromstring(r.text)
 
         # wait for the response
-        time.sleep(2)
         if 'statusLocation' in tree.attrib:
 
             # process is started

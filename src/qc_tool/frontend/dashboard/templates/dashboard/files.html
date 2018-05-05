@@ -8,9 +8,9 @@
 {% endblock css %}
 
 {% block menu %}
-<li class=""><a href="/"><span>Checking Tasks</span></a></li>
-<li class="s"><a href="/new"><span>New Checking Task</span></a></li>
-<li class="active"><a href="/files"><span>Files</span></a></li>
+<li class=""><a href="{% url 'index' %}"><span>Checking Tasks</span></a></li>
+<li class=""><a href="{% url 'new_check' %}"><span>New Checking Task</span></a></li>
+<li class="active"><a href="{% url 'files' %}"><span>Files</span></a></li>
 {% endblock %}
 
 {% block content %}
@@ -44,7 +44,7 @@
                         <div id="runs-toolbar-1">
                             <a href="{% url 'file_upload' %}" class="btn btn-success" role="button">
                                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                Upload New File
+                                Add New File
                             </a>
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
@@ -53,7 +53,7 @@
                             <tr>
                                 <th data-field="filename" data-sortable="true">File Name</th>
                                 <th data-field="filepath" data-sortable="true">File Path</th>
-                                <th data-field="uploaded_time" data-sortable="true">Date Uploaded</th>
+                                <th data-field="time" data-sortable="true">Date Added</th>
                             </tr>
                             </thead>
                            <tbody>

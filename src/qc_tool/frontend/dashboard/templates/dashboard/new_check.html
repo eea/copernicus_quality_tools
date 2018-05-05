@@ -9,9 +9,9 @@
 {% endblock %}
 
 {% block menu %}
-<li class=""><a href="/"><span>Checking Tasks</span></a></li>
-<li class="active"><a href="/new"><span>New Checking Task</span></a></li>
-<li class=""><a href="/files"><span>Files</span></a></li>
+<li class=""><a href="{% url 'index' %}"><span>Checking Tasks</span></a></li>
+<li class="active"><a href="{% url 'new_check' %}"><span>New Checking Task</span></a></li>
+<li class=""><a href="{% url 'files' %}"><span>Files</span></a></li>
 {% endblock %}
 
 {% block content %}
@@ -51,14 +51,8 @@
                                     <span>  - </span>
                                     <select id="select_product_type" name="select_product_type" class="form-control" required
                                     data-error-msg="Please select a product type.">
-                                        <!-- read this from the WPS response -->
-                                        <option value="clc_vector">CLC Vector</option>
-                                        <option value="clc_raster">CLC Raster</option>
-                                        <option value="ua_vector">Urban Atlas Vector</option>
-                                        <option value="ua_raster">Urban Atlas Raster</option>
                                     </select>
                                 </div>
-
                                 <table id="tbl_check_details" class="table" data-toggle="table" data-show-refresh="false" data-show-toggle="false" data-toolbar="#runs-bar" data-toolbar-align="left" data-search-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
                                     <thead>
                                     <tr>
@@ -72,6 +66,10 @@
                                    <tbody>
                                    </tbody>
                                 </table>
+                                <br>
+                                <div class="form-group">
+                                <a id="product_type_link" href="data/product_type/unknown/">Show Product Type Configuration</a>
+                                </div>
                                 <br>
 
                                 <button type="submit" class="btn btn-success" type="button">

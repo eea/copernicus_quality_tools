@@ -1,6 +1,7 @@
 $(document).ready(function() {
 
     $("#tbl_check_details").hide();
+    $("#product_type_link").hide();
 
     $.getJSON("data/files", function(obj) {
 
@@ -15,7 +16,7 @@ $(document).ready(function() {
         document.getElementById("select_file").innerHTML = options;
     });
 
-    $.getJSON("product_types", function(obj) {
+    $.getJSON("data/product_types", function(obj) {
 
         var prods = obj.product_types;
 
@@ -44,7 +45,7 @@ $( "#select_product_type" ).change(function() {
     //populate product type info
     var optionSelected = $("option:selected", this);
     var valueSelected = this.value;
-    var detail_url = "product_type_details/" + valueSelected;
+    var detail_url = "data/product_type/" + valueSelected + "/";
     console.log(detail_url);
     $.getJSON(detail_url , function(obj) {
         var checks = obj.product_type.checks
@@ -76,14 +77,18 @@ $( "#select_product_type" ).change(function() {
                 tbody += " disabled";
             }
             tbody += "></td></tr>";
-            //console.log(checks[i].check_ident);
         }
-        //console.log(tbody);
         $("#tbl_check_details > tbody").html(tbody);
 
         //show table if hidden
         if($("#tbl_check_details").is(':hidden')){
             $("#tbl_check_details").show();
+        }
+
+        //show json product type config file link if hidden
+        $("#product_type_link").attr("href", "data/product_type/" + valueSelected + "/");
+        if($("#product_type_link").is(':hidden')){
+            $("#product_type_link").show();
         }
     });
 });
