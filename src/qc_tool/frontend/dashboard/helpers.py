@@ -1,7 +1,25 @@
 import json
+import os
 import requests
 from lxml import etree
 from django.utils.dateparse import parse_datetime
+
+
+def get_file_or_dir_size(file_or_dir):
+    """
+    finds total size of a file or a directory in Bytes
+    :param file_or_dir: the full path to the file or directory
+    :return:
+    """
+    if os.path.isfile(file_or_dir):
+        return os.path.getsize(file_or_dir)
+    else:
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(file_or_dir):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                total_size += os.path.getsize(fp)
+        return total_size
 
 
 def parse_status_document(document_url):

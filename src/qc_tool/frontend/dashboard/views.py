@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import FileSystemStorage
 
 from .helpers import parse_status_document
+from .helpers import get_file_or_dir_size
 
 from django.shortcuts import render
 from django.shortcuts import redirect
@@ -39,22 +40,28 @@ def get_files_json(request):
     :return: list of the files in JSON format
     """
     base_dir = settings.INCOMING_DIR
-    print('base_dir:' + base_dir)
-    out_list = []
-    for root, dirs, files in os.walk(base_dir):
+    valid_filepaths = []
+
+    for dirpath, subdirs, files in os.walk(base_dir):
         for filepath in files:
             if filepath.lower().endswith('.tif') or filepath.lower().endswith('gdb.zip'):
-                full_path = os.path.join(base_dir, filepath)
-                uploaded_time = time.ctime(os.path.getmtime(full_path))
-                file_info = {'filename':filepath, 'filepath':full_path, 'time':uploaded_time}
-                out_list.append(file_info)
-        for dirpath in dirs:
-            print(dirpath)
-            if dirpath.endswith('.gdb'):
-                full_path = os.path.join(base_dir, dirpath)
-                uploaded_time = time.ctime(os.path.getmtime(full_path))
-                file_info = {'filename':dirpath, 'filepath':full_path, 'time':uploaded_time}
-                out_list.append(file_info)
+                full_path = os.path.join(dirpath, filepath)
+                valid_filepaths.append(full_path)
+        for subdir in subdirs:
+            if subdir.endswith('.gdb'):
+                full_path = os.path.join(dirpath, subdir)
+                valid_filepaths.append(full_path)
+
+    out_list = []
+    for filepath in valid_filepaths:
+        uploaded_time = time.ctime(os.path.getmtime(filepath))
+        size_MB = get_file_or_dir_size(filepath) >> 10 # converting bytes to MB
+        file_info = {'filename': os.path.basename(filepath),
+                     'filepath': filepath,
+                     'time': uploaded_time,
+                     'size_MB': float(size_MB) / 1000.0 }
+        out_list.append(file_info)
+
     return JsonResponse(out_list, safe=False)
 
 
