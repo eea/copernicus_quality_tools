@@ -11,9 +11,11 @@ The application will consist of:
 Steps to install the code and run it (tested on Ubuntu Linux 16.04):
 
 ```
+mkdir $HOME/github
+cd $HOME/github
 git clone https://github.com/eea/copernicus_quality_tools
 docker build copernicus_quality_tools/docker -f copernicus_quality_tools/docker/Dockerfile.phusion -t ubucop
-sh ./copernicus_quality_tools/docker/run_docker_local.sh $(pwd) $(pwd)/copernicus_quality_tools/testing_data
+sh $HOME/github/copernicus_quality_tools/docker/run_docker_local.sh $HOME/github $HOME/github/copernicus_quality_tools/testing_data
 
 ```
 
