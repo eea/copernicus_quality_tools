@@ -8,11 +8,11 @@ The application will consist of:
 * Application deployment tools based on docker
 
 # QC Tool Checking Environment
-Steps to install the code and run it
+Steps to install the code and run it (tested on Ubuntu Linux 16.04):
 
 ```
 git clone https://github.com/eea/copernicus_quality_tools
-sudo docker build copernicus_quality_tools/docker -f Dockerfile.phusion -t ubucop
+docker build copernicus_quality_tools/docker -f copernicus_quality_tools/docker/Dockerfile.phusion -t ubucop
 sh ./copernicus_quality_tools/docker/run_docker_local.sh $(pwd) $(pwd)/copernicus_quality_tools/testing_data
 
 ```
