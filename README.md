@@ -11,18 +11,16 @@ The application will consist of:
 Steps to install the code and run it (tested on Ubuntu Linux 16.04):
 
 ```
-mkdir $HOME/github
-cd $HOME/github
+sudo apt install docker.io docker-compose
+
 git clone https://github.com/eea/copernicus_quality_tools
-docker build copernicus_quality_tools/docker -f copernicus_quality_tools/docker/Dockerfile.phusion -t ubucop
-sh $HOME/github/copernicus_quality_tools/docker/run_docker_local.sh $HOME/github $HOME/github/copernicus_quality_tools/testing_data
+cd copernicus_quality_tools/docker
+sudo docker-compose up
 
 ```
 
-The application should be running in a docker container at http://172.17.0.2:8000 in your browser.
+The application should be running in a docker container at http://127.0.0.1:8000 in your browser.
 
-The WPS service should be running at http://172.17.0.2:5000 in your browser.
+The WPS service should be running at http://127.0.0.1:5000 in your browser.
 
-* Note: the run_docker_local.sh script has two arguments. The first one is the parent
-directory of the folder cloned from Github. The second one is the path where the qc
-tool looks for .gdb or .tif files to be checked and where the user can add new files.
+* Note: the docker-compose.yml file is used for the setup. The default directory for storing .gdb and .tif files is copernicus_quality_tools/testing_data. You can change this directory by editing the volumes settings in the docker-compose.yml file. 
