@@ -173,7 +173,7 @@ def get_result(request, result_uuid):
         'product_type_description': None,
         'filepath': status_doc['filepath'],
         'start_time': status_doc['start_time'],
-        'status_document_url': status_doc_url,
+        'status_document_url': status_doc_url.replace("wps", "127.0.0.1"),
         'result': {
             'uuid': result_uuid,
             'detail': result_list_sorted
@@ -198,7 +198,8 @@ def get_checking_sessions(request):
     # for each status document, retrieve the info:
     docs = []
     for doc_url in status_doc_urls:
-        doc = parse_status_document(doc_url)
+        doc_url2 = wps_host + "/output/" + doc_url.rsplit("/")[-1]
+        doc = parse_status_document(doc_url2)
 
         if not doc is None:
             docs.append(doc)
