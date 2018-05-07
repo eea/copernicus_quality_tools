@@ -1,0 +1,34 @@
+version: '2'
+services:
+    wps:
+        build: 
+            context: .
+            dockerfile: Dockerfile.phusion_wps
+        ports:
+            - 5000:5000
+        environment:
+            - WPS_DIR=/mnt/wps
+            - WPS_PORT=5000
+            - WPS_URL=http://172.17.0.1:5000/wps
+            - WPS_OUTPUT_URL=http://172.17.0.1:5000/wps/output
+            - INCOMING_DIR=/mnt/wps/data
+            - PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
+        volumes:
+           -  ..:/usr/local/src/copernicus_quality_tools
+           -  ../../wps:/mnt/wps
+           -   ../testing_data:/mnt/wps/data
+    frontend:
+        build: 
+            context: .
+            dockerfile: Dockerfile.phusion_frontend
+        ports:
+            - 8000:8000
+        environment:
+            - WPS_URL=http://wps:5000/wps
+            - INCOMING_DIR=/mnt/wps/data
+            - PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
+        volumes:
+           -  ..:/usr/local/src/copernicus_quality_tools
+           -  ../../wps:/mnt/wps
+           -   ../testing_data:/mnt/wps/data
+
