@@ -10,29 +10,35 @@ import re
 
 from qc_tool.wps.registry import register_check_function
 
-
-__author__ = "Jiri Tomicek"
-__copyright__ = "Copyright 2018, GISAT s.r.o., CZ"
-__email__ = "jiri.tomicek@gisat.cz"
-__status__ = "operational"
-
-
 @register_check_function(__name__, "File names match file naming conventions.")
-def run(filepath, params):
+def run_check(filepath, params):
     """
     Check if string matches pattern.
-    :param source: name of the file/layer
-    :param template: regular_expression
-    :return:
+    :param filepath: pathname to data source
+    :param params: configuration
+    :return: status + message
     """
-    template = params["file_name_regex"]
-    regex = re.compile(template)
-    filename = os.path.basename(filepath)
-    res = bool(regex.match(filename))
 
-    if res:
-        return {"status": "ok",
-                "message": "Name conforms to the naming convention"}
+    def check_name(name, template):
+        regex = re.compile(template)
+        return bool(regex.match(name))
+
+    # check file name
+    filename = os.path.basename(filepath).lower()
+    file_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
+    if not check_name(filename, file_regex):
+        print("failed")
+        return {"status": "failed",
+                "message": "File name does not conform to the naming convention."}
     else:
-        return {"status": "FAILED",
-                "message": "Name does not conform to the naming convention"} 
+        list_of_files = [x.lower() for x in os.listdir(os.path.dirname(filepath))]
+        file_prefix = os.path.splitext(filename)[0]
+
+        # check for required files
+        for ext in params["extensions"]:
+            req_file = file_prefix + ext
+            if req_file not in list_of_files:
+                return {"status": "failed",
+                        "message": "'{:s}' file is missing.".format(ext)}
+        return {"status": "ok",
+                "message": "The file naming convention check was successfull."}

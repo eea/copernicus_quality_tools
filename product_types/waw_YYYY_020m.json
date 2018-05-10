@@ -1,9 +1,6 @@
 {
   "description": "High Resolution Layer Water and Wetness (20m)",
-  "parameters": {
-    "dataset_name": "WAW",
-    "layer_name": "waw_020"
-  },
+  "parameters": {},
   "checks": [
     {
       "check_ident": "r1",
@@ -14,9 +11,9 @@
     },
     {
       "check_ident": "r2",
-      "required": false,
+      "required": true,
       "parameters": {
-        "file_name_regex": "^waw_[0-9]{4}_020m_[a-z]{2}_[0-9]{5}.*.tif$"
+        "file_name_regex": "^waw_[0-9]{4}_020m_(countrycode)_[0-9]{5}.*.tif$"
       }
     },
     {
