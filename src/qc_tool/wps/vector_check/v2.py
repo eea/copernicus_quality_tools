@@ -10,7 +10,7 @@ import os
 from qc_tool.wps.registry import register_check_function
 
 from qc_tool.wps.helper import *
-from dump_gdbtable import *
+from qc_tool.wps.vector_check.dump_gdbtable import *
 
 @register_check_function(__name__, "File names match file naming conventions.")
 def run_check(filepath, params):

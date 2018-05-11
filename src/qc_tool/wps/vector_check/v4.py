@@ -8,7 +8,7 @@ CRS check.
 import ogr
 import osr
 
-from dump_gdbtable import *
+from qc_tool.wps.vector_check.dump_gdbtable import *
 from qc_tool.wps.helper import *
 
 from qc_tool.wps.registry import register_check_function
