@@ -9,6 +9,7 @@ import os
 import re
 
 from qc_tool.wps.registry import register_check_function
+from qc_tool.wps.helper import *
 
 @register_check_function(__name__, "File names match file naming conventions.")
 def run_check(filepath, params):
@@ -18,10 +19,6 @@ def run_check(filepath, params):
     :param params: configuration
     :return: status + message
     """
-
-    def check_name(name, template):
-        regex = re.compile(template)
-        return bool(regex.match(name))
 
     # check file name
     filename = os.path.basename(filepath).lower()

@@ -24,3 +24,8 @@ def dir_recursive_search(in_dir, regexp=".*", target="file", deep=9999, full_pat
         level += 1
     return results
 
+
+def check_name(name, template):
+    regex = re.compile(template)
+    return bool(regex.match(name))
+

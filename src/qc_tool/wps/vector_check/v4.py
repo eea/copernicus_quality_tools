@@ -6,8 +6,10 @@ CRS check.
 """
 
 import ogr
-import re
 import osr
+
+from dump_gdbtable import *
+from qc_tool.wps.helper import *
 
 from qc_tool.wps.registry import register_check_function
 
@@ -21,8 +23,8 @@ def run_check(filepath, params):
     :return: status + message
     """
 
-    print("run_check.filepath={:s}".format(repr(filepath)))
-    print("run_check.params={:s}".format(repr(params)))
+    # print("run_check.filepath={:s}".format(repr(filepath)))
+    # print("run_check.params={:s}".format(repr(params)))
 
     def check_crs(lyr):
 
@@ -33,7 +35,9 @@ def run_check(filepath, params):
         else:
             return {"status": "failed",
                     "message": "the data is not projected"}
-
+        if epsg is None:
+            return {"status": "failed",
+                    "message": "The file has EPSG authority missing."}
         # CRS check via EPSG comparison
         if epsg in map(str, params["epsg"]):
             return {"status": "ok",
@@ -42,20 +46,18 @@ def run_check(filepath, params):
             return {"status": "failed",
                     "message": "forbidden EPSG code: {:s}".format(str(epsg))}
 
-    # open source data, get list of matching layernames
-    dsopen = ogr.Open(filepath)
-    regex = re.compile(params["layer_regex"])
-    layers_prefix = [layer.GetName() for layer in dsopen if params["layer_prefix"] in layer.GetName()]
-    layers_regex = [layer for layer in layers_prefix if bool(regex.match(layer.lower()))]
-    if not (list(set(layers_prefix) - set(layers_regex)) or len(layers_regex) == int(params["layer_count"])):
-        print (list(set(layers_prefix) - set(layers_regex)), len(layers_regex))
-        return {"status": "failed",
-                "message": "Number of matching layers ({:d}) does not correspond with declared number of layers({:d})".format(
-                    len(layers_regex), int(params["layer_count"]))}
+    # get list of feature classes
+    lyrs = get_fc_path(filepath)
+
+    # get list of feature classes matching to the prefix
+    layer_regex = params["layer_regex"].replace("countrycode", params["country_codes"]).lower()
+    layers_regex = [layer for layer in lyrs if check_name(layer.lower(), layer_regex)]
 
     # check CRS of all matching layers
     res = dict()
+    dsopen = ogr.Open(filepath)
     for layername in layers_regex:
+        layername = str(layername.split("/")[-1])
         layer = dsopen.GetLayerByName(layername)
         res[layername] = check_crs(layer)
 

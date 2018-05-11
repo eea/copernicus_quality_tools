@@ -38,4 +38,5 @@ def run_check(filepath, params):
         return {"status": "failed",
                 "message": "EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"]))}
 
-    return {"status": "ok"}
+    return {"status": "ok",
+            "message": "the CRS check was successful"}
