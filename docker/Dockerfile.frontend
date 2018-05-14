@@ -1,28 +1,26 @@
 # Dockerfile for building environment for COP15m WPS checking processes.
 # Currently, it utilizes django for the frontend
 
-FROM phusion/baseimage
+FROM ubuntu:xenial
 
 LABEL author=gisat.cz
-LABEL description="QC tool environment."
+LABEL description="QC tool environment, frontend application."
 
-# Add repositories.
-RUN install_clean wget software-properties-common \
-    && add-apt-repository -y ppa:ubuntugis/ppa \
-    && add-apt-repository "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" \
-    && wget --quiet --output-document=- https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 
 # Upgrade the base system.
 RUN apt-get -y update \
     && apt-get -y upgrade \
-    && install_clean python3-pip \
+    && apt-get install -y python3-pip \
     && pip3 install --upgrade pip \
-    && install_clean git
+    && apt-get install -y git
 
-# Install qc tool.
+# Install qc tool, frontend application.
 RUN cd /usr/local/src \
     && git clone https://github.com/eea/copernicus_quality_tools \
+    #&& cd copernicus_quality_tools/src/qc_tool/frontend \
     && cd copernicus_quality_tools \
     && pip3 install -r ./requirements.txt
 
-CMD python3 -m qc_tool.frontend.manage runserver 0.0.0.0:8000
+# Run frontend application.
+CMD python3 -m qc_tool.frontend.manage runserver 0.0.0.0:${FRONTEND_PORT}
