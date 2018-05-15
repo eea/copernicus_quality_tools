@@ -18,8 +18,7 @@ RUN apt-get -y update \
 # Install qc tool, frontend application.
 RUN cd /usr/local/src \
     && git clone https://github.com/eea/copernicus_quality_tools \
-    #&& cd copernicus_quality_tools/src/qc_tool/frontend \
-    && cd copernicus_quality_tools \
+    && cd copernicus_quality_tools/src/qc_tool/frontend \
     && pip3 install -r ./requirements.txt
 
 # Run frontend application.
