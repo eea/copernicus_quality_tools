@@ -14,7 +14,7 @@
 
             <ol class="breadcrumb">
               <li><a href="{% url 'index' %}">Copernicus QC Tool</a></li>
-              <li class="active"><a href="{% url 'index' %}">Checking Sessions</a></li>
+              <li class="active"><a href="{% url 'index' %}">Jobs</a></li>
             </ol>
 
             <div class="main">
@@ -32,14 +32,14 @@
                         <div id="runs-toolbar-1">
                             <a href="{% url 'new_check' %}" class="btn btn-success" role="button">
                                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                Start New Checking
+                                New Checking Job
                             </a>
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
                         <table id="tbl-runs" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
-                                <th data-field="uid" data-sortable="true" data-formatter="checkingDetailFormatter">Checking Run ID</th>
+                                <th data-field="uid" data-sortable="true" data-formatter="checkingDetailFormatter">Job ID</th>
                                 <th data-field="filepath" data-sortable="true">File Path</th>
                                 <th data-field="product_type_name" data-sortable="true">Product Type</th>
                                 <th data-field="start_time" data-sortable="true">Start</th>
