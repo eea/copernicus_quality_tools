@@ -26,7 +26,7 @@ def run_check(filepath, params):
     gdal.UseExceptions()
 
     # file extension check
-    ds_extension = os.path.splitext(filepath)[1]
+    ds_extension = os.path.splitext(filepath)[1].lower()
     if ds_extension not in params["formats"]:
         return {"status": "failed",
                 "message": "forbidden file extension {:s}".format(ds_extension)}
