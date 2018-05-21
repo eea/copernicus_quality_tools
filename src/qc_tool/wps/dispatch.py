@@ -49,17 +49,19 @@ def dispatch(filepath, product_type_name, optional_check_idents, params=None, up
 
     # Run check suite.
     suite_result = {}
+    job_params = {}
     for check in check_suite:
         # Prepare parameteres.
         check_params = {}
-        if params is not None:
-            check_params.update(params)
-        if "parameters" in product_type:
-            check_params.update(product_type["parameters"])
         if check["check_ident"] in check_defaults:
             check_params.update(check_defaults[check["check_ident"]])
+        if "parameters" in product_type:
+            check_params.update(product_type["parameters"])
         if "parameters" in check:
             check_params.update(check["parameters"])
+        if params is not None:
+            check_params.update(params)
+        check_params.update(job_params)
 
         # Run the check.
         func = get_check_function(check["check_ident"])
@@ -68,11 +70,16 @@ def dispatch(filepath, product_type_name, optional_check_idents, params=None, up
         #        while upper server stack uses pathlib.
         #        it is encouraged to choose one or another.
         check_result = func(str(filepath), check_params)
-        suite_result[check["check_ident"]] = check_result
+        suite_result[check["check_ident"]] = {}
+        suite_result[check["check_ident"]]["status"] = check_result["status"]
+        if "message" in check_result:
+            suite_result[check["check_ident"]]["message"] = check_result["message"]
         if update_result is not None:
             update_result(suite_result)
         if check_result["status"] == "aborted":
             break
+        if "params" in check_result:
+            job_params.update(check_result["params"])
 
 
 class ServiceException(Exception):
