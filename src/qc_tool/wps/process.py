@@ -76,7 +76,7 @@ class CopSleep(Process):
 
 
 class RunChecks(Process):
-    # There is also keywork parameter "default" in LiteralInput constructor, however it has no effect.
+    # There is also keyword parameter "default" in LiteralInput constructor, however it has no effect.
     INPUTS = [LiteralInput("filepath", "Local filesystem path to the product to be checked.",
                            data_type="string", min_occurs=1, max_occurs=1),
               LiteralInput("product_type_name", "The type of the product denoting group of checks to be performed.",
@@ -107,8 +107,11 @@ class RunChecks(Process):
             optional_check_idents = []
 
         # Call dispatch.
-        params = {}
         def update_result(suite_result):
             response.outputs["result"].data = json.dumps(suite_result)
-        dispatch(filepath, product_type_name, optional_check_idents, params, update_result)
+        dispatch(str(self.uuid),
+                 filepath,
+                 product_type_name,
+                 optional_check_idents,
+                 update_result=update_result)
         return response

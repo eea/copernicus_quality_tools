@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile.wps
     environment:
+      - PG_HOST
+      - PG_DATABASE_NAME
       - WPS_DIR
       - WPS_PORT
       - WPS_URL
