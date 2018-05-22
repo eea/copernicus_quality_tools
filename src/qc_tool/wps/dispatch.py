@@ -51,7 +51,7 @@ def dispatch(filepath, product_type_name, optional_check_idents, params=None, up
     suite_result = {}
     job_params = {}
     for check in check_suite:
-        # Prepare parameteres.
+        # Prepare parameters.
         check_params = {}
         if check["check_ident"] in check_defaults:
             check_params.update(check_defaults[check["check_ident"]])
@@ -70,16 +70,22 @@ def dispatch(filepath, product_type_name, optional_check_idents, params=None, up
         #        while upper server stack uses pathlib.
         #        it is encouraged to choose one or another.
         check_result = func(str(filepath), check_params)
+
+        # Add result to suite results.
         suite_result[check["check_ident"]] = {}
         suite_result[check["check_ident"]]["status"] = check_result["status"]
         if "message" in check_result:
             suite_result[check["check_ident"]]["message"] = check_result["message"]
-        if update_result is not None:
-            update_result(suite_result)
-        if check_result["status"] == "aborted":
-            break
         if "params" in check_result:
             job_params.update(check_result["params"])
+
+        # Update wps output.
+        if update_result is not None:
+            update_result(suite_result)
+
+        # Abort validation if wanted.
+        if check_result["status"] == "aborted":
+            break
 
 
 class ServiceException(Exception):
