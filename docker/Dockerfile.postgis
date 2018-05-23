@@ -1,0 +1,34 @@
+FROM ubuntu:xenial
+
+LABEL author=gisat.cz
+LABEL description="QC tool environment, image for postgresql & postgis component."
+
+# Add repositories and upgrade the system.
+RUN apt-get -y update \
+    && apt-get -y install wget software-properties-common \
+    && add-apt-repository -y ppa:ubuntugis/ppa \
+    && add-apt-repository "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" \
+    && wget --quiet --output-document=- https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+    && apt-get -y update \
+    && apt-get -y upgrade
+
+# Install postgresql & postgis.
+RUN apt-get -y install postgresql-10-postgis-2.4
+
+USER postgres
+
+# Configure the qc tool database.
+RUN echo "host   qc_tool_db   qc_job   all   trust" >>/etc/postgresql/10/main/pg_hba.conf \
+    && echo "listen_addresses='*'" >>/etc/postgresql/10/main/postgresql.conf \
+    && /etc/init.d/postgresql start \
+    && psql --command="CREATE DATABASE qc_tool_db;" \
+    && psql --command="CREATE ROLE qc_job WITH LOGIN PASSWORD NULL;" \
+    && psql --command="GRANT ALL PRIVILEGES ON DATABASE qc_tool_db TO qc_job;" \
+    && psql --dbname=qc_tool_db --command="CREATE EXTENSION postgis;" \
+    && /etc/init.d/postgresql stop
+
+VOLUME ["/var/log/postgresql"]
+
+EXPOSE 5432
+
+CMD ["/usr/lib/postgresql/10/bin/postgres", "-D", "/var/lib/postgresql/10/main", "-c", "config_file=/etc/postgresql/10/main/postgresql.conf"]

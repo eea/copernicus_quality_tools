@@ -26,4 +26,7 @@ services:
       - INCOMING_DIR
     volumes:
       - "${WPS_MOUNT}:${WPS_DIR}"
-
+  qc_tool_postgis:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgis
