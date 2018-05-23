@@ -1,5 +1,5 @@
 {
-  "description": "CORINE Land Cover initial status layer",
+  "description": "CORINE Land Cover status layers",
   "parameters": {
     "layer_prefix": "^countrycode/clc",
     "layer_regex": "^countrycode/clc[0-9]{2}_countrycode$",
@@ -28,10 +28,15 @@
       }
     },
     {
+      "check_ident": "import2pg",
+      "required": true
+    },
+    {
       "check_ident": "v11",
       "required": false,
       "parameters": {
-          "area_ha": 25
+        "area_ha": 25,
+        "border_exception": true
       }
     }
   ]

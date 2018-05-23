@@ -28,10 +28,15 @@
       }
     },
     {
+      "check_ident": "import2pg",
+      "required": true
+    },
+    {
       "check_ident": "v11",
       "required": false,
       "parameters": {
-        "area_ha": 5
+        "area_ha": 5,
+        "border_exception": true
       }
     }
   ]
