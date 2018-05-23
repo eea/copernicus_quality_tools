@@ -3,7 +3,6 @@
 
 import re
 import os
-import commands
 import psycopg2
 
 """
@@ -30,4 +29,3 @@ def dir_recursive_search(in_dir, regexp=".*", target="file", deep=9999, full_pat
 def check_name(name, template):
     regex = re.compile(template)
     return bool(regex.match(name))
-

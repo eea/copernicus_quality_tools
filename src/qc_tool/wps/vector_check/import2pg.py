@@ -5,13 +5,14 @@
 Import layers into PostGIS db.
 """
 
-from qc_tool.wps.registry import register_check_function
-
-from qc_tool.wps.helper import *
-from qc_tool.wps.vector_check.dump_gdbtable import *
 
 from subprocess import Popen, PIPE
+
 import psycopg2
+
+from qc_tool.wps.helper import check_name
+from qc_tool.wps.registry import register_check_function
+from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
 
 @register_check_function(__name__, "Import layers into PostGIS db.")
@@ -38,7 +39,7 @@ def run_check(filepath, params):
                    "-overwrite",
                    "-skipfailures",
                    "-f", "PostgreSQL",
-                   "PG:{:s} active_schema='{:s}'".format(dsn, schema),
+                   "PG:{:s} active_schema={:s}".format(dsn, schema),
                    filepath,
                    lyr.split("/")[1]])
         if p.returncode != 0 and p.returncode is not None:
