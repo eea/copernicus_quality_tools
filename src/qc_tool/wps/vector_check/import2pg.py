@@ -39,7 +39,8 @@ def run_check(filepath, params):
                    "-overwrite",
                    "-skipfailures",
                    "-f", "PostgreSQL",
-                   "PG:{:s} active_schema={:s}".format(dsn, schema),
+                   "-lco", schema,
+                   "PG:{:s}".format(dsn),
                    filepath,
                    lyr.split("/")[1]])
         if p.returncode != 0 and p.returncode is not None:

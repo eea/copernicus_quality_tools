@@ -1,3 +1,6 @@
+DROP SCHEMA IF EXISTS qc_function CASCADE;
+CREATE SCHEMA qc_function;
+
 CREATE FUNCTION qc_function.__f_count_rows(_tbl regclass, OUT _ct bigint)
 RETURNS bigint
 LANGUAGE plpgsql

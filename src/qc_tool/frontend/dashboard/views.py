@@ -163,7 +163,11 @@ def get_result(request, result_uuid):
     print(result_detail)
     result_list = []
     for id, val in result_detail.items():
-        result_list.append({'check_ident': id, 'status': val['status'], 'message': val['message']})
+        if 'message' in val:
+            message = val['message']
+        else:
+            message = None
+        result_list.append({'check_ident': id, 'status': val['status'], 'message': message})
 
     # sort the results by check_ident
     result_list_sorted = sorted(result_list, key=lambda x: x['check_ident'])
