@@ -34,17 +34,16 @@ def run_check(filepath, params):
             epsg = srs.GetAttrValue("AUTHORITY", 1)
         else:
             return {"status": "failed",
-                    "message": "the data is not projected"}
+                    "message": "The source data is not projected."}
         if epsg is None:
             return {"status": "failed",
                     "message": "The file has EPSG authority missing."}
         # CRS check via EPSG comparison
         if epsg in map(str, params["epsg"]):
-            return {"status": "ok",
-                    "message": "the CRS check was successful"}
+            return {"status": "ok"}
         else:
             return {"status": "failed",
-                    "message": "forbidden EPSG code: {:s}".format(str(epsg))}
+                    "message": "EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"]))}
 
     # get list of feature classes
     lyrs = get_fc_path(filepath)
@@ -63,12 +62,11 @@ def run_check(filepath, params):
 
     # return results for particular layers
     if "failed" not in list(set(([res[ln]["status"] for ln in res]))):
-        return {"status": "ok",
-                "message": "the CRS check was successful"}
+        return {"status": "ok"}
     else:
         layer_results = ', '.join(
             "layer {!s}: {!r}".format(key, val) for (key, val) in {ln: res[ln]["message"] for ln in res}.items())
 
-        res_message = "the CRS check failed ({:s})".format(layer_results)
+        res_message = "The CRS check failed ({:s}).".format(layer_results)
         return {"status": "failed",
                 "message": res_message}

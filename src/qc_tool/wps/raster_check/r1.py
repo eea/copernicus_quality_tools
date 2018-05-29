@@ -5,8 +5,8 @@
 File format check.
 """
 
-import os
 import gdal
+from pathlib import PurePath
 
 from qc_tool.wps.registry import register_check_function
 
@@ -19,37 +19,33 @@ def run_check(filepath, params):
     :return: status + message
     """
 
-    print("run_check.filepath={:s}".format(repr(filepath)))
-    print("run_check.params={:s}".format(repr(params)))
-
     # enable gdal to use exceptions
     gdal.UseExceptions()
 
     # file extension check
-    ds_extension = os.path.splitext(filepath)[1].lower()
+    ds_extension = PurePath(filepath).suffix
     if ds_extension not in params["formats"]:
-        return {"status": "failed",
-                "message": "forbidden file extension {:s}".format(ds_extension)}
+        return {"status": "aborted",
+                "message": "The source file has forbidden extension: {:s}.".format(ds_extension)}
 
     # try to open file with ogr drivers
     if ds_extension in params["drivers"]:
         try:
             ds_open = gdal.Open(filepath)
             if ds_open is None:
-                return {"status": "failed",
-                        "message": "file can not be opened"}
+                return {"status": "aborted",
+                        "message": "The source file can not be opened."}
         except:
-            return {"status": "failed",
-                    "message": "file can not be opened"}
+            return {"status": "aborted",
+                    "message": "The source file can not be opened."}
 
         # check file format
         drivername = ds_open.GetDriver().ShortName
         if drivername == params["drivers"][ds_extension]:
-            return {"status": "ok",
-                    "message": "the file format check was successful"}
+            return {"status": "ok"}
         else:
-            return {"status": "failed",
-                    "message": "file format is invalid"}
+            return {"status": "aborted",
+                    "message": "The file format is invalid."}
     else:
-        return {"status": "failed",
-                "message": "forbidden file extension {:s}".format(ds_extension)}
+        return {"status": "aborted",
+                "message": "The source file has forbidden extension: {:s}".format(ds_extension)}

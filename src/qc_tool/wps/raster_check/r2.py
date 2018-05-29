@@ -5,11 +5,7 @@
 Naming convention check.
 """
 
-import os
-import re
-
-from qc_tool.wps.registry import register_check_function
-from qc_tool.wps.helper import *
+from pathlib import Path, PurePath
 
 @register_check_function(__name__, "File names match file naming conventions.")
 def run_check(filepath, params):
@@ -21,21 +17,20 @@ def run_check(filepath, params):
     """
 
     # check file name
-    filename = os.path.basename(filepath).lower()
+    filename = PurePath(filepath).name
+    filename = filename.lower()
     file_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
     if not check_name(filename, file_regex):
-        print("failed")
         return {"status": "failed",
                 "message": "File name does not conform to the naming convention."}
     else:
-        list_of_files = [x.lower() for x in os.listdir(os.path.dirname(filepath))]
-        file_prefix = os.path.splitext(filename)[0]
+        list_of_files = [str(x).lower() for x in Path(PurePath(filepath).parents[0]).iterdir()]
+        file_stem = PurePath(filename).stem
 
         # check for required files
         for ext in params["extensions"]:
-            req_file = file_prefix + ext
+            req_file = file_stem + ext
             if req_file not in list_of_files:
                 return {"status": "failed",
-                        "message": "'{:s}' file is missing.".format(ext)}
-        return {"status": "ok",
-                "message": "The file naming convention check was successfull."}
+                        "message": "The '{:s}' file is missing.".format(req_file)}
+        return {"status": "ok"}

@@ -5,11 +5,9 @@
 Minimum mapping unit check.
 """
 
-from qc_tool.wps.registry import register_check_function
-from qc_tool.wps.helper import *
+from pathlib import Path, PurePath
 
-
-@register_check_function(__name__, "Minimum mapping unit check.")
+# @register_check_function(__name__, "Minimum mapping unit check.")
 def run_check(filepath, params):
     """
     Minimum mapping unit check..
@@ -28,12 +26,11 @@ def run_check(filepath, params):
 
     # run command to create custom SQL functions
     # this should be moved to dispatch
-    current_directory = os.path.dirname(__file__)
-    sql_file = os.path.join(current_directory, "db_functions.sql")
-    with open(sql_file, "r") as sql_file_obj:
-        sql_query = sql_file_obj.read()
-        cur.execute(sql_query)
-        conn.commit()
+    current_directory = PurePath(__file__).parents[0]
+    sql_file = PurePath(current_directory, "v11.sql")
+    sql_query = Path(sql_file).read_text()
+    cur.execute(sql_query)
+    conn.commit()
 
 
     # select all db tables
@@ -44,6 +41,10 @@ def run_check(filepath, params):
     for table in tables:
 
         table = table[0]
+
+        if "polyline" in table or "lessmmu" in table:
+            continue
+
 
         # create table of less-mmu polygons
         cur.execute("""SELECT __v11_mmu_status({0},'{1}',{2});""".format(area_m, table, str(border_exception).lower()))

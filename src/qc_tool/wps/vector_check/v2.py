@@ -4,11 +4,11 @@
 """
 Naming convention check.
 """
+import re
 
-import os
+from pathlib import PurePath
 
 from qc_tool.wps.registry import register_check_function
-
 from qc_tool.wps.helper import *
 from qc_tool.wps.vector_check.dump_gdbtable import *
 
@@ -23,11 +23,12 @@ def run_check(filepath, params):
 
 
     # check file name
-    filename = os.path.basename(filepath).lower()
+    filename = PurePath(filepath).name
+    filename = filename.lower()
     file_name_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
     conf = check_name(filename, file_name_regex)
     if not conf:
-        return {"status": "failed",
+        return {"status": "aborted",
                 "message": "File name does not conform to the naming convention."}
 
     # get particular country code
@@ -45,12 +46,12 @@ def run_check(filepath, params):
 
     if not list(set(layers_prefix) - set(layers_regex)):
         if len(layers_regex) != int(params["layer_count"]):
-            return {"status": "failed",
+            return {"status": "aborted",
                     "message": "Number of matching layers ({:d}) does not correspond with declared number of layers({:d})".format(
                         len(layers_regex), int(params["layer_count"]))}
         else:
-            return {"status": "ok",
-                    "message": "Names of file and layers conforms to the naming convention."}
+            return {"status": "ok"}
     else:
-        return {"status": "failed",
-                "message": "File naming convention failed."}
+        return {"status": "aborted",
+                "message": "Number of layers matching prefix '{:s}' and number of layers matching regex '{:s}' are not equal.".format(
+                    layer_prefix, layer_regex)}

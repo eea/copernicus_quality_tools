@@ -5,10 +5,7 @@
 Import layers into PostGIS db.
 """
 
-
-from subprocess import Popen, PIPE
-
-import psycopg2
+from subprocess import Popen
 
 from qc_tool.wps.helper import check_name
 from qc_tool.wps.registry import register_check_function

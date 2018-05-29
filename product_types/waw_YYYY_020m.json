@@ -11,7 +11,7 @@
     },
     {
       "check_ident": "r2",
-      "required": true,
+      "required": false,
       "parameters": {
         "file_name_regex": "^waw_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"
       }
