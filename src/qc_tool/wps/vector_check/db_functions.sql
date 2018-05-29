@@ -1,4 +1,4 @@
-CREATE FUNCTION __f_count_rows(_tbl regclass, OUT _ct bigint)
+CREATE FUNCTION qc_function.__f_count_rows(_tbl regclass, OUT _ct bigint)
 RETURNS bigint
 LANGUAGE plpgsql
 AS $$
@@ -8,7 +8,7 @@ END
 $$;
 
 
-CREATE FUNCTION __v11_mmu_polyline_border(product_name text)
+CREATE FUNCTION qc_function.__v11_mmu_polyline_border(product_name text)
 RETURNS text
 LANGUAGE plpgsql
 AS $$
@@ -23,7 +23,7 @@ END
 $$;
 
 
-CREATE FUNCTION __v11_mmu_status(mmu integer, product_name text, product_border boolean, OUT _ct bigint)
+CREATE FUNCTION qc_function.__v11_mmu_status(mmu integer, product_name text, product_border boolean, OUT _ct bigint)
 RETURNS bigint
 LANGUAGE plpgsql
 AS $$
@@ -50,7 +50,7 @@ END
 $$;
 
 
-CREATE FUNCTION __v11_mmu_change(mmu integer, product_name text, product_type text, product_border boolean, code_from text, code_to text)
+CREATE FUNCTION qc_function.__v11_mmu_change(mmu integer, product_name text, product_type text, product_border boolean, code_from text, code_to text)
 RETURNS text
 LANGUAGE plpgsql
 AS $$
@@ -97,7 +97,7 @@ BEGIN
 --		EXECUTE format('CREATE TABLE %1$s_lessMMU_except AS SELECT c.* from %1$s c, %1$s_polyline_border b where ((ST_INTERSECTS(c.wkb_geometry, b.geometry1))) AND c.shape_area < %2$s',product_name, mmu::text);
 --		EXECUTE 'SELECT count(*) FROM ' ||  product_name || '_lessMMU_error' INTO _ct;
 
-	 ELSE   
+	 ELSE
 --		EXECUTE format('CREATE TABLE %1$s_lessMMU_error AS SELECT c.* from %1$s c where c.shape_area < %2$s',product_name, mmu::text);
 --		EXECUTE 'SELECT count(*) FROM ' ||  product_name || '_lessMMU_error' INTO _ct;
   END CASE;
