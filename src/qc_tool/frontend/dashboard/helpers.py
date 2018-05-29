@@ -108,7 +108,9 @@ def parse_status_document(document_url):
                             break
 
                     doc['overall_result'] = overall_result
-                except:
+
+                except json.JSONDecodeError:
+                    # when the output is not in valid JSON format
                     doc['result'] = out_text
 
     # status of the WPS output
