@@ -163,7 +163,8 @@ class ConnectionManager():
         if self.job_schema_name is not None:
             if not self._is_connected():
                 conn = _create_connection()
-            self._drop_schema()
+            # docasne zakomentovat odebrani schematu 
+            # self._drop_schema()
         if self._is_connected():
             self.connection.close()
         self.connection = None
