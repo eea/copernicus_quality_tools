@@ -26,6 +26,16 @@ def run_check(filepath, params):
     conn = params["connection_manager"].get_connection()
     cur = conn.cursor()
 
+    # run command to create custom SQL functions
+    # this should be moved to dispatch
+    current_directory = os.path.dirname(__file__)
+    sql_file = os.path.join(current_directory, "db_functions.sql")
+    with open(sql_file, "r") as sql_file_obj:
+        sql_query = sql_file_obj.read()
+        cur.execute(sql_query)
+        conn.commit()
+
+
     # select all db tables
     cur.execute("""SELECT relname FROM pg_class WHERE relkind='r' AND relname !~ '(^(pg_|sql_)|spatial_ref_sys)';""")
     tables = cur.fetchall()
@@ -36,11 +46,11 @@ def run_check(filepath, params):
         table = table[0]
 
         # create table of less-mmu polygons
-        cur.execute("""SELECT __eo_create_table_check_status_MMU_v02({0},'{1}',{2});""".format(area_m, table, str(border_exception).lower()))
+        cur.execute("""SELECT __v11_mmu_status({0},'{1}',{2});""".format(area_m, table, str(border_exception).lower()))
         conn.commit()
 
         # get less mmu ids and count
-        cur.execute("""SELECT id FROM {:s}_lessmmu_error""".format(table))
+        cur.execute("""SELECT id FROM {:s}_lessMMU_error""".format(table))
         lessmmu_error_ids = ', '.join([id[0] for id in cur.fetchall()])
         lessmmu_error_count = cur.rowcount
 
@@ -50,7 +60,7 @@ def run_check(filepath, params):
             res[table] = {"lessmmu_error": [0]}
 
         if border_exception:
-            cur.execute("""SELECT id FROM {:s}_lessmmu_except""".format(table))
+            cur.execute("""SELECT id FROM {:s}_lessMMU_except""".format(table))
             lessmmu_except_ids = ', '.join([id[0] for id in cur.fetchall()])
             lessmmu_except_count = cur.rowcount
 
