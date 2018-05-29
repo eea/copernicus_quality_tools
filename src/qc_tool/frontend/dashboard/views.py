@@ -5,6 +5,7 @@ import os
 import json
 import requests
 import time
+import zipfile
 
 from pathlib import Path
 from xml.etree import ElementTree
@@ -89,6 +90,20 @@ def file_upload(request):
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
         fs.save(myfile.name, myfile)
+
+        # if it is a zip file then unzip it
+        if myfile.name.endswith('gdb.zip'):
+            zip_file_path = os.path.join(settings.INCOMING_DIR, os.path.basename(myfile.name))
+
+            gdb_dir_path = zip_file_path.replace('gdb.zip','gdb')
+            os.makedirs(gdb_dir_path)
+            print(gdb_dir_path)
+
+            with zipfile.ZipFile(zip_file_path, 'r') as f:
+                files = [n for n in f.namelist() if not n.endswith('/')]
+                f.extractall(path=settings.INCOMING_DIR, members=files)
+            os.remove(zip_file_path)
+
         return redirect('/files/?uploaded_filename={0}'.format(myfile.name))
 
     return render(request, 'dashboard/file_upload.html')
@@ -261,8 +276,7 @@ def run_wps_execute(request):
             js = json.dumps(error_response)
             return HttpResponse(js, content_type='application/json')
 
-    except BaseException as e:
-        # general exception handling
+    except requests.exceptions.RequestException as e:  # catch exception in case of wps server not responding
         error_response = {"status": "ERR", "message": "WPS server probably does not respond. Error details: %s" % (e)}
         js = json.dumps(error_response)
         return HttpResponse(js, content_type='application/json')

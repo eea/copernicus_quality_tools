@@ -105,6 +105,8 @@ def parse_status_document(document_url):
                             overall_result = 'PASSED'
                         else:
                             overall_result = 'FAILED'
+                            break
+
                     doc['overall_result'] = overall_result
                 except:
                     doc['result'] = out_text
