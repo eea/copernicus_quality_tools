@@ -31,7 +31,7 @@ PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
 CHECK_DEFAULTS_FILENAME = "_check_defaults.json"
 
 
-def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, params=None, update_result=None):
+def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, update_result_func=None):
     # Read configurations.
     check_defaults_filepath = PRODUCT_TYPES_DIR.joinpath(CHECK_DEFAULTS_FILENAME)
     check_defaults = json.loads(check_defaults_filepath.read_text())
@@ -70,8 +70,6 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, param
                 check_params.update(product_type["parameters"])
             if "parameters" in check:
                 check_params.update(check["parameters"])
-            if params is not None:
-                check_params.update(params)
             check_params.update(job_params)
 
             # Run the check.
@@ -91,8 +89,8 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, param
                 job_params.update(check_result["params"])
 
             # Update wps output.
-            if update_result is not None:
-                update_result(suite_result)
+            if update_result_func is not None:
+                update_result_func(suite_result)
 
             # Abort validation if wanted.
             if check_result["status"] == "aborted":

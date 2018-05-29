@@ -107,11 +107,11 @@ class RunChecks(Process):
             optional_check_idents = []
 
         # Call dispatch.
-        def update_result(suite_result):
+        def update_wps_result(suite_result):
             response.outputs["result"].data = json.dumps(suite_result)
         dispatch(str(self.uuid),
                  filepath,
                  product_type_name,
                  optional_check_idents,
-                 update_result=update_result)
+                 update_result_func=update_wps_result)
         return response
