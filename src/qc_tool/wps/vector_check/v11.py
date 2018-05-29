@@ -7,7 +7,9 @@ Minimum mapping unit check.
 
 from pathlib import Path, PurePath
 
-# @register_check_function(__name__, "Minimum mapping unit check.")
+from qc_tool.wps.registry import register_check_function
+
+@register_check_function(__name__, "Minimum mapping unit check.")
 def run_check(filepath, params):
     """
     Minimum mapping unit check..
@@ -50,6 +52,8 @@ def run_check(filepath, params):
         cur.execute("""SELECT __v11_mmu_status({0},'{1}',{2});""".format(area_m, table, str(border_exception).lower()))
         conn.commit()
 
+        print("mmu status function completed!")
+
         # get less mmu ids and count
         cur.execute("""SELECT id FROM {:s}_lessMMU_error""".format(table))
         lessmmu_error_ids = ', '.join([id[0] for id in cur.fetchall()])
@@ -71,7 +75,7 @@ def run_check(filepath, params):
                 res[table]["lessmmu_except"] = [0]
 
     lmes = [res[lme]["lessmmu_error"][0] for lme in res]
-    if len(list(set(lmes))) == 0 and lmes[0] == 0:
+    if len(list(set(lmes))) == 0 or lmes[0] == 0:
         return {"status": "ok"}
     else:
         layer_results = ', '.join(

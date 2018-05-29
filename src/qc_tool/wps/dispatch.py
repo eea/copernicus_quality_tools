@@ -12,7 +12,6 @@ from psycopg2 import connect
 from qc_tool.wps.registry import get_check_function
 
 import qc_tool.wps.common_check.dummy
-import qc_tool.wps.common_check.vr1
 
 import qc_tool.wps.raster_check.r1
 import qc_tool.wps.raster_check.r2
@@ -137,7 +136,7 @@ class ConnectionManager():
         with closing(self.connection.cursor()) as cursor:
             cursor.execute("CREATE SCHEMA {:s};".format(job_schema_name))
             self.job_schema_name = job_schema_name
-            cursor.execute("SET search_path TO {:s}, {:s};".format(job_schema_name, self.func_schema_name))
+            cursor.execute("SET search_path TO {:s}, {:s}, public;".format(job_schema_name, self.func_schema_name))
 
     def _drop_schema(self):
         with closing(self.connection.cursor()) as cursor:

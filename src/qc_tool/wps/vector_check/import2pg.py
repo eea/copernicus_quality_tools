@@ -36,7 +36,7 @@ def run_check(filepath, params):
                    "-overwrite",
                    "-skipfailures",
                    "-f", "PostgreSQL",
-                   "-lco", schema,
+                   "-lco", "SCHEMA={:s}".format(schema),
                    "PG:{:s}".format(dsn),
                    filepath,
                    lyr.split("/")[1]])
