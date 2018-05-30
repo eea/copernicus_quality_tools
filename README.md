@@ -10,9 +10,10 @@ The application will consist of:
 # QC Tool Checking Environment
 Steps to install the code and run it (tested on Ubuntu Linux 16.04):
 
-(1) install docker
+(1) install docker version 1.13 or higher
 ```
-sudo apt install docker.io docker-compose
+sudo apt install docker.io
+docker --version
 ```
 (2) get the latest version of docker-compose (1.21 or higher)
 ```
