@@ -21,6 +21,13 @@
       }
     },
     {
+      "check_ident": "v3",
+      "required": false,
+      "parameters": {
+        "fields": ["^ID$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$", "^Shape_Length$", "^Shape_Area$"]
+      }
+    },
+    {
       "check_ident": "v4",
       "required": false,
       "parameters": {
