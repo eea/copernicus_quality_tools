@@ -8,6 +8,7 @@ Naming convention check.
 from pathlib import Path, PurePath
 
 from qc_tool.wps.registry import register_check_function
+from qc_tool.wps.helper import check_name
 
 @register_check_function(__name__, "File names match file naming conventions.")
 def run_check(filepath, params):
