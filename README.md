@@ -11,17 +11,12 @@ The application will consist of:
 Steps to install the code and run it (tested on Ubuntu Linux 16.04):
 
 (1) install docker version 1.13 or higher
-```
-sudo apt install docker.io
-docker --version
-```
+
+(see https://docs.docker.com/install/linux/docker-ce/ubuntu/)
+
 (2) get the latest version of docker-compose (1.21 or higher)
-```
-sudo apt remove docker-compose
-sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-docker-compose --version
-```
+
+(see https://docs.docker.com/compose/install/#install-compose)
 
 (3) get the source code from github and go to the copernicus_quality_tools/docker directory
 ```
@@ -29,7 +24,7 @@ git clone https://github.com/eea/copernicus_quality_tools
 cd copernicus_quality_tools/docker
 ```
 
-(4) Configure the directory for uploaded .gdb and .tif files by editing the hidden .env file in copernicus_quality_tools/docker: 
+(4) Configure the directory for uploading .gdb and .tif files by editing the hidden .env file in copernicus_quality_tools/docker: 
 ```
 nano .env
 ```
@@ -47,7 +42,7 @@ FRONTEND_PORT=8000
 
 WPS_MOUNT=/mnt/pracovni-archiv-01/projects/cop15m/volume-igor
 ```
-In the .env file, set WPS_MOUNT in the last line to a directory with read and write permissions on your system.
+In the .env file, set *WPS_MOUNT* to a directory on your system with read and write permissions on your system. For example you can set *WPS_MOUNT=/tmp/wps*
 
 (5) Build the docker containers and run the application
 ```
