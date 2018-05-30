@@ -29,3 +29,29 @@ def dir_recursive_search(in_dir, regexp=".*", target="file", deep=9999, full_pat
 def check_name(name, template):
     regex = re.compile(template)
     return bool(regex.match(name))
+
+
+def find_name(list_of_names, template):
+    """
+    Find string from list based on regular expression.
+    :param template: regex
+    :param list_of_names: list of strings
+    :return: list of matching strings
+    """
+    regex = re.compile(template)
+    return filter(regex.match, list_of_names)
+
+
+def get_substring(name, template):
+    """
+    Get substring based on regular expression.
+    :param name:
+    :param template:
+    :return: matching substring (or None)
+    """
+    r = re.compile(template)
+    rs = re.search(r, name)
+    if rs:
+        return str(rs.group(0))
+    else:
+        return None

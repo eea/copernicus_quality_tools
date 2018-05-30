@@ -31,7 +31,7 @@
       "check_ident": "v4",
       "required": false,
       "parameters": {
-          "epsg": [3035, 23033]
+          "epsg": [3035, 23033, 5514]
       }
     },
     {
@@ -42,7 +42,7 @@
       "check_ident": "v11",
       "required": false,
       "parameters": {
-        "area_ha": 25,
+        "area_ha": 200,
         "border_exception": true
       }
     }
