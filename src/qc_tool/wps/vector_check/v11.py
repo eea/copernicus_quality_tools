@@ -60,7 +60,7 @@ def run_check(filepath, params):
         lessmmu_error_count = cur.rowcount
 
         if lessmmu_error_count > 0:
-            res[table] = {"lessmmu_error": [lessmmu_error_count, lessmmu_
+            res[table] = {"lessmmu_error": [lessmmu_error_count, lessmmu_error_ids]}
         else:
             res[table] = {"lessmmu_error": [0]}
 
