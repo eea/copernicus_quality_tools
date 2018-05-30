@@ -9,8 +9,8 @@ import re
 from pathlib import PurePath
 
 from qc_tool.wps.registry import register_check_function
-from qc_tool.wps.helper import *
-from qc_tool.wps.vector_check.dump_gdbtable import *
+from qc_tool.wps.helper import check_name
+from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
 @register_check_function(__name__, "File names match file naming conventions.")
 def run_check(filepath, params):

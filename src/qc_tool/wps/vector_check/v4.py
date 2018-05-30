@@ -8,8 +8,8 @@ CRS check.
 import ogr
 import osr
 
-from qc_tool.wps.vector_check.dump_gdbtable import *
-from qc_tool.wps.helper import *
+from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
+from qc_tool.wps.helper import check_name
 
 from qc_tool.wps.registry import register_check_function
 
@@ -22,9 +22,6 @@ def run_check(filepath, params):
     :param params: configuration
     :return: status + message
     """
-
-    # print("run_check.filepath={:s}".format(repr(filepath)))
-    # print("run_check.params={:s}".format(repr(params)))
 
     def check_crs(lyr):
 
