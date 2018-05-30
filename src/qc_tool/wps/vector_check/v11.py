@@ -55,7 +55,7 @@ def run_check(filepath, params):
         print("mmu status function completed!")
 
         # get less mmu ids and count
-        cur.execute("""SELECT id FROM {:s}_lessMMU_error""".format(table))
+        cur.execute("""SELECT id FROM {:s}_lessmmu_error""".format(table))
         lessmmu_error_ids = ', '.join([id[0] for id in cur.fetchall()])
         lessmmu_error_count = cur.rowcount
 
@@ -65,7 +65,7 @@ def run_check(filepath, params):
             res[table] = {"lessmmu_error": [0]}
 
         if border_exception:
-            cur.execute("""SELECT id FROM {:s}_lessMMU_except""".format(table))
+            cur.execute("""SELECT id FROM {:s}_lessmmu_except""".format(table))
             lessmmu_except_ids = ', '.join([id[0] for id in cur.fetchall()])
             lessmmu_except_count = cur.rowcount
 
