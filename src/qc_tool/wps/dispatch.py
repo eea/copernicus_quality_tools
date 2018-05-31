@@ -48,7 +48,8 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
                                            CONFIG["pg_host"],
                                            CONFIG["pg_port"],
                                            CONFIG["pg_user"],
-                                           CONFIG["pg_database"])
+                                           CONFIG["pg_database"],
+                                           CONFIG["leave_schema"])
     with connection_manager:
         suite_result = {}
         job_params = {}
@@ -98,12 +99,13 @@ class ConnectionManager():
     func_schema_name = "qc_function"
     job_schema_name_tpl = "job_{:s}"
 
-    def __init__(self, job_uuid, host, port, user, db_name):
+    def __init__(self, job_uuid, host, port, user, db_name, leave_schema):
         self.job_uuid = job_uuid
         self.host = host
         self.port = port
         self.user = user
         self.db_name = db_name
+        self.leave_schema = leave_schema
         self.connection = None
         self.job_schema_name = None
 
@@ -152,9 +154,9 @@ class ConnectionManager():
         return self.connection
 
     def close(self):
-        if self.job_schema_name is not None:
+        if not (self.leave_schema or self.job_schema_name is None):
             if not self._is_connected():
-                conn = _create_connection()
+                conn = self._create_connection()
             self._drop_schema()
         if self._is_connected():
             self.connection.close()

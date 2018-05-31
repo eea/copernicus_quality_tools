@@ -85,6 +85,9 @@ def setup_config():
     config["pg_user"] = environ.get("PG_USER", "qc_job")
     config["pg_database"] = environ.get("PG_DATABASE", "qc_tool_db")
 
+    # Debugging parameters.
+    config["leave_schema"] = bool(environ.get("LEAVE_SCHEMA", False))
+
     return config
 
 CONFIG = setup_config()
