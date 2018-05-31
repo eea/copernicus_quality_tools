@@ -24,6 +24,10 @@ def run_check(filepath, params):
     # open the file
     ds = gdal.Open(filepath)
 
+    if ds is None:
+        return {"status": "aborted",
+                "message": "The raster {:s} could not be opened.".format(filepath)}
+
     # get the number of bands
     num_bands = ds.RasterCount
     if num_bands != 1:
@@ -35,7 +39,7 @@ def run_check(filepath, params):
     actual_datatype = gdal.GetDataTypeName(band.DataType)
 
     # compare actual data type to expected data excpected_type
-    if data_type_name.lower() == expected_datatype.lower()
+    if str(actual_datatype).lower() == str(expected_datatype).lower():
         return {"status": "ok"}
     else:
         return {"status": "failed",
