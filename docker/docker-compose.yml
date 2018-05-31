@@ -1,6 +1,8 @@
 version: '3'
 services:
   qc_tool_wps:
+    depends_on:
+      - qc_tool_postgis
     build:
       context: .
       dockerfile: Dockerfile.wps
@@ -15,6 +17,8 @@ services:
     volumes:
       - "${WPS_MOUNT}:${WPS_DIR}"
   qc_tool_frontend:
+    depends_on:
+      - qc_tool_wps
     build:
       context: .
       dockerfile: Dockerfile.frontend
