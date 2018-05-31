@@ -14,12 +14,14 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 import os.path
 from os import environ
 
+from qc_tool.common import CONFIG
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # The WPS server url.
-WPS_URL = environ["WPS_URL"]
+WPS_URL = CONFIG["wps_url"]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
@@ -133,6 +135,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Media or user-uploaded files
 # the directory with files for checking. This must be readable both by the Frontend and by the WPS
-INCOMING_DIR = environ["INCOMING_DIR"]
+INCOMING_DIR = str(CONFIG["incoming_dir"])
 MEDIA_ROOT = INCOMING_DIR
 MEDIA_URL = '/media/'

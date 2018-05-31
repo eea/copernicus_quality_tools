@@ -16,8 +16,10 @@ import qc_tool.wps.raster_check.r4
 import qc_tool.wps.vector_check.import2pg
 import qc_tool.wps.vector_check.v1
 import qc_tool.wps.vector_check.v2
+import qc_tool.wps.vector_check.v3
 import qc_tool.wps.vector_check.v4
 import qc_tool.wps.vector_check.v11
+from qc_tool.common import CONFIG
 from qc_tool.common import load_product_type_definition
 from qc_tool.common import load_check_defaults
 
@@ -42,7 +44,11 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
                    if check["required"] or check["check_ident"] in optional_check_idents]
 
     # Run with postgre connection manager.
-    connection_manager = ConnectionManager(job_uuid, environ["PG_HOST"], environ["PG_DATABASE_NAME"])
+    connection_manager = ConnectionManager(job_uuid,
+                                           CONFIG["pg_host"],
+                                           CONFIG["pg_port"],
+                                           CONFIG["pg_user"],
+                                           CONFIG["pg_database"])
     with connection_manager:
         suite_result = {}
         job_params = {}
@@ -89,13 +95,14 @@ class ServiceException(Exception):
 
 
 class ConnectionManager():
-    job_role_name = "qc_job"
     func_schema_name = "qc_function"
     job_schema_name_tpl = "job_{:s}"
 
-    def __init__(self, job_uuid, host, db_name):
+    def __init__(self, job_uuid, host, port, user, db_name):
         self.job_uuid = job_uuid
         self.host = host
+        self.port = port
+        self.user = user
         self.db_name = db_name
         self.connection = None
         self.job_schema_name = None
@@ -111,7 +118,7 @@ class ConnectionManager():
 
     def _create_connection(self):
         try:
-            connection = connect(user=self.job_role_name, dbname=self.db_name, host=self.host)
+            connection = connect(host=self.host, port=self.port, user=self.user, dbname=self.db_name)
         except Exception as ex:
             msg = "Can not make db connection for the job:{:s}.".format(self.job_uuid)
             raise ServiceException(msg) from ex
