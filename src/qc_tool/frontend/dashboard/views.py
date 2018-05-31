@@ -35,8 +35,10 @@ def new_check(request):
 
 def get_files_json(request):
     """
-    returns a list of all files that are available for checking.
-    The files are loaded from the directory specified in settings.CHECKED_FILES_DIR
+    Returns a list of all files that are available for checking.
+
+    The files are loaded from the directory specified in settings.INCOMING_DIR.
+
     :param request:
     :return: list of the files in JSON format
     """
