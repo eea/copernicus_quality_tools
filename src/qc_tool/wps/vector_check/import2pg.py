@@ -5,7 +5,7 @@
 Import layers into PostGIS db.
 """
 
-from subprocess import Popen
+from subprocess import run
 
 from qc_tool.wps.helper import check_name
 from qc_tool.wps.registry import register_check_function
@@ -32,7 +32,7 @@ def run_check(filepath, params):
                 "message": "There is no matching layer in the data source."}
 
     for lyr in layers_regex:
-        p = Popen(["ogr2ogr",
+        pc = run(["ogr2ogr",
                    "-overwrite",
                    "-skipfailures",
                    "-f", "PostgreSQL",
@@ -40,8 +40,7 @@ def run_check(filepath, params):
                    "PG:{:s}".format(dsn),
                    filepath,
                    lyr.split("/")[1]])
-        if p.returncode != 0 and p.returncode is not None:
+        if pc.returncode != 0:
             return {"status": "aborted",
-                    "message": "Importing of {:s} layer into PostGIS db failed with error: {:s}".format(
-                        lyr, p.communicate()[1])}
+                    "message": "Importing of {:s} layer into PostGIS db failed.".format(lyr)}
     return {"status": "ok"}
