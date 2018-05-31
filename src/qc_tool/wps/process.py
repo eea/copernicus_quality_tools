@@ -2,6 +2,7 @@
 
 
 import json
+from os import environ
 from pathlib import Path
 from time import sleep
 
@@ -99,6 +100,7 @@ class RunChecks(Process):
     def _handler(self, request, response):
         # Prepare parameters.
         filepath = Path(request.inputs["filepath"][0].data)
+        filepath = Path(environ["INCOMING_DIR"]).joinpath(filepath)
         product_type_name = request.inputs["product_type_name"][0].data
         if "optional_check_idents" in request.inputs:
             optional_check_idents = request.inputs["optional_check_idents"][0].data
