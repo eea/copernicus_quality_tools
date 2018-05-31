@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from os import environ
+
 from unittest import TestCase
 from uuid import uuid4
 
