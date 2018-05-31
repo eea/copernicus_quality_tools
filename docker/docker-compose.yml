@@ -7,13 +7,16 @@ services:
       context: .
       dockerfile: Dockerfile.wps
     environment:
-      - PG_HOST
-      - PG_DATABASE_NAME
+      - INCOMING_DIR
       - WPS_DIR
+      - WPS_HOST
       - WPS_PORT
       - WPS_URL
       - WPS_OUTPUT_URL
-      - INCOMING_DIR
+      - PG_HOST
+      - PG_PORT
+      - PG_USER
+      - PG_DATABASE
     volumes:
       - "${WPS_MOUNT}:${WPS_DIR}"
   qc_tool_frontend:
@@ -25,9 +28,8 @@ services:
     ports:
       - ${FRONTEND_PORT}:${FRONTEND_PORT}
     environment:
-      - FRONTEND_PORT
-      - WPS_URL
       - INCOMING_DIR
+      - WPS_URL
     volumes:
       - "${WPS_MOUNT}:${WPS_DIR}"
   qc_tool_postgis:
