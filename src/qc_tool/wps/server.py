@@ -9,7 +9,6 @@ import re
 import sys
 from argparse import ArgumentParser
 from os import environ
-from os.path import normpath
 from pathlib import Path
 
 import flask
@@ -17,14 +16,11 @@ import pywps
 from pywps import Service
 from pywps.configuration import get_config_value
 
+from qc_tool.common import load_all_product_type_definitions
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
 from qc_tool.wps.registry import get_check_function
 from qc_tool.wps.registry import get_idents
-
-
-QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../../.."))))
-PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
 
 
 app = flask.Flask(__name__)
@@ -57,17 +53,9 @@ def outputfile(filename):
 
 @app.route("/product_types")
 def product_types():
-    product_type_regex = re.compile(r"[a-z].*\.json$")
-    product_type_filepaths = [path
-                              for path in PRODUCT_TYPES_DIR.iterdir()
-                              if product_type_regex.match(path.name) is not None]
-    product_types = {}
-    for filepath in product_type_filepaths:
-        product_type_name = filepath.stem
-        product_type_definition = filepath.read_text()
-        product_type_definition = json.loads(product_type_definition)
-        product_types[product_type_name] = product_type_definition
-    return flask.Response(json.dumps(product_types), content_type="application/json")
+    product_type_definitions = load_all_product_type_definitions()
+    product_type_definitions = json.dumps(product_type_definitions)
+    return flask.Response(product_type_definitions, content_type="application/json")
 
 @app.route("/check_functions")
 def check_functions():
@@ -92,11 +80,11 @@ def run_server():
     port = int(environ["WPS_PORT"])
     wps_dir = Path(environ["WPS_DIR"])
     wps_output_dir = wps_dir.joinpath("output")
-    wps_output_dir.mkdir(exist_ok=True)
+    wps_output_dir.mkdir(exist_ok=True, parents=True)
     wps_work_dir = wps_dir.joinpath("work")
-    wps_work_dir.mkdir(exist_ok=True)
+    wps_work_dir.mkdir(exist_ok=True, parents=True)
     wps_log_dir = wps_dir.joinpath("log")
-    wps_log_dir.mkdir(exist_ok=True)
+    wps_log_dir.mkdir(exist_ok=True, parents=True)
 
     processes = [CopSleep(), RunChecks()]
     config_filepaths = [str(Path(__file__).with_name("pywps.cfg"))]

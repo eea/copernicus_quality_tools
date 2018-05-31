@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
 
-import json
 from contextlib import closing
 from os import environ
-from os.path import normpath
 from pathlib import Path
 
 from psycopg2 import connect
@@ -12,7 +10,6 @@ from psycopg2 import connect
 from qc_tool.wps.registry import get_check_function
 
 import qc_tool.wps.common_check.dummy
-
 import qc_tool.wps.raster_check.r1
 import qc_tool.wps.raster_check.r2
 import qc_tool.wps.raster_check.r4
@@ -21,21 +18,14 @@ import qc_tool.wps.vector_check.v1
 import qc_tool.wps.vector_check.v2
 import qc_tool.wps.vector_check.v4
 import qc_tool.wps.vector_check.v11
-
-
-
-# FIXME: such normalization should be removed in python3.6.
-QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../../.."))))
-PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
-CHECK_DEFAULTS_FILENAME = "_check_defaults.json"
+from qc_tool.common import load_product_type_definition
+from qc_tool.common import load_check_defaults
 
 
 def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, update_result_func=None):
     # Read configurations.
-    check_defaults_filepath = PRODUCT_TYPES_DIR.joinpath(CHECK_DEFAULTS_FILENAME)
-    check_defaults = json.loads(check_defaults_filepath.read_text())
-    product_type_filepath = PRODUCT_TYPES_DIR.joinpath("{:s}.json".format(product_type_name))
-    product_type = json.loads(product_type_filepath.read_text())
+    check_defaults = load_check_defaults()
+    product_type = load_product_type_definition(product_type_name)
 
     # Prepare check idents.
     product_check_idents = set(check["check_ident"] for check in product_type["checks"])
@@ -50,7 +40,6 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
     check_suite = [check
                    for check in product_type["checks"]
                    if check["required"] or check["check_ident"] in optional_check_idents]
-
 
     # Run with postgre connection manager.
     connection_manager = ConnectionManager(job_uuid, environ["PG_HOST"], environ["PG_DATABASE_NAME"])
