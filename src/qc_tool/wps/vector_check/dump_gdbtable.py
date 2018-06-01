@@ -912,6 +912,10 @@ def get_fc_path(filename):
             # else:
                 # print('unhandled type : %d' % fields[ifield].type)
 
+    # close the files
+    fx.close()
+    f.close()
+
     paths = [fc.decode("ascii").lstrip("\\").replace("\\", "/") for fc in paths if fc.decode("ascii") not in ("", "\\") and len(fc.decode("ascii").split("\\")) == 3]
     return paths
 
