@@ -2,6 +2,7 @@
 
 
 from contextlib import closing
+from shutil import rmtree
 
 from psycopg2 import connect
 
@@ -16,6 +17,13 @@ def create_connection_manager(job_uuid):
                                            CONFIG["pg_database"],
                                            CONFIG["leave_schema"])
     return connection_manager
+
+def create_jobdir_manager(job_uuid):
+    jobdir_manager = JobdirManager(job_uuid,
+                                   CONFIG["work_dir"],
+                                   CONFIG["jobdir_exist_ok"],
+                                   CONFIG["leave_jobdir"])
+    return jobdir_manager
 
 
 class ConnectionException(Exception):
@@ -81,10 +89,41 @@ class ConnectionManager():
         return self.connection
 
     def close(self):
-        if not (self.leave_schema or self.job_schema_name is None):
+        if not self.leave_schema and self.job_schema_name is not None:
             if not self._is_connected():
                 conn = self._create_connection()
             self._drop_schema()
         if self._is_connected():
             self.connection.close()
         self.connection = None
+
+
+class JobdirManager():
+    job_subdir_tpl = "job_{:s}"
+
+    def __init__(self, job_uuid, work_dir, exist_ok=False, leave_dir=False):
+        self.job_uuid = job_uuid
+        self.work_dir = work_dir
+        self.exist_ok = exist_ok
+        self.leave_dir = leave_dir
+        self.job_dir = None
+
+    def __enter__(self):
+        self.create_dir()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.remove_dir()
+
+    def create_dir(self):
+        job_uuid = self.job_uuid.lower().replace("-", "")
+        job_dir = self.work_dir.joinpath(self.job_subdir_tpl.format(job_uuid))
+        job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
+        self.job_dir = job_dir
+        import sys
+        print(job_dir)
+
+    def remove_dir(self):
+        if not self.leave_dir and self.job_dir is not None:
+            rmtree(str(self.job_dir))
+        self.job_dir = None

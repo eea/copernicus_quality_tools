@@ -5,7 +5,7 @@ from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
-from qc_tool.wps.connection_manager import create_connection_manager
+from qc_tool.wps.manager import create_connection_manager
 
 
 class TestV11(TestCase):

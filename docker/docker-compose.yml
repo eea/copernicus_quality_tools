@@ -9,6 +9,7 @@ services:
     environment:
       - INCOMING_DIR
       - WPS_DIR
+      - WORK_DIR
       - WPS_HOST
       - WPS_PORT
       - WPS_URL
@@ -17,6 +18,9 @@ services:
       - PG_PORT
       - PG_USER
       - PG_DATABASE
+      - LEAVE_SCHEMA
+      - JOBDIR_EXIST_OK
+      - LEAVE_JOBDIR
     volumes:
       - "${WPS_MOUNT}:${WPS_DIR}"
   qc_tool_frontend:

@@ -3,7 +3,8 @@
 
 from pathlib import Path
 
-from qc_tool.wps.connection_manager import create_connection_manager
+from qc_tool.wps.manager import create_connection_manager
+from qc_tool.wps.manager import create_jobdir_manager
 from qc_tool.wps.registry import get_check_function
 
 import qc_tool.wps.common_check.dummy
@@ -42,10 +43,11 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
     # Prepare variable keeping results of all checks.
     suite_result = {}
 
-    # Run with postgre connection manager.
-    with create_connection_manager(job_uuid) as connection_manager:
+    # Wrap the job with needful managers.
+    with create_connection_manager(job_uuid) as connection_manager, create_jobdir_manager(job_uuid) as jobdir_manager:
         job_params = {}
         job_params["connection_manager"] = connection_manager
+        job_params["job_dir"] = str(jobdir_manager.job_dir)
 
         # Run check suite.
         for check in check_suite:

@@ -59,6 +59,9 @@ def setup_config():
     * PG_PORT;
     * PG_USER;
     * PG_DATABASE;
+    * LEAVE_SCHEMA;
+    * JOBDIR_EXIST_OK;
+    * LEAVE_JOBDIR;
 
     Environment variables consumed by frontend:
     * INCOMING_DIR;
@@ -87,6 +90,8 @@ def setup_config():
 
     # Debugging parameters.
     config["leave_schema"] = bool(environ.get("LEAVE_SCHEMA", False))
+    config["jobdir_exist_ok"] = bool(environ.get("JOBDIR_EXIST_OK", False))
+    config["leave_jobdir"] = bool(environ.get("LEAVE_JOBDIR", False))
 
     return config
 
