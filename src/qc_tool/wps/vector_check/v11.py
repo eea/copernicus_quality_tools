@@ -26,14 +26,6 @@ def run_check(filepath, params):
     conn = params["connection_manager"].get_connection()
     cur = conn.cursor()
 
-    # run command to create custom SQL functions
-    # this should be moved to dispatch
-    current_directory = PurePath(__file__).parents[0]
-    sql_file = PurePath(current_directory, "v11.sql")
-    sql_query = Path(sql_file).read_text()
-    cur.execute(sql_query)
-    conn.commit()
-
 
     # select all db tables
     cur.execute("""SELECT relname FROM pg_class WHERE relkind='r' AND relname !~ '(^(pg_|sql_)|spatial_ref_sys)';""")

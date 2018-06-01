@@ -4,6 +4,7 @@
 from contextlib import closing
 from shutil import rmtree
 
+from pathlib import Path, PurePath
 from psycopg2 import connect
 
 from qc_tool.common import CONFIG
@@ -69,6 +70,12 @@ class ConnectionManager():
             cursor.execute("CREATE SCHEMA {:s};".format(job_schema_name))
             self.job_schema_name = job_schema_name
             cursor.execute("SET search_path TO {:s}, {:s}, public;".format(job_schema_name, self.func_schema_name))
+            # also import SQL functions from the functions.sql file
+            current_directory = PurePath(__file__).parents[0]
+            sql_file = PurePath(current_directory, "functions.sql")
+            sql_query = Path(sql_file).read_text()
+            cursor.execute(sql_query)
+
 
     def _drop_schema(self):
         with closing(self.connection.cursor()) as cursor:
