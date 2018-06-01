@@ -2,6 +2,7 @@
 
 
 import json
+from os import environ
 from pathlib import Path
 from time import sleep
 
@@ -9,6 +10,7 @@ from pywps.app.Process import Process
 from pywps.inout.inputs import LiteralInput
 from pywps.inout.outputs import LiteralOutput
 
+from qc_tool.common import CONFIG
 from qc_tool.wps.dispatch import dispatch
 
 
@@ -99,6 +101,7 @@ class RunChecks(Process):
     def _handler(self, request, response):
         # Prepare parameters.
         filepath = Path(request.inputs["filepath"][0].data)
+        filepath = CONFIG["incoming_dir"].joinpath(filepath)
         product_type_name = request.inputs["product_type_name"][0].data
         if "optional_check_idents" in request.inputs:
             optional_check_idents = request.inputs["optional_check_idents"][0].data

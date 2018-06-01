@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
 
-import json
 from contextlib import closing
 from os import environ
-from os.path import normpath
 from pathlib import Path
 
 from psycopg2 import connect
@@ -12,30 +10,24 @@ from psycopg2 import connect
 from qc_tool.wps.registry import get_check_function
 
 import qc_tool.wps.common_check.dummy
-
 import qc_tool.wps.raster_check.r1
 import qc_tool.wps.raster_check.r2
 import qc_tool.wps.raster_check.r4
 import qc_tool.wps.vector_check.import2pg
 import qc_tool.wps.vector_check.v1
 import qc_tool.wps.vector_check.v2
+import qc_tool.wps.vector_check.v3
 import qc_tool.wps.vector_check.v4
 import qc_tool.wps.vector_check.v11
-
-
-
-# FIXME: such normalization should be removed in python3.6.
-QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../../.."))))
-PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
-CHECK_DEFAULTS_FILENAME = "_check_defaults.json"
+from qc_tool.common import CONFIG
+from qc_tool.common import load_product_type_definition
+from qc_tool.common import load_check_defaults
 
 
 def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, update_result_func=None):
     # Read configurations.
-    check_defaults_filepath = PRODUCT_TYPES_DIR.joinpath(CHECK_DEFAULTS_FILENAME)
-    check_defaults = json.loads(check_defaults_filepath.read_text())
-    product_type_filepath = PRODUCT_TYPES_DIR.joinpath("{:s}.json".format(product_type_name))
-    product_type = json.loads(product_type_filepath.read_text())
+    check_defaults = load_check_defaults()
+    product_type = load_product_type_definition(product_type_name)
 
     # Prepare check idents.
     product_check_idents = set(check["check_ident"] for check in product_type["checks"])
@@ -51,9 +43,13 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
                    for check in product_type["checks"]
                    if check["required"] or check["check_ident"] in optional_check_idents]
 
-
     # Run with postgre connection manager.
-    connection_manager = ConnectionManager(job_uuid, environ["PG_HOST"], environ["PG_DATABASE_NAME"])
+    connection_manager = ConnectionManager(job_uuid,
+                                           CONFIG["pg_host"],
+                                           CONFIG["pg_port"],
+                                           CONFIG["pg_user"],
+                                           CONFIG["pg_database"],
+                                           CONFIG["leave_schema"])
     with connection_manager:
         suite_result = {}
         job_params = {}
@@ -73,7 +69,6 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
 
             # Run the check.
             func = get_check_function(check["check_ident"])
-            filepath = Path(environ["INCOMING_DIR"]).joinpath(filepath)
             # FIXME: currently check functions use os.path for path manipulation
             #        while upper server stack uses pathlib.
             #        it is encouraged to choose one or another.
@@ -101,14 +96,16 @@ class ServiceException(Exception):
 
 
 class ConnectionManager():
-    job_role_name = "qc_job"
     func_schema_name = "qc_function"
     job_schema_name_tpl = "job_{:s}"
 
-    def __init__(self, job_uuid, host, db_name):
+    def __init__(self, job_uuid, host, port, user, db_name, leave_schema):
         self.job_uuid = job_uuid
         self.host = host
+        self.port = port
+        self.user = user
         self.db_name = db_name
+        self.leave_schema = leave_schema
         self.connection = None
         self.job_schema_name = None
 
@@ -123,7 +120,7 @@ class ConnectionManager():
 
     def _create_connection(self):
         try:
-            connection = connect(user=self.job_role_name, dbname=self.db_name, host=self.host)
+            connection = connect(host=self.host, port=self.port, user=self.user, dbname=self.db_name)
         except Exception as ex:
             msg = "Can not make db connection for the job:{:s}.".format(self.job_uuid)
             raise ServiceException(msg) from ex
@@ -157,9 +154,9 @@ class ConnectionManager():
         return self.connection
 
     def close(self):
-        if self.job_schema_name is not None:
+        if not (self.leave_schema or self.job_schema_name is None):
             if not self._is_connected():
-                conn = _create_connection()
+                conn = self._create_connection()
             self._drop_schema()
         if self._is_connected():
             self.connection.close()

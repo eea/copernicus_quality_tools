@@ -1,0 +1,26 @@
+How to run tests for check functions
+------------------------------------
+
+Build docker images:
+
+docker build --file=Dockerfile.postgis --tag=qc_tool_postgis .
+docker build --file=Dockerfile.wps --tag=qc_tool_wps .
+
+Run postgis container:
+
+docker run --rm --publish 5432:5432 --name=qc_tool_postgis --tty --interactive qc_tool_postgis
+
+Setup MY_QC_TOOL_HOME to your development source files, eg.
+
+MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
+
+Switch to another terminal and run the tests:
+
+docker run --rm \
+  --interactive --tty \
+  --name=qc_tool_wps \
+  --link=qc_tool_postgis \
+  --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
+  qc_tool_wps python3 -m unittest qc_tool.test.test_dummy
+
+

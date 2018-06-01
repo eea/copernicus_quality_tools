@@ -35,8 +35,10 @@ def new_check(request):
 
 def get_files_json(request):
     """
-    returns a list of all files that are available for checking.
-    The files are loaded from the directory specified in settings.CHECKED_FILES_DIR
+    Returns a list of all files that are available for checking.
+
+    The files are loaded from the directory specified in settings.INCOMING_DIR.
+
     :param request:
     :return: list of the files in JSON format
     """
@@ -178,11 +180,7 @@ def get_result(request, result_uuid):
     print(result_detail)
     result_list = []
     for id, val in result_detail.items():
-        if 'message' in val:
-            message = val['message']
-        else:
-            message = None
-        result_list.append({'check_ident': id, 'status': val['status'], 'message': message})
+        result_list.append({'check_ident': id, 'status': val['status'], 'message': val.get('message')})
 
     # sort the results by check_ident
     result_list_sorted = sorted(result_list, key=lambda x: x['check_ident'])

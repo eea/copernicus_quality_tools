@@ -9,7 +9,6 @@ import re
 import sys
 from argparse import ArgumentParser
 from os import environ
-from os.path import normpath
 from pathlib import Path
 
 import flask
@@ -17,14 +16,12 @@ import pywps
 from pywps import Service
 from pywps.configuration import get_config_value
 
+from qc_tool.common import CONFIG
+from qc_tool.common import load_all_product_type_definitions
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
 from qc_tool.wps.registry import get_check_function
 from qc_tool.wps.registry import get_idents
-
-
-QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../../.."))))
-PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
 
 
 app = flask.Flask(__name__)
@@ -42,7 +39,7 @@ def wps():
 
 @app.route("/output/<filename>")
 def outputfile(filename):
-    wps_output_dir = Path(pywps.configuration.get_config_value("server", "outputpath"))
+    wps_output_dir = Path(get_config_value("server", "outputpath"))
     # FIXME: ensure the resulting path can not be rerouted to other tree by using "..".
     filepath = wps_output_dir.joinpath(filename)
     if filepath.is_file():
@@ -57,17 +54,9 @@ def outputfile(filename):
 
 @app.route("/product_types")
 def product_types():
-    product_type_regex = re.compile(r"[a-z].*\.json$")
-    product_type_filepaths = [path
-                              for path in PRODUCT_TYPES_DIR.iterdir()
-                              if product_type_regex.match(path.name) is not None]
-    product_types = {}
-    for filepath in product_type_filepaths:
-        product_type_name = filepath.stem
-        product_type_definition = filepath.read_text()
-        product_type_definition = json.loads(product_type_definition)
-        product_types[product_type_name] = product_type_definition
-    return flask.Response(json.dumps(product_types), content_type="application/json")
+    product_type_definitions = load_all_product_type_definitions()
+    product_type_definitions = json.dumps(product_type_definitions)
+    return flask.Response(product_type_definitions, content_type="application/json")
 
 @app.route("/check_functions")
 def check_functions():
@@ -89,14 +78,21 @@ def status_document_urls():
 def run_server():
     global service
 
-    port = int(environ["WPS_PORT"])
-    wps_dir = Path(environ["WPS_DIR"])
-    wps_output_dir = wps_dir.joinpath("output")
-    wps_output_dir.mkdir(exist_ok=True)
-    wps_work_dir = wps_dir.joinpath("work")
-    wps_work_dir.mkdir(exist_ok=True)
-    wps_log_dir = wps_dir.joinpath("log")
-    wps_log_dir.mkdir(exist_ok=True)
+    wps_config = pywps.configuration.CONFIG
+    wps_config.set("server", "url", CONFIG["wps_url"])
+    wps_config.set("server", "outputurl", CONFIG["wps_output_url"])
+
+    wps_output_dir = CONFIG["wps_dir"].joinpath("output")
+    wps_output_dir.mkdir(exist_ok=True, parents=True)
+    wps_config.set("server", "outputpath", str(wps_output_dir))
+
+    wps_work_dir = CONFIG["wps_dir"].joinpath("work")
+    wps_work_dir.mkdir(exist_ok=True, parents=True)
+    wps_config.set("server", "workdir", str(wps_work_dir))
+
+    wps_log_dir = CONFIG["wps_dir"].joinpath("log")
+    wps_log_dir.mkdir(exist_ok=True, parents=True)
+    wps_config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))
 
     processes = [CopSleep(), RunChecks()]
     config_filepaths = [str(Path(__file__).with_name("pywps.cfg"))]
@@ -107,14 +103,7 @@ def run_server():
     # specified in config file does not even exist yet.
     service = Service(processes, [])
 
-    config = pywps.configuration.CONFIG
-    config.set("server", "url", environ["WPS_URL"])
-    config.set("server", "outputurl", environ["WPS_OUTPUT_URL"])
-    config.set("server", "outputpath", str(wps_output_dir))
-    config.set("server", "workdir", str(wps_work_dir))
-    config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))
-
-    app.run(threaded=True, host="0.0.0.0", port=port)
+    app.run(threaded=True, host="0.0.0.0", port=CONFIG["wps_port"])
 
 
 if __name__ == "__main__":
