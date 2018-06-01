@@ -5,7 +5,7 @@
 Bit depth check
 """
 
-import ogr
+import gdal
 
 from qc_tool.wps.registry import register_check_function
 
@@ -35,6 +35,7 @@ def run_check(filepath, params):
                 "message": "The raster has {:d} bands. \
                 expected number of bands is one.".format(num_bands)}
 
+    # get the DataType of the band ("Byte" means 8-bit depth)
     band = ds.GetRasterBand(1)
     actual_datatype = gdal.GetDataTypeName(band.DataType)
 
