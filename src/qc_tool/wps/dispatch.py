@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
 
-from contextlib import closing
-from os import environ
 from pathlib import Path
 
-from psycopg2 import connect
-
+from qc_tool.wps.connection_manager import create_connection_manager
 from qc_tool.wps.registry import get_check_function
 
 import qc_tool.wps.common_check.dummy
@@ -19,7 +16,6 @@ import qc_tool.wps.vector_check.v2
 import qc_tool.wps.vector_check.v3
 import qc_tool.wps.vector_check.v4
 import qc_tool.wps.vector_check.v11
-from qc_tool.common import CONFIG
 from qc_tool.common import load_product_type_definition
 from qc_tool.common import load_check_defaults
 
@@ -36,7 +32,7 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
     # Ensure passed optional checks take part in product type.
     incorrect_check_idents = optional_check_idents - product_check_idents
     if len(incorrect_check_idents) > 0:
-        raise ServiceException("Incorrect checks passed, product_type_name={:s}, incorrect_check_idents={:s}.".format(repr(product_type_name), repr(sorted(incorrect_check_idents))))
+        raise IncorrectCheckException("Incorrect checks passed, product_type_name={:s}, incorrect_check_idents={:s}.".format(repr(product_type_name), repr(sorted(incorrect_check_idents))))
 
     # Compile suite of checks to be performed.
     check_suite = [check
@@ -47,13 +43,7 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
     suite_result = {}
 
     # Run with postgre connection manager.
-    connection_manager = ConnectionManager(job_uuid,
-                                           CONFIG["pg_host"],
-                                           CONFIG["pg_port"],
-                                           CONFIG["pg_user"],
-                                           CONFIG["pg_database"],
-                                           CONFIG["leave_schema"])
-    with connection_manager:
+    with create_connection_manager(job_uuid) as connection_manager:
         job_params = {}
         job_params["connection_manager"] = connection_manager
 
@@ -95,73 +85,5 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
     return suite_result
 
 
-class ServiceException(Exception):
+class IncorrectCheckException(Exception):
     pass
-
-
-class ConnectionManager():
-    func_schema_name = "qc_function"
-    job_schema_name_tpl = "job_{:s}"
-
-    def __init__(self, job_uuid, host, port, user, db_name, leave_schema):
-        self.job_uuid = job_uuid
-        self.host = host
-        self.port = port
-        self.user = user
-        self.db_name = db_name
-        self.leave_schema = leave_schema
-        self.connection = None
-        self.job_schema_name = None
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    def _is_connected(self):
-        return self.connection is not None and self.connection.closed == 0
-
-    def _create_connection(self):
-        try:
-            connection = connect(host=self.host, port=self.port, user=self.user, dbname=self.db_name)
-        except Exception as ex:
-            msg = "Can not make db connection for the job:{:s}.".format(self.job_uuid)
-            raise ServiceException(msg) from ex
-        self.connection = connection
-        self.connection.autocommit = True
-
-    def _create_schema(self):
-        job_uuid = self.job_uuid.lower().replace("-", "")
-        job_schema_name = self.job_schema_name_tpl.format(job_uuid)
-        with closing(self.connection.cursor()) as cursor:
-            cursor.execute("CREATE SCHEMA {:s};".format(job_schema_name))
-            self.job_schema_name = job_schema_name
-            cursor.execute("SET search_path TO {:s}, {:s}, public;".format(job_schema_name, self.func_schema_name))
-
-    def _drop_schema(self):
-        with closing(self.connection.cursor()) as cursor:
-            cursor.execute("DROP SCHEMA {:s} CASCADE;".format(self.job_schema_name))
-            self.job_schema_name = None
-            cursor.close()
-
-    def get_dsn_schema(self):
-        conn = self.get_connection()
-        return (conn.dsn, self.job_schema_name)
-
-    def get_connection(self):
-        if self._is_connected():
-            return self.connection
-        self._create_connection()
-        if self.job_schema_name is None:
-            self._create_schema()
-        return self.connection
-
-    def close(self):
-        if not (self.leave_schema or self.job_schema_name is None):
-            if not self._is_connected():
-                conn = self._create_connection()
-            self._drop_schema()
-        if self._is_connected():
-            self.connection.close()
-        self.connection = None

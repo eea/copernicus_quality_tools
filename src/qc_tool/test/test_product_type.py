@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+
 from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.wps.dispatch import dispatch
+
 
 class Test_fty_YYYY_020m(TestCase):
     product_type_name = "fty_YYYY_020m"
