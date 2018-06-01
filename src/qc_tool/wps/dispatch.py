@@ -43,6 +43,9 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
                    for check in product_type["checks"]
                    if check["required"] or check["check_ident"] in optional_check_idents]
 
+    # Prepare variable keeping results of all checks.
+    suite_result = {}
+
     # Run with postgre connection manager.
     connection_manager = ConnectionManager(job_uuid,
                                            CONFIG["pg_host"],
@@ -51,7 +54,6 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
                                            CONFIG["pg_database"],
                                            CONFIG["leave_schema"])
     with connection_manager:
-        suite_result = {}
         job_params = {}
         job_params["connection_manager"] = connection_manager
 
@@ -89,6 +91,8 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
             # Abort validation if wanted.
             if check_result["status"] == "aborted":
                 break
+
+    return suite_result
 
 
 class ServiceException(Exception):
