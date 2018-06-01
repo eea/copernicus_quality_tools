@@ -1,0 +1,61 @@
+{
+  "description": "High Resolution Layer Forest Type (20m)",
+  "parameters": {},
+  "checks": [
+    {
+      "check_ident": "r1",
+      "required": true,
+      "parameters": {
+        "formats": [".tif"]
+      }
+    },
+    {
+      "check_ident": "r2",
+      "required": false,
+      "parameters": {
+        "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$$"
+      }
+    },
+    {
+      "check_ident": "r3",
+      "required": false,
+      "parameters": {
+        "fields": ["^value$", "^count$", "^km2$"]
+      }
+    },
+    {
+      "check_ident": "r4",
+      "required": true,
+      "parameters": {
+        "epsg": [3035]
+      }
+    },
+    {
+      "check_ident": "r7",
+      "required": false,
+      "parameters": {
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "r14",
+      "required": false,
+      "parameters": {}
+    },
+    {
+      "check_ident": "r15",
+      "required": false,
+      "parameters": {
+        "colours": {
+          "0":[255, 255, 255],
+          "1":[0, 77, 168],
+          "2":[0, 112, 255],
+          "3":[0, 197, 255],
+          "4":[115, 255, 223],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }
+      }
+    }
+  ]
+}
