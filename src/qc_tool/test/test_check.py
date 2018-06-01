@@ -8,23 +8,6 @@ from qc_tool.common import TEST_DATA_DIR
 from qc_tool.wps.manager import create_connection_manager
 
 
-class TestV11(TestCase):
-    def setUp(self):
-        self.connection_manager = create_connection_manager(str(uuid4()))
-
-    def tearDown(self):
-        self.connection_manager.close()
-
-    def test_v11(self):
-        from qc_tool.wps.vector_check.v11 import run_check
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
-        params = {"area_ha": 200,
-                  "border_exception": True,
-                  "connection_manager": self.connection_manager}
-        result = run_check(filepath, params)
-        self.assertEqual("ok", result["status"])
-
-
 class TestImport2pg(TestCase):
     valid_geodatabase = "clc2012_mt.gdb"
 
@@ -101,6 +84,14 @@ class TestV11(TestCase):
         params = {"area_ha": 25,
                   "border_exception": True,
                   "connection_manager": self.connection_manager}
+        run_check(filepath, params)
+
+    def test_v11_small_mmu_should_pass(self):
+        from qc_tool.wps.vector_check.v11 import run_check
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        params = {"area_ha": 25,
+                  "border_exception": True,
+                  "connection_manager": self.connection_manager}
         result = run_check(filepath, params)
         if "message" in result:
             print(result["message"])
@@ -128,23 +119,16 @@ class TestV11(TestCase):
         params = {"area_ha": 200,
                   "border_exception": True,
                   "connection_manager": self.connection_manager}
-        result = run_check(filepath, params)
+        run_check(filepath, params)
 
-        # get connection and cursor
         conn = params["connection_manager"].get_connection()
         cur = conn.cursor()
 
         expected_table = "{:s}_polyline_border".format(layer)
-
         cur.execute("SELECT table_name FROM information_schema.tables where table_name='{:s}'".format(expected_table))
-        for row in cur.fetchall():
-            actual_table = row[1]
+        row = cur.fetchone()
+        self.assertIsNotNone(row, "v1 should create a polyline_border table in the database.")
 
-        cur.execute('SELECT * FROM "{:s}"'.format(expected_table))
-        border_count = cur.rowcount
-        print("rows in border table: {:d}".format(border_count))
-
-        self.assertEqual(1, border_count, "v1 should create a polyline_border table in the database.")
 
     def test_v11_border_table_not_in_public(self):
         """
@@ -164,14 +148,11 @@ class TestV11(TestCase):
         cur = conn.cursor()
 
         border_table = "{:s}_polyline_border".format(layer)
-        cur.execute("SELECT table_schema, table_name FROM information_schema.tables where table_name='{:s}'".format(border_table))
-        for row in cur.fetchall():
-            actual_schema = row[0]
-            actual_table = row[1]
-            print("schema: {:s}".format(actual_schema))
-            print("table: {:s}".format(actual_table))
+        cur.execute("SELECT table_schema, table_name FROM information_schema.tables \
+                     where table_schema='public' AND table_name = '{:s}'".format(border_table))
+        row = cur.fetchone()
+        self.assertIsNone(row, "border table {:s} should not be in the public schema.".format(border_table))
 
-        self.assertNotEqual("public", actual_schema, "border table {:s} should not be in the public schema.")
 
     def test_v11_border_table_in_job_schema(self):
         """
@@ -191,13 +172,8 @@ class TestV11(TestCase):
         cur = conn.cursor()
 
         border_table = "{:s}_polyline_border".format(layer)
-        cur.execute("SELECT table_schema, table_name FROM information_schema.tables where table_name='{:s}'".format(
-            border_table))
-        for row in cur.fetchall():
-            actual_schema = row[0]
-            actual_table = row[1]
-            print("schema: {:s}".format(actual_schema))
-            print("table: {:s}".format(actual_table))
-
         expected_schema = self.connection_manager.get_dsn_schema()[1]
-        self.assertEqual(expected_schema, actual_schema, "polyline_border table should be created in the job's schema")
+        cur.execute("SELECT table_schema, table_name FROM information_schema.tables \
+                     where table_schema='{:s}' AND table_name='{:s}'".format(expected_schema, border_table))
+        row = cur.fetchone()
+        self.assertIsNotNone(row, "polyline_border table should be created in the current job schema.")

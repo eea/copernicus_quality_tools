@@ -27,9 +27,16 @@ def run_check(filepath, params):
     cur = conn.cursor()
 
 
-    # select all db tables
-    cur.execute("""SELECT relname FROM pg_class WHERE relkind='r' AND relname !~ '(^(pg_|sql_)|spatial_ref_sys)';""")
+    # select all db tables in the current job schema
+    job_schema = params["connection_manager"].get_dsn_schema()[1]
+    cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='{:s}'""".format(job_schema))
     tables = cur.fetchall()
+
+    valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table)]
+
+    if len(valid_tables) == 0:
+        res_message = "The MMU check failed. The geodatabase does not contain any valid feature class tables."
+        return {"status": "failed", "message": res_message}
 
     res = dict()
     for table in tables:
@@ -43,8 +50,6 @@ def run_check(filepath, params):
         # create table of less-mmu polygons
         cur.execute("""SELECT __v11_mmu_status({0},'{1}',{2});""".format(area_m, table, str(border_exception).lower()))
         conn.commit()
-
-        print("mmu status function completed!")
 
         # get less mmu ids and count
         cur.execute("""SELECT id FROM {:s}_lessmmu_error""".format(table))
