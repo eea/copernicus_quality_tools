@@ -72,7 +72,7 @@ class ConnectionManager():
             cursor.execute("SET search_path TO {:s}, {:s}, public;".format(job_schema_name, self.func_schema_name))
             # also import SQL functions from the functions.sql file
             current_directory = PurePath(__file__).parents[0]
-            sql_file = PurePath(current_directory, "functions.sql")
+            sql_file = PurePath(current_directory, "db_functions.sql")
             sql_query = Path(sql_file).read_text()
             cursor.execute(sql_query)
 
