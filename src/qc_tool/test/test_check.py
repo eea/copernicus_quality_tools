@@ -41,6 +41,30 @@ class TestImport2pg(TestCase):
         num_rows = cur.rowcount
         self.assertGreater(num_rows, 0, "imported table does not have any rows.")
 
+    def test_import2pg_functions_created(self):
+        from qc_tool.wps.vector_check.import2pg import run_check
+        filepath = str(TEST_DATA_DIR.joinpath(self.valid_geodatabase))
+        params = {"country_codes": "(CZ|MT)",
+                  "layer_regex": "^countrycode/clc[0-9]{2}_countrycode$",
+                  "connection_manager": self.connection_manager}
+        run_check(filepath, params)
+
+        job_schema = self.connection_manager.get_dsn_schema()[1]
+        expected_function_names = ["__v11_mmu_status",
+                                   "__v11_mmu_polyline_border",
+                                   "__v6_validcodes",
+                                   "__v11_mmu_change_clc"]
+        conn = self.connection_manager.get_connection()
+        cur = conn.cursor()
+        cur.execute("""SELECT routine_name FROM information_schema.routines \
+                       WHERE routine_type='FUNCTION' AND routine_schema='{:s}'""".format(job_schema))
+
+        actual_function_names = [row[0] for row in cur.fetchall()]
+
+        for expected_name in expected_function_names:
+            self.assertIn(expected_name, actual_function_names,
+                          "a function {:s} should be created in schema {:s}".format(expected_name, job_schema))
+
     def tearDown(self):
         self.connection_manager.close()
 

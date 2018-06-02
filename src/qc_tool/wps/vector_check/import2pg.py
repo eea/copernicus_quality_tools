@@ -15,13 +15,14 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 @register_check_function(__name__, "Import layers into PostGIS db.")
 def run_check(filepath, params):
     """
-    Import layers into PostGIS db.
+    Import layers into PostGIS db. also imports the qc functions.
     :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
 
-    dsn, schema = params["connection_manager"].get_dsn_schema()
+    connection_manager = params["connection_manager"]
+    dsn, schema = connection_manager.get_dsn_schema()
 
     lyrs = get_fc_path(filepath)
     layer_regex = params["layer_regex"].replace("countrycode", params["country_codes"]).lower()
@@ -30,6 +31,9 @@ def run_check(filepath, params):
     if not layers_regex:
         return {"status": "aborted",
                 "message": "There is no matching layer in the data source."}
+
+    # import required custom qc_functions to the database from sql files in db_functions
+    connection_manager.create_qc_functions(["v6.sql", "v11.sql"])
 
     for lyr in layers_regex:
         pc = run(["ogr2ogr",
