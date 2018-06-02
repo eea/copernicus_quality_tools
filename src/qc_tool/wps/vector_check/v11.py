@@ -5,7 +5,6 @@
 Minimum mapping unit check.
 """
 
-from pathlib import Path, PurePath
 
 from qc_tool.wps.registry import register_check_function
 
@@ -26,7 +25,6 @@ def run_check(filepath, params):
     conn = params["connection_manager"].get_connection()
     cur = conn.cursor()
 
-
     # select all db tables in the current job schema
     job_schema = params["connection_manager"].get_dsn_schema()[1]
     cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='{:s}'""".format(job_schema))
@@ -46,12 +44,11 @@ def run_check(filepath, params):
         if "polyline" in table or "lessmmu" in table:
             continue
 
-
-        # create table of less-mmu polygons
+        # Calling a custom postgres function to create table of less-mmu polygons
         cur.execute("""SELECT __v11_mmu_status({0},'{1}',{2});""".format(area_m, table, str(border_exception).lower()))
         conn.commit()
 
-        # get less mmu ids and count
+        # get less mmu ids and count. the _lessmmu_error table was created by the __v11_mmu_status function.
         cur.execute("""SELECT id FROM {:s}_lessmmu_error""".format(table))
         lessmmu_error_ids = ', '.join([id[0] for id in cur.fetchall()])
         lessmmu_error_count = cur.rowcount

@@ -5,7 +5,7 @@
 File format check.
 """
 
-import gdal
+from osgeo import gdal
 from pathlib import PurePath
 
 from qc_tool.wps.registry import register_check_function

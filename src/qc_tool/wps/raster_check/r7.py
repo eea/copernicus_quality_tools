@@ -5,7 +5,7 @@
 Bit depth check
 """
 
-import gdal
+from osgeo import gdal
 
 from qc_tool.wps.registry import register_check_function
 

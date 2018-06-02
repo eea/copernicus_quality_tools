@@ -5,8 +5,8 @@
 CRS check.
 """
 
-import ogr
-import osr
+from osgeo import ogr
+from osgeo import osr
 
 from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 from qc_tool.wps.helper import check_name

@@ -78,6 +78,7 @@ class TestV11(TestCase):
     def tearDown(self):
         self.connection_manager.close()
 
+
     def test_v11(self):
         from qc_tool.wps.vector_check.v11 import run_check
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
@@ -116,9 +117,7 @@ class TestV11(TestCase):
         from qc_tool.wps.vector_check.v11 import run_check
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
         layer = "clc12_mt"
-        params = {"area_ha": 200,
-                  "border_exception": True,
-                  "connection_manager": self.connection_manager}
+        params = {"area_ha": 200, "border_exception": True, "connection_manager": self.connection_manager}
         run_check(filepath, params)
 
         conn = params["connection_manager"].get_connection()
@@ -138,10 +137,8 @@ class TestV11(TestCase):
         from qc_tool.wps.vector_check.v11 import run_check
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
         layer = "clc12_mt"
-        params = {"area_ha": 200,
-                  "border_exception": True,
-                  "connection_manager": self.connection_manager}
-        result = run_check(filepath, params)
+        params = {"area_ha": 200, "border_exception": True, "connection_manager": self.connection_manager}
+        run_check(filepath, params)
 
         # get connection and cursor
         conn = params["connection_manager"].get_connection()
@@ -162,18 +159,58 @@ class TestV11(TestCase):
         from qc_tool.wps.vector_check.v11 import run_check
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
         layer = "clc12_mt"
-        params = {"area_ha": 200,
-                  "border_exception": True,
-                  "connection_manager": self.connection_manager}
-        result = run_check(filepath, params)
+        params = {"area_ha": 200, "border_exception": True, "connection_manager": self.connection_manager}
+        run_check(filepath, params)
 
-        # get connection and cursor
         conn = params["connection_manager"].get_connection()
         cur = conn.cursor()
-
         border_table = "{:s}_polyline_border".format(layer)
         expected_schema = self.connection_manager.get_dsn_schema()[1]
         cur.execute("SELECT table_schema, table_name FROM information_schema.tables \
                      where table_schema='{:s}' AND table_name='{:s}'".format(expected_schema, border_table))
         row = cur.fetchone()
         self.assertIsNotNone(row, "polyline_border table should be created in the current job schema.")
+
+    def test_v11_lessmmu_error_table_in_job_schema(self):
+        """
+        a *_lessmmu_error table should be created in the job's schema
+        :return:
+        """
+        from qc_tool.wps.vector_check.v11 import run_check
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        layer = "clc12_mt"
+        params = {"area_ha": 200,
+                  "border_exception": True,
+                  "connection_manager": self.connection_manager}
+        run_check(filepath, params)
+
+        conn = params["connection_manager"].get_connection()
+        cur = conn.cursor()
+        expected_table = "{:s}_lessmmu_error".format(layer)
+        expected_schema = self.connection_manager.get_dsn_schema()[1]
+        cur.execute("SELECT table_schema, table_name FROM information_schema.tables \
+                     where table_schema='{:s}' AND table_name='{:s}'".format(expected_schema, expected_table))
+        row = cur.fetchone()
+        self.assertIsNotNone(row, "lessmmu_error table should be created in the current job schema.")
+
+    def test_v11_lessmmu_except_table_in_job_schema(self):
+        """
+        a *_lessmmu_except table should be created in the job's schema
+        :return:
+        """
+        from qc_tool.wps.vector_check.v11 import run_check
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        layer = "clc12_mt"
+        params = {"area_ha": 200,
+                  "border_exception": True,
+                  "connection_manager": self.connection_manager}
+        run_check(filepath, params)
+
+        conn = params["connection_manager"].get_connection()
+        cur = conn.cursor()
+        expected_table = "{:s}_lessmmu_except".format(layer)
+        expected_schema = self.connection_manager.get_dsn_schema()[1]
+        cur.execute("SELECT table_schema, table_name FROM information_schema.tables \
+                     where table_schema='{:s}' AND table_name='{:s}'".format(expected_schema, expected_table))
+        row = cur.fetchone()
+        self.assertIsNotNone(row, "lessmmu_except table should be created in the current job schema.")

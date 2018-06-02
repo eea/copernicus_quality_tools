@@ -5,8 +5,8 @@
 CRS check.
 """
 
-import osr
-import gdal
+from osgeo import gdal
+from osgeo import osr
 
 from qc_tool.wps.registry import register_check_function
 

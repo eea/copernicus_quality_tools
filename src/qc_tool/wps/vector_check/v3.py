@@ -5,7 +5,7 @@
 Attribute table structure check.
 """
 
-import ogr
+from osgeo import ogr
 
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path

@@ -6,7 +6,7 @@ File format check.
 """
 
 from pathlib import PurePath
-import ogr
+from osgeo import ogr
 
 from qc_tool.wps.registry import register_check_function
 

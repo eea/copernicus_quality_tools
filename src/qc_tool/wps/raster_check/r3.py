@@ -6,7 +6,7 @@ Attribute table structure check.
 """
 
 from pathlib import Path
-import ogr
+from osgeo import ogr
 
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import find_name
