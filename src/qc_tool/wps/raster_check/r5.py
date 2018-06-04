@@ -7,9 +7,9 @@ Raster resolution check.
 
 import gdal
 
-# from qc_tool.wps.registry import register_check_function
-#
-# @register_check_function(__name__, "Pixel size must be equal to given value.")
+from qc_tool.wps.registry import register_check_function
+
+@register_check_function(__name__, "Pixel size must be equal to given value.")
 def run_check(filepath, params):
     """
     Raster resolution check.
@@ -51,9 +51,3 @@ def run_check(filepath, params):
     else:
         return {"status": "failed",
                 "message": "The raster pixel size is {:s} m, {:s} m is allowed.".format(str(x_size), str(params["pixelsize"]))}
-
-
-f = "/home/jiri/Plocha/COP_QC_rasterdata/WAW_2015_100m_eu_03035_d02_full/WAW_2015_100m_eu_03035_d02_full.tif"
-par = {"pixelsize": 20}
-print(run_check(f, par))
-
