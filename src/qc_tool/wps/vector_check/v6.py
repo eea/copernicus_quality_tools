@@ -5,11 +5,9 @@
 Valid codes check.
 """
 
-from pathlib import Path, PurePath
-#
-# from qc_tool.wps.registry import register_check_function
-#
-# @register_check_function(__name__, "Valid codes check.")
+from qc_tool.wps.registry import register_check_function
+
+@register_check_function(__name__, "Valid codes check.")
 def run_check(filepath, params):
     """
     Minimum mapping unit check..
@@ -22,33 +20,50 @@ def run_check(filepath, params):
     conn = params["connection_manager"].get_connection()
     cur = conn.cursor()
 
-    # run command to create custom SQL functions
-    # this should be moved to dispatch
-    current_directory = PurePath(__file__).parents[0]
-    sql_file = PurePath(current_directory, "v6.sql")
-    sql_query = Path(sql_file).read_text()
-    cur.execute(sql_query)
-    conn.commit()
-
-    # select all db tables
-    cur.execute("""SELECT relname FROM pg_class WHERE relkind='r' AND relname !~ '(^(pg_|sql_)|spatial_ref_sys)';""")
+    # select all db tables in the current job schema
+    job_schema = params["connection_manager"].get_dsn_schema()[1]
+    cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='{:s}'""".format(job_schema))
     tables = cur.fetchall()
 
+    valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table or "v6_code" in table)]
+
+    if len(valid_tables) == 0:
+        res_message = "The valid codes check failed. The geodatabase does not contain any valid feature class tables."
+        return {"status": "failed", "message": res_message}
+
     res = dict()
-    for table in tables:
+    for table in valid_tables:
 
         table = table[0]
 
-        if table not in ["clc_code", "ua_code"]:
-            continue
-
-        # create table of less-mmu polygons
+        # create table of valid code errors
         cur.execute("""SELECT __V6_ValidCodes('{0}', '{1}');""".format(table, params["product_code"]))
-        print(cur.fetchall())
         conn.commit()
 
-        # TODO: zjistis, co vraci funkce __V6_ValidCodes a dopsat
+        # get wrong codes ids and count. the _validcodes_error table was created by the __v6_ValidCodes function.
+        # TODO: attribute 'id' is only in CLC product type!!! Further optimalization is needed.
+        cur.execute("""SELECT id FROM {:s}_validcodes_error""".format(table))
+        validcodes_error_ids = ', '.join([id[0] for id in cur.fetchall()])
+        validcodes_error_count = cur.rowcount
 
-f = ''
-p = {"product_code": "clc"}
-print(run_check(f, p))
+        if validcodes_error_count > 0:
+            res[table] = {"validcodes_error": [validcodes_error_count, validcodes_error_ids]}
+        else:
+            res[table] = {"validcodes_error": [0]}
+
+        # drop temporary table with code errors
+        cur.execute("""DROP TABLE IF EXISTS {:s}_validcodes_error;""".format(table))
+        conn.commit()
+
+    lmes = [res[lme]["validcodes_error"][0] for lme in res]
+    if len(list(set(lmes))) == 0 or lmes[0] == 0:
+        return {"status": "ok"}
+    else:
+        layer_results = ', '.join(
+            "layer {!s}: {:d} polygons with wrong code ({!s})".format(key,
+                                                                val["validcodes_error"][0],
+                                                                val["validcodes_error"][1]) for (key, val) in res.items()
+            if val["validcodes_error"][0] != 0)
+        res_message = "The valid codes check failed ({:s}).".format(layer_results)
+        return {"status": "failed",
+                "message": res_message}

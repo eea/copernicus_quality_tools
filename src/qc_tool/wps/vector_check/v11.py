@@ -30,19 +30,16 @@ def run_check(filepath, params):
     cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='{:s}'""".format(job_schema))
     tables = cur.fetchall()
 
-    valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table)]
+    valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table or "v6_code" in table)]
 
     if len(valid_tables) == 0:
         res_message = "The MMU check failed. The geodatabase does not contain any valid feature class tables."
         return {"status": "failed", "message": res_message}
 
     res = dict()
-    for table in tables:
+    for table in valid_tables:
 
         table = table[0]
-
-        if "polyline" in table or "lessmmu" in table:
-            continue
 
         # Calling a custom postgres function to create table of less-mmu polygons
         cur.execute("""SELECT __v11_mmu_status({0},'{1}',{2});""".format(area_m, table, str(border_exception).lower()))
@@ -58,6 +55,10 @@ def run_check(filepath, params):
         else:
             res[table] = {"lessmmu_error": [0]}
 
+        # drop temporary table with code errors
+        cur.execute("""DROP TABLE IF EXISTS {:s}_lessmmu_error;""".format(table))
+        conn.commit()
+
         if border_exception:
             cur.execute("""SELECT id FROM {:s}_lessmmu_except""".format(table))
             lessmmu_except_ids = ', '.join([id[0] for id in cur.fetchall()])
@@ -67,6 +68,10 @@ def run_check(filepath, params):
                 res[table]["lessmmu_except"] = [lessmmu_except_count, lessmmu_except_ids]
             else:
                 res[table]["lessmmu_except"] = [0]
+
+            # drop temporary table with code errors
+            cur.execute("""DROP TABLE IF EXISTS {:s}_lessmmu_except;""".format(table))
+            conn.commit()
 
     lmes = [res[lme]["lessmmu_error"][0] for lme in res]
     if len(list(set(lmes))) == 0 or lmes[0] == 0:
