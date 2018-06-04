@@ -25,9 +25,16 @@
     },
     {
       "check_ident": "r4",
-      "required": true,
+      "required": false,
       "parameters": {
         "epsg": [3035]
+      }
+    },
+    {
+      "check_ident": "r5",
+      "required": false,
+      "parameters": {
+        "pixelsize": 100
       }
     },
     {
