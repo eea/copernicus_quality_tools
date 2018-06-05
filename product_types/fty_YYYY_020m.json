@@ -45,6 +45,13 @@
       }
     },
     {
+      "check_ident": "r8",
+      "required": false,
+      "parameters": {
+        "compression": ["LZW", "PackBits"]
+      }
+    },
+    {
       "check_ident": "r11",
       "required": false,
       "parameters": {
