@@ -106,6 +106,17 @@ def file_upload(request):
                 f.extractall(path=settings.INCOMING_DIR, members=files)
             os.remove(zip_file_path)
 
+        elif myfile.name.endswith('tif.zip'):
+            zip_file_path = os.path.join(settings.INCOMING_DIR, os.path.basename(myfile.name))
+
+            raster_dir_path = zip_file_path.replace('tif.zip','')
+            os.makedirs(raster_dir_path)
+
+            with zipfile.ZipFile(zip_file_path, 'r') as f:
+                files = [n for n in f.namelist() if not n.endswith('/')]
+                f.extractall(path=raster_dir_path, members=files)
+            os.remove(zip_file_path)
+
         return redirect('/files/?uploaded_filename={0}'.format(myfile.name))
 
     return render(request, 'dashboard/file_upload.html')

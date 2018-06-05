@@ -63,6 +63,8 @@ def run_check(filepath, params):
             incorrect_colours.append({"class":code,
                                       "expected": expected_colours[code],
                                       "actual": actual_colours[code]})
+    print(incorrect_colours)
+    print(missing_codes)
 
     # report raster values with missing entries in the colour table
     if len(missing_codes) > 0:
@@ -74,7 +76,7 @@ def run_check(filepath, params):
     if len(incorrect_colours) > 0:
         colour_reports = []
         for c in incorrect_colours:
-            colour_reports.append("value:{:s}, expected RGB:{:s}, actual RGB:{:s}")
+            colour_reports.append("value:{:s}, expected RGB:{:s}, actual RGB:{:s}".format(c))
         return {"status": "failed",
                 "message": "The raster colour table has some incorrect colours. \
                             {:s}".format("; ".join(colour_reports))}

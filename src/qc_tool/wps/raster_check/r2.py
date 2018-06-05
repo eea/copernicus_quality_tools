@@ -27,13 +27,15 @@ def run_check(filepath, params):
         return {"status": "failed",
                 "message": "File name does not conform to the naming convention."}
     else:
-        list_of_files = [str(x).lower() for x in Path(PurePath(filepath).parents[0]).iterdir()]
+        list_of_files = [str(x.name).lower() for x in Path(PurePath(filepath).parents[0]).iterdir()]
+        print(list_of_files)
         file_stem = PurePath(filename).stem
 
         # check for required files
         for ext in params["extensions"]:
             req_file = file_stem + ext
-            if req_file not in list_of_files:
+            if req_file.lower() not in list_of_files:
+                print(req_file.lower())
                 return {"status": "failed",
                         "message": "The '{:s}' file is missing.".format(req_file)}
         return {"status": "ok"}

@@ -87,6 +87,34 @@ class TestV11_DataNotImported(TestCase):
     def tearDown(self):
         self.connection_manager.close()
 
+class TestR2(TestCase):
+    def test_r2(self):
+        from qc_tool.wps.raster_check.r2 import run_check
+        filepath = TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif")
+        params = {"country_codes": "(AL|AT|BA|BE|BG|CH|CY|CZ|DE|DK|EE|ES|EU|FI|FR|GR|HR|HU|IE|IS|IT|XK|LI|LT|LU|LV|ME|MK|MT|NL|NO|PL|PT|RO|SE|SI|SK|TR|UK|UK_NI|ES_CN|PT_RAA|PT_RAM|UK_GE|UK_JE|FR_GLP|FR_GUF|FR_MTQ|FR_MYT|FR_REU|PT_RAA_CEG|PT_RAA_WEG)",
+                  "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"],
+                  "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"}
+        result = run_check(filepath, params)
+        if result["message"] is not None:
+            print(result["message"])
+        self.assertEqual("ok", result["status"], "raster check r2 should pass")
+
+
+class TestR15(TestCase):
+    def test_r15(self):
+        from qc_tool.wps.raster_check.r15 import run_check
+        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
+        print(type(filepath))
+        params = {"colours": {
+          "0":[255, 255, 255],
+          "1":[0, 77, 168],
+          "2":[0, 112, 255],
+          "3":[0, 197, 255],
+          "4":[115, 255, 223],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }}
+        result = run_check(filepath, params)
 
 class TestV11(TestCase):
     def setUp(self):
@@ -238,3 +266,4 @@ class TestV11(TestCase):
                      where table_schema='{:s}' AND table_name='{:s}'".format(expected_schema, expected_table))
         row = cur.fetchone()
         self.assertIsNotNone(row, "lessmmu_except table should be created in the current job schema.")
+
