@@ -8,18 +8,13 @@ Minimum mapping unit check.
 import subprocess
 import sys
 import os
-import tempfile
-import shutil
-import time
+from pathlib import Path
 import ogr
 from math import ceil
-# from qc_tool.wps.registry import register_check_function
 
-start = time.time()
+from qc_tool.wps.registry import register_check_function
 
-# NOTE: grass-core and grass-dev package is required
 
-# TODO: move setup_grass_scripting and start_grass functions into helper
 def setup_grass_scripting(grass_version):
     """
     setup calling grass functions (for LINUX only!!!)
@@ -47,9 +42,10 @@ def setup_grass_scripting(grass_version):
     os.environ['GISBASE'] = gisbase
 
     # define GRASS-Python environment
-    gpydir = os.path.join(gisbase, "etc", "python")
-    sys.path.append(gpydir)
+    gpydir = Path(gisbase, "etc", "python")
+    sys.path.append(str(gpydir))
     return gisbase
+
 
 def start_grass(gdbdir, georef_data, version):
 
@@ -66,7 +62,6 @@ def start_grass(gdbdir, georef_data, version):
 
     # set up grass for scripting...
     gisbase = setup_grass_scripting(version)
-    print gisbase
 
     # Import GRASS Python bindings
     import grass.script as g
@@ -83,7 +78,8 @@ def start_grass(gdbdir, georef_data, version):
     gsetup.init(gisbase, GrassDbDir, location, 'PERMANENT')
     return g
 
-# @register_check_function(__name__, "EPSG code of file CRS match reference EPSG code.")
+
+@register_check_function(__name__, "Minimum mapping unit check.")
 def run_check(filepath, params):
     """
     CRS check.
@@ -92,23 +88,18 @@ def run_check(filepath, params):
     :return: status + message
     """
 
-
     # convert mmu limit from 'ha' to 'pix' (expected pixel size of 20m)
     mmu_limit = int(ceil(params["area_ha"]*25))
 
-    # TODO: here replace to the temporary dir from params
-    clump_centroids = "/home/jiri/Plocha/COP_QC_rasterdata/FTY_2012_020m_eu_03035_d01_E20N10/FTY_2012_020m_eu_03035_d01_E20N10.shp"
-    if os.path.isfile(clump_centroids):
-        os.remove(clump_centroids)
+    clump_centroids = Path(params["job_dir"], "clump_centroids.shp")
 
     # TODO: create GRASS db dir in temporary dir from params
     # start GRASS session
-    grass_db_dir = os.path.join(tempfile.gettempdir(), 'grass')  # create GRASS database directory
-    if os.path.exists(grass_db_dir):
-        shutil.rmtree(grass_db_dir)
+    grass_db_dir = Path(params["job_dir"], 'grass') # create GRASS database directory
+    grass_db_dir.mkdir()
 
     # start GRASS GIS session...
-    grass = start_grass(grass_db_dir, filepath, "grass")
+    grass = start_grass(str(grass_db_dir), filepath, "grass")
 
     # import source raster data into GRASS environment
     grass.read_command('r.in.gdal', input=filepath, output='inpfile')
@@ -129,12 +120,8 @@ def run_check(filepath, params):
     grass.read_command('v.out.ogr', 'c', input='lessmmu_centroids', output=clump_centroids, format='ESRI_Shapefile',
                        output_layer='clump_centroids')
 
-    # TODO: remove - probably tmp dir will be automatically dropped in dispatch
-    # remove temp dir
-    shutil.rmtree(grass_db_dir)
-
     # get lessmmu clumps count
-    ds_centr = ogr.Open(clump_centroids)
+    ds_centr = ogr.Open(str(clump_centroids))
     lyr_centr = ds_centr.GetLayer()
     lessmmu_count = lyr_centr.GetFeatureCount()
     lyr_centr = None
@@ -146,14 +133,3 @@ def run_check(filepath, params):
         return {"status": "failed",
                 "message": "The data source has {:s} objects under MMU limit of {:s} ha.".format(str(lessmmu_count),
                                                                                                  str(params["area_ha"]))}
-
-
-f = "/home/jiri/Plocha/COP_QC_rasterdata/FTY_2012_020m_eu_03035_d01_E20N10/FTY_2012_020m_eu_03035_d01_E20N10.TIF"
-par = {"area_ha": 0.5}
-print(run_check(f, par))
-
-stop = time.time()
-seconds = stop - start
-minutes = seconds / 60
-hours = minutes / 60
-print 'Processing time: %02d:%02d:%02d - %s [s]' % (hours, minutes % 60, seconds % 60, stop - start)
