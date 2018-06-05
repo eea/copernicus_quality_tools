@@ -47,7 +47,7 @@
       "check_ident": "v11",
       "required": false,
       "parameters": {
-        "area_ha": 200,
+        "area_ha": 25,
         "border_exception": true
       }
     }

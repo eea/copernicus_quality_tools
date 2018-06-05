@@ -23,7 +23,6 @@ def run_check(filepath, params):
 
     # set compression type names to lowercase
     allowed_compression_types = [c.lower() for c in params["compression"]]
-    print allowed_compression_types
 
     try:
         ds_open = gdal.Open(filepath)
@@ -36,7 +35,6 @@ def run_check(filepath, params):
 
     # get raster metadata
     meta = ds_open.GetMetadata('IMAGE_STRUCTURE')
-    print meta
 
     compression = meta.get('COMPRESSION', None)
 
