@@ -40,6 +40,10 @@
       "required": true
     },
     {
+      "check_ident": "v5",
+      "required": false
+    },
+    {
       "check_ident": "v6",
       "required": false
     },
