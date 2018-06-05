@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__, "Valid codes check.")
 def run_check(filepath, params):
     """
-    Minimum mapping unit check..
+    Valid codes check.
     :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
