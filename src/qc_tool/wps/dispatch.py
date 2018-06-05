@@ -14,6 +14,8 @@ import qc_tool.wps.raster_check.r3
 import qc_tool.wps.raster_check.r4
 import qc_tool.wps.raster_check.r5
 import qc_tool.wps.raster_check.r7
+import qc_tool.wps.raster_check.r8
+import qc_tool.wps.raster_check.r11
 import qc_tool.wps.raster_check.r14
 import qc_tool.wps.raster_check.r15
 import qc_tool.wps.vector_check.import2pg
@@ -21,6 +23,7 @@ import qc_tool.wps.vector_check.v1
 import qc_tool.wps.vector_check.v2
 import qc_tool.wps.vector_check.v3
 import qc_tool.wps.vector_check.v4
+import qc_tool.wps.vector_check.v6
 import qc_tool.wps.vector_check.v11
 from qc_tool.common import load_product_type_definition
 from qc_tool.common import load_check_defaults
