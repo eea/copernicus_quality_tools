@@ -38,7 +38,7 @@ def setup_grass_scripting(grass_version):
                                                                                            error=err)}
 
     # Set GISBASE environment variable
-    gisbase = out.strip('\n')
+    gisbase = str(out.strip(b'\n'))
     os.environ['GISBASE'] = gisbase
 
     # define GRASS-Python environment
@@ -55,6 +55,7 @@ def start_grass(gdbdir, georef_data, version):
     :param version: [string]: version of GRASS GIS e.g. 'grass'
     :return:
     """
+    print(sys.path)
 
     # create temporary GRASS database directory, location
     GrassDbDir = gdbdir
@@ -96,10 +97,11 @@ def run_check(filepath, params):
     # TODO: create GRASS db dir in temporary dir from params
     # start GRASS session
     grass_db_dir = Path(params["job_dir"], 'grass') # create GRASS database directory
+    print(grass_db_dir)
     grass_db_dir.mkdir()
 
     # start GRASS GIS session...
-    grass = start_grass(str(grass_db_dir), filepath, "grass")
+    grass = start_grass(bytes(str(grass_db_dir), encoding='utf-8'), filepath, "grass")
 
     # import source raster data into GRASS environment
     grass.read_command('r.in.gdal', input=filepath, output='inpfile')

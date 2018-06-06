@@ -23,7 +23,9 @@ import qc_tool.wps.vector_check.v1
 import qc_tool.wps.vector_check.v2
 import qc_tool.wps.vector_check.v3
 import qc_tool.wps.vector_check.v4
+import qc_tool.wps.vector_check.v5
 import qc_tool.wps.vector_check.v6
+import qc_tool.wps.vector_check.v8
 import qc_tool.wps.vector_check.v11
 from qc_tool.common import load_product_type_definition
 from qc_tool.common import load_check_defaults

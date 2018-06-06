@@ -4,7 +4,7 @@
 """
 Check colors in the color table
 """
-
+import time
 from osgeo import gdal
 
 from qc_tool.wps.registry import register_check_function
@@ -66,6 +66,9 @@ def run_check(filepath, params):
     print(incorrect_colours)
     print(missing_codes)
 
+    # simulate very long run
+    time.sleep(120)
+
     # report raster values with missing entries in the colour table
     if len(missing_codes) > 0:
         return {"status": "failed",
@@ -76,7 +79,7 @@ def run_check(filepath, params):
     if len(incorrect_colours) > 0:
         colour_reports = []
         for c in incorrect_colours:
-            colour_reports.append("value:{:s}, expected RGB:{:s}, actual RGB:{:s}".format(c))
+            colour_reports.append("value:{0}, expected RGB:{1}, actual RGB:{2}".format(c["class"], c["expected"], c["actual"]))
         return {"status": "failed",
                 "message": "The raster colour table has some incorrect colours. \
                             {:s}".format("; ".join(colour_reports))}

@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.wps.manager import create_connection_manager
+from qc_tool.wps.manager import create_jobdir_manager
 
 
 class TestImport2pg(TestCase):
@@ -52,7 +53,9 @@ class TestImport2pg(TestCase):
         job_schema = self.connection_manager.get_dsn_schema()[1]
         expected_function_names = ["__v11_mmu_status",
                                    "__v11_mmu_polyline_border",
+                                   "__v5_uniqueid",
                                    "__v6_validcodes",
+                                   "__v8_multipartpolyg",
                                    "__v11_mmu_change_clc"]
         conn = self.connection_manager.get_connection()
         cur = conn.cursor()
@@ -90,7 +93,7 @@ class TestV11_DataNotImported(TestCase):
 class TestR2(TestCase):
     def test_r2(self):
         from qc_tool.wps.raster_check.r2 import run_check
-        filepath = TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif")
+        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
         params = {"country_codes": "(AL|AT|BA|BE|BG|CH|CY|CZ|DE|DK|EE|ES|EU|FI|FR|GR|HR|HU|IE|IS|IT|XK|LI|LT|LU|LV|ME|MK|MT|NL|NO|PL|PT|RO|SE|SI|SK|TR|UK|UK_NI|ES_CN|PT_RAA|PT_RAM|UK_GE|UK_JE|FR_GLP|FR_GUF|FR_MTQ|FR_MYT|FR_REU|PT_RAA_CEG|PT_RAA_WEG)",
                   "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"],
                   "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"}
@@ -99,6 +102,27 @@ class TestR2(TestCase):
             print(result["message"])
         self.assertEqual("ok", result["status"], "raster check r2 should pass")
 
+class TestR11(TestCase):
+    def setUp(self):
+        self.jobdir_manager = create_jobdir_manager(str(uuid4()))
+        self.jobdir_manager.create_dir()
+
+    def test_r11_jobdir(self):
+        from qc_tool.wps.raster_check.r11 import run_check
+        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
+        params = {"area_ha": 25, "job_dir": str(self.jobdir_manager.job_dir)}
+        print(self.jobdir_manager.job_dir)
+        self.assertIsNotNone(self.jobdir_manager.job_dir, "job_dir should be a valid directory")
+        #run_check(filepath, params)
+
+    def test_r11(self):
+        from qc_tool.wps.raster_check.r11 import run_check
+        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
+        params = {"area_ha": 25, "job_dir": str(self.jobdir_manager.job_dir)}
+        run_check(filepath, params)
+
+    def tearDown(self):
+        self.jobdir_manager.remove_dir()
 
 class TestR15(TestCase):
     def test_r15(self):
@@ -106,15 +130,45 @@ class TestR15(TestCase):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
         print(type(filepath))
         params = {"colours": {
-          "0":[255, 255, 255],
-          "1":[0, 77, 168],
-          "2":[0, 112, 255],
-          "3":[0, 197, 255],
-          "4":[115, 255, 223],
+          "0":[240, 240, 240],
+          "1":[70, 158, 74],
+          "2":[28, 92, 36],
           "254":[153, 153, 153],
-          "255":[0, 0, 0]
+          "255":[0, 0, 1]
         }}
         result = run_check(filepath, params)
+
+
+class TestV8(TestCase):
+    def setUp(self):
+        self.job_uuid = str(uuid4())
+        self.connection_manager = create_connection_manager(self.job_uuid)
+        from qc_tool.wps.vector_check.import2pg import run_check
+        filepath = str(TEST_DATA_DIR.joinpath("clc2012_mt.gdb"))
+        params = {"country_codes": "(CZ|MT)",
+                  "layer_regex": "^countrycode/clc[0-9]{2}_countrycode$",
+                  "connection_manager": self.connection_manager}
+        run_check(filepath, params)
+
+    def test_v8(self):
+        from qc_tool.wps.vector_check.v8 import run_check
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        params = {"connection_manager": self.connection_manager}
+        run_check(filepath, params)
+
+    def test_v8_NoMultipart_ok(self):
+        from qc_tool.wps.vector_check.v8 import run_check
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        params = {"connection_manager": self.connection_manager}
+        result = run_check(filepath, params)
+        if "message" in result:
+            print(result["message"])
+        self.assertEqual("ok", result["status"], "check result should be ok for Malta")
+
+
+    def tearDown(self):
+        self.connection_manager.close()
+
 
 class TestV11(TestCase):
     def setUp(self):

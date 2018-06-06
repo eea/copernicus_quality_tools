@@ -21,4 +21,12 @@ class Test_fty_YYYY_020m(TestCase):
         result = dispatch(str(uuid4()), filepath, self.product_type_name, [])
         self.assertEqual("aborted", result["r1"]["status"], "r1 should give aborted with bad extension.")
 
+class Test_clc_YY(TestCase):
+    product_type_name = "clc_YY"
+
+    def test_run(self):
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        result = dispatch(str(uuid4()), filepath, self.product_type_name, [])
+        self.assertEqual("ok", result["r1"]["status"], "Malta should pass the checks for clc_YY product type")
+
 

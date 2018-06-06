@@ -33,7 +33,7 @@ def run_check(filepath, params):
                 "message": "There is no matching layer in the data source."}
 
     # import required custom qc_functions to the database from sql files in db_functions
-    connection_manager.create_qc_functions(["v6.sql", "v6_codes.sql", "v11.sql"])
+    connection_manager.create_qc_functions(["v5.sql", "v6.sql", "v6_codes.sql", "v8.sql", "v11.sql"])
 
     for lyr in layers_regex:
         pc = run(["ogr2ogr",
