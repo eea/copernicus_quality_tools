@@ -28,7 +28,7 @@ def run_check(filepath, params):
     valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table or "v6_code" in table)]
 
     if len(valid_tables) == 0:
-        res_message = "The valid codes check failed. The geodatabase does not contain any valid feature class tables."
+        res_message = "The unique identifier check failed. The geodatabase does not contain any valid feature class tables."
         return {"status": "failed", "message": res_message}
 
     res = dict()
@@ -65,6 +65,6 @@ def run_check(filepath, params):
                                                                           val["uniqueid_error"][1]) for (key, val) in
                 res.items()
                 if val["uniqueid_error"][0] != 0)
-            res_message = "The valid codes check failed ({:s}).".format(layer_results)
+            res_message = "The unique identifier check failed ({:s}).".format(layer_results)
             return {"status": "failed",
                     "message": res_message}
