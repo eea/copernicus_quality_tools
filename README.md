@@ -28,7 +28,7 @@ cd copernicus_quality_tools/docker
 ```
 nano .env
 ```
-The .env file looks like this:
+Edit the .env file to look like this:
 ```
 WPS_PORT=5000
 WPS_DIR=/mnt/wps
@@ -37,12 +37,10 @@ WPS_URL=http://qc_tool_wps:5000/wps
 WPS_OUTPUT_URL=http://qc_tool_wps:5000/wps/output
 PG_DATABASE_NAME=qc_tool_db
 PG_HOST=qc_tool_postgis
-
 FRONTEND_PORT=8000
-
-WPS_MOUNT=/mnt/pracovni-archiv-01/projects/cop15m/volume-igor
+WPS_MOUNT=/tmp
 ```
-In the .env file, set *WPS_MOUNT* to a directory on your system with read and write permissions on your system. For example you can set *WPS_MOUNT=/tmp/wps*
+In the .env file, set *WPS_MOUNT* to a directory on your system with read and write permissions on your system. For example you can set *WPS_MOUNT=/home/jiri/qc_tool* if you have that folder.
 
 (5) Build the docker containers and run the application
 ```
@@ -56,24 +54,58 @@ The Postgres database and WPS service will be running on a local ip-address, for
 
 * Note: docker-compose version 3 file format is used. In case of errors, please upgrade to a newer version of docker and docker-compose software.
 
-## Development Setup when docker images are already built:
-### in this setup, local changes in the source code will immediately take effect in the docker.
+## Testing Environment Setup
+----------------------------
+### in this setup, local changes in the source code will immediately take effect in the docker. For running unit test you first need to start-up the
+qc_tool_postgis docker and then start the qc_tool_wps in testing mode.
 ```
 git clone https://github.com/eea/copernicus_quality_tools
-export WPS_MOUNT=${PWD}
 cd copernicus_quality_tools/docker
-docker-compose run -v $WPS_MOUNT/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools -d --use-aliases qc_tool_wps
-docker-compose run -v $WPS_MOUNT/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools -d --use-aliases qc_tool_postgis
-docker-compose run -v $WPS_MOUNT/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools -d --use-aliases qc_tool_frontend
-docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -q)
 
+docker build --file=Dockerfile.postgis --tag=qc_tool_postgis .
+docker build --file=Dockerfile.wps --tag=qc_tool_wps .
+docker build --file=Dockerfile.frontend --tag=qc_tool_frontend .
+
+docker run --rm --publish 15432:5432 --name=qc_tool_postgis --tty --interactive qc_tool_postgis
 ```
-The docker inspect command shows the local ip addresses of the docker containers, for example:
+
+## switch to a new terminal window and then run:
 ```
-/docker_qc_tool_postgis_run_5 - 172.21.0.4
-/docker_qc_tool_wps_run_7 - 172.21.0.3
-/docker_qc_tool_frontend_run_9 - 172.21.0.2
+MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools (set this to the actual folder with your copernicus_quality_tools source code!)
+docker run --rm \
+  --interactive --tty \
+  --name=qc_tool_wps \
+  --link=qc_tool_postgis \
+  --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
+  qc_tool_wps python3 -m unittest qc_tool.test.test_dummy
 ```
-* Check the ip address of the docker_qc_tool_frontend_ container (in this case it is 172.21.0.2)
-* The application will be running on http://172.21.0.2:8000 in your browser where 172.21.0.2 is the "ip address" and 8000 is the "port number"
-* NOTE: depending on your setup, the ip can be http://172.21.0.1 or http://172.21.0.2 or other. the output of the docker inspect command gives you the correct ip addresses on your host.
+
+## Launching All Docker Containers via command-line
+---------------------------------------------------
+(1) Start the postgis container. MY_QC_TOOL_HOME must be the absolute path to your copernicus_quality_tools folder
+```
+MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
+docker run --rm --publish 15432:5432 --name=qc_tool_postgis --tty --interactive qc_tool_postgis
+```
+(2) Switch to a second terminal window and start the wps container
+```
+MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
+docker run --rm \
+  --interactive --tty \
+  --name=qc_tool_wps \
+  --link=qc_tool_postgis \
+  --volume $MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
+  qc_tool_wps
+```
+
+(3) Switch to a third terminal window and start the frontend. MY_QC_TOOL_HOME must be the absolute path to your copernicus_quality_tools folder
+```
+MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
+docker run --rm \
+  --interactive --tty \
+  --publish 8000:8000 \
+  --name=qc_tool_frontend \
+  --link=qc_tool_wps \
+  --volume $MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
+  qc_tool_frontend
+```
