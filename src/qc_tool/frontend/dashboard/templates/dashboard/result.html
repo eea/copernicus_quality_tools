@@ -47,6 +47,7 @@
                     <thead>
                     <tr>
                         <th data-field="check_ident" data-sortable="false">Check</th>
+                        <th data-field="check_description" data-sortable="false">Description</th>
                         <th data-field="check_result" data-sortable="false">Status</th>
                         <th data-field="check_message" data-sortable="false">Message</th>
                     </tr>
@@ -56,10 +57,12 @@
                         <tr>
                             {% if detail.status == "ok" %}
                             <td class="success">{{detail.check_ident}}</td>
+                            <td class="success">{{detail.description}}</td>
                             <td class="success">{{detail.status}}</td>
                             <td class="success">{{detail.message}}</td>
                             {% else %}
                             <td class="danger">{{detail.check_ident}}</td>
+                            <td class="danger">{{detail.description}}</td>
                             <td class="danger">{{detail.status}}</td>
                             <td class="danger">{{detail.message}}</td>
                             {% endif %}
@@ -68,11 +71,11 @@
                    </tbody>
                 </table>
                 <br>
-                <!--
+
                 <a href="{{ status_document_url }}">Show Detailed XML Report..</a>
                     </div>
                 </div>
-                -->
+
             </div>
 
         </div>

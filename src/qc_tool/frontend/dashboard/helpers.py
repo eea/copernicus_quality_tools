@@ -32,11 +32,11 @@ def parse_status_document(document_url):
 
     """
 
-    STATUS_ACCEPTED = 'accepted'
+    STATUS_ACCEPTED = 'started'
     STATUS_ERROR = 'error'
     STATUS_FAILED = 'failed'
     STATUS_STARTED = 'started'
-    STATUS_SUCCEEDED = 'succeeded'
+    STATUS_SUCCEEDED = 'finished'
 
     uid = document_url.split('/')[-1].split('.')[0]
     doc = {'uid': uid,
@@ -87,6 +87,56 @@ def parse_status_document(document_url):
         if ident == 'optional_check_idents':
             doc['check_idents'] = val
 
+    # status of the WPS output
+    status_tags = tree.xpath('//wps:Status', namespaces=ns)
+    if len(status_tags) == 0:
+        # this meens there is no status element --- some exception occurred during that request
+        doc['status'] = STATUS_ERROR
+        return doc
+
+    status_tag = status_tags[0]
+    accepted_tags = status_tag.findall('wps:ProcessAccepted', ns)
+    started_tags = status_tag.findall('wps:ProcessStarted', ns)
+    succeeded_tags = status_tag.findall('wps:ProcessSucceeded', ns)
+    failed_tags = status_tag.findall('wps:ProcessFailed', ns)
+
+    if len(accepted_tags) > 0:
+        doc['status'] = STATUS_ACCEPTED
+        doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
+        doc['log_info'] = accepted_tags[0].text
+        doc['result'] = dict()
+        doc['result']['unknown'] = {'description': '', 'status': 'accepted', 'message': doc['log_info']}
+        return doc
+
+    elif len(started_tags) > 0:
+        doc['status'] = STATUS_STARTED
+        started_tag = started_tags[0]
+        doc['log_info'] = started_tag.text
+        if "percentCompleted" in started_tag.attrib:
+            doc['percent_complete'] = started_tag.attrib["percentCompleted"]
+
+    elif len(succeeded_tags) > 0:
+        doc['status'] = STATUS_SUCCEEDED
+        doc['log_info'] = succeeded_tags[0].text
+        doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
+        doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
+        doc['percent_complete'] = "100"
+
+    elif len(failed_tags) > 0:
+        doc['status'] = STATUS_FAILED
+        doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
+        doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
+
+        failed_tag = failed_tags[0]
+        exception_tags = failed_tag.findall('wps:ExceptionReport', ns)
+        exception_tag = exception_tags[0]
+        for sub_tag in exception_tag:
+            for detail_tag in sub_tag:
+                doc['log_info'] = detail_tag.text
+        doc['result'] = dict()
+        doc['result']['unknown'] = {'status':'failed','message':doc['log_info']}
+        return doc
+
     # data outputs if they exist
     output_tags = tree.xpath('//wps:ProcessOutputs/wps:Output', namespaces=ns)
     for output_tag in output_tags:
@@ -111,52 +161,6 @@ def parse_status_document(document_url):
 
                 except json.JSONDecodeError:
                     # when the output is not in valid JSON format
-                    doc['result'] = out_text
+                    doc['result'] = {}
 
-    # status of the WPS output
-    status_tags = tree.xpath('//wps:Status', namespaces=ns)
-    if len(status_tags) == 0:
-        # this meens there is no status element --- some exception occurred during that request
-        doc['status'] = STATUS_ERROR
-        return doc
-
-    status_tag = status_tags[0]
-    accepted_tags = status_tag.findall('wps:ProcessAccepted', ns)
-    started_tags = status_tag.findall('wps:ProcessStarted', ns)
-    succeeded_tags = status_tag.findall('wps:ProcessSucceeded', ns)
-    failed_tags = status_tag.findall('wps:ProcessFailed', ns)
-
-    if len(accepted_tags) > 0:
-        doc['status'] = STATUS_ACCEPTED
-        doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
-        doc['log_info'] = accepted_tags[0].text
-        return doc
-
-    if len(started_tags) > 0:
-        doc['status'] = STATUS_STARTED
-        started_tag = started_tags[0]
-        doc['log_info'] = started_tag.text
-        if "percentCompleted" in started_tag.attrib:
-            doc['percent_complete'] = started_tag.attrib["percentCompleted"]
-        return doc
-
-    if len(succeeded_tags) > 0:
-        doc['status'] = STATUS_SUCCEEDED
-        doc['log_info'] = succeeded_tags[0].text
-        doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
-        doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
-        doc['percent_complete'] = "100"
-        return doc
-
-    if len(failed_tags) > 0:
-        doc['status'] = STATUS_FAILED
-        doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
-        doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
-
-        failed_tag = failed_tags[0]
-        exception_tags = failed_tag.findall('wps:ExceptionReport', ns)
-        exception_tag = exception_tags[0]
-        for sub_tag in exception_tag:
-            for detail_tag in sub_tag:
-                doc['log_info'] = detail_tag.text
-        return doc
+    return doc

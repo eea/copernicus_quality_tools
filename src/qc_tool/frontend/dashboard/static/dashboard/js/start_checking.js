@@ -52,7 +52,7 @@ $( "#select_product_type" ).change(function() {
         $("#tbl_check_details > tbody").html("");
         var tbody = ''
         for (var i=0;i<checks.length;i++){
-            tbody += "<tr><td>" + checks[i].check_ident + "</td>" + "<td></td>";
+            tbody += "<tr><td>" + checks[i].check_ident + "</td>" + "<td>" + checks[i].description + "</td>";
             var check_params = checks[i].parameters;
             console.log(check_params);
             if (check_params) {

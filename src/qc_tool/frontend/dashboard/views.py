@@ -154,31 +154,22 @@ def get_product_type_details(request, product_type_name):
     product_types = resp.json()
     product_type_info = product_types[product_type_name]
 
+    # also add check descriptions to product type info
+    checks_url = wps_host + "/check_functions"
+    resp = requests.get(url=checks_url)
+    check_functions = resp.json()
+    for index in range(0, len(product_type_info['checks'])):
+        ident = product_type_info['checks'][index]['check_ident']
+        product_type_info['checks'][index]['description'] = check_functions[ident]
+
     return JsonResponse({'product_type': product_type_info})
 
 
-def get_product_type_table(request, product_type):
-    """
-    returns the product type info in suitable format for bootstrap-table
-    :param request:
-    :param product_type:
-    :return:
-    """
-    prod_file = os.path.join(settings.PRODUCT_TYPES_DIR, product_type + ".json")
-    prod_path = Path(prod_file)
-    prod_info = json.loads(prod_path.read_text())
-    checks = prod_info['checks']
-    check_list = []
-    for check in checks:
-        if 'parameters' in check:
-            check_params = repr(check['parameters'])
-        else:
-            check_params = 'no parameters'
-        check_list.append({'check_ident': check['check_ident'],
-                         'required': check['required'],
-                         'parameters': check_params})
-    return JsonResponse({"total": len(checks), "rows": check_list})
-
+def get_status_document(request, result_uuid):
+    wps_host = settings.WPS_URL.rsplit('/', 1)[0]
+    status_doc_url = wps_host + '/output/' + result_uuid + '.xml'
+    resp = requests.get(status_doc_url)
+    return HttpResponse(resp.content, content_type="application/xml")
 
 def get_result(request, result_uuid):
 
@@ -193,8 +184,45 @@ def get_result(request, result_uuid):
     for id, val in result_detail.items():
         result_list.append({'check_ident': id, 'status': val['status'], 'message': val.get('message')})
 
-    # sort the results by check_ident
-    result_list_sorted = sorted(result_list, key=lambda x: x['check_ident'])
+    # ensure ordering of the checks based on product type spec
+    if 'product_type_name' in status_doc:
+
+        # get check descriptions
+        checks_url = wps_host + "/check_functions"
+        resp = requests.get(url=checks_url)
+        check_functions = resp.json()
+
+        product_type_name = status_doc['product_type_name']
+        product_types_url = wps_host + "/product_types"
+        resp = requests.get(url=product_types_url)
+        product_types = resp.json()
+        product_type_info = product_types[product_type_name]
+
+        checks = product_type_info['checks']
+        check_list = []
+        for check in checks:
+            ident = check['check_ident']
+            desc = check_functions[ident]
+            check_list.append({'check_ident': ident, 'check_description': desc})
+
+        # sort by the product type order and check_ident
+        result_list_sorted = []
+        for check in check_list:
+            check_ident = check['check_ident']
+            if check_ident in result_detail:
+                if 'message' in result_detail[check_ident]:
+                    check_message = result_detail[check_ident]['message']
+                else:
+                    check_message = ' '
+
+                result_list_sorted.append({'check_ident': check['check_ident'],
+                                           'description': check['check_description'],
+                                           'status': result_detail[check_ident]['status'],
+                                           'message': check_message})
+
+    else:
+        # if product_type is not available then sort by alphabetical order
+        result_list_sorted = sorted(result_list, key=lambda x: x['check_ident'])
 
     context = {
         'product_type_name': status_doc['product_type_name'],
@@ -259,7 +287,7 @@ def run_wps_execute(request):
 
         # calling cop_sleep (-> change it to run_checks)
         wps_base_url = settings.WPS_URL # "http://192.168.2.72:5000"
-        wps_base = wps_base_url + "?service=WPS&version=1.0.0&request=Execute&identifier=run_checks&lineage=true&DataInputs="
+        wps_base = wps_base_url + "?service=WPS&version=1.0.0&request=Execute&identifier=run_checks&storeExecuteResponse=true&status=true&lineage=true&DataInputs="
         data_inputs = "filepath={0};product_type_name={1};optional_check_idents={2}".format(filepath, product_type_name, optional_check_idents)
 
         wps_url = wps_base + data_inputs

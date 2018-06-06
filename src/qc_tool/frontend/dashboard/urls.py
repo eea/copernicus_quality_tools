@@ -13,10 +13,10 @@ urlpatterns = [
     path('files/upload', views.file_upload, name='file_upload'),
     path('files/', views.get_files, name='files'),
 
-    path('product_type_table/<product_type>/', views.get_product_type_table, name='product_type_table'),
     path('run_wps_execute', views.run_wps_execute, name='run_wps_execute'),
     path('new', views.new_check, name='new_check'),
     path('result/<result_uuid>/', views.get_result, name='checking_result'),
+    path('status_document/<result_uuid>/', views.get_status_document, name='checking_result'),
 
 ]
 
