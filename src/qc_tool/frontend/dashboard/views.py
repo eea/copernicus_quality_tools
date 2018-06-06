@@ -106,10 +106,10 @@ def file_upload(request):
                 f.extractall(path=settings.INCOMING_DIR, members=files)
             os.remove(zip_file_path)
 
-        elif myfile.name.endswith('tif.zip'):
+        elif myfile.name.endswith('.tif.zip'):
             zip_file_path = os.path.join(settings.INCOMING_DIR, os.path.basename(myfile.name))
 
-            raster_dir_path = zip_file_path.replace('tif.zip','')
+            raster_dir_path = zip_file_path.replace('.tif.zip','')
             os.makedirs(raster_dir_path)
 
             with zipfile.ZipFile(zip_file_path, 'r') as f:
@@ -185,14 +185,15 @@ def get_result(request, result_uuid):
         result_list.append({'check_ident': id, 'status': val['status'], 'message': val.get('message')})
 
     # ensure ordering of the checks based on product type spec
-    if 'product_type_name' in status_doc:
+    if 'product_type_name' in status_doc and not status_doc['product_type_name'] is None:
+
+        product_type_name = status_doc['product_type_name']
 
         # get check descriptions
         checks_url = wps_host + "/check_functions"
         resp = requests.get(url=checks_url)
         check_functions = resp.json()
 
-        product_type_name = status_doc['product_type_name']
         product_types_url = wps_host + "/product_types"
         resp = requests.get(url=product_types_url)
         product_types = resp.json()
@@ -222,14 +223,20 @@ def get_result(request, result_uuid):
 
     else:
         # if product_type is not available then sort by alphabetical order
+        product_type_name = 'current_product'
+        filepath = 'current_filepath'
+
         result_list_sorted = sorted(result_list, key=lambda x: x['check_ident'])
 
+    status_doc_basename = os.path.basename(status_doc_url)
+    status_doc_url2 = "/status_document/{:s}/".format(status_doc_basename.replace(".xml", ""))
+
     context = {
-        'product_type_name': status_doc['product_type_name'],
+        'product_type_name': product_type_name,
         'product_type_description': None,
         'filepath': status_doc['filepath'],
         'start_time': status_doc['start_time'],
-        'status_document_url': status_doc_url.replace("wps", "127.0.0.1"),
+        'status_document_url': status_doc_url2,
         'result': {
             'uuid': result_uuid,
             'detail': result_list_sorted
