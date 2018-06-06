@@ -5,7 +5,6 @@
     "layer_regex": "^countrycode/cha[0-9]{2}_countrycode$",
     "layer_count": 1,
     "product_code": "cha"
-
   },
   "checks": [
     {
@@ -26,14 +25,14 @@
       "check_ident": "v3",
       "required": false,
       "parameters": {
-        "fields": ["^ID$", "^CODE_[0-9]{2}$", "^CODE_[0-9]{2}$", "^CHANGE$", "^CHTYPE$", "^AREA_HA$", "^REMARK$", "^Shape_Length$", "^Shape_Area$"]
+        "fields": ["^ID$", "^CODE_[0-9]{2}$", "^CODE_[0-9]{2}$", "^CHANGE$", "^CHTYPE$", "^AREA_HA$", "^REMARK$"]
       }
     },
     {
       "check_ident": "v4",
       "required": false,
       "parameters": {
-        "epsg": [3035]
+        "epsg": [2462, 31287, 3812, 3908, 32634, 32635, 3765, 32636, 5514, 25832, 25833, 5316, 3301, 3067, 2154, 2154, 32620, 32620, 32622, 32738, 32740, 6204, 31466, 31467, 31468, 31469, 27700, 29903, 3109, 3108, 2100, 23700, 5325, 2157, 32632, 32633, 32634, 3909, 3059, 2056, 3346, 2169, 23033, 25834, 28992, 25832, 25833, 25834, 25835, 25836, 2180, 3763, 5014, 5015, 5016, 3844, 25834, 5514, 3912, 32628, 25829, 25830, 25831, 3006, 2056]
       }
     },
     {
@@ -49,6 +48,10 @@
       "required": false
     },
     {
+      "check_ident": "v8",
+      "required": false
+    },
+    {
       "check_ident": "v11",
       "required": false,
       "parameters": {
@@ -58,3 +61,5 @@
     }
   ]
 }
+
+
