@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Valid codes check.
+Unique identifier check.
 """
 
 from qc_tool.wps.registry import register_check_function
@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__, "Unique identifier check.")
 def run_check(filepath, params):
     """
-    Minimum mapping unit check..
+    Unique identifier check.
     :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
@@ -28,7 +28,7 @@ def run_check(filepath, params):
     valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table or "v6_code" in table)]
 
     if len(valid_tables) == 0:
-        res_message = "The unique identifier check failed. The geodatabase does not contain any valid feature class tables."
+        res_message = "The valid codes check failed. The geodatabase does not contain any valid feature class tables."
         return {"status": "failed", "message": res_message}
 
     res = dict()
@@ -37,13 +37,34 @@ def run_check(filepath, params):
         table = table[0]
 
         # create table of valid code errors
-        cur.execute("""SELECT __v5_uniqueid('{0}', '{1}');""".format(table, params["product_code"]))
+        cur.execute("""SELECT __V5_UniqueID('{0}','{1}');""".format(table, params["product_code"]))
         conn.commit()
 
-        non_unique_ids = [id[0] for id in cur.fetchall()]
-        if len(non_unique_ids) > 0 and non_unique_ids[0] == 0:
+        # get wrong UniqueID ids and count. the _uniqueid_error table was created by the __V5_UniqueID function.
+        # TODO: attribute 'id' is only in CLC product type!!! Further optimalization is needed.
+        cur.execute("""SELECT id FROM {:s}_uniqueid_error""".format(table))
+        uniqueid_error_ids = ', '.join([id[0] for id in cur.fetchall()])
+        uniqueid_error_count = cur.rowcount
+
+        if uniqueid_error_count > 0:
+            res[table] = {"uniqueid_error": [uniqueid_error_count, uniqueid_error_ids]}
+        else:
+            res[table] = {"uniqueid_error": [0]}
+
+        # drop temporary table with code errors
+        cur.execute("""DROP TABLE IF EXISTS {:s}_uniqueid_error;""".format(table))
+        conn.commit()
+
+        lmes = [res[lme]["uniqueid_error"][0] for lme in res]
+        if len(list(set(lmes))) == 0 or lmes[0] == 0:
             return {"status": "ok"}
         else:
-            res_message = "non-unique ID values found: " + ",".join(non_unique_ids)
+            layer_results = ', '.join(
+                "layer {!s}: {:d} polygons with wrong code ({!s})".format(key,
+                                                                          val["uniqueid_error"][0],
+                                                                          val["uniqueid_error"][1]) for (key, val) in
+                res.items()
+                if val["uniqueid_error"][0] != 0)
+            res_message = "The valid codes check failed ({:s}).".format(layer_results)
             return {"status": "failed",
                     "message": res_message}
