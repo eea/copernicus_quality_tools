@@ -51,7 +51,6 @@ def setup_config():
     * INCOMING_DIR;
     * WPS_DIR;
     * WORK_DIR;
-    * WPS_HOST;
     * WPS_PORT;
     * WPS_URL;
     * WPS_OUTPUT_URL;
@@ -78,9 +77,8 @@ def setup_config():
     config["wps_port"] = int(environ.get("WPS_PORT", 5000))
 
     # Access to wps service.
-    config["wps_host"] = environ.get("WPS_HOST", "qc_tool_wps")
-    config["wps_url"] = environ.get("WPS_URL", "http://{:s}:{:d}/wps".format(config["wps_host"], config["wps_port"]))
-    config["wps_output_url"] = environ.get("WPS_OUTPUT_URL", "http://{:s}:{:d}/wps/output".format(config["wps_host"], config["wps_port"]))
+    config["wps_url"] = environ.get("WPS_URL", "http://localhost:{:d}/wps".format(config["wps_port"]))
+    config["wps_output_url"] = environ.get("WPS_OUTPUT_URL", "http://localhost:{:d}/wps/output".format(config["wps_port"]))
 
     # Access to postgis.
     config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")
@@ -89,9 +87,9 @@ def setup_config():
     config["pg_database"] = environ.get("PG_DATABASE", "qc_tool_db")
 
     # Debugging parameters.
-    config["leave_schema"] = bool(environ.get("LEAVE_SCHEMA", False))
-    config["jobdir_exist_ok"] = bool(environ.get("JOBDIR_EXIST_OK", False))
-    config["leave_jobdir"] = bool(environ.get("LEAVE_JOBDIR", False))
+    config["leave_schema"] = environ.get("LEAVE_SCHEMA", "no") == "yes"
+    config["jobdir_exist_ok"] = environ.get("JOBDIR_EXIST_OK", "no") == "yes"
+    config["leave_jobdir"] = environ.get("LEAVE_JOBDIR", "no") == "yes"
 
     return config
 

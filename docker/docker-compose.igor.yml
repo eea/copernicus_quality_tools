@@ -1,0 +1,45 @@
+version: '3'
+services:
+  qc_tool_frontend:
+    depends_on:
+      - qc_tool_wps
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: qc_tool_frontend
+    ports:
+      - 8000:8000
+    environment:
+      - FRONTEND_PORT=8000
+      - WPS_URL=http://qc_tool_wps:5000/wps
+    volumes:
+      - /mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/pracovni-archiv-01/projects/cop15m/igor/wps:/mnt/wps
+  qc_tool_wps:
+    depends_on:
+      - qc_tool_postgis
+    build:
+      context: .
+      dockerfile: Dockerfile.wps
+    image: qc_tool_wps
+    environment:
+      - WPS_DIR=/mnt/wps
+      - WORK_DIR=/mnt/work
+      - WPS_PORT=5000
+      - WPS_URL=http://qc_tool_wps:5000/wps
+      - WPS_OUTPUT_URL=http://qc_tool_wps:5000/wps/output
+      - PG_HOST=qc_tool_postgis
+      - PG_PORT=5432
+      - PG_USER=qc_job
+      - PG_DATABASE=qc_tool_db
+      - LEAVE_SCHEMA=no
+      - JOBDIR_EXIST_OK=no
+      - LEAVE_JOBDIR=no
+    volumes:
+      - /mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/pracovni-archiv-01/projects/cop15m/igor/wps:/mnt/wps
+  qc_tool_postgis:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgis
+    image: qc_tool_postgis

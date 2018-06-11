@@ -15,7 +15,7 @@ class Test_fty_YYYY_020m(TestCase):
     def test_run(self):
         filepath = TEST_DATA_DIR.joinpath("FTY_2015_020m_si_03035_d04_test.tif")
         result = dispatch(str(uuid4()), filepath, self.product_type_name, [])
-        self.assertEqual("ok", result["r1"]["status"], "Slovenia test file should pass check for  product fty_YYYY_020m")
+        self.assertEqual("ok", result["r1"]["status"], "Slovenia test file should pass check for product fty_YYYY_020m")
 
     def test_bad_extension(self):
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
@@ -28,7 +28,7 @@ class Test_clc_YY(TestCase):
     def test_run(self):
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
         result = dispatch(str(uuid4()), filepath, self.product_type_name, [])
-        self.assertEqual("ok", result["r1"]["status"], "Malta should pass the checks for clc_YY product type")
+        self.assertEqual("ok", result["v1"]["status"], "Malta should pass the checks for clc_YY product type")
 
 
 class Test_update_status(TestCase):

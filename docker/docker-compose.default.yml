@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+  qc_tool_frontend:
+    depends_on:
+      - qc_tool_wps
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: qc_tool_frontend
+    ports:
+      - 8000:8000
+    environment:
+      - FRONTEND_PORT=8000
+      - INCOMING_DIR=/mnt/incoming
+      - WPS_URL=http://qc_tool_wps:5000/wps
+    volumes:
+      - incoming:/mnt/incoming
+      - wps:/mnt/wps
+
+  qc_tool_wps:
+    depends_on:
+      - qc_tool_postgis
+    build:
+      context: .
+      dockerfile: Dockerfile.wps
+    image: qc_tool_wps
+    environment:
+      - INCOMING_DIR=/mnt/incoming
+      - WPS_DIR=/mnt/wps
+      - WORK_DIR=/mnt/work
+      - WPS_PORT=5000
+      - WPS_URL=http://qc_tool_wps:5000/wps
+      - WPS_OUTPUT_URL=http://qc_tool_wps:5000/wps/output
+      - PG_HOST=qc_tool_postgis
+      - PG_PORT=5432
+      - PG_USER=qc_job
+      - PG_DATABASE=qc_tool_db
+      - LEAVE_SCHEMA=no
+      - JOBDIR_EXIST_OK=no
+      - LEAVE_JOBDIR=no
+    volumes:
+      - incoming:/mnt/incoming
+      - wps:/mnt/wps
+
+  qc_tool_postgis:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgis
+    image: qc_tool_postgis
+
+volumes:
+  incoming:
+    driver: local
+  wps:
+    driver: local
+
+networks:
+  qc_tool_network:
+    driver: bridge

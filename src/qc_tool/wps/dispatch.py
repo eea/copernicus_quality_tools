@@ -63,8 +63,9 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
         for check in check_suite:
             # Prepare parameters.
             check_params = {}
-            if check["check_ident"] in check_defaults:
-                check_params.update(check_defaults[check["check_ident"]])
+            check_params.update(check_defaults["globals"])
+            if check["check_ident"] in check_defaults["checks"]:
+                check_params.update(check_defaults["checks"][check["check_ident"]])
             if "parameters" in product_type:
                 check_params.update(product_type["parameters"])
             if "parameters" in check:
