@@ -15,6 +15,7 @@ import qc_tool.wps.raster_check.r4
 import qc_tool.wps.raster_check.r5
 import qc_tool.wps.raster_check.r7
 import qc_tool.wps.raster_check.r8
+import qc_tool.wps.raster_check.r9
 import qc_tool.wps.raster_check.r11
 import qc_tool.wps.raster_check.r14
 import qc_tool.wps.raster_check.r15

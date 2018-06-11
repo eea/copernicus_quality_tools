@@ -52,6 +52,13 @@
       }
     },
     {
+      "check_ident": "r9",
+      "required": false,
+      "parameters": {
+        "validcodes": [0, 1, 2, 254, 255]
+      }
+    },
+    {
       "check_ident": "r14",
       "required": false,
       "parameters": {}
