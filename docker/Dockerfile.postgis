@@ -15,16 +15,25 @@ RUN apt-get -y update \
 # Install postgresql & postgis.
 RUN apt-get -y install postgresql-10-postgis-2.4
 
+# Install qc tool sources.
+RUN cd /usr/local/src \
+    && apt-get install -y git \
+    && git clone https://github.com/eea/copernicus_quality_tools
+
 USER postgres
 
 # Configure the qc tool database.
-RUN echo "host   qc_tool_db   qc_job   all   trust" >>/etc/postgresql/10/main/pg_hba.conf \
+#
+# We insert qc_job/trust clause just *before* 127.0.0.1/md5 clause in pg_hba.conf,
+# so that qc_job is thus allowed to connect to qc_tool_db without password even
+# when connecting to 127.0.0.1.
+COPY ./init_qc_tool_db.sql /usr/local/src
+RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/10/main/pg_hba.conf \
     && echo "listen_addresses='*'" >>/etc/postgresql/10/main/postgresql.conf \
     && /etc/init.d/postgresql start \
-    && psql --command="CREATE DATABASE qc_tool_db;" \
-    && psql --command="CREATE ROLE qc_job WITH LOGIN PASSWORD NULL;" \
-    && psql --command="GRANT ALL PRIVILEGES ON DATABASE qc_tool_db TO qc_job;" \
-    && psql --dbname=qc_tool_db --command="CREATE EXTENSION postgis;" \
+    && psql --file=/usr/local/src/init_qc_tool_db.sql \
+    && cat /usr/local/src/copernicus_quality_tools/src/qc_tool/wps/db_functions/*.sql \
+       | psql --host=127.0.0.1 --dbname=qc_tool_db --username=qc_job --file=- \
     && /etc/init.d/postgresql stop
 
 VOLUME ["/var/log/postgresql"]
