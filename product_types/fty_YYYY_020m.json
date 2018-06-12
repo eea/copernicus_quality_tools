@@ -1,7 +1,6 @@
 {
   "description": "High Resolution Layer Forest Type (20m)",
   "parameters": {
-    "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$$"
   },
   "checks": [
     {
@@ -14,7 +13,9 @@
     {
       "check_ident": "r2",
       "required": false,
-      "parameters": {}
+      "parameters": {
+        "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$$"
+      }
     },
     {
       "check_ident": "r3",
