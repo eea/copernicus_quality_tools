@@ -99,7 +99,7 @@ class TestR2(TestCase):
                   "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"],
                   "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"}
         result = run_check(filepath, params)
-        if result["message"] is not None:
+        if "message" in result:
             print(result["message"])
         self.assertEqual("ok", result["status"], "raster check r2 should pass")
 
