@@ -13,6 +13,8 @@ QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
 PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
 CHECK_DEFAULTS_FILEPATH = PRODUCT_TYPES_DIR.joinpath("_check_defaults.json")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
+DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
+DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
 PRODUCT_TYPE_REGEX = re.compile(r"[a-z].*\.json$")
 

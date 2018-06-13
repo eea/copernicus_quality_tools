@@ -89,28 +89,6 @@ class ConnectionManager():
             self._create_schema()
         return self.connection
 
-    def create_qc_functions(self, check_idents):
-        """
-        creates custom qc functions in the current job schema by importing them from .sql files in db_functions folder.
-        :param check_idents identifiers of the checks. for example ["v6", "v11"]
-        """
-        if not self._is_connected():
-            msg = "qc functions cannot be imported. reason: connection does not exist or it is closed.".format(self.job_uuid)
-            raise ConnectionException(msg)
-
-        # the .sql files must be in the wps/db_functions directory
-        base_path = Path(__file__).resolve().parent
-        db_functions_path = Path.joinpath(base_path, "db_functions")
-
-        for check_ident in check_idents:
-            if check_ident.endswith(".sql"):
-                sql_filepath = db_functions_path.joinpath(check_ident)
-            else:
-                sql_filepath = db_functions_path.joinpath(check_ident + ".sql")
-            with closing(self.connection.cursor()) as cursor:
-                sql_query = sql_filepath.read_text()
-                cursor.execute(sql_query)
-
     def close(self):
         if not self.leave_schema and self.job_schema_name is not None:
             if not self._is_connected():

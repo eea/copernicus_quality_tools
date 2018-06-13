@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 
+from contextlib import closing
 from contextlib import ExitStack
 from unittest import TestCase
 from uuid import uuid4
 
+from qc_tool.common import DB_FUNCTION_DIR
+from qc_tool.common import DB_FUNCTION_SCHEMA_NAME
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 
@@ -25,4 +28,16 @@ class VectorCheckTestCase(TestCase):
              self.jobdir_manager = stack.enter_context(create_jobdir_manager(self.job_uuid))
              self.addCleanup(stack.pop_all().close)
 
-
+        # Reload database functions every time job schema is created.
+        _create_schema = self.connection_manager._create_schema
+        def _create_schema_with_reload():
+            _create_schema()
+            with closing(self.connection_manager.connection.cursor()) as cursor:
+                sql = "DROP SCHEMA {:s} CASCADE;".format(DB_FUNCTION_SCHEMA_NAME)
+                cursor.execute(sql)
+                sql = "CREATE SCHEMA {:s};".format(DB_FUNCTION_SCHEMA_NAME)
+                cursor.execute(sql)
+                for filepath in sorted(DB_FUNCTION_DIR.glob("*.sql")):
+                    sql_script = filepath.read_text()
+                    cursor.execute(sql_script)
+        self.connection_manager._create_schema = _create_schema_with_reload
