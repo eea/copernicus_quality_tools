@@ -9,26 +9,24 @@ from qc_tool.common import TEST_DATA_DIR
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 
+GRASS_VERSION = "grass72"
+
 class TestGrass(TestCase):
     def setUp(self):
         self.jobdir_manager = create_jobdir_manager(str(uuid4()))
         self.jobdir_manager.create_dir()
 
-    def test_r11_jobdir(self):
-        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        params = {"area_ha": 25, "job_dir": str(self.jobdir_manager.job_dir)}
+    def test_grass_jobdir(self):
         print(self.jobdir_manager.job_dir)
         self.assertIsNotNone(self.jobdir_manager.job_dir, "job_dir should be a valid directory")
-        #run_check(filepath, params)
 
-    def test_r11_grass_location(self):
+
+    def test_grass_location(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        params = {"area_ha": 25, "job_dir": str(self.jobdir_manager.job_dir)}
         job_dir = self.jobdir_manager.job_dir
 
         location_path = Path(job_dir, "location")
-        #location_path = job_dir
-        p = run(["grass72",
+        p = run([GRASS_VERSION,
                   "-c",
                   filepath,
                  "-e",
@@ -39,15 +37,12 @@ class TestGrass(TestCase):
         self.assertTrue(location_path.exists())
         self.assertEqual(p.returncode, 0, "GRASS should create the location")
 
-    def test_r11_grass_import(self):
+    def test_grass_import(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
         job_dir = str(self.jobdir_manager.job_dir)
-        params = {"area_ha": 25, "job_dir": job_dir}
-
-        # (PREPARE) creating a location
         location_path = Path(job_dir, "location")
-        p1 = run(["grass72",
+        p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
                   "-e",
@@ -64,18 +59,14 @@ class TestGrass(TestCase):
                   "input={:s}".format(filepath),
                   "output=inpfile"],
                   check=True)
-        print(p2.stderr)
-        print(p2.stdout)
 
-        self.assertEqual(p2.returncode, 0, "GRASS should import the dataset via r.in.gdal")
+        self.assertEqual(0, p2.returncode, "GRASS should import the dataset via r.in.gdal")
 
-    def test_r11_grass_clump(self):
+    def test_grass_clump(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
         job_dir = str(self.jobdir_manager.job_dir)
-        params = {"area_ha": 25, "job_dir": job_dir}
 
-        # (PREPARE) creating a location
         location_path = Path(job_dir, "location")
         p1 = run(["grass72",
                   "-c",
@@ -88,7 +79,7 @@ class TestGrass(TestCase):
 
         # import dataset
         mapset_path = Path(location_path, "PERMANENT")
-        p2 = run(["grass72",
+        p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.in.gdal",
@@ -97,7 +88,7 @@ class TestGrass(TestCase):
                   check=True)
 
         # run clump
-        p3 = run(["grass72",
+        p3 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.clump",
@@ -108,15 +99,14 @@ class TestGrass(TestCase):
 
         self.assertEqual(p3.returncode, 0, "GRASS should create the clumps.")
 
-    def test_r11_grass_volume(self):
+    def test_grass_volume(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
         job_dir = str(self.jobdir_manager.job_dir)
-        params = {"area_ha": 25, "job_dir": job_dir}
 
         # (PREPARE) creating a location
         location_path = Path(job_dir, "location")
-        p1 = run(["grass72",
+        p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
                   "-e",
@@ -127,7 +117,7 @@ class TestGrass(TestCase):
 
         # import dataset
         mapset_path = Path(location_path, "PERMANENT")
-        p2 = run(["grass72",
+        p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.in.gdal",
@@ -136,7 +126,7 @@ class TestGrass(TestCase):
                   check=True)
 
         # run clump
-        p3 = run(["grass72",
+        p3 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.clump",
@@ -146,7 +136,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # run volume
-        p4 = run(["grass72",
+        p4 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.volume",
@@ -159,15 +149,14 @@ class TestGrass(TestCase):
 
         self.assertEqual(p4.returncode, 0, "GRASS should create the volume and clump_centroids.")
 
-    def test_r11_grass_build(self):
+    def test_grass_build(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
         job_dir = str(self.jobdir_manager.job_dir)
-        params = {"area_ha": 25, "job_dir": job_dir}
 
         # (PREPARE) creating a location
         location_path = Path(job_dir, "location")
-        p1 = run(["grass72",
+        p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
                   "-e",
@@ -178,7 +167,7 @@ class TestGrass(TestCase):
 
         # import dataset
         mapset_path = Path(location_path, "PERMANENT")
-        p2 = run(["grass72",
+        p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.in.gdal",
@@ -187,7 +176,7 @@ class TestGrass(TestCase):
                   check=True)
 
         # run clump
-        p3 = run(["grass72",
+        p3 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.clump",
@@ -197,7 +186,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # run volume
-        p4 = run(["grass72",
+        p4 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.volume",
@@ -209,7 +198,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # rebuild clump_centroids (necessary in grass72)
-        p5 = run(["grass72",
+        p5 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.build",
@@ -218,7 +207,7 @@ class TestGrass(TestCase):
                  check=True)
         self.assertEqual(p5.returncode, 0, "GRASS should build clump_centroids layer.")
 
-    def test_r11_grass_extract(self):
+    def test_grass_extract(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
         job_dir = str(self.jobdir_manager.job_dir)
@@ -226,7 +215,7 @@ class TestGrass(TestCase):
 
         # (PREPARE) creating a location
         location_path = Path(job_dir, "location")
-        p1 = run(["grass72",
+        p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
                   "-e",
@@ -237,7 +226,7 @@ class TestGrass(TestCase):
 
         # import dataset
         mapset_path = Path(location_path, "PERMANENT")
-        p2 = run(["grass72",
+        p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.in.gdal",
@@ -246,7 +235,7 @@ class TestGrass(TestCase):
                   check=True)
 
         # run clump
-        p3 = run(["grass72",
+        p3 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.clump",
@@ -256,7 +245,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # run volume
-        p4 = run(["grass72",
+        p4 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.volume",
@@ -268,7 +257,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # rebuild clump_centroids topology (necessary in grass72)
-        p5 = run(["grass72",
+        p5 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.build",
@@ -277,7 +266,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # remove db columns
-        p5 = run(["grass72",
+        p5 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.db.dropcolumn",
@@ -286,7 +275,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # print connection
-        p6 = run(["grass72",
+        p6 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.db.connect",
@@ -295,7 +284,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # extract features with count<5
-        p7 = run(["grass72",
+        p7 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.extract",
@@ -306,16 +295,15 @@ class TestGrass(TestCase):
 
         self.assertEqual(p7.returncode, 0, "GRASS should extract the feature with lessmmu")
 
-    def test_r11_grass_export(self):
-        #filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        filepath = str(TEST_DATA_DIR.joinpath("FTY_2015_020m_eu_03035_d04_full.tif"))
+    def test_grass_export(self):
+        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
+        #filepath = str(TEST_DATA_DIR.joinpath("FTY_2015_020m_eu_03035_d04_full.tif"))
 
         job_dir = str(self.jobdir_manager.job_dir)
-        params = {"area_ha": 25, "job_dir": job_dir}
 
         # (PREPARE) creating a location
         location_path = Path(job_dir, "location")
-        p1 = run(["grass72",
+        p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
                   "-e",
@@ -326,7 +314,7 @@ class TestGrass(TestCase):
 
         # import dataset
         mapset_path = Path(location_path, "PERMANENT")
-        p2 = run(["grass72",
+        p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.in.gdal",
@@ -335,7 +323,7 @@ class TestGrass(TestCase):
                   check=True)
 
         # run clump
-        p3 = run(["grass72",
+        p3 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.clump",
@@ -345,7 +333,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # run volume
-        p4 = run(["grass72",
+        p4 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "r.volume",
@@ -357,7 +345,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # rebuild clump_centroids (necessary in grass72)
-        p5 = run(["grass72",
+        p5 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.build",
@@ -366,7 +354,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # remove db columns
-        p6 = run(["grass72",
+        p6 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.db.dropcolumn",
@@ -376,7 +364,7 @@ class TestGrass(TestCase):
 
         # export to shp
         out_path = TEST_DATA_DIR.joinpath(self.jobdir_manager.job_dir.name)
-        p7 = run(["grass72",
+        p7 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
                   "v.out.ogr",
@@ -388,11 +376,77 @@ class TestGrass(TestCase):
 
         self.assertEqual(p7.returncode, 0, "GRASS should export lessmmu_centroids to shapefile.")
 
-    def test_r11(self):
-        from qc_tool.wps.raster_check.r11 import run_check
+
+    def test_grass_alternative(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        params = {"area_ha": 25, "job_dir": str(self.jobdir_manager.job_dir)}
-        run_check(filepath, params)
+
+        job_dir = str(self.jobdir_manager.job_dir)
+        params = {"area_ha": 25, "job_dir": job_dir}
+
+        # (PREPARE) creating a location
+        location_path = Path(job_dir, "location")
+        p1 = run([GRASS_VERSION,
+                  "-c",
+                  filepath,
+                  "-e",
+                  str(location_path)], check=True)
+
+        if p1.returncode != 0:
+            print("some error creating location!")
+
+        # import dataset
+        mapset_path = Path(location_path, "PERMANENT")
+        p2 = run([GRASS_VERSION,
+                  str(mapset_path),
+                  "--exec",
+                  "r.in.gdal",
+                  "input={:s}".format(filepath),
+                  "output=inpfile"],
+                  check=True)
+
+        # run r.reclass.area
+        p3 = run([GRASS_VERSION,
+                  str(mapset_path),
+                  "--exec",
+                  "r.reclass.area",
+                  "--verbose",
+                  "input=inpfile",
+                  "output=lessmmu_raster",
+                  "value=5",
+                  "mode=lesser",
+                  "method=reclass"],
+                 check=True)
+
+        # run r.to.vect
+        p4 = run([GRASS_VERSION,
+                  str(mapset_path),
+                  "--exec",
+                  "r.to.vect",
+                  "--overwrite",
+                  "--verbose",
+                  "-s",
+                  "-v",
+                  "type=area",
+                  "input=lessmmu_raster",
+                  "output=lessmmu_areas"],
+                 check=True)
+
+        # export to shp
+        out_dir_path = TEST_DATA_DIR.joinpath(self.jobdir_manager.job_dir.name)
+        out_dir_path.mkdir()
+        out_shapefile_path = out_dir_path.joinpath("lessmmu_areas.shp")
+
+        p7 = run([GRASS_VERSION,
+                  str(mapset_path),
+                  "--exec",
+                  "v.out.ogr",
+                  "input=lessmmu_areas",
+                  "output={:s}".format(str(out_shapefile_path)),
+                  "format=ESRI_Shapefile"],
+                 check=True)
+
+        self.assertEqual(p7.returncode, 0, "GRASS should export lessmmu_areas to shapefile.")
+
 
     def tearDown(self):
         self.jobdir_manager.remove_dir()
