@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
-from pathlib import Path
-from subprocess import run
+
 
 from unittest import TestCase
-from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
-from qc_tool.wps.manager import create_connection_manager
-from qc_tool.wps.manager import create_jobdir_manager
+from qc_tool.test.helper import RasterCheckTestCase
+from qc_tool.test.helper import VectorCheckTestCase
 
 
-class TestImport2pg(TestCase):
+class TestImport2pg(VectorCheckTestCase):
     valid_geodatabase = "clc2012_mt.gdb"
-
-    def setUp(self):
-        self.job_uuid = str(uuid4())
-        self.connection_manager = create_connection_manager(self.job_uuid)
-
 
     def test_import2pg_pass(self):
         from qc_tool.wps.vector_check.import2pg import run_check
@@ -69,14 +62,8 @@ class TestImport2pg(TestCase):
             self.assertIn(expected_name, actual_function_names,
                           "a function {:s} should be created in schema {:s}".format(expected_name, job_schema))
 
-    def tearDown(self):
-        self.connection_manager.close()
 
-
-class TestV11_DataNotImported(TestCase):
-    def setUp(self):
-        self.connection_manager = create_connection_manager(str(uuid4()))
-
+class TestV11_DataNotImported(VectorCheckTestCase):
     def test_missing_table_should_cause_fail(self):
         from qc_tool.wps.vector_check.v11 import run_check
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
@@ -88,8 +75,6 @@ class TestV11_DataNotImported(TestCase):
             print(result["message"])
         self.assertEqual("failed", result["status"], "check result should be FAILED when table is not imported.")
 
-    def tearDown(self):
-        self.connection_manager.close()
 
 class TestR2(TestCase):
     def test_r2(self):
@@ -103,11 +88,8 @@ class TestR2(TestCase):
             print(result["message"])
         self.assertEqual("ok", result["status"], "raster check r2 should pass")
 
-class TestR11(TestCase):
-    def setUp(self):
-        self.jobdir_manager = create_jobdir_manager(str(uuid4()))
-        self.jobdir_manager.create_dir()
 
+class TestR11(RasterCheckTestCase):
     def test_r11_jobdir(self):
         self.assertIsNotNone(self.jobdir_manager.job_dir, "job_dir should be a valid directory")
 
@@ -123,8 +105,6 @@ class TestR11(TestCase):
         self.assertEqual("failed", result["status"])
         self.assertNotIn("GRASS GIS error", result["message"])
 
-    def tearDown(self):
-        self.jobdir_manager.remove_dir()
 
 class TestR15(TestCase):
     def test_r15(self):
@@ -141,10 +121,9 @@ class TestR15(TestCase):
         result = run_check(filepath, params)
 
 
-class TestV8(TestCase):
+class TestV8(VectorCheckTestCase):
     def setUp(self):
-        self.job_uuid = str(uuid4())
-        self.connection_manager = create_connection_manager(self.job_uuid)
+        super().setUp()
         from qc_tool.wps.vector_check.import2pg import run_check
         filepath = str(TEST_DATA_DIR.joinpath("clc2012_mt.gdb"))
         params = {"country_codes": "(CZ|MT)",
@@ -168,24 +147,15 @@ class TestV8(TestCase):
         self.assertEqual("ok", result["status"], "check result should be ok for Malta")
 
 
-    def tearDown(self):
-        self.connection_manager.close()
-
-
-class TestV11(TestCase):
+class TestV11(VectorCheckTestCase):
     def setUp(self):
-        self.job_uuid = str(uuid4())
-        self.connection_manager = create_connection_manager(self.job_uuid)
+        super().setUp()
         from qc_tool.wps.vector_check.import2pg import run_check
         filepath = str(TEST_DATA_DIR.joinpath("clc2012_mt.gdb"))
         params = {"country_codes": "(CZ|MT)",
                   "layer_regex": "^countrycode/clc[0-9]{2}_countrycode$",
                   "connection_manager": self.connection_manager}
         run_check(filepath, params)
-
-    def tearDown(self):
-        self.connection_manager.close()
-
 
     def test_v11(self):
         from qc_tool.wps.vector_check.v11 import run_check
@@ -236,7 +206,6 @@ class TestV11(TestCase):
         row = cur.fetchone()
         self.assertIsNotNone(row, "v1 should create a polyline_border table in the database.")
 
-
     def test_v11_border_table_not_in_public(self):
         """
         a _polyline_border table should be created in the job's schema
@@ -257,7 +226,6 @@ class TestV11(TestCase):
                      where table_schema='public' AND table_name = '{:s}'".format(border_table))
         row = cur.fetchone()
         self.assertIsNone(row, "border table {:s} should not be in the public schema.".format(border_table))
-
 
     def test_v11_border_table_in_job_schema(self):
         """
