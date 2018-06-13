@@ -20,7 +20,7 @@
       }
     },
     "r2": {
-      "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"]
+      "extensions": [".tif", ".clr", ".xml", ".tif.vat.dbf"]
     }
   }
 }
