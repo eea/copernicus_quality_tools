@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+from pathlib import Path
+from subprocess import run
 
 from unittest import TestCase
 from uuid import uuid4
@@ -40,7 +41,7 @@ class TestImport2pg(TestCase):
         layer = "clc12_mt"
         cur.execute("""SELECT id FROM {:s}""".format(layer))
         num_rows = cur.rowcount
-        self.assertGreater(num_rows, 0, "imported table does not have any rows.")
+        self.assertLess(0, num_rows, "imported table should have at least one row.")
 
     def test_import2pg_functions_created(self):
         from qc_tool.wps.vector_check.import2pg import run_check
@@ -108,18 +109,19 @@ class TestR11(TestCase):
         self.jobdir_manager.create_dir()
 
     def test_r11_jobdir(self):
-        from qc_tool.wps.raster_check.r11 import run_check
-        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        params = {"area_ha": 25, "job_dir": str(self.jobdir_manager.job_dir)}
-        print(self.jobdir_manager.job_dir)
         self.assertIsNotNone(self.jobdir_manager.job_dir, "job_dir should be a valid directory")
-        #run_check(filepath, params)
+
+    def test_r11_jobdir_exists(self):
+        self.assertIsNotNone(self.jobdir_manager.job_dir.exists(), "job_dir directory must exist.")
 
     def test_r11(self):
         from qc_tool.wps.raster_check.r11 import run_check
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        params = {"area_ha": 25, "job_dir": str(self.jobdir_manager.job_dir)}
-        run_check(filepath, params)
+        params = {"area_ha": 5, "job_dir": str(self.jobdir_manager.job_dir)}
+        result = run_check(filepath, params)
+        print(result)
+        self.assertEqual("failed", result["status"])
+        self.assertNotIn("GRASS GIS error", result["message"])
 
     def tearDown(self):
         self.jobdir_manager.remove_dir()
