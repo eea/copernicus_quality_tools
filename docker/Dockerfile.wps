@@ -9,32 +9,32 @@ LABEL description="QC tool environment."
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 
 # Add repositories.
-RUN apt-get update \
-    && apt-get install -y software-properties-common \
+RUN apt-get -y update \
+    && apt-get -y install software-properties-common \
     && add-apt-repository -y ppa:ubuntugis/ppa
 
 # Upgrade the base system.
 RUN apt-get -y update \
     && apt-get -y upgrade \
-    && apt-get install -y python3-pip \
+    && apt-get -y install python3-pip \
     && pip3 install --upgrade pip \
-    && apt-get install -y git
+    && apt-get -y install git
 
 # Install geo environment.
-RUN apt-get install -y gdal-bin python3-psycopg2 python3-gdal python3-numpy 
+RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy
 
 # Install grass.
-RUN apt-get install -y grass-core
+RUN apt-get -y install grass-core
 
 # Install flask & pywps.
-RUN apt-get install -y git gcc python3-dev libproj-dev python3-lxml \
+RUN apt-get -y install gcc python3-dev libproj-dev python3-lxml \
     && pip3 install --upgrade setuptools \
     && pip3 install Flask \
     && env PROJ_DIR=/usr pip3 install pyproj \
     && cd /usr/local/src \
     && pip3 install -e git+https://github.com/geopython/pywps.git@4.0.0#egg=pywps-dev
 
-# Install qc tool, wps application
+# Install qc tool.
 RUN cd /usr/local/src \
     && git clone https://github.com/eea/copernicus_quality_tools
 

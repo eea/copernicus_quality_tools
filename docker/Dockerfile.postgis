@@ -10,14 +10,14 @@ RUN apt-get -y update \
     && add-apt-repository "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" \
     && wget --quiet --output-document=- https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt-get -y update \
-    && apt-get -y upgrade
+    && apt-get -y upgrade \
+    && apt-get -y install git
 
 # Install postgresql & postgis.
 RUN apt-get -y install postgresql-10-postgis-2.4
 
-# Install qc tool sources.
+# Install qc tool.
 RUN cd /usr/local/src \
-    && apt-get install -y git \
     && git clone https://github.com/eea/copernicus_quality_tools
 
 USER postgres
