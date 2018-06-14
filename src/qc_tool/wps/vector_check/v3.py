@@ -20,18 +20,10 @@ def run_check(filepath, params):
     :param params: configuration
     :return: status + message
     """
-
-    # get list of feature classes
-    lyrs = get_fc_path(filepath)
-
-    # get list of feature classes matching to the regex
-    layer_regex = params["layer_regex"].replace("countrycode", params["country_codes"]).lower()
-    layers_regex = [layer.split("/")[1] for layer in lyrs if check_name(layer.lower(), layer_regex)]
-
     # get list of field names of particular layers
     ds = ogr.Open(filepath)
     fnames = dict()
-    for ln in layers_regex:
+    for ln in params["layer_name"]:
         fnames[ln] = list()
         lyr = ds.GetLayerByName(str(ln))
         lyr_defn = lyr.GetLayerDefn()

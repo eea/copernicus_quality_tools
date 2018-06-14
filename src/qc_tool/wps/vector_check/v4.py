@@ -22,9 +22,7 @@ def run_check(filepath, params):
     :param params: configuration
     :return: status + message
     """
-
     def check_crs(lyr):
-
         # get Spatial Reference and EPSG code
         srs = osr.SpatialReference(lyr.GetSpatialRef().ExportToWkt())
         if srs.IsProjected:
@@ -42,18 +40,10 @@ def run_check(filepath, params):
             return {"status": "failed",
                     "message": "EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"]))}
 
-    # get list of feature classes
-    lyrs = get_fc_path(filepath)
-
-    # get list of feature classes matching to the prefix
-    layer_regex = params["layer_regex"].replace("countrycode", params["country_codes"]).lower()
-    layers_regex = [layer for layer in lyrs if check_name(layer.lower(), layer_regex)]
-
     # check CRS of all matching layers
     res = dict()
     dsopen = ogr.Open(filepath)
-    for layername in layers_regex:
-        layername = str(layername.split("/")[-1])
+    for layername in params["layer_names"]:
         layer = dsopen.GetLayerByName(layername)
         res[layername] = check_crs(layer)
 

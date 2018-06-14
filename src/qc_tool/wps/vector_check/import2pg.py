@@ -20,19 +20,9 @@ def run_check(filepath, params):
     :param params: configuration
     :return: status + message
     """
+    dsn, schema =  params["connection_manager"].get_dsn_schema()
 
-    connection_manager = params["connection_manager"]
-    dsn, schema = connection_manager.get_dsn_schema()
-
-    lyrs = get_fc_path(filepath)
-    layer_regex = params["layer_regex"].replace("countrycode", params["country_codes"]).lower()
-    layers_regex = [layer for layer in lyrs if check_name(layer.lower(), layer_regex)]
-
-    if not layers_regex:
-        return {"status": "aborted",
-                "message": "There is no matching layer in the data source."}
-
-    for lyr in layers_regex:
+    for layer_name in params["layer_names"]:
         pc = run(["ogr2ogr",
                    "-overwrite",
                    "-skipfailures",
@@ -40,7 +30,7 @@ def run_check(filepath, params):
                    "-lco", "SCHEMA={:s}".format(schema),
                    "PG:{:s}".format(dsn),
                    filepath,
-                   lyr.split("/")[1]])
+                   layer_name])
         if pc.returncode != 0:
             return {"status": "aborted",
                     "message": "Importing of {:s} layer into PostGIS db failed.".format(lyr)}

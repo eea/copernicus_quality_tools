@@ -23,16 +23,18 @@ class RasterCheckTestCase(TestCase):
 class VectorCheckTestCase(TestCase):
     def setUp(self):
         self.job_uuid = str(uuid4())
+        self.params = {}
         with ExitStack() as stack:
-             self.connection_manager = stack.enter_context(create_connection_manager(self.job_uuid))
-             self.jobdir_manager = stack.enter_context(create_jobdir_manager(self.job_uuid))
+             self.params["connection_manager"] = stack.enter_context(create_connection_manager(self.job_uuid))
+             self.params["jobdir_manager"] = stack.enter_context(create_jobdir_manager(self.job_uuid))
              self.addCleanup(stack.pop_all().close)
 
         # Reload database functions every time job schema is created.
-        _create_schema = self.connection_manager._create_schema
+        _connection_manager = self.params["connection_manager"]
+        _create_schema = _connection_manager._create_schema
         def _create_schema_with_reload():
             _create_schema()
-            with closing(self.connection_manager.connection.cursor()) as cursor:
+            with closing(_connection_manager.connection.cursor()) as cursor:
                 sql = "DROP SCHEMA {:s} CASCADE;".format(DB_FUNCTION_SCHEMA_NAME)
                 cursor.execute(sql)
                 sql = "CREATE SCHEMA {:s};".format(DB_FUNCTION_SCHEMA_NAME)
@@ -40,4 +42,4 @@ class VectorCheckTestCase(TestCase):
                 for filepath in sorted(DB_FUNCTION_DIR.glob("*.sql")):
                     sql_script = filepath.read_text()
                     cursor.execute(sql_script)
-        self.connection_manager._create_schema = _create_schema_with_reload
+        _connection_manager._create_schema = _create_schema_with_reload
