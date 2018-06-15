@@ -37,12 +37,13 @@ def run_check(filepath, params):
 
     # get list of feature classes
     layer_names = get_fc_path(filepath)
+    layer_names = [layer_name.lower() for layer_name in layer_names]
 
     # get list of feature classes matching to the prefix and regex
     layer_prefix = params["layer_prefix"].format(countrycode=countrycode)
     layer_regex = params["layer_regex"].format(countrycode=countrycode).lower()
-    layer_names_by_prefix = [layer_name.lower() for layer_name in layer_names
-                             if check_name(layer_name.lower(), layer_prefix)]
+    layer_names_by_prefix = [layer_name for layer_name in layer_names
+                             if check_name(layer_name, layer_prefix)]
     layer_names_by_regex = [layer_name for layer_name in layer_names
                             if check_name(layer_name, layer_regex)]
 
