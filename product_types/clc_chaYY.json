@@ -58,6 +58,13 @@
         "area_ha": 5,
         "border_exception": true
       }
+    },
+    {
+      "check_ident": "v13",
+      "required": false,
+      "parameters": {
+        "ident_colname": "id"
+      }
     }
   ]
 }

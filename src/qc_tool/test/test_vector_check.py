@@ -113,3 +113,37 @@ class TestV11_DataNotImported(VectorCheckTestCase):
                             "border_exception": True})
         result = run_check(filepath, self.params)
         self.assertEqual("failed", result["status"], "check result should be FAILED when table is not imported.")
+
+
+class TestV13(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE test_layer_1 (ident integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE test_layer_2 (ident integer, wkb_geometry geometry(Polygon, 4326));")
+        self.params.update({"layer_names": ["test_layer_1", "test_layer_2"],
+                            "ident_colname": "ident"})
+
+    def test_non_overlapping(self):
+        from qc_tool.wps.vector_check.v13 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                      " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                      " (3, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
+                                                      " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
+        cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                      " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        result = run_check(None, self.params)
+        self.assertEqual("ok", result["status"])
+
+    def test_overlapping(self):
+        from qc_tool.wps.vector_check.v13 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                      " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
+        cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                      " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
+                                                      " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
+        result = run_check(None, self.params)
+        self.assertEqual("failed", result["status"])
+        self.assertEqual("Layers with overlapping pairs: test_layer_1:1, test_layer_2:3.", result["message"])
