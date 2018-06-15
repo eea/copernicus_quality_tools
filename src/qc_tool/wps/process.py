@@ -110,12 +110,14 @@ class RunChecks(Process):
             optional_check_idents = []
 
         # Call dispatch.
-        def update_wps_result(suite_result, percent_done):
-            response.outputs["result"].data = json.dumps(suite_result)
-            response.update_status(status_percentage=percent_done)
-        dispatch(str(self.uuid),
-                 filepath,
-                 product_type_name,
-                 optional_check_idents,
-                 update_result_func=update_wps_result)
+        def update_wps_status(check_ident, percent_done):
+            message = "Running check {:s}.".format(check_ident)
+            response.update_status(message, int(percent_done))
+        suite_result = dispatch(str(self.uuid),
+                                filepath,
+                                product_type_name,
+                                optional_check_idents,
+                                update_status_func=update_wps_status)
+        response.outputs["result"].data = json.dumps(suite_result)
+
         return response
