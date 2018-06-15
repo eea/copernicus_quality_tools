@@ -14,7 +14,7 @@
     },
     {
       "check_ident": "v2",
-      "required": false,
+      "required": true,
       "parameters": {
         "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
         "layer_prefix": "^{countrycode:s}/cha",

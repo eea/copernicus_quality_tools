@@ -1,8 +1,6 @@
 {
   "description": "CORINE Land Cover status layers",
   "parameters": {
-    "layer_prefix": "^countrycode/clc",
-    "layer_regex": "^countrycode/clc[0-9]{2}_countrycode$",
     "layer_count": 2,
     "product_code": "clc"
   },
@@ -16,9 +14,11 @@
     },
     {
       "check_ident": "v2",
-      "required": false,
+      "required": true,
       "parameters": {
-        "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$"
+        "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
+        "layer_prefix": "^{countrycode:s}/clc",
+        "layer_regex": "^{countrycode:s}/clc[0-9]{{2}}_{countrycode:s}$"
       }
     },
     {
