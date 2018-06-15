@@ -62,7 +62,7 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
         job_params["job_dir"] = str(jobdir_manager.job_dir)
 
         # Run check suite.
-        for check in check_suite:
+        for i, check in enumerate(check_suite, start=1):
             # Prepare parameters.
             check_params = {}
             check_params.update(check_defaults["globals"])
@@ -91,7 +91,8 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
 
             # Update wps output.
             if update_result_func is not None:
-                update_result_func(suite_result)
+                percent_done = i / len(check_suite)
+                update_result_func(suite_result, percent_done)
 
             # Abort validation if wanted.
             if check_result["status"] == "aborted":
