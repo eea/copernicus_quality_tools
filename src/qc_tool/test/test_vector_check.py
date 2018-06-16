@@ -6,6 +6,26 @@ from contextlib import closing
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
 
+class TestV3(VectorCheckTestCase):
+    valid_geodatabase = "clc2012_mt.gdb"
+    def setUp(self):
+        super().setUp()
+        self.filepath = str(TEST_DATA_DIR.joinpath(self.valid_geodatabase))
+        self.params["layer_names"] = ["clc12_mt"]
+
+    def test_v3_Malta_clc_ok(self):
+        from qc_tool.wps.vector_check.v3 import run_check
+        self.params["fields"] = ["^ID$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$"]
+        result = run_check(self.filepath, self.params)
+        self.assertEqual("ok", result["status"])
+
+    def test_v3_missing_fields(self):
+        from qc_tool.wps.vector_check.v3 import run_check
+        self.params["fields"] = ["^ID2$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$", "^EXTRA_FIELD$"]
+        result = run_check(self.filepath, self.params)
+        if "message" in result:
+            print(result["message"])
+        self.assertEqual("failed", result["status"])
 
 class TestImport2pg(VectorCheckTestCase):
     valid_geodatabase = "clc2012_mt.gdb"

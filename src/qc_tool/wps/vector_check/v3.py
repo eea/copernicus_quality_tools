@@ -8,7 +8,6 @@ Attribute table structure check.
 from osgeo import ogr
 
 from qc_tool.wps.registry import register_check_function
-from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 from qc_tool.wps.helper import find_name, check_name, get_substring
 
 
@@ -20,35 +19,34 @@ def run_check(filepath, params):
     :param params: configuration
     :return: status + message
     """
-    # get list of field names of particular layers
+    # get list of actual field names of all layers
     ds = ogr.Open(filepath)
-    fnames = dict()
-    for ln in params["layer_name"]:
-        fnames[ln] = list()
-        lyr = ds.GetLayerByName(str(ln))
-        lyr_defn = lyr.GetLayerDefn()
-        for n in range(lyr_defn.GetFieldCount()):
-            fdefn = lyr_defn.GetFieldDefn(n)
-            fnames[ln].append(str(fdefn.name.lower()))
+    layer_fields = dict()
+    for ln in params["layer_names"]:
+        layer = ds.GetLayerByName(str(ln))
+        layer_fields[ln] = [field.name.lower() for field in layer.schema]
 
-    # get list of missing field names
-    missing_fnames= dict()
-    for ln in fnames:
-        missing_fnames[ln] = list()
+    # The list of missing field names will be stored by layer
+    missing = dict()
+    for ln in layer_fields:
+        missing[ln] = list()
         year = get_substring(ln, "[0-9]{2}")
         for an in params["fields"]:
             if year and "yy" in an:
                 an = an.replace("yy", year)
-            if not find_name(fnames[ln], an.lower()):
-                missing_fnames[ln].append(an.lower().lstrip("^").rstrip("$"))
-        if not missing_fnames[ln]:
-            del missing_fnames[ln]
+            # check if there are any actual field names that match the template
+            matching_fieldnames = list(find_name(layer_fields[ln], an.lower()))
+            if not matching_fieldnames:
+                missing[ln].append(an.lower().lstrip("^").rstrip("$"))
 
-    if not missing_fnames:
+        if not missing[ln]:
+            del missing[ln]
+
+    if not missing:
         return {"status": "ok"}
     else:
-        layer_results = ', '.join(
-            "layer {!s}: ('{!s}')".format(key, "', '".join(val)) for (key, val) in missing_fnames.items())
+        # report missing fields for each layer
+        layer_results = ", ".join("layer {!s}: ('{!s}')".format(ln, "', '".join(fn)) for (ln, fn) in missing.items())
         res_message = "Some of the required attributes are missing: ({:s})".format(layer_results)
         return {"status": "failed",
                 "message": res_message}
