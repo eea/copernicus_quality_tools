@@ -8,7 +8,7 @@ Attribute table structure check.
 from osgeo import ogr
 
 from qc_tool.wps.registry import register_check_function
-from qc_tool.wps.helper import find_name, check_name, get_substring
+from qc_tool.wps.helper import find_name, get_substring
 
 
 @register_check_function(__name__, "Attribute table contains specified attributes.")

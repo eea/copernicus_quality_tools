@@ -20,7 +20,7 @@ def run_check(filepath, params):
     :param params: configuration
     :return: status + message
     """
-
+    print(params["layer_prefix"])
 
     # check file name
     filename = PurePath(filepath).name

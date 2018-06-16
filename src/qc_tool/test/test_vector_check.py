@@ -6,6 +6,36 @@ from contextlib import closing
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
 
+class TestV2(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.filepath = str(TEST_DATA_DIR.joinpath("clc2012_mt.gdb"))
+        self.params.update({"country_codes": "(MT)",
+                            "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
+                            "layer_prefix": "^{countrycode:s}/clc",
+                            "layer_regex": "^{countrycode:s}/clc[0-9]{{2}}_{countrycode:s}$",
+                            "layer_count": 2
+                           })
+
+    def test_v2_clc_ok(self):
+        from qc_tool.wps.vector_check.v2 import run_check
+        result = run_check(self.filepath, self.params)
+        self.assertEqual("ok", result["status"])
+        self.assertIn("layer_names", result["params"])
+
+    def test_v2_prefix_fail(self):
+        self.params["layer_prefix"] = "^{countrycode:s}/cha"
+        from qc_tool.wps.vector_check.v2 import run_check
+        result = run_check(self.filepath, self.params)
+        self.assertEqual("aborted", result["status"])
+
+    def test_v2_count_fail(self):
+        self.params["layer_count"] = 1
+        from qc_tool.wps.vector_check.v2 import run_check
+        result = run_check(self.filepath, self.params)
+        self.assertEqual("aborted", result["status"])
+
+
 class TestV3(VectorCheckTestCase):
     valid_geodatabase = "clc2012_mt.gdb"
     def setUp(self):
@@ -39,6 +69,11 @@ class TestImport2pg(VectorCheckTestCase):
         result = run_check(self.filepath, self.params)
         self.assertEqual("ok", result["status"])
 
+    def test_import2pg_bad_file_aborted(self):
+        from qc_tool.wps.vector_check.import2pg import run_check
+        self.filepath = str(TEST_DATA_DIR.joinpath("test_raster1.tif"))
+        result = run_check(self.filepath, self.params)
+        self.assertEqual("aborted", result["status"], "Status was not 'aborted' when importing a file with bad format.")
 
     def test_import2pg_table_created(self):
         from qc_tool.wps.vector_check.import2pg import run_check

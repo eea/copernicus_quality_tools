@@ -33,5 +33,5 @@ def run_check(filepath, params):
                    layer_name])
         if pc.returncode != 0:
             return {"status": "aborted",
-                    "message": "Importing of {:s} layer into PostGIS db failed.".format(lyr)}
+                    "message": "Importing of {:s} layer into PostGIS db failed.".format(layer_name)}
     return {"status": "ok"}
