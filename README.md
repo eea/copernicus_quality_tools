@@ -24,23 +24,9 @@ git clone https://github.com/eea/copernicus_quality_tools
 cd copernicus_quality_tools/docker
 ```
 
-(4) Configure the directory for uploading .gdb and .tif files by editing the hidden .env file in copernicus_quality_tools/docker: 
-```
-nano .env
-```
-Edit the .env file to look like this:
-```
-WPS_PORT=5000
-WPS_DIR=/mnt/wps
-INCOMING_DIR=/mnt/wps/incoming
-WPS_URL=http://qc_tool_wps:5000/wps
-WPS_OUTPUT_URL=http://qc_tool_wps:5000/wps/output
-PG_DATABASE_NAME=qc_tool_db
-PG_HOST=qc_tool_postgis
-FRONTEND_PORT=8000
-WPS_MOUNT=/tmp
-```
-In the .env file, set *WPS_MOUNT* to a directory on your system with read and write permissions on your system. For example you can set *WPS_MOUNT=/home/jiri/qc_tool* if you have that folder.
+(4) Create a new file docker-compose.yml for your local deployment. See the files `docker-compose.igor.yml` and `docker-compose.jiri.yml`
+as an example. The most important setting is to edit the volumes. the /mnt/wps volume should be mounted to a writable volume on your
+system.
 
 (5) Build the docker containers and run the application
 ```
@@ -77,35 +63,5 @@ docker run --rm \
   --name=qc_tool_wps \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_wps python3 -m unittest qc_tool.test.test_dummy
-```
-
-## Launching All Docker Containers via command-line
----------------------------------------------------
-(1) Start the postgis container. MY_QC_TOOL_HOME must be the absolute path to your copernicus_quality_tools folder
-```
-MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
-docker run --rm --publish 15432:5432 --name=qc_tool_postgis --tty --interactive qc_tool_postgis
-```
-(2) Switch to a second terminal window and start the wps container
-```
-MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
-docker run --rm \
-  --interactive --tty \
-  --name=qc_tool_wps \
-  --link=qc_tool_postgis \
-  --volume $MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_wps
-```
-
-(3) Switch to a third terminal window and start the frontend. MY_QC_TOOL_HOME must be the absolute path to your copernicus_quality_tools folder
-```
-MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
-docker run --rm \
-  --interactive --tty \
-  --publish 8000:8000 \
-  --name=qc_tool_frontend \
-  --link=qc_tool_wps \
-  --volume $MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_frontend
+  qc_tool_wps python3 -m unittest qc_tool.test.test_vector_check
 ```
