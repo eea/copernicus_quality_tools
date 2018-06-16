@@ -25,8 +25,7 @@ cd copernicus_quality_tools/docker
 ```
 
 (4) Create a new file `docker-compose.yml` for your local deployment. See the files `docker-compose.igor.yml` and `docker-compose.jiri.yml`
-as an example. The most important setting is to edit the volumes. the /mnt/wps volume should be mounted to a writable volume on your
-system.
+as an example. The most important setting is to edit the volumes. the `/mnt/wps` volume should be mounted to a writable volume on your system. The environment variables which can be set in docker-compose.yml are explained in the [a NOTES.environ.txt](docker/.NOTES.environ.txt) document.
 
 (5) Build the docker containers and run the application
 ```
