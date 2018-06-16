@@ -24,7 +24,7 @@ git clone https://github.com/eea/copernicus_quality_tools
 cd copernicus_quality_tools/docker
 ```
 
-(4) Create a new file docker-compose.yml for your local deployment. See the files `docker-compose.igor.yml` and `docker-compose.jiri.yml`
+(4) Create a new file `docker-compose.yml` for your local deployment. See the files `docker-compose.igor.yml` and `docker-compose.jiri.yml`
 as an example. The most important setting is to edit the volumes. the /mnt/wps volume should be mounted to a writable volume on your
 system.
 
