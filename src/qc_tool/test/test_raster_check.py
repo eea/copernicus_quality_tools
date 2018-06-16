@@ -33,12 +33,11 @@ class TestR11(RasterCheckTestCase):
     def test_r11(self):
         from qc_tool.wps.raster_check.r11 import run_check
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        params = {"area_ha": 5, "job_dir": str(self.jobdir_manager.job_dir)}
+        params = {"area_ha": 0.5, "job_dir": str(self.jobdir_manager.job_dir)}
         result = run_check(filepath, params)
         print(result)
         self.assertEqual("failed", result["status"])
         self.assertNotIn("GRASS GIS error", result["message"])
-
 
 class TestR15(TestCase):
     def test_r15(self):

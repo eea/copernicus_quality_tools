@@ -63,7 +63,7 @@ def run_check(filepath, params):
               "--verbose",
               "input=inpfile",
               "output=lessmmu_raster",
-              "value={:d}".format(mmu_limit_ha),
+              "value={:f}".format(mmu_limit_ha),
               "mode=lesser",
               "method=reclass"],
              check=True)
