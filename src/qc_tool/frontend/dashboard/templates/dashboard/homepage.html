@@ -30,9 +30,9 @@
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="recent">
                         <div id="runs-toolbar-1">
-                            <a href="{% url 'new_check' %}" class="btn btn-success" role="button">
+                            <a href="{% url 'new_job' %}" class="btn btn-success" role="button">
                                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                New Checking Job
+                                New QA Job
                             </a>
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
@@ -45,7 +45,7 @@
                                 <th data-field="start_time" data-sortable="true">Start</th>
                                 <th data-field="end_time" data-sortable="true">End</th>
                                 <th data-field="status" data-sortable="false">Status</th>
-                                <!-- <th data-field="status" data-sortable="true">Status</th>-->
+                                <th data-field="percent_complete" data-sortable="true">Percent</th>
                                 <th data-field="overall_result" data-sortable="true">Result</th>
                             </tr>
                             </thead>

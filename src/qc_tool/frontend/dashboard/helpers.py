@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+from datetime import datetime
 from lxml import etree
 from django.utils.dateparse import parse_datetime
 
@@ -92,13 +93,14 @@ def parse_status_document(document_url):
     if len(status_tags) == 0:
         # this meens there is no status element --- some exception occurred during that request
         doc['status'] = STATUS_ERROR
+        doc['overall_result'] = STATUS_ERROR
         return doc
 
     status_tag = status_tags[0]
     accepted_tags = status_tag.findall('wps:ProcessAccepted', ns)
     started_tags = status_tag.findall('wps:ProcessStarted', ns)
     succeeded_tags = status_tag.findall('wps:ProcessSucceeded', ns)
-    failed_tags = status_tag.findall('wps:ProcessFailed', ns)
+    error_tags = status_tag.findall('wps:ProcessFailed', ns)
 
     if len(accepted_tags) > 0:
         doc['status'] = STATUS_ACCEPTED
@@ -106,14 +108,22 @@ def parse_status_document(document_url):
         doc['log_info'] = accepted_tags[0].text
         doc['result'] = dict()
         doc['result']['unknown'] = {'description': '', 'status': 'accepted', 'message': doc['log_info']}
+        accepted_tag = accepted_tags[0]
+        doc['log_info'] = accepted_tag.text
+        if "percentCompleted" in accepted_tag.attrib:
+            doc['percent_complete'] = accepted_tag.attrib["percentCompleted"]
         return doc
 
     elif len(started_tags) > 0:
         doc['status'] = STATUS_STARTED
         started_tag = started_tags[0]
         doc['log_info'] = started_tag.text
+        doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
         if "percentCompleted" in started_tag.attrib:
-            doc['percent_complete'] = started_tag.attrib["percentCompleted"]
+            doc["percent_complete"] = started_tag.attrib["percentCompleted"]
+        doc["result"] = dict()
+        status = "running {:s}%".format(doc["percent_complete"])
+        doc["result"]["unknown"] = {"status": status, "message": doc["log_info"]}
 
     elif len(succeeded_tags) > 0:
         doc['status'] = STATUS_SUCCEEDED
@@ -122,19 +132,21 @@ def parse_status_document(document_url):
         doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
         doc['percent_complete'] = "100"
 
-    elif len(failed_tags) > 0:
-        doc['status'] = STATUS_FAILED
+    # wps:ProcessFailed means there was an unhandled exception (error) in the process
+    elif len(error_tags) > 0:
+        doc['status'] = STATUS_ERROR
         doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
         doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
 
-        failed_tag = failed_tags[0]
-        exception_tags = failed_tag.findall('wps:ExceptionReport', ns)
+        error_tag = error_tags[0]
+        exception_tags = error_tag.findall('wps:ExceptionReport', ns)
         exception_tag = exception_tags[0]
         for sub_tag in exception_tag:
             for detail_tag in sub_tag:
                 doc['log_info'] = detail_tag.text
         doc['result'] = dict()
-        doc['result']['unknown'] = {'status':'failed','message':doc['log_info']}
+        doc['result']['unknown'] = {'status': STATUS_ERROR, 'message': doc['log_info']}
+        doc['overall_result'] = 'ERROR'
         return doc
 
     # data outputs if they exist

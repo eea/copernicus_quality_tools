@@ -10,7 +10,6 @@ function format_rows() {
     });
 }
 
-
 $('#tbl-runs').bootstrapTable({
     cache: false,
     striped: true,
@@ -19,14 +18,14 @@ $('#tbl-runs').bootstrapTable({
     showColumns: true,
     sortName: 'name',
     sortOrder: 'desc',
-    url: "data/checking_sessions",
+    url: "data/jobs",
     pageSize: 20,
     pageList: [20, 50, 100, 500],
     onPageChange: function() {
         format_rows();
     },
     onLoadSuccess: function() {
-        format_rows();
+        format_rows
     },
     onSort: function() {
         console.log('onSort')
@@ -34,10 +33,9 @@ $('#tbl-runs').bootstrapTable({
     }
 });
 
-
 function checkingDetailFormatter(value, row, index) {
     return [
-            '<a class="like" href="', "result/", value, '" title="Show check results">',
+            '<a class="like" href="', "result/", value, '" title="Show results">',
                 value,
             '</a>'].join('');
 }

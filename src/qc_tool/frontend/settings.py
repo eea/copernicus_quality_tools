@@ -22,6 +22,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # The WPS server url.
 WPS_URL = CONFIG["wps_url"]
+WPS_HOST = WPS_URL.rsplit("/", 1)[0]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/

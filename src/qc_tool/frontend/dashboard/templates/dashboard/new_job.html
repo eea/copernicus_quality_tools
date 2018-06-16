@@ -10,7 +10,7 @@
 
 {% block menu %}
 <li class=""><a href="{% url 'index' %}"><span>Jobs</span></a></li>
-<li class="active"><a href="{% url 'new_check' %}"><span>New Job</span></a></li>
+<li class="active"><a href="{% url 'new_job' %}"><span>New Job</span></a></li>
 <li class=""><a href="{% url 'files' %}"><span>Files</span></a></li>
 {% endblock %}
 
@@ -30,7 +30,7 @@
                     <div class="panel panel-primary">
                         <div class="panel-heading">
                             <div class="panel-title">
-                                Setup new checking
+                                Setup new QA job
                             </div>
                         </div>
                         <div class="panel-body">
