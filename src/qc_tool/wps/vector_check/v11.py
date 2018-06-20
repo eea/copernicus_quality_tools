@@ -46,7 +46,7 @@ def run_check(filepath, params):
         conn.commit()
 
         # get less mmu ids and count. the _lessmmu_error table was created by the __v11_mmu_status function.
-        cur.execute("""SELECT id FROM {:s}_lessmmu_error""".format(table))
+        cur.execute("""SELECT {0} FROM {1}_lessmmu_error""".format(params["ident_colname"], table))
         lessmmu_error_ids = ', '.join([id[0] for id in cur.fetchall()])
         lessmmu_error_count = cur.rowcount
 
@@ -60,7 +60,7 @@ def run_check(filepath, params):
         conn.commit()
 
         if border_exception:
-            cur.execute("""SELECT id FROM {:s}_lessmmu_except""".format(table))
+            cur.execute("""SELECT {0} FROM {1}_lessmmu_except""".format(params["ident_colname"], table))
             lessmmu_except_ids = ', '.join([id[0] for id in cur.fetchall()])
             lessmmu_except_count = cur.rowcount
 

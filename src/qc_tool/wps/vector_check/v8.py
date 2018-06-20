@@ -48,8 +48,7 @@ def run_check(filepath, params):
             return {"status": "ok"}
 
         # get wrong codes ids and count. the _validcodes_error table was created by the __v6_ValidCodes function.
-        # TODO: attribute 'id' is only in CLC product type!!! Further optimalization is needed.
-        cur.execute("""SELECT id FROM {:s}_multipartpolyg_error""".format(table))
+        cur.execute("""SELECT {0} FROM {1}_multipartpolyg_error""".format(params["ident_colname"], table))
         multipart_error_id_list = [id[0] for id in cur.fetchall()]
 
         res[table] = {"multipart_error": [multipart_count, ",".join(multipart_error_id_list)]}

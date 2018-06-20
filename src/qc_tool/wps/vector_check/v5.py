@@ -41,8 +41,7 @@ def run_check(filepath, params):
         conn.commit()
 
         # get wrong UniqueID ids and count. the _uniqueid_error table was created by the __V5_UniqueID function.
-        # TODO: attribute 'id' is only in CLC product type!!! Further optimalization is needed.
-        cur.execute("""SELECT id FROM {:s}_uniqueid_error""".format(table))
+        cur.execute("""SELECT {0} FROM {1}_uniqueid_error""".format(params["ident_colname"], table))
         uniqueid_error_ids = ', '.join([id[0] for id in cur.fetchall()])
         uniqueid_error_count = cur.rowcount
 

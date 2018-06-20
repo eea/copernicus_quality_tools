@@ -41,22 +41,32 @@
     },
     {
       "check_ident": "v5",
-      "required": false
+      "required": false,
+      "parameters": {
+        "ident_colname": "id"
+      }
     },
     {
       "check_ident": "v6",
-      "required": false
+      "required": false,
+      "parameters": {
+        "ident_colname": "id"
+      }
     },
     {
       "check_ident": "v8",
-      "required": false
+      "required": false,
+      "parameters": {
+        "ident_colname": "id"
+      }
     },
     {
       "check_ident": "v11",
       "required": false,
       "parameters": {
         "area_ha": 5,
-        "border_exception": true
+        "border_exception": true,
+        "ident_colname": "id"
       }
     },
     {
