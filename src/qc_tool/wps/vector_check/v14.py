@@ -7,7 +7,7 @@ Neighbouring polygons code check.
 
 from qc_tool.wps.registry import register_check_function
 
-@register_check_function(__name__, "Neighbouring polygons with the same code.")
+@register_check_function(__name__, "No neighbouring polygons with the same code.")
 def run_check(filepath, params):
     """
     Neighbouring polygons with the same code.
