@@ -133,6 +133,7 @@ def run_check(filepath, params):
 
         numpy.set_printoptions(threshold=numpy.nan)
         print zonearray
+        # TODO: vraci prazne zonalni pole...
 
 
 f = "/home/jtomicek/Dropbox/COP15/water_bodies_raster/WAW_2015_020m_eu_03035_d06_ful/WAW_2015_020m_eu_03035_d06_full.tif"
