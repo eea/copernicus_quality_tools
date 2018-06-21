@@ -7,8 +7,6 @@ from os import environ
 from os.path import normpath
 from pathlib import Path
 
-from qc_tool.wps.registry import get_descriptions
-
 
 # FIXME: such normalization should be removed in python3.6.
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
@@ -19,6 +17,38 @@ DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
 PRODUCT_NAME_REGEX = re.compile(r"[a-z].*\.json$")
+
+CHECK_FUNCTION_DESCRIPTIONS = {
+    "import2pg": "Import layers into PostGIS database.",
+    "v1": "File format is allowed.",
+    "v2": "File names match file naming conventions.",
+    "v3": "Attribute table contains specified attributes.",
+    "v4": "CRS of layer expressed as EPSG code match reference EPSG code.",
+    "v5": "Unique identifier check.",
+    "v6": "Valid codes check.",
+    "v7": "(no description)",
+    "v8": "No multipart polygons.",
+    "v9": "(no description)",
+    "v10": "(no description)",
+    "v11": "Minimum mapping unit check.",
+    "v12": "(no description)",
+    "v13": "There are no overlapping polygons.",
+    "v14": "No neighbouring polygons with the same code.",
+    "r1": "File format is allowed.",
+    "r2": "File names match file naming conventions.",
+    "r3": "Attribute table contains specified attributes.",
+    "r4": "EPSG code of file CRS match reference EPSG code.",
+    "r5": "Pixel size must be equal to given value.",
+    "r6": "Raster origin check.",
+    "r7": "Raster has specified bit depth data type.",
+    "r8": "Compression type check.",
+    "r9": "Pixel values check.",
+    "r10": "In the mapped area are no NoData pixels.",
+    "r11": "Minimum mapping unit check.",
+    "r12": "(no description)",
+    "r13": "(no description)",
+    "r14": "Raster has a color table",
+    "r15": "Colors in the color table match product specification"}
 
 CONFIG = None
 
@@ -40,14 +70,15 @@ def compile_product_infos():
     """
     product_paths = [path for path in PRODUCT_DIR.iterdir()
                      if PRODUCT_NAME_REGEX.match(path.name) is not None]
-    check_descriptions = get_descriptions()
     product_infos = {}
     for filepath in product_paths:
         product_ident = filepath.stem
         product_definition = filepath.read_text()
         product_definition = json.loads(product_definition)
         product_description = product_definition["description"]
-        product_checks = [(check["check_ident"], check_descriptions[check["check_ident"]], check["required"])
+        product_checks = [(check["check_ident"],
+                           CHECK_FUNCTION_DESCRIPTIONS[check["check_ident"]],
+                           check["required"])
                           for check in product_definition["checks"]]
         product_infos[product_ident] = {"description": product_description, "checks": product_checks}
 

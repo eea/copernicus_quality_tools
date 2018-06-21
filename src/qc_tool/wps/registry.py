@@ -19,11 +19,7 @@ def register_check_function(ident, description=None):
         return func
     return register
 
-def get_descriptions():
-    descriptions = {ident: func.description for ident, func in check_function_registry.items()}
-    return descriptions
-
-def get_function(ident):
+def get_check_function(ident):
     return check_function_registry[ident]
 
 def load_all_check_functions():
