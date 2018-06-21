@@ -170,21 +170,12 @@ def get_result(request, result_uuid):
 
         product_type_name = status_doc['product_type_name']
 
-        # get check descriptions
-        checks_url = settings.WPS_HOST + "/check_functions"
-        resp = get(url=checks_url)
-        check_functions = resp.json()
+        product_info = compile_product_infos()[product_type_name]
 
-        product_types_url = settings.WPS_HOST + "/product_types"
-        resp = get(url=product_types_url)
-        product_types = resp.json()
-        product_type_info = product_types[product_type_name]
-
-        checks = product_type_info['checks']
+        checks = product_info['checks']
         check_list = []
-        for check in checks:
-            ident = check['check_ident']
-            desc = check_functions[ident]
+
+        for ident, desc, required in checks:
             check_list.append({'check_ident': ident, 'check_description': desc})
 
         # sort by the product type order and check_ident
