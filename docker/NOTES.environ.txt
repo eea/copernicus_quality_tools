@@ -1,28 +1,33 @@
 Environment variables
 =====================
 
+All paths are related to container point of view.
+They are passed to applications running inside the containers.
+Default values and environment setup is located at src/qc_tool/common.py:setup_config().
+There is no path related to host viewpoint.
+
 
 Service qc_tool_frontend
 ------------------------
 
-  * FRONTEND_PORT, the port the frontend server should listen on; such port is used by user;
-  * INCOMING_DIR, the directory where uploaded files are stored and are waiting to be validated;
-  * WPS_URL, the url of the wps server that the frontend server sends queries to;
+  * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
+  * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
+  * WPS_URL, informs the frontend server of the url where the wps server can be reached;
 
 
 Service qc_tool_wps
 -------------------
 
-  * INCOMING_DIR, the top level directory the job takes the file to be validated from;
-  * WPS_DIR, the directory where wps server stores all of its files (eg. status files, logs);
-  * WORK_DIR, the top level directory under which job creates its own temporary working directory;
-  * WPS_PORT, the port the wps server should listen on;
-  * WPS_URL, the url the wps can be reached by frontend server, eg. http://wps_host:$WPS_PORT/wps;
-  * WPS_OUTPUT_URL, the url the results (eg. status files) are published by wps, eg. $WPS_URL/output, and as such it maps to $WPS_DIR/output;
-  * PG_HOST, the postgres host the job should connect to;
-  * PG_PORT, the postgres port the job should connect to;
-  * PG_USER, the postgres username the job will use;
-  * PG_DATABASE, the postgres database name the job will use;
-  * LEAVE_SCHEMA, if "yes" then database schema job is utilizing will not be dropped at then end of the job;
-  * JOBDIR_EXIST_OK, if "yes" then no error will be raised if the directory dedicated for the job already exists;
-  * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed at the end of the job;
+  * INCOMING_DIR, informs the job where it should look for uploaded files;
+  * WPS_DIR, instructs the wps server where it should store its operational files;
+  * WORK_DIR, instructs the running jobs where it should store its operational files;
+  * WPS_PORT, instructs the wps server what port is should start listening for connections;
+  * WPS_URL, informs the wps server of its own url;
+  * WPS_OUTPUT_URL, informs the wps server of the url pointing to area of status documents;
+  * PG_HOST, informs the jobs about the host name/ip address on which the postgresql server is running;
+  * PG_PORT, informs the job about the tcp port on which the postgresql server is listening for connections;
+  * PG_USER, informs the job which user name it should use when connecting to postgresql server;
+  * PG_DATABASE, informs the job which database name it should use when connecting to postgresql server;
+  * LEAVE_SCHEMA, if "yes" then job schema will not be dropped;
+  * JOBDIR_EXIST_OK, if "yes" then job will not raise an error when the job's working directory already exists;
+  * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed;
