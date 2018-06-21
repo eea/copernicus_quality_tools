@@ -4,11 +4,7 @@
 
 
 import json
-import os
 import re
-import sys
-from argparse import ArgumentParser
-from os import environ
 from pathlib import Path
 
 import flask
@@ -17,7 +13,6 @@ from pywps import Service
 from pywps.configuration import get_config_value
 
 from qc_tool.common import CONFIG
-from qc_tool.common import load_all_product_type_definitions
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
 from qc_tool.wps.registry import load_all_check_functions
