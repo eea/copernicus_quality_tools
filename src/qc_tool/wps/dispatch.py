@@ -7,51 +7,27 @@ from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 from qc_tool.wps.registry import get_check_function
 
-import qc_tool.wps.common_check.dummy
-import qc_tool.wps.raster_check.r1
-import qc_tool.wps.raster_check.r2
-import qc_tool.wps.raster_check.r3
-import qc_tool.wps.raster_check.r4
-import qc_tool.wps.raster_check.r5
-import qc_tool.wps.raster_check.r6
-import qc_tool.wps.raster_check.r7
-import qc_tool.wps.raster_check.r8
-import qc_tool.wps.raster_check.r9
-import qc_tool.wps.raster_check.r11
-import qc_tool.wps.raster_check.r14
-import qc_tool.wps.raster_check.r15
-import qc_tool.wps.vector_check.import2pg
-import qc_tool.wps.vector_check.v1
-import qc_tool.wps.vector_check.v2
-import qc_tool.wps.vector_check.v3
-import qc_tool.wps.vector_check.v4
-import qc_tool.wps.vector_check.v5
-import qc_tool.wps.vector_check.v6
-import qc_tool.wps.vector_check.v8
-import qc_tool.wps.vector_check.v11
-import qc_tool.wps.vector_check.v13
-import qc_tool.wps.vector_check.v14
-from qc_tool.common import load_product_type_definition
 from qc_tool.common import load_check_defaults
+from qc_tool.common import load_product_definition
 
 
-def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, update_status_func=None):
+def dispatch(job_uuid, filepath, product_name, optional_check_idents, update_status_func=None):
     # Read configurations.
     check_defaults = load_check_defaults()
-    product_type = load_product_type_definition(product_type_name)
+    product_definition = load_product_definition(product_name)
 
     # Prepare check idents.
-    product_check_idents = set(check["check_ident"] for check in product_type["checks"])
+    product_check_idents = set(check["check_ident"] for check in product_definition["checks"])
     optional_check_idents = set(optional_check_idents)
 
     # Ensure passed optional checks take part in product type.
     incorrect_check_idents = optional_check_idents - product_check_idents
     if len(incorrect_check_idents) > 0:
-        raise IncorrectCheckException("Incorrect checks passed, product_type_name={:s}, incorrect_check_idents={:s}.".format(repr(product_type_name), repr(sorted(incorrect_check_idents))))
+        raise IncorrectCheckException("Incorrect checks passed, product_name={:s}, incorrect_check_idents={:s}.".format(repr(product_name), repr(sorted(incorrect_check_idents))))
 
     # Compile suite of checks to be performed.
     check_suite = [check
-                   for check in product_type["checks"]
+                   for check in product_definition["checks"]
                    if check["required"] or check["check_ident"] in optional_check_idents]
 
     # Prepare variable keeping results of all checks.
@@ -76,8 +52,8 @@ def dispatch(job_uuid, filepath, product_type_name, optional_check_idents, updat
             check_params.update(check_defaults["globals"])
             if check["check_ident"] in check_defaults["checks"]:
                 check_params.update(check_defaults["checks"][check["check_ident"]])
-            if "parameters" in product_type:
-                check_params.update(product_type["parameters"])
+            if "parameters" in product_definition:
+                check_params.update(product_definition["parameters"])
             if "parameters" in check:
                 check_params.update(check["parameters"])
             check_params.update(job_params)

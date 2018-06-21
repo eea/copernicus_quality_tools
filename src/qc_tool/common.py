@@ -7,40 +7,51 @@ from os import environ
 from os.path import normpath
 from pathlib import Path
 
+from qc_tool.wps.registry import get_descriptions
+
 
 # FIXME: such normalization should be removed in python3.6.
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
-PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
-CHECK_DEFAULTS_FILEPATH = PRODUCT_TYPES_DIR.joinpath("_check_defaults.json")
+PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_types")
+CHECK_DEFAULTS_FILEPATH = PRODUCT_DIR.joinpath("_check_defaults.json")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
-PRODUCT_TYPE_REGEX = re.compile(r"[a-z].*\.json$")
+PRODUCT_NAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 CONFIG = None
 
 
-def load_product_type_definition(product_type_name):
-    filename = "{:s}.json".format(product_type_name)
-    filepath = PRODUCT_TYPES_DIR.joinpath(filename)
-    product_type_definition = filepath.read_text()
-    product_type_definition = json.loads(product_type_definition)
-    return product_type_definition
+def load_product_definition(product_name):
+    filename = "{:s}.json".format(product_name)
+    filepath = PRODUCT_DIR.joinpath(filename)
+    product_definition = filepath.read_text()
+    product_definition = json.loads(product_definition)
+    return product_definition
 
-def get_all_product_type_names():
-    product_type_names = [path.stem
-                          for path in PRODUCT_TYPES_DIR.iterdir()
-                          if PRODUCT_TYPE_REGEX.match(path.name) is not None]
-    return product_type_names
+def compile_product_infos():
+    """
+    Compiles dictionary of product infos.
 
-def load_all_product_type_definitions():
-    product_type_definitions = {}
-    product_type_names = get_all_product_type_names()
-    for product_type_name in product_type_names:
-        product_type_definition = load_product_type_definition(product_type_name)
-        product_type_definitions[product_type_name] = product_type_definition
-    return product_type_definitions
+    Every value of product info is in the form:
+    {"description: "<product description>",
+     "checks": [("<function_name>", "<function_description>", <is_required>), ...]}
+    """
+    product_paths = [path for path in PRODUCT_DIR.iterdir()
+                     if PRODUCT_NAME_REGEX.match(path.name) is not None]
+    check_descriptions = get_descriptions()
+    product_infos = {}
+    for filepath in product_paths:
+        product_ident = filepath.stem
+        product_definition = filepath.read_text()
+        product_definition = json.loads(product_definition)
+        product_description = product_definition["description"]
+        product_checks = [(check["check_ident"], check_descriptions[check["check_ident"]], check["required"])
+                          for check in product_definition["checks"]]
+        product_infos[product_ident] = {"description": product_description, "checks": product_checks}
+
+    return product_infos
 
 def load_check_defaults():
     check_defaults = CHECK_DEFAULTS_FILEPATH.read_text()
