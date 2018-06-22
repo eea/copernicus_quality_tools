@@ -11,19 +11,19 @@ from qc_tool.common import load_check_defaults
 from qc_tool.common import load_product_definition
 
 
-def dispatch(job_uuid, filepath, product_name, optional_check_idents, update_status_func=None):
+def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_status_func=None):
     # Read configurations.
     check_defaults = load_check_defaults()
-    product_definition = load_product_definition(product_name)
+    product_definition = load_product_definition(product_ident)
 
     # Prepare check idents.
     product_check_idents = set(check["check_ident"] for check in product_definition["checks"])
     optional_check_idents = set(optional_check_idents)
 
-    # Ensure passed optional checks take part in product type.
+    # Ensure passed optional checks take part in product.
     incorrect_check_idents = optional_check_idents - product_check_idents
     if len(incorrect_check_idents) > 0:
-        raise IncorrectCheckException("Incorrect checks passed, product_name={:s}, incorrect_check_idents={:s}.".format(repr(product_name), repr(sorted(incorrect_check_idents))))
+        raise IncorrectCheckException("Incorrect checks passed, product_ident={:s}, incorrect_check_idents={:s}.".format(repr(product_ident), repr(sorted(incorrect_check_idents))))
 
     # Compile suite of checks to be performed.
     check_suite = [check

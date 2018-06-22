@@ -10,13 +10,13 @@ from pathlib import Path
 
 # FIXME: such normalization should be removed in python3.6.
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
-PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_types")
+PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 CHECK_DEFAULTS_FILEPATH = PRODUCT_DIR.joinpath("_check_defaults.json")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
-PRODUCT_NAME_REGEX = re.compile(r"[a-z].*\.json$")
+PRODUCT_IDENT_REGEX = re.compile(r"[a-z].*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
     "import2pg": "Import layers into PostGIS database.",
@@ -53,8 +53,8 @@ CHECK_FUNCTION_DESCRIPTIONS = {
 CONFIG = None
 
 
-def load_product_definition(product_name):
-    filename = "{:s}.json".format(product_name)
+def load_product_definition(product_ident):
+    filename = "{:s}.json".format(product_ident)
     filepath = PRODUCT_DIR.joinpath(filename)
     product_definition = filepath.read_text()
     product_definition = json.loads(product_definition)
@@ -69,7 +69,7 @@ def compile_product_infos():
      "checks": [("<function_name>", "<function_description>", <is_required>), ...]}
     """
     product_paths = [path for path in PRODUCT_DIR.iterdir()
-                     if PRODUCT_NAME_REGEX.match(path.name) is not None]
+                     if PRODUCT_IDENT_REGEX.match(path.name) is not None]
     product_infos = {}
     for filepath in product_paths:
         product_ident = filepath.stem

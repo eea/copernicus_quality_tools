@@ -257,12 +257,12 @@ def run_wps_execute(request):
     """
     try:
 
-        product_type_name = request.POST.get("product_type_name")
+        product_ident = request.POST.get("product_type_name")
         filepath = request.POST.get("filepath")
         optional_check_idents = request.POST.get("optional_check_idents")
 
-        if not product_type_name:
-            product_type_name = request.GET.get("product_type_name")
+        if not product_ident:
+            product_ident = request.GET.get("product_type_name")
         if not filepath:
             filepath = request.GET.get("filepath")
         if not optional_check_idents:
@@ -271,7 +271,7 @@ def run_wps_execute(request):
         # call wps execute method
         wps_base_url = settings.WPS_URL
         wps_base = wps_base_url + "?service=WPS&version=1.0.0&request=Execute&identifier=run_checks&storeExecuteResponse=true&status=true&lineage=true&DataInputs="
-        data_inputs = "filepath={0};product_type_name={1};optional_check_idents={2}".format(filepath, product_type_name, optional_check_idents)
+        data_inputs = "filepath={0};product_ident={1};optional_check_idents={2}".format(filepath, product_ident, optional_check_idents)
 
         wps_url = wps_base + data_inputs
         print("Sending WPS Execute request to: " + wps_url)
