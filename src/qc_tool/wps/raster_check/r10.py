@@ -48,6 +48,7 @@ def run_check(filepath, params):
     # load raster band, get NoData value
     ras_band = ras_ds.GetRasterBand(1)
     NoData = ras_band.GetNoDataValue()
+    ras_band.DeleteNoDataValue()
 
     # Get raster info
     transform = ras_ds.GetGeoTransform()
@@ -132,12 +133,16 @@ def run_check(filepath, params):
         zonearray = numpy.ma.masked_array(srcRasterArray, maskArray).astype(int)
 
         numpy.set_printoptions(threshold=numpy.nan)
-        print zonearray
         # TODO: vraci prazne zonalni pole...
+        if NoData in zonearray:
+            return {"status": "failed",
+                    "message": "NoData pixels occured in mapped area."}
+        else:
+            return {"status": "ok"}
 
 
-f = "/home/jtomicek/Dropbox/COP15/water_bodies_raster/WAW_2015_020m_eu_03035_d06_ful/WAW_2015_020m_eu_03035_d06_full.tif"
-p = {"mapped_area": "/home/jtomicek/Desktop/mapped_area_test_r10.shp",
-     "file_name_regex": "waw_[0-9]{4}_[0-9]{3}m_(.+?)_[0-9]{5}_[a-z][0-9]{2}_[a-z]{4}.tif$"}
-run_check(f, p)
+f = "/home/jiri/Plocha/COPQC_HRLDATA/FTY_2015_100m_eu_03035_d02_E30N20/FTY_2015_100m_eu_03035_d02_E30N20_clip.TIF"
+p = {"mapped_area": "/home/jiri/Plocha/COPQC_HRLDATA/test_polygon.shp",
+     "file_name_regex": "^fty_[0-9]{4}_100m_(.+?)_[0-9]{5}.*.tif$$"}
+print run_check(f, p)
 
