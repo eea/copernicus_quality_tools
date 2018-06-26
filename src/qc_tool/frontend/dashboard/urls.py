@@ -6,8 +6,8 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('data/jobs', views.get_jobs, name='jobs_json'),
     path('data/files', views.get_files_json, name='files_json'),
-    path('data/product_type/<product_type_name>/', views.get_product_type_details, name='product_type_details'),
-    path('data/product_types/', views.get_product_types, name='product_types'),
+    path('data/product/<product_ident>/', views.get_product_info, name='product_info'),
+    path('data/product_list/', views.get_product_list, name='product_list'),
 
 
     path('files/upload', views.file_upload, name='file_upload'),

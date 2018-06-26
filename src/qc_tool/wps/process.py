@@ -24,7 +24,7 @@ class CopSleep(Process):
                            data_type="string", min_occurs=0, max_occurs=1),
               LiteralInput("layer_name", "The name of the layer to be checked.",
                            data_type="string", min_occurs=0, max_occurs=1),
-              LiteralInput("product_type_name", "The type of the product denoting group of checks to be performed.",
+              LiteralInput("product_ident", "The identifier of the product denoting group of checks to be performed.",
                            data_type="string", min_occurs=0, max_occurs=1),
               LiteralInput("exit_ok", "false if the process should fail finally.",
                            data_type="boolean", min_occurs=0, max_occurs=1)]
@@ -46,7 +46,7 @@ class CopSleep(Process):
         params = {"delay": 1.0,
                   "cycles": 0,
                   "exit_ok": True,
-                  "product_type_name": None,
+                  "product_ident": None,
                   "layer_name": None,
                   "filepath": None}
         if "delay" in request.inputs:
@@ -59,8 +59,8 @@ class CopSleep(Process):
             params["filepath"] = Path(request.inputs["filepath"][0].data)
         if "layer_name" in request.inputs:
             params["layer_name"] = request.inputs["layer_name"][0].data
-        if "product_type_name" in request.inputs:
-            params["product_type_name"] = request.inputs["product_type_name"][0].data
+        if "product_ident" in request.inputs:
+            params["product_ident"] = request.inputs["product_ident"][0].data
 
         # Do cycles of sleeping.
         if params["cycles"] >= 1:
@@ -81,7 +81,7 @@ class RunChecks(Process):
     # There is also keyword parameter "default" in LiteralInput constructor, however it has no effect.
     INPUTS = [LiteralInput("filepath", "Local filesystem path to the product to be checked.",
                            data_type="string", min_occurs=1, max_occurs=1),
-              LiteralInput("product_type_name", "The type of the product denoting group of checks to be performed.",
+              LiteralInput("product_ident", "The identifier of the product denoting group of checks to be performed.",
                            data_type="string", min_occurs=1, max_occurs=1),
               LiteralInput("optional_check_idents", "Comma separated identifiers of optional checks to be performed.",
                            data_type="string", min_occurs=0, max_occurs=1)]
@@ -102,7 +102,7 @@ class RunChecks(Process):
         # Prepare parameters.
         filepath = Path(request.inputs["filepath"][0].data)
         filepath = CONFIG["incoming_dir"].joinpath(filepath)
-        product_type_name = request.inputs["product_type_name"][0].data
+        product_ident = request.inputs["product_ident"][0].data
         if "optional_check_idents" in request.inputs:
             optional_check_idents = request.inputs["optional_check_idents"][0].data
             optional_check_idents = optional_check_idents.split(",")
@@ -113,11 +113,11 @@ class RunChecks(Process):
         def update_wps_status(check_ident, percent_done):
             message = "Running check {:s}.".format(check_ident)
             response.update_status(message, int(percent_done))
-        suite_result = dispatch(str(self.uuid),
-                                filepath,
-                                product_type_name,
-                                optional_check_idents,
-                                update_status_func=update_wps_status)
-        response.outputs["result"].data = json.dumps(suite_result)
+        job_result = dispatch(str(self.uuid),
+                              filepath,
+                              product_ident,
+                              optional_check_idents,
+                              update_status_func=update_wps_status)
+        response.outputs["result"].data = json.dumps(job_result)
 
         return response

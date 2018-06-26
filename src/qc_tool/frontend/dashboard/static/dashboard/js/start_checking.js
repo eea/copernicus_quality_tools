@@ -16,9 +16,9 @@ $(document).ready(function() {
         document.getElementById("select_file").innerHTML = options;
     });
 
-    $.getJSON("data/product_types", function(obj) {
+    $.getJSON("data/product_list/", function(obj) {
 
-        var prods = obj.product_types;
+        var prods = obj.product_list;
 
         var options = '';
         options += '<option hidden >Select product type ...</option>';
@@ -45,32 +45,14 @@ $( "#select_product_type" ).change(function() {
     //populate product type info
     var optionSelected = $("option:selected", this);
     var valueSelected = this.value;
-    var detail_url = "data/product_type/" + valueSelected + "/";
+    var detail_url = "data/product/" + valueSelected + "/";
     console.log(detail_url);
     $.getJSON(detail_url , function(obj) {
-        var checks = obj.product_type.checks
+        var checks = obj.product_info.checks
         $("#tbl_check_details > tbody").html("");
         var tbody = ''
         for (var i=0;i<checks.length;i++){
             tbody += "<tr><td>" + checks[i].check_ident + "</td>" + "<td>" + checks[i].description + "</td>";
-            var check_params = checks[i].parameters;
-            console.log(check_params);
-            if (check_params) {
-                var param_values = "";
-                var num_params = 0;
-                $.each(check_params, function(key, value) {
-                    if (num_params > 0) {
-                        param_values += ", ";
-                    }
-                    param_values += key + ": " + value;
-                    num_params += 1;
-                });
-
-                console.log(param_values);
-                tbody += "<td>" + param_values + "</td>";
-            } else {
-                tbody += "<td></td>";
-            }
             tbody += "<td>" + checks[i].required + "</td>";
             tbody += "<td><input name=\"selected_checks[]\" type=\"checkbox\" value=\"" + checks[i].check_ident + "\" checked";
             if (checks[i].required) {

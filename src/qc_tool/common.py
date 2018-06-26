@@ -10,37 +10,108 @@ from pathlib import Path
 
 # FIXME: such normalization should be removed in python3.6.
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
-PRODUCT_TYPES_DIR = QC_TOOL_HOME.joinpath("product_types")
-CHECK_DEFAULTS_FILEPATH = PRODUCT_TYPES_DIR.joinpath("_check_defaults.json")
+PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
+CHECK_DEFAULTS_FILEPATH = PRODUCT_DIR.joinpath("_check_defaults.json")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
-PRODUCT_TYPE_REGEX = re.compile(r"[a-z].*\.json$")
+PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
+
+CHECK_FUNCTION_DESCRIPTIONS = {
+    "import2pg": "Import layers into PostGIS database.",
+    "v1": "File format is allowed.",
+    "v2": "File names match file naming conventions.",
+    "v3": "Attribute table contains specified attributes.",
+    "v4": "CRS of layer expressed as EPSG code match reference EPSG code.",
+    "v5": "Unique identifier check.",
+    "v6": "Valid codes check.",
+    "v7": "(no description)",
+    "v8": "No multipart polygons.",
+    "v9": "(no description)",
+    "v10": "(no description)",
+    "v11": "Minimum mapping unit check.",
+    "v12": "(no description)",
+    "v13": "There are no overlapping polygons.",
+    "v14": "No neighbouring polygons with the same code.",
+    "r1": "File format is allowed.",
+    "r2": "File names match file naming conventions.",
+    "r3": "Attribute table contains specified attributes.",
+    "r4": "EPSG code of file CRS match reference EPSG code.",
+    "r5": "Pixel size must be equal to given value.",
+    "r6": "Raster origin check.",
+    "r7": "Raster has specified bit depth data type.",
+    "r8": "Compression type check.",
+    "r9": "Pixel values check.",
+    "r10": "In the mapped area are no NoData pixels.",
+    "r11": "Minimum mapping unit check.",
+    "r12": "(no description)",
+    "r13": "(no description)",
+    "r14": "Raster has a color table.",
+    "r15": "Colors in the color table match product specification."}
 
 CONFIG = None
 
 
-def load_product_type_definition(product_type_name):
-    filename = "{:s}.json".format(product_type_name)
-    filepath = PRODUCT_TYPES_DIR.joinpath(filename)
-    product_type_definition = filepath.read_text()
-    product_type_definition = json.loads(product_type_definition)
-    return product_type_definition
+def strip_prefix(check_ident):
+    check_ident = check_ident.split(".")[-1]
+    return check_ident
 
-def get_all_product_type_names():
-    product_type_names = [path.stem
-                          for path in PRODUCT_TYPES_DIR.iterdir()
-                          if PRODUCT_TYPE_REGEX.match(path.name) is not None]
-    return product_type_names
+def load_product_definitions(product_ident):
+    """
+    Loads all definitions of a particuar product.
 
-def load_all_product_type_definitions():
-    product_type_definitions = {}
-    product_type_names = get_all_product_type_names()
-    for product_type_name in product_type_names:
-        product_type_definition = load_product_type_definition(product_type_name)
-        product_type_definitions[product_type_name] = product_type_definition
-    return product_type_definitions
+    The return value is a list of definitions.
+    The first item of the list is a definition of a passed product.
+    Then definitions of every subproduct follow sorted by full ident name.
+
+    Every check ident is made prefixed by subproduct ident.
+    """
+    product_paths = [path for path in PRODUCT_DIR.iterdir()
+                     if PRODUCT_FILENAME_REGEX.match(path.name) is not None
+                     and path.name.startswith("{:s}.".format(product_ident))]
+    product_paths = sorted(product_paths, key=lambda x: x.stem)
+    product_definitions = []
+    for filepath in product_paths:
+        product_ident = filepath.stem
+        product_definition = filepath.read_text()
+        product_definition = json.loads(product_definition)
+        if "checks" in product_definition:
+            for check in product_definition["checks"]:
+                check["check_ident"] = "{:s}.{:s}".format(product_ident, check["check_ident"])
+        product_definitions.append(product_definition)
+    return product_definitions
+
+def compile_product_infos():
+    """
+    Compiles dictionary of product infos.
+
+    The product ident becomes the key.
+    The items consist of main products only.
+    The value represents product info and is formed as:
+    {"description: "<product description>",
+     "checks": [("<product_part>.<function_name>", "<function_description>", <is_required>), ...]}
+    """
+    product_paths = [path for path in PRODUCT_DIR.iterdir()
+                     if PRODUCT_FILENAME_REGEX.match(path.name) is not None]
+    product_paths = sorted(product_paths, key=lambda x: x.stem)
+    product_infos = {}
+    for filepath in product_paths:
+        product_ident = filepath.stem
+        main_product_ident = product_ident.split(".", maxsplit=1)[0]
+        product_definition = filepath.read_text()
+        product_definition = json.loads(product_definition)
+        if main_product_ident not in product_infos:
+            product_infos[main_product_ident] = {"description": product_definition["description"],
+                                                 "checks": []}
+        if "checks" in product_definition:
+            product_checks = [("{:s}.{:s}".format(product_ident, check["check_ident"]),
+                               CHECK_FUNCTION_DESCRIPTIONS[check["check_ident"]],
+                               check["required"])
+                              for check in product_definition["checks"]]
+            product_infos[main_product_ident]["checks"].extend(product_checks)
+
+    return product_infos
 
 def load_check_defaults():
     check_defaults = CHECK_DEFAULTS_FILEPATH.read_text()

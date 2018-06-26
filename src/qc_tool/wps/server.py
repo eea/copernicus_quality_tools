@@ -4,11 +4,7 @@
 
 
 import json
-import os
 import re
-import sys
-from argparse import ArgumentParser
-from os import environ
 from pathlib import Path
 
 import flask
@@ -17,11 +13,9 @@ from pywps import Service
 from pywps.configuration import get_config_value
 
 from qc_tool.common import CONFIG
-from qc_tool.common import load_all_product_type_definitions
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
-from qc_tool.wps.registry import get_check_function
-from qc_tool.wps.registry import get_idents
+from qc_tool.wps.registry import load_all_check_functions
 
 
 app = flask.Flask(__name__)
@@ -51,17 +45,6 @@ def outputfile(filename):
         return flask.Response(file_bytes, content_type=content_type)
     else:
         flask.abort(404)
-
-@app.route("/product_types")
-def product_types():
-    product_type_definitions = load_all_product_type_definitions()
-    product_type_definitions = json.dumps(product_type_definitions)
-    return flask.Response(product_type_definitions, content_type="application/json")
-
-@app.route("/check_functions")
-def check_functions():
-    function_dict = {ident: get_check_function(ident).description for ident in get_idents()}
-    return flask.Response(json.dumps(function_dict), content_type="application/json")
 
 @app.route("/status_document_urls")
 def status_document_urls():
@@ -94,6 +77,8 @@ def run_server():
     wps_log_dir.mkdir(exist_ok=True, parents=True)
     wps_config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))
 
+    load_all_check_functions()
+
     processes = [CopSleep(), RunChecks()]
     config_filepaths = [str(Path(__file__).with_name("pywps.cfg"))]
     # FIXME:
@@ -102,7 +87,6 @@ def run_server():
     # Moreover, the service fails immediately while the path to log file
     # specified in config file does not even exist yet.
     service = Service(processes, [])
-
     app.run(threaded=True, host="0.0.0.0", port=CONFIG["wps_port"])
 
 

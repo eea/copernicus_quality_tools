@@ -8,6 +8,7 @@ from pathlib import Path, PurePath
 from psycopg2 import connect
 
 from qc_tool.common import CONFIG
+from qc_tool.common import DB_FUNCTION_SCHEMA_NAME
 
 
 def create_connection_manager(job_uuid):
@@ -32,7 +33,7 @@ class ConnectionException(Exception):
 
 
 class ConnectionManager():
-    func_schema_name = "qc_function"
+    func_schema_name = DB_FUNCTION_SCHEMA_NAME
     job_schema_name_tpl = "job_{:s}"
 
     def __init__(self, job_uuid, host, port, user, db_name, leave_schema):
@@ -121,8 +122,6 @@ class JobdirManager():
         job_dir = self.work_dir.joinpath(self.job_subdir_tpl.format(job_uuid))
         job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
         self.job_dir = job_dir
-        import sys
-        print(job_dir)
 
     def remove_dir(self):
         if not self.leave_dir and self.job_dir is not None:

@@ -1,27 +1,25 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 
-import os
 import json
+import os
 import time
 import zipfile
-
 from pathlib import Path
 from requests import get
 from requests.exceptions import RequestException
 from xml.etree import ElementTree
 
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.files.storage import FileSystemStorage
-
 from django.shortcuts import render
 from django.shortcuts import redirect
+from django.views.decorators.csrf import csrf_exempt
 
-from .helpers import parse_status_document
-from .helpers import get_file_or_dir_size
+from qc_tool.common import compile_product_infos
+from qc_tool.frontend.dashboard.helpers import parse_status_document
+from qc_tool.frontend.dashboard.helpers import get_file_or_dir_size
 
 
 def index(request):
@@ -124,48 +122,30 @@ def file_upload(request):
     return render(request, 'dashboard/file_upload.html')
 
 
-def get_product_types(request):
+def get_product_list(request):
     """
     returns a list of all product types that are available for checking.
-    The files are loaded from the directory specified in settings.PRODUCT_TYPES_DIR
     :param request:
     :return: list of the product types with items {name, description} in JSON format
     """
-
-    wps_host = settings.WPS_HOST
-    product_types_url = wps_host + "/product_types"
-    resp = get(url=product_types_url)
-    product_types_dict = resp.json()
-    product_types_list = []
-    for key, val in product_types_dict.items():
-        product_types_list.append({'name': key, 'description': val['description']})
-
-    product_types_sorted = sorted(product_types_list, key=lambda x: x['description'])
-    return JsonResponse({'product_types': product_types_sorted})
+    product_infos = compile_product_infos()
+    product_list = [{'name': product_ident, 'description': product_info['description']}
+                    for product_ident, product_info in product_infos.items()]
+    product_list = sorted(product_list, key=lambda x: x['description'])
+    return JsonResponse({'product_list': product_list})
 
 
-def get_product_type_details(request, product_type_name):
+def get_product_info(request, product_ident):
     """
     returns a table of details about the product type
     :param request:
-    :param product_type: the name of the product type for example clc_chaYY
+    :param product_ident: the name of the product type for example clc_chaYY
     :return: details about the product type including the required and optional checks
     """
-    product_types_url = settings.WPS_HOST + "/product_types"
-    resp = get(url=product_types_url)
-    product_types = resp.json()
-    product_type_info = product_types[product_type_name]
-
-    # also add check descriptions to product type info
-    checks_url = settings.WPS_HOST + "/check_functions"
-    resp = get(url=checks_url)
-    check_functions = resp.json()
-    for index in range(0, len(product_type_info['checks'])):
-        ident = product_type_info['checks'][index]['check_ident']
-        product_type_info['checks'][index]['description'] = check_functions[ident]
-        # need better display of parameters! (make it shorter...)
-
-    return JsonResponse({'product_type': product_type_info})
+    product_info = compile_product_infos()[product_ident]
+    product_info['checks'] = [{'check_ident': ident, 'description': desc, 'required': required}
+                              for ident, desc, required in product_info['checks']]
+    return JsonResponse({'product_info': product_info})
 
 
 def get_status_document(request, result_uuid):
@@ -190,21 +170,12 @@ def get_result(request, result_uuid):
 
         product_type_name = status_doc['product_type_name']
 
-        # get check descriptions
-        checks_url = settings.WPS_HOST + "/check_functions"
-        resp = get(url=checks_url)
-        check_functions = resp.json()
+        product_info = compile_product_infos()[product_type_name]
 
-        product_types_url = settings.WPS_HOST + "/product_types"
-        resp = get(url=product_types_url)
-        product_types = resp.json()
-        product_type_info = product_types[product_type_name]
-
-        checks = product_type_info['checks']
+        checks = product_info['checks']
         check_list = []
-        for check in checks:
-            ident = check['check_ident']
-            desc = check_functions[ident]
+
+        for ident, desc, required in checks:
             check_list.append({'check_ident': ident, 'check_description': desc})
 
         # sort by the product type order and check_ident
@@ -286,12 +257,12 @@ def run_wps_execute(request):
     """
     try:
 
-        product_type_name = request.POST.get("product_type_name")
+        product_ident = request.POST.get("product_type_name")
         filepath = request.POST.get("filepath")
         optional_check_idents = request.POST.get("optional_check_idents")
 
-        if not product_type_name:
-            product_type_name = request.GET.get("product_type_name")
+        if not product_ident:
+            product_ident = request.GET.get("product_type_name")
         if not filepath:
             filepath = request.GET.get("filepath")
         if not optional_check_idents:
@@ -300,7 +271,7 @@ def run_wps_execute(request):
         # call wps execute method
         wps_base_url = settings.WPS_URL
         wps_base = wps_base_url + "?service=WPS&version=1.0.0&request=Execute&identifier=run_checks&storeExecuteResponse=true&status=true&lineage=true&DataInputs="
-        data_inputs = "filepath={0};product_type_name={1};optional_check_idents={2}".format(filepath, product_type_name, optional_check_idents)
+        data_inputs = "filepath={0};product_ident={1};optional_check_idents={2}".format(filepath, product_ident, optional_check_idents)
 
         wps_url = wps_base + data_inputs
         print("Sending WPS Execute request to: " + wps_url)
