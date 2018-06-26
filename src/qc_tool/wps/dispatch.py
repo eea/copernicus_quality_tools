@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from contextlib import ExitStack
 from pathlib import Path
 
 from qc_tool.wps.manager import create_connection_manager
@@ -8,77 +9,103 @@ from qc_tool.wps.manager import create_jobdir_manager
 from qc_tool.wps.registry import get_check_function
 
 from qc_tool.common import load_check_defaults
-from qc_tool.common import load_product_definition
+from qc_tool.common import load_product_definitions
+from qc_tool.common import strip_prefix
 
 
 def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_status_func=None):
-    # Read configurations.
-    check_defaults = load_check_defaults()
-    product_definition = load_product_definition(product_ident)
-
-    # Prepare check idents.
-    product_check_idents = set(check["check_ident"] for check in product_definition["checks"])
     optional_check_idents = set(optional_check_idents)
 
-    # Ensure passed optional checks take part in product.
-    incorrect_check_idents = optional_check_idents - product_check_idents
-    if len(incorrect_check_idents) > 0:
-        raise IncorrectCheckException("Incorrect checks passed, product_ident={:s}, incorrect_check_idents={:s}.".format(repr(product_ident), repr(sorted(incorrect_check_idents))))
+    # Read configurations.
+    check_defaults = load_check_defaults()
+    product_definitions = load_product_definitions(product_ident)
+    defined_checks = [check
+                      for product_definition in product_definitions if "checks" in product_definition
+                      for check in product_definition["checks"]]
 
-    # Compile suite of checks to be performed.
-    check_suite = [check
-                   for check in product_definition["checks"]
-                   if check["required"] or check["check_ident"] in optional_check_idents]
+    # Ensure passed optional checks take part in product.
+    defined_optional_check_idents = {check["check_ident"] 
+                                     for check in defined_checks if not check["required"]}
+    incorrect_check_idents = optional_check_idents - defined_optional_check_idents
+    if len(incorrect_check_idents) > 0:
+        message = "Incorrect checks passed, product_ident={:s}, incorrect_check_idents={:s}.".format(repr(product_ident), repr(sorted(incorrect_check_idents)))
+        raise IncorrectCheckException(message)
 
     # Prepare variable keeping results of all checks.
-    suite_result = {}
+    job_result = {}
+    required_check_count = len([check for check in defined_checks if check["required"]])
+    job_check_count = required_check_count + len(optional_check_idents)
+    checks_passed_count = 0
 
     # Wrap the job with needful managers.
-    with create_connection_manager(job_uuid) as connection_manager, create_jobdir_manager(job_uuid) as jobdir_manager:
+    with ExitStack() as exit_stack:
+
         job_params = {}
-        job_params["connection_manager"] = connection_manager
+        job_params["connection_manager"] = exit_stack.enter_context(create_connection_manager(job_uuid))
+        jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         job_params["job_dir"] = str(jobdir_manager.job_dir)
 
-        # Run check suite.
-        for i, check in enumerate(check_suite):
+        try:
 
-            # Update status.
-            if update_status_func is not None:
-                percent_done = i / len(check_suite) * 100
-                update_status_func(check["check_ident"], percent_done)
+            # For every (sub)product.
+            for product_definition in product_definitions:
 
-            # Prepare parameters.
-            check_params = {}
-            check_params.update(check_defaults["globals"])
-            if check["check_ident"] in check_defaults["checks"]:
-                check_params.update(check_defaults["checks"][check["check_ident"]])
-            if "parameters" in product_definition:
-                check_params.update(product_definition["parameters"])
-            if "parameters" in check:
-                check_params.update(check["parameters"])
-            check_params.update(job_params)
+                # Prepare check suite to be run for the current product.
+                if "checks" in product_definition:
+                    check_suite = [check
+                                   for check in product_definition["checks"]
+                                   if check["required"] or check["check_ident"] in optional_check_idents]
+                else:
+                    check_suite = []
 
-            # Run the check.
-            func = get_check_function(check["check_ident"])
-            # FIXME: currently check functions use os.path for path manipulation
-            #        while upper server stack uses pathlib.
-            #        it is encouraged to choose one or another.
-            check_result = func(str(filepath), check_params)
+                # Run every check.
+                for check in check_suite:
 
-            # Add result to suite results.
-            suite_result[check["check_ident"]] = {}
-            suite_result[check["check_ident"]]["status"] = check_result["status"]
-            if "message" in check_result:
-                suite_result[check["check_ident"]]["message"] = check_result["message"]
-            if "params" in check_result:
-                job_params.update(check_result["params"])
+                    # Update status.
+                    if update_status_func is not None:
+                        percent_done = checks_passed_count / job_check_count * 100
+                        update_status_func(check["check_ident"], percent_done)
+                    checks_passed_count += 1
 
-            # Abort validation if wanted.
-            if check_result["status"] == "aborted":
-                break
+                    # Prepare parameters.
+                    check_params = {}
+                    check_params.update(check_defaults["globals"])
+                    short_check_ident = strip_prefix(check["check_ident"])
+                    if short_check_ident in check_defaults["checks"]:
+                        check_params.update(check_defaults["checks"][short_check_ident])
+                    if "parameters" in product_definition:
+                        check_params.update(product_definition["parameters"])
+                    if "parameters" in check:
+                        check_params.update(check["parameters"])
+                    check_params.update(job_params)
 
-    return suite_result
+                    # Run the check.
+                    func = get_check_function(check["check_ident"])
+                    # FIXME: currently check functions use os.path for path manipulation
+                    #        while upper server stack uses pathlib.
+                    #        it is encouraged to choose one or another.
+                    check_result = func(str(filepath), check_params)
 
+                    # Add check result to job result.
+                    job_result[check["check_ident"]] = {}
+                    job_result[check["check_ident"]]["status"] = check_result["status"]
+                    if "message" in check_result:
+                        job_result[check["check_ident"]]["message"] = check_result["message"]
+                    if "params" in check_result:
+                        job_params.update(check_result["params"])
+
+                    # Abort validation job.
+                    if check_result["status"] == "aborted":
+                        raise AbortJob()
+
+        except AbortJob:
+            pass
+
+    return job_result
+
+
+class AbortJob(Exception):
+    pass
 
 class IncorrectCheckException(Exception):
     pass

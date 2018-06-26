@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 
+from qc_tool.common import strip_prefix
+
+
 check_function_registry = {}
 
 def register_check_function(ident, description=None):
@@ -19,8 +22,10 @@ def register_check_function(ident, description=None):
         return func
     return register
 
-def get_check_function(ident):
-    return check_function_registry[ident]
+def get_check_function(check_ident):
+    check_ident = strip_prefix(check_ident)
+    func = check_function_registry[check_ident]
+    return func
 
 def load_all_check_functions():
     import qc_tool.wps.common_check.dummy

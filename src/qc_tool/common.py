@@ -16,7 +16,7 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
-PRODUCT_IDENT_REGEX = re.compile(r"[a-z].*\.json$")
+PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
     "import2pg": "Import layers into PostGIS database.",
@@ -47,40 +47,69 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "r11": "Minimum mapping unit check.",
     "r12": "(no description)",
     "r13": "(no description)",
-    "r14": "Raster has a color table",
-    "r15": "Colors in the color table match product specification"}
+    "r14": "Raster has a color table.",
+    "r15": "Colors in the color table match product specification."}
 
 CONFIG = None
 
 
-def load_product_definition(product_ident):
-    filename = "{:s}.json".format(product_ident)
-    filepath = PRODUCT_DIR.joinpath(filename)
-    product_definition = filepath.read_text()
-    product_definition = json.loads(product_definition)
-    return product_definition
+def strip_prefix(check_ident):
+    check_ident = check_ident.split(".")[-1]
+    return check_ident
+
+def load_product_definitions(product_ident):
+    """
+    Loads all definitions of a particuar product.
+
+    The return value is a list of definitions.
+    The first item of the list is a definition of a passed product.
+    Then definitions of every subproduct follow sorted by full ident name.
+
+    Every check ident is made prefixed by subproduct ident.
+    """
+    product_paths = [path for path in PRODUCT_DIR.iterdir()
+                     if PRODUCT_FILENAME_REGEX.match(path.name) is not None
+                     and path.name.startswith("{:s}.".format(product_ident))]
+    product_paths = sorted(product_paths, key=lambda x: x.stem)
+    product_definitions = []
+    for filepath in product_paths:
+        product_ident = filepath.stem
+        product_definition = filepath.read_text()
+        product_definition = json.loads(product_definition)
+        if "checks" in product_definition:
+            for check in product_definition["checks"]:
+                check["check_ident"] = "{:s}.{:s}".format(product_ident, check["check_ident"])
+        product_definitions.append(product_definition)
+    return product_definitions
 
 def compile_product_infos():
     """
     Compiles dictionary of product infos.
 
-    Every value of product info is in the form:
+    The product ident becomes the key.
+    The items consist of main products only.
+    The value represents product info and is formed as:
     {"description: "<product description>",
-     "checks": [("<function_name>", "<function_description>", <is_required>), ...]}
+     "checks": [("<product_part>.<function_name>", "<function_description>", <is_required>), ...]}
     """
     product_paths = [path for path in PRODUCT_DIR.iterdir()
-                     if PRODUCT_IDENT_REGEX.match(path.name) is not None]
+                     if PRODUCT_FILENAME_REGEX.match(path.name) is not None]
+    product_paths = sorted(product_paths, key=lambda x: x.stem)
     product_infos = {}
     for filepath in product_paths:
         product_ident = filepath.stem
+        main_product_ident = product_ident.split(".", maxsplit=1)[0]
         product_definition = filepath.read_text()
         product_definition = json.loads(product_definition)
-        product_description = product_definition["description"]
-        product_checks = [(check["check_ident"],
-                           CHECK_FUNCTION_DESCRIPTIONS[check["check_ident"]],
-                           check["required"])
-                          for check in product_definition["checks"]]
-        product_infos[product_ident] = {"description": product_description, "checks": product_checks}
+        if main_product_ident not in product_infos:
+            product_infos[main_product_ident] = {"description": product_definition["description"],
+                                                 "checks": []}
+        if "checks" in product_definition:
+            product_checks = [("{:s}.{:s}".format(product_ident, check["check_ident"]),
+                               CHECK_FUNCTION_DESCRIPTIONS[check["check_ident"]],
+                               check["required"])
+                              for check in product_definition["checks"]]
+            product_infos[main_product_ident]["checks"].extend(product_checks)
 
     return product_infos
 
