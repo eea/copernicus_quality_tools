@@ -66,6 +66,13 @@
       }
     },
     {
+      "check_ident": "r10",
+      "required": false,
+      "parameters": {
+        "file_name_regex": "^fty_[0-9]{4}_020m_(.+?)_[0-9]{5}.*.tif$$"
+      }
+    },
+    {
       "check_ident": "r11",
       "required": false,
       "parameters": {

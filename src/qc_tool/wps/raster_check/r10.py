@@ -13,10 +13,10 @@ from osgeo import osr
 from osgeo import ogr
 from pathlib import Path
 
-# from qc_tool.wps.registry import register_check_function
+from qc_tool.wps.registry import register_check_function
 
 
-# @register_check_function(__name__, "In the mapped area are no NoData pixels.")
+@register_check_function(__name__, "In the mapped area are no NoData pixels.")
 def run_check(filepath, params):
     """
     NoData pixels check.
@@ -28,11 +28,12 @@ def run_check(filepath, params):
     # get countrycode from filename
     filename = Path(filepath).name.lower()
     countrycode = re.search(params["file_name_regex"], filename).group(1)
+    countrycode = countrycode.lower()
 
     # get geometry on mapped area
     ma_ds = ogr.Open(params["mapped_area"])
     ma_lyr = ma_ds.GetLayer()
-    ma_ft = [ft for ft in ma_lyr if ft.GetField("iso_code") == countrycode][0]
+    ma_ft = [ft for ft in ma_lyr if ft.GetField("CNTR").lower() == countrycode][0]
     ma_geom = ma_ft.GetGeometryRef()
 
     # open raster data source
@@ -132,17 +133,8 @@ def run_check(filepath, params):
         # Mask zone of raster and fill gaps by 9999
         zonearray = numpy.ma.masked_array(srcRasterArray, maskArray).astype(int)
 
-        numpy.set_printoptions(threshold=numpy.nan)
-        # TODO: vraci prazne zonalni pole...
         if NoData in zonearray:
             return {"status": "failed",
                     "message": "NoData pixels occured in mapped area."}
         else:
             return {"status": "ok"}
-
-
-f = "/home/jiri/Plocha/COPQC_HRLDATA/FTY_2015_100m_eu_03035_d02_E30N20/FTY_2015_100m_eu_03035_d02_E30N20_clip.TIF"
-p = {"mapped_area": "/home/jiri/Plocha/COPQC_HRLDATA/test_polygon.shp",
-     "file_name_regex": "^fty_[0-9]{4}_100m_(.+?)_[0-9]{5}.*.tif$$"}
-print run_check(f, p)
-
