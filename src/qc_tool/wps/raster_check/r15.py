@@ -9,7 +9,7 @@ from osgeo import gdal
 
 from qc_tool.wps.registry import register_check_function
 
-@register_check_function(__name__, "Colors in the color table match product specification")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     :param colors: a dictionary of raster values and associated [r,g,b] colors

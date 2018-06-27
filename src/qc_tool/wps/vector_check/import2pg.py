@@ -12,7 +12,7 @@ from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
 
-@register_check_function(__name__, "Import layers into PostGIS db.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Import layers into PostGIS db. also imports the qc functions.

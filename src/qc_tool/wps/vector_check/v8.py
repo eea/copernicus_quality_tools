@@ -7,7 +7,7 @@ Multiparts polygons
 
 from qc_tool.wps.registry import register_check_function
 
-@register_check_function(__name__, "No multipart polygons")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Minimum mapping unit check..

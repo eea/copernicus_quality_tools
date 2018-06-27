@@ -11,7 +11,7 @@ from osgeo import osr
 from qc_tool.wps.registry import register_check_function
 
 
-@register_check_function(__name__, "EPSG code of file CRS match reference EPSG code.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     CRS check.

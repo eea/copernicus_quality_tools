@@ -11,7 +11,7 @@ from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import find_name, get_substring
 
 
-@register_check_function(__name__, "Attribute table contains specified attributes.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Attribute table structure check.

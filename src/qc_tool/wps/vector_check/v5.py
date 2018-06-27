@@ -7,7 +7,7 @@ Unique identifier check.
 
 from qc_tool.wps.registry import register_check_function
 
-@register_check_function(__name__, "Unique identifier check.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Unique identifier check.

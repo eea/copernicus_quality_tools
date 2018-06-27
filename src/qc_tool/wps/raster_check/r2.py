@@ -10,7 +10,7 @@ from pathlib import Path, PurePath
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import check_name
 
-@register_check_function(__name__, "File names match file naming conventions.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Check if string matches pattern.

@@ -9,7 +9,7 @@ import gdal
 
 from qc_tool.wps.registry import register_check_function
 
-@register_check_function(__name__, "Compression type check.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Compression type check.

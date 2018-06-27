@@ -9,7 +9,7 @@ import gdal
 
 from qc_tool.wps.registry import register_check_function
 
-@register_check_function(__name__, "Pixel size must be equal to given value.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Raster resolution check.

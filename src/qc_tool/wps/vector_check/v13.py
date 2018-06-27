@@ -6,7 +6,7 @@ from contextlib import closing
 from qc_tool.wps.registry import register_check_function
 
 
-@register_check_function(__name__, "There are no overlapping polygons.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     error_counts = {}
     for layer_name in params["layer_names"]:

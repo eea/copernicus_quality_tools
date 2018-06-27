@@ -16,7 +16,7 @@ from pathlib import Path
 from qc_tool.wps.registry import register_check_function
 
 
-@register_check_function(__name__, "In the mapped area are no NoData pixels.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     NoData pixels check.

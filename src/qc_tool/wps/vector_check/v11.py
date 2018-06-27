@@ -8,7 +8,7 @@ Minimum mapping unit check.
 
 from qc_tool.wps.registry import register_check_function
 
-@register_check_function(__name__, "Minimum mapping unit check.")
+@register_check_function(__name__)
 def run_check(filepath, params):
     """
     Minimum mapping unit check..

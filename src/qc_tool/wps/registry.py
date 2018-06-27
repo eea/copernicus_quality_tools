@@ -6,7 +6,7 @@ from qc_tool.common import strip_prefix
 
 check_function_registry = {}
 
-def register_check_function(ident, description=None):
+def register_check_function(ident):
     # If name is supplied with dots, take the last part.
     ident = ident.split(".")[-1]
 
@@ -17,7 +17,6 @@ def register_check_function(ident, description=None):
     # Return decorator.
     def register(func):
         func.ident = ident
-        func.description = description
         check_function_registry[ident] = func
         return func
     return register
