@@ -50,6 +50,8 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "r14": "Raster has a color table.",
     "r15": "Colors in the color table match product specification."}
 
+SYSTEM_CHECK_FUNCTIONS = ["import2pg"]
+
 CONFIG = None
 
 
@@ -78,8 +80,10 @@ def load_product_definitions(product_ident):
         product_definition = json.loads(product_definition)
         if "checks" in product_definition:
             for check in product_definition["checks"]:
-                check["check_ident"] = "{:s}.{:s}".format(product_ident, check["check_ident"])
+                full_check_ident = "{:s}.{:s}".format(product_ident, check["check_ident"])
+                check["check_ident"] = full_check_ident
         product_definitions.append(product_definition)
+
     return product_definitions
 
 def compile_product_infos():
@@ -90,7 +94,7 @@ def compile_product_infos():
     The items consist of main products only.
     The value represents product info and is formed as:
     {"description: "<product description>",
-     "checks": [("<product_part>.<function_name>", "<function_description>", <is_required>), ...]}
+     "checks": [("<product_ident>.<function_name>", "<function_description>", <is_required>, <is_system>), ...]}
     """
     product_paths = [path for path in PRODUCT_DIR.iterdir()
                      if PRODUCT_FILENAME_REGEX.match(path.name) is not None]
@@ -101,15 +105,23 @@ def compile_product_infos():
         main_product_ident = product_ident.split(".", maxsplit=1)[0]
         product_definition = filepath.read_text()
         product_definition = json.loads(product_definition)
+
+        # Add main product to product infos.
         if main_product_ident not in product_infos:
             product_infos[main_product_ident] = {"description": product_definition["description"],
                                                  "checks": []}
+
+        # Append checks to main product info.
+        # Inject full check identifier and system flag.
         if "checks" in product_definition:
-            product_checks = [("{:s}.{:s}".format(product_ident, check["check_ident"]),
-                               CHECK_FUNCTION_DESCRIPTIONS[check["check_ident"]],
-                               check["required"])
-                              for check in product_definition["checks"]]
-            product_infos[main_product_ident]["checks"].extend(product_checks)
+            for check in product_definition["checks"]:
+                short_check_ident = check["check_ident"]
+                full_check_ident = "{:s}.{:s}".format(product_ident, short_check_ident)
+                check_info = (full_check_ident,
+                              CHECK_FUNCTION_DESCRIPTIONS[check["check_ident"]],
+                              check["required"],
+                              short_check_ident in SYSTEM_CHECK_FUNCTIONS)
+                product_infos[main_product_ident]["checks"].append(check_info)
 
     return product_infos
 

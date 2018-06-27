@@ -8,12 +8,13 @@ class TestProduct(TestCase):
     def test_load_product_definitions(self):
         from qc_tool.common import load_product_definitions
         product_definitions = load_product_definitions("clc")
-        self.assertIn("checks", product_definitions)
-        self.assertLess(1, len(product_definitions["checks"]))
-        self.assertEqual({"check_ident": "clc.status.v1",
+        self.assertNotIn("checks", product_definitions[0])
+        self.assertIn("checks", product_definitions[1])
+        self.assertLess(1, len(product_definitions[1]["checks"]))
+        self.assertEqual({"check_ident": "clc.change.v1",
                           "parameters": {"formats": [".gdb"]},
                           "required": True},
-                         product_definitions["checks"][0])
+                         product_definitions[1]["checks"][0])
 
     def test_compile_product_infos(self):
         from qc_tool.common import compile_product_infos
@@ -26,4 +27,5 @@ class TestProduct(TestCase):
         self.assertEqual("CORINE Land Cover", product_infos["clc"]["description"])
         self.assertIn("checks", product_infos["clc"])
         self.assertLess(1, len(product_infos["clc"]["checks"]))
-        self.assertEqual(("clc.change.v1", "File format is allowed.", True), product_infos["clc"]["checks"][0])
+        self.assertEqual(("clc.change.v1", "File format is allowed.", True, False), product_infos["clc"]["checks"][0])
+        self.assertEqual(("clc.change.import2pg", "Import layers into PostGIS database.", True, True), product_infos["clc"]["checks"][4])
