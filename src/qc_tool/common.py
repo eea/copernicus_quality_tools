@@ -19,6 +19,7 @@ DB_FUNCTION_SCHEMA_NAME = "qc_function"
 INCOMING_DIR = Path("/mnt/incomming")
 WPS_DIR = Path("/mnt/wps")
 WORK_DIR = Path("/mnt/work")
+BOUNDARY_DIR = Path("/mnt/boundary")
 
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
