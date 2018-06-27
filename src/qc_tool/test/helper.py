@@ -35,9 +35,7 @@ class VectorCheckTestCase(TestCase):
         def _create_schema_with_reload():
             _create_schema()
             with closing(_connection_manager.connection.cursor()) as cursor:
-                sql = "DROP SCHEMA {:s} CASCADE;".format(DB_FUNCTION_SCHEMA_NAME)
-                cursor.execute(sql)
-                sql = "CREATE SCHEMA {:s};".format(DB_FUNCTION_SCHEMA_NAME)
+                sql = "SET search_path TO {:s}, public;".format(_connection_manager.job_schema_name)
                 cursor.execute(sql)
                 for filepath in sorted(DB_FUNCTION_DIR.glob("*.sql")):
                     sql_script = filepath.read_text()
