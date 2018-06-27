@@ -16,7 +16,7 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
-INCOMING_DIR = Path("/mnt/incomming")
+INCOMING_DIR = Path("/mnt/incoming")
 WPS_DIR = Path("/mnt/wps")
 WORK_DIR = Path("/mnt/work")
 BOUNDARY_DIR = Path("/mnt/boundary")
@@ -178,7 +178,7 @@ def setup_config():
 
     # Access to wps service.
     config["wps_url"] = environ.get("WPS_URL", "http://localhost:{:d}/wps".format(config["wps_port"]))
-    config["wps_output_url"] = environ.get("WPS_OUTPUT_URL", "http://localhost:{:d}/wps/output".format(config["wps_port"]))
+    config["wps_output_url"] = environ.get("WPS_OUTPUT_URL", "http://localhost:{:d}/output".format(config["wps_port"]))
 
     # Access to postgis.
     config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")

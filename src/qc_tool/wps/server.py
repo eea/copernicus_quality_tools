@@ -35,7 +35,7 @@ def wps():
 @app.route("/output/<filename>")
 def outputfile(filename):
     wps_output_dir = Path(get_config_value("server", "outputpath"))
-    # FIXME: ensure the resulting path can not be rerouted to other tree by using "..".
+    filename = Path(filename).name
     filepath = wps_output_dir.joinpath(filename)
     if filepath.is_file():
         file_bytes = filepath.read_bytes()
