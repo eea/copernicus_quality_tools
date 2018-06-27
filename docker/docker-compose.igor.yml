@@ -23,8 +23,6 @@ services:
       dockerfile: Dockerfile.wps
     image: qc_tool_wps
     environment:
-      - WPS_DIR=/mnt/wps
-      - WORK_DIR=/mnt/work
       - WPS_PORT=5000
       - WPS_URL=http://qc_tool_wps:5000/wps
       - WPS_OUTPUT_URL=http://qc_tool_wps:5000/wps/output

@@ -37,12 +37,12 @@ def new_job(request):
 def get_files_json(request):
     """
     Returns a list of all files that are available for checking.
-    The files are loaded from the directory specified in settings.INCOMING_DIR.
+    The files are loaded from the directory specified in settings.MEDIA_ROOT.
 
     :param request:
     :return: list of the files in JSON format
     """
-    base_dir = settings.INCOMING_DIR
+    base_dir = settings.MEDIA_ROOT
     valid_filepaths = []
 
     for dirpath, subdirs, files in os.walk(base_dir):
@@ -72,7 +72,7 @@ def get_files(request):
 
     if request.method == 'GET' and 'uploaded_filename' in request.GET:
         return render(request, 'dashboard/files.html', {
-            'uploaded_file_url': os.path.join(settings.INCOMING_DIR, request.GET['uploaded_filename'])
+            'uploaded_file_url': os.path.join(settings.MEDIA_ROOT, request.GET['uploaded_filename'])
         })
 
     if request.method == 'POST' and request.FILES['myfile']:
@@ -80,7 +80,7 @@ def get_files(request):
         fs = FileSystemStorage()
         filename = fs.save(myfile.name, myfile)
         return render(request, 'dashboard/files.html', {
-            'uploaded_file_path': os.path.join(settings.INCOMING_DIR, filename)
+            'uploaded_file_path': os.path.join(settings.MEDIA_ROOT, filename)
         })
 
     return render(request, 'dashboard/files.html')
@@ -95,7 +95,7 @@ def file_upload(request):
 
         # if it is a zip file then unzip it
         if myfile.name.endswith('gdb.zip'):
-            zip_file_path = os.path.join(settings.INCOMING_DIR, os.path.basename(myfile.name))
+            zip_file_path = os.path.join(settings.MEDIA_ROOT, os.path.basename(myfile.name))
 
             gdb_dir_path = zip_file_path.replace('gdb.zip','gdb')
             os.makedirs(gdb_dir_path)
@@ -103,11 +103,11 @@ def file_upload(request):
 
             with zipfile.ZipFile(zip_file_path, 'r') as f:
                 files = [n for n in f.namelist() if not n.endswith('/')]
-                f.extractall(path=settings.INCOMING_DIR, members=files)
+                f.extractall(path=settings.MEDIA_ROOT, members=files)
             os.remove(zip_file_path)
 
         elif myfile.name.endswith('.tif.zip'):
-            zip_file_path = os.path.join(settings.INCOMING_DIR, os.path.basename(myfile.name))
+            zip_file_path = os.path.join(settings.MEDIA_ROOT, os.path.basename(myfile.name))
 
             raster_dir_path = zip_file_path.replace('.tif.zip','')
             os.makedirs(raster_dir_path)

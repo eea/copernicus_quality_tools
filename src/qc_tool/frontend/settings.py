@@ -15,6 +15,7 @@ import os.path
 from os import environ
 
 from qc_tool.common import CONFIG
+from qc_tool.common import INCOMING_DIR
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -136,6 +137,5 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Media or user-uploaded files
 # the directory with files for checking. This must be readable both by the Frontend and by the WPS
-INCOMING_DIR = str(CONFIG["incoming_dir"])
-MEDIA_ROOT = INCOMING_DIR
+MEDIA_ROOT = str(INCOMING_DIR)
 MEDIA_URL = '/media/'

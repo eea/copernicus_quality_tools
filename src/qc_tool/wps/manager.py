@@ -9,6 +9,7 @@ from psycopg2 import connect
 
 from qc_tool.common import CONFIG
 from qc_tool.common import DB_FUNCTION_SCHEMA_NAME
+from qc_tool.common import WORK_DIR
 
 
 def create_connection_manager(job_uuid):
@@ -22,7 +23,7 @@ def create_connection_manager(job_uuid):
 
 def create_jobdir_manager(job_uuid):
     jobdir_manager = JobdirManager(job_uuid,
-                                   CONFIG["work_dir"],
+                                   WORK_DIR,
                                    CONFIG["jobdir_exist_ok"],
                                    CONFIG["leave_jobdir"])
     return jobdir_manager

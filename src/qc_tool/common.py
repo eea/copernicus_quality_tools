@@ -16,6 +16,10 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
+INCOMING_DIR = Path("/mnt/incomming")
+WPS_DIR = Path("/mnt/wps")
+WORK_DIR = Path("/mnt/work")
+
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
@@ -133,9 +137,6 @@ def load_check_defaults():
 def setup_config():
     """
     Environment variables consumed by wps:
-    * INCOMING_DIR;
-    * WPS_DIR;
-    * WORK_DIR;
     * WPS_PORT;
     * WPS_URL;
     * WPS_OUTPUT_URL;
@@ -148,15 +149,9 @@ def setup_config():
     * LEAVE_JOBDIR;
 
     Environment variables consumed by frontend:
-    * INCOMING_DIR;
     * WPS_URL;
     """
     config = {}
-
-    # Parameters common to both frontend and wps.
-    config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
-    config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/wps"))
-    config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/work"))
 
     # Wps server port to listen on.
     config["wps_port"] = int(environ.get("WPS_PORT", 5000))
