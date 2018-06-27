@@ -10,6 +10,7 @@ from qc_tool.wps.registry import get_check_function
 
 from qc_tool.common import load_check_defaults
 from qc_tool.common import load_product_definitions
+from qc_tool.common import prepare_empty_status
 from qc_tool.common import strip_prefix
 
 
@@ -32,10 +33,12 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         raise IncorrectCheckException(message)
 
     # Prepare variable keeping results of all checks.
-    job_result = {}
     required_check_count = len([check for check in defined_checks if check["required"]])
     job_check_count = required_check_count + len(optional_check_idents)
     checks_passed_count = 0
+
+    job_status = prepare_empty_status(product_ident)
+    job_status_check_idx = {check["check_ident"]: check for check in job_status["checks"]}
 
     # Wrap the job with needful managers.
     with ExitStack() as exit_stack:
@@ -46,62 +49,55 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         job_params["job_dir"] = str(jobdir_manager.job_dir)
 
         try:
-
-            # For every (sub)product.
             for product_definition in product_definitions:
-
-                # Prepare check suite to be run for the current product.
                 if "checks" in product_definition:
-                    check_suite = [check
-                                   for check in product_definition["checks"]
-                                   if check["required"] or check["check_ident"] in optional_check_idents]
-                else:
-                    check_suite = []
+                    for check in product_definition["checks"]:
+                        if check["required"] or check["check_ident"] in optional_check_idents:
+                            # Update status.
+                            if update_status_func is not None:
+                                percent_done = checks_passed_count / job_check_count * 100
+                                update_status_func(check["check_ident"], percent_done)
+                            checks_passed_count += 1
 
-                # Run every check.
-                for check in check_suite:
+                            # Prepare parameters.
+                            check_params = {}
+                            check_params.update(check_defaults["globals"])
+                            short_check_ident = strip_prefix(check["check_ident"])
+                            if short_check_ident in check_defaults["checks"]:
+                                check_params.update(check_defaults["checks"][short_check_ident])
+                            if "parameters" in product_definition:
+                                check_params.update(product_definition["parameters"])
+                            if "parameters" in check:
+                                check_params.update(check["parameters"])
+                            check_params.update(job_params)
 
-                    # Update status.
-                    if update_status_func is not None:
-                        percent_done = checks_passed_count / job_check_count * 100
-                        update_status_func(check["check_ident"], percent_done)
-                    checks_passed_count += 1
+                            # Run the check.
+                            func = get_check_function(check["check_ident"])
+                            # FIXME: currently check functions use os.path for path manipulation
+                            #        while upper server stack uses pathlib.
+                            #        it is encouraged to choose one or another.
+                            check_result = func(str(filepath), check_params)
 
-                    # Prepare parameters.
-                    check_params = {}
-                    check_params.update(check_defaults["globals"])
-                    short_check_ident = strip_prefix(check["check_ident"])
-                    if short_check_ident in check_defaults["checks"]:
-                        check_params.update(check_defaults["checks"][short_check_ident])
-                    if "parameters" in product_definition:
-                        check_params.update(product_definition["parameters"])
-                    if "parameters" in check:
-                        check_params.update(check["parameters"])
-                    check_params.update(job_params)
+                            # Set the check result into the job status.
+                            job_status_check_idx[check["check_ident"]]["status"] = check_result["status"]
+                            if "message" in check_result:
+                                job_status_check_idx[check["check_ident"]]["message"] = check_result["message"]
 
-                    # Run the check.
-                    func = get_check_function(check["check_ident"])
-                    # FIXME: currently check functions use os.path for path manipulation
-                    #        while upper server stack uses pathlib.
-                    #        it is encouraged to choose one or another.
-                    check_result = func(str(filepath), check_params)
+                            # Abort validation job.
+                            if check_result["status"] == "aborted":
+                                raise AbortJob()
 
-                    # Add check result to job result.
-                    job_result[check["check_ident"]] = {}
-                    job_result[check["check_ident"]]["status"] = check_result["status"]
-                    if "message" in check_result:
-                        job_result[check["check_ident"]]["message"] = check_result["message"]
-                    if "params" in check_result:
-                        job_params.update(check_result["params"])
+                            # Update job params.
+                            if "params" in check_result:
+                                job_params.update(check_result["params"])
 
-                    # Abort validation job.
-                    if check_result["status"] == "aborted":
-                        raise AbortJob()
+                        else:
+                            job_status_check_idx[check["check_ident"]]["status"] = "skipped"
 
         except AbortJob:
             pass
 
-    return job_result
+    return job_status
 
 
 class AbortJob(Exception):

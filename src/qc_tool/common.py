@@ -21,7 +21,7 @@ WPS_DIR = Path("/mnt/wps")
 WORK_DIR = Path("/mnt/work")
 BOUNDARY_DIR = Path("/mnt/boundary")
 
-PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
+MAIN_PRODUCT_FILENAME_REGEX = re.compile(r"[a-z][^.]*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
     "import2pg": "Import layers into PostGIS database.",
@@ -75,8 +75,7 @@ def load_product_definitions(product_ident):
     Every check ident is made prefixed by subproduct ident.
     """
     product_paths = [path for path in PRODUCT_DIR.iterdir()
-                     if PRODUCT_FILENAME_REGEX.match(path.name) is not None
-                     and path.name.startswith("{:s}.".format(product_ident))]
+                     if path.name.startswith("{:s}.".format(product_ident)) and path.name.endswith(".json")]
     product_paths = sorted(product_paths, key=lambda x: x.stem)
     product_definitions = []
     for filepath in product_paths:
@@ -91,44 +90,64 @@ def load_product_definitions(product_ident):
 
     return product_definitions
 
-def compile_product_infos():
-    """
-    Compiles dictionary of product infos.
+def get_main_products():
+    product_paths = [path for path in PRODUCT_DIR.iterdir()
+                     if MAIN_PRODUCT_FILENAME_REGEX.match(path.name) is not None]
+    product_paths = sorted(product_paths, key=lambda x: x.stem)
+    main_products = {}
+    for filepath in product_paths:
+        product_ident = filepath.stem
+        product_definition = filepath.read_text()
+        product_definition = json.loads(product_definition)
+        product_description = product_definition["description"]
+        main_products[product_ident] = product_description
+    return main_products
 
-    The product ident becomes the key.
-    The items consist of main products only.
-    The value represents product info and is formed as:
-    {"description: "<product description>",
-     "checks": [("<product_ident>.<function_name>", "<function_description>", <is_required>, <is_system>), ...]}
+def prepare_empty_status(product_ident):
+    """
+    Prepare status structure to be later filled by check results.
+
+    {"product_ident": <product ident>,
+     "description: <product description>,
+     "checks": [{"check_ident": <full check ident>,
+                 "product_description": <>,
+                 "check_description": <>,
+                 "required": <>,
+                 "system": <>,
+                 "status": <>,
+                 "message": <>}, ...]}
     """
     product_paths = [path for path in PRODUCT_DIR.iterdir()
-                     if PRODUCT_FILENAME_REGEX.match(path.name) is not None]
+                     if path.name.startswith("{:s}.".format(product_ident)) and path.name.endswith(".json")]
     product_paths = sorted(product_paths, key=lambda x: x.stem)
-    product_infos = {}
+    status = {"checks": []}
     for filepath in product_paths:
         product_ident = filepath.stem
         main_product_ident = product_ident.split(".", maxsplit=1)[0]
         product_definition = filepath.read_text()
         product_definition = json.loads(product_definition)
 
-        # Add main product to product infos.
-        if main_product_ident not in product_infos:
-            product_infos[main_product_ident] = {"description": product_definition["description"],
-                                                 "checks": []}
+        # Set main product attributes.
+        if main_product_ident == product_ident:
+            status["product_ident"] = product_ident
+            status["description"] = product_definition["description"]
 
-        # Append checks to main product info.
+        # Append check items.
         # Inject full check identifier and system flag.
         if "checks" in product_definition:
             for check in product_definition["checks"]:
                 short_check_ident = check["check_ident"]
                 full_check_ident = "{:s}.{:s}".format(product_ident, short_check_ident)
-                check_info = (full_check_ident,
-                              CHECK_FUNCTION_DESCRIPTIONS[check["check_ident"]],
-                              check["required"],
-                              short_check_ident in SYSTEM_CHECK_FUNCTIONS)
-                product_infos[main_product_ident]["checks"].append(check_info)
+                check_item = {"check_ident": full_check_ident,
+                              "product_description": product_definition["description"],
+                              "check_description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
+                              "required": check["required"],
+                              "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
+                              "status": None,
+                              "message": None}
+                status["checks"].append(check_item)
 
-    return product_infos
+    return status
 
 def load_check_defaults():
     check_defaults = CHECK_DEFAULTS_FILEPATH.read_text()

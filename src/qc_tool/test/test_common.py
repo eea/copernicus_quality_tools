@@ -4,7 +4,7 @@
 from unittest import TestCase
 
 
-class TestProduct(TestCase):
+class TestCommon(TestCase):
     def test_load_product_definitions(self):
         from qc_tool.common import load_product_definitions
         product_definitions = load_product_definitions("clc")
@@ -16,16 +16,24 @@ class TestProduct(TestCase):
                           "required": True},
                          product_definitions[1]["checks"][0])
 
-    def test_compile_product_infos(self):
-        from qc_tool.common import compile_product_infos
-        from qc_tool.wps.registry import load_all_check_functions
-        load_all_check_functions()
-        product_infos = compile_product_infos()
-        self.assertIn("clc", product_infos)
-        self.assertNotIn("clc.status", product_infos)
-        self.assertIn("description", product_infos["clc"])
-        self.assertEqual("CORINE Land Cover", product_infos["clc"]["description"])
-        self.assertIn("checks", product_infos["clc"])
-        self.assertLess(1, len(product_infos["clc"]["checks"]))
-        self.assertEqual(("clc.change.v1", "File format is allowed.", True, False), product_infos["clc"]["checks"][0])
-        self.assertEqual(("clc.change.import2pg", "Import layers into PostGIS database.", True, True), product_infos["clc"]["checks"][4])
+    def test_get_main_products(self):
+        from qc_tool.common import get_main_products
+        main_products = get_main_products()
+        self.assertIn("clc", main_products)
+        self.assertEqual("CORINE Land Cover", main_products["clc"])
+
+    def test_prepare_empty_status(self):
+        from qc_tool.common import prepare_empty_status
+        status = prepare_empty_status("clc")
+        self.assertEqual("clc", status["product_ident"])
+        self.assertEqual("CORINE Land Cover", status["description"])
+        self.assertLess(4, len(status["checks"]))
+        self.assertEqual("clc.change.v1", status["checks"][0]["check_ident"])
+        self.assertEqual("File format is allowed.", status["checks"][0]["check_description"])
+        self.assertEqual("CORINE Land Cover, change layer", status["checks"][0]["product_description"])
+        self.assertTrue(status["checks"][0]["required"])
+        self.assertFalse(status["checks"][0]["system"])
+        self.assertIsNone(status["checks"][0]["status"])
+        self.assertIsNone(status["checks"][0]["message"])
+        self.assertEqual("clc.change.import2pg", status["checks"][4]["check_ident"])
+        self.assertTrue(status["checks"][4]["system"])
