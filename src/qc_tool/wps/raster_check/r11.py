@@ -26,14 +26,12 @@ def run_check(filepath, params):
     # mmu_limit = int(ceil(params["area_ha"]*25))
     # for example 20x20 pixel and 5ha mmu -> 125 pixels mmu_limit
 
-    job_dir = params["job_dir"]
-
-    lessmmu_shp_path = Path(job_dir, "lessmmu_areas.shp")
+    lessmmu_shp_path = params["output_dir"].joinpath("lessmmu_areas.shp")
 
     GRASS_VERSION = "grass72"
 
     # (1) create a new GRASS location named "location" in the job directory
-    location_path = Path(job_dir, "location")
+    location_path = params["tmp_dir"].joinpath("location")
     p1 = run([GRASS_VERSION,
              "-c",
              filepath,

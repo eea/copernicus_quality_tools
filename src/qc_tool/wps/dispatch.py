@@ -46,7 +46,9 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         job_params = {}
         job_params["connection_manager"] = exit_stack.enter_context(create_connection_manager(job_uuid))
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
-        job_params["job_dir"] = str(jobdir_manager.job_dir)
+        job_params["input_dir"] = str(jobdir_manager.input_dir)
+        job_params["tmp_dir"] = str(jobdir_manager.tmp_dir)
+        job_params["output_dir"] = str(jobdir_manager.output_dir)
 
         try:
             for product_definition in product_definitions:

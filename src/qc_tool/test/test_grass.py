@@ -1,31 +1,27 @@
 #!/usr/bin/env python3
+
+
 from pathlib import Path
 from subprocess import run
-
 from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
-from qc_tool.wps.manager import create_connection_manager
-from qc_tool.wps.manager import create_jobdir_manager
+from qc_tool.test.helper import RasterCheckTestCase
+
 
 GRASS_VERSION = "grass72"
 
-class TestGrass(TestCase):
-    def setUp(self):
-        self.jobdir_manager = create_jobdir_manager(str(uuid4()))
-        self.jobdir_manager.create_dir()
 
+class TestGrass(RasterCheckTestCase):
     def test_grass_jobdir(self):
-        print(self.jobdir_manager.job_dir)
         self.assertIsNotNone(self.jobdir_manager.job_dir, "job_dir should be a valid directory")
-
 
     def test_grass_location(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
-        job_dir = self.jobdir_manager.job_dir
+        tmp_dir = self.jobdir_manager.tmp_dir
 
-        location_path = Path(job_dir, "location")
+        location_path = tmp_dir.joinpath("location")
         p = run([GRASS_VERSION,
                   "-c",
                   filepath,
@@ -40,8 +36,8 @@ class TestGrass(TestCase):
     def test_grass_import(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
-        job_dir = str(self.jobdir_manager.job_dir)
-        location_path = Path(job_dir, "location")
+        tmp_dir = self.jobdir_manager.tmp_dir
+        location_path = tmp_dir.joinpath("location")
         p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
@@ -65,9 +61,9 @@ class TestGrass(TestCase):
     def test_grass_clump(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
-        job_dir = str(self.jobdir_manager.job_dir)
+        tmp_dir = self.jobdir_manager.tmp_dir
 
-        location_path = Path(job_dir, "location")
+        location_path = tmp_dir.joinpath("location")
         p1 = run(["grass72",
                   "-c",
                   filepath,
@@ -78,7 +74,7 @@ class TestGrass(TestCase):
             print("some error creating location!")
 
         # import dataset
-        mapset_path = Path(location_path, "PERMANENT")
+        mapset_path = location_path.joinpath("PERMANENT")
         p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
@@ -102,10 +98,10 @@ class TestGrass(TestCase):
     def test_grass_volume(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
-        job_dir = str(self.jobdir_manager.job_dir)
+        tmp_dir = self.jobdir_manager.tmp_dir
 
         # (PREPARE) creating a location
-        location_path = Path(job_dir, "location")
+        location_path = tmp_dir.joinpath("location")
         p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
@@ -116,7 +112,7 @@ class TestGrass(TestCase):
             print("some error creating location!")
 
         # import dataset
-        mapset_path = Path(location_path, "PERMANENT")
+        mapset_path = location_path.joinpath("PERMANENT")
         p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
@@ -152,10 +148,10 @@ class TestGrass(TestCase):
     def test_grass_build(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
-        job_dir = str(self.jobdir_manager.job_dir)
+        tmp_dir = self.jobdir_manager.tmp_dir
 
         # (PREPARE) creating a location
-        location_path = Path(job_dir, "location")
+        location_path = tmp_dir.joinpath("location")
         p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
@@ -166,7 +162,7 @@ class TestGrass(TestCase):
             print("some error creating location!")
 
         # import dataset
-        mapset_path = Path(location_path, "PERMANENT")
+        mapset_path = location_path.joinpath("PERMANENT")
         p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
@@ -210,11 +206,10 @@ class TestGrass(TestCase):
     def test_grass_extract(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
-        job_dir = str(self.jobdir_manager.job_dir)
-        params = {"area_ha": 25, "job_dir": job_dir}
+        tmp_dir = self.jobdir_manager.tmp_dir
 
         # (PREPARE) creating a location
-        location_path = Path(job_dir, "location")
+        location_path = tmp_dir.joinpath("location")
         p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
@@ -225,7 +220,7 @@ class TestGrass(TestCase):
             print("some error creating location!")
 
         # import dataset
-        mapset_path = Path(location_path, "PERMANENT")
+        mapset_path = location_path.joinpath("PERMANENT")
         p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
@@ -299,10 +294,10 @@ class TestGrass(TestCase):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
         #filepath = str(TEST_DATA_DIR.joinpath("FTY_2015_020m_eu_03035_d04_full.tif"))
 
-        job_dir = str(self.jobdir_manager.job_dir)
+        tmp_dir = self.jobdir_manager.tmp_dir
 
         # (PREPARE) creating a location
-        location_path = Path(job_dir, "location")
+        location_path = tmp_dir.joinpath("location")
         p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
@@ -313,7 +308,7 @@ class TestGrass(TestCase):
             print("some error creating location!")
 
         # import dataset
-        mapset_path = Path(location_path, "PERMANENT")
+        mapset_path = location_path.joinpath("PERMANENT")
         p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
@@ -363,7 +358,7 @@ class TestGrass(TestCase):
                  check=True)
 
         # export to shp
-        out_path = TEST_DATA_DIR.joinpath(self.jobdir_manager.job_dir.name)
+        out_path = self.jobdir_manager.output_dir
         p7 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
@@ -380,11 +375,10 @@ class TestGrass(TestCase):
     def test_grass_alternative(self):
         filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
 
-        job_dir = str(self.jobdir_manager.job_dir)
-        params = {"area_ha": 25, "job_dir": job_dir}
+        tmp_dir = self.jobdir_manager.tmp_dir
 
         # (PREPARE) creating a location
-        location_path = Path(job_dir, "location")
+        location_path = tmp_dir.joinpath("location")
         p1 = run([GRASS_VERSION,
                   "-c",
                   filepath,
@@ -395,7 +389,7 @@ class TestGrass(TestCase):
             print("some error creating location!")
 
         # import dataset
-        mapset_path = Path(location_path, "PERMANENT")
+        mapset_path = location_path.joinpath("PERMANENT")
         p2 = run([GRASS_VERSION,
                   str(mapset_path),
                   "--exec",
@@ -432,9 +426,9 @@ class TestGrass(TestCase):
                  check=True)
 
         # export to shp
-        out_dir_path = TEST_DATA_DIR.joinpath(self.jobdir_manager.job_dir.name)
-        out_dir_path.mkdir()
-        out_shapefile_path = out_dir_path.joinpath("lessmmu_areas.shp")
+        output_dir = self.jobdir_manager.output_dir
+        output_dir.mkdir()
+        out_shapefile_path = output_dir.joinpath("lessmmu_areas.shp")
 
         p7 = run([GRASS_VERSION,
                   str(mapset_path),
@@ -446,7 +440,3 @@ class TestGrass(TestCase):
                  check=True)
 
         self.assertEqual(p7.returncode, 0, "GRASS should export lessmmu_areas to shapefile.")
-
-
-    def tearDown(self):
-        self.jobdir_manager.remove_dir()

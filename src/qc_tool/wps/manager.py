@@ -110,21 +110,36 @@ class JobdirManager():
         self.exist_ok = exist_ok
         self.leave_dir = leave_dir
         self.job_dir = None
+        self.input_dir = None
+        self.tmp_dir = None
+        self.output_dir = None
 
     def __enter__(self):
-        self.create_dir()
+        self.create_dirs()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.remove_dir()
+        self.remove_tmp_dir()
 
-    def create_dir(self):
+    def create_dirs(self):
         job_uuid = self.job_uuid.lower().replace("-", "")
         job_dir = self.work_dir.joinpath(self.job_subdir_tpl.format(job_uuid))
         job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
         self.job_dir = job_dir
 
-    def remove_dir(self):
-        if not self.leave_dir and self.job_dir is not None:
-            rmtree(str(self.job_dir))
-        self.job_dir = None
+        input_dir = job_dir.joinpath("input.d")
+        input_dir.mkdir(parents=True, exist_ok=self.exist_ok)
+        self.input_dir = input_dir
+
+        tmp_dir = job_dir.joinpath("tmp.d")
+        tmp_dir.mkdir(parents=True, exist_ok=self.exist_ok)
+        self.tmp_dir = tmp_dir
+
+        output_dir = job_dir.joinpath("output.d")
+        output_dir.mkdir(parents=True, exist_ok=self.exist_ok)
+        self.output_dir = output_dir
+
+    def remove_tmp_dir(self):
+        if not self.leave_dir and self.tmp_dir is not None:
+            rmtree(str(self.tmp_dir))
+        self.tmp_dir = None
