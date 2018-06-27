@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+import json
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -50,12 +51,18 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         job_params["tmp_dir"] = jobdir_manager.tmp_dir
         job_params["output_dir"] = jobdir_manager.output_dir
 
+        status_filepath = jobdir_manager.job_dir.joinpath("status.json")
+
         try:
             for product_definition in product_definitions:
                 if "checks" in product_definition:
                     for check in product_definition["checks"]:
+
+                        # Update status.json.
+                        status_filepath.write_text(json.dumps(job_status))
+
                         if check["required"] or check["check_ident"] in optional_check_idents:
-                            # Update status.
+                            # Update status at wps
                             if update_status_func is not None:
                                 percent_done = checks_passed_count / job_check_count * 100
                                 update_status_func(check["check_ident"], percent_done)
@@ -98,6 +105,9 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
 
         except AbortJob:
             pass
+
+        # Update status.json finally.
+        status_filepath.write_text(json.dumps(job_status))
 
     return job_status
 

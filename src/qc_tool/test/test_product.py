@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 
+import json
+from pathlib import Path
 from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
+from qc_tool.common import WORK_DIR
 from qc_tool.wps.dispatch import dispatch
 from qc_tool.wps.registry import load_all_check_functions
 
@@ -31,10 +34,17 @@ class Test_fty_YYYY_020m(TestCase):
 class Test_clc(TestCase):
     def setUp(self):
         load_all_check_functions()
+        self.job_uuid = "test-uuid"
+        self.status_filepath = Path(WORK_DIR.joinpath("job_testuuid/status.json"))
 
     def test_run(self):
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
-        job_status = dispatch(str(uuid4()), filepath, "clc", [])
+        job_status = dispatch(self.job_uuid, filepath, "clc", [])
+        self.assertTrue(self.status_filepath.exists())
+        job_status_from_file = self.status_filepath.read_text()
+        job_status_from_file = json.loads(job_status_from_file)
+        self.assertEqual(job_status, job_status_from_file,
+                         "Job status returned by dispatch() must be the same as stored in status.json file.")
 
 
 class Test_clc_status(TestCase):
