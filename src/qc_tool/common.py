@@ -16,11 +16,6 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
-INCOMING_DIR = Path("/mnt/incoming")
-WPS_DIR = Path("/mnt/wps")
-WORK_DIR = Path("/mnt/work")
-BOUNDARY_DIR = Path("/mnt/boundary")
-
 MAIN_PRODUCT_FILENAME_REGEX = re.compile(r"[a-z][^.]*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
@@ -103,7 +98,7 @@ def get_main_products():
         main_products[product_ident] = product_description
     return main_products
 
-def prepare_empty_status(product_ident):
+def prepare_empty_job_status(product_ident):
     """
     Prepare status structure to be later filled by check results.
 
@@ -154,9 +149,38 @@ def load_check_defaults():
     check_defaults = json.loads(check_defaults)
     return check_defaults
 
+def compose_job_dir(job_uuid):
+    job_subdir_tpl = "job_{:s}"
+    job_uuid = str(job_uuid).lower().replace("-", "")
+    job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
+    return job_dir
+
+def compose_job_status_filepath(job_uuid):
+    job_dir = compose_job_dir(job_uuid)
+    job_status_filepath = job_dir.joinpath("status.json")
+    return job_status_filepath
+
+def compose_wps_status_filepath(job_uuid):
+    wps_status_filename = "{:s}.xml".format(str(job_uuid))
+    wps_status_filepath = CONFIG["wps_output_dir"].joinpath(wps_status_filename)
+    return wps_status_filepath
+
+def get_all_wps_uuids():
+    status_document_regex = re.compile(r"[a-z0-9-]{36}\.xml")
+    wps_output_dir = CONFIG["wps_output_dir"]
+    wps_uuids = [path.stem
+                 for path in wps_output_dir.iterdir()
+                 if status_document_regex.match(path.name) is not None]
+    return wps_uuids
+
+
 def setup_config():
     """
     Environment variables consumed by wps:
+    * BOUNDARY_DIR;
+    * INCOMING_DIR;
+    * WPS_DIR;
+    * WORK_DIR,
     * WPS_PORT;
     * WPS_URL;
     * WPS_OUTPUT_URL;
@@ -169,9 +193,19 @@ def setup_config():
     * LEAVE_JOBDIR;
 
     Environment variables consumed by frontend:
+    * INCOMING_DIR;
+    * WPS_DIR;
+    * WORK_DIR;
     * WPS_URL;
     """
     config = {}
+
+    # Parameters common to both frontend and wps.
+    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/boundary"))
+    config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
+    config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_volume/wps"))
+    config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_volume/work"))
+    config["wps_output_dir"] = config["wps_dir"].joinpath("output")
 
     # Wps server port to listen on.
     config["wps_port"] = int(environ.get("WPS_PORT", 5000))

@@ -32,32 +32,6 @@ def hello():
 def wps():
     return service
 
-@app.route("/output/<filename>")
-def outputfile(filename):
-    wps_output_dir = Path(get_config_value("server", "outputpath"))
-    filename = Path(filename).name
-    filepath = wps_output_dir.joinpath(filename)
-    if filepath.is_file():
-        file_bytes = filepath.read_bytes()
-        if ".xml" == filepath.suffix:
-            content_type = 'text/xml'
-        else:
-            content_type = None
-        return flask.Response(file_bytes, content_type=content_type)
-    else:
-        flask.abort(404)
-
-@app.route("/status_document_urls")
-def status_document_urls():
-    status_document_regex = re.compile(r"[a-z0-9-]{36}\.xml")
-    wps_output_dir = Path(get_config_value("server", "outputpath"))
-    wps_output_url = get_config_value("server", "outputurl")
-    # FIXME: compose the url by dedicated functions instead of such plain way.
-    status_document_urls = ["{:s}/{:s}".format(wps_output_url, path.name)
-                            for path in wps_output_dir.iterdir()
-                            if status_document_regex.match(path.name) is not None]
-    return flask.Response(json.dumps(status_document_urls), content_type="application/json")
-
 
 def run_server():
     global service
@@ -66,7 +40,7 @@ def run_server():
     wps_config.set("server", "url", CONFIG["wps_url"])
     wps_config.set("server", "outputurl", CONFIG["wps_output_url"])
 
-    wps_output_dir = WPS_DIR.joinpath("output")
+    wps_output_dir = CONFIG["wps_output_dir"]
     wps_output_dir.mkdir(exist_ok=True, parents=True)
     wps_config.set("server", "outputpath", str(wps_output_dir))
 

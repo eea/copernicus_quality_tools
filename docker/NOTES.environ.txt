@@ -10,6 +10,9 @@ There is no path related to host viewpoint.
 Service qc_tool_frontend
 ------------------------
 
+  * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
+  * WPS_DIR, informs the frontend server where it should look for wps status files;
+  * WORK_DIR, informs the frontend server where it should look for job output files;
   * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
   * WPS_URL, informs the frontend server of the url where the wps server can be reached;
 
@@ -17,6 +20,10 @@ Service qc_tool_frontend
 Service qc_tool_wps
 -------------------
 
+  * BOUNDARY_DIR, informs the check function where to look for boundary vectors;
+  * INCOMING_DIR, informs the job where it should look for uploaded files;
+  * WPS_DIR, instructs the wps server where it should store its operational files;
+  * WORK_DIR, instructs the running jobs where it should store its operational files;
   * WPS_PORT, instructs the wps server what port is should start listening for connections;
   * WPS_URL, informs the wps server of its own url;
   * WPS_OUTPUT_URL, informs the wps server of the url pointing to area of status documents;

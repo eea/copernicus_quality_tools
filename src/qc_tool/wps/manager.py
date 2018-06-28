@@ -9,7 +9,7 @@ from psycopg2 import connect
 
 from qc_tool.common import CONFIG
 from qc_tool.common import DB_FUNCTION_SCHEMA_NAME
-from qc_tool.common import WORK_DIR
+from qc_tool.common import compose_job_dir
 
 
 def create_connection_manager(job_uuid):
@@ -22,8 +22,8 @@ def create_connection_manager(job_uuid):
     return connection_manager
 
 def create_jobdir_manager(job_uuid):
-    jobdir_manager = JobdirManager(job_uuid,
-                                   WORK_DIR,
+    job_dir = compose_job_dir(job_uuid)
+    jobdir_manager = JobdirManager(job_dir,
                                    CONFIG["jobdir_exist_ok"],
                                    CONFIG["leave_jobdir"])
     return jobdir_manager
@@ -102,14 +102,10 @@ class ConnectionManager():
 
 
 class JobdirManager():
-    job_subdir_tpl = "job_{:s}"
-
-    def __init__(self, job_uuid, work_dir, exist_ok=False, leave_dir=False):
-        self.job_uuid = job_uuid
-        self.work_dir = work_dir
+    def __init__(self, job_dir, exist_ok=False, leave_dir=False):
+        self.job_dir = job_dir
         self.exist_ok = exist_ok
         self.leave_dir = leave_dir
-        self.job_dir = None
         self.input_dir = None
         self.tmp_dir = None
         self.output_dir = None
@@ -122,20 +118,17 @@ class JobdirManager():
         self.remove_tmp_dir()
 
     def create_dirs(self):
-        job_uuid = self.job_uuid.lower().replace("-", "")
-        job_dir = self.work_dir.joinpath(self.job_subdir_tpl.format(job_uuid))
-        job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
-        self.job_dir = job_dir
+        self.job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
 
-        input_dir = job_dir.joinpath("input.d")
+        input_dir = self.job_dir.joinpath("input.d")
         input_dir.mkdir(parents=True, exist_ok=self.exist_ok)
         self.input_dir = input_dir
 
-        tmp_dir = job_dir.joinpath("tmp.d")
+        tmp_dir = self.job_dir.joinpath("tmp.d")
         tmp_dir.mkdir(parents=True, exist_ok=self.exist_ok)
         self.tmp_dir = tmp_dir
 
-        output_dir = job_dir.joinpath("output.d")
+        output_dir = self.job_dir.joinpath("output.d")
         output_dir.mkdir(parents=True, exist_ok=self.exist_ok)
         self.output_dir = output_dir
 

@@ -86,7 +86,7 @@ class RunChecks(Process):
                            data_type="string", min_occurs=1, max_occurs=1),
               LiteralInput("optional_check_idents", "Comma separated identifiers of optional checks to be performed.",
                            data_type="string", min_occurs=0, max_occurs=1)]
-    OUTPUTS = [LiteralOutput("result", "Result of passed checks in json format.", data_type="string")]
+    OUTPUTS = []
 
     def __init__(self):
         super().__init__(self._handler,
@@ -119,6 +119,5 @@ class RunChecks(Process):
                               product_ident,
                               optional_check_idents,
                               update_status_func=update_wps_status)
-        response.outputs["result"].data = json.dumps(job_result)
 
         return response

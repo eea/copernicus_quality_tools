@@ -9,9 +9,10 @@ from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 from qc_tool.wps.registry import get_check_function
 
+from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import load_check_defaults
 from qc_tool.common import load_product_definitions
-from qc_tool.common import prepare_empty_status
+from qc_tool.common import prepare_empty_job_status
 from qc_tool.common import strip_prefix
 
 
@@ -38,7 +39,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
     job_check_count = required_check_count + len(optional_check_idents)
     checks_passed_count = 0
 
-    job_status = prepare_empty_status(product_ident)
+    job_status = prepare_empty_job_status(product_ident)
     job_status_check_idx = {check["check_ident"]: check for check in job_status["checks"]}
 
     # Wrap the job with needful managers.
@@ -51,7 +52,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         job_params["tmp_dir"] = jobdir_manager.tmp_dir
         job_params["output_dir"] = jobdir_manager.output_dir
 
-        status_filepath = jobdir_manager.job_dir.joinpath("status.json")
+        status_filepath = compose_job_status_filepath(job_uuid)
 
         try:
             for product_definition in product_definitions:

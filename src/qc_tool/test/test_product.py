@@ -7,7 +7,6 @@ from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
-from qc_tool.common import WORK_DIR
 from qc_tool.wps.dispatch import dispatch
 from qc_tool.wps.registry import load_all_check_functions
 
@@ -35,7 +34,7 @@ class Test_clc(TestCase):
     def setUp(self):
         load_all_check_functions()
         self.job_uuid = "test-uuid"
-        self.status_filepath = Path(WORK_DIR.joinpath("job_testuuid/status.json"))
+        self.status_filepath = Path("/mnt/qc_volume/work/job_testuuid/status.json")
 
     def test_run(self):
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
