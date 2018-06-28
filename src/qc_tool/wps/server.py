@@ -13,7 +13,6 @@ from pywps import Service
 from pywps.configuration import get_config_value
 
 from qc_tool.common import CONFIG
-from qc_tool.common import WPS_DIR
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
 from qc_tool.wps.registry import load_all_check_functions
@@ -44,11 +43,11 @@ def run_server():
     wps_output_dir.mkdir(exist_ok=True, parents=True)
     wps_config.set("server", "outputpath", str(wps_output_dir))
 
-    wps_work_dir = WPS_DIR.joinpath("work")
+    wps_work_dir = CONFIG["wps_dir"].joinpath("work")
     wps_work_dir.mkdir(exist_ok=True, parents=True)
     wps_config.set("server", "workdir", str(wps_work_dir))
 
-    wps_log_dir = WPS_DIR.joinpath("log")
+    wps_log_dir = CONFIG["wps_dir"].joinpath("log")
     wps_log_dir.mkdir(exist_ok=True, parents=True)
     wps_config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))
 
