@@ -60,6 +60,11 @@
                             <td class="success">{{detail.description}}</td>
                             <td class="success">{{detail.status}}</td>
                             <td class="success">{{detail.message}}</td>
+                            {% elif detail.status == None %}
+                            <td>{{detail.check_ident}}</td>
+                            <td>{{detail.description}}</td>
+                            <td></td>
+                            <td></td>
                             {% else %}
                             <td class="danger">{{detail.check_ident}}</td>
                             <td class="danger">{{detail.description}}</td>
@@ -71,10 +76,6 @@
                    </tbody>
                 </table>
                 <br>
-
-                <a href="{{ status_document_url }}">Show Detailed XML Report..</a>
-                    </div>
-                </div>
 
             </div>
 

@@ -83,8 +83,10 @@ def prepare_empty_job_status(product_ident):
 
     {"product_ident": <product ident>,
      "description: <product description>,
+     "job_start_date": <>,
+     "filename": <>,
+     "job_uuid": <>,
      "checks": [{"check_ident": <full check ident>,
-                 "product_description": <>,
                  "check_description": <>,
                  "required": <>,
                  "system": <>,
@@ -96,11 +98,14 @@ def prepare_empty_job_status(product_ident):
     product_definition = json.loads(product_definition)
     status = {"product_ident": product_ident,
               "description": product_definition["description"],
+              "job_start_date": None,
+              "filename": None,
+              "job_uuid": None,
               "checks": []}
     for check in product_definition["checks"]:
         short_check_ident = strip_prefix(check["check_ident"])
         check_item = {"check_ident": check["check_ident"],
-                      "check_description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
+                      "description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
                       "required": check["required"],
                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
                       "status": None,

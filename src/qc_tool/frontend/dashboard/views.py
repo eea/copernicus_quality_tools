@@ -17,7 +17,12 @@ from django.shortcuts import render
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 
-from qc_tool.common import compile_product_infos
+from qc_tool.common import compose_job_status_filepath
+from qc_tool.common import compose_wps_status_filepath
+from qc_tool.common import get_all_wps_uuids
+from qc_tool.common import get_product_descriptions
+from qc_tool.common import prepare_empty_job_status
+
 from qc_tool.frontend.dashboard.helpers import parse_status_document
 from qc_tool.frontend.dashboard.helpers import get_file_or_dir_size
 
@@ -128,9 +133,9 @@ def get_product_list(request):
     :param request:
     :return: list of the product types with items {name, description} in JSON format
     """
-    product_infos = compile_product_infos()
-    product_list = [{'name': product_ident, 'description': product_info['description']}
-                    for product_ident, product_info in product_infos.items()]
+    product_infos = get_product_descriptions()
+    product_list = [{'name': product_ident, 'description': product_description}
+                    for product_ident, product_description in product_infos.items()]
     product_list = sorted(product_list, key=lambda x: x['description'])
     return JsonResponse({'product_list': product_list})
 
@@ -142,83 +147,38 @@ def get_product_info(request, product_ident):
     :param product_ident: the name of the product type for example clc_chaYY
     :return: details about the product type including the required and optional checks
     """
-    product_info = compile_product_infos()[product_ident]
-    product_info['checks'] = [{'check_ident': ident, 'description': desc, 'required': required}
-                              for ident, desc, required in product_info['checks']]
-    return JsonResponse({'product_info': product_info})
+    job_status = prepare_empty_job_status(product_ident)
+    return JsonResponse({'job_status': job_status})
 
 
-def get_status_document(request, result_uuid):
-    status_doc_url = settings.WPS_HOST + '/output/' + result_uuid + '.xml'
-    resp = get(status_doc_url)
-    return HttpResponse(resp.content, content_type="application/xml")
+def get_result(request, job_uuid):
+    job_status_filepath = compose_job_status_filepath(job_uuid)
 
-def get_result(request, result_uuid):
-
-    # fetch the result status document
-    status_doc_url = settings.WPS_HOST + '/output/' + result_uuid + '.xml'
-    status_doc = parse_status_document(status_doc_url)
-    result_detail = status_doc['result']
-
-    print(result_detail)
-    result_list = []
-    for id, val in result_detail.items():
-        result_list.append({'check_ident': id, 'status': val['status'], 'message': val.get('message')})
-
-    # ensure ordering of the checks based on product type spec. also keep skipped checks
-    if 'product_type_name' in status_doc and not status_doc['product_type_name'] is None:
-
-        product_type_name = status_doc['product_type_name']
-
-        product_info = compile_product_infos()[product_type_name]
-
-        checks = product_info['checks']
-        check_list = []
-
-        for ident, desc, required in checks:
-            check_list.append({'check_ident': ident, 'check_description': desc})
-
-        # sort by the product type order and check_ident
-        result_list_sorted = []
-        for check in check_list:
-            check_ident = check['check_ident']
-            if check_ident in result_detail:
-                if 'message' in result_detail[check_ident]:
-                    check_message = result_detail[check_ident]['message']
-                else:
-                    check_message = ' '
-
-                result_list_sorted.append({"check_ident": check["check_ident"],
-                                           "description": check["check_description"],
-                                           "status": result_detail[check_ident]["status"],
-                                           "message": check_message})
-            else:
-                result_list_sorted.append({"check_ident": check["check_ident"],
-                                           "description": check["check_description"],
-                                           "status": "skipped",
-                                           "message": ""})
-
-    else:
-        # if product_type is not available then sort by alphabetical order
-        product_type_name = 'current_product'
-        filepath = 'current_filepath'
-
-        result_list_sorted = sorted(result_list, key=lambda x: x['check_ident'])
-
-    status_doc_basename = os.path.basename(status_doc_url)
-    status_doc_url2 = "/status_document/{:s}/".format(status_doc_basename.replace(".xml", ""))
-
-    context = {
-        'product_type_name': product_type_name,
-        'product_type_description': None,
-        'filepath': status_doc['filepath'],
-        'start_time': status_doc['start_time'],
-        'status_document_url': status_doc_url2,
-        'result': {
-            'uuid': result_uuid,
-            'detail': result_list_sorted
+    if job_status_filepath.exists():
+        job_status = job_status_filepath.read_text()
+        job_status = json.loads(job_status)
+        context = {
+            'product_type_name': job_status["product_ident"],
+            'product_type_description': job_status["description"],
+            'filepath': job_status["filename"],
+            'start_time': job_status["job_start_date"],
+            'result': {
+                'uuid': job_uuid,
+                'detail': job_status["checks"]
+            }
         }
-    }
+    else:
+        context = {
+            'product_type_name': None,
+            'product_type_description': None,
+            'filepath': None,
+            'start_time': None,
+            'result': {
+                'uuid': job_uuid,
+                'detail': []
+            }
+        }
+
     return render(request, 'dashboard/result.html', context)
 
 
@@ -228,25 +188,26 @@ def get_jobs(request):
     :param request:
     :return:
     """
+    job_infos = []
+    for job_uuid in get_all_wps_uuids():
+        wps_status_filepath = compose_wps_status_filepath(job_uuid)
+        wps_status = wps_status_filepath.read_text()
+        job_info = parse_status_document(wps_status)
+        job_info["uid"] = job_uuid
 
-    # first, retrieve the URL's
-    status_docs_api = settings.WPS_HOST + "/status_document_urls"
-    resp = get(url=status_docs_api)
-    status_doc_urls = resp.json()
+        job_status_filepath = compose_job_status_filepath(job_uuid)
+        if job_status_filepath.exists() and job_info["status"] == "finished":
+            job_status = job_status_filepath.read_text()
+            job_status = json.loads(job_status)
+            overall_status_ok = all((check["status"] in ("ok", "skipped") for check in job_status["checks"]))
+            job_info["overall_result"] = ["FAILED", "PASSED"][overall_status_ok]
 
-    # for each status document, retrieve the info:
-    docs = []
-    for doc_url in status_doc_urls:
-        doc_url2 = "{:s}/output/{:s}".format(settings.WPS_HOST, os.path.basename(doc_url))
-        doc = parse_status_document(doc_url2)
-
-        if not doc is None:
-            docs.append(doc)
+        job_infos.append(job_info)
 
     # sort by start_time in descending order
-    docs_sorted = sorted(docs, key=lambda d: d['start_time'], reverse=True)
+    job_infos = sorted(job_infos, key=lambda ji: ji['start_time'], reverse=True)
 
-    return JsonResponse(docs_sorted, safe=False)
+    return JsonResponse(job_infos, safe=False)
     # for server-side pagination change code to: return JsonResponse({"total": len(docs_sorted), "rows": docs_sorted})
 
 

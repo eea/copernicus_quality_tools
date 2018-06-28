@@ -32,7 +32,6 @@ $(document).ready(function() {
 
     $('#check_form').submit(function(event){
         event.preventDefault();
-        console.log('check form submit!');
         run_checks();
     });
 
@@ -46,19 +45,24 @@ $( "#select_product_type" ).change(function() {
     var optionSelected = $("option:selected", this);
     var valueSelected = this.value;
     var detail_url = "data/product/" + valueSelected + "/";
-    console.log(detail_url);
     $.getJSON(detail_url , function(obj) {
-        var checks = obj.product_info.checks
+        var checks = obj.job_status.checks
         $("#tbl_check_details > tbody").html("");
         var tbody = ''
         for (var i=0;i<checks.length;i++){
-            tbody += "<tr><td>" + checks[i].check_ident + "</td>" + "<td>" + checks[i].description + "</td>";
-            tbody += "<td>" + checks[i].required + "</td>";
-            tbody += "<td><input name=\"selected_checks[]\" type=\"checkbox\" value=\"" + checks[i].check_ident + "\" checked";
-            if (checks[i].required) {
-                tbody += " disabled";
+            tbody += "<tr>";
+            tbody += "<td>" + checks[i].check_ident + "</td>";
+            tbody += "<td>" + checks[i].description + "</td>";
+            if(checks[i].system) {
+                tbody += "<td></td>"
+            } else {
+                tbody += "<td><input name=\"selected_checks[]\" type=\"checkbox\" value=\"" + checks[i].check_ident + "\" checked";
+                if (checks[i].required) {
+                    tbody += " disabled";
+                }
+                tbody += "></td>";
             }
-            tbody += "></td></tr>";
+            tbody += "</tr>";
         }
         $("#tbl_check_details > tbody").html(tbody);
 
@@ -79,38 +83,20 @@ $( "#select_product_type" ).change(function() {
 
 function run_checks() {
 
-    // run process if form is valid
-
-    console.log("run_checks()");
-
     $('#modal-spinner').modal('show');
-
-    // original call was via HTTP GET
-    //var product_type_name = $("#select_product").val();
-    //var filepath = $("#select_file").val();
-    //var run_url = "/run_wps_execute?product_type_name=" + data.product_type_name + "&filepath=" + data.filepath;
-
-    // the wps must called from from the django run_wps_execute function because it does not support cross-site requests
-    // the following two lines show example WPS calls
-    // var wps_base = "http://192.168.2.72:5000/wps?service=WPS&version=1.0.0&request=Execute&identifier=cop_sleep";
-    // var wps_url = wps_base + "&DataInputs=delay=1.3;cycles=10;exit_ok=true;filepath=/home/bum/bac;layer_name=my_layer;product_type_name=big_product&lineage=true&status=true&storeExecuteResponse=true"
 
     var run_url = "/run_wps_execute";
 
     // retrieve the checkboxes
     var selected_checks = [];
     $ ('tbody tr').each(function() {
-        console.log($(this).find('td:first').text());
         var checkbox = $(this).find('input');
-        console.log(checkbox);
-        is_checked = checkbox.is(':checked');
-        if (is_checked) {
+        is_checked = checkbox.prop('checked');
+        is_disabled = checkbox.prop('disabled');
+        if (!is_disabled && is_checked) {
             selected_checks.push(checkbox.val());
         }
-        console.log(is_checked);
     });
-    console.log(selected_checks);
-
 
     var data = {
         "product_type_name": $("#select_product_type").val(),
@@ -124,7 +110,6 @@ function run_checks() {
         data: data,
         dataType: 'json',
         success: function(result) {
-            console.log(result);
             $('#modal-spinner').modal('hide');
 
             if (result.status=="OK") {

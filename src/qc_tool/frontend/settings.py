@@ -136,5 +136,5 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Media or user-uploaded files
 # the directory with files for checking. This must be readable both by the Frontend and by the WPS
-MEDIA_ROOT = CONFIG["incoming_dir"]
+MEDIA_ROOT = str(CONFIG["incoming_dir"])
 MEDIA_URL = '/media/'

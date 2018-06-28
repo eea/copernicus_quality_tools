@@ -18,6 +18,8 @@ services:
     volumes:
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
       - /home/jiri/wps:/mnt/wps
+      - /home/jiri/work:/mnt/work
+      - /home/jiri/qc_tool/testdata:/mnt/incoming
   qc_tool_wps:
     depends_on:
       - qc_tool_postgis
@@ -43,6 +45,8 @@ services:
     volumes:
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
       - /home/jiri/wps:/mnt/wps
+      - /home/jiri/work:/mnt/work
+      - /home/jiri/qc_tool/testdata:/mnt/incoming
   qc_tool_postgis:
     build:
       context: .

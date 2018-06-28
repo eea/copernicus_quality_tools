@@ -28,7 +28,6 @@ def run_check(filepath, params):
                 "message": "File name does not conform to the naming convention."}
     else:
         list_of_files = [str(x.name).lower() for x in Path(PurePath(filepath).parents[0]).iterdir()]
-        print(list_of_files)
         file_stem = PurePath(filename).stem
 
         # check for required files

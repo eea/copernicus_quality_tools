@@ -23,10 +23,10 @@ def get_file_or_dir_size(file_or_dir):
         return total_size
 
 
-def parse_status_document(document_url):
+def parse_status_document(document_content):
     """
     Parses the status document from the WPS
-    :param document_url: the URL of the document. This is obtained
+    :param document_content: the content of the document. This is obtained
     in the statusLocation attribute of the WPS 1.0.0 response
     :return: a status document dictionary with items filepath, product_type_name, start_time, end_time,
              percent_complete, wps_status_location, status, result, log_info
@@ -39,15 +39,13 @@ def parse_status_document(document_url):
     STATUS_STARTED = 'started'
     STATUS_SUCCEEDED = 'finished'
 
-    uid = document_url.split('/')[-1].split('.')[0]
-    doc = {'uid': uid,
+    doc = {'uid': None,
            'filepath': None,
            'product_type_name': None,
            'check_idents': None,
            'start_time': None,
            'end_time': None,
            'percent_complete': 0,
-           'wps_status_location': document_url,
            'status': 'failed',
            'result': None,
            'log_info': None,
@@ -57,8 +55,7 @@ def parse_status_document(document_url):
 
     ns = {'wps': 'http://www.opengis.net/wps/1.0.0', 'ows': 'http://www.opengis.net/ows/1.1'}
 
-    resp = requests.get(document_url)
-    tree = etree.fromstring(resp.content)
+    tree = etree.fromstring(document_content)
 
     identifier_tags = tree.xpath('//wps:Process/ows:Identifier', namespaces=ns)
     if len(identifier_tags) == 0:
@@ -148,31 +145,5 @@ def parse_status_document(document_url):
         doc['result']['unknown'] = {'status': STATUS_ERROR, 'message': doc['log_info']}
         doc['overall_result'] = 'ERROR'
         return doc
-
-    # data outputs if they exist
-    output_tags = tree.xpath('//wps:ProcessOutputs/wps:Output', namespaces=ns)
-    for output_tag in output_tags:
-        ident = output_tag.xpath('ows:Identifier', namespaces=ns)[0].text
-
-        if ident == 'result':
-            out_val = output_tag.xpath('wps:Data/wps:LiteralData', namespaces=ns)
-            if len(out_val) > 0:
-                out_text = out_val[0].text
-                try:
-                    out_dict = json.loads(out_text)
-                    doc['result'] = out_dict
-                    overall_result = 'FAILED'
-                    for key, val in out_dict.items():
-                        if 'status' in val and val['status'] == 'ok':
-                            overall_result = 'PASSED'
-                        else:
-                            overall_result = 'FAILED'
-                            break
-
-                    doc['overall_result'] = overall_result
-
-                except json.JSONDecodeError:
-                    # when the output is not in valid JSON format
-                    doc['result'] = {}
 
     return doc

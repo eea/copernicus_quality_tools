@@ -76,7 +76,7 @@ class TestR15(TestCase):
 
     def test_r15_incorrect_fail(self):
         from qc_tool.wps.raster_check.r15 import run_check
-        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
+        filepath = str(TEST_DATA_DIR.joinpath("r11_raster_correct.tif"))
         params = {"colours": {
           "0":[240, 240, 240],
           "1":[70, 158, 74],

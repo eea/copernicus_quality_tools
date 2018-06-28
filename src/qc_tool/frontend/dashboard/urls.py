@@ -15,9 +15,7 @@ urlpatterns = [
 
     path('run_wps_execute', views.run_wps_execute, name='run_wps_execute'),
     path('new', views.new_job, name='new_job'),
-    path('result/<result_uuid>/', views.get_result, name='checking_result'),
-    path('status_document/<result_uuid>/', views.get_status_document, name='checking_result'),
-
+    path('result/<job_uuid>/', views.get_result, name='checking_result'),
 ]
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
