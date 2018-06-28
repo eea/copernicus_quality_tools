@@ -5,8 +5,8 @@
 Minimum mapping unit check.
 """
 
+import subprocess
 from pathlib import Path
-from subprocess import run
 
 from osgeo import ogr
 
@@ -32,7 +32,7 @@ def run_check(filepath, params):
 
     # (1) create a new GRASS location named "location" in the job directory
     location_path = params["tmp_dir"].joinpath("location")
-    p1 = run([GRASS_VERSION,
+    p1 = subprocess.run([GRASS_VERSION,
              "-c",
              filepath,
              "-e",
@@ -42,7 +42,7 @@ def run_check(filepath, params):
 
     # (2) import the data into a GRASS mapset named PERMANENT
     mapset_path = Path(location_path, "PERMANENT")
-    p2 = run(["grass72",
+    p2 = subprocess.run(["grass72",
               str(mapset_path),
               "--exec",
               "r.in.gdal",
@@ -54,7 +54,7 @@ def run_check(filepath, params):
 
     # (3) run r.reclass.area (area is already in hectares)
     mmu_limit_ha = params["area_ha"]
-    p3 = run([GRASS_VERSION,
+    p3 = subprocess.run([GRASS_VERSION,
               str(mapset_path),
               "--exec",
               "r.reclass.area",
@@ -63,13 +63,16 @@ def run_check(filepath, params):
               "output=lessmmu_raster",
               "value={:f}".format(mmu_limit_ha),
               "mode=lesser",
-              "method=reclass"],
-             check=True)
-    if p3.returncode != 0:
+              "method=reclass"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    if "No areas of size less than or equal to" in str(p3.stdout):
+        return {"status": "ok"}
+
+    elif p3.returncode != 0:
         return {"status": "failed", "message": "GRASS GIS error in r.reclass.area"}
 
     # (4) run r.to.vect: convert clumps with mmu < mmu_limit_ha to polygon areas
-    p4 = run([GRASS_VERSION,
+    p4 = subprocess.run([GRASS_VERSION,
               str(mapset_path),
               "--exec",
               "r.to.vect",
@@ -85,7 +88,7 @@ def run_check(filepath, params):
         return {"status": "failed", "message": "GRASS GIS error in r.to.vect"}
 
     # (5) export lessmmu_areas to shapefile
-    p5 = run([GRASS_VERSION,
+    p5 = subprocess.run([GRASS_VERSION,
               str(mapset_path),
               "--exec",
               "v.out.ogr",
