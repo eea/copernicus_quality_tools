@@ -11,7 +11,6 @@ from pywps.inout.inputs import LiteralInput
 from pywps.inout.outputs import LiteralOutput
 
 from qc_tool.common import CONFIG
-from qc_tool.common import INCOMING_DIR
 from qc_tool.wps.dispatch import dispatch
 
 
@@ -102,7 +101,7 @@ class RunChecks(Process):
     def _handler(self, request, response):
         # Prepare parameters.
         filepath = Path(request.inputs["filepath"][0].data)
-        filepath = INCOMING_DIR.joinpath(filepath)
+        filepath = CONFIG["incoming_dir"].joinpath(filepath)
         product_ident = request.inputs["product_ident"][0].data
         if "optional_check_idents" in request.inputs:
             optional_check_idents = request.inputs["optional_check_idents"][0].data
