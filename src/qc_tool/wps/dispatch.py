@@ -5,6 +5,7 @@ import json
 from contextlib import ExitStack
 from datetime import datetime
 from pathlib import Path
+from shutil import copyfile
 
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
@@ -45,6 +46,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
     # Wrap the job with needful managers.
     with ExitStack() as exit_stack:
 
+        # Prepare initial job params.
         job_params = {}
         job_params["connection_manager"] = exit_stack.enter_context(create_connection_manager(job_uuid))
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
@@ -52,8 +54,15 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         job_params["tmp_dir"] = jobdir_manager.tmp_dir
         job_params["output_dir"] = jobdir_manager.output_dir
 
+        # Write initial status.json.
         status_filepath = compose_job_status_filepath(job_uuid)
         status_filepath.write_text(json.dumps(job_status))
+
+        # Copy file to be checked into input dir.
+        src_filepath = filepath
+        dst_filepath = job_params["input_dir"].joinpath(filepath.name)
+        copyfile(str(src_filepath), str(dst_filepath))
+        job_params["filepath"] = dst_filepath
 
         for check in product_definition["checks"]:
 
@@ -84,7 +93,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
                 # FIXME: currently check functions use os.path for path manipulation
                 #        while upper server stack uses pathlib.
                 #        it is encouraged to choose one or another.
-                check_result = func(str(filepath), check_params)
+                check_result = func(check_params)
 
                 # Set the check result into the job status.
                 job_status_check_idx[check["check_ident"]]["status"] = check_result["status"]

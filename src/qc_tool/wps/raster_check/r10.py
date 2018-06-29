@@ -5,28 +5,27 @@
 NoData pixels check.
 """
 
-import numpy
+
 import re
 
+import numpy
 from osgeo import gdal
-from osgeo import osr
 from osgeo import ogr
-from pathlib import Path
+from osgeo import osr
 
 from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     NoData pixels check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
 
     # get countrycode from filename
-    filename = Path(filepath).name.lower()
+    filename = params["filepath"].name.lower()
     countrycode = re.search(params["file_name_regex"], filename).group(1)
     countrycode = countrycode.lower()
 
@@ -37,7 +36,7 @@ def run_check(filepath, params):
     ma_geom = ma_ft.GetGeometryRef()
 
     # open raster data source
-    ras_ds = gdal.Open(filepath)
+    ras_ds = gdal.Open(str(params["filepath"]))
 
     # transform mapped_area geometry into raster SRS
     source_sr = ma_lyr.GetSpatialRef()

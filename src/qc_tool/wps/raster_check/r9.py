@@ -5,15 +5,16 @@
 Pixel values check.
 """
 
-import gdal
+
+from osgeo import gdal
 
 from qc_tool.wps.registry import register_check_function
 
+
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Pixel values check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
@@ -22,7 +23,7 @@ def run_check(filepath, params):
     gdal.UseExceptions()
 
     try:
-        ds_open = gdal.Open(filepath)
+        ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
             return {"status": "failed",
                     "message": "The file can not be opened."}

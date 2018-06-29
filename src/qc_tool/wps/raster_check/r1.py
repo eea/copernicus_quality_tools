@@ -5,16 +5,16 @@
 File format check.
 """
 
+
 from osgeo import gdal
-from pathlib import PurePath
 
 from qc_tool.wps.registry import register_check_function
 
+
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     File format check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
@@ -23,7 +23,7 @@ def run_check(filepath, params):
     gdal.UseExceptions()
 
     # file extension check
-    ds_extension = PurePath(filepath).suffix
+    ds_extension = params["filepath"].suffix
     if ds_extension not in params["formats"]:
         return {"status": "aborted",
                 "message": "The source file has forbidden extension: {:s}.".format(ds_extension)}
@@ -31,7 +31,7 @@ def run_check(filepath, params):
     # try to open file with ogr drivers
     if ds_extension in params["drivers"]:
         try:
-            ds_open = gdal.Open(filepath)
+            ds_open = gdal.Open(str(params["filepath"]))
             if ds_open is None:
                 return {"status": "aborted",
                         "message": "The source file can not be opened."}

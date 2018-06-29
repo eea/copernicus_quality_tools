@@ -5,36 +5,30 @@
 Naming convention check.
 """
 
-from pathlib import Path, PurePath
 
-from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import check_name
+from qc_tool.wps.registry import register_check_function
+
 
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Check if string matches pattern.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
-
-    # check file name
-    filename = PurePath(filepath).name
-    filename = filename.lower()
+    # Check file name.
+    filename = params["filepath"].name.lower()
     file_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
     if not check_name(filename, file_regex):
         return {"status": "failed",
                 "message": "File name does not conform to the naming convention."}
-    else:
-        list_of_files = [str(x.name).lower() for x in Path(PurePath(filepath).parents[0]).iterdir()]
-        file_stem = PurePath(filename).stem
 
-        # check for required files
-        for ext in params["extensions"]:
-            req_file = file_stem + ext
-            if req_file.lower() not in list_of_files:
-                print(req_file.lower())
-                return {"status": "failed",
-                        "message": "The '{:s}' file is missing.".format(req_file)}
-        return {"status": "ok"}
+    # Check for supplementary files.
+    for ext in params["extensions"]:
+        other_filepath = params["filepath"].with_suffix(ext)
+        if not other_filepath.exists():
+            return {"status": "failed",
+                        "message": "The '{:s}' file is missing.".format(other_filepath.name)}
+
+    return {"status": "ok"}

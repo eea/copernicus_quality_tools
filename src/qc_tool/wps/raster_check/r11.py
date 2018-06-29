@@ -6,7 +6,6 @@ Minimum mapping unit check.
 """
 
 import subprocess
-from pathlib import Path
 
 from osgeo import ogr
 
@@ -14,10 +13,9 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Minimum mapping unit (MMU) check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
@@ -34,23 +32,23 @@ def run_check(filepath, params):
     location_path = params["tmp_dir"].joinpath("location")
     p1 = subprocess.run([GRASS_VERSION,
              "-c",
-             filepath,
+             str(params["filepath"]),
              "-e",
              str(location_path)], check=True)
     if p1.returncode != 0:
         return {"status": "failed", "message": "GRASS GIS error: cannot create location!"}
 
     # (2) import the data into a GRASS mapset named PERMANENT
-    mapset_path = Path(location_path, "PERMANENT")
+    mapset_path = location_path.joinpath("PERMANENT")
     p2 = subprocess.run(["grass72",
               str(mapset_path),
               "--exec",
               "r.in.gdal",
-              "input={:s}".format(filepath),
+                         "input={:s}".format(str(params["filepath"])),
               "output=inpfile"],
              check=True)
     if p2.returncode != 0:
-        return {"status": "failed", "message": "GRASS GIS error: cannot import raster from {:s}".format(filepath)}
+        return {"status": "failed", "message": "GRASS GIS error: cannot import raster from {:s}".format(params["filepath"].name)}
 
     # (3) run r.reclass.area (area is already in hectares)
     mmu_limit_ha = params["area_ha"]
