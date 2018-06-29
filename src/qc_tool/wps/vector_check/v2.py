@@ -4,25 +4,25 @@
 """
 Naming convention check.
 """
+
+
 import re
 
-from pathlib import PurePath
-
-from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import check_name
+from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
+
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Check if string matches pattern.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
 
     # check file name
-    filename = PurePath(filepath).name
+    filename = params["filepath"].name
     filename = filename.lower()
     file_name_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
     conf = check_name(filename, file_name_regex)
@@ -35,7 +35,7 @@ def run_check(filepath, params):
     countrycode = re.search(cc_regex, filename).group(1)
 
     # get list of feature classes
-    layer_names = get_fc_path(filepath)
+    layer_names = get_fc_path(str(params["filepath"]))
     layer_names = [layer_name.lower() for layer_name in layer_names]
 
     # get list of feature classes matching to the prefix and regex

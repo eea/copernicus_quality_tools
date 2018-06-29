@@ -5,6 +5,7 @@
 CRS check.
 """
 
+
 from osgeo import ogr
 from osgeo import osr
 
@@ -12,10 +13,9 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     CRS check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
@@ -39,7 +39,7 @@ def run_check(filepath, params):
 
     # check CRS of all matching layers
     res = dict()
-    dsopen = ogr.Open(filepath)
+    dsopen = ogr.Open(str(params["filepath"]))
     for layername in params["layer_names"]:
         layer = dsopen.GetLayerByName(layername)
         res[layername] = check_crs(layer)

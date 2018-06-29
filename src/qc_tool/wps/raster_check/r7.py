@@ -5,15 +5,16 @@
 Bit depth check
 """
 
+
 from osgeo import gdal
 
 from qc_tool.wps.registry import register_check_function
 
+
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Bit depth / data type check.
-    :param filepath: pathname to data source
     :param params: configuration with a bitdepth parameter
     :return: status + message
     """
@@ -22,11 +23,11 @@ def run_check(filepath, params):
     expected_datatype = params["datatype"]
 
     # open the file
-    ds = gdal.Open(filepath)
+    ds = gdal.Open(str(params["filepath"]))
 
     if ds is None:
         return {"status": "aborted",
-                "message": "The raster {:s} could not be opened.".format(filepath)}
+                "message": "The raster {:s} could not be opened.".format(params["filepath"].name)}
 
     # get the number of bands
     num_bands = ds.RasterCount
@@ -44,5 +45,5 @@ def run_check(filepath, params):
         return {"status": "ok"}
     else:
         return {"status": "failed",
-                "message": "The raster data type'{:s}' does not match  the \
-                            expected data type '{:s}'".format(actual_datatype, expected_datatype)}
+                "message": "The raster data type '{:s}' does not match  the \
+                            expected data type '{:s}'.".format(actual_datatype, expected_datatype)}

@@ -5,13 +5,14 @@
 Multiparts polygons
 """
 
+
 from qc_tool.wps.registry import register_check_function
 
+
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Minimum mapping unit check..
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """

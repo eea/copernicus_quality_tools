@@ -5,22 +5,23 @@
 Attribute table structure check.
 """
 
+
 from osgeo import ogr
 
+from qc_tool.wps.helper import find_name
+from qc_tool.wps.helper import get_substring
 from qc_tool.wps.registry import register_check_function
-from qc_tool.wps.helper import find_name, get_substring
 
 
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Attribute table structure check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
     # get list of actual field names of all layers
-    ds = ogr.Open(filepath)
+    ds = ogr.Open(str(params["filepath"]))
     layer_fields = dict()
     for ln in params["layer_names"]:
         layer = ds.GetLayerByName(str(ln))

@@ -5,20 +5,22 @@
 Color table existence check
 """
 
+
 from osgeo import gdal
 
 from qc_tool.wps.registry import register_check_function
 
+
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     :return: status + message
     """
-    ds = gdal.Open(filepath)
+    ds = gdal.Open(str(params["filepath"]))
 
     if ds is None:
         return {"status": "aborted",
-                "message": "The raster {:s} could not be opened.".format(filepath)}
+                "message": "The raster {:s} could not be opened.".format(params["filepath"].name)}
 
     # get the number of bands
     num_bands = ds.RasterCount
@@ -35,6 +37,6 @@ def run_check(filepath, params):
     if ct is None:
         return {"status": "failed",
                 "message": "The raster {:s} does not have a \
-                            color table.".format(filepath)}
+                            color table.".format(params["filepath"].name)}
     else:
         return {"status": "ok"}

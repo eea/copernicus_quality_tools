@@ -5,6 +5,7 @@
 CRS check.
 """
 
+
 from osgeo import gdal
 from osgeo import osr
 
@@ -12,15 +13,14 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     CRS check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
 
-    dataset = gdal.Open(filepath)
+    dataset = gdal.Open(str(params["filepath"]))
     srs = osr.SpatialReference(dataset.GetProjection())
     if srs.IsProjected() == 0:
         return {"status": "failed",

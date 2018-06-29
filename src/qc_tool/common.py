@@ -16,9 +16,13 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
+HASH_ALGORITHM = "sha256"
+HASH_BUFFER_SIZE = 1024 ** 2
+
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
+    "v_unzip": "Unzips the source file.",
     "import2pg": "Import layers into PostGIS database.",
     "v1": "File format is allowed.",
     "v2": "File names match file naming conventions.",
@@ -34,6 +38,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v12": "(no description)",
     "v13": "There are no overlapping polygons.",
     "v14": "No neighbouring polygons with the same code.",
+    "r_unzip": "Unzips the source file.",
     "r1": "File format is allowed.",
     "r2": "File names match file naming conventions.",
     "r3": "Attribute table contains specified attributes.",
@@ -50,7 +55,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "r14": "Raster has a color table.",
     "r15": "Colors in the color table match product specification."}
 
-SYSTEM_CHECK_FUNCTIONS = ["import2pg"]
+SYSTEM_CHECK_FUNCTIONS = ["import2pg", "r_unzip", "v_unzip"]
 
 CONFIG = None
 
@@ -85,6 +90,7 @@ def prepare_empty_job_status(product_ident):
      "description: <product description>,
      "job_start_date": <>,
      "filename": <>,
+     "hash": <>,
      "job_uuid": <>,
      "checks": [{"check_ident": <full check ident>,
                  "check_description": <>,
@@ -100,6 +106,7 @@ def prepare_empty_job_status(product_ident):
               "description": product_definition["description"],
               "job_start_date": None,
               "filename": None,
+              "hash": None,
               "job_uuid": None,
               "checks": []}
     for check in product_definition["checks"]:

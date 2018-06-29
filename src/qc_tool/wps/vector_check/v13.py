@@ -7,7 +7,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     error_counts = {}
     for layer_name in params["layer_names"]:
         with closing(params["connection_manager"].get_connection().cursor()) as cursor:

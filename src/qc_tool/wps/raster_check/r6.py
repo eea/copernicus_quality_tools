@@ -5,16 +5,16 @@
 Raster origin check.
 """
 
-import gdal
-from pathlib import Path
+
+from osgeo import gdal
 
 from qc_tool.wps.registry import register_check_function
 
+
 @register_check_function(__name__)
-def run_check(filepath, params):
+def run_check(params):
     """
     Raster origin check.
-    :param filepath: pathname to data source
     :param params: configuration
     :return: status + message
     """
@@ -23,7 +23,7 @@ def run_check(filepath, params):
     gdal.UseExceptions()
 
     try:
-        ds_open = gdal.Open(filepath)
+        ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
             return {"status": "failed",
                     "message": "The file can not be opened."}
@@ -43,7 +43,7 @@ def run_check(filepath, params):
                 "message": "The upper-left X, Y coordinates are not divisible by pixel-size with no remainder."}
 
     # Pan-European layers must fit to the LEAC 1 km grid
-    filename = Path(filepath).name
+    filename = params["filepath"].name
     if "_eu_" in filename:
         if ulx % 1000 != 0 or uly % 1000 != 0:
             return {"status": "failed",

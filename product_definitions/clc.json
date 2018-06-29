@@ -2,6 +2,10 @@
   "description": "CORINE Land Cover",
   "checks": [
     {
+      "check_ident": "v_unzip",
+      "required": true
+    },
+    {
       "check_ident": "v1",
       "required": true,
       "parameters": {
