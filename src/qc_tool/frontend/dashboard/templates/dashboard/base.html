@@ -41,6 +41,11 @@
                                 {% block menu %}
                                 <li class="active"><a href="/"><span>Files</span></a></li>
                                 <li class=""><a href="/jobs"><span>Jobs</span></a></li>
+                                {% if user.is_authenticated %}
+                                <li><a href="{% url 'logout'%}?next={{request.path}}">Logout ({{ user.get_username }})</a></li>
+                                {% else %}
+                                <li><a href="{% url 'login'%}?next={{request.path}}">Login</a></li>
+                                {% endif %}
                                 {% endblock %}
                             </ul>
                         </div>

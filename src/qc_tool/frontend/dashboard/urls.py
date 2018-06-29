@@ -13,7 +13,7 @@ urlpatterns = [
     path("data/product_list/", views.get_product_list, name="product_list_json"),
 
 
-    path('files/upload', views.file_upload, name='file_upload'),
+    path('upload/', views.file_upload, name='file_upload'),
 
     path("run_wps_execute", views.run_wps_execute, name="run_wps_execute"),
     path("start_job/<filename>/<product>/", views.start_job, name="start_job"),

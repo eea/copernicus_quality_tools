@@ -7,12 +7,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />
 {% endblock css %}
 
-{% block menu %}
-<li class="active"><a href="{% url 'files' %}"><span>Files</span></a></li>
-<li class=""><a href="{% url 'jobs' %}"><span>Jobs</span></a></li>
-
-{% endblock %}
-
 {% block content %}
 
     <div class="container-fluid main" style="padding-top: 70px;">
@@ -55,7 +49,7 @@
                                 <th data-field="filename" data-sortable="true">Name</th>
                                 <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
                                 <th data-field="date_uploaded" data-sortable="true">Date Uploaded</th>
-                                <th data-field="size_GB" data-sortable="true">Size (GB)</th>
+                                <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
                                 <th data-field="product_description" data-sortable="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
                                 <th data-field="qc_status" data-sortable="true">QC Status</th>

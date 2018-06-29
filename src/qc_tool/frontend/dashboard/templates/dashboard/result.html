@@ -32,15 +32,19 @@
                     <div class="panel panel-default"><div class="panel-body">
                     <dl class="row">
                       <dt class="col-sm-2">Product Type</dt>
-                      <dd class="col-sm-10">{{product_type_name}}</dd>
+                      <dd class="col-sm-10">{{product_type_description}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">File Path</dt>
                       <dd class="col-sm-10">{{filepath}}</dd>
                     </dl>
                     <dl class="row">
-                      <dt class="col-sm-2">Date</dt>
+                      <dt class="col-sm-2">Start Date/Time</dt>
                       <dd class="col-sm-10">{{start_time}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">End Date/Time</dt>
+                      <dd class="col-sm-10">{{end_time}}</dd>
                     </dl>
                 </div></div>
 
@@ -51,7 +55,8 @@
                         <th data-field="check_ident" data-sortable="false">Check</th>
                         <th data-field="check_description" data-sortable="false">Description</th>
                         <th data-field="check_result" data-sortable="false">Status</th>
-                        <th data-field="check_message" data-sortable="false">Message</th>
+                        <th data-field="check_errors" data-sortable="false">Support Files</th>
+                        <th data-field="check_message" data-sortable="false">Comments</th>
                     </tr>
                     </thead>
                    <tbody>
@@ -61,16 +66,19 @@
                             <td class="success">{{detail.check_ident}}</td>
                             <td class="success">{{detail.description}}</td>
                             <td class="success">{{detail.status}}</td>
-                            <td class="success">{{detail.message}}</td>
+                            <td class="success"></td>
+                            <td class="success"></td>
                             {% elif detail.status == None %}
                             <td>{{detail.check_ident}}</td>
                             <td>{{detail.description}}</td>
+                            <td></td>
                             <td></td>
                             <td></td>
                             {% else %}
                             <td class="danger">{{detail.check_ident}}</td>
                             <td class="danger">{{detail.description}}</td>
                             <td class="danger">{{detail.status}}</td>
+                            <td class="danger">{{detail.errors}}</td>
                             <td class="danger">{{detail.message}}</td>
                             {% endif %}
                         </tr>

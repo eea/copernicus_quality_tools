@@ -6,6 +6,7 @@ import time
 import zipfile
 
 from datetime import datetime
+from math import ceil
 from pathlib import Path
 from requests import get as requests_get
 from requests.exceptions import RequestException
@@ -38,6 +39,7 @@ def files(request):
             'uploaded_file_url': os.path.join(settings.MEDIA_ROOT, request.GET['uploaded_filename'])
         })
 
+    # special case - after successful file upload (this will be changed)
     if request.method == 'POST' and request.FILES['myfile']:
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
@@ -71,37 +73,33 @@ def get_files_json(request):
     :param request:
     :return: list of the files in JSON format
     """
-    base_dir = settings.MEDIA_ROOT
+
+    # Files are uploaded to a subfolder with the same name as the current username
+    user_file_dir = settings.MEDIA_ROOT
     valid_filepaths = []
 
+    user_dir_path = Path(user_file_dir)
+
     # Unzipping will be moved to WPS
-    for dirpath, subdirs, files in os.walk(base_dir):
-        for filepath in files:
-            if filepath.lower().endswith('.tif') or filepath.lower().endswith('gdb.zip') or filepath.lower().endswith('tif.zip'):
-                full_path = os.path.join(dirpath, filepath)
-                valid_filepaths.append(full_path)
-        for subdir in subdirs:
-            if subdir.endswith('.gdb'):
-                full_path = os.path.join(dirpath, subdir)
-                valid_filepaths.append(full_path)
+    zip_files = [x for x in user_dir_path.iterdir() if x.is_file() and str(x).lower().endswith(".zip")]
+
 
     out_list = []
-    for filepath in valid_filepaths:
-        file_timestamp = os.path.getmtime(filepath)
-        uploaded_time = datetime.utcfromtimestamp(file_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-        size_kB = get_file_or_dir_size(filepath) >> 10 # converting bytes to MB
-        size_MB = float(size_kB) / 1000.0
-        if size_MB < 1:
-            size_MB = 1
-        else:
-            size_MB = round(size_MB)
+    for filepath in zip_files:
 
-        file_info = {'filename': os.path.basename(filepath),
-                     'filepath': filepath,
-                     'date_uploaded': uploaded_time,
-                     'size_GB': "{:.3f}".format(float(size_MB) / 1000.0),
+        # getting uploaded time or last modified time of the file
+        file_timestamp = filepath.stat().st_mtime
+        uploaded_time = datetime.utcfromtimestamp(file_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+        # print out file information and status.
+        # TODO: retrieve status from job status documents!
+        file_info = {"filename": filepath.name,
+                     "filepath": str(filepath),
+                     "date_uploaded": uploaded_time,
+                     "size_bytes": filepath.stat().st_size,
                      "product_ident": "unknown",
-                     'product_description': "Unknown",
+                     "product_description": "Unknown",
+                     "qc_status": "Not checked",
                      "submitted": "No"}
         out_list.append(file_info)
 
@@ -115,32 +113,7 @@ def file_upload(request):
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
         fs.save(myfile.name, myfile)
-
-        # if it is a zip file then unzip it
-        if myfile.name.endswith('gdb.zip'):
-            zip_file_path = os.path.join(settings.MEDIA_ROOT, os.path.basename(myfile.name))
-
-            gdb_dir_path = zip_file_path.replace('gdb.zip','gdb')
-            os.makedirs(gdb_dir_path)
-            print(gdb_dir_path)
-
-            with zipfile.ZipFile(zip_file_path, 'r') as f:
-                files = [n for n in f.namelist() if not n.endswith('/')]
-                f.extractall(path=settings.MEDIA_ROOT, members=files)
-            os.remove(zip_file_path)
-
-        elif myfile.name.endswith('.tif.zip'):
-            zip_file_path = os.path.join(settings.MEDIA_ROOT, os.path.basename(myfile.name))
-
-            raster_dir_path = zip_file_path.replace('.tif.zip','')
-            os.makedirs(raster_dir_path)
-
-            with zipfile.ZipFile(zip_file_path, 'r') as f:
-                files = [n for n in f.namelist() if not n.endswith('/')]
-                f.extractall(path=raster_dir_path, members=files)
-            os.remove(zip_file_path)
-
-        return redirect('/files/?uploaded_filename={0}'.format(myfile.name))
+        return redirect('/?uploaded_filename={0}'.format(myfile.name))
 
     return render(request, 'dashboard/file_upload.html')
 
@@ -175,11 +148,14 @@ def get_result(request, job_uuid):
     if job_status_filepath.exists():
         job_status = job_status_filepath.read_text()
         job_status = json.loads(job_status)
+        job_timestamp = job_status_filepath.stat().st_mtime
+        job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         context = {
             'product_type_name': job_status["product_ident"],
             'product_type_description': job_status["description"],
             'filepath': job_status["filename"],
             'start_time': job_status["job_start_date"],
+            'end_time': job_end_date,
             'result': {
                 'uuid': job_uuid,
                 'detail': job_status["checks"]
@@ -191,6 +167,7 @@ def get_result(request, job_uuid):
             'product_type_description': None,
             'filepath': None,
             'start_time': None,
+            'end_time': None,
             'result': {
                 'uuid': job_uuid,
                 'detail': []

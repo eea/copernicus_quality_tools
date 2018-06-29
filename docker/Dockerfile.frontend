@@ -17,9 +17,14 @@ RUN apt-get -y update \
 
 # Install qc tool, frontend application.
 RUN cd /usr/local/src \
-    && git clone https://github.com/eea/copernicus_quality_tools \
+    && git clone --single-branch -b dev https://github.com/eea/copernicus_quality_tools \
     && cd copernicus_quality_tools/src/qc_tool/frontend \
     && pip3 install -r ./requirements.txt
+
+# migrate django database tables and create a default user.
+RUN cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
+    && python3 manage.py migrate \
+    && python3 manage.py create_default_user --username guest --password guest
 
 # Run frontend application.
 CMD python3 -m qc_tool.frontend.manage runserver 0.0.0.0:${FRONTEND_PORT:-8000}

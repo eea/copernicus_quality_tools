@@ -7,9 +7,8 @@
 {% endblock %}
 
 {% block menu %}
-<li class=""><a href="{% url 'index' %}"><span>Checking Tasks</span></a></li>
-<li class=""><a href="{% url 'new_job' %}"><span>New Checking Task</span></a></li>
 <li class="active"><a href="{% url 'files' %}"><span>Files</span></a></li>
+<li class=""><a href="{% url 'jobs' %}"><span>Jobs</span></a></li>
 {% endblock %}
 
 {% block content %}
@@ -19,7 +18,6 @@
 
             <ol class="breadcrumb">
               <li><a href="/">Copernicus QC Tool</a></li>
-                <li><a href="/files/">Files</a></li>
               <li class="active"><a href="">Upload New File</a></li>
             </ol>
 
