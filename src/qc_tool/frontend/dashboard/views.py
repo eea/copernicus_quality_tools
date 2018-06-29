@@ -85,17 +85,17 @@ def get_files_json(request):
 
     out_list = []
     for filepath in zip_files:
+
+        # getting uploaded time or last modified time of the file
         file_timestamp = filepath.stat().st_mtime
         uploaded_time = datetime.utcfromtimestamp(file_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
-        size_bytes = filepath.stat().st_size
-        size_mb = size_bytes >> 20 # converting bytes to megabytes using bitwise shifting operator
-        size_mb = ceil(size_mb)
-
+        # print out file information and status.
+        # TODO: retrieve status from job status documents!
         file_info = {"filename": filepath.name,
                      "filepath": str(filepath),
                      "date_uploaded": uploaded_time,
-                     "size_gb": "{:.3f}".format(float(size_mb) / 1000.0),
+                     "size_bytes": filepath.stat().st_size,
                      "product_ident": "unknown",
                      "product_description": "Unknown",
                      "qc_status": "Not checked",
@@ -112,32 +112,7 @@ def file_upload(request):
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
         fs.save(myfile.name, myfile)
-
-        # if it is a zip file then unzip it
-        if myfile.name.endswith('gdb.zip'):
-            zip_file_path = os.path.join(settings.MEDIA_ROOT, os.path.basename(myfile.name))
-
-            gdb_dir_path = zip_file_path.replace('gdb.zip','gdb')
-            os.makedirs(gdb_dir_path)
-            print(gdb_dir_path)
-
-            with zipfile.ZipFile(zip_file_path, 'r') as f:
-                files = [n for n in f.namelist() if not n.endswith('/')]
-                f.extractall(path=settings.MEDIA_ROOT, members=files)
-            os.remove(zip_file_path)
-
-        elif myfile.name.endswith('.tif.zip'):
-            zip_file_path = os.path.join(settings.MEDIA_ROOT, os.path.basename(myfile.name))
-
-            raster_dir_path = zip_file_path.replace('.tif.zip','')
-            os.makedirs(raster_dir_path)
-
-            with zipfile.ZipFile(zip_file_path, 'r') as f:
-                files = [n for n in f.namelist() if not n.endswith('/')]
-                f.extractall(path=raster_dir_path, members=files)
-            os.remove(zip_file_path)
-
-        return redirect('/files/?uploaded_filename={0}'.format(myfile.name))
+        return redirect('/?uploaded_filename={0}'.format(myfile.name))
 
     return render(request, 'dashboard/file_upload.html')
 

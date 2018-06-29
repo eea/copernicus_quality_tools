@@ -11,6 +11,18 @@ $('#tbl-files').bootstrapTable({
     pageList: [20, 50, 100, 500],
 });
 
+function fileSizeFormatter(value, row) {
+
+    function formatBytes(bytes,decimals) {
+       if(bytes == 0) return '0 Bytes';
+       var k = 1024,
+           dm = decimals || 2,
+           sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+           i = Math.floor(Math.log(bytes) / Math.log(k));
+       return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+    return formatBytes(value, 2)
+}
 
 function actionsFormatter(value, row) {
     //return "<a class=\"btn btn-xs btn-success glyphicon glyphicon-ok\"></a>";
@@ -22,6 +34,7 @@ function actionsFormatter(value, row) {
     btn_data += " <button class=\"btn btn-sm btn-default \" disabled>Del</button>";
     btn_data += " <button class=\"btn btn-sm btn-default \" disabled>Submit to EEA</button>";
     return btn_data;
+
 
     //return "<button class=\"btn btn-sm btn-success \">QC</button>" +
     //       " <button class=\"btn btn-sm btn-default \" disabled>Del</button>" +
