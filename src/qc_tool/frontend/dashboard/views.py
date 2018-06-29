@@ -13,6 +13,7 @@ from requests.exceptions import RequestException
 from xml.etree import ElementTree
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -34,10 +35,6 @@ def files(request):
     """
     Displays the main page with uploaded files and action buttons
     """
-    if request.method == 'GET' and 'uploaded_filename' in request.GET:
-        return render(request, 'dashboard/files.html', {
-            'uploaded_file_url': os.path.join(settings.MEDIA_ROOT, request.GET['uploaded_filename'])
-        })
 
     # special case - after successful file upload (this will be changed)
     if request.method == 'POST' and request.FILES['myfile']:
@@ -45,7 +42,7 @@ def files(request):
         fs = FileSystemStorage()
         filename = fs.save(myfile.name, myfile)
         return render(request, 'dashboard/files.html', {
-            'uploaded_file_path': os.path.join(settings.MEDIA_ROOT, filename)
+            'uploaded_filename': os.path.basename(filename)
         })
 
     return render(request, 'dashboard/files.html')
@@ -75,10 +72,7 @@ def get_files_json(request):
     """
 
     # Files are uploaded to a subfolder with the same name as the current username
-    user_file_dir = settings.MEDIA_ROOT
-    valid_filepaths = []
-
-    user_dir_path = Path(user_file_dir)
+    user_dir_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
 
     # Unzipping will be moved to WPS
     zip_files = [x for x in user_dir_path.iterdir() if x.is_file() and str(x).lower().endswith(".zip")]
@@ -109,9 +103,14 @@ def get_files_json(request):
 # File upload will be moved to chunked_file_uploads
 def file_upload(request):
 
+    # file is uploaded to a directory with the same name as the current username
+    user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
+    if not user_upload_path.exists():
+        user_upload_path.mkdir(parents=True)
+
     if request.method == 'POST' and request.FILES['myfile']:
         myfile = request.FILES['myfile']
-        fs = FileSystemStorage()
+        fs = FileSystemStorage(str(user_upload_path))
         fs.save(myfile.name, myfile)
         return redirect('/?uploaded_filename={0}'.format(myfile.name))
 
