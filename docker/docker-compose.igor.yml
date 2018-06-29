@@ -10,14 +10,16 @@ services:
     ports:
       - 8000:8000
     environment:
-      - INCOMING_DIR=/mnt/incoming
-      - WPS_DIR=/mnt/wps
-      - WORK_DIR=/mnt/work
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - WPS_DIR=/mnt/qc_tool_work/wps
+      - WORK_DIR=/mnt/qc_tool_work/work
       - FRONTEND_PORT=8000
       - WPS_URL=http://qc_tool_wps:5000/wps
     volumes:
       - /mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-      - /mnt/pracovni-archiv-01/projects/cop15m/igor/wps:/mnt/wps
+      - /mnt/pracovni-archiv-01/projects/cop15m/incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/pracovni-archiv-01/projects/cop15m/igor/qc_tool_work:/mnt/qc_tool_work
+
   qc_tool_wps:
     depends_on:
       - qc_tool_postgis
@@ -26,10 +28,10 @@ services:
       dockerfile: Dockerfile.wps
     image: qc_tool_wps
     environment:
-      - BOUNDARY_DIR=/mnt/boundary
-      - INCOMING_DIR=/mnt/incoming
-      - WPS_DIR=/mnt/wps
-      - WORK_DIR=/mnt/work
+      - BOUNDARY_DIR=/mnt/qc_tool_bondary/boundary
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - WPS_DIR=/mnt/qc_tool_work/wps
+      - WORK_DIR=/mnt/qc_tool_work/work
       - WPS_PORT=5000
       - WPS_URL=http://qc_tool_wps:5000/wps
       - WPS_OUTPUT_URL=http://qc_tool_wps:5000/output
@@ -42,8 +44,10 @@ services:
       - LEAVE_JOBDIR=no
     volumes:
       - /mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-      - /mnt/pracovni-archiv-01/projects/cop15m/igor/wps:/mnt/wps
-      - /mnt/pracovni-archiv-01/projects/cop15m/incoming:/mnt/incoming
+      - /mnt/pracovni-archiv-01/projects/cop15m/boundary:/mnt/qc_tool_boundary/boundary
+      - /mnt/pracovni-archiv-01/projects/cop15m/incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/pracovni-archiv-01/projects/cop15m/igor/qc_tool_work:/mnt/qc_tool_work
+
   qc_tool_postgis:
     build:
       context: .
