@@ -18,8 +18,6 @@ class Test_fty_YYYY_020m(TestCase):
     def test_run(self):
         filepath = TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif.zip")
         job_status = dispatch(str(uuid4()), filepath, "fty_YYYY_020m", [])
-        from pprint import pprint
-        pprint(job_status)
         self.assertEqual("r1", job_status["checks"][1]["check_ident"])
         self.assertEqual("ok", job_status["checks"][1]["status"],
                          "Slovenia test file should pass check for the product fty_YYYY_020m.")

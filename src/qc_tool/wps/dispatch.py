@@ -50,7 +50,6 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         job_params = {}
         job_params["connection_manager"] = exit_stack.enter_context(create_connection_manager(job_uuid))
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
-        job_params["input_dir"] = jobdir_manager.input_dir
         job_params["tmp_dir"] = jobdir_manager.tmp_dir
         job_params["output_dir"] = jobdir_manager.output_dir
 
@@ -60,7 +59,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
 
         # Copy file to be checked into input dir.
         src_filepath = filepath
-        dst_filepath = job_params["input_dir"].joinpath(filepath.name)
+        dst_filepath = job_params["tmp_dir"].joinpath(filepath.name)
         copyfile(str(src_filepath), str(dst_filepath))
         job_params["filepath"] = dst_filepath
 

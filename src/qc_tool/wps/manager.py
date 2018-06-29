@@ -106,7 +106,6 @@ class JobdirManager():
         self.job_dir = job_dir
         self.exist_ok = exist_ok
         self.leave_dir = leave_dir
-        self.input_dir = None
         self.tmp_dir = None
         self.output_dir = None
 
@@ -119,10 +118,6 @@ class JobdirManager():
 
     def create_dirs(self):
         self.job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
-
-        input_dir = self.job_dir.joinpath("input.d")
-        input_dir.mkdir(parents=True, exist_ok=self.exist_ok)
-        self.input_dir = input_dir
 
         tmp_dir = self.job_dir.joinpath("tmp.d")
         tmp_dir.mkdir(parents=True, exist_ok=self.exist_ok)
