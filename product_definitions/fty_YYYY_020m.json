@@ -4,6 +4,10 @@
   },
   "checks": [
     {
+      "check_ident": "r_unzip",
+      "required": true
+    },
+    {
       "check_ident": "r1",
       "required": true,
       "parameters": {

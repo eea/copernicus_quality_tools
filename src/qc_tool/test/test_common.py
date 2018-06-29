@@ -16,7 +16,7 @@ class TestCommon(TestCase):
         self.assertEqual({"check_ident": "v1",
                           "parameters": {"formats": [".gdb"]},
                           "required": True},
-                         product_definition["checks"][0])
+                         product_definition["checks"][1])
 
     def test_get_product_descriptions(self):
         from qc_tool.common import get_product_descriptions
@@ -30,14 +30,14 @@ class TestCommon(TestCase):
         self.assertEqual("clc", status["product_ident"])
         self.assertEqual("CORINE Land Cover", status["description"])
         self.assertLess(4, len(status["checks"]))
-        self.assertEqual("v1", status["checks"][0]["check_ident"])
-        self.assertEqual("File format is allowed.", status["checks"][0]["description"])
-        self.assertTrue(status["checks"][0]["required"])
-        self.assertFalse(status["checks"][0]["system"])
-        self.assertIsNone(status["checks"][0]["status"])
-        self.assertIsNone(status["checks"][0]["message"])
-        self.assertEqual("change.import2pg", status["checks"][4]["check_ident"])
-        self.assertTrue(status["checks"][4]["system"])
+        self.assertEqual("v1", status["checks"][1]["check_ident"])
+        self.assertEqual("File format is allowed.", status["checks"][1]["description"])
+        self.assertTrue(status["checks"][1]["required"])
+        self.assertFalse(status["checks"][1]["system"])
+        self.assertIsNone(status["checks"][1]["status"])
+        self.assertIsNone(status["checks"][1]["message"])
+        self.assertEqual("change.import2pg", status["checks"][5]["check_ident"])
+        self.assertTrue(status["checks"][5]["system"])
 
 class TestCommonWithConfig(TestCase):
     def setUp(self):
