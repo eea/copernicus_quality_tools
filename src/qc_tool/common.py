@@ -170,10 +170,10 @@ def setup_config():
     config = {}
 
     # Parameters common to both frontend and wps.
-    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/boundary"))
+    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundary"))
     config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
-    config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_volume/wps"))
-    config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_volume/work"))
+    config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_tool_work/wps"))
+    config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_work/work"))
     config["wps_output_dir"] = config["wps_dir"].joinpath("output")
 
     # Wps server port to listen on.

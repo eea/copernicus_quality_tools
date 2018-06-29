@@ -11,14 +11,14 @@ services:
     ports:
       - 8000:8000
     environment:
-      - INCOMING_DIR=/mnt/incoming
-      - WPS_DIR=/mnt/wps
-      - WORK_DIR=/mnt/work
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - WPS_DIR=/mnt/qc_tool_work/wps
+      - WORK_DIR=/mnt/qc_tool_work/work
       - FRONTEND_PORT=8000
       - WPS_URL=http://qc_tool_wps:5000/wps
     volumes:
-      - incoming:/mnt/incoming
-      - wps:/mnt/wps
+      - qc_tool_incoming:/mnt/qc_tool_incoming
+      - qc_tool_work:/mnt/qc_tool_work
 
   qc_tool_wps:
     depends_on:
@@ -28,10 +28,10 @@ services:
       dockerfile: Dockerfile.wps
     image: qc_tool_wps
     environment:
-      - BOUNDARY_DIR=/mnt/boundary
-      - INCOMING_DIR=/mnt/incoming
-      - WPS_DIR=/mnt/wps
-      - WORK_DIR=/mnt/work
+      - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundary
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - WPS_DIR=/mnt/qc_tool_work/wps
+      - WORK_DIR=/mnt/qc_tool_work/work
       - WPS_PORT=5000
       - WPS_URL=http://qc_tool_wps:5000/wps
       - WPS_OUTPUT_URL=http://qc_tool_wps:5000/output
@@ -43,8 +43,9 @@ services:
       - JOBDIR_EXIST_OK=no
       - LEAVE_JOBDIR=no
     volumes:
-      - incoming:/mnt/incoming
-      - wps:/mnt/wps
+      - qc_tool_boundary:/mnt/qc_tool_boundary
+      - qc_tool_incoming:/mnt/qc_tool_incoming
+      - qc_tool_work:/mnt/qc_tool_work
 
   qc_tool_postgis:
     build:
@@ -53,9 +54,11 @@ services:
     image: qc_tool_postgis
 
 volumes:
-  incoming:
+  qc_tool_boundary:
     driver: local
-  wps:
+  qc_tool_incoming:
+    driver: local
+  qc_tool_work:
     driver: local
 
 networks:
