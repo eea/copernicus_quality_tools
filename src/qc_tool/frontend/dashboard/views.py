@@ -6,6 +6,7 @@ import time
 import zipfile
 
 from datetime import datetime
+from math import ceil
 from pathlib import Path
 from requests import get as requests_get
 from requests.exceptions import RequestException
@@ -71,37 +72,33 @@ def get_files_json(request):
     :param request:
     :return: list of the files in JSON format
     """
-    base_dir = settings.MEDIA_ROOT
+
+    # Files are uploaded to a subfolder with the same name as the current username
+    user_file_dir = settings.MEDIA_ROOT
     valid_filepaths = []
 
+    user_dir_path = Path(user_file_dir)
+
     # Unzipping will be moved to WPS
-    for dirpath, subdirs, files in os.walk(base_dir):
-        for filepath in files:
-            if filepath.lower().endswith('.tif') or filepath.lower().endswith('gdb.zip') or filepath.lower().endswith('tif.zip'):
-                full_path = os.path.join(dirpath, filepath)
-                valid_filepaths.append(full_path)
-        for subdir in subdirs:
-            if subdir.endswith('.gdb'):
-                full_path = os.path.join(dirpath, subdir)
-                valid_filepaths.append(full_path)
+    zip_files = [x for x in user_dir_path.iterdir() if x.is_file() and str(x).lower().endswith(".zip")]
+
 
     out_list = []
-    for filepath in valid_filepaths:
-        file_timestamp = os.path.getmtime(filepath)
+    for filepath in zip_files:
+        file_timestamp = filepath.stat().st_mtime
         uploaded_time = datetime.utcfromtimestamp(file_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-        size_kB = get_file_or_dir_size(filepath) >> 10 # converting bytes to MB
-        size_MB = float(size_kB) / 1000.0
-        if size_MB < 1:
-            size_MB = 1
-        else:
-            size_MB = round(size_MB)
 
-        file_info = {'filename': os.path.basename(filepath),
-                     'filepath': filepath,
-                     'date_uploaded': uploaded_time,
-                     'size_GB': "{:.3f}".format(float(size_MB) / 1000.0),
+        size_bytes = filepath.stat().st_size
+        size_mb = size_bytes >> 20 # converting bytes to megabytes using bitwise shifting operator
+        size_mb = ceil(size_mb)
+
+        file_info = {"filename": filepath.name,
+                     "filepath": str(filepath),
+                     "date_uploaded": uploaded_time,
+                     "size_gb": "{:.3f}".format(float(size_mb) / 1000.0),
                      "product_ident": "unknown",
-                     'product_description': "Unknown",
+                     "product_description": "Unknown",
+                     "qc_status": "Not checked",
                      "submitted": "No"}
         out_list.append(file_info)
 
