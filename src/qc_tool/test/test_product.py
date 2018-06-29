@@ -23,7 +23,7 @@ class Test_fty_YYYY_020m(TestCase):
                          "Slovenia test file should pass check for the product fty_YYYY_020m.")
 
     def test_bad_extension(self):
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
         job_status = dispatch(str(uuid4()), filepath, "fty_YYYY_020m", [])
         self.assertEqual("r1", job_status["checks"][0]["check_ident"])
         self.assertEqual("aborted", job_status["checks"][0]["status"],
@@ -37,14 +37,14 @@ class Test_clc(TestCase):
         self.status_filepath = Path("/mnt/qc_volume/work/job_testuuid/status.json")
 
     def test_malta(self):
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
         job_status = dispatch(str(uuid4()), filepath, "clc", [])
         self.assertEqual("v1", job_status["checks"][0]["check_ident"])
         self.assertEqual("ok", job_status["checks"][0]["status"],
                          "Malta should pass the checks for the product clc.status.")
 
     def test_status_json(self):
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
         job_status = dispatch(self.job_uuid, filepath, "clc", [])
         self.assertTrue(self.status_filepath.exists())
         job_status_from_file = self.status_filepath.read_text()
@@ -58,7 +58,6 @@ class Test_clc_status(TestCase):
         load_all_check_functions()
 
 
-
 class Test_update_status(TestCase):
     def setUp(self):
         load_all_check_functions()
@@ -66,7 +65,7 @@ class Test_update_status(TestCase):
     def test_run(self):
         def my_update(check_ident, percent_done):
             pass
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
+        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
         dispatch(str(uuid4()),
                  filepath,
                  "clc",
