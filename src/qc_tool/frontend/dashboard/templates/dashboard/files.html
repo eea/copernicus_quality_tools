@@ -9,7 +9,7 @@
 
 {% block menu %}
 <li class=""><a href="{% url 'index' %}"><span>Jobs</span></a></li>
-<li class=""><a href="{% url 'new_job' %}"><span>New Job</span></a></li>
+<li class=""><a href="{% url 'start_job' %}"><span>New Job</span></a></li>
 <li class="active"><a href="{% url 'files' %}"><span>Files</span></a></li>
 {% endblock %}
 
@@ -44,16 +44,24 @@
                         <div id="runs-toolbar-1">
                             <a href="{% url 'file_upload' %}" class="btn btn-success" role="button">
                                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                Add New File
+                                Upload New File
                             </a>
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
                         <table id="tbl-files" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
-                                <th data-field="filename" data-sortable="true">File Name</th>
-                                <th data-field="filepath" data-sortable="true">File Path</th>
-                                <th data-field="time" data-sortable="true">Date Added</th>
+                                <th data-field="id" data-sortable="true">ID</th>
+                                <th data-field="filename" data-sortable="true">Name</th>
+                                <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
+                                <th data-field="date_uploaded" data-sortable="true">Date Uploaded</th>
+                                <th data-field="size_GB" data-sortable="true">Size (GB)</th>
+                                <th data-field="product_description" data-sortable="true">Product</th>
+                                <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
+                                <th data-field="qc_status" data-sortable="true">QC Status</th>
+                                <th data-field="submitted" data-sortable="true">Submitted</th>
+                                <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>
+
                             </tr>
                             </thead>
                            <tbody>

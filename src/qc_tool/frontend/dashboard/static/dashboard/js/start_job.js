@@ -3,6 +3,7 @@ $(document).ready(function() {
     $("#tbl_check_details").hide();
     $("#product_type_link").hide();
 
+    // retrieve list of files (this will go away..)
     $.getJSON("data/files", function(obj) {
 
         var filepaths = obj;
@@ -16,6 +17,7 @@ $(document).ready(function() {
         document.getElementById("select_file").innerHTML = options;
     });
 
+    // retrieve list of available product types (--> need to pre-select product type)
     $.getJSON("data/product_list/", function(obj) {
 
         var prods = obj.product_list;
@@ -38,7 +40,6 @@ $(document).ready(function() {
 });
 
 
-
 // when product type is changed
 $( "#select_product_type" ).change(function() {
     //populate product type info
@@ -48,7 +49,7 @@ $( "#select_product_type" ).change(function() {
     $.getJSON(detail_url , function(obj) {
         var checks = obj.job_status.checks
         $("#tbl_check_details > tbody").html("");
-        var tbody = ''
+        var tbody = ""
         for (var i=0;i<checks.length;i++){
             tbody += "<tr>";
             tbody += "<td>" + checks[i].check_ident + "</td>";
@@ -67,7 +68,7 @@ $( "#select_product_type" ).change(function() {
         $("#tbl_check_details > tbody").html(tbody);
 
         //show table if hidden
-        if($("#tbl_check_details").is(':hidden')){
+        if($("#tbl_check_details").is(":hidden")){
             $("#tbl_check_details").show();
         }
 
@@ -78,7 +79,6 @@ $( "#select_product_type" ).change(function() {
         }
     });
 });
-
 
 
 function run_checks() {
@@ -105,29 +105,37 @@ function run_checks() {
     };
 
     $.ajax({
-        type: 'POST',
+        type: "POST",
         url: run_url,
         data: data,
-        dataType: 'json',
+        dataType: "json",
         success: function(result) {
-            $('#modal-spinner').modal('hide');
+            $("#modal-spinner").modal("hide");
 
             if (result.status=="OK") {
                 var dlg_ok = BootstrapDialog.show({
-                    title: 'Checking Task is successfully triggered',
+                    title: "QC Job is successfully triggered",
                     message: result.message,
                     buttons: [{
-                        label: 'OK',
-                        cssClass: 'btn-default',
+                        label: "OK",
+                        cssClass: "btn-default",
                         action: function(dialog) {
-                            $(location).attr('href','/');
-                            //dialog.close();
+                            // If the user click OK, then redirect to main page.
+                            $(location).attr("href","/");
                         }
                     }]
                 });
 
             } else {
-                var dlg_err = BootstrapDialog.show({title: 'Error', message: result.message, buttons: [{label: 'OK', cssClass: 'btn-default', action: function(dialog) {dialog.close();}}]});
+                var dlg_err = BootstrapDialog.show({
+                    title: "Error",
+                    message: result.message,
+                    buttons: [{
+                        label: "OK",
+                        cssClass: "btn-default",
+                        action: function(dialog) {dialog.close();}
+                    }]
+                });
             }
         }
     });

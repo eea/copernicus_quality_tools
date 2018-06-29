@@ -10,3 +10,11 @@ $('#tbl-files').bootstrapTable({
     pageSize: 20,
     pageList: [20, 50, 100, 500],
 });
+
+
+function actionsFormatter(value, row) {
+    //return "<a class=\"btn btn-xs btn-success glyphicon glyphicon-ok\"></a>";
+    return "<button class=\"btn btn-sm btn-success \">QC</button>" +
+           " <button class=\"btn btn-sm btn-default \" disabled>Del</button>" +
+           " <button class=\"btn btn-sm btn-default \" disabled>Submit to EEA</button>";
+}

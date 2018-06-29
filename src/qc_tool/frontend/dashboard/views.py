@@ -4,8 +4,10 @@ import json
 import os
 import time
 import zipfile
+
+from datetime import datetime
 from pathlib import Path
-from requests import get
+from requests import get as requests_get
 from requests.exceptions import RequestException
 from xml.etree import ElementTree
 
@@ -28,15 +30,17 @@ from qc_tool.frontend.dashboard.helpers import get_file_or_dir_size
 
 
 def index(request):
+    """
+    Displays the homepage
+    """
+    return render(request, "dashboard/homepage.html")
 
-    return render(request, 'dashboard/homepage.html', {'show_button': True})
 
-
-def new_job(request):
+def start_job(request):
     """
     Displays a page for starting a new QA job
     """
-    return render(request, 'dashboard/new_job.html')
+    return render(request, "dashboard/start_job.html")
 
 
 def get_files_json(request):
@@ -50,9 +54,10 @@ def get_files_json(request):
     base_dir = settings.MEDIA_ROOT
     valid_filepaths = []
 
+    # Unzipping will be moved to WPS
     for dirpath, subdirs, files in os.walk(base_dir):
         for filepath in files:
-            if filepath.lower().endswith('.tif') or filepath.lower().endswith('gdb.zip'):
+            if filepath.lower().endswith('.tif') or filepath.lower().endswith('gdb.zip') or filepath.lower().endswith('tif.zip'):
                 full_path = os.path.join(dirpath, filepath)
                 valid_filepaths.append(full_path)
         for subdir in subdirs:
@@ -62,12 +67,19 @@ def get_files_json(request):
 
     out_list = []
     for filepath in valid_filepaths:
-        uploaded_time = time.ctime(os.path.getmtime(filepath))
-        size_MB = get_file_or_dir_size(filepath) >> 10 # converting bytes to MB
+        file_timestamp = os.path.getmtime(filepath)
+        uploaded_time = datetime.utcfromtimestamp(file_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        size_kB = get_file_or_dir_size(filepath) >> 10 # converting bytes to MB
+        size_MB = float(size_kB) / 1000.0
+        if size_MB < 1:
+            size_MB = 1
+        else:
+            size_MB = round(size_MB)
+
         file_info = {'filename': os.path.basename(filepath),
                      'filepath': filepath,
-                     'time': uploaded_time,
-                     'size_MB': float(size_MB) / 1000.0 }
+                     'date_uploaded': uploaded_time,
+                     'size_GB': "{:.3f}".format(float(size_MB) / 1000.0) }
         out_list.append(file_info)
 
     return JsonResponse(out_list, safe=False)
@@ -90,7 +102,7 @@ def get_files(request):
 
     return render(request, 'dashboard/files.html')
 
-
+# File upload will be moved to chunked_file_uploads
 def file_upload(request):
 
     if request.method == 'POST' and request.FILES['myfile']:
@@ -230,15 +242,26 @@ def run_wps_execute(request):
             optional_check_idents = request.GET.get("optional_check_idents")
 
         # call wps execute method
-        wps_base_url = settings.WPS_URL
-        wps_base = wps_base_url + "?service=WPS&version=1.0.0&request=Execute&identifier=run_checks&storeExecuteResponse=true&status=true&lineage=true&DataInputs="
-        data_inputs = "filepath={0};product_ident={1};optional_check_idents={2}".format(filepath, product_ident, optional_check_idents)
+        wps_data_inputs = ["filepath={:s}".format(filepath),
+                           "product_ident={:s}".format(product_ident),
+                           "optional_check_idents={:s}".format(optional_check_idents)]
 
-        wps_url = wps_base + data_inputs
-        print("Sending WPS Execute request to: " + wps_url)
+        wps_params = ["service=WPS",
+                      "version=1.0.0",
+                      "request=Execute",
+                      "identifier=run_checks",
+                      "storeExecuteResponse=true",
+                      "status=true",
+                      "lineage=true",
+                      "DataInputs={:s}".format(";".join(wps_data_inputs))]
+
+        wps_url = settings.WPS_URL + "?" + "&".join(wps_params)
+
+        #wps_data_inputs = "&DataInputs=filepath={0};product_ident={1};optional_check_idents={2}".format(filepath, product_ident, optional_check_idents)
+
 
         # call the wps and receive response
-        r = get(wps_url)
+        r = requests_get(wps_url)
         tree = ElementTree.fromstring(r.text)
 
         # wait for the response
@@ -246,14 +269,13 @@ def run_wps_execute(request):
 
             # process is started
             result = {"status": "OK",
-                      "message": "Checking task has started and it is running in the background. "
-                                 "To view status of the task, go to 'Checking Tasks' menu..."}
+                      "message": "QC job has started and it is running in the background."}
             js = json.dumps(result)
             return HttpResponse(js, content_type='application/json')
         else:
 
             # process failed to start
-            error_response = {"status": "ERR", "message": "There was an error starting the process. Exception: %s" % r.text}
+            error_response = {"status": "ERR", "message": "There was an error starting the job. Exception: %s" % r.text}
             js = json.dumps(error_response)
             return HttpResponse(js, content_type='application/json')
 

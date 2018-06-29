@@ -10,7 +10,7 @@
 
 {% block menu %}
 <li class=""><a href="{% url 'index' %}"><span>Jobs</span></a></li>
-<li class="active"><a href="{% url 'new_job' %}"><span>New Job</span></a></li>
+<li class="active"><a href="{% url 'start_job' %}"><span>New Job</span></a></li>
 <li class=""><a href="{% url 'files' %}"><span>Files</span></a></li>
 {% endblock %}
 
@@ -95,5 +95,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.17.0/jquery.validate.min.js" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap3-dialog/1.35.4/js/bootstrap-dialog.min.js" type="text/javascript"></script>
     <script src="{% static 'dashboard/js/spin.min.js' %}" type="text/javascript"></script>
-    <script src="{% static 'dashboard/js/start_checking.js' %}" type="text/javascript"></script>
+    <script src="{% static 'dashboard/js/start_job.js' %}" type="text/javascript"></script>
 {% endblock js %}

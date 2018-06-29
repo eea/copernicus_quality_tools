@@ -33,6 +33,10 @@ $('#tbl-runs').bootstrapTable({
     }
 });
 
+function actionsFormatter(value, row) {
+    return "<a class=\"btn btn-xs btn-success glyphicon glyphicon-ok\"></a>";
+}
+
 function checkingDetailFormatter(value, row, index) {
     return [
             '<a class="like" href="', "result/", value, '" title="Show results">',
