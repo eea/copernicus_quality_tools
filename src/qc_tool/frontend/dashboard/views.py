@@ -39,6 +39,7 @@ def files(request):
             'uploaded_file_url': os.path.join(settings.MEDIA_ROOT, request.GET['uploaded_filename'])
         })
 
+    # special case - after successful file upload (this will be changed)
     if request.method == 'POST' and request.FILES['myfile']:
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
@@ -147,11 +148,14 @@ def get_result(request, job_uuid):
     if job_status_filepath.exists():
         job_status = job_status_filepath.read_text()
         job_status = json.loads(job_status)
+        job_timestamp = job_status_filepath.stat().st_mtime
+        job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         context = {
             'product_type_name': job_status["product_ident"],
             'product_type_description': job_status["description"],
             'filepath': job_status["filename"],
             'start_time': job_status["job_start_date"],
+            'end_time': job_end_date,
             'result': {
                 'uuid': job_uuid,
                 'detail': job_status["checks"]
@@ -163,6 +167,7 @@ def get_result(request, job_uuid):
             'product_type_description': None,
             'filepath': None,
             'start_time': None,
+            'end_time': None,
             'result': {
                 'uuid': job_uuid,
                 'detail': []
