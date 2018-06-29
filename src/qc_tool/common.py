@@ -16,6 +16,9 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
+HASH_ALGORITHM = "sha256"
+HASH_BUFFER_SIZE = 1024 ** 2
+
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
@@ -87,6 +90,7 @@ def prepare_empty_job_status(product_ident):
      "description: <product description>,
      "job_start_date": <>,
      "filename": <>,
+     "hash": <>,
      "job_uuid": <>,
      "checks": [{"check_ident": <full check ident>,
                  "check_description": <>,
@@ -102,6 +106,7 @@ def prepare_empty_job_status(product_ident):
               "description": product_definition["description"],
               "job_start_date": None,
               "filename": None,
+              "hash": None,
               "job_uuid": None,
               "checks": []}
     for check in product_definition["checks"]:

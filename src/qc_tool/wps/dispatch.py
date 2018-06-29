@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 
 
+import hashlib
 import json
 from contextlib import ExitStack
 from datetime import datetime
-from pathlib import Path
+from functools import partial
 from shutil import copyfile
 
-from qc_tool.wps.manager import create_connection_manager
-from qc_tool.wps.manager import create_jobdir_manager
-from qc_tool.wps.registry import get_check_function
-
+from qc_tool.common import HASH_ALGORITHM
+from qc_tool.common import HASH_BUFFER_SIZE
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import load_check_defaults
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
 from qc_tool.common import strip_prefix
+from qc_tool.wps.manager import create_connection_manager
+from qc_tool.wps.manager import create_jobdir_manager
+from qc_tool.wps.registry import get_check_function
 
 
 def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_status_func=None):
@@ -62,6 +64,15 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         dst_filepath = job_params["tmp_dir"].joinpath(filepath.name)
         copyfile(str(src_filepath), str(dst_filepath))
         job_params["filepath"] = dst_filepath
+
+        # Make signature.
+        h = hashlib.new(HASH_ALGORITHM)
+        with open(str(dst_filepath), "rb") as dst_file:
+            for buf in iter(partial(dst_file.read, HASH_BUFFER_SIZE), b''):
+                h.update(buf)
+        del buf
+        job_status["hash"] = h.hexdigest()
+        del h
 
         for check in product_definition["checks"]:
 
