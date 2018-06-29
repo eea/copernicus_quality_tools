@@ -3,29 +3,22 @@ $(document).ready(function() {
     $("#tbl_check_details").hide();
     $("#product_type_link").hide();
 
-    // retrieve list of files (this will go away..)
-    $.getJSON("data/files", function(obj) {
 
-        var filepaths = obj;
+    // retrieve list of available product types (product is pre-selected from url parameter)
+    $.getJSON("/data/product_list/", function(obj) {
 
-        var options = '';
-        options += '<option hidden >Select file to check ...</option>';
-        for (var i=0;i<filepaths.length;i++){
-            options += '<option value=' + filepaths[i].filepath + '>' + filepaths[i].filepath + '</option>';
-        }
-        document.getElementById("select_file").options.length = 0;
-        document.getElementById("select_file").innerHTML = options;
-    });
-
-    // retrieve list of available product types (--> need to pre-select product type)
-    $.getJSON("data/product_list/", function(obj) {
+        var selected_product_ident = document.getElementById("preselected_product").value;
 
         var prods = obj.product_list;
 
         var options = '';
         options += '<option hidden >Select product type ...</option>';
         for (var i=0;i<prods.length;i++){
-            options += '<option value=' + prods[i].name + '>' + prods[i].description + '</option>';
+            if(prods[i].name === selected_product_ident) {
+                options += '<option value=' + prods[i].name + ' selected>' + prods[i].description + '</option>';
+            } else {
+                options += '<option value=' + prods[i].name + '>' + prods[i].description + '</option>';
+            }
         }
         document.getElementById("select_product_type").options.length = 0;
         document.getElementById("select_product_type").innerHTML = options;
@@ -45,7 +38,7 @@ $( "#select_product_type" ).change(function() {
     //populate product type info
     var optionSelected = $("option:selected", this);
     var valueSelected = this.value;
-    var detail_url = "data/product/" + valueSelected + "/";
+    var detail_url = "/data/product/" + valueSelected + "/";
     $.getJSON(detail_url , function(obj) {
         var checks = obj.job_status.checks
         $("#tbl_check_details > tbody").html("");
@@ -100,7 +93,7 @@ function run_checks() {
 
     var data = {
         "product_type_name": $("#select_product_type").val(),
-        "filepath": $("#select_file").val(),
+        "filepath": $("#preselected_file").val(),
         "optional_check_idents": selected_checks.join(",")
     };
 
@@ -120,8 +113,8 @@ function run_checks() {
                         label: "OK",
                         cssClass: "btn-default",
                         action: function(dialog) {
-                            // If the user click OK, then redirect to main page.
-                            $(location).attr("href","/");
+                            // If the user click OK, then redirect to jobs page for now.
+                            $(location).attr("href","/jobs/");
                         }
                     }]
                 });

@@ -29,18 +29,38 @@ from qc_tool.frontend.dashboard.helpers import parse_status_document
 from qc_tool.frontend.dashboard.helpers import get_file_or_dir_size
 
 
-def index(request):
+def files(request):
     """
-    Displays the homepage
+    Displays the main page with uploaded files and action buttons
     """
-    return render(request, "dashboard/homepage.html")
+    if request.method == 'GET' and 'uploaded_filename' in request.GET:
+        return render(request, 'dashboard/files.html', {
+            'uploaded_file_url': os.path.join(settings.MEDIA_ROOT, request.GET['uploaded_filename'])
+        })
+
+    if request.method == 'POST' and request.FILES['myfile']:
+        myfile = request.FILES['myfile']
+        fs = FileSystemStorage()
+        filename = fs.save(myfile.name, myfile)
+        return render(request, 'dashboard/files.html', {
+            'uploaded_file_path': os.path.join(settings.MEDIA_ROOT, filename)
+        })
+
+    return render(request, 'dashboard/files.html')
 
 
-def start_job(request):
+def jobs(request):
+    """
+    Displays the page with history of jobs for a specific file
+    """
+    return render(request, "dashboard/jobs.html")
+
+
+def start_job(request, filename, product):
     """
     Displays a page for starting a new QA job
     """
-    return render(request, "dashboard/start_job.html")
+    return render(request, "dashboard/start_job.html",{"filename": filename, "product": product})
 
 
 def get_files_json(request):
@@ -79,28 +99,14 @@ def get_files_json(request):
         file_info = {'filename': os.path.basename(filepath),
                      'filepath': filepath,
                      'date_uploaded': uploaded_time,
-                     'size_GB': "{:.3f}".format(float(size_MB) / 1000.0) }
+                     'size_GB': "{:.3f}".format(float(size_MB) / 1000.0),
+                     "product_ident": "unknown",
+                     'product_description': "Unknown",
+                     "submitted": "No"}
         out_list.append(file_info)
 
     return JsonResponse(out_list, safe=False)
 
-
-def get_files(request):
-
-    if request.method == 'GET' and 'uploaded_filename' in request.GET:
-        return render(request, 'dashboard/files.html', {
-            'uploaded_file_url': os.path.join(settings.MEDIA_ROOT, request.GET['uploaded_filename'])
-        })
-
-    if request.method == 'POST' and request.FILES['myfile']:
-        myfile = request.FILES['myfile']
-        fs = FileSystemStorage()
-        filename = fs.save(myfile.name, myfile)
-        return render(request, 'dashboard/files.html', {
-            'uploaded_file_path': os.path.join(settings.MEDIA_ROOT, filename)
-        })
-
-    return render(request, 'dashboard/files.html')
 
 # File upload will be moved to chunked_file_uploads
 def file_upload(request):

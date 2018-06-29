@@ -39,7 +39,7 @@ function actionsFormatter(value, row) {
 
 function checkingDetailFormatter(value, row, index) {
     return [
-            '<a class="like" href="', "result/", value, '" title="Show results">',
+            '<a class="like" href="', "/result/", value, '" title="Show results">',
                 value,
             '</a>'].join('');
 }

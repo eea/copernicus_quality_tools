@@ -9,9 +9,8 @@
 {% endblock %}
 
 {% block menu %}
-<li class=""><a href="{% url 'index' %}"><span>Jobs</span></a></li>
-<li class="active"><a href="{% url 'start_job' %}"><span>New Job</span></a></li>
 <li class=""><a href="{% url 'files' %}"><span>Files</span></a></li>
+<li class=""><a href="{% url 'jobs' %}"><span>Jobs</span></a></li>
 {% endblock %}
 
 {% block content %}
@@ -30,7 +29,7 @@
                     <div class="panel panel-primary">
                         <div class="panel-heading">
                             <div class="panel-title">
-                                Setup new QA job
+                                Setup new QA job for product <strong>{{product}}</strong> (file: <strong>{{filename}}</strong>)
                             </div>
                         </div>
                         <div class="panel-body">
@@ -39,16 +38,14 @@
                                 <fieldset></fieldset>
 
                                 <div class="form-group">
-                                    <label for="select_file">Select File to Check</label>
-                                    <span>  - </span>
-                                    <select id="select_file" name="select_file" class="form-control" required
-                                    data-error-msg="Please select a product file.">
-                                    </select>
+                                    <label>Selected file: {{filename}}</label>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="select_product_type">Select Product Type</label>
                                     <span>  - </span>
+                                    <input id="preselected_product" type="hidden" value="{{product}}">
+                                    <input id="preselected_file" type="hidden" value="{{filename}}">
                                     <select id="select_product_type" name="select_product_type" class="form-control" required
                                     data-error-msg="Please select a product type.">
                                     </select>

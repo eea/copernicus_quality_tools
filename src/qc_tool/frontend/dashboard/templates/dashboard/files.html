@@ -8,9 +8,9 @@
 {% endblock css %}
 
 {% block menu %}
-<li class=""><a href="{% url 'index' %}"><span>Jobs</span></a></li>
-<li class=""><a href="{% url 'start_job' %}"><span>New Job</span></a></li>
 <li class="active"><a href="{% url 'files' %}"><span>Files</span></a></li>
+<li class=""><a href="{% url 'jobs' %}"><span>Jobs</span></a></li>
+
 {% endblock %}
 
 {% block content %}
@@ -19,7 +19,7 @@
         <div class="row text-left">
 
             <ol class="breadcrumb">
-              <li><a href="{% url 'index' %}">Copernicus QC Tool</a></li>
+              <li><a href="{% url 'files' %}">Copernicus QC Tool</a></li>
               <li class="active"><a href="">Files</a></li>
             </ol>
 
