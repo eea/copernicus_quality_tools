@@ -25,7 +25,8 @@ function fileSizeFormatter(value, row) {
 }
 
 function actionsFormatter(value, row) {
-    var start_job_url = '/start_job/' + row.filename + '/' + row.product_ident + '/';
+    // for example /start_job/clc/guest/clc2012_cz.zip
+    var start_job_url = '/start_job/' + row.product_ident + '/' + row.filename + '/';
     var btn_data = '<a class="btn btn-sm btn-success" role="button" href="' + start_job_url + '">QC</a>' //" class="btn btn-sm btn-success" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span>QC</a><button class="btn btn-sm btn-default" disabled>Del</button><button class="btn btn-sm btn-default" disabled>Submit to EEA</button>";
     btn_data += " <button class=\"btn btn-sm btn-default \" disabled>Del</button>";
     btn_data += " <button class=\"btn btn-sm btn-default \" disabled>Submit to EEA</button>";

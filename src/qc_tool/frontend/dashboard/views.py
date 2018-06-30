@@ -25,6 +25,7 @@ from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_all_wps_uuids
 from qc_tool.common import get_product_descriptions
+from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
 
 from qc_tool.frontend.dashboard.helpers import parse_status_document
@@ -92,6 +93,7 @@ def get_files_json(request):
                      "date_uploaded": uploaded_time,
                      "size_bytes": filepath.stat().st_size,
                      "product_ident": "unknown",
+                     "username": request.user.username,
                      "product_description": "Unknown",
                      "qc_status": "Not checked",
                      "submitted": "No"}
@@ -132,13 +134,21 @@ def get_product_list(request):
 
 def get_product_info(request, product_ident):
     """
-    returns a table of details about the product type
+    returns a table of details about the product
     :param request:
-    :param product_ident: the name of the product type for example clc_chaYY
-    :return: details about the product type including the required and optional checks
+    :param product_ident: the name of the product type for example clc
+    :return: product details with a list of checks and their type (system, required, optional)
     """
     job_status = prepare_empty_job_status(product_ident)
     return JsonResponse({'job_status': job_status})
+
+
+def get_product_config(request, product_ident):
+    """
+    shows the json product type configuration of the selected product
+    """
+    product_config = load_product_definition(product_ident)
+    return JsonResponse(product_config)
 
 
 def get_result(request, job_uuid):
@@ -208,8 +218,9 @@ def get_jobs(request):
 @csrf_exempt
 def run_wps_execute(request):
     """
-    Called from the web app - Run the process
+    Called from the UI - forwards the call to WPS and runs the process
     """
+
     try:
 
         product_ident = request.POST.get("product_type_name")
@@ -238,9 +249,6 @@ def run_wps_execute(request):
                       "DataInputs={:s}".format(";".join(wps_data_inputs))]
 
         wps_url = settings.WPS_URL + "?" + "&".join(wps_params)
-
-        #wps_data_inputs = "&DataInputs=filepath={0};product_ident={1};optional_check_idents={2}".format(filepath, product_ident, optional_check_idents)
-
 
         # call the wps and receive response
         r = requests_get(wps_url)

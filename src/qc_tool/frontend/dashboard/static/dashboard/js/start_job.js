@@ -1,44 +1,5 @@
-$(document).ready(function() {
-
-    $("#tbl_check_details").hide();
-    $("#product_type_link").hide();
-
-
-    // retrieve list of available product types (product is pre-selected from url parameter)
-    $.getJSON("/data/product_list/", function(obj) {
-
-        var selected_product_ident = document.getElementById("preselected_product").value;
-
-        var prods = obj.product_list;
-
-        var options = '';
-        options += '<option hidden >Select product type ...</option>';
-        for (var i=0;i<prods.length;i++){
-            if(prods[i].name === selected_product_ident) {
-                options += '<option value=' + prods[i].name + ' selected>' + prods[i].description + '</option>';
-            } else {
-                options += '<option value=' + prods[i].name + '>' + prods[i].description + '</option>';
-            }
-        }
-        document.getElementById("select_product_type").options.length = 0;
-        document.getElementById("select_product_type").innerHTML = options;
-    });
-
-
-    $('#check_form').submit(function(event){
-        event.preventDefault();
-        run_checks();
-    });
-
-});
-
-
-// when product type is changed
-$( "#select_product_type" ).change(function() {
-    //populate product type info
-    var optionSelected = $("option:selected", this);
-    var valueSelected = this.value;
-    var detail_url = "/data/product/" + valueSelected + "/";
+function display_product_info(product_ident) {
+    var detail_url = "/data/product/" + product_ident + "/";
     $.getJSON(detail_url , function(obj) {
         var checks = obj.job_status.checks
         $("#tbl_check_details > tbody").html("");
@@ -47,11 +8,12 @@ $( "#select_product_type" ).change(function() {
             tbody += "<tr>";
             tbody += "<td>" + checks[i].check_ident + "</td>";
             tbody += "<td>" + checks[i].description + "</td>";
-            if(checks[i].system) {
+
+            if(checks[i].system) { // System checks do not have any checkbox.
                 tbody += "<td></td>"
             } else {
-                tbody += "<td><input name=\"selected_checks[]\" type=\"checkbox\" value=\"" + checks[i].check_ident + "\" checked";
-                if (checks[i].required) {
+                tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" checked';
+                if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
                     tbody += " disabled";
                 }
                 tbody += "></td>";
@@ -66,11 +28,60 @@ $( "#select_product_type" ).change(function() {
         }
 
         //show json product type config file link if hidden
-        $("#product_type_link").attr("href", "data/product_type/" + valueSelected + "/");
+        $("#product_type_link").attr("href", "/data/product_config/" + product_ident + "/");
         if($("#product_type_link").is(':hidden')){
             $("#product_type_link").show();
         }
     });
+}
+
+
+$(document).ready(function() {
+
+    $("#tbl_check_details").hide();
+    $("#product_type_link").hide();
+
+    var selected_product_ident = document.getElementById("preselected_product").value;
+
+    // retrieve list of available product types (product is pre-selected from url parameter)
+    $.getJSON("/data/product_list/", function(obj) {
+
+        var selected_product_exists = false;
+        var prods = obj.product_list;
+
+        var options = '';
+        options += '<option hidden >Select product type ...</option>';
+        for (var i=0;i<prods.length;i++){
+            if(prods[i].name === selected_product_ident) {
+                options += '<option value=' + prods[i].name + ' selected>' + prods[i].description + '</option>';
+                selected_product_exists = true;
+            } else {
+                options += '<option value=' + prods[i].name + '>' + prods[i].description + '</option>';
+            }
+        }
+        document.getElementById("select_product_type").options.length = 0;
+        document.getElementById("select_product_type").innerHTML = options;
+
+        // display checks for pre-selected product type
+        if (selected_product_exists) {
+            display_product_info(selected_product_ident);
+        }
+    });
+
+
+    $('#check_form').submit(function(event){
+        event.preventDefault();
+        run_checks();
+    });
+
+
+    // When product type is changed in the dropdown, update product detail info.
+    $('#select_product_type').change(function() {
+        //populate product type info
+        var optionSelected = $("option:selected", this);
+        display_product_info(this.value);
+    });
+
 });
 
 
@@ -93,7 +104,7 @@ function run_checks() {
 
     var data = {
         "product_type_name": $("#select_product_type").val(),
-        "filepath": $("#preselected_file").val(),
+        "filepath": $("current_username").val() + "/" + $("#preselected_file").val(),
         "optional_check_idents": selected_checks.join(",")
     };
 
@@ -130,6 +141,18 @@ function run_checks() {
                     }]
                 });
             }
+        },
+        error: function(result) {
+            $("#modal-spinner").modal("hide");
+            var dlg_err = BootstrapDialog.show({
+                title: "Error",
+                message: "WPS server probably does not respond. Please try later.",
+                buttons: [{
+                    label: "OK",
+                    cssClass: "btn-default",
+                    action: function(dialog) {dialog.close();}
+                }]
+            });
         }
     });
 }
