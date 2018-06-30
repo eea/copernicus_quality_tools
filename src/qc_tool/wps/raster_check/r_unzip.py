@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
+import os
 from zipfile import ZipFile
 
 from qc_tool.wps.registry import register_check_function
@@ -22,10 +22,11 @@ def run_check(params):
                 "message": "Error unzipping file {:s}.".format(zip_filepath.filename)}
 
     # Find tif file.
-    tif_filepaths = [path for path in list(extract_dir.iterdir()) if path.name.lower().endswith(".tif")]
+    tif_filepaths = [path for path in list(extract_dir.glob("**/*")) if path.name.lower().endswith(".tif")]
     if len(tif_filepaths) != 1 or not tif_filepaths[0].is_file():
         return {"status": "aborted",
-                "message": "There must be exactly one .tif file in the zip file."}
+                "message": "There must be exactly one .tif file in the zip file. "
+                           "Found {:d} .tif files.".format(len(tif_filepaths))}
 
     return {"status": "ok",
             "params": {"filepath": tif_filepaths[0]}}
