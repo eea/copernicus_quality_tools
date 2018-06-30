@@ -104,9 +104,10 @@ function run_checks() {
 
     var data = {
         "product_type_name": $("#select_product_type").val(),
-        "filepath": $("current_username").val() + "/" + $("#preselected_file").val(),
+        "filepath": $("#current_username").val() + "/" + $("#preselected_file").val(),
         "optional_check_idents": selected_checks.join(",")
     };
+    console.log(data);
 
     $.ajax({
         type: "POST",

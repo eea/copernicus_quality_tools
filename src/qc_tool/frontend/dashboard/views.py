@@ -13,6 +13,7 @@ from requests.exceptions import RequestException
 from xml.etree import ElementTree
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse
@@ -29,9 +30,9 @@ from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
 
 from qc_tool.frontend.dashboard.helpers import parse_status_document
-from qc_tool.frontend.dashboard.helpers import get_file_or_dir_size
 
 
+@login_required
 def files(request):
     """
     Displays the main page with uploaded files and action buttons
