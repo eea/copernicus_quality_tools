@@ -23,6 +23,29 @@ def get_file_or_dir_size(file_or_dir):
         return total_size
 
 
+def guess_product_ident(product_filename):
+    """
+    Tries to guess the product ident from the uploaded file name
+    This should use the file_name_regex in each product's configuration
+    :param product_filename:
+    :return:
+    """
+    fn = product_filename.lower()
+
+    if fn.startswith("clc"):
+        return "clc"
+    elif fn.startswith("ua"):
+        return "ua"
+    elif fn.startswith("fty"):
+        if "_020m" in fn:
+            return "fty_YYYY_020m"
+        else:
+            return "fty_YYYY_100m"
+    else:
+        return None
+
+
+
 def parse_status_document(document_content):
     """
     Parses the status document from the WPS

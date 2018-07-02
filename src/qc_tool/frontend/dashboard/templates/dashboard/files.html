@@ -42,13 +42,13 @@
                             </a>
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
-                        <table id="tbl-files" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client">
+                        <table id="tbl-files" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
                                 <th data-field="id" data-sortable="true">ID</th>
                                 <th data-field="filename" data-sortable="true">Name</th>
                                 <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
-                                <th data-field="date_uploaded" data-sortable="true">Date Uploaded</th>
+                                <th data-field="date_uploaded" data-sortable="true" data-formatter="dateFormatter">Date Uploaded</th>
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
                                 <th data-field="product_description" data-sortable="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
@@ -75,5 +75,6 @@
 
 {% block js %}
     {{ block.super }}
+    <script src="https://momentjs.com/downloads/moment.min.js"></script>
     <script src="{% static 'dashboard/js/files.js' %}" type="text/javascript"></script>
 {% endblock js %}

@@ -29,7 +29,10 @@ from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
 
+from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import parse_status_document
+from .models import Job
+from .models import UploadedFile
 
 
 @login_required
@@ -76,29 +79,41 @@ def get_files_json(request):
     # Files are uploaded to a subfolder with the same name as the current username
     user_dir_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
 
-    # Unzipping will be moved to WPS
+    # Only show zip files
     zip_files = [x for x in user_dir_path.iterdir() if x.is_file() and str(x).lower().endswith(".zip")]
 
 
     out_list = []
-    for filepath in zip_files:
 
-        # getting uploaded time or last modified time of the file
-        file_timestamp = filepath.stat().st_mtime
-        uploaded_time = datetime.utcfromtimestamp(file_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    # product description lookup
+    product_descriptions = get_product_descriptions()
 
-        # print out file information and status.
-        # TODO: retrieve status from job status documents!
-        file_info = {"filename": filepath.name,
-                     "filepath": str(filepath),
-                     "date_uploaded": uploaded_time,
-                     "size_bytes": filepath.stat().st_size,
-                     "product_ident": "unknown",
-                     "username": request.user.username,
-                     "product_description": "Unknown",
-                     "qc_status": "Not checked",
-                     "submitted": "No"}
-        out_list.append(file_info)
+    # files from db
+    db_file_infos = UploadedFile.objects.filter(user=request.user).order_by("-date_uploaded")
+    for f in db_file_infos:
+        filepath = Path(f.filepath).joinpath(f.filename)
+        if filepath.exists() and str(filepath).lower().endswith(".zip"):
+
+            # getting uploaded time or last modified time of the file
+            #file_timestamp = filepath.stat().st_mtime
+            #uploaded_time = datetime.utcfromtimestamp(file_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+            # getting product description from lookup table
+            product_description = "Unknown"
+            if f.product_ident in product_descriptions:
+                product_description = product_descriptions[f.product_ident]
+
+            file_info = {"id": f.id,
+                         "filename": f.filename,
+                         "filepath": f.filepath,
+                         "date_uploaded": f.date_uploaded.strftime('%Y-%m-%dT%H:%M:%S.000Z'),
+                         "size_bytes": filepath.stat().st_size,
+                         "product_ident": f.product_ident,
+                         "username": request.user.username,
+                         "product_description": product_description,
+                         "qc_status": f.status,
+                         "submitted": "No"}
+            out_list.append(file_info)
 
     return JsonResponse(out_list, safe=False)
 
@@ -114,7 +129,21 @@ def file_upload(request):
     if request.method == 'POST' and request.FILES['myfile']:
         myfile = request.FILES['myfile']
         fs = FileSystemStorage(str(user_upload_path))
-        fs.save(myfile.name, myfile)
+        saved_filename = fs.save(myfile.name, myfile)
+
+        # also save file info to db
+        f = UploadedFile()
+        #f.file = myfile
+        f.filename = saved_filename
+        f.filepath = user_upload_path
+        f.product_ident = guess_product_ident(saved_filename)
+        f.status = "Not checked"
+        f.user = request.user
+        f.save()
+
+        #f.product_ident = guess_product_ident(f.file.name)
+        #f.save()
+
         return redirect('/?uploaded_filename={0}'.format(myfile.name))
 
     return render(request, 'dashboard/file_upload.html')
@@ -221,9 +250,7 @@ def run_wps_execute(request):
     """
     Called from the UI - forwards the call to WPS and runs the process
     """
-
     try:
-
         product_ident = request.POST.get("product_type_name")
         filepath = request.POST.get("filepath")
         optional_check_idents = request.POST.get("optional_check_idents")

@@ -24,6 +24,10 @@ function fileSizeFormatter(value, row) {
     return formatBytes(value, 2)
 }
 
+function dateFormatter(value, row) {
+   return moment(value).format('YYYY-MM-DD hh:mm:ss');
+}
+
 function actionsFormatter(value, row) {
     // for example /start_job/clc/guest/clc2012_cz.zip
     var start_job_url = '/start_job/' + row.product_ident + '/' + row.filename + '/';

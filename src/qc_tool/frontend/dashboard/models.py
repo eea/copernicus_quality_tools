@@ -1,11 +1,44 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+import uuid
 
 from django.db import models
 from django.utils import timezone
 
+class UploadedFile(models.Model):
+    class Meta:
+        app_label = "dashboard"
+
+    def __str__(self):
+        return "User: {:s} | File: {:s}".format(self.user.username, self.filename)
+
+    def user_directory_path(instance, filename):
+        # file will be uploaded to MEDIA_ROOT/<username>/<filename>
+        return '{0}/{1}'.format(instance.user.username, filename)
+
+    filename = models.CharField(max_length=500)
+    filepath = models.CharField(max_length=500)
+    #file = models.FileField(models.FileField(upload_to=user_directory_path))
+    product_ident = models.CharField(max_length=64, blank=True, null=True)
+    date_uploaded = models.DateTimeField(default=timezone.now)
+    date_last_checked = models.DateTimeField(null=True)
+    date_submitted = models.DateTimeField(null=True)
+    status = models.CharField(max_length=64)
+    user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
+
+class Job(models.Model):
+    class Meta:
+        app_label = "dashboard"
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product_ident = models.CharField(max_length=64, null=True)
+    start = models.DateTimeField(blank=True, null=True)
+    end = models.DateTimeField(blank=True, null=True)
+    status = models.CharField(max_length=64)
+    status_document_path = models.CharField(max_length=500)
+
 
 class FileFormat(models.Model):
+    class Meta:
+        app_label = "dashboard"
     type = models.TextField()
     extension = models.TextField()
     description = models.TextField()
@@ -15,6 +48,8 @@ class FileFormat(models.Model):
 
 
 class File(models.Model):
+    class Meta:
+        app_label = "dashboard"
     path = models.TextField(max_length=500)
     storage = models.CharField(max_length=500)
     version = models.CharField(max_length=50)
@@ -23,6 +58,8 @@ class File(models.Model):
 
 
 class Product(models.Model):
+    class Meta:
+        app_label = "dashboard"
     name = models.TextField(unique=True)
     description = models.TextField()
     file_format = models.ForeignKey(FileFormat, null=True, on_delete=models.CASCADE)
@@ -32,6 +69,8 @@ class Product(models.Model):
 
 
 class CheckingSession(models.Model):
+    class Meta:
+        app_label = "dashboard"
     """
     The CheckingSession model: this is the main model for keeping track of
     the tasks
