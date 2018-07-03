@@ -37,6 +37,12 @@ def run_check(params):
     codes = range(len(counts))
     hist = dict(zip(codes, counts))
 
+    # the raster must have a valid NoDataValue entry
+    nodata_obj = ds_band.GetNoDataValue()
+    if nodata_obj is None:
+        return {"status": "failed",
+                "message": "The Geotiff does not have a NoData value specified."}
+
     # get list of 'used' codes (with non-zero pixel count)
     nodata = int(ds_band.GetNoDataValue())
     used_codes = [i for i in hist if hist[i] != 0]
