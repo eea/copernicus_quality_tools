@@ -5,6 +5,16 @@ from datetime import datetime
 from lxml import etree
 from django.utils.dateparse import parse_datetime
 
+#from .models import Job
+#from .models import UploadedFile
+
+from qc_tool.common import compose_job_status_filepath
+from qc_tool.common import compose_wps_status_filepath
+from qc_tool.common import get_all_wps_uuids
+from qc_tool.common import get_product_descriptions
+from qc_tool.common import load_product_definition
+from qc_tool.common import prepare_empty_job_status
+
 
 def get_file_or_dir_size(file_or_dir):
     """
@@ -30,6 +40,16 @@ def guess_product_ident(product_filename):
     :param product_filename:
     :return:
     """
+    is_20m_raster = False
+    is_100m_raster = False
+    is_vector = False
+
+    if "_020m" in product_filename:
+        is_20m_raster = True
+    if "_100m" in product_filename:
+        is_100m_raster = True
+
+
     fn = product_filename.lower()
 
     if fn.startswith("clc"):
@@ -46,6 +66,38 @@ def guess_product_ident(product_filename):
 
 
 
+def update_jobs_db():
+    """
+    updates the jobs table in the db focusing on recent job runs.
+    :return:
+    """
+    job_infos = []
+    for job_uuid in get_all_wps_uuids():
+        wps_status_filepath = compose_wps_status_filepath(job_uuid)
+        wps_status = wps_status_filepath.read_text()
+        job_info = parse_status_document(wps_status)
+        job_info["uid"] = job_uuid
+
+        job_status_filepath = compose_job_status_filepath(job_uuid)
+        if job_status_filepath.exists() and job_info["status"] == "finished":
+            job_status = job_status_filepath.read_text()
+            job_status = json.loads(job_status)
+            overall_status_ok = all((check["status"] in ("ok", "skipped") for check in job_status["checks"]))
+            job_info["overall_result"] = ["FAILED", "PASSED"][overall_status_ok]
+
+        job_infos.append(job_info)
+
+    #for job_info in job_infos:
+        #try:
+            #db_job = Job.objects.get(job_uuid=job_info["uid"])
+        #except:
+            #db_job = Job()
+            #db_job.job_uuid = job_info["uid"]
+
+    # sort by start_time in descending order
+    job_infos = sorted(job_infos, key=lambda ji: ji['start_time'], reverse=True)
+
+
 def parse_status_document(document_content):
     """
     Parses the status document from the WPS
@@ -56,9 +108,8 @@ def parse_status_document(document_content):
 
     """
 
-    STATUS_ACCEPTED = 'started'
-    STATUS_ERROR = 'error'
-    STATUS_FAILED = 'failed'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_FAILED = 'error'
     STATUS_STARTED = 'started'
     STATUS_SUCCEEDED = 'finished'
 
@@ -112,8 +163,8 @@ def parse_status_document(document_content):
     status_tags = tree.xpath('//wps:Status', namespaces=ns)
     if len(status_tags) == 0:
         # this meens there is no status element --- some exception occurred during that request
-        doc['status'] = STATUS_ERROR
-        doc['overall_result'] = STATUS_ERROR
+        doc['status'] = STATUS_FAILED
+        doc['overall_result'] = STATUS_FAILED
         return doc
 
     status_tag = status_tags[0]
@@ -154,7 +205,7 @@ def parse_status_document(document_content):
 
     # wps:ProcessFailed means there was an unhandled exception (error) in the process
     elif len(error_tags) > 0:
-        doc['status'] = STATUS_ERROR
+        doc['status'] = STATUS_FAILED
         doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
         doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
 
@@ -165,7 +216,7 @@ def parse_status_document(document_content):
             for detail_tag in sub_tag:
                 doc['log_info'] = detail_tag.text
         doc['result'] = dict()
-        doc['result']['unknown'] = {'status': STATUS_ERROR, 'message': doc['log_info']}
+        doc['result']['unknown'] = {'status': STATUS_FAILED, 'message': doc['log_info']}
         doc['overall_result'] = 'ERROR'
         return doc
 

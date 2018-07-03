@@ -68,7 +68,7 @@
                             <td class="success">{{detail.status}}</td>
                             <td class="success"></td>
                             <td class="success"></td>
-                            {% elif detail.status == None %}
+                            {% elif detail.status == "skipped" or detail.status == None %}
                             <td>{{detail.check_ident}}</td>
                             <td>{{detail.description}}</td>
                             <td></td>
@@ -86,6 +86,9 @@
                    </tbody>
                 </table>
                 <br>
+
+                <a href="/data/result/{{ result.uuid }}/">Show Detailed JSON Report..</a>
+                &nbsp;&nbsp;<a href="/data/wps_status/{{ result.uuid }}/">Show XML Report..</a>
 
             </div>
 

@@ -25,14 +25,49 @@ function fileSizeFormatter(value, row) {
 }
 
 function dateFormatter(value, row) {
-   return moment(value).format('YYYY-MM-DD hh:mm:ss');
+   return moment(value).format('YYYY-MM-DD HH:mm:ss');
 }
 
 function actionsFormatter(value, row) {
     // for example /start_job/clc/guest/clc2012_cz.zip
     var start_job_url = '/start_job/' + row.product_ident + '/' + row.filename + '/';
-    var btn_data = '<a class="btn btn-sm btn-success" role="button" href="' + start_job_url + '">QC</a>' //" class="btn btn-sm btn-success" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span>QC</a><button class="btn btn-sm btn-default" disabled>Del</button><button class="btn btn-sm btn-default" disabled>Submit to EEA</button>";
+    var btn_data = '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" title="Run quality controls for this file." href="' + start_job_url + '" ' + '>QC</a>' //" class="btn btn-sm btn-success" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span>QC</a><button class="btn btn-sm btn-default" disabled>Del</button><button class="btn btn-sm btn-default" disabled>Submit to EEA</button>";
     btn_data += " <button class=\"btn btn-sm btn-default \" disabled>Del</button>";
     btn_data += " <button class=\"btn btn-sm btn-default \" disabled>Submit to EEA</button>";
     return btn_data;
 }
+
+function statusFormatter(value, row, index) {
+    var uuid = row["last_job_uuid"];
+    console.log(uuid);
+
+    // special formatting failed --> NOT OK, value --> OK
+    if (value == "failed") {
+        value = "NOT OK"
+    } else if (value == "ok") {
+        value = "OK"
+    }
+
+    if (uuid) {
+        return ['<a class="like" href="',
+                "/result/",
+                uuid,
+                '" title="Show results">',
+                value,
+                '</a>'].join('');
+    } else {
+        return 'Not checked'
+    }
+}
+
+function statusCellStyle(value, row, index) {
+
+    if (value == "failed" || value == "error" || value == "NOT OK") {
+        return { classes: "danger" }
+    }
+    return {};
+}
+
+$(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip();
+});

@@ -126,7 +126,7 @@ function run_checks() {
                         cssClass: "btn-default",
                         action: function(dialog) {
                             // If the user click OK, then redirect to jobs page for now.
-                            $(location).attr("href","/jobs/");
+                            $(location).attr("href","/");
                         }
                     }]
                 });

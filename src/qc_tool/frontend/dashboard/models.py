@@ -25,15 +25,20 @@ class UploadedFile(models.Model):
     status = models.CharField(max_length=64)
     user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
 
+
 class Job(models.Model):
     class Meta:
         app_label = "dashboard"
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    job_uuid = models.CharField(max_length=32)
     product_ident = models.CharField(max_length=64, null=True)
     start = models.DateTimeField(blank=True, null=True)
     end = models.DateTimeField(blank=True, null=True)
     status = models.CharField(max_length=64)
     status_document_path = models.CharField(max_length=500)
+    filename = models.CharField(blank=True, null=True, max_length=500)
+    file = models.ForeignKey(UploadedFile, null=True, blank=True, on_delete=models.CASCADE)
+    user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
 
 
 class FileFormat(models.Model):

@@ -48,13 +48,15 @@
                                 <th data-field="id" data-sortable="true">ID</th>
                                 <th data-field="filename" data-sortable="true">Name</th>
                                 <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
-                                <th data-field="date_uploaded" data-sortable="true" data-formatter="dateFormatter">Date Uploaded</th>
+                                <th data-field="date_uploaded" data-sortable="true" data-formatter="dateFormatter">Uploaded</th>
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
                                 <th data-field="product_description" data-sortable="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
-                                <th data-field="qc_status" data-sortable="true">QC Status</th>
-                                <th data-field="submitted" data-sortable="true">Submitted</th>
+                                <th data-field="qc_status" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
+                                <th data-field="submitted" data-sortable="true">EEA</th>
+                                <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
+                                <th data-field="last_job_time" data-visible="false" data-sortable="true">Last job time</th>
                                 <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>
 
                             </tr>
