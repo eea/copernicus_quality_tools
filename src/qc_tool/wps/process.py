@@ -105,7 +105,10 @@ class RunChecks(Process):
         product_ident = request.inputs["product_ident"][0].data
         if "optional_check_idents" in request.inputs:
             optional_check_idents = request.inputs["optional_check_idents"][0].data
-            optional_check_idents = optional_check_idents.split(",")
+            if optional_check_idents == "":
+                optional_check_idents = optional_check_idents.split(",")
+            else:
+                optional_check_idents = []
         else:
             optional_check_idents = []
 
