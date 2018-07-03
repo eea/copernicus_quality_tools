@@ -40,7 +40,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
     checks_passed_count = 0
 
     job_status = prepare_empty_job_status(product_ident)
-    job_status["job_start_date"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    job_status["job_start_date"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     job_status["filename"] = filepath.name
     job_status["job_uuid"] = job_uuid
     job_status["optional_check_idents"] = list(optional_check_idents)
