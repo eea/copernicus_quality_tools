@@ -21,26 +21,11 @@ def run_check(params):
     conn = params["connection_manager"].get_connection()
     cur = conn.cursor()
 
-    # select all db tables in the current job schema
-    job_schema = params["connection_manager"].get_dsn_schema()[1]
-    cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='{:s}'""".format(job_schema))
-    tables = cur.fetchall()
-
-    valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table or "v6_code" in table)]
-
-    if len(valid_tables) == 0:
-        res_message = "The valid codes check failed. The geodatabase does not contain any valid feature class tables."
-        return {"status": "failed", "message": res_message}
-
     res = dict()
-    for table in valid_tables:
-
-        # valid_tables wraps the tables inside tuples: unpack tuple here
-        table = table[0]
-        print("table name: {:s}".format(table))
+    for layer_name in params["layer_names"]:
 
         # create table of valid code errors
-        cur.execute("""SELECT __v8_multipartpolyg('{0}');""".format(table))
+        cur.execute("""SELECT __v8_multipartpolyg('{0}');""".format(layer_name))
         conn.commit()
         multipart_count = cur.fetchone()[0]
         print("multipart_count: {:d}".format(multipart_count))
@@ -49,13 +34,13 @@ def run_check(params):
             return {"status": "ok"}
 
         # get wrong codes ids and count. the _validcodes_error table was created by the __v6_ValidCodes function.
-        cur.execute("""SELECT {0} FROM {1}_multipartpolyg_error""".format(params["ident_colname"], table))
+        cur.execute("""SELECT {0} FROM {1}_multipartpolyg_error""".format(params["ident_colname"], layer_name))
         multipart_error_id_list = [id[0] for id in cur.fetchall()]
 
-        res[table] = {"multipart_error": [multipart_count, ",".join(multipart_error_id_list)]}
+        res[layer_name] = {"multipart_error": [multipart_count, ",".join(multipart_error_id_list)]}
 
         # drop temporary table with code errors
-        cur.execute("""DROP TABLE IF EXISTS {:s}_multipartpolyg_error;""".format(table))
+        cur.execute("""DROP TABLE IF EXISTS {:s}_multipartpolyg_error;""".format(layer_name))
         conn.commit()
 
     lmes = [res[lme]["multipart_error"][0] for lme in res]
