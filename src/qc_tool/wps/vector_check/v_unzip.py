@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params):
     zip_filepath = params["filepath"]
-    extract_dir = params["tmp_dir"].joinpath("v_unzip")
+    extract_dir = params["tmp_dir"].joinpath("v_unzip.d")
     extract_dir.mkdir()
     
     # Unzip the source zip file.

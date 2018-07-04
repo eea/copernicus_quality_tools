@@ -19,6 +19,10 @@ DB_FUNCTION_SCHEMA_NAME = "qc_function"
 HASH_ALGORITHM = "sha256"
 HASH_BUFFER_SIZE = 1024 ** 2
 
+STATUS_RUNNING_LABEL = "running"
+STATUS_SKIPPED_LABEL = "skipped"
+STATUS_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
@@ -92,6 +96,7 @@ def prepare_empty_job_status(product_ident):
      "filename": <>,
      "hash": <>,
      "job_uuid": <>,
+     "exception": <>,
      "checks": [{"check_ident": <full check ident>,
                  "check_description": <>,
                  "required": <>,
@@ -105,9 +110,11 @@ def prepare_empty_job_status(product_ident):
     status = {"product_ident": product_ident,
               "description": product_definition["description"],
               "job_start_date": None,
+              "job_finish_date": None,
               "filename": None,
               "hash": None,
               "job_uuid": None,
+              "exception": None,
               "checks": []}
     for check in product_definition["checks"]:
         short_check_ident = strip_prefix(check["check_ident"])
