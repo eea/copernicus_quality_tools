@@ -6,6 +6,7 @@ from contextlib import closing
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
 
+
 class TestV2(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
@@ -57,34 +58,35 @@ class TestV3(VectorCheckTestCase):
             print(result["message"])
         self.assertEqual("failed", result["status"])
 
-class TestImport2pg(VectorCheckTestCase):
+
+class TestVImport2pg(VectorCheckTestCase):
     valid_geodatabase = "clc2012_mt.gdb"
     def setUp(self):
         super().setUp()
         self.params.update({"filepath": TEST_DATA_DIR.joinpath(self.valid_geodatabase),
                             "layer_names": ["clc12_mt"]})
 
-    def test_import2pg_pass(self):
-        from qc_tool.wps.vector_check.import2pg import run_check
+    def test_v_import2pg_pass(self):
+        from qc_tool.wps.vector_check.v_import2pg import run_check
         result = run_check(self.params)
         self.assertEqual("ok", result["status"])
 
-    def test_import2pg_bad_file_aborted(self):
-        from qc_tool.wps.vector_check.import2pg import run_check
+    def test_v_import2pg_bad_file_aborted(self):
+        from qc_tool.wps.vector_check.v_import2pg import run_check
         self.params["filepath"] = TEST_DATA_DIR.joinpath("test_raster1.tif")
         result = run_check(self.params)
         self.assertEqual("aborted", result["status"], "Status was not 'aborted' when importing a file with bad format.")
 
-    def test_import2pg_table_created(self):
-        from qc_tool.wps.vector_check.import2pg import run_check
+    def test_v_import2pg_table_created(self):
+        from qc_tool.wps.vector_check.v_import2pg import run_check
         run_check(self.params)
 
         cur = self.params["connection_manager"].get_connection().cursor()
         cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_names"][0]))
         self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
 
-    def test_import2pg_functions_created(self):
-        from qc_tool.wps.vector_check.import2pg import run_check
+    def test_v_import2pg_functions_created(self):
+        from qc_tool.wps.vector_check.v_import2pg import run_check
         run_check(self.params)
 
         job_schema = self.params["connection_manager"].get_dsn_schema()[1]
@@ -109,7 +111,7 @@ class TestImport2pg(VectorCheckTestCase):
 class TestV8(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.import2pg import run_check as import_check
+        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_names": ["clc12_mt"]})
         import_check(self.params)
@@ -123,7 +125,7 @@ class TestV8(VectorCheckTestCase):
 class TestV11(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.import2pg import run_check as import_check
+        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_names": ["clc12_mt"],
                             "ident_colname": "id",

@@ -27,7 +27,7 @@ PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 CHECK_FUNCTION_DESCRIPTIONS = {
     "v_unzip": "Unzips the source file.",
-    "import2pg": "Import layers into PostGIS database.",
+    "v_import2pg": "Import layers into PostGIS database.",
     "v1": "File format is allowed.",
     "v2": "File names match file naming conventions.",
     "v3": "Attribute table contains specified attributes.",
@@ -59,7 +59,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "r14": "Raster has a color table.",
     "r15": "Colors in the color table match product specification."}
 
-SYSTEM_CHECK_FUNCTIONS = ["import2pg", "r_unzip", "v_unzip"]
+SYSTEM_CHECK_FUNCTIONS = ["r_unzip", "v_import2pg", "v_unzip"]
 
 CONFIG = None
 

@@ -37,7 +37,7 @@
       }
     },
     {
-      "check_ident": "change.import2pg",
+      "check_ident": "change.v_import2pg",
       "required": true
     },
     {
@@ -112,7 +112,7 @@
       }
     },
     {
-      "check_ident": "status.import2pg",
+      "check_ident": "status.v_import2pg",
       "required": true
     },
     {

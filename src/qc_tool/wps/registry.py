@@ -28,7 +28,6 @@ def get_check_function(check_ident):
 
 def load_all_check_functions():
     import qc_tool.wps.common_check.dummy
-    import qc_tool.wps.vector_check.import2pg
     import qc_tool.wps.raster_check.r_unzip
     import qc_tool.wps.raster_check.r1
     import qc_tool.wps.raster_check.r2
@@ -42,6 +41,7 @@ def load_all_check_functions():
     import qc_tool.wps.raster_check.r11
     import qc_tool.wps.raster_check.r14
     import qc_tool.wps.raster_check.r15
+    import qc_tool.wps.vector_check.v_import2pg
     import qc_tool.wps.vector_check.v_unzip
     import qc_tool.wps.vector_check.v1
     import qc_tool.wps.vector_check.v2
