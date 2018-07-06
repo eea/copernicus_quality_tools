@@ -21,38 +21,25 @@ def run_check(params):
     conn = params["connection_manager"].get_connection()
     cur = conn.cursor()
 
-    # select all db tables in the current job schema
-    job_schema = params["connection_manager"].get_dsn_schema()[1]
-    cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='{:s}'""".format(job_schema))
-    tables = cur.fetchall()
-
-    valid_tables = [table for table in tables if not ("polyline" in table or "lessmmu" in table or "v6_code" in table)]
-
-    if len(valid_tables) == 0:
-        res_message = "The valid codes check failed. The geodatabase does not contain any valid feature class tables."
-        return {"status": "failed", "message": res_message}
-
     res = dict()
-    for table in valid_tables:
-
-        table = table[0]
+    for layer_name in params["layer_names"]:
 
         # create table of valid code errors
-        cur.execute("""SELECT __V6_ValidCodes('{0}', '{1}');""".format(table, params["product_code"]))
+        cur.execute("""SELECT __V6_ValidCodes('{0}', '{1}');""".format(layer_name, params["product_code"]))
         conn.commit()
 
         # get wrong codes ids and count. the _validcodes_error table was created by the __v6_ValidCodes function.
-        cur.execute("""SELECT {0} FROM {1}_validcodes_error""".format(params["ident_colname"], table))
+        cur.execute("""SELECT {0} FROM {1}_validcodes_error""".format(params["ident_colname"], layer_name))
         validcodes_error_ids = ', '.join([id[0] for id in cur.fetchall()])
         validcodes_error_count = cur.rowcount
 
         if validcodes_error_count > 0:
-            res[table] = {"validcodes_error": [validcodes_error_count, validcodes_error_ids]}
+            res[layer_name] = {"validcodes_error": [validcodes_error_count, validcodes_error_ids]}
         else:
-            res[table] = {"validcodes_error": [0]}
+            res[layer_name] = {"validcodes_error": [0]}
 
         # drop temporary table with code errors
-        cur.execute("""DROP TABLE IF EXISTS {:s}_validcodes_error;""".format(table))
+        cur.execute("""DROP TABLE IF EXISTS {:s}_validcodes_error;""".format(layer_name))
         conn.commit()
 
     lmes = [res[lme]["validcodes_error"][0] for lme in res]

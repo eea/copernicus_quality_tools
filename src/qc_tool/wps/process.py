@@ -103,14 +103,11 @@ class RunChecks(Process):
         filepath = Path(request.inputs["filepath"][0].data)
         filepath = CONFIG["incoming_dir"].joinpath(filepath)
         product_ident = request.inputs["product_ident"][0].data
+        optional_check_idents = []
         if "optional_check_idents" in request.inputs:
-            optional_check_idents = request.inputs["optional_check_idents"][0].data
-            if optional_check_idents == "":
-                optional_check_idents = []
-            else:
-                optional_check_idents = optional_check_idents.split(",")
-        else:
-            optional_check_idents = []
+            optional_check_idents_data = request.inputs["optional_check_idents"][0].data
+            if optional_check_idents_data != "":
+                optional_check_idents = optional_check_idents_data.split(",")
 
         # Call dispatch.
         def update_wps_status(check_ident, percent_done):

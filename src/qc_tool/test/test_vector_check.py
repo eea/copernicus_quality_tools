@@ -9,8 +9,8 @@ from qc_tool.test.helper import VectorCheckTestCase
 class TestV2(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        self.filepath = str(TEST_DATA_DIR.joinpath("clc2012_mt.gdb"))
-        self.params.update({"country_codes": "(MT)",
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
+                            "country_codes": "(MT)",
                             "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
                             "layer_prefix": "^{countrycode:s}/clc",
                             "layer_regex": "^{countrycode:s}/clc[0-9]{{2}}_{countrycode:s}$",
@@ -19,20 +19,20 @@ class TestV2(VectorCheckTestCase):
 
     def test_v2_clc_ok(self):
         from qc_tool.wps.vector_check.v2 import run_check
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("ok", result["status"])
         self.assertIn("layer_names", result["params"])
 
     def test_v2_prefix_fail(self):
         self.params["layer_prefix"] = "^{countrycode:s}/cha"
         from qc_tool.wps.vector_check.v2 import run_check
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("aborted", result["status"])
 
     def test_v2_count_fail(self):
         self.params["layer_count"] = 1
         from qc_tool.wps.vector_check.v2 import run_check
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("aborted", result["status"])
 
 
@@ -40,19 +40,19 @@ class TestV3(VectorCheckTestCase):
     valid_geodatabase = "clc2012_mt.gdb"
     def setUp(self):
         super().setUp()
-        self.filepath = str(TEST_DATA_DIR.joinpath(self.valid_geodatabase))
-        self.params["layer_names"] = ["clc12_mt"]
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath(self.valid_geodatabase),
+                            "layer_names": ["clc12_mt"]})
 
     def test_v3_Malta_clc_ok(self):
         from qc_tool.wps.vector_check.v3 import run_check
         self.params["fields"] = ["^ID$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$"]
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("ok", result["status"])
 
     def test_v3_missing_fields(self):
         from qc_tool.wps.vector_check.v3 import run_check
         self.params["fields"] = ["^ID2$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$", "^EXTRA_FIELD$"]
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         if "message" in result:
             print(result["message"])
         self.assertEqual("failed", result["status"])
@@ -61,23 +61,23 @@ class TestImport2pg(VectorCheckTestCase):
     valid_geodatabase = "clc2012_mt.gdb"
     def setUp(self):
         super().setUp()
-        self.filepath = str(TEST_DATA_DIR.joinpath(self.valid_geodatabase))
-        self.params["layer_names"] = ["clc12_mt"]
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath(self.valid_geodatabase),
+                            "layer_names": ["clc12_mt"]})
 
     def test_import2pg_pass(self):
         from qc_tool.wps.vector_check.import2pg import run_check
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("ok", result["status"])
 
     def test_import2pg_bad_file_aborted(self):
         from qc_tool.wps.vector_check.import2pg import run_check
-        self.filepath = str(TEST_DATA_DIR.joinpath("test_raster1.tif"))
-        result = run_check(self.filepath, self.params)
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("test_raster1.tif")
+        result = run_check(self.params)
         self.assertEqual("aborted", result["status"], "Status was not 'aborted' when importing a file with bad format.")
 
     def test_import2pg_table_created(self):
         from qc_tool.wps.vector_check.import2pg import run_check
-        run_check(self.filepath, self.params)
+        run_check(self.params)
 
         cur = self.params["connection_manager"].get_connection().cursor()
         cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_names"][0]))
@@ -85,7 +85,7 @@ class TestImport2pg(VectorCheckTestCase):
 
     def test_import2pg_functions_created(self):
         from qc_tool.wps.vector_check.import2pg import run_check
-        run_check(self.filepath, self.params)
+        run_check(self.params)
 
         job_schema = self.params["connection_manager"].get_dsn_schema()[1]
         expected_function_names = ["__v11_mmu_status",
@@ -110,13 +110,13 @@ class TestV8(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.import2pg import run_check as import_check
-        self.filepath = str(TEST_DATA_DIR.joinpath("clc2012_mt.gdb"))
-        self.params["layer_names"] =  ["clc12_mt"]
-        import_check(self.filepath, self.params)
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
+                            "layer_names": ["clc12_mt"]})
+        import_check(self.params)
 
     def test_v8_Malta(self):
         from qc_tool.wps.vector_check.v8 import run_check
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("ok", result["status"], "Check result should be ok for Malta.")
 
 
@@ -124,21 +124,22 @@ class TestV11(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.import2pg import run_check as import_check
-        self.filepath = str(TEST_DATA_DIR.joinpath("clc2012_mt.gdb"))
-        self.params.update({"layer_names": ["clc12_mt"],
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
+                            "layer_names": ["clc12_mt"],
+                            "ident_colname": "id",
                             "area_ha": 25,
                             "border_exception": True})
-        import_check(self.filepath, self.params)
+        import_check(self.params)
 
     def test_v11_small_mmu_should_pass(self):
         from qc_tool.wps.vector_check.v11 import run_check
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("ok", result["status"], "Check result should be ok for MMU=25ha.")
 
     def test_v11_big_mmu_should_fail(self):
         from qc_tool.wps.vector_check.v11 import run_check
         self.params["area_ha"] = 250
-        result = run_check(self.filepath, self.params)
+        result = run_check(self.params)
         self.assertEqual("failed", result["status"], "Check result should be 'failed' for MMU=250ha.")
 
     def test_v11_border_table(self):
@@ -147,7 +148,7 @@ class TestV11(VectorCheckTestCase):
         :return:
         """
         from qc_tool.wps.vector_check.v11 import run_check
-        run_check(self.filepath, self.params)
+        run_check(self.params)
 
         table_name = "{:s}_polyline_border".format(self.params["layer_names"][0])
         dsn, job_schema_name =  self.params["connection_manager"].get_dsn_schema()
@@ -158,16 +159,6 @@ class TestV11(VectorCheckTestCase):
         table_schema = row[0]
         self.assertNotEqual("public", table_schema, "polyline_border table should not be in public schema.")
         self.assertEqual(job_schema_name, table_schema, "polyline_border table is in {:s} schema instead of {:s} schema.".format(table_schema, job_schema_name))
-
-
-class TestV11_DataNotImported(VectorCheckTestCase):
-    def test_missing_table_should_cause_fail(self):
-        from qc_tool.wps.vector_check.v11 import run_check
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb")
-        self.params.update({"area_ha": 25,
-                            "border_exception": True})
-        result = run_check(filepath, self.params)
-        self.assertEqual("failed", result["status"], "check result should be FAILED when table is not imported.")
 
 
 class TestV13(VectorCheckTestCase):
@@ -188,7 +179,7 @@ class TestV13(VectorCheckTestCase):
                                                       " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
         cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                       " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        result = run_check(None, self.params)
+        result = run_check(self.params)
         self.assertEqual("ok", result["status"])
 
     def test_overlapping(self):
@@ -199,6 +190,6 @@ class TestV13(VectorCheckTestCase):
         cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                       " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
                                                       " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
-        result = run_check(None, self.params)
+        result = run_check(self.params)
         self.assertEqual("failed", result["status"])
         self.assertEqual("Layers with overlapping pairs: test_layer_1:1, test_layer_2:3.", result["message"])
