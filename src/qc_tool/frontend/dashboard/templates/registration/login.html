@@ -6,6 +6,19 @@
 
 {% block content %}
 
+
+<div class="container-fluid main" style="padding-top: 70px;">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="{% url 'files' %}">Copernicus QC Tool</a></li>
+              <li class="active">Login</li>
+            </ol>
+
+            <div class="main">
+
+
+
 <div class="container">
       <div class="row">
         <div class="col-md-4"></div>
@@ -25,7 +38,7 @@
     <p>Your account doesn't have access to this page. To proceed,
     please login with an account that has access.</p>
     {% else %}
-    <p>Please login to see this page.</p>
+    <p>Please login to enter the QC tool.</p>
     {% endif %}
 {% endif %}
 
@@ -48,12 +61,17 @@
 </form>
 
 {# Assumes you setup the password_reset view in your URLconf #}
-<p><a href="{% url 'password_reset' %}">Lost password?</a></p>
+<!--<p><a href="{% url 'password_reset' %}">Lost password?</a></p>-->
 
 
             </div>
         </div>
       </div>
 </div>
+
+
+
+            </div></div></div>
+
 
 {% endblock %}

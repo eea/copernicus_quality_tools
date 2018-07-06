@@ -1,13 +1,16 @@
 # from django.conf.urls import url
 from django.urls import path
 from django.urls import re_path
-from dashboard import views
+from qc_tool.frontend.dashboard import views
 
 urlpatterns = [
-    path("", views.files, name="files"),
-    path("jobs/", views.jobs, name="jobs"),
 
-    re_path("data/jobs", views.get_jobs, name="jobs_json"),
+    path("", views.files, name="files"),
+
+    path("jobs/<filename>/", views.jobs, name="jobs"),
+
+    path("data/jobs/<filename>/", views.get_jobs, name="jobs_json"),
+
     re_path("data/files", views.get_files_json, name="files_json"),
     path("data/product/<product_ident>/", views.get_product_info, name="product_info_json"),
     path("data/product_config/<product_ident>/", views.get_product_config, name="product_config_json"),
@@ -27,3 +30,5 @@ urlpatterns = [
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 urlpatterns += staticfiles_urlpatterns()
+
+views.startup()

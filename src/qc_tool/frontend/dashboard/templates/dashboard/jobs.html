@@ -3,14 +3,9 @@
 
 {% block css %}
 {{ block.super }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
 {% endblock css %}
-
-{% block menu %}
-<li><a href="{% url 'files' %}"><span>Files</span></a></li>
-<li class="active"><a href="{% url 'jobs' %}"><span>Jobs</span></a></li>
-{% endblock %}
 
 {% block content %}
 
@@ -19,13 +14,13 @@
 
             <ol class="breadcrumb">
               <li><a href="{% url 'files' %}">Copernicus QC Tool</a></li>
-              <li class="active"><a href="{% url 'jobs' %}">Jobs</a></li>
+              <!-- <li class="active"><a href="jobs">Jobs</a></li> -->
             </ol>
 
             <div class="main">
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">My Jobs</a></li>
+                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">File hash log</a></li>
                     <!--
                     <li role="presentation"><a id="tab_templates" href="#servers" aria-controls="messages" role="tab" data-toggle="tab">New Check Job</a></li>
                     -->
@@ -35,20 +30,16 @@
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="recent">
                         <div id="runs-toolbar-1">
-                            <a href="{% url 'files' %}" class="btn btn-success" role="button">
-                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                New QA Job
-                            </a>
+                            File hash log for file: <strong><span id="job_filename">{{ filename }}</span></strong>
                             <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
-                        <table id="tbl-runs" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client">
+                        <table id="tbl-jobs" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
-                                <th data-field="uid" data-sortable="true" data-formatter="checkingDetailFormatter">Job ID</th>
-                                <th data-field="filepath" data-sortable="true">File Path</th>
-                                <th data-field="product_type_name" data-sortable="true">Product Type</th>
-                                <th data-field="start_time" data-sortable="true">Start</th>
-                                <th data-field="end_time" data-sortable="true">End</th>
+                                <th data-field="job_uuid" data-sortable="true" data-formatter="jobUuidFormatter">Job ID</th>
+                                <th data-field="all_checks_selected" data-sortable="true" data-formatter="qcListFormatter">Quality check list</th>
+                                <th data-field="start" data-sortable="true" data-formatter="dateFormatter">Start</th>
+                                <th data-field="end" data-sortable="true" data-formatter="dateFormatter">End</th>
                                 <th data-field="status" data-sortable="false">Status</th>
                                 <th data-field="percent_complete" data-sortable="true">Percent</th>
                                 <th data-field="overall_result" data-sortable="true">Result</th>
@@ -76,5 +67,6 @@
 
 {% block js %}
     {{ block.super }}
-    <script src="{% static 'dashboard/js/jobs.js' %}" type="text/javascript"></script>
+    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
+    <script src="{% static 'dashboard/js/jobs.js' %}"></script>
 {% endblock js %}

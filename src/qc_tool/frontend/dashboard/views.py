@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import json
 import os
 import time
+import threading
 import uuid
 import zipfile
 
@@ -35,9 +37,12 @@ from qc_tool.common import prepare_empty_job_status
 
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import parse_status_document
-from .models import Job
-from .models import UploadedFile
+from qc_tool.frontend.dashboard.models import Job
+from qc_tool.frontend.dashboard.models import UploadedFile
 
+
+logger = logging.getLogger(__name__)
+timer_is_running = False
 
 @login_required
 def files(request):
@@ -50,6 +55,15 @@ def files(request):
         myfile = request.FILES['myfile']
         fs = FileSystemStorage()
         filename = fs.save(myfile.name, myfile)
+
+        f = UploadedFile(
+            filename=Path(filename).name,
+            filepath=str(Path(filename)),
+            status="Not checked",
+            user=request.user,
+        )
+        f.save()
+
         return render(request, 'dashboard/files.html', {
             'uploaded_filename': os.path.basename(filename)
         })
@@ -57,11 +71,11 @@ def files(request):
     return render(request, 'dashboard/files.html')
 
 
-def jobs(request):
+def jobs(request, filename):
     """
     Displays the page with history of jobs for a specific file
     """
-    return render(request, "dashboard/jobs.html")
+    return render(request, "dashboard/jobs.html", {"filename": filename})
 
 
 def start_job(request, filename, product):
@@ -80,36 +94,20 @@ def get_files_json(request):
     :return: list of the files in JSON format
     """
 
-    # Files are uploaded to a subfolder with the same name as the current username
-    user_dir_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
-
-    # Only show zip files
-    zip_files = [x for x in user_dir_path.iterdir() if x.is_file() and str(x).lower().endswith(".zip")]
-
-
-    out_list = []
-
-    # product description lookup
-    product_descriptions = get_product_descriptions()
-
-    # jobs from db for the user/file
-    # this should be done in a background worker.
-    db_jobs = Job.objects.filter(user=request.user, status="started") | Job.objects.filter(user=request.user, status="accepted")
-    for db_job in db_jobs:
-        save_job_info(db_job.job_uuid, request.user, None, None)
-
-    # files from db
-    sql = """SELECT f.id, f.filepath, f.filename,  f.date_uploaded, j.end as last_job_time, j.job_uuid as last_job_uuid, j.status, j.product_ident 
-    FROM (dashboard_uploadedfile As f INNER JOIN dashboard_job As j ON f.id = j.file_id) 
-    INNER JOIN (SELECT max(end) As lasttime, file_id FROM dashboard_job WHERE user_id={0} GROUP BY file_id) As mj 
-    ON mj.lasttime = j.end AND mj.file_id = f.id 
+    # retrieve file metadata and related jobs from the frontend database
+    sql = """SELECT f.id, f.filepath, f.filename,  f.date_uploaded, 
+    j.end as last_job_time, j.job_uuid as last_job_uuid, j.status, j.product_ident 
+    FROM (dashboard_uploadedfile As f INNER JOIN dashboard_job As j ON f.filename = j.filename) 
+    INNER JOIN (SELECT max(end) As lasttime, filename FROM dashboard_job WHERE user_id={0} GROUP BY filename) As mj 
+    ON mj.lasttime = j.end AND mj.filename = f.filename 
     UNION
-    SELECT id, filepath, filename, date_uploaded, NULL AS last_job_time, NULL AS last_job_uuid, NULL AS status, product_ident FROM dashboard_uploadedfile
-    WHERE user_id={0} AND id NOT IN (SELECT file_id FROM dashboard_job WHERE user_id={0})
+    SELECT id, filepath, filename, date_uploaded, 
+    NULL AS last_job_time, NULL AS last_job_uuid, NULL AS status, product_ident 
+    FROM dashboard_uploadedfile
+    WHERE user_id={0} AND filename NOT IN (SELECT filename FROM dashboard_job WHERE user_id={0})
     """.format(request.user.id)
+    logger.debug(sql)
 
-
-    db_file_infos = []
     with connection.cursor() as cur:
         cur.execute(sql)
         columns = [col[0] for col in cur.description]
@@ -117,28 +115,19 @@ def get_files_json(request):
             dict(zip(columns, row))
             for row in cur.fetchall()
         ]
-        #return JsonResponse(db_file_infos, safe=False)
 
-
-    #db_file_infos = UploadedFile.objects.filter(user=request.user).order_by("-date_uploaded")
     db_valid_files = [f for f in db_file_infos if Path(f["filepath"]).joinpath(f["filename"]).exists()
                       and f["filename"].endswith("zip")]
-    #return JsonResponse(db_valid_files, safe=False)
+
+    matching_files = []
     for f in db_valid_files:
         filepath = Path(f["filepath"]).joinpath(f["filename"])
 
         # getting product description from lookup table
         product_description = "Unknown"
+        product_descriptions = get_product_descriptions()
         if f["product_ident"] in product_descriptions:
             product_description = product_descriptions[f["product_ident"]]
-
-        #if f.status == "Not checked" or f.status == "accepted" or f.status == "started":
-        #    file_jobs = Job.objects.filter(user=request.user, file=f).order_by("start")
-        #    for file_job in file_jobs:
-        #        f.product_ident = file_job.product_ident
-        #        f.status = file_job.status
-        #        f.save()
-
 
         file_info = {"id": f["id"],
                      "filename": f["filename"],
@@ -151,10 +140,11 @@ def get_files_json(request):
                      "last_job_uuid": f["last_job_uuid"],
                      "last_job_time": f["last_job_time"],
                      "qc_status": f["status"],
+                     "percent": None,
                      "submitted": "No"}
-        out_list.append(file_info)
+        matching_files.append(file_info)
 
-    return JsonResponse(out_list, safe=False)
+    return JsonResponse(matching_files, safe=False)
 
 
 # File upload will be moved to chunked_file_uploads
@@ -274,7 +264,6 @@ def get_result(request, job_uuid):
                 context["result"]["detail"][error_check_index]["status"] = "error"
                 context["result"]["detail"][error_check_index]["message"] = wps_info["log_info"]
 
-
     else:
         context = {
             'product_type_name': None,
@@ -291,33 +280,57 @@ def get_result(request, job_uuid):
     return render(request, 'dashboard/result.html', context)
 
 
-def get_jobs(request):
+def get_jobs(request, filename):
     """
     Returns the list of all QA jobs (both running and completed) in JSON format
     :param request:
-    :return:
+    :param filename: filename the name of the uploaded file (same as file hash)
     """
+    sql = """
+    SELECT j.*, f.filename AS file_filename from dashboard_job j
+    INNER JOIN dashboard_uploadedfile f
+    ON j.filename = f.filename
+    WHERE file_filename = "{:s}"
+    AND f.user_id = {:d}
+    ORDER BY end DESC
+    """.format(filename, request.user.id)
+    logger.debug(sql)
+
     job_infos = []
-    for job_uuid in get_all_wps_uuids():
-        wps_status_filepath = compose_wps_status_filepath(job_uuid)
-        wps_status = wps_status_filepath.read_text()
-        job_info = parse_status_document(wps_status)
-        job_info["uid"] = job_uuid
+    with connection.cursor() as cur:
+        cur.execute(sql)
+        columns = [col[0] for col in cur.description]
+        job_infos = [
+            dict(zip(columns, row))
+            for row in cur.fetchall()
+        ]
 
-        job_status_filepath = compose_job_status_filepath(job_uuid)
-        if job_status_filepath.exists() and job_info["status"] == "finished":
-            job_status = job_status_filepath.read_text()
-            job_status = json.loads(job_status)
-            overall_status_ok = all((check["status"] in ("ok", "skipped") for check in job_status["checks"]))
-            job_info["overall_result"] = ["FAILED", "PASSED"][overall_status_ok]
+        # optional check idents: did the user intend to run a full set of checks for the product?
+        for job_info in job_infos:
+            product_ident = job_info["product_ident"]
+            product_def = load_product_definition(product_ident)
+            all_checks = product_def["checks"]
+            available_optional_checks = [check for check in all_checks if check["required"] == False]
 
-        job_infos.append(job_info)
+            selected_optional_checks = available_optional_checks
+            job_status_filepath = compose_job_status_filepath(job_info["job_uuid"])
+            if job_status_filepath.exists():
+                job_status = job_status_filepath.read_text()
+                job_status = json.loads(job_status)
+                if "optional_check_idents" in job_status:
+                    selected_optional_checks = job_status["optional_check_idents"]
 
-    # sort by start_time in descending order
-    job_infos = sorted(job_infos, key=lambda ji: ji['start_time'], reverse=True)
+            if len(selected_optional_checks) == len(available_optional_checks):
+                job_info["all_checks_selected"] = True
+            else:
+                job_info["all_checks_selected"] = False
 
-    return JsonResponse(job_infos, safe=False)
-    # for server-side pagination change code to: return JsonResponse({"total": len(docs_sorted), "rows": docs_sorted})
+            job_info["start"] = str(job_info["start"]).replace(" ", "T") + "Z"
+            if job_info["end"] is not None:
+                job_info["end"] = str(job_info["end"]).replace(" ", "T") + "Z"
+
+        return JsonResponse(job_infos, safe=False)
+
 
 
 
@@ -336,67 +349,68 @@ def save_job_info(job_uuid, user, product_ident, filename):
     wps_status_filepath = compose_wps_status_filepath(job_uuid)
     wps_status = wps_status_filepath.read_text()
     wps_doc = parse_status_document(wps_status)
-    job.user = user
+
+    if user is not None:
+        job.user = user
 
     # (1) Exception in job status document - run has stopped
     if wps_doc["status"] == "error":
         job.status = "error"
 
+    job.end = wps_doc["end_time"]
+
     job_status_filepath = compose_job_status_filepath(job_uuid)
+    job_info = {"status": None}
     if job_status_filepath.exists():
         job_info = job_status_filepath.read_text()
         job_info = json.loads(job_info)
 
-        job_filename = job_info["filename"]
-        job.filename = job_filename
+        #job_filename = job_info["filename"]
+        #job.filename = job_filename
 
         job.start = job_info["job_start_date"]
-        job.end = datetime.fromtimestamp(job_status_filepath.stat().st_mtime)
 
         job.product_ident = job_info["product_ident"]
 
-        # retrieve the file info from the database
-        file_info = UploadedFile.objects.filter(filename=job.filename, user=user).order_by("-date_uploaded").first()
-        job.file = file_info
-
         if wps_doc["status"] == "error":
             job.status = "error"
+        elif wps_doc["status"] == "accepted":
+            job.status = "accepted"
         elif wps_doc["status"] == "started":
             job.status = "started"
-        elif job.status != "error" and any((check["status"] is None for check in job_info["checks"])):
-            job.status = "partial"
-            # special case partial: find out if any of the checks is failed
-            for check in job_info["checks"]:
-                if check["status"] is not None:
-                    if check["status"] in ("failed", "aborted"):
-                        job.status = "failed"
-        elif all((check["status"] == "ok" for check in job_info["checks"])):
-            job.status = "ok"
         elif any((check["status"] in ("failed", "aborted") for check in job_info["checks"])):
             job.status = "failed"
-        elif any((check["status"] == "skipped" for check in job_info["checks"])):
+        elif any(("status" not in check for check in job_info["checks"])):
             job.status = "partial"
+        elif any((check["status"] is None or check["status"] == "skipped" for check in job_info["checks"])):
+            job.status = "partial"
+        elif all((check["status"] == "ok" for check in job_info["checks"])):
+            job.status = "ok"
         else:
             job.status = "unknown"
 
     else:
         job.start = datetime.fromtimestamp(wps_status_filepath.stat().st_mtime)
-        job.end = datetime.fromtimestamp(wps_status_filepath.stat().st_mtime)
         job.status = wps_doc["status"]
 
 
-        if filename is not None:
-            job_filepath = Path(settings.MEDIA_ROOT, user.username, filename)
-            job.filename = job_filepath.name
+        #if filename is not None:
+        #    job_filepath = Path(settings.MEDIA_ROOT, user.username, filename)
+        #    job.filename = job_filepath.name
         if product_ident is not None:
             job.product_ident = product_ident
 
-        # retrieve the file info from the database
-        file_info = UploadedFile.objects.filter(filename=job.filename, user=user).order_by("-date_uploaded").first()
-        job.file = file_info
+    # retrieve the file info from the database
+
+    file_info = UploadedFile.objects.get(filename=filename, user=user)
+    job.file = file_info
 
     #save job info to database
     job.save()
+
+    #return JsonResponse()
+    job_info["status"] = job.status
+    return {"job_status": job.status, "wps_doc_status": wps_doc["status"], "job_info": job_info}
 
 
 @csrf_exempt
@@ -405,7 +419,8 @@ def save_job(request):
     filename = request.GET.get("filename")
     product_ident = request.GET.get("product_ident")
     job_uuid = request.GET.get("job_uuid")
-    save_job_info(job_uuid, user, product_ident, filename)
+    out = save_job_info(job_uuid, user, product_ident, filename)
+    return JsonResponse(out, safe=False)
 
 
 
@@ -419,17 +434,10 @@ def run_wps_execute(request):
         filepath = request.POST.get("filepath")
         optional_check_idents = request.POST.get("optional_check_idents")
 
-        if optional_check_idents is None:
-            optional_check_idents = ""
-
-        #if not product_ident:
-        #    product_ident = request.GET.get("product_type_name")
-        #if not filepath:
-        #    filepath = request.GET.get("filepath")
-        #if not optional_check_idents:
-        #    optional_check_idents = request.GET.get("optional_check_idents")
-
-        # call wps execute method
+        #if optional_check_idents == "" or optional_check_idents is None:
+        #    wps_data_inputs = ["filepath={:s}".format(filepath),
+        #                       "product_ident={:s}".format(product_ident)]
+        #else:
         wps_data_inputs = ["filepath={:s}".format(filepath),
                            "product_ident={:s}".format(product_ident),
                            "optional_check_idents={:s}".format(optional_check_idents)]
@@ -459,12 +467,16 @@ def run_wps_execute(request):
 
             # save job info to database cache
             filename = filepath.split("/")[-1]
+
+            logger.debug("run_wps_execute save_job_info started!")
             save_job_info(job_uuid, request.user, product_ident, filename)
+            logger.debug("run_wps_execute save_job_info finished!")
 
             # process is started
             result = {"status": "OK",
                       "message": "QC job has started and it is running in the background. <br><i>job uuid: " + job_uuid + "</i>",
-                      "job_uuid": job_uuid}
+                      "job_uuid": job_uuid,
+                      "wps_url": wps_url}
             js = json.dumps(result)
             return HttpResponse(js, content_type='application/json')
         else:
@@ -478,3 +490,31 @@ def run_wps_execute(request):
         error_response = {"status": "ERR", "message": "WPS server probably does not respond. Error details: %s" % (e)}
         js = json.dumps(error_response)
         return HttpResponse(js, content_type='application/json')
+
+
+def check_processes():
+    # runs the timer every 10 seconds
+    time.sleep(10)
+    counter = 0
+    while True:
+        time.sleep(10)
+        counter += 1
+
+        db_jobs = Job.objects.filter(status__in=["accepted", "started"])
+        n_updates = len(list(db_jobs))
+        for db_job in db_jobs:
+            save_job_info(db_job.job_uuid, None, None, None)
+
+        msg = "Running the timer: {:d} .....{:d} jobs updated.".format(counter, n_updates)
+        logger.info(msg)
+
+
+def startup():
+
+    print ("STARTUP !!!!!")
+
+    t = threading.Thread(target=check_processes)
+    t.setDaemon(True)
+    t.start()
+
+

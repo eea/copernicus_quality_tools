@@ -9,7 +9,7 @@
         <meta name="description" content=""/>
         <meta name="robots" content="{% block robots %}index, follow{% endblock robots %}"/>
         <meta name="keywords" content="eea, copernicus, qc, tool, gis, wps, quality"/>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
         <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}dashboard/css/main.css">
         <link rel="stylesheet" href="{{ STATIC_URL }}dashboard/css/bootstrap-dialog.min.css" type="text/css" />
         <link rel="shortcut icon" type="image/png" href="{{ STATIC_URL }}favicon.ico"/>
@@ -39,8 +39,6 @@
                         <div class="navbar-collapse collapse">
                             <ul class="nav navbar-nav navbar-right">
                                 {% block menu %}
-                                <li class="active"><a href="/"><span>Files</span></a></li>
-                                <li class=""><a href="/jobs"><span>Jobs</span></a></li>
                                 {% if user.is_authenticated %}
                                 <li><a href="{% url 'logout'%}?next={{request.path}}">Logout ({{ user.get_username }})</a></li>
                                 {% else %}
@@ -55,13 +53,13 @@
                 {% block content %}{% endblock content %}
 
                 {% block js %}
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" type="text/javascript"></script>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
-
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.js" type="text/javascript"></script>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.min.js" type="text/javascript"></script>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/TableExport/5.0.0/js/tableexport.min.js"></script>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.4.0/bootbox.min.js" type="text/javascript"></script>
+                    <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootstrap-table.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootstrap-table-export.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/tableexport.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootbox.min.js' %}"></script>
                 {% endblock js %}
             </div>
             <br>
