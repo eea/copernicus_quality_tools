@@ -106,6 +106,13 @@ def get_files_json(request):
     FROM dashboard_uploadedfile
     WHERE user_id={0} AND filename NOT IN (SELECT filename FROM dashboard_job WHERE user_id={0})
     """.format(request.user.id)
+
+    sql = """
+        SELECT id, filepath, filename, date_uploaded, 
+        NULL AS last_job_time, NULL AS last_job_uuid, NULL AS status, product_ident 
+        FROM dashboard_uploadedfile WHERE user_id={0}
+        """.format(request.user.id)
+
     logger.debug(sql)
 
     with connection.cursor() as cur:
