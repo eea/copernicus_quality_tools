@@ -6,6 +6,8 @@ Unique identifier check.
 """
 
 
+from qc_tool.common import FAILED_ITEMS_LIMIT
+from qc_tool.wps.helper import shorten_failed_items_message
 from qc_tool.wps.registry import register_check_function
 
 
@@ -16,42 +18,25 @@ def run_check(params):
     :param params: configuration
     :return: status + message
     """
-
-    # connection to PG
-    conn = params["connection_manager"].get_connection()
-    cur = conn.cursor()
-
-    res = dict()
+    cursor = params["connection_manager"].get_connection().cursor()
+    failed_messages = {}
     for layer_name in params["layer_names"]:
-
         # create table of valid code errors
-        cur.execute("""SELECT __V5_UniqueID('{0}','{1}');""".format(layer_name, params["product_code"]))
-        conn.commit()
+        cursor.execute("""SELECT __V5_UniqueID('{0}','{1}');""".format(layer_name, params["product_code"]))
 
         # get wrong UniqueID ids and count. the _uniqueid_error table was created by the __V5_UniqueID function.
-        cur.execute("""SELECT {0} FROM {1}_uniqueid_error""".format(params["ident_colname"], layer_name))
-        uniqueid_error_ids = ', '.join([id[0] for id in cur.fetchall()])
-        uniqueid_error_count = cur.rowcount
-
-        if uniqueid_error_count > 0:
-            res[layer_name] = {"uniqueid_error": [uniqueid_error_count, uniqueid_error_ids]}
-        else:
-            res[layer_name] = {"uniqueid_error": [0]}
+        cursor.execute("""SELECT {0} FROM {1}_uniqueid_error;""".format(params["ident_colname"], layer_name))
+        failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
+        failed_message = shorten_failed_items_message(failed_ids, cursor.rowcount)
+        if failed_message is not None:
+            failed_messages[layer_name] = failed_message
 
         # drop temporary table with code errors
-        cur.execute("""DROP TABLE IF EXISTS {:s}_uniqueid_error;""".format(layer_name))
-        conn.commit()
+        cursor.execute("""DROP TABLE {:s}_uniqueid_error;""".format(layer_name))
 
-        lmes = [res[lme]["uniqueid_error"][0] for lme in res]
-        if len(list(set(lmes))) == 0 or lmes[0] == 0:
+    if len(failed_messages) == 0:
             return {"status": "ok"}
-        else:
-            layer_results = ', '.join(
-                "layer {!s}: {:d} polygons with wrong code ({!s})".format(key,
-                                                                          val["uniqueid_error"][0],
-                                                                          val["uniqueid_error"][1]) for (key, val) in
-                res.items()
-                if val["uniqueid_error"][0] != 0)
-            res_message = "The unique identifier check failed ({:s}).".format(layer_results)
-            return {"status": "failed",
-                    "message": res_message}
+    else:
+        message = "\n".join("The layer {:s} has non-unique identifiers: {:s}.".format(layer_name, failed_message)
+                            for layer_name in sort(failed_messages.keys()))
+        return {"status": "failed", "message": message}

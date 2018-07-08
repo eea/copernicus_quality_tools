@@ -55,3 +55,11 @@ def get_substring(name, template):
         return str(rs.group(0))
     else:
         return None
+
+def shorten_failed_items_message(items, count):
+    if len(items) == 0:
+        return None
+    message = ", ".join(items)
+    if count > len(items):
+        message += " and {:d} others".format(count - len(items))
+    return message

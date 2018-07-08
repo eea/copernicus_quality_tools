@@ -108,6 +108,22 @@ class TestVImport2pg(VectorCheckTestCase):
                           "a function {:s} should be created in schema {:s}".format(expected_name, job_schema))
 
 
+class TestV5(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
+        self.params.update({"product_code": "cha",
+                            "filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
+                            "layer_names": ["clc12_mt"],
+                            "ident_colname": "id"})
+        import_check(self.params)
+
+    def test(self):
+        from qc_tool.wps.vector_check.v5 import run_check
+        result = run_check(self.params)
+        self.assertEqual("ok", result["status"])
+
+
 class TestV8(VectorCheckTestCase):
     def setUp(self):
         super().setUp()

@@ -25,6 +25,8 @@ STATUS_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
+FAILED_ITEMS_LIMIT = 10
+
 CHECK_FUNCTION_DESCRIPTIONS = {
     "v_unzip_gdb": "Unzips the file containing gdb directory structure.",
     "v_unzip_shp": "Unzips the file containing shp file.",
