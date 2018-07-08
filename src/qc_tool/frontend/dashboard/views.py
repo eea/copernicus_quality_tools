@@ -162,8 +162,8 @@ def file_upload(request):
     if not user_upload_path.exists():
         user_upload_path.mkdir(parents=True)
 
-    if request.method == 'POST' and request.FILES['myfile']:
-        myfile = request.FILES['myfile']
+    if request.method == 'POST' and request.FILES['file']:
+        myfile = request.FILES['file']
         fs = FileSystemStorage(str(user_upload_path))
         saved_filename = fs.save(myfile.name, myfile)
 
@@ -180,7 +180,11 @@ def file_upload(request):
         #f.product_ident = guess_product_ident(f.file.name)
         #f.save()
 
-        return redirect('/?uploaded_filename={0}'.format(myfile.name))
+        #return redirect('/?uploaded_filename={0}'.format(myfile.name))
+
+        # try-catch should be here ...
+        data = {'is_valid': True, 'name': saved_filename, 'url': saved_filename}
+        return JsonResponse(data)
 
     return render(request, 'dashboard/file_upload.html')
 

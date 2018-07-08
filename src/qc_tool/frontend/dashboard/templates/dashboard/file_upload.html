@@ -26,7 +26,51 @@
                             </div>
                         </div>
                         <div class="panel-body">
-                            <h4>Select File to Upload (.gdb.zip or .tif)</h4>
+                            <h4>Select a ZIP File to Upload</h4>
+
+                            {# 1. BUTTON TO TRIGGER THE ACTION #}
+                            <button type="button" class="btn btn-primary js-upload-files">
+                              <span class="glyphicon glyphicon-cloud-upload"></span> Upload .zip file ...
+                            </button>
+
+                            {# 2. FILE INPUT TO BE USED BY THE PLUG-IN #}
+                            <input id="fileupload" type="file" name="file" multiple
+                                   style="display: none;"
+                                   data-url="{% url 'file_upload' %}"
+                                   data-form-data='{"csrfmiddlewaretoken": "{{ csrf_token }}"}'>
+
+                            <div class="modal fade" id="modal-progress" data-backdrop="static" data-keyboard="false">
+                              <div class="modal-dialog">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <h4 class="modal-title">Uploading...</h4>
+                                  </div>
+                                  <div class="modal-body">
+                                    <div class="progress">
+                                      <div class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {# 3. TABLE TO DISPLAY THE UPLOADED PHOTOS #}
+                            <table id="files_table" class="table table-bordered">
+                              <thead>
+                                <tr>
+                                  <th id="files_heading"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {% for uploaded_file in uploaded_files %}
+                                  <tr>
+                                    <td><a href="{{ uploaded_file.filename }}">{{ uploaded_file.filename }}</a></td>
+                                  </tr>
+                                {% endfor %}
+                              </tbody>
+                            </table>
+
+                            <!--
                             <form id = "file_form" method="post" enctype="multipart/form-data">
                                 <fieldset></fieldset>
                                 <div class="form-group">
@@ -34,6 +78,7 @@
                                         <input id="my-file" name="myfile" type="file" class="file" data-preview-file-type="text">
                                 </div>
                             </form>
+                            -->
                         </div>
                     </div>
                 </div>
@@ -54,6 +99,13 @@
 
 {% block js %}
     {{ block.super }}
-    <script src="{% static 'dashboard/js/jquery.validate.min.js' %}"></script>
-    <script src="{% static 'dashboard/js/fileinput.min.js' %}"></script>
+
+    {# JQUERY FILE UPLOAD SCRIPTS #}
+   <script src="{% static 'dashboard/js/jquery-file-upload/vendor/jquery.ui.widget.js' %}"></script>
+   <script src="{% static 'dashboard/js/jquery-file-upload/jquery.iframe-transport.js' %}"></script>
+   <script src="{% static 'dashboard/js/jquery-file-upload/jquery.fileupload.js' %}"></script>
+
+    {# UPLOADING PAGE SCRIPTS #}
+    <script src="{% static 'dashboard/js/file_upload.js' %}"></script>
+
 {% endblock js %}
