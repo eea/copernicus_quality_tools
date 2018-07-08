@@ -125,6 +125,7 @@ function run_checks() {
                         label: "OK",
                         cssClass: "btn-default",
                         action: function(dialog) {
+                            console.log(result);
                             // If the user click OK, then redirect to jobs page for now.
                             $(location).attr("href","/");
                         }

@@ -3,12 +3,7 @@
 
 {% block css %}
   {{ block.super }}
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.4.5/css/fileinput.min.css" media="all" rel="stylesheet" type="text/css" />
-{% endblock %}
-
-{% block menu %}
-<li class="active"><a href="{% url 'files' %}"><span>Files</span></a></li>
-<li class=""><a href="{% url 'jobs' %}"><span>Jobs</span></a></li>
+  <link rel="stylesheet" href="{% static 'dashboard/css/fileinput.min.css' %}" type="text/css" media="screen" />
 {% endblock %}
 
 {% block content %}
@@ -59,6 +54,6 @@
 
 {% block js %}
     {{ block.super }}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.17.0/jquery.validate.min.js" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/4.4.5/js/fileinput.min.js"></script>
+    <script src="{% static 'dashboard/js/jquery.validate.min.js' %}"></script>
+    <script src="{% static 'dashboard/js/fileinput.min.js' %}"></script>
 {% endblock js %}

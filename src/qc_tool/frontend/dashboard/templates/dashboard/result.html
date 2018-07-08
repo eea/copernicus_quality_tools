@@ -3,8 +3,8 @@
 
 {% block css %}
 {{ block.super }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css" type="text/css" media="screen" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
 {% endblock css %}
 
 {% block content %}

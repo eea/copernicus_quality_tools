@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'dashboard'
+    'qc_tool.frontend.dashboard'
 ]
 
 MIDDLEWARE = [
@@ -141,3 +141,60 @@ MEDIA_URL = '/media/'
 
 # The WPS server url.
 WPS_URL = CONFIG["wps_url"]
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+            'verbose': {
+                'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+                'datefmt' : "%d/%b/%Y %H:%M:%S"
+            },
+            'simple': {
+                'format': '%(levelname)s %(message)s'
+            },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/tmp/django.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers':['file'],
+            'propagate': True,
+            'level':'ERROR',
+        },
+        'dashboard': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'frontend': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'qc_tool.frontend': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'qc_tool.frontend.dashboard': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'qc_tool.frontend.dashboard.views': {
+                    'handlers': ['console'],
+                    'level': 'DEBUG',
+                    'propagate': True,
+                },
+    }
+}

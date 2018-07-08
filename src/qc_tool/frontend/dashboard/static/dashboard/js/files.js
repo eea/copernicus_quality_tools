@@ -43,9 +43,11 @@ function statusFormatter(value, row, index) {
 
     // special formatting failed --> NOT OK, value --> OK
     if (value == "failed") {
-        value = "NOT OK"
+        value = "checks failed"
     } else if (value == "ok") {
-        value = "OK"
+        value = "checks passed"
+    } else if (value == "error") {
+        value = "error"
     }
 
     if (uuid) {
