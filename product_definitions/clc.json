@@ -13,7 +13,7 @@
       }
     },
     {
-      "check_ident": "change.v2",
+      "check_ident": "change.v2_gdb",
       "required": true,
       "parameters": {
         "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
@@ -88,7 +88,7 @@
       }
     },
     {
-      "check_ident": "status.v2",
+      "check_ident": "status.v2_gdb",
       "required": true,
       "parameters": {
         "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",

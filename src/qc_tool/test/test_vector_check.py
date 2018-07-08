@@ -7,7 +7,7 @@ from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
 
 
-class TestV2(VectorCheckTestCase):
+class TestV2_gdb(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
@@ -18,21 +18,21 @@ class TestV2(VectorCheckTestCase):
                             "layer_count": 2
                            })
 
-    def test_v2_clc_ok(self):
-        from qc_tool.wps.vector_check.v2 import run_check
+    def test_v2_gdb_clc_ok(self):
+        from qc_tool.wps.vector_check.v2_gdb import run_check
         result = run_check(self.params)
         self.assertEqual("ok", result["status"])
         self.assertIn("layer_names", result["params"])
 
-    def test_v2_prefix_fail(self):
+    def test_v2_gdb_prefix_fail(self):
         self.params["layer_prefix"] = "^{countrycode:s}/cha"
-        from qc_tool.wps.vector_check.v2 import run_check
+        from qc_tool.wps.vector_check.v2_gdb import run_check
         result = run_check(self.params)
         self.assertEqual("aborted", result["status"])
 
-    def test_v2_count_fail(self):
+    def test_v2_gdb_count_fail(self):
         self.params["layer_count"] = 1
-        from qc_tool.wps.vector_check.v2 import run_check
+        from qc_tool.wps.vector_check.v2_gdb import run_check
         result = run_check(self.params)
         self.assertEqual("aborted", result["status"])
 

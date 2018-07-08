@@ -30,7 +30,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v_unzip_shp": "Unzips the file containing shp file.",
     "v_import2pg": "Import layers into PostGIS database.",
     "v1": "File format is allowed.",
-    "v2": "File names match file naming conventions.",
+    "v2_gdb": "File names match file naming conventions.",
     "v3": "Attribute table contains specified attributes.",
     "v4": "CRS of layer expressed as EPSG code match reference EPSG code.",
     "v5": "Unique identifier check.",

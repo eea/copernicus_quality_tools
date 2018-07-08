@@ -45,7 +45,7 @@ def load_all_check_functions():
     import qc_tool.wps.vector_check.v_unzip_gdb
     import qc_tool.wps.vector_check.v_unzip_shp
     import qc_tool.wps.vector_check.v1
-    import qc_tool.wps.vector_check.v2
+    import qc_tool.wps.vector_check.v2_gdb
     import qc_tool.wps.vector_check.v3
     import qc_tool.wps.vector_check.v4
     import qc_tool.wps.vector_check.v5
