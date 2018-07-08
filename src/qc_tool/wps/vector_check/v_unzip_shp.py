@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params):
     zip_filepath = params["filepath"]
-    extract_dir = params["tmp_dir"].joinpath("v_unzip_gdb.d")
+    extract_dir = params["tmp_dir"].joinpath("v_unzip_shp.d")
     extract_dir.mkdir()
 
     # Unzip the source zip file.
@@ -21,11 +21,11 @@ def run_check(params):
         return {"status": "aborted",
                 "message": "Error unzipping file {:s}.".format(zip_filepath.filename)}
 
-    # Find gdb directory.
-    gdb_filepaths = [path for path in list(extract_dir.iterdir()) if path.suffix.lower() == ".gdb"]
-    if len(gdb_filepaths) != 1 or not gdb_filepaths[0].is_dir():
+    # Find shp file.
+    shp_filepaths = [path for path in list(extract_dir.iterdir()) if path.suffix.lower() == ".shp"]
+    if len(shp_filepaths) != 1 or not shp_filepaths[0].is_file():
         return {"status": "aborted",
-                "message": "There must be exactly one .gdb directory in the zip file."}
+                "message": "There must be exactly one .shp file in the zip file."}
 
     return {"status": "ok",
-            "params": {"filepath": gdb_filepaths[0]}}
+            "params": {"filepath": shp_filepaths[0]}}
