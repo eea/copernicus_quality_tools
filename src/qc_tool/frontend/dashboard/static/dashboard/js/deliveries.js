@@ -33,32 +33,51 @@ function actionsFormatter(value, row) {
     var start_job_url = '/start_job/' + row.product_ident + '/' + row.filename + '/';
     var btn_data = '<div class="btn-group">';
 
-    if (row.qc_status === "running" || row.submitted === "Yes") {
+    if (row.qc_status === "running" || row.is_submitted) {
         // job is running --> QC button disabled, Delete button disabled
+        var tooltip_message = "QC checks are currently running.";
+        if (row.is_submitted) {
+            tooltip_message = "Delivery has already been submitted to EEA.";
+        }
         btn_data += "<a class=\"btn btn-sm btn-success\" role=\"button\" disabled data-toggle=\"tooltip\"";
-        btn_data += 'title="Cannot run quality controls for this delivery. Checks are currently running." href="' + start_job_url + '" ' + '>QC</a>';
+        btn_data += 'title="Cannot run quality controls for this delivery. ' + tooltip_message;
+        btn_data += '" href="' + start_job_url + '" ' + '>QC</a>';
         btn_data += ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ';
-        btn_data += 'title="Cannot delete this delivery. Checks are currently running." disabled>Delete</button>';
+        btn_data += 'title="Cannot delete this delivery. ' + tooltip_message + '" disabled>Delete</button>';
     } else {
         // job is not running --> QC button enabled
         btn_data += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
         btn_data += 'title="Run quality controls for this delivery." href="' + start_job_url + '" ' + '>QC</a>';
-        btn_data += ' <button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery." data-toggle="modal" data-target="#confirm-delete">Delete</button>';
+        btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
+        btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
+        btn_data += 'Delete</button>';
+        //data-toggle="modal" data-target="#confirm-delete">Delete</button>';
     }
 
-    if (row.submitted === "No" && row.qc_status === "ok") {
-
-        btn_data += ' <button class="btn btn-sm btn-default">Submit to EEA</button>';
+    if (row.is_submitted) {
+        btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
+        btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';
     } else {
-
-        btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" title="Delivery cannot be submitted to EEA.">Submit to EEA</button>';
-
+        if (row.qc_status === "ok") {
+            btn_data += ' <button onclick="submit_eea_function(' + row.id + ', \'' + row.filename + '\')"';
+            btn_data += ' class="btn btn-sm btn-default data-toggle="tooltip"';
+            btn_data += ' title="Click to send the delivery to EEA for approval.">Submit to EEA</button>';
+        } else {
+            btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip"';
+            btn_data += ' title="Delivery cannot be submitted to EEA. QC status is not OK.">Submit to EEA</button>';
+        }
     }
 
     btn_data += '</div>';
-    //console.log(btn_data);
-
     return btn_data;
+}
+
+function submittedFormatter(value, row, index) {
+    if (!value) {
+        return "No";
+    } else {
+        return "Yes";
+    }
 }
 
 function statusFormatter(value, row, index) {
@@ -109,7 +128,7 @@ function delete_function(id, filename) {
                     data = {"id": id, "filename": filename};
                     $.ajax({
                         type: "POST",
-                        url: "/delete_delivery/",
+                        url: "/delivery/delete/",
                         data: data,
                         dataType: "json",
                         success: function(result) {
@@ -117,8 +136,42 @@ function delete_function(id, filename) {
                             $('#tbl-files').bootstrapTable('refresh');
                             dialog.close();
                         },
-                            //$("#modal-spinner").modal("hide");
                         error: function(result)  { console.log("error deleting file!") ;  }
+                    })
+                }
+            }, {
+                label: "No",
+                cssClass: "btn-default",
+                action: function(dialog) {dialog.close();}
+            }]
+        });
+}
+
+
+function submit_eea_function(id, filename) {
+    console.log("clicked submit to EEA!");
+        var dlg_ok = BootstrapDialog.show({
+            title: "Are you sure you want to submit the delivery to EEA?",
+            message: "Delivery file name: " + filename,
+            buttons: [{
+                label: "Yes",
+                cssClass: "btn-default",
+                action: function(dialog) {
+                    console.log("Submit to EEA confirmed by the user.");
+
+                    data = {"id": id, "filename": filename};
+                    dialog.setMessage("Submitting to EEA...");
+                    $.ajax({
+                        type: "POST",
+                        url: "/delivery/submit/",
+                        data: data,
+                        dataType: "json",
+                        success: function(result) {
+                            console.log("file marked successfully for submission to EEA!") ;
+                            $('#tbl-files').bootstrapTable('refresh');
+                            dialog.close();
+                        },
+                        error: function(result)  { console.log("error submitting file to EEA!") ;  }
                     })
                 }
             }, {

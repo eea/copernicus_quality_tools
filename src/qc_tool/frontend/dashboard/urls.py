@@ -13,7 +13,8 @@ urlpatterns = [
 
     re_path("data/files", views.get_files_json, name="files_json"),
 
-    path("delete_delivery/", views.delete_delivery, name="delete_delivery"),
+    path("delivery/delete/", views.delivery_delete, name="delivery_delete"),
+    path("delivery/submit/", views.delivery_submit_eea, name="delivery_submit"),
 
     path("data/product/<product_ident>/", views.get_product_info, name="product_info_json"),
     path("data/product_config/<product_ident>/", views.get_product_config, name="product_config_json"),

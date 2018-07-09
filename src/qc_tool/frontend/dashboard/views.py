@@ -25,7 +25,7 @@ from django.db import connection
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.shortcuts import redirect
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from qc_tool.common import compose_job_status_filepath
@@ -66,6 +66,7 @@ def start_job(request, filename, product):
     return render(request, "dashboard/start_job.html",{"filename": filename, "product": product})
 
 
+
 def get_files_json(request):
     """
     Returns a list of all files that are available for checking.
@@ -82,6 +83,14 @@ def get_files_json(request):
         """.format(request.user.id)
 
     logger.debug(sql)
+
+
+    def format_date_utc(db_date):
+        if db_date is None:
+            return None
+        else:
+            return db_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
 
     with connection.cursor() as cur:
         cur.execute(sql)
@@ -104,10 +113,12 @@ def get_files_json(request):
         if f["product_ident"] in product_descriptions:
             product_description = product_descriptions[f["product_ident"]]
 
+        delivery_is_submitted = f["date_submitted"] is not None
         file_info = {"id": f["id"],
                      "filename": f["filename"],
                      "filepath": f["filepath"],
-                     "date_uploaded": f["date_uploaded"].strftime('%Y-%m-%dT%H:%M:%S.000Z'),
+                     "date_uploaded": format_date_utc(f["date_uploaded"]),
+                     "date_submitted": format_date_utc(f["date_submitted"]),
                      "size_bytes": filepath.stat().st_size,
                      "product_ident": f["product_ident"],
                      "username": request.user.username,
@@ -115,10 +126,10 @@ def get_files_json(request):
                      "last_job_uuid": f["last_job_uuid"],
                      "date_last_checked": f["date_last_checked"],
                      "last_job_status": f["last_job_status"],
-                     "qc_status": "",
+                     "qc_status": "ok",
                      "last_wps_status": f["last_wps_status"],
                      "percent": None,
-                     "submitted": "No"}
+                     "is_submitted": delivery_is_submitted}
         matching_files.append(file_info)
 
     return JsonResponse(matching_files, safe=False)
@@ -129,63 +140,85 @@ def file_upload(request):
 
     # file is uploaded to a directory with the same name as the current username
     logger.debug("file_upload!")
-    user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
-    if not user_upload_path.exists():
-        user_upload_path.mkdir(parents=True)
+    try:
+        user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
+        if not user_upload_path.exists():
+            user_upload_path.mkdir(parents=True)
 
-    if request.method == 'POST' and request.FILES['file']:
-        myfile = request.FILES['file']
+        if request.method == 'POST' and request.FILES['file']:
+            myfile = request.FILES['file']
 
-        logger.debug(myfile.name)
+            logger.debug(myfile.name)
 
-        # filepath exists --> show error
-        existing_deliveries = Delivery.objects.filter(filename=myfile)
-        if existing_deliveries.count() > 0:
-            data = {'is_valid': False,
+            # filepath exists --> show error
+            existing_deliveries = Delivery.objects.filter(filename=myfile)
+            if existing_deliveries.count() > 0:
+                data = {'is_valid': False,
+                        'name': myfile.name,
+                        'url': myfile.name,
+                        'message': "A file named {0} already exists. "
+                                   "If you want to replace the file, please delete if first.".format(myfile)}
+                return JsonResponse(data)
+
+            logger.debug("saving uploaded file ...")
+            fs = FileSystemStorage(str(user_upload_path))
+            saved_filename = fs.save(myfile.name, myfile)
+            logger.debug("uploaded file saved successfully to filesystem.")
+
+            # also save file info to db
+            f = Delivery()
+            #f.file = myfile
+            f.filename = saved_filename
+            f.filepath = user_upload_path
+            f.product_ident = guess_product_ident(myfile.name)
+            f.wps_status = None
+            f.job_status = "Not checked"
+            f.user = request.user
+            f.save()
+            logger.debug("file info object saved successfully to database.")
+
+            data = {'is_valid': True,
                     'name': myfile.name,
-                    'url': myfile.name,
-                    'message': "A file named {0} already exists. "
-                               "If you want to replace the file, please delete if first.".format(myfile)}
+                    'url': myfile.name}
+
             return JsonResponse(data)
-
-        logger.debug("saving uploaded file ...")
-        fs = FileSystemStorage(str(user_upload_path))
-        saved_filename = fs.save(myfile.name, myfile)
-        logger.debug("uploaded file saved successfully to filesystem.")
-
-        # also save file info to db
-        f = Delivery()
-        #f.file = myfile
-        f.filename = saved_filename
-        f.filepath = user_upload_path
-        f.product_ident = guess_product_ident(myfile.name)
-        f.wps_status = None
-        f.job_status = "Not checked"
-        f.user = request.user
-        f.save()
-        logger.debug("file info object saved successfully to database.")
-
-        data = {'is_valid': True,
-                'name': myfile.name,
-                'url': myfile.name}
+    except BaseException as e:
+        data = {'is_valid': False,
+                'name': None,
+                'url': None,
+                'message': str(e)}
 
         return JsonResponse(data)
 
     return render(request, 'dashboard/file_upload.html')
 
 @csrf_exempt
-def delete_delivery(request):
+def delivery_delete(request):
     if request.method == "POST":
         file_id = request.POST.get("id")
         filename = request.POST.get("filename")
 
-        logger.debug("delete_delivery id=" + str(file_id))
+        logger.debug("delivery_delete id=" + str(file_id))
 
         f = Delivery.objects.get(id=file_id)
         file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(f.filename)
         file_path.unlink()
         f.delete()
         return JsonResponse({"status":"ok", "message": "File {0} deleted successfully.".format(filename)})
+
+
+@csrf_exempt
+def delivery_submit_eea(request):
+    if request.method == "POST":
+        file_id = request.POST.get("id")
+        filename = request.POST.get("filename")
+
+        logger.debug("delivery_submit_eea id=" + str(file_id))
+
+        d = Delivery.objects.get(id=file_id)
+        d.date_submitted = timezone.now()
+        d.save()
+        return JsonResponse({"status":"ok", "message": "File {0} successfully scheduled for EEA submission.".format(filename)})
 
 
 def get_product_list(request):
