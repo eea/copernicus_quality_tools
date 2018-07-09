@@ -134,6 +134,6 @@ def run_check(params):
 
         if NoData in zonearray:
             return {"status": "failed",
-                    "message": "NoData pixels occured in mapped area."}
+                    "messages": ["NoData pixels occured in mapped area."]}
         else:
             return {"status": "ok"}

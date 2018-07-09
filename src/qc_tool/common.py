@@ -105,7 +105,7 @@ def prepare_empty_job_status(product_ident):
                  "required": <>,
                  "system": <>,
                  "status": <>,
-                 "message": <>}, ...]}
+                 "messages": <>}, ...]}
     """
     filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
     product_definition = filepath.read_text()
@@ -126,7 +126,7 @@ def prepare_empty_job_status(product_ident):
                       "required": check["required"],
                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
                       "status": None,
-                      "message": None}
+                      "messages": None}
         status["checks"].append(check_item)
     return status
 

@@ -70,4 +70,4 @@ def run_check(params):
                                                                 val["lessmmu_error"][1]) for (key, val) in res.items() if val["lessmmu_error"][0] != 0)
         res_message = "The MMU check failed ({:s}).".format(layer_results)
         return {"status": "failed",
-                "message": res_message}
+                "messages": [res_message]}

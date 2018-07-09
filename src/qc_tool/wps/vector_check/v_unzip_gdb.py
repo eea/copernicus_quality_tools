@@ -19,13 +19,13 @@ def run_check(params):
             zip_file.extractall(path=str(extract_dir))
     except Exception as ex:
         return {"status": "aborted",
-                "message": "Error unzipping file {:s}.".format(zip_filepath.filename)}
+                "messages": ["Error unzipping file {:s}.".format(zip_filepath.filename)]}
 
     # Find gdb directory.
     gdb_filepaths = [path for path in list(extract_dir.iterdir()) if path.suffix.lower() == ".gdb"]
     if len(gdb_filepaths) != 1 or not gdb_filepaths[0].is_dir():
         return {"status": "aborted",
-                "message": "There must be exactly one .gdb directory in the zip file."}
+                "messages": ["There must be exactly one .gdb directory in the zip file."]}
 
     return {"status": "ok",
             "params": {"filepath": gdb_filepaths[0]}}

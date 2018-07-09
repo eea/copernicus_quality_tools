@@ -26,7 +26,7 @@ def run_check(params):
     ds_extension = params["filepath"].suffix
     if ds_extension not in params["formats"]:
         return {"status": "aborted",
-                "message": "The source file has forbidden extension: {:s}.".format(ds_extension)}
+                "messages": ["The source file has forbidden extension: {:s}.".format(ds_extension)]}
 
     # try to open file with ogr drivers
     if ds_extension in params["drivers"]:
@@ -34,10 +34,10 @@ def run_check(params):
             ds_open = gdal.Open(str(params["filepath"]))
             if ds_open is None:
                 return {"status": "aborted",
-                        "message": "The source file can not be opened."}
+                        "messages": ["The source file can not be opened."]}
         except:
             return {"status": "aborted",
-                    "message": "The source file can not be opened."}
+                    "messages": ["The source file can not be opened."]}
 
         # check file format
         drivername = ds_open.GetDriver().ShortName
@@ -45,7 +45,7 @@ def run_check(params):
             return {"status": "ok"}
         else:
             return {"status": "aborted",
-                    "message": "The file format is invalid."}
+                    "messages": ["The file format is invalid."]}
     else:
         return {"status": "aborted",
-                "message": "The source file has forbidden extension: {:s}".format(ds_extension)}
+                "messages": ["The source file has forbidden extension: {:s}".format(ds_extension)]}

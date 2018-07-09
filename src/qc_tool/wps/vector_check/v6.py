@@ -53,4 +53,4 @@ def run_check(params):
             if val["validcodes_error"][0] != 0)
         res_message = "The valid codes check failed ({:s}).".format(layer_results)
         return {"status": "failed",
-                "message": res_message}
+                "messages": [res_message]}

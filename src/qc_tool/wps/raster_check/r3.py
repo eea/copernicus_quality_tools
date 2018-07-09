@@ -25,7 +25,7 @@ def run_check(params):
     dbf_filepath = params["filepath"].with_name(dbf_filename)
     if not dbf_filepath.is_file():
         return {"status": "failed",
-                "message": "Attribute table file (.vat.dbf) is missing."}
+                "messages": ["Attribute table file (.vat.dbf) is missing."]}
 
     # get list of field names
     ds = ogr.Open(str(dbf_filepath))
@@ -46,4 +46,4 @@ def run_check(params):
     else:
         missing_fnames_str = "', '".join(missing_fnames)
         return {"status": "failed",
-                "message": "Some of the required attributes are missing: '{:s}'.".format(missing_fnames_str)}
+                "messages": ["Some of the required attributes are missing: '{:s}'.".format(missing_fnames_str)]}

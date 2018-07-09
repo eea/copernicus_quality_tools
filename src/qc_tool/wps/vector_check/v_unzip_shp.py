@@ -19,13 +19,13 @@ def run_check(params):
             zip_file.extractall(path=str(extract_dir))
     except Exception as ex:
         return {"status": "aborted",
-                "message": "Error unzipping file {:s}.".format(zip_filepath.filename)}
+                "messages": ["Error unzipping file {:s}.".format(zip_filepath.filename)]}
 
     # Find shp file.
     shp_filepaths = [path for path in list(extract_dir.iterdir()) if path.suffix.lower() == ".shp"]
     if len(shp_filepaths) != 1 or not shp_filepaths[0].is_file():
         return {"status": "aborted",
-                "message": "There must be exactly one .shp file in the zip file."}
+                "messages": ["There must be exactly one .shp file in the zip file."]}
 
     return {"status": "ok",
             "params": {"filepath": shp_filepaths[0]}}

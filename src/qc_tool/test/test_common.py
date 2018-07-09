@@ -35,7 +35,7 @@ class TestCommon(TestCase):
         self.assertTrue(status["checks"][1]["required"])
         self.assertFalse(status["checks"][1]["system"])
         self.assertIsNone(status["checks"][1]["status"])
-        self.assertIsNone(status["checks"][1]["message"])
+        self.assertIsNone(status["checks"][1]["messages"])
         self.assertEqual("change.v_import2pg", status["checks"][5]["check_ident"])
         self.assertTrue(status["checks"][5]["system"])
 

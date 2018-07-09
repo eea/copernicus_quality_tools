@@ -54,4 +54,4 @@ def run_check(params):
             if val["multipart_error"][0] != 0)
         res_message = "{:d} multipart polygons found: ({:s}).".format(len(list(set(lmes))), layer_results)
         return {"status": "failed",
-                "message": res_message}
+                "messages": [res_message]}

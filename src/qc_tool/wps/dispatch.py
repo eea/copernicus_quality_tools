@@ -118,8 +118,8 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
 
                 # Set the check result into the job status.
                 job_status_check_idx[check["check_ident"]]["status"] = check_result["status"]
-                if "message" in check_result:
-                    job_status_check_idx[check["check_ident"]]["message"] = check_result["message"]
+                if "messages" in check_result:
+                    job_status_check_idx[check["check_ident"]]["messages"] = check_result["messages"]
 
                 # Abort validation job.
                 if check_result["status"] == "aborted":

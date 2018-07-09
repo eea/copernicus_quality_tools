@@ -54,8 +54,6 @@ class TestV3(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v3 import run_check
         self.params["fields"] = ["^ID2$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$", "^EXTRA_FIELD$"]
         result = run_check(self.params)
-        if "message" in result:
-            print(result["message"])
         self.assertEqual("failed", result["status"])
 
 
@@ -210,4 +208,4 @@ class TestV13(VectorCheckTestCase):
                                                       " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
         result = run_check(self.params)
         self.assertEqual("failed", result["status"])
-        self.assertEqual("Layers with overlapping pairs: test_layer_1:1, test_layer_2:3.", result["message"])
+        self.assertEqual(["Layers with overlapping pairs: test_layer_1:1, test_layer_2:3."], result["messages"])

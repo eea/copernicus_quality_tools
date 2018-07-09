@@ -22,13 +22,13 @@ def run_check(params):
     file_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
     if not check_name(filename, file_regex):
         return {"status": "failed",
-                "message": "File name does not conform to the naming convention."}
+                "messages": ["File name does not conform to the naming convention."]}
 
     # Check for supplementary files.
     for ext in params["extensions"]:
         other_filepath = params["filepath"].with_suffix(ext)
         if not other_filepath.exists():
             return {"status": "failed",
-                        "message": "The '{:s}' file is missing.".format(other_filepath.name)}
+                    "messages": ["The '{:s}' file is missing.".format(other_filepath.name)]}
 
     return {"status": "ok"}

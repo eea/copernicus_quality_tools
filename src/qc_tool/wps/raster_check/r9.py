@@ -26,10 +26,10 @@ def run_check(params):
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
             return {"status": "failed",
-                    "message": "The file can not be opened."}
+                    "messages": ["The file can not be opened."]}
     except:
         return {"status": "failed",
-                "message": "The file can not be opened."}
+                "messages": ["The file can not be opened."]}
 
     # get dictionary of pixel 'codes-counts'
     ds_band = ds_open.GetRasterBand(1)
@@ -41,7 +41,7 @@ def run_check(params):
     nodata_obj = ds_band.GetNoDataValue()
     if nodata_obj is None:
         return {"status": "failed",
-                "message": "The Geotiff does not have a NoData value specified."}
+                "messages": ["The Geotiff does not have a NoData value specified."]}
 
     # get list of 'used' codes (with non-zero pixel count)
     nodata = int(ds_band.GetNoDataValue())
@@ -60,4 +60,4 @@ def run_check(params):
     else:
         invalid_codes_str = ', '.join(invalid_codes)
         return {"status": "failed",
-                "message": "Pixels contain invalid codes: {:s}.".format(invalid_codes_str)}
+                "messages": ["Pixels contain invalid codes: {:s}.".format(invalid_codes_str)]}

@@ -26,15 +26,15 @@ def run_check(params):
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
             return {"status": "failed",
-                    "message": "The file can not be opened."}
+                    "messages": ["The file can not be opened."]}
     except:
         return {"status": "failed",
-                "message": "The file can not be opened."}
+                "messages": ["The file can not be opened."]}
 
     band_count = ds_open.RasterCount
     if band_count != 1:
         return {"status": "failed",
-                "message": "The input raster data contains {:s} bands (1 band is allowed).".format(str(band_count))}
+                "messages": ["The input raster data contains {:s} bands (1 band is allowed).".format(str(band_count))]}
 
     # get raster pixel size
     gt = ds_open.GetGeoTransform()
@@ -44,11 +44,11 @@ def run_check(params):
     # verify the square shape of the pixel
     if x_size != y_size:
         return {"status": "failed",
-                "message": "The pixel is not square-shaped."}
+                "messages": ["The pixel is not square-shaped."]}
 
     # 
     if x_size == params["pixelsize"]:
         return {"status": "ok"}
     else:
         return {"status": "failed",
-                "message": "The raster pixel size is {:s} m, {:s} m is allowed.".format(str(x_size), str(params["pixelsize"]))}
+                "messages": ["The raster pixel size is {:s} m, {:s} m is allowed.".format(str(x_size), str(params["pixelsize"]))]}

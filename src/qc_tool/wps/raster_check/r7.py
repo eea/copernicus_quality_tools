@@ -27,14 +27,14 @@ def run_check(params):
 
     if ds is None:
         return {"status": "aborted",
-                "message": "The raster {:s} could not be opened.".format(params["filepath"].name)}
+                "messages": ["The raster {:s} could not be opened.".format(params["filepath"].name)]}
 
     # get the number of bands
     num_bands = ds.RasterCount
     if num_bands != 1:
         return {"status": "failed",
-                "message": "The raster has {:d} bands. \
-                expected number of bands is one.".format(num_bands)}
+                "messages": ["The raster has {:d} bands."
+                             "The expected number of bands is one.".format(num_bands)]}
 
     # get the DataType of the band ("Byte" means 8-bit depth)
     band = ds.GetRasterBand(1)
@@ -45,5 +45,5 @@ def run_check(params):
         return {"status": "ok"}
     else:
         return {"status": "failed",
-                "message": "The raster data type '{:s}' does not match  the \
-                            expected data type '{:s}'.".format(actual_datatype, expected_datatype)}
+                "messages": ["The raster data type '{:s}' does not match"
+                             " the expected data type '{:s}'.".format(actual_datatype, expected_datatype)]}

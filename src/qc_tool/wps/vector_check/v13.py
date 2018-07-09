@@ -24,4 +24,4 @@ def run_check(params):
                          for layer_name in params["layer_names"]
                          if error_counts.get(layer_name, 0) > 0]
         message = "Layers with overlapping pairs: {:s}.".format(", ".join(message_items))
-        return {"status": "failed", "message": message}
+        return {"status": "failed", "messages": [message]}

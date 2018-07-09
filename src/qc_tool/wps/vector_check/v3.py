@@ -50,4 +50,4 @@ def run_check(params):
         layer_results = ", ".join("layer {!s}: ('{!s}')".format(ln, "', '".join(fn)) for (ln, fn) in missing.items())
         res_message = "Some of the required attributes are missing: ({:s})".format(layer_results)
         return {"status": "failed",
-                "message": res_message}
+                "messages": [res_message]}

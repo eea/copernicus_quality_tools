@@ -29,10 +29,10 @@ def run_check(params):
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
             return {"status": "failed",
-                    "message": "The file can not be opened."}
+                    "messages": ["The file can not be opened."]}
     except:
         return {"status": "failed",
-                "message": "The file can not be opened."}
+                "messages": ["The file can not be opened."]}
 
     # get raster metadata
     meta = ds_open.GetMetadata('IMAGE_STRUCTURE')
@@ -41,11 +41,11 @@ def run_check(params):
 
     if compression is None:
         return {"status": "failed",
-                "message": "The raster data compression is not set."}
+                "messages": ["The raster data compression is not set."]}
 
     if compression.lower() in allowed_compression_types:
         return {"status": "ok"}
 
     else:
         return {"status": "failed",
-                "message": "The raster compression type '{:s}' is not allowed.".format(compression)}
+                "messages": ["The raster compression type '{:s}' is not allowed.".format(compression)]}

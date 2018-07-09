@@ -28,7 +28,7 @@ def run_check(params):
     conf = check_name(filename, file_name_regex)
     if not conf:
         return {"status": "aborted",
-                "message": "File name does not conform to the naming convention."}
+                "messages": ["File name does not conform to the naming convention."]}
 
     # get particular country code
     cc_regex = params["file_name_regex"].replace("countrycode", "(.+?)")
@@ -48,12 +48,14 @@ def run_check(params):
 
     if set(layer_names_by_prefix) - set(layer_names_by_regex):
         return {"status": "aborted",
-                "message": "Number of layers matching prefix '{:s}' and number of layers matching regex '{:s}' are not equal.".format(
-                    layer_prefix, layer_regex)}
+                "messages": ["Number of layers matching prefix '{:s}'"
+                             " and number of layers matching regex '{:s}'"
+                             " are not equal.".format(layer_prefix, layer_regex)]}
     elif len(layer_names_by_regex) != int(params["layer_count"]):
         return {"status": "aborted",
-                "message": "Number of matching layers ({:d}) does not correspond with declared number of layers({:d})".format(
-                    len(layer_names_by_regex), int(params["layer_count"]))}
+                "messages": ["Number of matching layers ({:d}) does not correspond with"
+                             "declared number of layers({:d})".format(len(layer_names_by_regex),
+                                                                      int(params["layer_count"]))]}
     else:
         # Strip country code feature dataset from layer name.
         layer_names = [layer_name.split("/")[1] for layer_name in layer_names_by_regex]

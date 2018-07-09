@@ -26,16 +26,17 @@ def run_check(params):
             epsg = srs.GetAttrValue("AUTHORITY", 1)
         else:
             return {"status": "failed",
-                    "message": "The source data is not projected."}
+                    "messages": ["The source data is not projected."]}
         if epsg is None:
             return {"status": "failed",
-                    "message": "The file has EPSG authority missing."}
+                    "messages": ["The file has EPSG authority missing."]}
         # CRS check via EPSG comparison
         if epsg in map(str, params["epsg"]):
             return {"status": "ok"}
         else:
             return {"status": "failed",
-                    "message": "EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"]))}
+                    "messages": ["EPSG code {:s} is not in"
+                                 " applicable codes {:s}.".format(str(epsg), str(params["epsg"]))]}
 
     # check CRS of all matching layers
     res = dict()
@@ -53,4 +54,4 @@ def run_check(params):
 
         res_message = "The CRS check failed ({:s}).".format(layer_results)
         return {"status": "failed",
-                "message": res_message}
+                "messages": [res_message]}

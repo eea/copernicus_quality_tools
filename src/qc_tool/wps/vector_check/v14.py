@@ -55,4 +55,4 @@ def run_check(params):
             if val["neighbcode_error"][0] != 0)
         res_message = "The neighbouring polygons code check. ({:s}).".format(layer_results)
         return {"status": "failed",
-                "message": res_message}
+                "messages": [res_message]}

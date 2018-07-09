@@ -39,4 +39,4 @@ def run_check(params):
     else:
         message = "\n".join("The layer {:s} has non-unique identifiers: {:s}.".format(layer_name, failed_message)
                             for layer_name in sort(failed_messages.keys()))
-        return {"status": "failed", "message": message}
+        return {"status": "failed", "messages": [message]}

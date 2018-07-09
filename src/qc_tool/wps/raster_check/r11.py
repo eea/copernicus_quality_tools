@@ -36,7 +36,7 @@ def run_check(params):
              "-e",
              str(location_path)], check=True)
     if p1.returncode != 0:
-        return {"status": "failed", "message": "GRASS GIS error: cannot create location!"}
+        return {"status": "failed", "messages": ["GRASS GIS error: cannot create location!"]}
 
     # (2) import the data into a GRASS mapset named PERMANENT
     mapset_path = location_path.joinpath("PERMANENT")
@@ -48,7 +48,7 @@ def run_check(params):
               "output=inpfile"],
              check=True)
     if p2.returncode != 0:
-        return {"status": "failed", "message": "GRASS GIS error: cannot import raster from {:s}".format(params["filepath"].name)}
+        return {"status": "failed", "messages": ["GRASS GIS error: cannot import raster from {:s}".format(params["filepath"].name)]}
 
     # (3) run r.reclass.area (area is already in hectares)
     mmu_limit_ha = params["area_ha"]
@@ -67,7 +67,7 @@ def run_check(params):
         return {"status": "ok"}
 
     elif p3.returncode != 0:
-        return {"status": "failed", "message": "GRASS GIS error in r.reclass.area"}
+        return {"status": "failed", "messages": ["GRASS GIS error in r.reclass.area"]}
 
     # (4) run r.to.vect: convert clumps with mmu < mmu_limit_ha to polygon areas
     p4 = subprocess.run([GRASS_VERSION,
@@ -83,7 +83,7 @@ def run_check(params):
               "output=lessmmu_areas"],
              check=True)
     if p4.returncode != 0:
-        return {"status": "failed", "message": "GRASS GIS error in r.to.vect"}
+        return {"status": "failed", "messages": ["GRASS GIS error in r.to.vect"]}
 
     # (5) export lessmmu_areas to shapefile
     p5 = subprocess.run([GRASS_VERSION,
@@ -95,22 +95,23 @@ def run_check(params):
               "format=ESRI_Shapefile"],
              check=True)
     if p5.returncode != 0:
-        return {"status": "failed", "message": "GRASS GIS error in executing v.out.ogr"}
+        return {"status": "failed", "messages": ["GRASS GIS error in executing v.out.ogr"]}
 
     if not lessmmu_shp_path.exists():
         return {"status": "failed",
-                "message": "GRASS GIS error. exported lessmmu_areas shapefile {:s} does not exist.".format(str(lessmmu_shp_path))}
+                "messages": ["GRASS GIS error. exported lessmmu_areas shapefile {:s} does not exist.".format(str(lessmmu_shp_path))]}
 
     ogr.UseExceptions()
     try:
         ds_lessmmu = ogr.Open(str(lessmmu_shp_path))
         if ds_lessmmu is None:
             return {"status": "failed",
-                    "message": "GRASS GIS error or OGR error. The file {:s} can not be opened.".format(str(lessmmu_shp_path))}
+                    "messages": ["GRASS GIS error or OGR error. The file {:s} can not be opened.".format(str(lessmmu_shp_path))]}
     except BaseException as e:
         return {"status": "failed",
-                "message": "GRASS GIS error or OGR error. The shapefile {:s} cannot be opened. Exception: {:s}".format(
-                    str(lessmmu_shp_path, str(e)))}
+                "messages": ["GRASS GIS error or OGR error."
+                             " The shapefile {:s} cannot be opened."
+                             " Exception: {:s}".format(str(lessmmu_shp_path, str(e)))]}
 
     lyr = ds_lessmmu.GetLayer()
     lessmmu_count = lyr.GetFeatureCount()
@@ -119,6 +120,6 @@ def run_check(params):
         result = {"status": "ok"}
     else:
         result = {"status": "failed",
-                "message": "The data source has {:s} objects under MMU limit of {:s} ha.".format(str(lessmmu_count),
-                                                                                                 str(params["area_ha"]))}
+                  "messages": ["The data source has {:s} objects under MMU limit"
+                               " of {:s} ha.".format(str(lessmmu_count), str(params["area_ha"]))]}
     return result

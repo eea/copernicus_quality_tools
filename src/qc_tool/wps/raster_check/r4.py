@@ -24,17 +24,17 @@ def run_check(params):
     srs = osr.SpatialReference(dataset.GetProjection())
     if srs.IsProjected() == 0:
         return {"status": "failed",
-                "message": "The file has no projected coordinate system associated."}
+                "messages": ["The file has no projected coordinate system associated."]}
     epsg = srs.GetAttrValue("AUTHORITY", 1)
     if epsg is None:
         return {"status": "failed",
-                "message": "The file has EPSG authority missing."}
+                "messages": ["The file has EPSG authority missing."]}
     try:
         epsg = int(epsg)
     except:
         return {"status": "failed",
-                "message": "The EPSG code {:s} is not an integer number.".format(str(epsg))}
+                "messages": ["The EPSG code {:s} is not an integer number.".format(str(epsg))]}
     if epsg not in params["epsg"]:
         return {"status": "failed",
-                "message": "EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"]))}
+                "messages": ["EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"]))]}
     return {"status": "ok"}
