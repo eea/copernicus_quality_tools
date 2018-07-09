@@ -5,13 +5,11 @@ function display_product_info(product_ident) {
         $("#tbl_check_details > tbody").html("");
         var tbody = ""
         for (var i=0;i<checks.length;i++){
-            tbody += "<tr>";
-            tbody += "<td>" + checks[i].check_ident + "</td>";
-            tbody += "<td>" + checks[i].description + "</td>";
-
-            if(checks[i].system) { // System checks do not have any checkbox.
-                tbody += "<td></td>"
-            } else {
+            
+            if(!checks[i].system) { // system checks are not shown
+                tbody += "<tr>";
+                tbody += "<td>" + checks[i].check_ident + "</td>";
+                tbody += "<td>" + checks[i].description + "</td>";
                 tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" checked';
                 if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
                     tbody += " disabled";
