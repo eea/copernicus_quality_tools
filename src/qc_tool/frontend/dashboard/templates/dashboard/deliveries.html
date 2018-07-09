@@ -14,15 +14,10 @@
 
             <ol class="breadcrumb">
               <li><a href="{% url 'files' %}">Copernicus QC Tool</a></li>
-              <li class="active"><a href="">Files</a></li>
+              <li class="active"><a href="">Deliveries</a></li>
             </ol>
 
             <div class="main">
-
-                {% if uploaded_file_url %}
-                <p>File <strong>{{ uploaded_file_name }}</strong> uploaded successfully!</p>
-                {% endif %}
-
 
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
@@ -54,9 +49,9 @@
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
                                 <th data-field="qc_status" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
-                                <th data-field="submitted" data-sortable="true">EEA</th>
+                                <th data-field="submitted" data-sortable="true">Submitted</th>
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
-                                <th data-field="last_job_time" data-visible="false" data-sortable="true">Last job time</th>
+                                <th data-field="date_last_checked" data-visible="false" data-sortable="true">Date last checked</th>
                                 <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>
 
                             </tr>
@@ -68,6 +63,26 @@
                 </div>
             </div>
 
+
+            <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            ...
+                        </div>
+                        <div class="modal-body">
+                            ...
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <a class="btn btn-danger btn-ok">Delete</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
         </div>
     </div>
 
@@ -77,6 +92,7 @@
 
 {% block js %}
     {{ block.super }}
+    <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
     <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
-    <script src="{% static 'dashboard/js/files.js' %}"></script>
+    <script src="{% static 'dashboard/js/deliveries.js' %}"></script>
 {% endblock js %}

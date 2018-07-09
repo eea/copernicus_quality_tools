@@ -38,7 +38,7 @@ from qc_tool.common import prepare_empty_job_status
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import parse_status_document
 from qc_tool.frontend.dashboard.models import Job
-from qc_tool.frontend.dashboard.models import UploadedFile
+from qc_tool.frontend.dashboard.models import Delivery
 
 
 logger = logging.getLogger(__name__)
@@ -49,26 +49,7 @@ def files(request):
     """
     Displays the main page with uploaded files and action buttons
     """
-
-    # special case - after successful file upload (this will be changed)
-    if request.method == 'POST' and request.FILES['myfile']:
-        myfile = request.FILES['myfile']
-        fs = FileSystemStorage()
-        filename = fs.save(myfile.name, myfile)
-
-        f = UploadedFile(
-            filename=Path(filename).name,
-            filepath=str(Path(filename)),
-            status="Not checked",
-            user=request.user,
-        )
-        f.save()
-
-        return render(request, 'dashboard/files.html', {
-            'uploaded_filename': os.path.basename(filename)
-        })
-
-    return render(request, 'dashboard/files.html')
+    return render(request, 'dashboard/deliveries.html')
 
 
 def jobs(request, filename):
@@ -94,23 +75,10 @@ def get_files_json(request):
     :return: list of the files in JSON format
     """
 
-    # retrieve file metadata and related jobs from the frontend database
-    sql = """SELECT f.id, f.filepath, f.filename,  f.date_uploaded, 
-    j.end as last_job_time, j.job_uuid as last_job_uuid, j.status, j.product_ident 
-    FROM (dashboard_uploadedfile As f INNER JOIN dashboard_job As j ON f.filename = j.filename) 
-    INNER JOIN (SELECT max(end) As lasttime, filename FROM dashboard_job WHERE user_id={0} GROUP BY filename) As mj 
-    ON mj.lasttime = j.end AND mj.filename = f.filename 
-    UNION
-    SELECT id, filepath, filename, date_uploaded, 
-    NULL AS last_job_time, NULL AS last_job_uuid, NULL AS status, product_ident 
-    FROM dashboard_uploadedfile
-    WHERE user_id={0} AND filename NOT IN (SELECT filename FROM dashboard_job WHERE user_id={0})
-    """.format(request.user.id)
-
+    # retrieve delivery metadata from the frontend database
     sql = """
-        SELECT id, filepath, filename, date_uploaded, 
-        NULL AS last_job_time, NULL AS last_job_uuid, NULL AS status, product_ident 
-        FROM dashboard_uploadedfile WHERE user_id={0}
+        SELECT * 
+        FROM dashboard_delivery WHERE user_id={0}
         """.format(request.user.id)
 
     logger.debug(sql)
@@ -145,8 +113,10 @@ def get_files_json(request):
                      "username": request.user.username,
                      "product_description": product_description,
                      "last_job_uuid": f["last_job_uuid"],
-                     "last_job_time": f["last_job_time"],
-                     "qc_status": f["status"],
+                     "date_last_checked": f["date_last_checked"],
+                     "last_job_status": f["last_job_status"],
+                     "qc_status": "",
+                     "last_wps_status": f["last_wps_status"],
                      "percent": None,
                      "submitted": "No"}
         matching_files.append(file_info)
@@ -158,35 +128,64 @@ def get_files_json(request):
 def file_upload(request):
 
     # file is uploaded to a directory with the same name as the current username
+    logger.debug("file_upload!")
     user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
     if not user_upload_path.exists():
         user_upload_path.mkdir(parents=True)
 
     if request.method == 'POST' and request.FILES['file']:
         myfile = request.FILES['file']
+
+        logger.debug(myfile.name)
+
+        # filepath exists --> show error
+        existing_deliveries = Delivery.objects.filter(filename=myfile)
+        if existing_deliveries.count() > 0:
+            data = {'is_valid': False,
+                    'name': myfile.name,
+                    'url': myfile.name,
+                    'message': "A file named {0} already exists. "
+                               "If you want to replace the file, please delete if first.".format(myfile)}
+            return JsonResponse(data)
+
+        logger.debug("saving uploaded file ...")
         fs = FileSystemStorage(str(user_upload_path))
         saved_filename = fs.save(myfile.name, myfile)
+        logger.debug("uploaded file saved successfully to filesystem.")
 
         # also save file info to db
-        f = UploadedFile()
+        f = Delivery()
         #f.file = myfile
         f.filename = saved_filename
         f.filepath = user_upload_path
-        f.product_ident = guess_product_ident(saved_filename)
-        f.status = "Not checked"
+        f.product_ident = guess_product_ident(myfile.name)
+        f.wps_status = None
+        f.job_status = "Not checked"
         f.user = request.user
         f.save()
+        logger.debug("file info object saved successfully to database.")
 
-        #f.product_ident = guess_product_ident(f.file.name)
-        #f.save()
+        data = {'is_valid': True,
+                'name': myfile.name,
+                'url': myfile.name}
 
-        #return redirect('/?uploaded_filename={0}'.format(myfile.name))
-
-        # try-catch should be here ...
-        data = {'is_valid': True, 'name': saved_filename, 'url': saved_filename}
         return JsonResponse(data)
 
     return render(request, 'dashboard/file_upload.html')
+
+@csrf_exempt
+def delete_delivery(request):
+    if request.method == "POST":
+        file_id = request.POST.get("id")
+        filename = request.POST.get("filename")
+
+        logger.debug("delete_delivery id=" + str(file_id))
+
+        f = Delivery.objects.get(id=file_id)
+        file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(f.filename)
+        file_path.unlink()
+        f.delete()
+        return JsonResponse({"status":"ok", "message": "File {0} deleted successfully.".format(filename)})
 
 
 def get_product_list(request):
@@ -299,7 +298,7 @@ def get_jobs(request, filename):
     """
     sql = """
     SELECT j.*, f.filename AS file_filename from dashboard_job j
-    INNER JOIN dashboard_uploadedfile f
+    INNER JOIN dashboard_delivery f
     ON j.filename = f.filename
     WHERE file_filename = "{:s}"
     AND f.user_id = {:d}
@@ -348,6 +347,7 @@ def get_jobs(request, filename):
 def save_job_info(job_uuid, user, product_ident, filename):
     """
     Saving a job info to database based on the job's uuid
+    We only update an entry in deliveries
     :param job_uuid:
     :return:
     """
@@ -413,8 +413,9 @@ def save_job_info(job_uuid, user, product_ident, filename):
 
     # retrieve the file info from the database
 
-    file_info = UploadedFile.objects.get(filename=filename, user=user)
-    job.file = file_info
+    file_info = Delivery.objects.get(filename=filename, user=user)
+    job.filename = file_info.filename
+    job.filepath = file_info.filepath
 
     #save job info to database
     job.save()

@@ -4,7 +4,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
-class UploadedFile(models.Model):
+class Delivery(models.Model):
     class Meta:
         app_label = "dashboard"
 
@@ -22,7 +22,10 @@ class UploadedFile(models.Model):
     date_uploaded = models.DateTimeField(default=timezone.now)
     date_last_checked = models.DateTimeField(null=True)
     date_submitted = models.DateTimeField(null=True)
-    status = models.CharField(max_length=64)
+    last_wps_status = models.CharField(max_length=64)
+    last_job_uuid = models.CharField(max_length=32)
+    last_job_status = models.CharField(max_length=64)
+    empty_status_document = models.TextField()
     user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
 
 
@@ -37,5 +40,5 @@ class Job(models.Model):
     status = models.CharField(max_length=64)
     status_document_path = models.CharField(max_length=500)
     filename = models.CharField(blank=True, null=True, max_length=500)
-    file = models.ForeignKey(UploadedFile, null=True, blank=True, on_delete=models.CASCADE)
+    filepath = models.CharField(blank=True, null=True, max_length=500)
     user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)

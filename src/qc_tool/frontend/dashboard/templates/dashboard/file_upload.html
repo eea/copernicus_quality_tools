@@ -34,7 +34,7 @@
                             </button>
 
                             {# 2. FILE INPUT TO BE USED BY THE PLUG-IN #}
-                            <input id="fileupload" type="file" name="file" multiple
+                            <input id="fileupload" type="file" name="file" accept="application/zip" multiple
                                    style="display: none;"
                                    data-url="{% url 'file_upload' %}"
                                    data-form-data='{"csrfmiddlewaretoken": "{{ csrf_token }}"}'>

@@ -26,7 +26,13 @@ $(function () {
         $("#files_heading").prepend("Uploaded file");
         $("#files_table tbody").prepend(
 
-          "<tr><td>File <strong>" + data.result.name + "</strong> uploaded successfully!</td></tr>"
+          '<tr><td><div class="alert alert-success">File <strong>' + data.result.url + '</strong> uploaded successfully.</div></td></tr>'
+        );
+      } else {
+
+        $("#files_table tbody").prepend(
+
+          '<tr><td><div class="alert alert-danger">File <strong>' + data.result.message + '</strong></div></td></tr>'
         );
       }
     }
