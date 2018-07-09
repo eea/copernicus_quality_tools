@@ -54,13 +54,8 @@
                               </div>
                             </div>
 
-                            {# 3. TABLE TO DISPLAY THE UPLOADED PHOTOS #}
+                            {# 3. TABLE TO DISPLAY THE UPLOADED FILES #}
                             <table id="files_table" class="table table-bordered">
-                              <thead>
-                                <tr>
-                                  <th id="files_heading"></th>
-                                </tr>
-                              </thead>
                               <tbody>
                                 {% for uploaded_file in uploaded_files %}
                                   <tr>
@@ -69,16 +64,6 @@
                                 {% endfor %}
                               </tbody>
                             </table>
-
-                            <!--
-                            <form id = "file_form" method="post" enctype="multipart/form-data">
-                                <fieldset></fieldset>
-                                <div class="form-group">
-                                        {% csrf_token %}
-                                        <input id="my-file" name="myfile" type="file" class="file" data-preview-file-type="text">
-                                </div>
-                            </form>
-                            -->
                         </div>
                     </div>
                 </div>
