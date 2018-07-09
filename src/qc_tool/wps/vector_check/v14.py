@@ -42,17 +42,17 @@ def run_check(params):
         cur.execute("""DROP TABLE IF EXISTS {:s}_neighbcode_error;""".format(layer_name))
         conn.commit()
 
-        lmes = [res[lme]["neighbcode_error"][0] for lme in res]
-        if len(list(set(lmes))) == 0 or lmes[0] == 0:
-            return {"status": "ok"}
+    lmes = [res[lme]["neighbcode_error"][0] for lme in res]
+    if len(list(set(lmes))) == 1 and lmes[0] == 0:
+        return {"status": "ok"}
 
-        else:
-            layer_results = ', '.join(
-                "layer {!s}: {:d} polygons has the same code as their neighbour ({!s})".format(key,
+    else:
+        layer_results = ', '.join(
+            "layer {!s}: {:d} polygons has the same code as their neighbour ({!s})".format(key,
                                                                           val["neighbcode_error"][0],
                                                                           val["neighbcode_error"][1]) for (key, val) in
-                res.items()
-                if val["neighbcode_error"][0] != 0)
-            res_message = "The neighbouring polygons code check. ({:s}).".format(layer_results)
-            return {"status": "failed",
-                    "message": res_message}
+            res.items()
+            if val["neighbcode_error"][0] != 0)
+        res_message = "The neighbouring polygons code check. ({:s}).".format(layer_results)
+        return {"status": "failed",
+                "message": res_message}

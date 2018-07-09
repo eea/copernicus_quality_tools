@@ -44,7 +44,7 @@ def run_check(params):
         conn.commit()
 
     lmes = [res[lme]["multipart_error"][0] for lme in res]
-    if len(list(set(lmes))) == 0 and lmes[0] == 0:
+    if len(list(set(lmes))) == 1 and lmes[0] == 0:
         return {"status": "ok"}
     else:
         layer_results = ', '.join(
