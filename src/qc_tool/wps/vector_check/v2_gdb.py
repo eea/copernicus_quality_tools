@@ -14,7 +14,7 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Check if string matches pattern.
     :param params: configuration
@@ -27,8 +27,9 @@ def run_check(params):
     file_name_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
     conf = check_name(filename, file_name_regex)
     if not conf:
-        return {"status": "aborted",
-                "messages": ["File name does not conform to the naming convention."]}
+        status.aborted()
+        status.add_message("File name does not conform to the naming convention.")
+        return
 
     # get particular country code
     cc_regex = params["file_name_regex"].replace("countrycode", "(.+?)")
@@ -47,16 +48,19 @@ def run_check(params):
                             if check_name(layer_name, layer_regex)]
 
     if set(layer_names_by_prefix) - set(layer_names_by_regex):
-        return {"status": "aborted",
-                "messages": ["Number of layers matching prefix '{:s}'"
-                             " and number of layers matching regex '{:s}'"
-                             " are not equal.".format(layer_prefix, layer_regex)]}
+        status.aborted()
+        status.add_message("Number of layers matching prefix '{:s}'"
+                           " and number of layers matching regex '{:s}'"
+                           " are not equal.".format(layer_prefix, layer_regex))
+        return
     elif len(layer_names_by_regex) != int(params["layer_count"]):
-        return {"status": "aborted",
-                "messages": ["Number of matching layers ({:d}) does not correspond with"
-                             "declared number of layers({:d})".format(len(layer_names_by_regex),
-                                                                      int(params["layer_count"]))]}
+        status.aborted()
+        status.add_message("Number of matching layers ({:d}) does not correspond with"
+                           " declared number of layers({:d})".format(len(layer_names_by_regex),
+                                                                     int(params["layer_count"])))
+        return
     else:
         # Strip country code feature dataset from layer name.
         layer_names = [layer_name.split("/")[1] for layer_name in layer_names_by_regex]
-        return {"status": "ok", "params": {"layer_names": layer_names}}
+        status.add_params({"layer_names": layer_names})
+        return

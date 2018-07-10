@@ -114,21 +114,22 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
                 check_params["check_ident"] = check["check_ident"]
 
                 # Run the check.
+                check_status = CheckStatus()
                 func = get_check_function(check["check_ident"])
-                check_result = func(check_params)
+                func(check_params, check_status)
 
                 # Set the check result into the job status.
-                job_status_check_idx[check["check_ident"]]["status"] = check_result["status"]
-                if "messages" in check_result:
-                    job_status_check_idx[check["check_ident"]]["messages"] = check_result["messages"]
+                job_check_status = job_status_check_idx[check["check_ident"]]
+                job_check_status["status"] = check_status.status
+                job_check_status["messages"] = check_status.messages
+                job_check_status["error_tables"] = check_status.error_tables
 
                 # Abort validation job.
-                if check_result["status"] == "aborted":
+                if check_status.is_aborted():
                     break
 
                 # Update job params.
-                if "params" in check_result:
-                    job_params.update(check_result["params"])
+                job_params.update(check_status.params)
 
         finally:
             # Update status.json finally and record exception if raised.
@@ -143,3 +144,31 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
 
 class IncorrectCheckException(Exception):
     pass
+
+
+class CheckStatus():
+    def __init__(self):
+        self.status = "ok"
+        self.messages = []
+        self.error_tables = []
+        self.params = {}
+
+    def failed(self):
+        self.status = "failed"
+
+    def aborted(self):
+        self.status = "aborted"
+
+    def is_aborted(self):
+        return self.status == "aborted"
+
+    def add_message(self, message):
+        self.messages.append(message)
+        if self.status == "ok":
+            self.failed()
+
+    def add_error_table(self, error_table):
+        self.error_tables.append(error_table)
+
+    def add_params(self, params_dict):
+        self.params.update(params_dict)

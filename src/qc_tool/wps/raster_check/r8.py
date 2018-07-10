@@ -12,7 +12,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Compression type check.
     :param params: configuration
@@ -28,11 +28,11 @@ def run_check(params):
     try:
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
-            return {"status": "failed",
-                    "messages": ["The file can not be opened."]}
+            status.add_message("The file can not be opened.")
+            return
     except:
-        return {"status": "failed",
-                "messages": ["The file can not be opened."]}
+        status.add_message("The file can not be opened.")
+        return
 
     # get raster metadata
     meta = ds_open.GetMetadata('IMAGE_STRUCTURE')
@@ -40,12 +40,11 @@ def run_check(params):
     compression = meta.get('COMPRESSION', None)
 
     if compression is None:
-        return {"status": "failed",
-                "messages": ["The raster data compression is not set."]}
+        status.add_message("The raster data compression is not set.")
+        return
 
     if compression.lower() in allowed_compression_types:
-        return {"status": "ok"}
-
+        return
     else:
-        return {"status": "failed",
-                "messages": ["The raster compression type '{:s}' is not allowed.".format(compression)]}
+        status.add_message("The raster compression type '{:s}' is not allowed.".format(compression))
+        return

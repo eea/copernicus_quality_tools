@@ -17,7 +17,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     NoData pixels check.
     :param params: configuration
@@ -133,7 +133,7 @@ def run_check(params):
         zonearray = numpy.ma.masked_array(srcRasterArray, maskArray).astype(int)
 
         if NoData in zonearray:
-            return {"status": "failed",
-                    "messages": ["NoData pixels occured in mapped area."]}
+            status.add_message("NoData pixels occured in mapped area.")
+            return
         else:
-            return {"status": "ok"}
+            return

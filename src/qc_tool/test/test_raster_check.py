@@ -7,7 +7,7 @@ from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import RasterCheckTestCase
 
 
-class TestR2(TestCase):
+class TestR2(RasterCheckTestCase):
     def test_r2(self):
         from qc_tool.wps.raster_check.r2 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"),
@@ -17,8 +17,9 @@ class TestR2(TestCase):
                                    "|FR_GUF|FR_MTQ|FR_MYT|FR_REU|PT_RAA_CEG|PT_RAA_WEG)",
                   "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"],
                   "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"}
-        result = run_check(params)
-        self.assertEqual("ok", result["status"], "raster check r2 should pass")
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("ok", status.status, "raster check r2 should pass")
 
 
 class TestR11(RasterCheckTestCase):
@@ -33,8 +34,9 @@ class TestR11(RasterCheckTestCase):
                   "area_ha": 0.5,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
-        result = run_check(params)
-        self.assertNotIn("GRASS GIS error", result["messages"][0])
+        status = self.status_class()
+        run_check(params, status)
+        self.assertNotIn("GRASS GIS error", status.messages[0])
 
     def test_r11_correct_pass(self):
         from qc_tool.wps.raster_check.r11 import run_check
@@ -42,8 +44,9 @@ class TestR11(RasterCheckTestCase):
                   "area_ha": 0.5,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
-        result = run_check(params)
-        self.assertEqual("ok", result["status"], "Raster check r11 should pass for raster with patches > 0.5 ha.")
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("ok", status.status, "Raster check r11 should pass for raster with patches > 0.5 ha.")
 
     def test_r11_incorrect_fail(self):
         from qc_tool.wps.raster_check.r11 import run_check
@@ -51,14 +54,15 @@ class TestR11(RasterCheckTestCase):
                   "area_ha": 0.5,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
-        result = run_check(params)
-        self.assertNotIn("GRASS GIS error", result["messages"][0])
-        self.assertEqual("failed", result["status"], "Raster check r11 should fail for raster with patches < 0.5 ha.")
-        self.assertIn("3", result["messages"][0], "There should be 3 polygons with MMU error.")
+        status = self.status_class()
+        run_check(params, status)
+        self.assertNotIn("GRASS GIS error", status.messages[0])
+        self.assertEqual("failed", status.status, "Raster check r11 should fail for raster with patches < 0.5 ha.")
+        self.assertIn("3", status.messages[0], "There should be 3 polygons with MMU error.")
         # Note: We should also test the existence of the lessmmu_areas.shp shapefile inside output_dir.
 
 
-class TestR15(TestCase):
+class TestR15(RasterCheckTestCase):
     def test_r15_correct_pass(self):
         from qc_tool.wps.raster_check.r15 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("r11_raster_correct.tif"),
@@ -67,8 +71,9 @@ class TestR15(TestCase):
                               "2": [28, 92, 36],
                               "254": [153, 153, 153],
                               "255": [0, 0, 0]}}
-        result = run_check(params)
-        self.assertEqual("ok", result["status"], "Check r15 with correct colours should pass.")
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("ok", status.status, "Check r15 with correct colours should pass.")
 
     def test_r15_incorrect_fail(self):
         from qc_tool.wps.raster_check.r15 import run_check
@@ -78,5 +83,6 @@ class TestR15(TestCase):
                               "2": [28, 92, 36],
                               "254": [153, 153, 153],
                               "255": [0, 0, 99]}}
-        result = run_check(params)
-        self.assertEqual("failed", result["status"], "Check r15 with incorrect colours should fail.")
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("failed", status.status, "Check r15 with incorrect colours should fail.")

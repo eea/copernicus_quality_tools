@@ -14,7 +14,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Attribute table structure check.
     :param params: configuration
@@ -43,11 +43,9 @@ def run_check(params):
         if not missing[ln]:
             del missing[ln]
 
-    if not missing:
-        return {"status": "ok"}
-    else:
+    if len(missing) > 0:
         # report missing fields for each layer
         layer_results = ", ".join("layer {!s}: ('{!s}')".format(ln, "', '".join(fn)) for (ln, fn) in missing.items())
         res_message = "Some of the required attributes are missing: ({:s})".format(layer_results)
-        return {"status": "failed",
-                "messages": [res_message]}
+        status.add_message(res_message)
+        return

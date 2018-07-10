@@ -12,7 +12,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Raster origin check.
     :param params: configuration
@@ -25,11 +25,11 @@ def run_check(params):
     try:
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
-            return {"status": "failed",
-                    "messages": ["The file can not be opened."]}
+            status.add_message("The file can not be opened.")
+            return
     except:
-        return {"status": "failed",
-                "messages": ["The file can not be opened."]}
+        status.add_message("The file can not be opened.")
+        return
 
     # upper-left coordinate divided by pixel-size must leave no remainder
     gt = ds_open.GetGeoTransform()
@@ -46,7 +46,7 @@ def run_check(params):
     filename = params["filepath"].name
     if "_eu_" in filename:
         if ulx % 1000 != 0 or uly % 1000 != 0:
-            return {"status": "failed",
-                    "messages": ["The raster origin does not fit to the LEAC 1 km grid."]}
+            status.add_mesage("The raster origin does not fit to the LEAC 1 km grid.")
+            return
 
-    return {"status": "ok"}
+    return

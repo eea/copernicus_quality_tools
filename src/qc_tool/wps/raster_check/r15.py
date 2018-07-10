@@ -14,7 +14,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     :param colors: a dictionary of raster values and associated [r,g,b] colors
     :return: status + message
@@ -22,15 +22,16 @@ def run_check(params):
     ds = gdal.Open(str(params["filepath"]))
 
     if ds is None:
-        return {"status": "aborted",
-                "messages": ["The raster {:s} could not be opened.".format(params["filepath"].name)]}
+        status.aborted()
+        status.add_message("The raster {:s} could not be opened.".format(params["filepath"].name))
+        return
 
     # get the number of bands
     num_bands = ds.RasterCount
     if num_bands != 1:
-        return {"status": "failed",
-                "messages": ["The raster has {:d} bands."
-                            " The expected number of bands is one.".format(num_bands)]}
+        status.add_message("The raster has {:d} bands."
+                           " The expected number of bands is one.".format(num_bands))
+        return
 
     # get the DataType of the band ("Byte" means 8-bit depth)
     band = ds.GetRasterBand(1)
@@ -38,8 +39,8 @@ def run_check(params):
     # check the color table of the band
     ct = band.GetRasterColorTable()
     if ct is None:
-        return {"status": "failed",
-                "messages": ["The raster {:s} has color table missing.".format(params["filepath"].name)]}
+        status.add_message("The raster {:s} has color table missing.".format(params["filepath"].name))
+        return
 
     # read-in the actual color table into a dictionary
     color_table_count = ct.GetCount()
@@ -74,15 +75,15 @@ def run_check(params):
 
     # report raster values with missing entries in the colour table
     if len(missing_codes) > 0:
-        return {"status": "failed",
-                "messages": ["The raster colour table does not have entries for raster values {:s}.".format(", ".join(missing_codes))]}
+        status.add_message("The raster colour table does not have entries for raster values {:s}.".format(", ".join(missing_codes)))
+        return
 
     # report color mismatches between expected and actual colour table
     if len(incorrect_colours) > 0:
         colour_reports = []
         for c in incorrect_colours:
             colour_reports.append("value:{0}, expected RGB:{1}, actual RGB:{2}".format(c["class"], c["expected"], c["actual"]))
-        return {"status": "failed",
-                "messages": ["The raster colour table has some incorrect colours. {:s}".format("; ".join(colour_reports))]}
+        status.add_message("The raster colour table has some incorrect colours. {:s}".format("; ".join(colour_reports)))
+        return
     else:
-        return {"status": "ok"}
+        return

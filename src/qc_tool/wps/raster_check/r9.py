@@ -12,7 +12,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Pixel values check.
     :param params: configuration
@@ -25,11 +25,11 @@ def run_check(params):
     try:
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
-            return {"status": "failed",
-                    "messages": ["The file can not be opened."]}
+            status.add_message("The file can not be opened.")
+            return
     except:
-        return {"status": "failed",
-                "messages": ["The file can not be opened."]}
+        status.add_message("The file can not be opened.")
+        return
 
     # get dictionary of pixel 'codes-counts'
     ds_band = ds_open.GetRasterBand(1)
@@ -40,8 +40,8 @@ def run_check(params):
     # the raster must have a valid NoDataValue entry
     nodata_obj = ds_band.GetNoDataValue()
     if nodata_obj is None:
-        return {"status": "failed",
-                "messages": ["The Geotiff does not have a NoData value specified."]}
+        status.add_message("The Geotiff does not have a NoData value specified.")
+        return
 
     # get list of 'used' codes (with non-zero pixel count)
     nodata = int(ds_band.GetNoDataValue())
@@ -56,8 +56,8 @@ def run_check(params):
             invalid_codes.append(str(code))
 
     if not invalid_codes:
-        return {"status": "ok"}
+        return
     else:
         invalid_codes_str = ', '.join(invalid_codes)
-        return {"status": "failed",
-                "messages": ["Pixels contain invalid codes: {:s}.".format(invalid_codes_str)]}
+        status.add_message("Pixels contain invalid codes: {:s}.".format(invalid_codes_str))
+        return

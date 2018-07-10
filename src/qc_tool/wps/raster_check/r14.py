@@ -12,22 +12,23 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     :return: status + message
     """
     ds = gdal.Open(str(params["filepath"]))
 
     if ds is None:
-        return {"status": "aborted",
-                "messages": ["The raster {:s} could not be opened.".format(params["filepath"].name)]}
+        status.aborted()
+        status.add_message("The raster {:s} could not be opened.".format(params["filepath"].name))
+        return
 
     # get the number of bands
     num_bands = ds.RasterCount
     if num_bands != 1:
-        return {"status": "failed",
-                "messages": ["The raster has {:d} bands."
-                             " The expected number of bands is one.".format(num_bands)]}
+        status.add_message("The raster has {:d} bands."
+                           " The expected number of bands is one.".format(num_bands))
+        return
 
     # get the DataType of the band ("Byte" means 8-bit depth)
     band = ds.GetRasterBand(1)
@@ -35,7 +36,7 @@ def run_check(params):
     # check the color table of the band
     ct = band.GetRasterColorTable()
     if ct is None:
-        return {"status": "failed",
-                "messages": ["The raster {:s} has color table missing.".format(params["filepath"].name)]}
+        status.add_message("The raster {:s} has color table missing.".format(params["filepath"].name))
+        return
     else:
-        return {"status": "ok"}
+        return

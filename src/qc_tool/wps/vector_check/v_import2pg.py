@@ -12,7 +12,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Import layers into PostGIS db. also imports the qc functions.
     :param params: configuration
@@ -30,6 +30,5 @@ def run_check(params):
                    str(params["filepath"]),
                    layer_name])
         if pc.returncode != 0:
-            return {"status": "aborted",
-                    "messages": ["Importing of {:s} layer into PostGIS db failed.".format(layer_name)]}
-    return {"status": "ok"}
+            status.aborted()
+            status.add_message("Importing of {:s} layer into PostGIS db failed.".format(layer_name))

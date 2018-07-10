@@ -8,12 +8,14 @@ from uuid import uuid4
 
 from qc_tool.common import DB_FUNCTION_DIR
 from qc_tool.common import DB_FUNCTION_SCHEMA_NAME
+from qc_tool.wps.dispatch import CheckStatus
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 
 
 class RasterCheckTestCase(TestCase):
     def setUp(self):
+        self.status_class = CheckStatus
         self.job_uuid = str(uuid4())
         with ExitStack() as stack:
             self.jobdir_manager = stack.enter_context(create_jobdir_manager(self.job_uuid))
@@ -22,6 +24,7 @@ class RasterCheckTestCase(TestCase):
 
 class VectorCheckTestCase(TestCase):
     def setUp(self):
+        self.status_class = CheckStatus
         self.job_uuid = str(uuid4())
         self.params = {}
         with ExitStack() as stack:

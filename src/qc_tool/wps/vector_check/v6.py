@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Valid codes check.
     :param params: configuration
@@ -44,7 +44,7 @@ def run_check(params):
 
     lmes = [res[lme]["validcodes_error"][0] for lme in res]
     if len(list(set(lmes))) == 1 and lmes[0] == 0:
-        return {"status": "ok"}
+        return
     else:
         layer_results = ', '.join(
             "layer {!s}: {:d} polygons with wrong code ({!s})".format(key,
@@ -52,5 +52,5 @@ def run_check(params):
                                                                 val["validcodes_error"][1]) for (key, val) in res.items()
             if val["validcodes_error"][0] != 0)
         res_message = "The valid codes check failed ({:s}).".format(layer_results)
-        return {"status": "failed",
-                "messages": [res_message]}
+        status.add_message(res_message)
+        return

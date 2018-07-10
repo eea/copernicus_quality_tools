@@ -13,7 +13,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Attribute table structure check.
     :param params: configuration
@@ -24,8 +24,8 @@ def run_check(params):
     dbf_filename = "{:s}.vat.dbf".format(params["filepath"].name)
     dbf_filepath = params["filepath"].with_name(dbf_filename)
     if not dbf_filepath.is_file():
-        return {"status": "failed",
-                "messages": ["Attribute table file (.vat.dbf) is missing."]}
+        status.add_message("Attribute table file (.vat.dbf) is missing.")
+        return
 
     # get list of field names
     ds = ogr.Open(str(dbf_filepath))
@@ -42,8 +42,8 @@ def run_check(params):
         if not find_name(fnames, an.lower()):
             missing_fnames.append(an.lower().lstrip("^").rstrip("$"))
     if not missing_fnames:
-        return {"status": "ok"}
+        return
     else:
         missing_fnames_str = "', '".join(missing_fnames)
-        return {"status": "failed",
-                "messages": ["Some of the required attributes are missing: '{:s}'.".format(missing_fnames_str)]}
+        status.add_message("Some of the required attributes are missing: '{:s}'.".format(missing_fnames_str))
+        return

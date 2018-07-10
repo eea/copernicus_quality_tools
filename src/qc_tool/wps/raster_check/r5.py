@@ -12,7 +12,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Raster resolution check.
     :param params: configuration
@@ -25,16 +25,16 @@ def run_check(params):
     try:
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
-            return {"status": "failed",
-                    "messages": ["The file can not be opened."]}
+            status.add_message("The file can not be opened.")
+            return
     except:
-        return {"status": "failed",
-                "messages": ["The file can not be opened."]}
+        status.add_message("The file can not be opened.")
+        return
 
     band_count = ds_open.RasterCount
     if band_count != 1:
-        return {"status": "failed",
-                "messages": ["The input raster data contains {:s} bands (1 band is allowed).".format(str(band_count))]}
+        status.add_message("The input raster data contains {:s} bands (1 band is allowed).".format(str(band_count)))
+        return
 
     # get raster pixel size
     gt = ds_open.GetGeoTransform()
@@ -43,12 +43,12 @@ def run_check(params):
 
     # verify the square shape of the pixel
     if x_size != y_size:
-        return {"status": "failed",
-                "messages": ["The pixel is not square-shaped."]}
+        status.add_message("The pixel is not square-shaped.")
+        return
 
     # 
     if x_size == params["pixelsize"]:
-        return {"status": "ok"}
+        return
     else:
-        return {"status": "failed",
-                "messages": ["The raster pixel size is {:s} m, {:s} m is allowed.".format(str(x_size), str(params["pixelsize"]))]}
+        status.add_message("The raster pixel size is {:s} m, {:s} m is allowed.".format(str(x_size), str(params["pixelsize"])))
+        return

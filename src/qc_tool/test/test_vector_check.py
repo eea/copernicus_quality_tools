@@ -20,21 +20,24 @@ class TestV2_gdb(VectorCheckTestCase):
 
     def test_v2_gdb_clc_ok(self):
         from qc_tool.wps.vector_check.v2_gdb import run_check
-        result = run_check(self.params)
-        self.assertEqual("ok", result["status"])
-        self.assertIn("layer_names", result["params"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("layer_names", status.params)
 
     def test_v2_gdb_prefix_fail(self):
         self.params["layer_prefix"] = "^{countrycode:s}/cha"
         from qc_tool.wps.vector_check.v2_gdb import run_check
-        result = run_check(self.params)
-        self.assertEqual("aborted", result["status"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
 
     def test_v2_gdb_count_fail(self):
         self.params["layer_count"] = 1
         from qc_tool.wps.vector_check.v2_gdb import run_check
-        result = run_check(self.params)
-        self.assertEqual("aborted", result["status"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
 
 
 class TestV3(VectorCheckTestCase):
@@ -47,14 +50,16 @@ class TestV3(VectorCheckTestCase):
     def test_v3_Malta_clc_ok(self):
         from qc_tool.wps.vector_check.v3 import run_check
         self.params["fields"] = ["^ID$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$"]
-        result = run_check(self.params)
-        self.assertEqual("ok", result["status"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
 
     def test_v3_missing_fields(self):
         from qc_tool.wps.vector_check.v3 import run_check
         self.params["fields"] = ["^ID2$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$", "^EXTRA_FIELD$"]
-        result = run_check(self.params)
-        self.assertEqual("failed", result["status"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
 
 
 class TestVImport2pg(VectorCheckTestCase):
@@ -66,18 +71,21 @@ class TestVImport2pg(VectorCheckTestCase):
 
     def test_v_import2pg_pass(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
-        result = run_check(self.params)
-        self.assertEqual("ok", result["status"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
 
     def test_v_import2pg_bad_file_aborted(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
         self.params["filepath"] = TEST_DATA_DIR.joinpath("test_raster1.tif")
-        result = run_check(self.params)
-        self.assertEqual("aborted", result["status"], "Status was not 'aborted' when importing a file with bad format.")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status, "Status was not 'aborted' when importing a file with bad format.")
 
     def test_v_import2pg_table_created(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
-        run_check(self.params)
+        status = self.status_class()
+        run_check(self.params, status)
 
         cur = self.params["connection_manager"].get_connection().cursor()
         cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_names"][0]))
@@ -85,7 +93,8 @@ class TestVImport2pg(VectorCheckTestCase):
 
     def test_v_import2pg_functions_created(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
-        run_check(self.params)
+        status = self.status_class()
+        run_check(self.params, status)
 
         job_schema = self.params["connection_manager"].get_dsn_schema()[1]
         expected_function_names = ["__v11_mmu_status",
@@ -114,12 +123,14 @@ class TestV5(VectorCheckTestCase):
                             "filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_names": ["clc12_mt"],
                             "ident_colname": "id"})
-        import_check(self.params)
+        status = self.status_class()
+        import_check(self.params, status)
 
     def test(self):
         from qc_tool.wps.vector_check.v5 import run_check
-        result = run_check(self.params)
-        self.assertEqual("ok", result["status"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
 
 
 class TestV8(VectorCheckTestCase):
@@ -128,12 +139,14 @@ class TestV8(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_names": ["clc12_mt"]})
-        import_check(self.params)
+        status = self.status_class()
+        import_check(self.params, status)
 
     def test_v8_Malta(self):
         from qc_tool.wps.vector_check.v8 import run_check
-        result = run_check(self.params)
-        self.assertEqual("ok", result["status"], "Check result should be ok for Malta.")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status, "Check result should be ok for Malta.")
 
 
 class TestV11(VectorCheckTestCase):
@@ -145,18 +158,21 @@ class TestV11(VectorCheckTestCase):
                             "ident_colname": "id",
                             "area_ha": 25,
                             "border_exception": True})
-        import_check(self.params)
+        status = self.status_class()
+        import_check(self.params, status)
 
     def test_v11_small_mmu_should_pass(self):
         from qc_tool.wps.vector_check.v11 import run_check
-        result = run_check(self.params)
-        self.assertEqual("ok", result["status"], "Check result should be ok for MMU=25ha.")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status, "Check result should be ok for MMU=25ha.")
 
     def test_v11_big_mmu_should_fail(self):
         from qc_tool.wps.vector_check.v11 import run_check
         self.params["area_ha"] = 250
-        result = run_check(self.params)
-        self.assertEqual("failed", result["status"], "Check result should be 'failed' for MMU=250ha.")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status, "Check result should be 'failed' for MMU=250ha.")
 
     def test_v11_border_table(self):
         """
@@ -164,7 +180,8 @@ class TestV11(VectorCheckTestCase):
         :return:
         """
         from qc_tool.wps.vector_check.v11 import run_check
-        run_check(self.params)
+        status = self.status_class()
+        run_check(self.params, status)
 
         table_name = "{:s}_polyline_border".format(self.params["layer_names"][0])
         dsn, job_schema_name =  self.params["connection_manager"].get_dsn_schema()
@@ -195,8 +212,9 @@ class TestV13(VectorCheckTestCase):
                                                       " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
         cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                       " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        result = run_check(self.params)
-        self.assertEqual("ok", result["status"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
 
     def test_overlapping(self):
         from qc_tool.wps.vector_check.v13 import run_check
@@ -206,6 +224,8 @@ class TestV13(VectorCheckTestCase):
         cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                       " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
                                                       " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
-        result = run_check(self.params)
-        self.assertEqual("failed", result["status"])
-        self.assertEqual(["Layers with overlapping pairs: test_layer_1:1, test_layer_2:3."], result["messages"])
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        result = ['Layer test_layer_1 has 1 overlapping pairs.', 'Layer test_layer_2 has 3 overlapping pairs.']
+        self.assertEqual(result, status.messages)

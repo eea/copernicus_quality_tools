@@ -13,7 +13,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
-def run_check(params):
+def run_check(params, status):
     """
     Minimum mapping unit (MMU) check.
     :param params: configuration
@@ -36,7 +36,8 @@ def run_check(params):
              "-e",
              str(location_path)], check=True)
     if p1.returncode != 0:
-        return {"status": "failed", "messages": ["GRASS GIS error: cannot create location!"]}
+        status.add_message("GRASS GIS error: cannot create location!")
+        return
 
     # (2) import the data into a GRASS mapset named PERMANENT
     mapset_path = location_path.joinpath("PERMANENT")
@@ -48,7 +49,8 @@ def run_check(params):
               "output=inpfile"],
              check=True)
     if p2.returncode != 0:
-        return {"status": "failed", "messages": ["GRASS GIS error: cannot import raster from {:s}".format(params["filepath"].name)]}
+        status.add_message("GRASS GIS error: cannot import raster from {:s}".format(params["filepath"].name))
+        return
 
     # (3) run r.reclass.area (area is already in hectares)
     mmu_limit_ha = params["area_ha"]
@@ -64,10 +66,11 @@ def run_check(params):
               "method=reclass"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     if "No areas of size less than or equal to" in str(p3.stdout):
-        return {"status": "ok"}
+        return
 
     elif p3.returncode != 0:
-        return {"status": "failed", "messages": ["GRASS GIS error in r.reclass.area"]}
+        status.add_message("GRASS GIS error in r.reclass.area")
+        return
 
     # (4) run r.to.vect: convert clumps with mmu < mmu_limit_ha to polygon areas
     p4 = subprocess.run([GRASS_VERSION,
@@ -83,7 +86,8 @@ def run_check(params):
               "output=lessmmu_areas"],
              check=True)
     if p4.returncode != 0:
-        return {"status": "failed", "messages": ["GRASS GIS error in r.to.vect"]}
+        status.add_message("GRASS GIS error in r.to.vect")
+        return
 
     # (5) export lessmmu_areas to shapefile
     p5 = subprocess.run([GRASS_VERSION,
@@ -95,31 +99,31 @@ def run_check(params):
               "format=ESRI_Shapefile"],
              check=True)
     if p5.returncode != 0:
-        return {"status": "failed", "messages": ["GRASS GIS error in executing v.out.ogr"]}
+        status.add_message("GRASS GIS error in executing v.out.ogr")
+        return
 
     if not lessmmu_shp_path.exists():
-        return {"status": "failed",
-                "messages": ["GRASS GIS error. exported lessmmu_areas shapefile {:s} does not exist.".format(str(lessmmu_shp_path))]}
+        status.add_message("GRASS GIS error. exported lessmmu_areas shapefile {:s} does not exist.".format(str(lessmmu_shp_path)))
+        return
 
     ogr.UseExceptions()
     try:
         ds_lessmmu = ogr.Open(str(lessmmu_shp_path))
         if ds_lessmmu is None:
-            return {"status": "failed",
-                    "messages": ["GRASS GIS error or OGR error. The file {:s} can not be opened.".format(str(lessmmu_shp_path))]}
+            status.add_message("GRASS GIS error or OGR error. The file {:s} can not be opened.".format(str(lessmmu_shp_path)))
+            return
     except BaseException as e:
-        return {"status": "failed",
-                "messages": ["GRASS GIS error or OGR error."
-                             " The shapefile {:s} cannot be opened."
-                             " Exception: {:s}".format(str(lessmmu_shp_path, str(e)))]}
+        status.add_message("GRASS GIS error or OGR error."
+                           " The shapefile {:s} cannot be opened."
+                           " Exception: {:s}".format(str(lessmmu_shp_path, str(e))))
+        return
 
     lyr = ds_lessmmu.GetLayer()
     lessmmu_count = lyr.GetFeatureCount()
 
     if lessmmu_count == 0:
-        result = {"status": "ok"}
+        return
     else:
-        result = {"status": "failed",
-                  "messages": ["The data source has {:s} objects under MMU limit"
-                               " of {:s} ha.".format(str(lessmmu_count), str(params["area_ha"]))]}
-    return result
+        status.add_message("The data source has {:s} objects under MMU limit"
+                           " of {:s} ha.".format(str(lessmmu_count), str(params["area_ha"])))
+        return
