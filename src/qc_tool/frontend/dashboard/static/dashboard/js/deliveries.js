@@ -86,7 +86,10 @@ function statusFormatter(value, row, index) {
     // special formatting failed --> NOT OK, value --> OK
     if (value == "failed") {
         value = "checks failed";
-    } else if (value == "ok") {
+    } else if (value == "running") {
+        value = "running (" + row.percent + "% )"
+    }
+    else if (value == "ok") {
         value = "checks passed"
     } else if (value == "error") {
         value = "error";
@@ -106,6 +109,9 @@ function statusFormatter(value, row, index) {
 
 function statusCellStyle(value, row, index) {
 
+    if (value == "ok") {
+        return { classes: "success"}
+    }
     if (value == "failed" || value == "error" || value == "NOT OK") {
         return { classes: "danger" }
     }

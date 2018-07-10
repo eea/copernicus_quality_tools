@@ -126,10 +126,11 @@ def get_files_json(request):
                      "last_job_uuid": f["last_job_uuid"],
                      "date_last_checked": f["date_last_checked"],
                      "last_job_status": f["last_job_status"],
-                     "qc_status": "ok",
+                     "qc_status": f["last_job_status"],
                      "last_wps_status": f["last_wps_status"],
-                     "percent": None,
+                     "percent": f["last_job_percent"],
                      "is_submitted": delivery_is_submitted}
+
         matching_files.append(file_info)
 
     return JsonResponse(matching_files, safe=False)
@@ -298,12 +299,25 @@ def get_result(request, job_uuid):
         # special case of system error: show error information from the WPS xml document
         wps_info = parse_status_document(compose_wps_status_filepath(job_uuid).read_text())
         if wps_info["status"] == "error":
-            if "log_info" in wps_info:
+            error_check_index = 0
+            for check in context["result"]["detail"]:
+                if check["status"] == "running" and "exception" in job_status:
+                    check["messages"] = job_status["exception"]
+                    break
+                else:
+                    error_check_index += 1
+            context["result"]["detail"][error_check_index]["status"] = "error"
+
+            if "exception" in job_status:
+                context["result"]["detail"][error_check_index]["message"] = job_status["exception"]
+
+            elif "log_info" in wps_info:
                 error_check_index = 0
                 for check in context["result"]["detail"]:
-                    if check["status"] is None:
+                    if check["status"] == "running":
                         break
-                    error_check_index += 1
+                    else:
+                        error_check_index += 1
                 context["result"]["detail"][error_check_index]["status"] = "error"
                 context["result"]["detail"][error_check_index]["message"] = wps_info["log_info"]
 
@@ -381,7 +395,7 @@ def save_job_info(job_uuid, user, product_ident, filename):
     """
     Saving a job info to database based on the job's uuid
     We only update an entry in deliveries
-    :param job_uuid:
+    :param job_uuid: the UUID assigned by the WPS server.
     :return:
     """
     try:
@@ -479,10 +493,6 @@ def run_wps_execute(request):
         filepath = request.POST.get("filepath")
         optional_check_idents = request.POST.get("optional_check_idents")
 
-        #if optional_check_idents == "" or optional_check_idents is None:
-        #    wps_data_inputs = ["filepath={:s}".format(filepath),
-        #                       "product_ident={:s}".format(product_ident)]
-        #else:
         wps_data_inputs = ["filepath={:s}".format(filepath),
                            "product_ident={:s}".format(product_ident),
                            "optional_check_idents={:s}".format(optional_check_idents)]
@@ -500,22 +510,34 @@ def run_wps_execute(request):
 
         # call the wps and receive response
         r = requests_get(wps_url)
+
+        # save to local db: initial saving.
+        file_path = Path(settings.MEDIA_ROOT).joinpath(filepath)
+        file_name = file_path.name
+        d = Delivery.objects.get(user=request.user, filename=file_name)
+        d.init_status(product_ident)
+        logger.debug("Delivery {:d}: init_status called.".format(d.id))
+
+        # parse other info about the job.
+
         tree = ElementTree.fromstring(r.text)
 
         #return HttpResponse(r.text, content_type='application/xml')
 
-        # wait for the response
+        # wait for the response and get the uuid
         if "statusLocation" in tree.attrib:
 
             status_location_url = str(tree.attrib["statusLocation"])
             job_uuid = (status_location_url.split("/")[-1]).split(".")[0]
 
-            # save job info to database cache
-            filename = filepath.split("/")[-1]
+            d.update_status(job_uuid)
 
-            logger.debug("run_wps_execute save_job_info started!")
-            save_job_info(job_uuid, request.user, product_ident, filename)
-            logger.debug("run_wps_execute save_job_info finished!")
+            # save job info to database cache
+            #filename = filepath.split("/")[-1]
+
+            #logger.debug("run_wps_execute saving job info to db..")
+            #save_job_info(job_uuid, request.user, product_ident, filename)
+            #logger.debug("run_wps_execute saved job info.")
 
             # process is started
             result = {"status": "OK",
@@ -545,10 +567,18 @@ def check_processes():
         time.sleep(10)
         counter += 1
 
-        db_jobs = Job.objects.filter(status__in=["accepted", "started"])
-        n_updates = len(list(db_jobs))
-        for db_job in db_jobs:
-            save_job_info(db_job.job_uuid, None, None, None)
+        logger.info("check_processes()")
+        db_deliveries = Delivery.objects.filter(last_wps_status__in=["accepted", "started"])
+        n_updates = 0
+        logger.info("items to update: {:d}".format(len(list(db_deliveries))))
+        for d in db_deliveries:
+            d.update_status(d.last_job_uuid)
+            n_updates += 1
+
+        #db_jobs = Job.objects.filter(last_wps_status__in=["accepted", "started"])
+        #n_updates = len(list(db_jobs))
+        #for db_job in db_jobs:
+        #    save_job_info(db_job.job_uuid, None, None, None)
 
         msg = "Running the timer: {:d} .....{:d} jobs updated.".format(counter, n_updates)
         logger.info(msg)

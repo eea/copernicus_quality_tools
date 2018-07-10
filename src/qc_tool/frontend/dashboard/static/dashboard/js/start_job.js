@@ -5,7 +5,7 @@ function display_product_info(product_ident) {
         $("#tbl_check_details > tbody").html("");
         var tbody = ""
         for (var i=0;i<checks.length;i++){
-            
+
             if(!checks[i].system) { // system checks are not shown
                 tbody += "<tr>";
                 tbody += "<td>" + checks[i].check_ident + "</td>";

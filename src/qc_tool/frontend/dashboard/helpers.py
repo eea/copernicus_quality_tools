@@ -113,7 +113,7 @@ def parse_status_document(document_content):
     STATUS_STARTED = 'started'
     STATUS_SUCCEEDED = 'finished'
 
-    doc = {'uid': None,
+    doc = {'uuid': None,
            'filepath': None,
            'product_type_name': None,
            'check_idents': None,
