@@ -1,0 +1,16 @@
+{
+  "description": "Riparian zones",
+  "checks": [
+    {
+      "check_ident": "v_unzip_shp",
+      "required": true
+    },
+    {
+      "check_ident": "v1",
+      "required": true,
+      "parameters": {
+        "formats": [".shp"]
+      }
+    }
+  ]
+}
