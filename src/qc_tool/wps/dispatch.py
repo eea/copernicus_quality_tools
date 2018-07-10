@@ -111,6 +111,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
                 if "parameters" in check:
                     check_params.update(check["parameters"])
                 check_params.update(job_params)
+                check_params["check_ident"] = check["check_ident"]
 
                 # Run the check.
                 func = get_check_function(check["check_ident"])
