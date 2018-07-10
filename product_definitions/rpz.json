@@ -1,0 +1,26 @@
+{
+  "description": "Riparian Zones",
+  "checks": [
+    {
+      "check_ident": "v_unzip_shp",
+      "required": true
+    },
+    {
+      "check_ident": "v1",
+      "required": true,
+      "parameters": {
+        "formats": [".shp"]
+      }
+    },
+    {
+      "check_ident": "change.v2_shp",
+      "required": true,
+      "parameters": {
+        "file_name_regex": "^rpz[0-9]{4}_countrycode.gdb$",
+        "layer_prefix": "^{countrycode:s}/cha",
+        "layer_regex": "^{countrycode:s}/cha[0-9]{{2}}_{countrycode:s}$",
+        "layer_count": 1
+      }
+    },
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "description": "HRL Forest Type (100m)",
+  "description": "HRL Grassland (100m)",
   "parameters": {
   },
   "checks": [
@@ -18,7 +18,7 @@
       "check_ident": "r2",
       "required": false,
       "parameters": {
-        "file_name_regex": "^fty_[0-9]{4}_100m_countrycode_[0-9]{5}.*.tif$$"
+        "file_name_regex": "^gra_[0-9]{4}_100m_countrycode_[0-9]{5}.*.tif$$"
       }
     },
     {
@@ -73,7 +73,7 @@
       "check_ident": "r10",
       "required": false,
       "parameters": {
-        "file_name_regex": "^fty_[0-9]{4}_100m_(.+?)_[0-9]{5}.*.tif$$"
+        "file_name_regex": "^gra_[0-9]{4}_100m_(.+?)_[0-9]{5}.*.tif$$"
       }
     },
     {
@@ -86,11 +86,8 @@
       "required": false,
       "parameters": {
         "colours": {
-          "0":[255, 255, 255],
-          "1":[0, 77, 168],
-          "2":[0, 112, 255],
-          "3":[0, 197, 255],
-          "4":[115, 255, 223],
+          "0":[240, 240, 240],
+          "1":[70, 158, 74],
           "254":[153, 153, 153],
           "255":[0, 0, 0]
         }
