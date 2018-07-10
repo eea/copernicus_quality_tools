@@ -1,5 +1,5 @@
 {
-  "description": "Riparian zones",
+  "description": "Riparian Zones",
   "checks": [
     {
       "check_ident": "v_unzip_shp",
