@@ -24,6 +24,7 @@ class Delivery(models.Model):
         # initializes the status with an empty job status document.
         self.last_wps_status = "accepted"
         self.last_job_status = "running"
+        self.product_ident = product_ident
         self.empty_status_document = json.dumps(prepare_empty_job_status(product_ident))
         self.save()
 
