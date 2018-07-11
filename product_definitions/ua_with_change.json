@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas",
+  "description": "Urban Atlas with Change Layer",
   "checks": [
     {
       "check_ident": "v_unzip",
