@@ -180,11 +180,15 @@ def setup_config():
 
     Environment variables consumed by frontend:
     * INCOMING_DIR;
+    * FRONTEND_DB_PATH;
     * WPS_DIR;
     * WORK_DIR;
     * WPS_URL;
     """
     config = {}
+
+    # Parameters for frontend.
+    config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/mnt/qc_tool_work/frontend.sqlite3"))
 
     # Parameters common to both frontend and wps.
     config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundary"))

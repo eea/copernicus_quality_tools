@@ -15,6 +15,7 @@ services:
       - WPS_DIR=/mnt/qc_tool_work/wps
       - WORK_DIR=/mnt/qc_tool_work/work
       - FRONTEND_PORT=8000
+      - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
       - WPS_URL=http://qc_tool_wps:5000/wps
     volumes:
       - qc_tool_incoming:/mnt/qc_tool_incoming
