@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-NoData pixels check.
-"""
-
 
 import re
 
@@ -18,12 +14,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    NoData pixels check.
-    :param params: configuration
-    :return: status + message
-    """
-
     # get countrycode from filename
     filename = params["filepath"].name.lower()
     countrycode = re.search(params["file_name_regex"], filename).group(1)

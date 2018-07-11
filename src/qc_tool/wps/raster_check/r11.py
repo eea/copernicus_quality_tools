@@ -1,9 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Minimum mapping unit check.
-"""
 
 import subprocess
 
@@ -14,12 +11,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Minimum mapping unit (MMU) check.
-    :param params: configuration
-    :return: status + message
-    """
-
     # convert mmu limit from 'ha' to 'pix' (expected pixel size of 20m)
     # mmu_limit = int(ceil(params["area_ha"]*25))
     # for example 20x20 pixel and 5ha mmu -> 125 pixels mmu_limit

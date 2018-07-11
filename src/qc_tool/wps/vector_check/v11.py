@@ -1,22 +1,12 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Minimum mapping unit check.
-"""
-
 
 from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Minimum mapping unit check..
-    :param params: configuration
-    :return: status + message
-    """
-
     # query parameters
     border_exception = params["border_exception"]
     area_m = int(params["area_ha"])*10000

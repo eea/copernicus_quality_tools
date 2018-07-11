@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Raster origin check.
-"""
-
 
 from osgeo import gdal
 
@@ -13,12 +9,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Raster origin check.
-    :param params: configuration
-    :return: status + message
-    """
-
     # enable gdal to use exceptions
     gdal.UseExceptions()
 

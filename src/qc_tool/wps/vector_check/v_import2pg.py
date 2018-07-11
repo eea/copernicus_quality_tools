@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Import layers into PostGIS db.
-"""
-
 
 from subprocess import run
 
@@ -13,11 +9,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Import layers into PostGIS db. also imports the qc functions.
-    :param params: configuration
-    :return: status + message
-    """
     dsn, schema =  params["connection_manager"].get_dsn_schema()
 
     for layer_name in params["layer_names"]:

@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Color table existence check
-"""
-
 
 from osgeo import gdal
 
@@ -13,9 +9,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    :return: status + message
-    """
     ds = gdal.Open(str(params["filepath"]))
 
     if ds is None:

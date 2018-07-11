@@ -1,22 +1,12 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Valid codes check.
-"""
-
 
 from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Valid codes check.
-    :param params: configuration
-    :return: status + message
-    """
-
     # connection to PG
     conn = params["connection_manager"].get_connection()
     cur = conn.cursor()

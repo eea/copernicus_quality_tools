@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Attribute table structure check.
-"""
-
 
 from osgeo import ogr
 
@@ -14,12 +10,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Attribute table structure check.
-    :param params: configuration
-    :return: status + message
-    """
-
     # check for .vat.dbf file existence
     dbf_filename = "{:s}.vat.dbf".format(params["filepath"].name)
     dbf_filepath = params["filepath"].with_name(dbf_filename)

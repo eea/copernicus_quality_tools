@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Unique identifier check.
-"""
-
 
 from qc_tool.common import FAILED_ITEMS_LIMIT
 from qc_tool.wps.helper import shorten_failed_items_message
@@ -13,11 +9,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Unique identifier check.
-    :param params: configuration
-    :return: status + message
-    """
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_name in params["layer_names"]:
         # create table of valid code errors

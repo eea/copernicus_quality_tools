@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Check colors in the color table
-"""
-
 
 import time
 
@@ -15,10 +11,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    :param colors: a dictionary of raster values and associated [r,g,b] colors
-    :return: status + message
-    """
     ds = gdal.Open(str(params["filepath"]))
 
     if ds is None:

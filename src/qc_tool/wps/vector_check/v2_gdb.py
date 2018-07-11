@@ -1,10 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Naming convention check.
-"""
-
 
 import re
 
@@ -15,12 +11,6 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Check if string matches pattern.
-    :param params: configuration
-    :return: status + message
-    """
-
     # check file name
     filename = params["filepath"].name
     filename = filename.lower()

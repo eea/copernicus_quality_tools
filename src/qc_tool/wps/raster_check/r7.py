@@ -1,10 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Bit depth check
-"""
-
 
 from osgeo import gdal
 
@@ -13,12 +9,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    """
-    Bit depth / data type check.
-    :param params: configuration with a bitdepth parameter
-    :return: status + message
-    """
-
     # read the datatype parameter
     expected_datatype = params["datatype"]
 
