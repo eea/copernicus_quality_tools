@@ -167,34 +167,15 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers':['file'],
+            'handlers':['console'],
             'propagate': True,
-            'level':'ERROR',
-        },
-        'dashboard': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'frontend': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'level':'INFO',
         },
         'qc_tool.frontend': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'handlers':['console'],
+            'propagate': False,
+            'level':'DEBUG',
         },
-        'qc_tool.frontend.dashboard': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'qc_tool.frontend.dashboard.views': {
-                    'handlers': ['console'],
-                    'level': 'DEBUG',
-                    'propagate': True,
-                },
+
     }
 }
