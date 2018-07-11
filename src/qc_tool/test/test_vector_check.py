@@ -6,6 +6,107 @@ from contextlib import closing
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
 
+class TestUnzip(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
+
+    def test_unzip_both_shp(self):
+        print("test_unzip_both_shp")
+        from qc_tool.wps.vector_check.v_unzip import run_check
+        self.params.update({"suffixes": [".gdb", ".shp"],
+                            "filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip")
+                            })
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("filepath", status.params)
+        self.assertEqual("Shapefiles", str((status.params["filepath"]).name))
+
+    def test_unzip_both_gdb(self):
+        print("test_unzip_both_gdb")
+        from qc_tool.wps.vector_check.v_unzip import run_check
+        self.params.update({"suffixes": [".gdb", ".shp"],
+                            "filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip")
+                            })
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("filepath", status.params)
+        self.assertEqual("SK007L1_TRNAVA.gdb", str((status.params["filepath"]).name))
+
+    def test_unzip_both_invalid(self):
+        from qc_tool.wps.vector_check.v_unzip import run_check
+        self.params.update({"suffixes": [".gdb", ".shp"],
+                            "filepath": TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif.zip")
+                           })
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status, "Unzipping a .tif file with v_unzip should be aborted.")
+
+    def test_unzip_shp_gdb(self):
+        from qc_tool.wps.vector_check.v_unzip import run_check
+        self.params.update({"suffixes": [".shp"],
+                            "filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip")
+                            })
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status, "Unzipping a .gdb using .shp suffix parameter should be aborted.")
+
+    def test_unzip_gdb_shp(self):
+        from qc_tool.wps.vector_check.v_unzip import run_check
+        self.params["suffixes"] = [".gdb"]
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status, "Unzipping a .gdb using .shp suffix parameter should be aborted.")
+
+
+class TestUnzip_shp(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip"),
+                            "tmp_dir": self.params["jobdir_manager"].tmp_dir
+                           })
+
+    def test_unzip_shp_ok(self):
+        from qc_tool.wps.vector_check.v_unzip_shp import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("filepath", status.params)
+        self.assertEqual("Shapefiles", str((status.params["filepath"]).name))
+
+    def test_unzip_shp_aborted(self):
+        from qc_tool.wps.vector_check.v_unzip_shp import run_check
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip")})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+
+
+class TestUnzip_gdb(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip"),
+                            "tmp_dir": self.params["jobdir_manager"].tmp_dir
+                           })
+
+    def test_unzip_gdb_ok(self):
+        from qc_tool.wps.vector_check.v_unzip_gdb import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("filepath", status.params)
+        self.assertEqual("SK007L1_TRNAVA.gdb", str((status.params["filepath"]).name))
+
+    def test_unzip_gdb_aborted(self):
+        from qc_tool.wps.vector_check.v_unzip_gdb import run_check
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip")})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+
 
 class TestV2_gdb(VectorCheckTestCase):
     def setUp(self):
