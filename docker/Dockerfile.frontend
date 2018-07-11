@@ -23,7 +23,6 @@ RUN cd /usr/local/src \
 
 # migrate django database tables and create a default user.
 RUN cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
-    && python3 -m qc_tool.frontend.manage makemigrations \
     && python3 -m qc_tool.frontend.manage migrate \
     && python3 -m qc_tool.frontend.manage create_default_user --username guest --password guest
 
