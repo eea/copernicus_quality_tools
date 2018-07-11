@@ -71,5 +71,5 @@ def run_check(params, status):
 
         else:
             # one directory with one or more .shp files: status ok
-            status.add_params({"filepath": shp_dirs[0]})
+            status.add_params({"filepath": shp_filepaths[0]})
             return

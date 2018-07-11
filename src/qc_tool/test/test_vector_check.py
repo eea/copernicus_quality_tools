@@ -75,7 +75,7 @@ class TestUnzip_shp(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         self.assertIn("filepath", status.params)
-        self.assertEqual("Shapefiles", str((status.params["filepath"]).name))
+        self.assertEqual("EE003L0_NARVA_UA2012.shp", str((status.params["filepath"]).name))
 
     def test_unzip_shp_aborted(self):
         from qc_tool.wps.vector_check.v_unzip_shp import run_check
@@ -106,6 +106,35 @@ class TestUnzip_gdb(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
+
+
+class TestV1(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip"),
+                            "tmp_dir": self.params["jobdir_manager"].tmp_dir,
+                            "suffixes": [".gdb", ".shp"]
+                           })
+        status = self.status_class()
+        unzip_check(self.params, status)
+        self.params["filepath"] = status.params["filepath"]
+
+    def test(self):
+        from qc_tool.wps.vector_check.v1 import run_check
+        status = self.status_class()
+        self.params.update({"formats": [".gdb", ".shp"],
+                            "drivers": {
+                                ".shp": "ESRI Shapefile",
+                                ".gdb": "OpenFileGDB",
+                                ".geojson": "GeoJSON",
+                                ".kml": "KML",
+                                ".gml": "GML",
+                                ".mdb": "ODBC"
+                            }
+                            })
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
 
 
 class TestV2_gdb(VectorCheckTestCase):
