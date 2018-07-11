@@ -23,7 +23,7 @@ def run_check(params, status):
         return
 
     # Find gdb directory.
-    gdb_filepaths = [path for path in list(extract_dir.iterdir()) if path.suffix.lower() == ".gdb"]
+    gdb_filepaths = [path for path in list(extract_dir.glob("**/*")) if path.suffix.lower() == ".gdb"]
     if len(gdb_filepaths) != 1 or not gdb_filepaths[0].is_dir():
         status.aborted()
         status.add_message("There must be exactly one .gdb directory in the zip file.")

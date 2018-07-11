@@ -28,6 +28,7 @@ PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 FAILED_ITEMS_LIMIT = 10
 
 CHECK_FUNCTION_DESCRIPTIONS = {
+    "v_unzip": "Unzips the vector file.",
     "v_unzip_gdb": "Unzips the file containing gdb directory structure.",
     "v_unzip_shp": "Unzips the file containing shp file.",
     "v_import2pg": "Import layers into PostGIS database.",
@@ -62,7 +63,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "r14": "Raster has a color table.",
     "r15": "Colors in the color table match product specification."}
 
-SYSTEM_CHECK_FUNCTIONS = ["r_unzip", "v_import2pg", "v_unzip_gdb", "v_unzip_shp"]
+SYSTEM_CHECK_FUNCTIONS = ["r_unzip", "v_import2pg", "v_unzip_gdb", "v_unzip_shp", "v_unzip"]
 
 CONFIG = None
 
