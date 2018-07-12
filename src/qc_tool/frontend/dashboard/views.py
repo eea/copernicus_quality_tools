@@ -120,7 +120,8 @@ def get_deliveries_json(request):
                      "qc_status": d.last_job_status,
                      "last_wps_status": d.last_wps_status,
                      "percent": d.last_job_percent,
-                     "is_submitted": delivery_is_submitted}
+                     "is_submitted": delivery_is_submitted,
+                     "local_installation": True}
 
         deliveries.append(file_info)
 
