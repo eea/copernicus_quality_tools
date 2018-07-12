@@ -1,36 +1,24 @@
 import json
-import os
-import requests
 from datetime import datetime
 from lxml import etree
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-
-#from .models import Job
-#from .models import UploadedFile
 
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_all_wps_uuids
-from qc_tool.common import get_product_descriptions
-from qc_tool.common import load_product_definition
-from qc_tool.common import prepare_empty_job_status
 
 
-def get_file_or_dir_size(file_or_dir):
+def format_date_utc(db_date):
     """
-    finds total size of a file or a directory in Bytes
-    :param file_or_dir: the full path to the file or directory
+    Formats a DateTime or Timezone object to UTC
+    :param db_date:
     :return:
     """
-    if os.path.isfile(file_or_dir):
-        return os.path.getsize(file_or_dir)
+    if db_date is None:
+        return None
     else:
-        total_size = 0
-        for dirpath, dirnames, filenames in os.walk(file_or_dir):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                total_size += os.path.getsize(fp)
-        return total_size
+        return db_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
 
 def guess_product_ident(product_filename):
@@ -56,6 +44,8 @@ def guess_product_ident(product_filename):
         return "clc"
     elif fn.startswith("ua"):
         return "ua"
+    elif fn.startswith("rpz"):
+        return "rpz"
     elif fn.startswith("fty"):
         if "_020m" in fn:
             return "fty_YYYY_020m"
@@ -68,8 +58,8 @@ def guess_product_ident(product_filename):
 
 def update_jobs_db():
     """
-    updates the jobs table in the db focusing on recent job runs.
-    :return:
+    updates the jobs table. This will be moved to the Job model.
+    :return: a list of job infos.
     """
     job_infos = []
     for job_uuid in get_all_wps_uuids():
@@ -87,15 +77,9 @@ def update_jobs_db():
 
         job_infos.append(job_info)
 
-    #for job_info in job_infos:
-        #try:
-            #db_job = Job.objects.get(job_uuid=job_info["uid"])
-        #except:
-            #db_job = Job()
-            #db_job.job_uuid = job_info["uid"]
-
     # sort by start_time in descending order
     job_infos = sorted(job_infos, key=lambda ji: ji['start_time'], reverse=True)
+    return job_infos
 
 
 def parse_status_document(document_content):
@@ -103,8 +87,9 @@ def parse_status_document(document_content):
     Parses the status document from the WPS
     :param document_content: the content of the document. This is obtained
     in the statusLocation attribute of the WPS 1.0.0 response
-    :return: a status document dictionary with items filepath, product_type_name, start_time, end_time,
-             percent_complete, wps_status_location, status, result, log_info
+    :return: a status document dictionary with items:
+             [filepath, product_type_name, start_time, end_time,
+              percent_complete, wps_status_location, status, result, log_info]
 
     """
 
@@ -150,7 +135,6 @@ def parse_status_document(document_content):
         val = input_tag.xpath('wps:Data/wps:LiteralData', namespaces=ns)[0].text
 
         if ident == 'filepath':
-            # print('filepath: {0}'.format(val))
             doc['filepath'] = val
 
         if ident == 'product_type_name':
