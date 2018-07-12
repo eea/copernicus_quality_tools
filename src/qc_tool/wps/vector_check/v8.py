@@ -12,7 +12,7 @@ def run_check(params, status):
     cur = conn.cursor()
 
     res = dict()
-    for layer_name in params["layer_names"]:
+    for layer_name in params["db_layer_names"]:
 
         # create table of valid code errors
         cur.execute("""SELECT __v8_multipartpolyg('{0}');""".format(layer_name))

@@ -10,9 +10,9 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    dsopen = ogr.Open(str(params["filepath"]))
-    for layer_name in params["layer_names"]:
-        layer = dsopen.GetLayerByName(layer_name)
+    for layer_name, layer_filepath in params["layer_sources"]:
+        ds = ogr.Open(layer_filepath)
+        layer = ds.GetLayerByName(layer_name)
         srs = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
         if not srs.IsProjected:
             status.add_message("Layer {:s} has source data not projected.".format(layer_name))

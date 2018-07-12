@@ -14,7 +14,7 @@ def run_check(params, status):
 
     cursor = params["connection_manager"].get_connection().cursor()
 
-    for layer_name in params["layer_names"]:
+    for layer_name in params["db_layer_names"]:
         cursor.execute("SELECT __v11_mmu_status(%s, %s, %s);", (area_m, layer_name, border_exception))
         cursor.execute("SELECT {:s} FROM {:s}_lessmmu_error;".format(params["ident_colname"], layer_name))
         failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]

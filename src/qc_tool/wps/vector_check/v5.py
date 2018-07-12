@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
-    for layer_name in params["layer_names"]:
+    for layer_name in params["db_layer_names"]:
         # create table of valid code errors
         cursor.execute("""SELECT __V5_UniqueID('{0}','{1}');""".format(layer_name, params["product_code"]))
 

@@ -2,24 +2,24 @@
   "description": "CORINE Land Cover",
   "checks": [
     {
-      "check_ident": "v_unzip_gdb",
+      "check_ident": "v_unzip",
       "required": true
     },
     {
-      "check_ident": "v1",
-      "required": true,
-      "parameters": {
-        "formats": [".gdb"]
-      }
-    },
-    {
-      "check_ident": "change.v2_gdb",
+      "check_ident": "change.v1_gdb",
       "required": true,
       "parameters": {
         "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
         "layer_prefix": "^{countrycode:s}/cha",
         "layer_regex": "^{countrycode:s}/cha[0-9]{{2}}_{countrycode:s}$",
         "layer_count": 1
+      }
+    },
+    {
+      "check_ident": "change.v2",
+      "required": true,
+      "parameters": {
+        "formats": [".gdb"]
       }
     },
     {
@@ -88,13 +88,20 @@
       }
     },
     {
-      "check_ident": "status.v2_gdb",
+      "check_ident": "status.v1_gdb",
       "required": true,
       "parameters": {
         "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
         "layer_prefix": "^{countrycode:s}/clc",
         "layer_regex": "^{countrycode:s}/clc[0-9]{{2}}_{countrycode:s}$",
         "layer_count": 2
+      }
+    },
+    {
+      "check_ident": "status.v2",
+      "required": true,
+      "parameters": {
+        "formats": [".gdb"]
       }
     },
     {

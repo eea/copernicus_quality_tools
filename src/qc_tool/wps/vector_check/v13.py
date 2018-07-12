@@ -8,7 +8,7 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    for layer_name in params["layer_names"]:
+    for layer_name in params["db_layer_names"]:
         cursor = params["connection_manager"].get_connection().cursor()
         cursor.execute("SELECT * FROM __v13_overlapping_polygons(%s, %s);", (layer_name, params["ident_colname"]))
         error_count = cursor.fetchone()[0]

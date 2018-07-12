@@ -11,9 +11,16 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
 @register_check_function(__name__)
 def run_check(params, status):
+    # Find gdb directory.
+    gdb_filepaths = [path for path in params["unzip_dir"].iterdir() if path.suffix.lower() == ".gdb"]
+    if len(gdb_filepaths) != 1 or not gdb_filepaths[0].is_dir():
+        status.aborted()
+        status.add_message("There must be exactly one .gdb directory.")
+        return
+    filepath = gdb_filepaths[0]
+
     # check file name
-    filename = params["filepath"].name
-    filename = filename.lower()
+    filename = filepath.name.lower()
     file_name_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
     conf = check_name(filename, file_name_regex)
     if not conf:
@@ -26,7 +33,7 @@ def run_check(params, status):
     countrycode = re.search(cc_regex, filename).group(1)
 
     # get list of feature classes
-    layer_names = get_fc_path(str(params["filepath"]))
+    layer_names = get_fc_path(str(filepath))
     layer_names = [layer_name.lower() for layer_name in layer_names]
 
     # get list of feature classes matching to the prefix and regex
@@ -51,6 +58,7 @@ def run_check(params, status):
         return
     else:
         # Strip country code feature dataset from layer name.
-        layer_names = [layer_name.split("/")[1] for layer_name in layer_names_by_regex]
-        status.add_params({"layer_names": layer_names})
+        layer_names = [layer_name.split("/")[-1] for layer_name in layer_names_by_regex]
+        layer_sources = [(layer_name, filepath) for layer_name in layer_names]
+        status.add_params({"layer_sources": layer_sources})
         return

@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
-    for layer_name in params["layer_names"]:
+    for layer_name in params["db_layer_names"]:
         cursor.execute("SELECT __V14_NeighbCodes(%s, %s);", (layer_name, params["product_code"]))
         cursor.execute("SELECT {:s} FROM {:s}_neighbcode_error;".format(params["ident_colname"], layer_name))
         failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]

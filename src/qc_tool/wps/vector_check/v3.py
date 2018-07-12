@@ -12,8 +12,8 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
     attr_regexes = [re.compile("{:s}$".format(attr_regex)) for attr_regex in params["attribute_regexes"]]
-    ds = ogr.Open(str(params["filepath"]))
-    for layer_name in params["layer_names"]:
+    for layer_name, layer_filepath in params["layer_sources"]:
+        ds = ogr.Open(str(layer_filepath))
         layer = ds.GetLayerByName(layer_name)
         attr_names = [field_defn.name for field_defn in layer.schema]
         missing_attr_regexes = []

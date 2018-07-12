@@ -2,19 +2,11 @@
   "description": "Riparian Zones",
   "checks": [
     {
-      "check_ident": "v_unzip_shp",
-      "file_name_regex": "^rpz_areacode[a-z]{1}_lclu_v[0-9]{2}.shp$",
+      "check_ident": "v_unzip",
       "required": true
     },
     {
-      "check_ident": "v1",
-      "required": true,
-      "parameters": {
-        "formats": [".shp"]
-      }
-    },
-    {
-      "check_ident": "v2_shp",
+      "check_ident": "v1_areacode",
       "required": true,
       "parameters": {
         "areacodes": ["du001", "du002", "du003", "du004", "du005", "du006", "du007", "du008", "du009", "du010", "du011",
@@ -22,6 +14,13 @@
                       "du023", "du024", "du025", "du026", "du027", "du028", "du029", "du030", "du031", "du032", "du033",
                       "du034", "du035", "du036", "du037", "du038", "du039", "du040", "du041", "du042", "du043"],
         "file_name_regex": "^rpz_areacode[a-z]{1}_lclu_v[0-9]{2}.shp$"
+      }
+    },
+    {
+      "check_ident": "v2",
+      "required": true,
+      "parameters": {
+        "formats": [".shp"]
       }
     },
     {

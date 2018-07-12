@@ -2,11 +2,15 @@
   "description": "Natura 2000",
   "checks": [
     {
-      "check_ident": "v_unzip_shp",
+      "check_ident": "v_unzip",
       "required": true
     },
     {
-      "check_ident": "v1",
+      "check_ident": "v1_shp",
+      "required": true
+    },
+    {
+      "check_ident": "v2",
       "required": true,
       "parameters": {
         "formats": [".shp"]
