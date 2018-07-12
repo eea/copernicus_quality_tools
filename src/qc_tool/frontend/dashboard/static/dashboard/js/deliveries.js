@@ -36,8 +36,8 @@ function dateFormatter(value, row) {
 }
 
 function actionsFormatter(value, row) {
-    // for example /start_job/clc/guest/clc2012_cz.zip
-    var start_job_url = '/start_job/' + row.product_ident + '/' + row.filename + '/';
+    // for example /start_job/1234/
+    var start_job_url = '/start_job/' + row.id + '/';
     var btn_data = '<div class="btn-group">';
 
 

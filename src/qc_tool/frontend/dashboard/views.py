@@ -18,19 +18,19 @@ from xml.etree import ElementTree
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core import exceptions as django_exceptions
+from django.core.exceptions import PermissionDenied
 from django.core.files.storage import FileSystemStorage
 from django.db import connection
 
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
-from qc_tool.common import get_all_wps_uuids
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
@@ -61,11 +61,19 @@ def jobs(request, filename):
 
 
 @login_required
-def start_job(request, filename, product):
+def start_job(request, delivery_id):
     """
     Displays a page for starting a new QA job
+    :param delivery_id: The ID of the delivery ZIP file.
     """
-    return render(request, "dashboard/start_job.html",{"filename": filename, "product": product})
+    delivery = get_object_or_404(Delivery, pk=delivery_id)
+
+    # Starting a job for a submitted delivery is not permitted.
+    if delivery.date_submitted is not None:
+        raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
+
+    context = {"filename": delivery.filename, "product": delivery.product_ident}
+    return render(request, "dashboard/start_job.html", context)
 
 
 @login_required
@@ -81,24 +89,15 @@ def get_deliveries_json(request):
 
     db_deliveries = Delivery.objects.filter(user_id=request.user.id)
 
-
-    # This could be rewritten using OOP
-    #with connection.cursor() as cur:
-    #    cur.execute(sql)
-    #    columns = [col[0] for col in cur.description]
-    #    db_file_infos = [
-    #        dict(zip(columns, row))
-    #        for row in cur.fetchall()
-    #    ]
-
-    db_valid_files = [d for d in db_deliveries if Path(d.filepath).joinpath(d.filename).exists()]
+    valid_zip_files = [d for d in db_deliveries if Path(d.filepath).joinpath(d.filename).exists()]
 
     deliveries = []
-    for d in db_valid_files:
+    for d in valid_zip_files:
+        # determine ZIP file size (todo: size_bytes should be saved in the deliveries table)
         filepath = Path(d.filepath).joinpath(d.filename)
         file_size = filepath.stat().st_size
 
-        # getting product description from lookup table
+        # getting product description from product lookup table
         product_description = "Unknown"
         product_descriptions = get_product_descriptions()
         if d.product_ident in product_descriptions:
@@ -391,7 +390,8 @@ def get_jobs(request, filename):
 def save_job_info(job_uuid, user, product_ident, filename):
     """
     Saving a job info to database based on the job's uuid
-    We only update an entry in deliveries. TODO: run this independently of delivery info.
+    We only update an entry in deliveries.
+    TODO: move this function to the job model.
     :param job_uuid: the UUID assigned by the WPS server.
     :return:
     """
@@ -526,7 +526,7 @@ def run_wps_execute(request):
             d = Delivery.objects.get(user=request.user, filename=file_name)
             d.init_status(product_ident)
             d.update_status(job_uuid)
-            logger.debug("Delivery {:d}: init_status called.".format(d.id))
+            logger.debug("Delivery {:d}: job status created with job_uuid={:s}.".format(d.id, str(d.job_uuid)))
 
             # The WPS process has been started asynchronously.
             result = {"status": "OK",

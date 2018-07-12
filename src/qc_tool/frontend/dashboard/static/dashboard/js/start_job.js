@@ -32,6 +32,7 @@ function display_product_info(product_ident) {
     $.getJSON(detail_url , function(obj) {
         var checks = obj.job_status.checks
         $("#tbl_check_details > tbody").html("");
+        $("#error_placeholder").html("");
         var tbody = ""
         for (var i=0;i<checks.length;i++){
 
@@ -64,9 +65,9 @@ function display_product_info(product_ident) {
         if($("#tbl_check_details").is(":hidden")){
             $("#tbl_check_details").show();
         }
-        $("#runs-bar").removeClass("hidden");
+        //$("#runs-bar").removeClass("hidden");
 
-        //show json product type config file link if hidden
+        // show json product type config file link if hidden
         $("#product_type_link").attr("href", "/data/product_config/" + product_ident + "/");
         if($("#product_type_link").is(':hidden')){
             $("#product_type_link").show();
@@ -78,6 +79,17 @@ function display_product_info(product_ident) {
             console.log("checkbox change");
             toggle_select_buttons();
         })
+    })
+    .fail(function() {
+        $("#tbl_check_details").hide();
+        $("#tbl_check_details > tbody").html("");
+        var product_error_msg = 'Error in configuration of <strong>' + product_ident + '</strong> product!'
+        $("#error_placeholder").html('<div class="alert alert-danger">' + product_error_msg + '</div>');
+        // show json product type config file link if hidden
+        $("#product_type_link").attr("href", "/data/product_config/" + product_ident + "/");
+        if($("#product_type_link").is(':hidden')){
+            $("#product_type_link").show();
+        }
     });
 }
 
@@ -119,7 +131,6 @@ $(document).ready(function() {
         event.preventDefault();
         run_checks();
     });
-
 
     // When product type is changed in the dropdown, update product detail info.
     $('#select_product_type').change(function() {

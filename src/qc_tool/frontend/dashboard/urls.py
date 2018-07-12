@@ -27,7 +27,7 @@ urlpatterns = [
 
     re_path("save_job/", views.save_job, name="save_job"),
 
-    path("start_job/<product>/<filename>/", views.start_job, name="start_job"),
+    path("start_job/<int:delivery_id>/", views.start_job, name="start_job"),
     path("result/<job_uuid>/", views.get_result, name="show_result"),
 ]
 
