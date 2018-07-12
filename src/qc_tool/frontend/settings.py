@@ -139,6 +139,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_ROOT = str(CONFIG["incoming_dir"])
 MEDIA_URL = '/media/'
 
+# The Local installation setting.
+# Default value is False, Set it to True if the application is deployed at EEA site.
+# TODO This should be read from CONFIG.
+# EEA_INSTALLATION = CONFIG["local_installation"]
+EEA_INSTALLATION = False
+
 # The WPS server url.
 WPS_URL = CONFIG["wps_url"]
 

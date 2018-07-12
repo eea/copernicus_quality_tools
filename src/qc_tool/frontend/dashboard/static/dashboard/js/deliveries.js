@@ -40,6 +40,9 @@ function actionsFormatter(value, row) {
     var start_job_url = '/start_job/' + row.product_ident + '/' + row.filename + '/';
     var btn_data = '<div class="btn-group">';
 
+    // EEA submit button is not shown in case of a local service provider installation.
+    var show_eea_button = row.eea_installation;
+
     if (row.qc_status === "running" || row.is_submitted) {
         // job is running --> QC button disabled, Delete button disabled
         var tooltip_message = "QC checks are currently running.";
@@ -60,17 +63,19 @@ function actionsFormatter(value, row) {
         btn_data += 'Delete</button>';
     }
 
-    if (row.is_submitted) {
-        btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
-        btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';
-    } else {
-        if (row.qc_status === "ok") {
-            btn_data += ' <button onclick="submit_eea_function(' + row.id + ', \'' + row.filename + '\')"';
-            btn_data += ' class="btn btn-sm btn-default data-toggle="tooltip"';
-            btn_data += ' title="Click to send the delivery to EEA for approval.">Submit to EEA</button>';
+    if (show_eea_button) {
+        if (row.is_submitted) {
+            btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
+            btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';
         } else {
-            btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip"';
-            btn_data += ' title="Delivery cannot be submitted to EEA. QC status is not OK.">Submit to EEA</button>';
+            if (row.qc_status === "ok") {
+                btn_data += ' <button onclick="submit_eea_function(' + row.id + ', \'' + row.filename + '\')"';
+                btn_data += ' class="btn btn-sm btn-default data-toggle="tooltip"';
+                btn_data += ' title="Click to send the delivery to EEA for approval.">Submit to EEA</button>';
+            } else {
+                btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip"';
+                btn_data += ' title="Delivery cannot be submitted to EEA. QC status is not OK.">Submit to EEA</button>';
+            }
         }
     }
 

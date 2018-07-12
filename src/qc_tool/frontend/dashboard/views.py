@@ -121,7 +121,7 @@ def get_deliveries_json(request):
                      "last_wps_status": d.last_wps_status,
                      "percent": d.last_job_percent,
                      "is_submitted": delivery_is_submitted,
-                     "local_installation": True}
+                     "eea_installation": settings.EEA_INSTALLATION}
 
         deliveries.append(file_info)
 
