@@ -35,6 +35,7 @@ from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
 
+from qc_tool.frontend.dashboard.helpers import format_date_utc
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import parse_status_document
 from qc_tool.frontend.dashboard.models import Job
@@ -45,13 +46,13 @@ logger = logging.getLogger(__name__)
 timer_is_running = False
 
 @login_required
-def files(request):
+def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
     """
     return render(request, 'dashboard/deliveries.html')
 
-
+@login_required
 def jobs(request, filename):
     """
     Displays the page with history of jobs for a specific file
@@ -59,6 +60,7 @@ def jobs(request, filename):
     return render(request, "dashboard/jobs.html", {"filename": filename})
 
 
+@login_required
 def start_job(request, filename, product):
     """
     Displays a page for starting a new QA job
@@ -66,94 +68,86 @@ def start_job(request, filename, product):
     return render(request, "dashboard/start_job.html",{"filename": filename, "product": product})
 
 
-
-def get_files_json(request):
+@login_required
+def get_deliveries_json(request):
     """
-    Returns a list of all files that are available for checking.
-    The files are loaded from the directory specified in settings.MEDIA_ROOT.
+    Returns a list of all deliveries for the current user.
+    The deliveries are loaded from the dashboard_deliverys database table.
+    The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
 
     :param request:
-    :return: list of the files in JSON format
+    :return: list of delivery ZIP files and associated metadata in JSON format
     """
 
-    # retrieve delivery metadata from the frontend database
-    sql = """
-        SELECT * 
-        FROM dashboard_delivery WHERE user_id={0}
-        """.format(request.user.id)
-
-    logger.debug(sql)
+    db_deliveries = Delivery.objects.filter(user_id=request.user.id)
 
 
-    def format_date_utc(db_date):
-        if db_date is None:
-            return None
-        else:
-            return db_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    # This could be rewritten using OOP
+    #with connection.cursor() as cur:
+    #    cur.execute(sql)
+    #    columns = [col[0] for col in cur.description]
+    #    db_file_infos = [
+    #        dict(zip(columns, row))
+    #        for row in cur.fetchall()
+    #    ]
 
+    db_valid_files = [d for d in db_deliveries if Path(d.filepath).joinpath(d.filename).exists()]
 
-    with connection.cursor() as cur:
-        cur.execute(sql)
-        columns = [col[0] for col in cur.description]
-        db_file_infos = [
-            dict(zip(columns, row))
-            for row in cur.fetchall()
-        ]
-
-    db_valid_files = [f for f in db_file_infos if Path(f["filepath"]).joinpath(f["filename"]).exists()
-                      and f["filename"].endswith("zip")]
-
-    matching_files = []
-    for f in db_valid_files:
-        filepath = Path(f["filepath"]).joinpath(f["filename"])
+    deliveries = []
+    for d in db_valid_files:
+        filepath = Path(d.filepath).joinpath(d.filename)
+        file_size = filepath.stat().st_size
 
         # getting product description from lookup table
         product_description = "Unknown"
         product_descriptions = get_product_descriptions()
-        if f["product_ident"] in product_descriptions:
-            product_description = product_descriptions[f["product_ident"]]
+        if d.product_ident in product_descriptions:
+            product_description = product_descriptions[d.product_ident]
 
-        delivery_is_submitted = f["date_submitted"] is not None
-        file_info = {"id": f["id"],
-                     "filename": f["filename"],
-                     "filepath": f["filepath"],
-                     "date_uploaded": format_date_utc(f["date_uploaded"]),
-                     "date_submitted": format_date_utc(f["date_submitted"]),
-                     "size_bytes": filepath.stat().st_size,
-                     "product_ident": f["product_ident"],
+        delivery_is_submitted = d.date_submitted is not None
+        file_info = {"id": d.id,
+                     "filename": d.filename,
+                     "filepath": d.filepath,
+                     "date_uploaded": format_date_utc(d.date_uploaded),
+                     "date_submitted": format_date_utc(d.date_submitted),
+                     "size_bytes": file_size,
+                     "product_ident": d.product_ident,
                      "username": request.user.username,
                      "product_description": product_description,
-                     "last_job_uuid": f["last_job_uuid"],
-                     "date_last_checked": f["date_last_checked"],
-                     "last_job_status": f["last_job_status"],
-                     "qc_status": f["last_job_status"],
-                     "last_wps_status": f["last_wps_status"],
-                     "percent": f["last_job_percent"],
+                     "last_job_uuid": d.last_job_uuid,
+                     "date_last_checked": d.date_last_checked,
+                     "last_job_status": d.last_job_status,
+                     "qc_status": d.last_job_status,
+                     "last_wps_status": d.last_wps_status,
+                     "percent": d.last_job_percent,
                      "is_submitted": delivery_is_submitted}
 
-        matching_files.append(file_info)
+        deliveries.append(file_info)
 
-    return JsonResponse(matching_files, safe=False)
+    return JsonResponse(deliveries, safe=False)
 
-
-# File upload will be moved to chunked_file_uploads
+@login_required
 def file_upload(request):
-
-    # file is uploaded to a directory with the same name as the current username
-    logger.debug("file_upload!")
+    """
+    Processing file uploads.
+    """
+    # Each ZIP file is uploaded to <MEDIA_ROOT>/<username>/
     try:
         user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
         if not user_upload_path.exists():
+            logger.info("Creating a directory for user-uploaded files: {:s}.".format(str(user_upload_path)))
             user_upload_path.mkdir(parents=True)
 
-        if request.method == 'POST' and request.FILES['file']:
-            myfile = request.FILES['file']
+        if request.method == 'POST' and request.FILES["file"]:
+            myfile = request.FILES["file"]
 
-            logger.debug(myfile.name)
+            logger.info("Processing uploaded ZIP file: {:s}".format(myfile.name))
 
-            # filepath exists --> show error
-            existing_deliveries = Delivery.objects.filter(filename=myfile)
+            # Show error if a ZIP file with the same name already exists.
+            existing_deliveries = Delivery.objects.filter(filename=myfile, user=request.user)
             if existing_deliveries.count() > 0:
+                logger.info("Upload rejected: file {:s} already exists for user {:s}".format(myfile.name,
+                                                                                             request.user.username))
                 data = {'is_valid': False,
                         'name': myfile.name,
                         'url': myfile.name,
@@ -166,23 +160,22 @@ def file_upload(request):
             saved_filename = fs.save(myfile.name, myfile)
             logger.debug("uploaded file saved successfully to filesystem.")
 
-            # also save file info to db
-            f = Delivery()
-            #f.file = myfile
-            f.filename = saved_filename
-            f.filepath = user_upload_path
-            f.product_ident = guess_product_ident(myfile.name)
-            f.wps_status = None
-            f.job_status = "Not checked"
-            f.user = request.user
-            f.save()
+            # Save delivery metadata into the database.
+            d = Delivery()
+            d.filename = saved_filename
+            d.filepath = user_upload_path
+            d.product_ident = guess_product_ident(myfile.name)
+            d.wps_status = None
+            d.job_status = "Not checked"
+            d.user = request.user
+            d.save()
             logger.debug("file info object saved successfully to database.")
 
             data = {'is_valid': True,
                     'name': myfile.name,
                     'url': myfile.name}
-
             return JsonResponse(data)
+
     except BaseException as e:
         data = {'is_valid': False,
                 'name': None,
@@ -195,6 +188,9 @@ def file_upload(request):
 
 @csrf_exempt
 def delivery_delete(request):
+    """
+    Deletes a delivery from the database and deleted the associated ZIP file from the filesystem.
+    """
     if request.method == "POST":
         file_id = request.POST.get("id")
         filename = request.POST.get("filename")
@@ -203,7 +199,8 @@ def delivery_delete(request):
 
         f = Delivery.objects.get(id=file_id)
         file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(f.filename)
-        file_path.unlink()
+        if file_path.exists():
+            file_path.unlink()
         f.delete()
         return JsonResponse({"status":"ok", "message": "File {0} deleted successfully.".format(filename)})
 
@@ -221,7 +218,7 @@ def delivery_submit_eea(request):
         d.save()
         return JsonResponse({"status":"ok", "message": "File {0} successfully scheduled for EEA submission.".format(filename)})
 
-
+@login_required
 def get_product_list(request):
     """
     returns a list of all product types that are available for checking.
@@ -234,7 +231,7 @@ def get_product_list(request):
     product_list = sorted(product_list, key=lambda x: x['description'])
     return JsonResponse({'product_list': product_list})
 
-
+@login_required
 def get_product_info(request, product_ident):
     """
     returns a table of details about the product
@@ -253,7 +250,7 @@ def get_product_config(request, product_ident):
     product_config = load_product_definition(product_ident)
     return JsonResponse(product_config)
 
-
+@login_required
 def get_wps_status_xml(request, job_uuid):
     """
     Shows the WPS status xml document of the selected job.
@@ -262,7 +259,7 @@ def get_wps_status_xml(request, job_uuid):
     wps_status = wps_status_filepath.read_text()
     return HttpResponse(wps_status, content_type="application/xml")
 
-
+@login_required
 def get_result_json(request, job_uuid):
     """
     Shows the JSON status xml document of the selected job.
@@ -272,7 +269,7 @@ def get_result_json(request, job_uuid):
     job_status = json.loads(job_status)
     return JsonResponse(job_status, safe=False)
 
-
+@login_required
 def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
@@ -283,7 +280,7 @@ def get_result(request, job_uuid):
         job_status = job_status_filepath.read_text()
         job_status = json.loads(job_status)
         job_timestamp = job_status_filepath.stat().st_mtime
-        job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
         context = {
             'product_type_name': job_status["product_ident"],
             'product_type_description': job_status["description"],
@@ -336,7 +333,7 @@ def get_result(request, job_uuid):
 
     return render(request, 'dashboard/result.html', context)
 
-
+@login_required
 def get_jobs(request, filename):
     """
     Returns the list of all QA jobs (both running and completed) in JSON format
@@ -353,7 +350,6 @@ def get_jobs(request, filename):
     """.format(filename, request.user.id)
     logger.debug(sql)
 
-    job_infos = []
     with connection.cursor() as cur:
         cur.execute(sql)
         columns = [col[0] for col in cur.description]
@@ -362,7 +358,7 @@ def get_jobs(request, filename):
             for row in cur.fetchall()
         ]
 
-        # optional check idents: did the user intend to run a full set of checks for the product?
+        # Optional check idents: Did the user intend to run a full set of checks for the product?
         for job_info in job_infos:
             product_ident = job_info["product_ident"]
             product_def = load_product_definition(product_ident)
@@ -394,7 +390,7 @@ def get_jobs(request, filename):
 def save_job_info(job_uuid, user, product_ident, filename):
     """
     Saving a job info to database based on the job's uuid
-    We only update an entry in deliveries
+    We only update an entry in deliveries. TODO: run this independently of delivery info.
     :param job_uuid: the UUID assigned by the WPS server.
     :return:
     """
@@ -482,7 +478,6 @@ def save_job(request):
     return JsonResponse(out, safe=False)
 
 
-
 @csrf_exempt
 def run_wps_execute(request):
     """
@@ -493,6 +488,7 @@ def run_wps_execute(request):
         filepath = request.POST.get("filepath")
         optional_check_idents = request.POST.get("optional_check_idents")
 
+        # The WPS Execute request is formatted using HTTP GET
         wps_data_inputs = ["filepath={:s}".format(filepath),
                            "product_ident={:s}".format(product_ident),
                            "optional_check_idents={:s}".format(optional_check_idents)]
@@ -508,40 +504,33 @@ def run_wps_execute(request):
 
         wps_url = settings.WPS_URL + "?" + "&".join(wps_params)
 
-        # call the wps and receive response
+        # Receive a response from the WPS.
+        logger.info("Calling WPS: {:s}".format(wps_url))
         r = requests_get(wps_url)
 
-        # save to local db: initial saving.
-        file_path = Path(settings.MEDIA_ROOT).joinpath(filepath)
-        file_name = file_path.name
-        d = Delivery.objects.get(user=request.user, filename=file_name)
-        d.init_status(product_ident)
-        logger.debug("Delivery {:d}: init_status called.".format(d.id))
-
-        # parse other info about the job.
-
+        # The WPS server should return a XML response.
         tree = ElementTree.fromstring(r.text)
-
-        #return HttpResponse(r.text, content_type='application/xml')
 
         # wait for the response and get the uuid
         if "statusLocation" in tree.attrib:
 
+            # Job UUID is parsed from the status location in the WPS response.
+            # <wps:response statusLocation="http://<wps_host>/status/<JOB_UUID>.xml">
             status_location_url = str(tree.attrib["statusLocation"])
             job_uuid = (status_location_url.split("/")[-1]).split(".")[0]
 
+            # Update delivery status in the frontend database.
+            file_path = Path(settings.MEDIA_ROOT).joinpath(filepath)
+            file_name = file_path.name
+            d = Delivery.objects.get(user=request.user, filename=file_name)
+            d.init_status(product_ident)
             d.update_status(job_uuid)
+            logger.debug("Delivery {:d}: init_status called.".format(d.id))
 
-            # save job info to database cache
-            #filename = filepath.split("/")[-1]
-
-            #logger.debug("run_wps_execute saving job info to db..")
-            #save_job_info(job_uuid, request.user, product_ident, filename)
-            #logger.debug("run_wps_execute saved job info.")
-
-            # process is started
+            # The WPS process has been started asynchronously.
             result = {"status": "OK",
-                      "message": "QC job has started and it is running in the background. <br><i>job uuid: " + job_uuid + "</i>",
+                      "message": "QC job has started and it is running in the background. <br>"
+                                 "<i>job uuid: " + job_uuid + "</i>",
                       "job_uuid": job_uuid,
                       "wps_url": wps_url}
             js = json.dumps(result)
@@ -567,26 +556,23 @@ def check_processes():
         time.sleep(10)
         counter += 1
 
-        logger.info("check_processes()")
+        logger.debug("check_processes()")
         db_deliveries = Delivery.objects.filter(last_wps_status__in=["accepted", "started"])
         n_updates = 0
-        logger.info("items to update: {:d}".format(len(list(db_deliveries))))
+        logger.debug("items to update: {:d}".format(len(list(db_deliveries))))
         for d in db_deliveries:
             d.update_status(d.last_job_uuid)
             n_updates += 1
 
-        #db_jobs = Job.objects.filter(last_wps_status__in=["accepted", "started"])
-        #n_updates = len(list(db_jobs))
-        #for db_job in db_jobs:
-        #    save_job_info(db_job.job_uuid, None, None, None)
-
         msg = "Running the timer: {:d} .....{:d} jobs updated.".format(counter, n_updates)
-        logger.info(msg)
+        logger.debug(msg)
 
 
 def startup():
-
-    print ("STARTUP !!!!!")
+    """
+    Launches a timer on server startup.
+    """
+    logger.debug("STARTUP !!!!!")
 
     t = threading.Thread(target=check_processes)
     t.setDaemon(True)

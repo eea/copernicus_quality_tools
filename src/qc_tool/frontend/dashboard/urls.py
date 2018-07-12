@@ -5,16 +5,15 @@ from qc_tool.frontend.dashboard import views
 
 urlpatterns = [
 
-    path("", views.files, name="files"),
+    path("", views.deliveries, name="deliveries"),
 
-    path("jobs/<filename>/", views.jobs, name="jobs"),
-
-    path("data/jobs/<filename>/", views.get_jobs, name="jobs_json"),
-
-    re_path("data/files", views.get_files_json, name="files_json"),
+    re_path("data/delivery/list/", views.get_deliveries_json, name="deliveries_json"),
 
     path("delivery/delete/", views.delivery_delete, name="delivery_delete"),
     path("delivery/submit/", views.delivery_submit_eea, name="delivery_submit"),
+
+    path("jobs/<filename>/", views.jobs, name="jobs"),
+    path("data/jobs/<filename>/", views.get_jobs, name="jobs_json"),
 
     path("data/product/<product_ident>/", views.get_product_info, name="product_info_json"),
     path("data/product_config/<product_ident>/", views.get_product_config, name="product_config_json"),

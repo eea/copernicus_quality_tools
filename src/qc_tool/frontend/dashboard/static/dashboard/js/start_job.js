@@ -183,7 +183,7 @@ function run_checks() {
 
             if (result.status=="OK") {
                 var dlg_ok = BootstrapDialog.show({
-                    title: "QC Job is successfully triggered",
+                    title: "QC Job successfully started",
                     message: result.message,
                     buttons: [{
                         label: "OK",

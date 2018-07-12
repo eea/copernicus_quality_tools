@@ -40,9 +40,11 @@
                             <ul class="nav navbar-nav navbar-right">
                                 {% block menu %}
                                 {% if user.is_authenticated %}
-                                <li><a href="{% url 'logout'%}?next={{request.path}}">Logout ({{ user.get_username }})</a></li>
+                                <li><a href="{% url 'logout'%}?next={{request.path}}">
+                                    <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
                                 {% else %}
-                                <li><a href="{% url 'login'%}?next={{request.path}}">Login</a></li>
+                                <li><a href="{% url 'login'%}?next={{request.path}}">
+                                    <span class="glyphicon glyphicon-log-in"></span>Sign in</a></li>
                                 {% endif %}
                                 {% endblock %}
                             </ul>
