@@ -17,7 +17,10 @@ $(function () {
     sequentialUploads: true,  /* 1. SEND THE FILES ONE BY ONE */
 
     start: function (e) {  /* 2. WHEN THE UPLOADING PROCESS STARTS, SHOW THE MODAL */
+      $("#files_table tbody").html("");
       $("#modal-progress").modal("show");
+      n_selected = 1;
+      n_uploaded = 0;
     },
     stop: function (e) {  /* 3. WHEN THE UPLOADING PROCESS FINALIZE, HIDE THE MODAL */
       $("#modal-progress").modal("hide");
@@ -32,22 +35,24 @@ $(function () {
       var strProgress = progress + "%";
       $(".progress-bar").css({"width": strProgress});
       $(".progress-bar").text(strProgress) ;
-      $(".modal-title").text("Uploading file " + n_uploaded + " / " + n_selected);
+      var n_uploaded_display = n_uploaded + 1;
+      $(".modal-title").text("Uploading file " + n_uploaded_display + " / " + n_selected);
     },
     done: function (e, data) {  /* 3. PROCESS THE RESPONSE FROM THE SERVER */
       n_uploaded += 1;
       if (data.result.is_valid) {
-        $("#files_table tbody").prepend(
-
-          '<tr><td><div class="alert alert-success">File <strong>' + data.result.url + '</strong> uploaded successfully.</div></td></tr>'
-        );
+        var msg = '<tr><td><div class="alert alert-success">'
+        msg += '<span class="glyphicon glyphicon-ok"></span>';
+        msg += ' File <strong>' + data.result.url + '</strong> uploaded successfully. ';
+        msg += '<a class="btn btn-success btn-pull-right" href="/">Go Back to my Deliveries<a>';
+        msg += '</div></td></tr>';
       } else {
-
-        $("#files_table tbody").prepend(
-
-          '<tr><td><div class="alert alert-danger">File <strong>' + data.result.message + '</strong></div></td></tr>'
-        );
+        var msg = '<tr><td><div class="alert alert-danger">';
+        msg += '<span class="glyphicon glyphicon-remove"></span> File <strong>';
+        msg += data.result.message;
+        msg += '</strong></div></td></tr>';
       }
+      $("#files_table tbody").prepend(msg);
     }
   });
 

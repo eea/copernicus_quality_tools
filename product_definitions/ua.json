@@ -2,7 +2,7 @@
   "description": "Urban Atlas",
   "checks": [
     {
-      "check_ident": "v_unzip",
+      "check_ident": "v_unzip_gdb",
       "required": true
     },
     {

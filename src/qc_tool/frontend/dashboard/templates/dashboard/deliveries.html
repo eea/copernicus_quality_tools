@@ -13,7 +13,7 @@
         <div class="row text-left">
 
             <ol class="breadcrumb">
-              <li><a href="{% url 'files' %}">Copernicus QC Tool</a></li>
+              <li><a href="{% url 'deliveries' %}">Copernicus QC Tool</a></li>
               <li class="active"><a href="">Deliveries</a></li>
             </ol>
 
@@ -21,7 +21,7 @@
 
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Uploaded Files</a></li>
+                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">My Deliveries</a></li>
                     <!--
                     <li role="presentation"><a id="tab_templates" href="#servers" aria-controls="messages" role="tab" data-toggle="tab">New Check Job</a></li>
                     -->
@@ -33,24 +33,23 @@
                         <div id="runs-toolbar-1">
                             <a href="{% url 'file_upload' %}" class="btn btn-success" role="button">
                                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                Upload New File
+                                Upload ZIP File(s)
                             </a>
-                            <!--<button id="btn-new class=btn btn-default">Start New Checking</button>-->
                         </div>
-                        <table id="tbl-files" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="client">
+                        <table id="tbl-deliveries" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
                                 <th data-field="id" data-sortable="true">ID</th>
                                 <th data-field="filename" data-sortable="true">Name</th>
                                 <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
-                                <th data-field="date_uploaded" data-sortable="true" data-formatter="dateFormatter">Uploaded</th>
+                                <th data-field="date_uploaded" data-sortable="true" data-formatter="dateFormatter">Date Uploaded</th>
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
                                 <th data-field="product_description" data-sortable="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
                                 <th data-field="qc_status" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
-                                <th data-field="is_submitted" data-sortable="true"data-formatter="submittedFormatter">Submitted</th>
-                                <th data-field="date_submitted" data-visible="false" data-sortable="true">Date Submitted</th>
+                                <th data-field="is_submitted" data-visible="false" data-sortable="false"data-formatter="submittedFormatter">Submitted</th>
+                                <th data-field="date_submitted" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
                                 <th data-field="date_last_checked" data-visible="false" data-sortable="true">Date last checked</th>
                                 <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>

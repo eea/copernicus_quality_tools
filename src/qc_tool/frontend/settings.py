@@ -139,6 +139,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_ROOT = str(CONFIG["incoming_dir"])
 MEDIA_URL = '/media/'
 
+# The Local installation setting.
+# Default value is False, Set it to True if the application is deployed at EEA site.
+# TODO This should be read from CONFIG.
+# EEA_INSTALLATION = CONFIG["local_installation"]
+EEA_INSTALLATION = False
+
 # The WPS server url.
 WPS_URL = CONFIG["wps_url"]
 
@@ -167,34 +173,15 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers':['file'],
+            'handlers':['console'],
             'propagate': True,
-            'level':'ERROR',
-        },
-        'dashboard': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'frontend': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'level':'INFO',
         },
         'qc_tool.frontend': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'handlers':['console'],
+            'propagate': False,
+            'level':'DEBUG',
         },
-        'qc_tool.frontend.dashboard': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'qc_tool.frontend.dashboard.views': {
-                    'handlers': ['console'],
-                    'level': 'DEBUG',
-                    'propagate': True,
-                },
+
     }
 }

@@ -1,3 +1,32 @@
+function toggle_select_buttons() {
+    var num_enabled_checked = 0;
+    var num_enabled_unchecked = 0;
+    var num_enabled = 0;
+
+    $(":checkbox").each(function(index) {
+        if(!$(this).prop('disabled')) {
+            num_enabled += 1;
+            if($(this).prop("checked")) {
+                num_enabled_checked += 1;
+            } else {
+                num_enabled_unchecked += 1;
+            }
+        }
+    });
+
+    if(num_enabled_checked === num_enabled) {
+        $("#btn_select_all").prop("disabled", true);
+    } else {
+        $("#btn_select_all").prop("disabled", false);
+    }
+    if(num_enabled_unchecked === num_enabled) {
+        $("#btn_unselect_all").prop("disabled", true);
+    } else {
+        $("#btn_unselect_all").prop("disabled", false);
+    }
+}
+
+
 function display_product_info(product_ident) {
     var detail_url = "/data/product/" + product_ident + "/";
     $.getJSON(detail_url , function(obj) {
@@ -9,27 +38,46 @@ function display_product_info(product_ident) {
             if(!checks[i].system) { // system checks are not shown
                 tbody += "<tr>";
                 tbody += "<td>" + checks[i].check_ident + "</td>";
-                tbody += "<td>" + checks[i].description + "</td>";
-                tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" checked';
-                if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
-                    tbody += " disabled";
+
+
+                if (checks[i].check_ident === "r10") {
+                    tbody += '<td>' + checks[i].description + '<br><br><div class="alert alert-warning">'
+                    tbody += 'Warning: Cannot run check. Reference boundary file HRL_boundary.shp not found!</div></td>';
+                    tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" disabled';
+                    tbody += "></td>";
+
+                } else {
+                    tbody += "<td>" + checks[i].description + "</td>";
+                    tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" checked';
+                    if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
+                        tbody += " disabled";
+                    }
+                    tbody += "></td>";
                 }
-                tbody += "></td>";
             }
             tbody += "</tr>";
         }
+
         $("#tbl_check_details > tbody").html(tbody);
 
         //show table if hidden
         if($("#tbl_check_details").is(":hidden")){
             $("#tbl_check_details").show();
         }
+        $("#runs-bar").removeClass("hidden");
 
         //show json product type config file link if hidden
         $("#product_type_link").attr("href", "/data/product_config/" + product_ident + "/");
         if($("#product_type_link").is(':hidden')){
             $("#product_type_link").show();
         }
+
+        //listen to checkbox events
+        toggle_select_buttons();
+        $(":checkbox").change(function() {
+            console.log("checkbox change");
+            toggle_select_buttons();
+        })
     });
 }
 
@@ -79,8 +127,26 @@ $(document).ready(function() {
         var optionSelected = $("option:selected", this);
         display_product_info(this.value);
     });
-
 });
+
+
+function unselect_all() {
+    $(":checkbox").each(function(index) {
+        if(!$(this).prop('disabled')) {
+            $(this).prop("checked", false);
+        }
+    });
+    toggle_select_buttons();
+}
+
+function select_all() {
+    $(":checkbox").each(function(index) {
+        if(!$(this).prop('disabled')) {
+            $(this).prop("checked", true);
+        }
+    });
+    toggle_select_buttons();
+}
 
 
 function run_checks() {
@@ -117,7 +183,7 @@ function run_checks() {
 
             if (result.status=="OK") {
                 var dlg_ok = BootstrapDialog.show({
-                    title: "QC Job is successfully triggered",
+                    title: "QC Job successfully started",
                     message: result.message,
                     buttons: [{
                         label: "OK",
