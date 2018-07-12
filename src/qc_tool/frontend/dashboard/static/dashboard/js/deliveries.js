@@ -40,7 +40,7 @@ function actionsFormatter(value, row) {
     var start_job_url = '/start_job/' + row.product_ident + '/' + row.filename + '/';
     var btn_data = '<div class="btn-group">';
 
-    // EEA submit button is not shown in case of a local service provider installation.
+
     var show_eea_button = row.eea_installation;
 
     if (row.qc_status === "running" || row.is_submitted) {
@@ -63,7 +63,8 @@ function actionsFormatter(value, row) {
         btn_data += 'Delete</button>';
     }
 
-    if (show_eea_button) {
+    // "Submit to EEA" button visibility is controlled by the SUBMISSION_ENABLED setting.
+    if (row.submission_enabled) {
         if (row.is_submitted) {
             btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
             btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';

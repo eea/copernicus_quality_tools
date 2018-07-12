@@ -15,6 +15,7 @@ services:
       - WORK_DIR=/mnt/qc_tool_work/work
       - FRONTEND_PORT=8000
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/work/frontend.sqlite3
+      - SUBMISSION_ENABLED=no
       - WPS_URL=http://qc_tool_wps:5000/wps
     volumes:
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools

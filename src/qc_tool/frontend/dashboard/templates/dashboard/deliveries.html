@@ -49,7 +49,9 @@
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
                                 <th data-field="qc_status" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
                                 <th data-field="is_submitted" data-visible="false" data-sortable="false"data-formatter="submittedFormatter">Submitted</th>
+                                {% if submission_enabled %}
                                 <th data-field="date_submitted" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
+                                {% endif %}
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
                                 <th data-field="date_last_checked" data-visible="false" data-sortable="true">Date last checked</th>
                                 <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>

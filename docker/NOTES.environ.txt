@@ -15,6 +15,7 @@ Service qc_tool_frontend
   * WORK_DIR, informs the frontend server where it should look for job output files;
   * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
   * FRONTEND_DB_PATH, instructs the frontend server what sqlite database file to use, if the database file does not exist, it will be created;
+  * SUBMISSION_ENABLED, instructs the frontend server that user is allowed to submit delivery to EEA;
   * WPS_URL, informs the frontend server of the url where the wps server can be reached;
 
 

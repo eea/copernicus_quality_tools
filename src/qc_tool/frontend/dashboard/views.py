@@ -50,7 +50,7 @@ def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
     """
-    return render(request, 'dashboard/deliveries.html')
+    return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED})
 
 @login_required
 def jobs(request, filename):
@@ -121,7 +121,7 @@ def get_deliveries_json(request):
                      "last_wps_status": d.last_wps_status,
                      "percent": d.last_job_percent,
                      "is_submitted": delivery_is_submitted,
-                     "eea_installation": settings.EEA_INSTALLATION}
+                     "submission_enabled": settings.SUBMISSION_ENABLED}
 
         deliveries.append(file_info)
 
