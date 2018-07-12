@@ -1,33 +1,24 @@
 {% extends "dashboard/base.html" %}
+{% load staticfiles %}
 
 {% block menu %}
-
 {% endblock %}
 
 {% block content %}
 
 
 <div class="container-fluid main" style="padding-top: 70px;">
-        <div class="row text-left">
-
-            <ol class="breadcrumb">
-              <li><a href="{% url 'files' %}">Copernicus QC Tool</a></li>
-              <li class="active">Login</li>
-            </ol>
-
-            <div class="main">
-
-
-
-<div class="container">
-      <div class="row">
-        <div class="col-md-4"></div>
-        <div class="col-md-4 text-center">
-
-            <br><br>
-
-            <div class="box1" style="padding:30px;">
-
+    <div class="row text-left">
+        <ol class="breadcrumb">
+          <li><a href="{% url 'deliveries' %}">Copernicus QC Tool</a></li>
+          <li class="active">Sign In</li>
+        </ol>
+        <div class="main">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-4"></div>
+                    <div class="col-md-4 text-center">
+                        <div class="box1" style="padding:30px;">
 
 {% if form.errors %}
 <p>Your username and password didn't match. Please try again.</p>
@@ -37,41 +28,48 @@
     {% if user.is_authenticated %}
     <p>Your account doesn't have access to this page. To proceed,
     please login with an account that has access.</p>
-    {% else %}
-    <p>Please login to enter the QC tool.</p>
     {% endif %}
 {% endif %}
 
-<form method="post" action="{% url 'login' %}">
-{% csrf_token %}
+<form method="post" class="form-signin" action="{% url 'login' %}">
+    {% csrf_token %}
+    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
 
-<div>
-  <td>{{ form.username.label_tag }}</td>
-  <td>{{ form.username }}</td>
-</div>
-<div>
-  <td>{{ form.password.label_tag }}</td>
-  <td>{{ form.password }}</td>
-</div>
-
-<div>
-  <input type="submit" value="login" />
-  <input type="hidden" name="next" value="{{ next }}" />
-</div>
+    {# The form controls are styled by login.js script #}
+    {{ form.username.label_tag }}
+    {{ form.username }}
+    {{ form.password.label_tag }}
+    {{ form.password }}
+    <br>
+    <!--
+    <div class="checkbox mb-3">
+        <label>
+          <input value="remember-me" type="checkbox"> Remember me
+        </label>
+    </div>
+    -->
+    <button class="btn btn-lg btn-primary btn-block" value="login" type="submit">Sign in</button>
+    {# The hidden input is internally used by Django for redirection (do not remove) #}
+    <input type="hidden" name="next" value="{{ next }}" />
+    <p class="mt-5 mb-3 text-muted"></p>
 </form>
 
 {# Assumes you setup the password_reset view in your URLconf #}
 <!--<p><a href="{% url 'password_reset' %}">Lost password?</a></p>-->
 
 
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-      </div>
+    </div>
 </div>
 
 
-
-            </div></div></div>
-
-
 {% endblock %}
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'dashboard/js/login.js' %}"></script>
+{% endblock js %}
