@@ -2,41 +2,30 @@
 # -*- coding: utf-8 -*-
 
 
+import re
+
 from osgeo import ogr
 
-from qc_tool.wps.helper import find_name
-from qc_tool.wps.helper import get_substring
 from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
 def run_check(params, status):
-    # get list of actual field names of all layers
+    attr_regexes = [re.compile("{:s}$".format(attr_regex)) for attr_regex in params["attribute_regexes"]]
     ds = ogr.Open(str(params["filepath"]))
-    layer_fields = dict()
-    for ln in params["layer_names"]:
-        layer = ds.GetLayerByName(str(ln))
-        layer_fields[ln] = [field.name.lower() for field in layer.schema]
-
-    # The list of missing field names will be stored by layer
-    missing = dict()
-    for ln in layer_fields:
-        missing[ln] = list()
-        year = get_substring(ln, "[0-9]{2}")
-        for an in params["fields"]:
-            if year and "yy" in an:
-                an = an.replace("yy", year)
-            # check if there are any actual field names that match the template
-            matching_fieldnames = list(find_name(layer_fields[ln], an.lower()))
-            if not matching_fieldnames:
-                missing[ln].append(an.lower().lstrip("^").rstrip("$"))
-
-        if not missing[ln]:
-            del missing[ln]
-
-    if len(missing) > 0:
-        # report missing fields for each layer
-        layer_results = ", ".join("layer {!s}: ('{!s}')".format(ln, "', '".join(fn)) for (ln, fn) in missing.items())
-        res_message = "Some of the required attributes are missing: ({:s})".format(layer_results)
-        status.add_message(res_message)
-        return
+    for layer_name in params["layer_names"]:
+        layer = ds.GetLayerByName(layer_name)
+        attr_names = [field_defn.name for field_defn in layer.schema]
+        missing_attr_regexes = []
+        for attr_regex in params["attribute_regexes"]:
+            is_missing = True
+            for attr_name in attr_names:
+                mobj = re.match("{:s}$".format(attr_regex), attr_name, re.IGNORECASE)
+                if mobj is not None:
+                    is_missing = False
+                    break
+            if is_missing:
+                missing_attr_regexes.append(attr_regex)
+        if len(missing_attr_regexes) > 0:
+            missing_attr_message = ", ".join(missing_attr_regexes)
+            status.add_message("Layer {:s} has missing attributes: {:s}.".format(layer_name, missing_attr_message))

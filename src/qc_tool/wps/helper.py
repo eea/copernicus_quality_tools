@@ -31,31 +31,6 @@ def check_name(name, template):
     return bool(regex.match(name))
 
 
-def find_name(list_of_names, template):
-    """
-    Find string from list based on regular expression.
-    :param template: regex
-    :param list_of_names: list of strings
-    :return: list of matching strings
-    """
-    regex = re.compile(template)
-    return filter(regex.match, list_of_names)
-
-
-def get_substring(name, template):
-    """
-    Get substring based on regular expression.
-    :param name:
-    :param template:
-    :return: matching substring (or None)
-    """
-    r = re.compile(template)
-    rs = re.search(r, name)
-    if rs:
-        return str(rs.group(0))
-    else:
-        return None
-
 def shorten_failed_items_message(items, count):
     if len(items) == 0:
         return None

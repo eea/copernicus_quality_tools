@@ -18,14 +18,14 @@
       "check_ident": "r2",
       "required": false,
       "parameters": {
-        "file_name_regex": "^gra_[0-9]{4}_100m_countrycode_[0-9]{5}.*.tif$$"
+        "file_name_regex": "^gra_[0-9]{4}_100m_countrycode_[0-9]{5}.*.tif$"
       }
     },
     {
       "check_ident": "r3",
       "required": false,
       "parameters": {
-        "fields": ["^value$", "^count$", "^km2$"]
+        "attribute_regexes": ["value", "count", "km2"]
       }
     },
     {
@@ -73,7 +73,7 @@
       "check_ident": "r10",
       "required": false,
       "parameters": {
-        "file_name_regex": "^gra_[0-9]{4}_100m_(.+?)_[0-9]{5}.*.tif$$"
+        "file_name_regex": "^gra_[0-9]{4}_100m_(.+?)_[0-9]{5}.*.tif$"
       }
     },
     {

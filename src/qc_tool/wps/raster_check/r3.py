@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 
+import re
+
 from osgeo import ogr
 
-from qc_tool.wps.helper import find_name
 from qc_tool.wps.registry import register_check_function
 
 
@@ -13,27 +14,24 @@ def run_check(params, status):
     # check for .vat.dbf file existence
     dbf_filename = "{:s}.vat.dbf".format(params["filepath"].name)
     dbf_filepath = params["filepath"].with_name(dbf_filename)
+
     if not dbf_filepath.is_file():
         status.add_message("Attribute table file (.vat.dbf) is missing.")
         return
 
-    # get list of field names
     ds = ogr.Open(str(dbf_filepath))
-    lyr = ds.GetLayer()
-    fnames = list()
-    lyr_defn = lyr.GetLayerDefn()
-    for n in range(lyr_defn.GetFieldCount()):
-        fdefn = lyr_defn.GetFieldDefn(n)
-        fnames.append(fdefn.name.lower())
-
-    # check for required field names existence
-    missing_fnames = list()
-    for an in params["fields"]:
-        if not find_name(fnames, an.lower()):
-            missing_fnames.append(an.lower().lstrip("^").rstrip("$"))
-    if not missing_fnames:
-        return
-    else:
-        missing_fnames_str = "', '".join(missing_fnames)
-        status.add_message("Some of the required attributes are missing: '{:s}'.".format(missing_fnames_str))
-        return
+    layer = ds.GetLayer()
+    attr_names = [field_defn.name for field_defn in layer.schema]
+    missing_attr_regexes = []
+    for attr_regex in params["attribute_regexes"]:
+        is_missing = True
+        for attr_name in attr_names:
+            mobj = re.match("{:s}$".format(attr_regex), attr_name, re.IGNORECASE)
+            if mobj is not None:
+                is_missing = False
+                break
+        if is_missing:
+            missing_attr_regexes.append(attr_regex)
+    if len(missing_attr_regexes) > 0:
+        missing_attr_message = ", ".join(missing_attr_regexes)
+        status.add_message("Raster attribute table has missing attributes: {:s}.".format(missing_attr_message))

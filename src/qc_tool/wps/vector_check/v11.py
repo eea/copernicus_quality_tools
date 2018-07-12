@@ -17,7 +17,7 @@ def run_check(params, status):
     for layer_name in params["layer_names"]:
         cursor.execute("SELECT __v11_mmu_status(%s, %s, %s);", (area_m, layer_name, border_exception))
         cursor.execute("SELECT {:s} FROM {:s}_lessmmu_error;".format(params["ident_colname"], layer_name))
-        failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)])
+        failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
         if len(failed_ids) > 0:
             failed_ids_message = shorten_failed_items_message(failed_ids, cursor.rowcount)
             status.add_message("Layer {:s} has polygons under MMU: {:s}.".format(layer_names, failed_ids_message))

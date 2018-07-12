@@ -28,7 +28,7 @@
       "check_ident": "v3",
       "required": false,
       "parameters": {
-        "fields": ["^FID$", "^ID$", "^DU_ID$", "^MAES_1$", "^MAES_2$", "^MAES_3$", "^MAES_4$", "^TCD$", "^UA$", "^AREA_HA$", "^NODATA$", "^COMMENT$"]
+        "attribute_regexes": ["fid", "id", "du_id", "maes_1", "maes_2", "maes_3", "maes_4", "tcd", "ua", "area_ha", "nodata", "comment"]
       }
     },
     {
@@ -124,7 +124,7 @@
       "parameters": {
         "ident_colname": "id",
         "product_code": "rpz",
-        "code_colnames":["MAES_4"]
+        "code_colnames": ["MAES_4"]
       }
     }
   ]

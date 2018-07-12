@@ -26,7 +26,7 @@
       "check_ident": "status.v3",
       "required": false,
       "parameters": {
-        "fields": ["^OBJECTID$", "^COUNTRY$", "^CITIES$", "^FUA_OR_CIT$", "^CODE_[0-9]{4}$", "^ITEM_[0-9]{4}$", "^PROD_DATE$", "^IDENT$", "^Shape_Length$", "^Shape_Area$"]
+        "attribute_regexes": ["objectid", "country", "cities", "fua_or_cit", "code_[0-9]{4}", "item_[0-9]{4}", "prod_date", "ident", "shape_length", "shape_area"]
       }
     },
     {
@@ -102,7 +102,7 @@
       "check_ident": "change.v3",
       "required": false,
       "parameters": {
-        "fields": ["^OBJECTID$", "^COUNTRY$", "^CITIES$", "^FUA_OR_CIT$", "^CODE_[0-9]{4}$", "^ITEM_[0-9]{4}$", "^PROD_DATE$", "^IDENT$", "^Shape_Length$", "^Shape_Area$"]
+        "attribute_regexes": ["objectid", "country", "cities", "fua_or_cit", "code_[0-9]{4}", "item_[0-9]{4}", "prod_date", "ident", "shape_length", "shape_area"]
       }
     },
     {
