@@ -4,8 +4,7 @@
 
 import re
 
-from qc_tool.common import FAILED_ITEMS_LIMIT
-from qc_tool.wps.helper import shorten_failed_items_message
+from qc_tool.wps.helper import get_failed_ids_message
 from qc_tool.wps.registry import register_check_function
 
 
