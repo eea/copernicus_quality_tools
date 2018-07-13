@@ -9,7 +9,7 @@
         ".jpg": "JPEG"
       }
     },
-    "v1": {
+    "v2": {
       "drivers": {
         ".shp": "ESRI Shapefile",
         ".gdb": "OpenFileGDB",

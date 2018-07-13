@@ -36,8 +36,8 @@ class Test_clc(TestCase):
     def test_malta(self):
         filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
         job_status = dispatch(str(uuid4()), filepath, "clc", [])
-        self.assertEqual("v1", job_status["checks"][1]["check_ident"])
-        self.assertEqual("ok", job_status["checks"][1]["status"],
+        self.assertEqual("change.v2", job_status["checks"][2]["check_ident"])
+        self.assertEqual("ok", job_status["checks"][2]["status"],
                          "Malta should pass the checks for the product clc.status.")
 
 
