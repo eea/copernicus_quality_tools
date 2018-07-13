@@ -140,7 +140,7 @@ MEDIA_ROOT = str(CONFIG["incoming_dir"])
 MEDIA_URL = '/media/'
 
 # Submission feature setting.
-SUBMISSION_ENABLED = CONFIG["submission_enabled"]
+SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
 
 # The WPS server url.
 WPS_URL = CONFIG["wps_url"]
