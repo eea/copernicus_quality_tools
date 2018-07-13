@@ -44,8 +44,7 @@
       "check_ident": "status.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
-        "product_code": "ua"
+        "ident_colname": "ident"
       }
     },
     {
@@ -120,8 +119,7 @@
       "check_ident": "change.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
-        "product_code": "ua"
+        "ident_colname": "ident"
       }
     },
     {

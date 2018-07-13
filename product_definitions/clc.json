@@ -44,8 +44,7 @@
       "check_ident": "change.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
-        "product_code": "cha"
+        "ident_colname": "id"
       }
     },
     {
@@ -126,8 +125,7 @@
       "check_ident": "status.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
-        "product_code": "clc"
+        "ident_colname": "id"
       }
     },
     {
