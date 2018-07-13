@@ -24,7 +24,7 @@ git clone https://github.com/eea/copernicus_quality_tools
 cd copernicus_quality_tools/docker
 ```
 
-(3) Create a copy of `docker-compose.default.yml` and adjust the copy in accord with your environment.  For example see `docker-compose.igor.yml`.  The environment variables are described in [docker/NOTES.environ.txt](docker/NOTES.environ.txt).
+(3) Create a copy of `docker-compose.service_provider.yml` and adjust the copy in accord with your environment.  For example see `docker-compose.igor.yml`.  The environment variables are described in [docker/NOTES.environ.txt](docker/NOTES.environ.txt).  There is also `docker-compose.eea.yml` prepared targeting eea infrastructure with submission feature enabled.
 
 (4) If you want to utilize source codes cloned in the step (1) you can overlay source codes already built inside the image.  You will apply docker bind mount.  For advice see the first item in section `volumes:` in [docker-compose.igor.yml](docker/docker-compose.igor.yml).
 
