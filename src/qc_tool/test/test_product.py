@@ -16,14 +16,14 @@ class Test_fty_YYYY_020m(TestCase):
         load_all_check_functions()
 
     def test_run(self):
-        filepath = TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif.zip")
-        job_status = dispatch(str(uuid4()), filepath, "fty_YYYY_020m", [])
+        filepath = TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif.zip")
+        job_status = dispatch(str(uuid4()), filepath, "fty_YYYY_020m", ["r2", "r3", "r4", "r5"])
         self.assertEqual("r1", job_status["checks"][1]["check_ident"])
         self.assertEqual("ok", job_status["checks"][1]["status"],
                          "Slovenia test file should pass check for the product fty_YYYY_020m.")
 
     def test_bad_extension(self):
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_status = dispatch(str(uuid4()), filepath, "fty_YYYY_020m", [])
         self.assertEqual("r_unzip", job_status["checks"][0]["check_ident"])
         self.assertEqual("aborted", job_status["checks"][0]["status"])
@@ -34,7 +34,7 @@ class Test_clc(TestCase):
         load_all_check_functions()
 
     def test_malta(self):
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_status = dispatch(str(uuid4()), filepath, "clc", [])
         self.assertEqual("change.v2", job_status["checks"][2]["check_ident"])
         self.assertEqual("ok", job_status["checks"][2]["status"],
@@ -46,7 +46,7 @@ class Test_clc_status(TestCase):
         load_all_check_functions()
 
     def test_status_json(self):
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_status = dispatch("test-uuid", filepath, "clc", [])
         status_filepath = Path("/mnt/qc_tool_work/work/job_testuuid/status.json")
         self.assertTrue(status_filepath.exists())
@@ -63,9 +63,10 @@ class Test_update_status(TestCase):
     def test_run(self):
         def my_update(check_ident, percent_done):
             pass
-        filepath = TEST_DATA_DIR.joinpath("clc2012_mt.gdb.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         dispatch(str(uuid4()),
                  filepath,
                  "clc",
-                 ["status.v3", "status.v4", "status.v5", "status.v6", "status.v8", "status.v11"],
+                 ["status.v3", "status.v4", "status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",
+                  "change.v3", "change.v4", "change.v5", "change.v6", "change.v8", "change.v11", "change.v13", "change.v14"],
                  update_status_func=my_update)

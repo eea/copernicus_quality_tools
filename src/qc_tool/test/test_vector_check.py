@@ -11,136 +11,76 @@ class TestUnzip(VectorCheckTestCase):
         super().setUp()
         self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
 
-    def test_unzip_both_shp(self):
-        print("test_unzip_both_shp")
+    def test_unzip_shp(self):
         from qc_tool.wps.vector_check.v_unzip import run_check
-        self.params.update({"suffixes": [".gdb", ".shp"],
-                            "filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip")
-                            })
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
-        self.assertIn("filepath", status.params)
-        self.assertEqual("Shapefiles", str((status.params["filepath"]).name))
 
-    def test_unzip_both_gdb(self):
+        self.assertIn("unzip_dir", status.params)
+        self.assertEqual("ok", status.status)
+
+        unzip_dir = status.params["unzip_dir"]
+        unzipped_subdir_names = [path.name for path in unzip_dir.glob("**")]
+        unzipped_file_names = [path.name for path in unzip_dir.glob("**/*") if path.is_file()]
+
+        self.assertIn("Shapefiles", unzipped_subdir_names,
+                      "Unzipped directory should contain a 'Shapefiles' subdirectory.")
+        self.assertIn("EE003L0_NARVA_UA2012.shp", unzipped_file_names,
+                      "Unzipped directory should contain a file EE003L0_NARVA_UA2012.shp.")
+
+    def test_unzip_gdb(self):
         print("test_unzip_both_gdb")
         from qc_tool.wps.vector_check.v_unzip import run_check
-        self.params.update({"suffixes": [".gdb", ".shp"],
-                            "filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip")
-                            })
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.assertIn("filepath", status.params)
-        self.assertEqual("SK007L1_TRNAVA.gdb", str((status.params["filepath"]).name))
+        self.assertIn("unzip_dir", status.params)
+        unzip_dir = status.params["unzip_dir"]
+        unzipped_subdir_names = [path.name for path in unzip_dir.glob("**") if path.is_dir()]
+        self.assertIn("SK007L1_TRNAVA.gdb", unzipped_subdir_names)
 
-    def test_unzip_both_invalid(self):
+    def test_unzip_invalid_file(self):
         from qc_tool.wps.vector_check.v_unzip import run_check
-        self.params.update({"suffixes": [".gdb", ".shp"],
-                            "filepath": TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif.zip")
-                           })
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("non_existent_zip_file.zip")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("aborted", status.status, "Unzipping a .tif file with v_unzip should be aborted.")
-
-    def test_unzip_shp_gdb(self):
-        from qc_tool.wps.vector_check.v_unzip import run_check
-        self.params.update({"suffixes": [".shp"],
-                            "filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip")
-                            })
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("aborted", status.status, "Unzipping a .gdb using .shp suffix parameter should be aborted.")
-
-    def test_unzip_gdb_shp(self):
-        from qc_tool.wps.vector_check.v_unzip import run_check
-        self.params["suffixes"] = [".gdb"]
-        self.params["filepath"] = TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip")
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("aborted", status.status, "Unzipping a .gdb using .shp suffix parameter should be aborted.")
+        self.assertEqual("aborted", status.status, "Unzipping a non-existent v_unzip should be aborted.")
 
 
-class TestUnzip_shp(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip"),
-                            "tmp_dir": self.params["jobdir_manager"].tmp_dir
-                           })
-
-    def test_unzip_shp_ok(self):
-        from qc_tool.wps.vector_check.v_unzip_shp import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("ok", status.status)
-        self.assertIn("filepath", status.params)
-        self.assertEqual("EE003L0_NARVA_UA2012.shp", str((status.params["filepath"]).name))
-
-    def test_unzip_shp_aborted(self):
-        from qc_tool.wps.vector_check.v_unzip_shp import run_check
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip")})
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("aborted", status.status)
-
-
-class TestUnzip_gdb(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "SK007L1_TRNAVA.gdb.zip"),
-                            "tmp_dir": self.params["jobdir_manager"].tmp_dir
-                           })
-
-    def test_unzip_gdb_ok(self):
-        from qc_tool.wps.vector_check.v_unzip_gdb import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("ok", status.status)
-        self.assertIn("filepath", status.params)
-        self.assertEqual("SK007L1_TRNAVA.gdb", str((status.params["filepath"]).name))
-
-    def test_unzip_gdb_aborted(self):
-        from qc_tool.wps.vector_check.v_unzip_gdb import run_check
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip")})
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("aborted", status.status)
-
-
-class TestV1(VectorCheckTestCase):
+class TestV1_areacode(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath("ua", "EE003L0_NARVA.shp.zip"),
-                            "tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "suffixes": [".gdb", ".shp"]
-                           })
+        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU026A.shp.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
-        self.params["filepath"] = status.params["filepath"]
+        self.params["unzip_dir"] = status.params["unzip_dir"]
 
     def test(self):
-        from qc_tool.wps.vector_check.v1 import run_check
+        from qc_tool.wps.vector_check.v1_areacode import run_check
         status = self.status_class()
-        self.params.update({"formats": [".gdb", ".shp"],
-                            "drivers": {
-                                ".shp": "ESRI Shapefile",
-                                ".gdb": "OpenFileGDB",
-                                ".geojson": "GeoJSON",
-                                ".kml": "KML",
-                                ".gml": "GML",
-                                ".mdb": "ODBC"
-                            }
-                            })
+        self.params["file_name_regex"] = "rpz_AREACODE[a-z]{1}_lclu_v[0-9]{2}.shp$"
+        self.params["areacodes"] = ["du026", "du027"]
+
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
+        self.assertIn("layer_sources", status.params)
+        self.assertEqual(1, len(status.params["layer_sources"]))
+        # testing if layer name in layer sources is correct
+        self.assertEqual("rpz_du026a_lclu_v01", status.params["layer_sources"][0][0], "layer name must match.")
+        # testing if associated filepath in layers sources is correct
+        self.assertEqual("rpz_DU026A_lclu_v01.shp", status.params["layer_sources"][0][1].name, "filename must match.")
 
 
-class TestV2_gdb(VectorCheckTestCase):
+class TestV1_gdb(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
+        self.params.update({
+                            "unzip_dir": TEST_DATA_DIR.joinpath("vector", "clc"),
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb"),
                             "country_codes": "(MT)",
                             "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
                             "layer_prefix": "^{countrycode:s}/clc",
@@ -148,66 +88,139 @@ class TestV2_gdb(VectorCheckTestCase):
                             "layer_count": 2
                            })
 
-    def test_v2_gdb_clc_ok(self):
-        from qc_tool.wps.vector_check.v2_gdb import run_check
+    def test_v1_gdb_clc_ok(self):
+        from qc_tool.wps.vector_check.v1_gdb import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.assertIn("layer_names", status.params)
+        self.assertIn("layer_sources", status.params)
+        # There should be two status layers in clc2012_mt.gdb.
+        self.assertEqual(2, len(status.params["layer_sources"]))
+        self.assertEqual("clc2012_mt.gdb", status.params["layer_sources"][0][1].name)
+        self.assertEqual("clc2012_mt.gdb", status.params["layer_sources"][1][1].name)
+        layer_names = [layer_source[0] for layer_source in status.params["layer_sources"]]
+        self.assertIn("clc12_mt", layer_names)
+        self.assertIn("clc06_mt", layer_names)
 
-    def test_v2_gdb_prefix_fail(self):
+    def test_v1_gdb_prefix_fail(self):
         self.params["layer_prefix"] = "^{countrycode:s}/cha"
-        from qc_tool.wps.vector_check.v2_gdb import run_check
+        from qc_tool.wps.vector_check.v1_gdb import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
 
-    def test_v2_gdb_count_fail(self):
+    def test_v1_gdb_count_fail(self):
         self.params["layer_count"] = 1
-        from qc_tool.wps.vector_check.v2_gdb import run_check
+        from qc_tool.wps.vector_check.v1_gdb import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
+
+
+class TestV2(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+
+        # setup step 1: unzip
+        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU026A.shp.zip")
+        self.params.update({"filepath": rpz_filepath,
+                            "tmp_dir": self.params["jobdir_manager"].tmp_dir
+                           })
+        status = self.status_class()
+        unzip_check(self.params, status)
+        self.params["unzip_dir"] = status.params["unzip_dir"]
+
+        # setup step 2: get layer names
+        from qc_tool.wps.vector_check.v1_areacode import run_check as layer_check
+        status = self.status_class()
+        self.params["file_name_regex"] = "rpz_AREACODE[a-z]{1}_lclu_v[0-9]{2}.shp$"
+        self.params["areacodes"] = ["du026", "du027"]
+        layer_check(self.params, status)
+        self.params["layer_sources"] = status.params["layer_sources"]
+
+
+    def test(self):
+        from qc_tool.wps.vector_check.v2 import run_check
+        status = self.status_class()
+        self.params.update({"formats": [".gdb", ".shp"], "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"}})
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_incorrect_format(self):
+        from qc_tool.wps.vector_check.v2 import run_check
+        status = self.status_class()
+        self.params.update({"formats": [".gdb"], "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"}})
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status, "Check v2 should be aborted if the file is not in expected format.")
 
 
 class TestV3(VectorCheckTestCase):
-    valid_geodatabase = "clc2012_mt.gdb"
     def setUp(self):
         super().setUp()
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath(self.valid_geodatabase),
-                            "layer_names": ["clc12_mt"]})
+        gdb_path = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb"),
+                            "layer_sources": [["clc12_mt", gdb_path],["clc06_mt", gdb_path]]
+                            })
 
     def test_v3_Malta_clc_ok(self):
         from qc_tool.wps.vector_check.v3 import run_check
-        self.params["fields"] = ["^ID$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$"]
+        self.params["attribute_regexes"] = ["id", "code_(06|12|18)", "area_ha", "remark"]
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_v3_missing_fields(self):
         from qc_tool.wps.vector_check.v3 import run_check
-        self.params["fields"] = ["^ID2$", "^CODE_[0-9]{2}$", "^AREA_HA$", "^REMARK$", "^EXTRA_FIELD$"]
+        self.params["attribute_regexes"] = ["id", "code_(06|12|18)", "area_ha", "remark", "extra_field"]
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(2, len(status.messages))
+        self.assertIn("has missing attributes: extra_field", status.messages[0])
+
+
+class TestV4(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        gdb_path = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
+        self.params.update({"filepath": TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb"),
+                            "layer_sources": [["clc12_mt", gdb_path], ["clc06_mt", gdb_path]],
+                            "epsg": [23033]
+                            })
+
+    def test(self):
+        from qc_tool.wps.vector_check.v4 import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_fail(self):
+        from qc_tool.wps.vector_check.v4 import run_check
+        self.params["epsg"] = [7777]
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
 
 
 class TestVImport2pg(VectorCheckTestCase):
-    valid_geodatabase = "clc2012_mt.gdb"
+    gdb_filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
     def setUp(self):
         super().setUp()
-        self.params.update({"filepath": TEST_DATA_DIR.joinpath(self.valid_geodatabase),
-                            "layer_names": ["clc12_mt"]})
+        self.params.update({"filepath": self.gdb_filepath,
+                            "layer_sources": [["clc12_mt", self.gdb_filepath], ["clc06_mt", self.gdb_filepath]]})
 
     def test_v_import2pg_pass(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
+        self.assertIn("clc12_mt", status.params["db_layer_names"])
+        self.assertIn("clc06_mt", status.params["db_layer_names"])
 
     def test_v_import2pg_bad_file_aborted(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
-        self.params["filepath"] = TEST_DATA_DIR.joinpath("test_raster1.tif")
+        self.params["layer_sources"] = [["bad_layer", TEST_DATA_DIR.joinpath("raster", "checks", "r11", "test_raster1.tif")]]
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status, "Status was not 'aborted' when importing a file with bad format.")
@@ -218,7 +231,7 @@ class TestVImport2pg(VectorCheckTestCase):
         run_check(self.params, status)
 
         cur = self.params["connection_manager"].get_connection().cursor()
-        cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_names"][0]))
+        cur.execute("""SELECT id FROM {:s};""".format(status.params["db_layer_names"][0]))
         self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
 
     def test_v_import2pg_functions_created(self):
@@ -229,9 +242,6 @@ class TestVImport2pg(VectorCheckTestCase):
         job_schema = self.params["connection_manager"].get_dsn_schema()[1]
         expected_function_names = ["__v11_mmu_status",
                                    "__v11_mmu_polyline_border",
-                                   "__v5_uniqueid",
-                                   "__v6_validcodes",
-                                   "__v8_multipartpolyg",
                                    "__v11_mmu_change_clc"]
         conn = self.params["connection_manager"].get_connection()
         cur = conn.cursor()
@@ -251,10 +261,11 @@ class TestV5(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"product_code": "cha",
                             "filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
-                            "layer_names": ["clc12_mt"],
+                            "layer_sources": [["clc12_mt", TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")]],
                             "ident_colname": "id"})
         status = self.status_class()
         import_check(self.params, status)
+        self.params["db_layer_names"] = status.params["db_layer_names"]
 
     def test(self):
         from qc_tool.wps.vector_check.v5 import run_check
@@ -263,14 +274,54 @@ class TestV5(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
 
+class TestV6(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+
+
+    def test_status_pass(self):
+        from qc_tool.wps.vector_check.v6 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE xxx18_zz (id integer, code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO xxx18_zz VALUES (1, '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                  " (2, '111', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                  " (3, '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params["db_layer_names"] = ["xxx18_zz"]
+        self.params["ident_colname"] = "id"
+        self.params["code_regex"] = "^...(..)"
+        self.params["code_to_column_def"] = {"18": [["code_18", "CLC"]]}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_change_fail(self):
+        from qc_tool.wps.vector_check.v6 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE cha18_xx (id integer, code_12 varchar, code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                  " (2, 'xxx', 'xxx', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                  " (3, 'xxx', '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+
+        self.params["db_layer_names"] = ["cha18_xx"]
+        self.params["ident_colname"] = "id"
+        self.params["code_regex"] = "^...(..)"
+        self.params["code_to_column_def"] = {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(2, len(status.messages))
+
 class TestV8(VectorCheckTestCase):
     def setUp(self):
+        gdb_filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
         super().setUp()
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
-                            "layer_names": ["clc12_mt"]})
+                            "layer_sources": [["clc12_mt", gdb_filepath]],
+                            "ident_colname": "id"})
         status = self.status_class()
         import_check(self.params, status)
+        self.params["db_layer_names"] = status.params["db_layer_names"]
 
     def test_v8_Malta(self):
         from qc_tool.wps.vector_check.v8 import run_check
@@ -282,14 +333,16 @@ class TestV8(VectorCheckTestCase):
 class TestV11(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
+        gdb_filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
-                            "layer_names": ["clc12_mt"],
+                            "layer_sources": [["clc12_mt", gdb_filepath]],
                             "ident_colname": "id",
                             "area_ha": 25,
                             "border_exception": True})
         status = self.status_class()
         import_check(self.params, status)
+        self.params["db_layer_names"] = status.params["db_layer_names"]
 
     def test_v11_small_mmu_should_pass(self):
         from qc_tool.wps.vector_check.v11 import run_check
@@ -313,7 +366,7 @@ class TestV11(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
 
-        table_name = "{:s}_polyline_border".format(self.params["layer_names"][0])
+        table_name = "{:s}_polyline_border".format(self.params["db_layer_names"][0])
         dsn, job_schema_name =  self.params["connection_manager"].get_dsn_schema()
         cur = self.params["connection_manager"].get_connection().cursor()
         cur.execute("SELECT table_schema FROM information_schema.tables WHERE table_name=%s;", (table_name,))
@@ -330,7 +383,7 @@ class TestV13(VectorCheckTestCase):
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE test_layer_1 (ident integer, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("CREATE TABLE test_layer_2 (ident integer, wkb_geometry geometry(Polygon, 4326));")
-        self.params.update({"layer_names": ["test_layer_1", "test_layer_2"],
+        self.params.update({"db_layer_names": ["test_layer_1", "test_layer_2"],
                             "ident_colname": "ident"})
 
     def test_non_overlapping(self):

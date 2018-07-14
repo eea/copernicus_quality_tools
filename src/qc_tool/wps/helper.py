@@ -31,7 +31,7 @@ def check_name(name, template):
 def shorten_failed_items_message(items, count):
     if len(items) == 0:
         return None
-    message = ", ".join(items)
+    message = ", ".join(map(str, items))
     if count > len(items):
         message += " and {:d} others".format(count - len(items))
     return message
