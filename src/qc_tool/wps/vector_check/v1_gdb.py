@@ -61,4 +61,6 @@ def run_check(params, status):
         layer_names = [layer_name.split("/")[-1] for layer_name in layer_names_by_regex]
         layer_sources = [(layer_name, filepath) for layer_name in layer_names]
         status.add_params({"layer_sources": layer_sources})
+        if params.get("is_border_source", False):
+            status.add_params({"border_source_layer": layer_names[0]})
         return

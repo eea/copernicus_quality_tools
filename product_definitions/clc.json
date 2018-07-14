@@ -12,7 +12,8 @@
         "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
         "layer_prefix": "^{countrycode:s}/cha",
         "layer_regex": "^{countrycode:s}/cha(06|12|18)_{countrycode:s}$",
-        "layer_count": 1
+        "layer_count": 1,
+	"is_border_source": true
       }
     },
     {
@@ -53,9 +54,9 @@
       "parameters": {
         "ident_colname": "id",
         "code_regex": "^...(..)",
-        "code_to_column_def": {"06": [["code_00", "CLC"], ["code_06", "CLC"]],
-                               "12": [["code_06", "CLC"], ["code_12", "CLC"]],
-                               "18": [["code_12", "CLC"], ["code_18", "CLC"]]}
+        "code_to_column_defs": {"06": [["code_00", "CLC"], ["code_06", "CLC"]],
+                                "12": [["code_06", "CLC"], ["code_12", "CLC"]],
+                                "18": [["code_12", "CLC"], ["code_18", "CLC"]]}
       }
     },
     {
@@ -70,8 +71,11 @@
       "required": false,
       "parameters": {
         "area_ha": 5,
-        "border_exception": true,
-        "ident_colname": "id"
+        "ident_colname": "id",
+        "code_regex": "^...(..)",
+        "code_to_column_names": {"06": ["code_00", "code_06"],
+				 "12": ["code_06", "code_12"],
+				 "18": ["code_12", "code_18"]}
       }
     },
     {
@@ -137,9 +141,9 @@
       "parameters": {
         "ident_colname": "id",
         "code_regex": "^...(..)",
-        "code_to_column_def": {"06": [["code_06", "CLC"]],
-                               "12": [["code_12", "CLC"]],
-                               "18": [["code_18", "CLC"]]}
+        "code_to_column_defs": {"06": [["code_06", "CLC"]],
+                                "12": [["code_12", "CLC"]],
+                                "18": [["code_18", "CLC"]]}
       }
     },
     {
@@ -156,7 +160,6 @@
         "area_ha": 25,
         "border_exception": true,
         "ident_colname": "id"
-
       }
     },
     {

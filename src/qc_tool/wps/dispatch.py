@@ -162,9 +162,9 @@ class CheckStatus():
     def is_aborted(self):
         return self.status == "aborted"
 
-    def add_message(self, message):
+    def add_message(self, message, failed=True):
         self.messages.append(message)
-        if self.status == "ok":
+        if self.status == "ok" and failed:
             self.failed()
 
     def add_error_table(self, error_table):

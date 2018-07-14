@@ -18,7 +18,7 @@ def run_check(params, status):
         if "code_regex" in params:
             mobj = re.search(params["code_regex"], layer_name)
             code = mobj.group(1)
-            column_defs = params["code_to_column_def"][code]
+            column_defs = params["code_to_column_defs"][code]
         else:
             column_defs = params["column_defs"]
 
