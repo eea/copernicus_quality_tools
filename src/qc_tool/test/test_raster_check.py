@@ -10,11 +10,8 @@ from qc_tool.test.helper import RasterCheckTestCase
 class TestR2(RasterCheckTestCase):
     def test_r2(self):
         from qc_tool.wps.raster_check.r2 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"),
-                  "country_codes": "(AL|AT|BA|BE|BG|CH|CY|CZ|DE|DK|EE|ES|EU|FI|FR|GR|HR|HU"
-                                   "|IE|IS|IT|XK|LI|LT|LU|LV|ME|MK|MT|NL|NO|PL|PT|RO|SE|SI"
-                                   "|SK|TR|UK|UK_NI|ES_CN|PT_RAA|PT_RAM|UK_GE|UK_JE|FR_GLP"
-                                   "|FR_GUF|FR_MTQ|FR_MYT|FR_REU|PT_RAA_CEG|PT_RAA_WEG)",
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif"),
+                  "country_codes": "(CZ|SK|SI)",
                   "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"],
                   "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"}
         status = self.status_class()
@@ -30,7 +27,7 @@ class TestR11(RasterCheckTestCase):
 
     def test_r11(self):
         from qc_tool.wps.raster_check.r11 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("r11_raster_incorrect.tif"),
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_incorrect.tif"),
                   "area_ha": 0.5,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
@@ -40,7 +37,7 @@ class TestR11(RasterCheckTestCase):
 
     def test_r11_correct_pass(self):
         from qc_tool.wps.raster_check.r11 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("r11_raster_correct.tif"),
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
                   "area_ha": 0.5,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
@@ -50,7 +47,7 @@ class TestR11(RasterCheckTestCase):
 
     def test_r11_incorrect_fail(self):
         from qc_tool.wps.raster_check.r11 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("r11_raster_incorrect.tif"),
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_incorrect.tif"),
                   "area_ha": 0.5,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
@@ -65,7 +62,7 @@ class TestR11(RasterCheckTestCase):
 class TestR15(RasterCheckTestCase):
     def test_r15_correct_pass(self):
         from qc_tool.wps.raster_check.r15 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("r11_raster_correct.tif"),
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
                   "colours": {"0": [240, 240, 240],
                               "1": [70, 158, 74],
                               "2": [28, 92, 36],
@@ -77,7 +74,7 @@ class TestR15(RasterCheckTestCase):
 
     def test_r15_incorrect_fail(self):
         from qc_tool.wps.raster_check.r15 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("r11_raster_correct.tif"),
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
                   "colours": {"0": [240, 240, 240],
                               "1": [70, 158, 74],
                               "2": [28, 92, 36],
