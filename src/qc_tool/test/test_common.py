@@ -13,10 +13,10 @@ class TestCommon(TestCase):
         product_definition = load_product_definition("clc")
         self.assertIn("checks", product_definition)
         self.assertLess(1, len(product_definition["checks"]))
-        self.assertEqual({"check_ident": "v1",
+        self.assertEqual({"check_ident": "change.v2",
                           "parameters": {"formats": [".gdb"]},
                           "required": True},
-                         product_definition["checks"][1])
+                         product_definition["checks"][2])
 
     def test_get_product_descriptions(self):
         from qc_tool.common import get_product_descriptions
@@ -30,8 +30,8 @@ class TestCommon(TestCase):
         self.assertEqual("clc", status["product_ident"])
         self.assertEqual("CORINE Land Cover", status["description"])
         self.assertLess(4, len(status["checks"]))
-        self.assertEqual("v1", status["checks"][1]["check_ident"])
-        self.assertEqual("File format is allowed.", status["checks"][1]["description"])
+        self.assertEqual("change.v2", status["checks"][2]["check_ident"])
+        self.assertEqual("File format is correct.", status["checks"][2]["description"])
         self.assertTrue(status["checks"][1]["required"])
         self.assertFalse(status["checks"][1]["system"])
         self.assertIsNone(status["checks"][1]["status"])

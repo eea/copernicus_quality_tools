@@ -1,4 +1,5 @@
 version: '3'
+
 services:
   qc_tool_frontend:
     depends_on:
@@ -11,18 +12,16 @@ services:
       - 8000:8000
     environment:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
-      - SUBMISSION_DIR=/mnt/qc_tool_work/submision
+      - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
       - WPS_DIR=/mnt/qc_tool_work/wps
       - WORK_DIR=/mnt/qc_tool_work/work
       - FRONTEND_PORT=8000
-      - FRONTEND_DB_PATH=/mnt/qc_tool_work/work/frontend.sqlite3
+      - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
       - WPS_URL=http://qc_tool_wps:5000/wps
     volumes:
-      - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-      - /home/jiri/qc_tool/testdata:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/wps:/mnt/qc_tool_work/wps
-      - /home/jiri/work:/mnt/qc_tool_work/work
-      - /home/jiri/submission:/mnt/qc_tool_work/submisison
+      - qc_tool_incoming:/mnt/qc_tool_incoming
+      - qc_tool_submission:/mnt/qc_tool_submission
+      - qc_tool_work:/mnt/qc_tool_work
 
   qc_tool_wps:
     depends_on:
@@ -47,13 +46,26 @@ services:
       - JOBDIR_EXIST_OK=no
       - LEAVE_JOBDIR=no
     volumes:
-      - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-      - /home/jiri/qc_tool/testdata:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/wps:/mnt/qc_tool_work/wps
-      - /home/jiri/work:/mnt/qc_tool_work/work
+      - qc_tool_boundary:/mnt/qc_tool_boundary
+      - qc_tool_incoming:/mnt/qc_tool_incoming
+      - qc_tool_work:/mnt/qc_tool_work
 
   qc_tool_postgis:
     build:
       context: .
       dockerfile: Dockerfile.postgis
     image: qc_tool_postgis
+
+volumes:
+  qc_tool_boundary:
+    driver: local
+  qc_tool_incoming:
+    driver: local
+  qc_tool_submission:
+    driver: local
+  qc_tool_work:
+    driver: local
+
+networks:
+  qc_tool_network:
+    driver: bridge

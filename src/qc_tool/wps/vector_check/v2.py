@@ -15,7 +15,7 @@ def run_check(params, status):
     filepaths = [layer_filepath for (layer_name, layer_filepath) in params["layer_sources"]]
     filepaths = set(filepaths)
     for filepath in filepaths:
-        ds_extension = params["filepath"].suffix
+        ds_extension = filepath.suffix
         if (ds_extension not in params["formats"]
             or ds_extension not in params["drivers"]):
             status.aborted()
@@ -23,7 +23,7 @@ def run_check(params, status):
         else:
             ds_open = None
             try:
-                ds_open = ogr.Open(str(params["filepath"]))
+                ds_open = ogr.Open(str(filepath))
             except:
                 pass
             if ds_open is None:

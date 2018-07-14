@@ -181,6 +181,7 @@ def setup_config():
 
     Environment variables consumed by frontend:
     * INCOMING_DIR;
+    * SUBMISSION_DIR;
     * FRONTEND_DB_PATH;
     * WPS_DIR;
     * WORK_DIR;
@@ -188,9 +189,11 @@ def setup_config():
     """
     config = {}
 
-    # Parameters for frontend.
+    # Parameters consumed by frontend.
     config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/mnt/qc_tool_work/frontend.sqlite3"))
-    config["submission_enabled"] = environ.get("SUBMISSION_ENABLED", "no") == "yes"
+    config["submission_dir"] = environ.get("SUBMISSION_DIR", None)
+    if config["submission_dir"] == "":
+        config["submission_dir"] = None
 
     # Parameters common to both frontend and wps.
     config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundary"))

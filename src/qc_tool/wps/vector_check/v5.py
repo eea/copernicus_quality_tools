@@ -2,25 +2,24 @@
 # -*- coding: utf-8 -*-
 
 
-from qc_tool.common import FAILED_ITEMS_LIMIT
-from qc_tool.wps.helper import shorten_failed_items_message
+from qc_tool.wps.helper import get_failed_ids_message
 from qc_tool.wps.registry import register_check_function
+
+
+SQL = "CREATE TABLE {0:s} AS SELECT {1:s} FROM {2:s} GROUP BY {1:s} HAVING count({1:s}) > 1;"
 
 
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_name in params["db_layer_names"]:
-        # create table of valid code errors
-        cursor.execute("""SELECT __V5_UniqueID('{0}','{1}');""".format(layer_name, params["product_code"]))
-
-        # get wrong UniqueID ids and count. the _uniqueid_error table was created by the __V5_UniqueID function.
-        cursor.execute("""SELECT {0} FROM {1}_uniqueid_error;""".format(params["ident_colname"], layer_name))
-        failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
-        if len(failed_ids) > 0:
-            failed_ids_message = shorten_failed_items_message(failed_ids, cursor.rowcount)
+        error_table_name = "{:s}_uniqueid_error".format(layer_name)
+        sql = SQL.format(error_table_name, params["ident_colname"], layer_name)
+        cursor.execute(sql)
+        if cursor.rowcount == 0:
+            cursor.execute("DROP TABLE {:s};".format(error_table_name))
+        else:
+            failed_ids_message = get_failed_ids_message(cursor, error_table_name, params["ident_colname"])
             failed_message = "The layer {:s} has non-unique identifiers: {:s}.".format(layer_name, failed_ids_message)
             status.add_message(failed_message)
-
-        # drop temporary table with code errors
-        cursor.execute("""DROP TABLE {:s}_uniqueid_error;""".format(layer_name))
+            status.add_error_table(error_table_name)

@@ -44,8 +44,7 @@
       "check_ident": "status.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
-        "product_code": "ua"
+        "ident_colname": "ident"
       }
     },
     {
@@ -53,7 +52,10 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "product_code": "ua"
+        "code_regex": "(.{6})$",
+        "code_to_column_def": {"ua2006": [["code2006", "UA"]],
+                               "ua2012": [["code2012", "UA"]],
+                               "ua2018": [["code2018", "UA"]]}
       }
     },
     {

@@ -11,6 +11,7 @@ services:
       - 8000:8000
     environment:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - SUBMISSION_DIR=/mnt/qc_tool_work/submission
       - WPS_DIR=/mnt/qc_tool_work/wps
       - WORK_DIR=/mnt/qc_tool_work/work
       - FRONTEND_PORT=8000

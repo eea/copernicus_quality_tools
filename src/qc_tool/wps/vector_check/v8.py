@@ -2,46 +2,23 @@
 # -*- coding: utf-8 -*-
 
 
+from qc_tool.common import FAILED_ITEMS_LIMIT
+from qc_tool.wps.helper import shorten_failed_items_message
 from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
 def run_check(params, status):
-    # connection to PG
-    conn = params["connection_manager"].get_connection()
-    cur = conn.cursor()
-
-    res = dict()
+    cursor = params["connection_manager"].get_connection().cursor()
     for layer_name in params["db_layer_names"]:
-
-        # create table of valid code errors
-        cur.execute("""SELECT __v8_multipartpolyg('{0}');""".format(layer_name))
-        conn.commit()
-        multipart_count = cur.fetchone()[0]
-        print("multipart_count: {:d}".format(multipart_count))
-
-        if multipart_count == 0:
-            return
-
-        # get wrong codes ids and count. the _validcodes_error table was created by the __v6_ValidCodes function.
-        cur.execute("""SELECT {0} FROM {1}_multipartpolyg_error""".format(params["ident_colname"], layer_name))
-        multipart_error_id_list = [id[0] for id in cur.fetchall()]
-
-        res[layer_name] = {"multipart_error": [multipart_count, ",".join(multipart_error_id_list)]}
-
-        # drop temporary table with code errors
-        cur.execute("""DROP TABLE IF EXISTS {:s}_multipartpolyg_error;""".format(layer_name))
-        conn.commit()
-
-    lmes = [res[lme]["multipart_error"][0] for lme in res]
-    if len(list(set(lmes))) == 1 and lmes[0] == 0:
-        return
-    else:
-        layer_results = ', '.join(
-            "layer {!s}: {:d} multipart polygons with wrong code ({!s})".format(key,
-                                                                val["multipart_error"][0],
-                                                                val["multipart_error"][1]) for (key, val) in res.items()
-            if val["multipart_error"][0] != 0)
-        res_message = "{:d} multipart polygons found: ({:s}).".format(len(list(set(lmes))), layer_results)
-        status.add_message(res_message)
-        return
+        error_table_name = "{:s}_multipartpolyg_error".format(layer_name)
+        cursor.execute("SELECT __V8_multipartpolyg(%s);", (layer_name,))
+        cursor.execute("SELECT DISTINCT {0:s} FROM {1:s} ORDER BY {0:s};".format(params["ident_colname"], error_table_name))
+        if cursor.rowcount == 0:
+            cursor.execute("DROP TABLE {:s};".format(error_table_name))
+        else:
+            failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
+            failed_ids_message = shorten_failed_items_message(failed_ids, cursor.rowcount)
+            failed_message = "The layer {:s} has multipart geometries in rows: {:s}.".format(layer_name, failed_ids_message)
+            status.add_message(failed_message)
+            status.add_error_table(error_table_name)
