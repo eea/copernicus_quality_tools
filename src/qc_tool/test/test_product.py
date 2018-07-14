@@ -7,12 +7,14 @@ from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
+from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
 from qc_tool.wps.registry import load_all_check_functions
 
 
 class Test_fty_YYYY_020m(TestCase):
     def setUp(self):
+        super().setUp()
         load_all_check_functions()
 
     def test_run(self):
@@ -31,6 +33,7 @@ class Test_fty_YYYY_020m(TestCase):
 
 class Test_clc(TestCase):
     def setUp(self):
+        super().setUp()
         load_all_check_functions()
 
     def test_malta(self):
@@ -43,6 +46,7 @@ class Test_clc(TestCase):
 
 class Test_clc_status(TestCase):
     def setUp(self):
+        super().setUp()
         load_all_check_functions()
 
     def test_status_json(self):
@@ -56,8 +60,9 @@ class Test_clc_status(TestCase):
                          "Job status returned by dispatch() must be the same as stored in status.json file.")
 
 
-class Test_update_status(TestCase):
+class Test_update_status(ProductTestCase):
     def setUp(self):
+        super().setUp()
         load_all_check_functions()
 
     def test_run(self):

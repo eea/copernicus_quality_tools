@@ -66,12 +66,14 @@
       }
     },
     {
-      "check_ident": "status.v11",
+      "check_ident": "status.v11_ua",
       "required": false,
       "parameters": {
-        "area_ha": 0.5,
-        "border_exception": false,
-        "ident_colname": "ident"
+        "ident_colname": "ident",
+        "code_regex": "^...(..)",
+        "code_to_column_name": {"06": "code_00",
+                                "12": "code_06",
+                                "18": "code_12"}
 
       }
     },

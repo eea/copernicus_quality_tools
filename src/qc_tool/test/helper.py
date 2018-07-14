@@ -13,8 +13,25 @@ from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 
 
+class ProductTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        with create_connection_manager(str(uuid4())) as connection_manager:
+            cursor = connection_manager.get_connection().cursor()
+            sql = "DROP SCHEMA {:s} CASCADE;".format(DB_FUNCTION_SCHEMA_NAME)
+            cursor.execute(sql)
+            sql = "CREATE SCHEMA {:s};".format(DB_FUNCTION_SCHEMA_NAME)
+            cursor.execute(sql)
+            sql = "SET search_path TO {:s};".format(DB_FUNCTION_SCHEMA_NAME)
+            cursor.execute(sql)
+            for filepath in sorted(DB_FUNCTION_DIR.glob("*.sql")):
+                    sql_script = filepath.read_text()
+                    cursor.execute(sql_script)
+
+
 class RasterCheckTestCase(TestCase):
     def setUp(self):
+        super().setUp()
         self.status_class = CheckStatus
         self.job_uuid = str(uuid4())
         with ExitStack() as stack:
@@ -24,6 +41,7 @@ class RasterCheckTestCase(TestCase):
 
 class VectorCheckTestCase(TestCase):
     def setUp(self):
+        super().setUp()
         self.status_class = CheckStatus
         self.job_uuid = str(uuid4())
         self.params = {}
