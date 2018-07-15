@@ -89,7 +89,10 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "product_code": "ua"
+        "code_regex": "(.{6})$",
+        "code_to_column_names": {"ua2006": ["code2006"],
+                                 "ua2012": ["code2012"],
+                                 "ua2018": ["code2018"]}
       }
     }
   ]

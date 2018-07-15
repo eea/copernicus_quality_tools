@@ -88,7 +88,10 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "product_code": "ua"
+        "code_regex": "(.{6})$",
+        "code_to_column_names": {"ua2006": ["code2006"],
+                                 "ua2012": ["code2012"],
+                                 "ua2018": ["code2018"]}
       }
     },
     {
@@ -166,7 +169,9 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "product_code": "clc"
+        "code_regex": "(.{16})$",
+        "code_to_column_names": {"change_2006_2012": ["code2006", "code2012"],
+                                 "change_2012_2018": ["code2012", "code2018"]}
       }
     }
   ]

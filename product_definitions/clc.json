@@ -90,7 +90,7 @@
       "required": false,
       "parameters": {
         "ident_colname": "id",
-        "product_code": "cha"
+        "code_colnames": ["change"]
       }
     },
     {
@@ -174,7 +174,10 @@
       "required": false,
       "parameters": {
         "ident_colname": "id",
-        "product_code": "clc"
+        "code_regex": "^...(..)",
+        "code_to_column_names": {"06": ["code_06"],
+                                 "12": ["code_12"],
+                                 "18": ["code_18"]}
       }
     }
   ]

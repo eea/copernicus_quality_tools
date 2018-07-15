@@ -2,22 +2,41 @@
 # -*- coding: utf-8 -*-
 
 
+import re
+
 from qc_tool.common import FAILED_ITEMS_LIMIT
 from qc_tool.wps.helper import shorten_failed_items_message
 from qc_tool.wps.registry import register_check_function
+
+
+def create_all_breaking_neighbcode(cursor, ident_colname, layer_name, error_table_name, code_colnames):
+    sql = ("CREATE TABLE {0:s} AS"
+           "  SELECT ta.{1:s} a_{1:s}, tb.{1:s} b_{1:s}"
+           "  FROM {2:s} ta INNER JOIN {2:s} tb ON ta.{1:s} < tb.{1:s}"
+           "  WHERE {3:s} AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, '*T**F****');")
+    code_where = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_colname) for code_colname in code_colnames)
+    sql = sql.format(error_table_name, ident_colname, layer_name, code_where)
+    cursor.execute(sql)
+    return cursor.rowcount
 
 
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_name in params["db_layer_names"]:
+        if "code_regex" in params:
+            mobj = re.search(params["code_regex"], layer_name)
+            code = mobj.group(1)
+            code_colnames = params["code_to_column_names"][code]
+        else:
+            code_colnames = params["code_colnames"]
+
         error_table_name = "{:s}_neighbcode_error".format(layer_name)
-        cursor.execute("SELECT __V14_NeighbCodes(%s, %s);", (layer_name, params["product_code"]))
-        cursor.execute("SELECT DISTINCT {0:s} FROM {1:s} ORDER BY {0:s};".format(params["ident_colname"], error_table_name))
-        if cursor.rowcount == 0:
+        error_count = create_all_breaking_neighbcode(cursor, params["ident_colname"], layer_name, error_table_name, code_colnames)
+        if error_count == 0:
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:
-            failed_ids = [row[0] for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
+            failed_ids = ["{:s}-{:s}".format(row[0], row[1]) for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
             failed_ids_message = shorten_failed_items_message(failed_ids, cursor.rowcount)
             failed_message = "The layer {:s} has neighbouring polygons with the same code in rows: {:s}.".format(layer_name, failed_ids_message)
             status.add_message(failed_message)
