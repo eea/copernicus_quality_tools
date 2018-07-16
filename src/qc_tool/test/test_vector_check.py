@@ -117,6 +117,113 @@ class TestV1_gdb(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
 
+class TestV1_ua_gdb(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")})
+        status = self.status_class()
+        unzip_check(self.params, status)
+        self.params["unzip_dir"] = status.params["unzip_dir"]
+
+    def test_v1_ua_gdb_boundary_ok(self):
+        from qc_tool.wps.vector_check.v1_ua import run_check
+        status = self.status_class()
+        self.params["layer_regex"] = "boundary(2006|2012|2018)_.*$"
+        self.params["layer_count"] = 1
+        self.params["is_border_source"] = True
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("layer_sources", status.params)
+        self.assertEqual(1, len(status.params["layer_sources"]))
+        self.assertEqual("Boundary2012_SK007L1_TRNAVA", status.params["layer_sources"][0][0])
+        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
+
+    def test_v1_ua_gdb_status_ok(self):
+        from qc_tool.wps.vector_check.v1_ua import run_check
+        status = self.status_class()
+        self.params["layer_regex"] = ".*_ua(2006_2012|2012|2018)$"
+        self.params["layer_count"] = 2
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("layer_sources", status.params)
+        self.assertEqual(2, len(status.params["layer_sources"]))
+        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
+        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][1][1].name)
+        layer_names = [layer_source[0] for layer_source in status.params["layer_sources"]]
+        self.assertIn("SK007L1_TRNAVA_UA2006_2012", layer_names)
+        self.assertIn("SK007L1_TRNAVA_UA2012", layer_names)
+
+    def test_v1_ua_gdb_change_ok(self):
+        from qc_tool.wps.vector_check.v1_ua import run_check
+        status = self.status_class()
+        self.params["layer_regex"] = ".*_change_(2006|2012)_(2012|2018)$"
+        self.params["layer_count"] = 1
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("layer_sources", status.params)
+        self.assertEqual(1, len(status.params["layer_sources"]))
+        self.assertEqual("SK007L1_TRNAVA_Change_2006_2012", status.params["layer_sources"][0][0])
+        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
+
+    def test_v1_ua_gdb_fail(self):
+        # test should fail if we pass in a geodatabase from another product
+        self.params["unzip_dir"] = TEST_DATA_DIR.joinpath("vector", "clc")
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
+        self.params["layer_regex"] = "boundary(2006|2012|2018)_.*$"
+        self.params["layer_count"] = 1
+        self.params["is_border_source"] = True
+        from qc_tool.wps.vector_check.v1_ua import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+
+
+class TestV1_ua_shp(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")})
+        status = self.status_class()
+        unzip_check(self.params, status)
+        self.params["unzip_dir"] = status.params["unzip_dir"]
+
+    def test_v1_ua_shp_boundary_ok(self):
+        from qc_tool.wps.vector_check.v1_ua import run_check
+        status = self.status_class()
+        self.params["layer_regex"] = "boundary(2006|2012|2018)_.*$"
+        self.params["layer_count"] = 1
+        self.params["is_border_source"] = True
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("layer_sources", status.params)
+        self.assertEqual(1, len(status.params["layer_sources"]))
+        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_sources"][0][0])
+        self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_sources"][0][1].name)
+
+
+    def test_v1_ua_shp_status_ok(self):
+        from qc_tool.wps.vector_check.v1_ua import run_check
+        status = self.status_class()
+        self.params["layer_regex"] = ".*_ua(2006|2012|2018)$"
+        self.params["layer_count"] = 1
+        self.params["is_border_source"] = False
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("layer_sources", status.params)
+        self.assertEqual(1, len(status.params["layer_sources"]))
+        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_sources"][0][0])
+        self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_sources"][0][1].name)
+
+
+
 class TestV2(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
@@ -234,26 +341,6 @@ class TestVImport2pg(VectorCheckTestCase):
         cur.execute("""SELECT id FROM {:s};""".format(status.params["db_layer_names"][0]))
         self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
 
-    def test_v_import2pg_functions_created(self):
-        from qc_tool.wps.vector_check.v_import2pg import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-
-        job_schema = self.params["connection_manager"].get_dsn_schema()[1]
-        expected_function_names = ["__v11_mmu_status",
-                                   "__v11_mmu_polyline_border",
-                                   "__v11_mmu_change_clc"]
-        conn = self.params["connection_manager"].get_connection()
-        cur = conn.cursor()
-        cur.execute("""SELECT routine_name FROM information_schema.routines \
-                       WHERE routine_type='FUNCTION' AND routine_schema='{:s}'""".format(job_schema))
-
-        actual_function_names = [row[0] for row in cur.fetchall()]
-
-        for expected_name in expected_function_names:
-            self.assertIn(expected_name, actual_function_names,
-                          "a function {:s} should be created in schema {:s}".format(expected_name, job_schema))
-
 
 class TestV5(VectorCheckTestCase):
     def setUp(self):
@@ -282,14 +369,15 @@ class TestV6(VectorCheckTestCase):
     def test_status_pass(self):
         from qc_tool.wps.vector_check.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE xxx18_zz (id integer, code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE xxx18_zz (id integer, "
+                       "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO xxx18_zz VALUES (1, '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, '111', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params["db_layer_names"] = ["xxx18_zz"]
         self.params["ident_colname"] = "id"
         self.params["code_regex"] = "^...(..)"
-        self.params["code_to_column_def"] = {"18": [["code_18", "CLC"]]}
+        self.params["code_to_column_defs"] = {"18": [["code_18", "CLC"]]}
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -297,7 +385,8 @@ class TestV6(VectorCheckTestCase):
     def test_change_fail(self):
         from qc_tool.wps.vector_check.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE cha18_xx (id integer, code_12 varchar, code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE cha18_xx (id integer, code_12 varchar, "
+                       "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, 'xxx', 'xxx', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, 'xxx', '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -305,7 +394,7 @@ class TestV6(VectorCheckTestCase):
         self.params["db_layer_names"] = ["cha18_xx"]
         self.params["ident_colname"] = "id"
         self.params["code_regex"] = "^...(..)"
-        self.params["code_to_column_def"] = {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}
+        self.params["code_to_column_defs"] = {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -339,6 +428,7 @@ class TestV11(VectorCheckTestCase):
                             "layer_sources": [["clc12_mt", gdb_filepath]],
                             "ident_colname": "id",
                             "area_ha": 25,
+                            "border_source_layer": "clc12_mt",
                             "border_exception": True})
         status = self.status_class()
         import_check(self.params, status)
@@ -357,24 +447,6 @@ class TestV11(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("failed", status.status, "Check result should be 'failed' for MMU=250ha.")
 
-    def test_v11_border_table(self):
-        """
-        a _polyline_border table should be created in the job's schema
-        :return:
-        """
-        from qc_tool.wps.vector_check.v11 import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-
-        table_name = "{:s}_polyline_border".format(self.params["db_layer_names"][0])
-        dsn, job_schema_name =  self.params["connection_manager"].get_dsn_schema()
-        cur = self.params["connection_manager"].get_connection().cursor()
-        cur.execute("SELECT table_schema FROM information_schema.tables WHERE table_name=%s;", (table_name,))
-        row = cur.fetchone()
-        self.assertIsNotNone(row, "There should be polyline_border table created.")
-        table_schema = row[0]
-        self.assertNotEqual("public", table_schema, "polyline_border table should not be in public schema.")
-        self.assertEqual(job_schema_name, table_schema, "polyline_border table is in {:s} schema instead of {:s} schema.".format(table_schema, job_schema_name))
 
 
 class TestV13(VectorCheckTestCase):

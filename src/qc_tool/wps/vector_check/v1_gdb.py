@@ -1,12 +1,15 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 
 import re
 
-from qc_tool.wps.helper import check_name
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
+
+def check_name(name, template):
+    regex = re.compile(template)
+    return bool(regex.match(name))
 
 
 @register_check_function(__name__)

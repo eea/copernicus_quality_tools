@@ -1,9 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-from qc_tool.wps.helper import check_name
+import re
 from qc_tool.wps.registry import register_check_function
+
+
+def check_name(name, template):
+    regex = re.compile(template)
+    return bool(regex.match(name))
 
 
 @register_check_function(__name__)

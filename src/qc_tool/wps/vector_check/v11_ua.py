@@ -18,7 +18,7 @@ def create_all_breaking_mmu(cursor, ident_colname, layer_name, error_table_name,
            "  SELECT {1:s} FROM {2:s}"
            "  WHERE ({3:s} LIKE '1%'  AND {3:s} NOT LIKE '122%' AND shape_area < 2500)"
            "        OR ({3:s} NOT LIKE '1%' AND {3:s} NOT LIKE '9%' AND shape_area < 10000);")
-           sql = sql.format(error_table_name, ident_colname, layer_name, code_colname)
+    sql = sql.format(error_table_name, ident_colname, layer_name, code_colname)
     cursor.execute(sql)
     return cursor.rowcount
 

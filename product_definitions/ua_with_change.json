@@ -6,6 +6,40 @@
       "required": true
     },
     {
+      "check_ident": "boundary.v1_ua",
+      "required": true,
+      "parameters": {
+        "layer_regex": "boundary(2006|2012|2018)_",
+        "layer_count": 1,
+        "is_border_source": true
+      }
+    },
+    {
+      "check_ident": "boundary.v2",
+      "required": true,
+      "parameters": {
+        "formats": [".gdb", ".shp"]
+      }
+    },
+    {
+      "check_ident": "boundary.v3",
+      "required": false,
+      "parameters": {
+        "attribute_regexes": ["objectid", "country", "cities", "shape_length", "shape_area"]
+      }
+    },
+    {
+      "check_ident": "boundary.v4",
+      "required": false,
+      "parameters": {
+        "epsg": [2462, 31287, 3812, 3908, 32634, 32635, 3765, 32636, 5514, 25832, 25833, 5316, 3301, 3067, 2154, 2154, 32620, 32620, 32622, 32738, 32740, 6204, 31466, 31467, 31468, 31469, 27700, 29903, 3109, 3108, 2100, 23700, 5325, 2157, 32632, 32633, 32634, 3909, 3059, 2056, 3346, 2169, 23033, 25834, 28992, 25832, 25833, 25834, 25835, 25836, 2180, 3763, 5014, 5015, 5016, 3844, 25834, 5514, 3912, 32628, 25829, 25830, 25831, 3006, 2056, 3035]
+      }
+    },
+    {
+      "check_ident": "boundary.v_import2pg",
+      "required": true
+    },
+    {
       "check_ident": "v1",
       "required": true,
       "parameters": {
@@ -13,13 +47,12 @@
       }
     },
     {
-      "check_ident": "status.v2_gdb",
+      "check_ident": "status.v1_ua",
       "required": true,
       "parameters": {
-        "file_name_regex": "^clc[a-z0-9]{6}_[a-z]*.gdb$",
-        "layer_prefix": "^{areacode:s}/{areacode:s}_ua",
-        "layer_regex": "^{areacode:s}/{areacode:s}_ua[0-9]{{4}}",
-        "layer_count": 1
+        "layer_regex": ".*_ua(2006_2012|2012|2018)$",
+        "layer_count": 2,
+        "is_border_source": false
       }
     },
     {
@@ -66,14 +99,12 @@
       }
     },
     {
-      "check_ident": "status.v11_ua",
-      "required": false,
+      "check_ident": "change.v1_ua",
+      "required": true,
       "parameters": {
-        "ident_colname": "ident",
-        "code_regex": "^...(..)",
-        "code_to_column_name": {"06": "code_00",
-                                "12": "code_06",
-                                "18": "code_12"}
+        "layer_regex": ".*_change_(2006|2012)_(2012|2018)$",
+        "layer_count": 1,
+        "is_border_source": false
       }
     },
     {

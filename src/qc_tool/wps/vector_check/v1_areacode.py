@@ -1,10 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 
 import re
 
-from qc_tool.wps.helper import check_name
 from qc_tool.wps.registry import register_check_function
 
 

@@ -24,10 +24,6 @@ def dir_recursive_search(in_dir, regexp=".*", target="file", deep=9999, full_pat
     return results
 
 
-def check_name(name, template):
-    regex = re.compile(template)
-    return bool(regex.match(name))
-
 def shorten_failed_items_message(items, count):
     if len(items) == 0:
         return None
@@ -35,6 +31,7 @@ def shorten_failed_items_message(items, count):
     if count > len(items):
         message += " and {:d} others".format(count - len(items))
     return message
+
 
 def get_failed_ids_message(cursor, error_table_name, ident_colname, limit=FAILED_ITEMS_LIMIT):
     sql = "SELECT {0:s} FROM {1:s} ORDER BY {0:s};".format(ident_colname, error_table_name)
