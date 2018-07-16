@@ -1,16 +1,27 @@
 #! /usr/bin/env python3
 
 
-from contextlib import closing
-
+from qc_tool.wps.helper import get_failed_pairs_message
 from qc_tool.wps.registry import register_check_function
+
+
+SQL = ("CREATE TABLE {0:s} AS"
+       "  SELECT ta.{1:s} a_{1:s}, tb.{1:s} b_{1:s}"
+       "  FROM {2:s} ta INNER JOIN {2:s} tb ON ta.{1:s} < tb.{1:s}"
+       "  WHERE ST_Relate(ta.wkb_geometry, tb.wkb_geometry, 'T********');")
 
 
 @register_check_function(__name__)
 def run_check(params, status):
+    cursor = params["connection_manager"].get_connection().cursor()
     for layer_name in params["db_layer_names"]:
-        cursor = params["connection_manager"].get_connection().cursor()
-        cursor.execute("SELECT * FROM __v13_overlapping_polygons(%s, %s);", (layer_name, params["ident_colname"]))
-        error_count = cursor.fetchone()[0]
-        if error_count > 0:
-            status.add_message("Layer {:s} has {:d} overlapping pairs.".format(layer_name, error_count))
+        error_table_name = "{:s}_overlap_error".format(layer_name)
+        sql = SQL.format(error_table_name, params["ident_colname"], layer_name);
+        cursor.execute(sql)
+        if cursor.rowcount == 0:
+            cursor.execute("DROP TABLE {:s};".format(error_table_name))
+        else:
+            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, ident_colname)
+            failed_message = "The layer {:s} has overlapping items in rows: {:s}.".format(layer_name, failed_pairs_message)
+            status.add_message(failed_message)
+            status.add_error_table(error_table_name)

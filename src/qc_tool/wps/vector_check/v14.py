@@ -4,8 +4,7 @@
 
 import re
 
-from qc_tool.common import FAILED_ITEMS_LIMIT
-from qc_tool.wps.helper import shorten_failed_items_message
+from qc_tool.wps.helper import get_failed_pairs_message
 from qc_tool.wps.registry import register_check_function
 
 
@@ -13,7 +12,7 @@ def create_all_breaking_neighbcode(cursor, ident_colname, layer_name, error_tabl
     sql = ("CREATE TABLE {0:s} AS"
            "  SELECT ta.{1:s} a_{1:s}, tb.{1:s} b_{1:s}"
            "  FROM {2:s} ta INNER JOIN {2:s} tb ON ta.{1:s} < tb.{1:s}"
-           "  WHERE {3:s} AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, '*T**F****');")
+           "  WHERE {3:s} AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, '*T*******');")
     code_where = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_colname) for code_colname in code_colnames)
     sql = sql.format(error_table_name, ident_colname, layer_name, code_where)
     cursor.execute(sql)
@@ -36,8 +35,7 @@ def run_check(params, status):
         if error_count == 0:
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:
-            failed_ids = ["{:s}-{:s}".format(row[0], row[1]) for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
-            failed_ids_message = shorten_failed_items_message(failed_ids, cursor.rowcount)
-            failed_message = "The layer {:s} has neighbouring polygons with the same code in rows: {:s}.".format(layer_name, failed_ids_message)
+            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, ident_colname)
+            failed_message = "The layer {:s} has neighbouring polygons with the same codes in rows: {:s}.".format(layer_name, failed_pairs_message)
             status.add_message(failed_message)
             status.add_error_table(error_table_name)
