@@ -19,14 +19,14 @@ class Test_fty_YYYY_020m(TestCase):
 
     def test_run(self):
         filepath = TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif.zip")
-        job_status = dispatch(str(uuid4()), filepath, "fty_YYYY_020m", ["r2", "r3", "r4", "r5"])
+        job_status = dispatch(str(uuid4()), "user_name", filepath, "fty_YYYY_020m", ["r2", "r3", "r4", "r5"])
         self.assertEqual("r1", job_status["checks"][1]["check_ident"])
         self.assertEqual("ok", job_status["checks"][1]["status"],
                          "Slovenia test file should pass check for the product fty_YYYY_020m.")
 
     def test_bad_extension(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_status = dispatch(str(uuid4()), filepath, "fty_YYYY_020m", [])
+        job_status = dispatch(str(uuid4()), "user_name", filepath, "fty_YYYY_020m", [])
         self.assertEqual("r_unzip", job_status["checks"][0]["check_ident"])
         self.assertEqual("aborted", job_status["checks"][0]["status"])
 
@@ -38,7 +38,7 @@ class Test_clc(TestCase):
 
     def test_malta(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_status = dispatch(str(uuid4()), filepath, "clc", [])
+        job_status = dispatch(str(uuid4()), "user_name", filepath, "clc", [])
         self.assertEqual("change.v2", job_status["checks"][2]["check_ident"])
         self.assertEqual("ok", job_status["checks"][2]["status"],
                          "Malta should pass the checks for the product clc.status.")
@@ -51,7 +51,7 @@ class Test_clc_status(TestCase):
 
     def test_status_json(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_status = dispatch("test-uuid", filepath, "clc", [])
+        job_status = dispatch("test-uuid", "user_name", filepath, "clc", [])
         status_filepath = Path("/mnt/qc_tool_work/work/job_testuuid/status.json")
         self.assertTrue(status_filepath.exists())
         job_status_from_file = status_filepath.read_text()
@@ -70,6 +70,7 @@ class Test_update_status(ProductTestCase):
             pass
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         dispatch(str(uuid4()),
+                 "user_name",
                  filepath,
                  "clc",
                  ["status.v3", "status.v4", "status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",

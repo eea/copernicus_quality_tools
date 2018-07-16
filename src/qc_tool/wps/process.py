@@ -84,6 +84,7 @@ class RunChecks(Process):
               LiteralInput("product_ident", "The identifier of the product denoting group of checks to be performed.",
                            data_type="string", min_occurs=1, max_occurs=1),
               LiteralInput("optional_check_idents", "Comma separated identifiers of optional checks to be performed.",
+              LiteralInput("user_name", "The name of the user managing the delivery.",
                            data_type="string", min_occurs=0, max_occurs=1)]
     OUTPUTS = []
 
@@ -100,6 +101,7 @@ class RunChecks(Process):
 
     def _handler(self, request, response):
         # Prepare parameters.
+        user_name = request.inputs["user_name"][0].data
         filepath = Path(request.inputs["filepath"][0].data)
         filepath = CONFIG["incoming_dir"].joinpath(filepath)
         product_ident = request.inputs["product_ident"][0].data
@@ -114,6 +116,7 @@ class RunChecks(Process):
             message = "Running check {:s}.".format(check_ident)
             response.update_status(message, int(percent_done))
         job_result = dispatch(str(self.uuid),
+                              user_name,
                               filepath,
                               product_ident,
                               optional_check_idents,

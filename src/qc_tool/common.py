@@ -96,6 +96,7 @@ def prepare_empty_job_status(product_ident):
 
     {"product_ident": <product ident>,
      "description: <product description>,
+     "user_name": <>,
      "job_start_date": <>,
      "filename": <>,
      "hash": <>,
@@ -114,6 +115,7 @@ def prepare_empty_job_status(product_ident):
     product_definition = json.loads(product_definition)
     status = {"product_ident": product_ident,
               "description": product_definition["description"],
+              "user_name": None,
               "job_start_date": None,
               "job_finish_date": None,
               "filename": None,

@@ -59,7 +59,7 @@ def compile_check_suite(product_definition, optional_check_idents):
                    if check["required"] or check["check_ident"] in optional_check_idents]
     return check_suite, skipped_idents
 
-def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_status_func=None):
+def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents, update_status_func=None):
     with ExitStack() as exit_stack:
         # Prepare job directory structure.
         status_filepath = compose_job_status_filepath(job_uuid)
@@ -67,6 +67,7 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         try:
             # Set up initial job status items.
+            job_status["user_name"] = user_name
             job_status["job_start_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
             job_status["filename"] = filepath.name
             job_status["job_uuid"] = job_uuid

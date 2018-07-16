@@ -490,7 +490,8 @@ def run_wps_execute(request):
         optional_check_idents = request.POST.get("optional_check_idents")
 
         # The WPS Execute request is formatted using HTTP GET
-        wps_data_inputs = ["filepath={:s}".format(filepath),
+        wps_data_inputs = ["user_name={:s}".format(request.user.username),
+                           "filepath={:s}".format(filepath),
                            "product_ident={:s}".format(product_ident),
                            "optional_check_idents={:s}".format(optional_check_idents)]
 
