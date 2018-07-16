@@ -182,10 +182,9 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "code_regex": "^...(..)",
-        "code_to_column_name": {"06": "code_00",
-                                "12": "code_06",
-                                "18": "code_12"}
+        "code_regex": "(.{16})$",
+        "code_to_column_name": {"change_2006_2012": "code2012",
+                                "change_2012_2018": "code2018"}
       }
     },
     {
