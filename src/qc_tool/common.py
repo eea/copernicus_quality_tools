@@ -27,6 +27,8 @@ PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
 FAILED_ITEMS_LIMIT = 10
 
+UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
+
 CHECK_FUNCTION_DESCRIPTIONS = {
     "v_unzip": "Unzips the delivery file.",
     "v_import2pg": "Import layers into PostGIS database.",
@@ -163,7 +165,6 @@ def get_all_wps_uuids():
                  for path in wps_output_dir.iterdir()
                  if status_document_regex.match(path.name) is not None]
     return wps_uuids
-
 
 def setup_config():
     """

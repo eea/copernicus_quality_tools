@@ -1,12 +1,20 @@
+#!/usr/bin/env python3
+
+
 import json
 from datetime import datetime
-from lxml import etree
+from shutil import copyfile
+from shutil import copytree
+
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from lxml import etree
 
+from qc_tool.common import compose_job_dir
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_all_wps_uuids
+from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
 
 
 def format_date_utc(db_date):
@@ -19,7 +27,6 @@ def format_date_utc(db_date):
         return None
     else:
         return db_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-
 
 def guess_product_ident(product_filename):
     """
@@ -54,8 +61,6 @@ def guess_product_ident(product_filename):
     else:
         return None
 
-
-
 def update_jobs_db():
     """
     updates the jobs table. This will be moved to the Job model.
@@ -80,7 +85,6 @@ def update_jobs_db():
     # sort by start_time in descending order
     job_infos = sorted(job_infos, key=lambda ji: ji['start_time'], reverse=True)
     return job_infos
-
 
 def parse_status_document(document_content):
     """
@@ -205,3 +209,46 @@ def parse_status_document(document_content):
         return doc
 
     return doc
+
+def submit_job(job_uuid, input_filepath, submission_date):
+    # Load job status.
+    status_filepath = compose_job_status_filepath(job_uuid)
+    status = status_filepath.read_text()
+    status = json.loads(status)
+
+    # Prepare parameters.
+    job_dir = compose_job_dir(job_uuid)
+    reference_year = status["reference_year"]
+    if reference_year is None:
+        reference_year = UNKNOWN_REFERENCE_YEAR_LABEL
+    uploaded_name = re.sub(".zip$", "", status["filename"])
+
+    # Create submission directory for the job.
+    submission_dirname = "{:s}-{:s}-{:s}.d".format(submission_date.strftime("%Y%m%d"),
+                                                   filename,
+                                                   job_uuid)
+    job_submission_dir = (CONFIG["submission_dir"].joinpath(status["product_ident"])
+                                                  .joinpath(reference_year)
+                                                  .joinpath(submission_dirname))
+    job_submission_dir.mkdir(parents=True, exist_ok=False)
+
+    # Copy status.
+    src_filepath = job_dir.joinpath("status.json")
+    dst_filepath = job_submission_dir.joinpath(src_filepath.name)
+    copyfile(src_filepath, dst_filepath)
+
+    # Copy output.d.
+    src_filepath = job_dir.joinpath("output.d")
+    dst_filepath = job_submission_dir.joinpath(src_filepath.name)
+    copytree(src_filepath, dst_filepath)
+
+    # Copy the uploaded file.
+    dst_dir = job_submission_dir.joinpath("input.d")
+    dst_dir.mkdir()
+    dst_filepath = dst_dir.joinpath(src_filepath.name)
+    copyfile(input_filepath, dst_filepath)
+
+    # Put stamp confirming finished submission.
+    dst_filepath = job_submission_dir.joinpath("SUBMITTED")
+    final_date = datetime.utcnow().isoformat(timespec="miliseconds")
+    dst_filepath.write_text(final_date)
