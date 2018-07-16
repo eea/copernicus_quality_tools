@@ -65,7 +65,7 @@ def dump_error_tables(connection, error_table_names, output_dir):
     for error_table_name in error_table_names:
         sql = "SELECT * FROM {:s};".format(error_table_name)
         cursor.execute(sql)
-        csv_filepath = output_dir.joinpath(error_table_name)
+        csv_filepath = output_dir.joinpath("{:s}.csv".format(error_table_name))
         with open(csv_filepath, 'w') as csv_file:
             csv_writer(csv_file)
             for row in cursor.fetchall():
