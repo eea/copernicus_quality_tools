@@ -195,7 +195,7 @@ def setup_config():
     config = {}
 
     # Parameters consumed by frontend.
-    config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/mnt/qc_tool_work/frontend.sqlite3"))
+    config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/mnt/qc_tool_volume/frontend.sqlite3"))
     config["submission_dir"] = environ.get("SUBMISSION_DIR", None)
     if config["submission_dir"] == "":
         config["submission_dir"] = None
@@ -203,8 +203,8 @@ def setup_config():
     # Parameters common to both frontend and wps.
     config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundary"))
     config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
-    config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_tool_work/wps"))
-    config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_work/work"))
+    config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_tool_volume/wps"))
+    config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_volume/work"))
     config["wps_output_dir"] = config["wps_dir"].joinpath("output")
 
     # Wps server port to listen on.

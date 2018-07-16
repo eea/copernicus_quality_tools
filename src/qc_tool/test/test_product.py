@@ -3,6 +3,7 @@
 
 import json
 from pathlib import Path
+from shutil import rmtree
 from unittest import TestCase
 from uuid import uuid4
 
@@ -51,8 +52,9 @@ class Test_clc_status(TestCase):
 
     def test_status_json(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
+        status_filepath = Path("/mnt/qc_tool_volume/work/job_testuuid/status.json")
+        rmtree(str(status_filepath.parent))
         job_status = dispatch("test-uuid", "user_name", filepath, "clc", [])
-        status_filepath = Path("/mnt/qc_tool_work/work/job_testuuid/status.json")
         self.assertTrue(status_filepath.exists())
         job_status_from_file = status_filepath.read_text()
         job_status_from_file = json.loads(job_status_from_file)

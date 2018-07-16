@@ -482,5 +482,6 @@ class TestV13(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        result = ['Layer test_layer_1 has 1 overlapping pairs.', 'Layer test_layer_2 has 3 overlapping pairs.']
+        result = ['The layer test_layer_1 has overlapping items in rows: 1-5.',
+                  'The layer test_layer_2 has overlapping items in rows: 1-5, 1-6, 5-6.']
         self.assertEqual(result, status.messages)

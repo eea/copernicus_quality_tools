@@ -41,6 +41,6 @@ def get_failed_ids_message(cursor, error_table_name, ident_colname, limit=FAILED
 def get_failed_pairs_message(cursor, error_table_name, ident_colname, limit=FAILED_ITEMS_LIMIT):
     sql = "SELECT a_{0:s}, b_{0:s} FROM {1:s} ORDER BY a_{0:s}, b_{0:s};".format(ident_colname, error_table_name)
     cursor.execute(sql)
-    failed_pairs = ["{:s}-{:s}".format(row[0], row[1]) for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
+    failed_pairs = ["{:s}-{:s}".format(str(row[0]), str(row[1])) for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
     failed_pairs_message = shorten_failed_items_message(failed_pairs, cursor.rowcount)
     return failed_pairs_message

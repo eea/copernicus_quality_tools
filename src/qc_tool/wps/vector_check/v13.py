@@ -21,7 +21,7 @@ def run_check(params, status):
         if cursor.rowcount == 0:
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:
-            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, ident_colname)
+            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, params["ident_colname"])
             failed_message = "The layer {:s} has overlapping items in rows: {:s}.".format(layer_name, failed_pairs_message)
             status.add_message(failed_message)
             status.add_error_table(error_table_name)

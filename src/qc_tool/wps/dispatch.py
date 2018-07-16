@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+from contextlib import closing
 from contextlib import ExitStack
 from datetime import datetime
 from functools import partial
@@ -58,6 +59,18 @@ def compile_check_suite(product_definition, optional_check_idents):
                    for check in product_definition["checks"]
                    if check["required"] or check["check_ident"] in optional_check_idents]
     return check_suite, skipped_idents
+
+def dump_error_tables(connection, error_table_names, output_dir):
+    cursor = connection.cursor()
+    for error_table_name in error_table_names:
+        sql = "SELECT * FROM {:s};".format(error_table_name)
+        cursor.execute(sql)
+        csv_filepath = output_dir.joinpath(error_table_name)
+        with open(csv_filepath, 'w') as csv_file:
+            csv_writer(csv_file)
+            for row in cursor.fetchall():
+                csv_writer.writerow(row)
+    cursor.close()
 
 def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents, update_status_func=None):
     with ExitStack() as exit_stack:
@@ -127,6 +140,10 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
 
                 # Update job status properties.
                 job_status.update(check_status.status_properties)
+
+                dump_error_tables(job_params["connection_manager"].get_connection(),
+                                  check_status.error_tables,
+                                  jobdir_manager.output_dir)
 
                 # Abort validation job.
                 if check_status.is_aborted():
