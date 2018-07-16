@@ -99,6 +99,7 @@ def prepare_empty_job_status(product_ident):
      "job_start_date": <>,
      "filename": <>,
      "hash": <>,
+     "reference_year": <>,
      "job_uuid": <>,
      "exception": <>,
      "checks": [{"check_ident": <full check ident>,
@@ -117,6 +118,7 @@ def prepare_empty_job_status(product_ident):
               "job_finish_date": None,
               "filename": None,
               "hash": None,
+              "reference_year": None,
               "job_uuid": None,
               "exception": None,
               "checks": []}

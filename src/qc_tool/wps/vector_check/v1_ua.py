@@ -21,7 +21,7 @@ def run_check(params, status):
     :param status:
     :return:
     """
-
+    reference_year = None
     all_directories = [path for path in params["unzip_dir"].glob("**") if path.is_dir()]
     layer_regex = re.compile(params["layer_regex"], re.IGNORECASE)
 
@@ -45,7 +45,11 @@ def run_check(params, status):
         matched_layer_names = []
         for layer_index in range(ds.GetLayerCount()):
             layer = ds.GetLayerByIndex(layer_index)
-            if re.match(layer_regex, layer.GetName()):
+            mobj = re.match(layer_regex, layer.GetName()):
+            if mobj is not None:
+                layer_reference_year = mobj.group("reference_year")[-4:]
+                if reference_year is None or reference_year < layer_reference_year:
+                    reference_year = layer_reference_year
                 matched_layer_names.append(layer.GetName())
 
         if len(matched_layer_names) == 0:
@@ -53,6 +57,8 @@ def run_check(params, status):
             status.add_message("Geodatabase {:s} does not have any layers matching expected naming convention pattern "
                                "{:s}.".format(gdb_filepath.name, params["layer_regex"]))
             return
+
+        status.set_status_property("reference_year", reference_year)
 
         if len(matched_layer_names) != params["layer_count"]:
             status.aborted()
@@ -73,12 +79,20 @@ def run_check(params, status):
         # option 2: SHAPEFILES
         all_filepaths = [path for path in params["unzip_dir"].glob("**/*") if path.is_file()]
         shp_filepaths = [path for path in all_filepaths if path.suffix.lower() == ".shp"]
-        matched_shp_filepaths = [path for path in shp_filepaths if layer_regex.match(path.stem)]
+        matched_shp_filepaths = []
+        for path in shp_filepaths:
+            mobj = layer_regex.match(path.stem)
+            layer_reference_year = mobj.group("reference_year")[-4:]
+            if reference_year is None or reference_year < layer_reference_year:
+                reference_year = layer_reference_year
+            matched_shp_filepaths.append(path)
 
         if len(matched_shp_filepaths) == 0:
             status.aborted()
             status.add_message("Delivery does not contain any geodatabase or shapefile layers matching the naming "
                                "convention. Expected number of layers is {:d}.".format(params["layer_count"]))
+
+        status.set_status_property("reference_year", reference_year)
 
         if len(matched_shp_filepaths) != params["layer_count"]:
             status.aborted()

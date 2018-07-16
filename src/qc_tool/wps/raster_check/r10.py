@@ -16,13 +16,11 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
     # get countrycode from filename
     filename = params["filepath"].name.lower()
-    countrycode = re.search(params["file_name_regex"], filename).group(1)
-    countrycode = countrycode.lower()
 
     # get geometry on mapped area
     ma_ds = ogr.Open(params["mapped_area"])
     ma_lyr = ma_ds.GetLayer()
-    ma_ft = [ft for ft in ma_lyr if ft.GetField("CNTR").lower() == countrycode][0]
+    ma_ft = [ft for ft in ma_lyr if ft.GetField("CNTR").lower() == params["country_code"]][0]
     ma_geom = ma_ft.GetGeometryRef()
 
     # open raster data source

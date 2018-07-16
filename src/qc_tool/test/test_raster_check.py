@@ -11,11 +11,12 @@ class TestR2(RasterCheckTestCase):
     def test_r2(self):
         from qc_tool.wps.raster_check.r2 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif"),
-                  "country_codes": "(CZ|SK|SI)",
+                  "country_codes": ["cz", "sk", "si"],
                   "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"],
-                  "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"}
+                  "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_020m_(?P<country_code>.+)_[0-9]{5}.*.tif$"}
         status = self.status_class()
         run_check(params, status)
+        print(status.messages)
         self.assertEqual("ok", status.status, "raster check r2 should pass")
 
 

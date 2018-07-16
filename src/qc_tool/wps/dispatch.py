@@ -124,11 +124,15 @@ def dispatch(job_uuid, filepath, product_ident, optional_check_idents, update_st
                 job_check_status["messages"] = check_status.messages
                 job_check_status["error_tables"] = check_status.error_tables
 
+                # Update job status properties.
+                job_status.update(check_status.status_properties)
+
                 # Abort validation job.
                 if check_status.is_aborted():
                     break
 
                 # Update job params.
+                job_params.update(check_status.status_properties)
                 job_params.update(check_status.params)
 
         finally:
@@ -152,6 +156,7 @@ class CheckStatus():
         self.messages = []
         self.error_tables = []
         self.params = {}
+        self.status_properties = {}
 
     def failed(self):
         self.status = "failed"
@@ -172,3 +177,6 @@ class CheckStatus():
 
     def add_params(self, params_dict):
         self.params.update(params_dict)
+
+    def set_status_property(self, key, value):
+        self.status_properties[key] = value

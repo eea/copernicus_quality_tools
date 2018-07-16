@@ -18,7 +18,7 @@
       "check_ident": "r2",
       "required": false,
       "parameters": {
-        "file_name_regex": "^fty_[0-9]{4}_020m_countrycode_[0-9]{5}.*.tif$"
+        "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_020m_(?P<country_code>.+)_[0-9]{5}.*.tif$"
       }
     },
     {
@@ -71,10 +71,7 @@
     },
     {
       "check_ident": "r10",
-      "required": false,
-      "parameters": {
-        "file_name_regex": "^fty_[0-9]{4}_020m_(.+?)_[0-9]{5}.*.tif$"
-      }
+      "required": false
     },
     {
       "check_ident": "r11",

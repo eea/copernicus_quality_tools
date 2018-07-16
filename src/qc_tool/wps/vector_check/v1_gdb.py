@@ -24,16 +24,22 @@ def run_check(params, status):
 
     # check file name
     filename = filepath.name.lower()
-    file_name_regex = params["file_name_regex"].replace("countrycode", params["country_codes"]).lower()
-    conf = check_name(filename, file_name_regex)
-    if not conf:
+    mobj = re.match(params["file_name_regex"], filename)
+    if mobj is None:
         status.aborted()
         status.add_message("File name does not conform to the naming convention.")
         return
 
-    # get particular country code
-    cc_regex = params["file_name_regex"].replace("countrycode", "(.+?)")
-    countrycode = re.search(cc_regex, filename).group(1)
+    # Get country code.
+    countrycode = mobj.group("country_code")
+    if countrycode not in params["country_codes"]:
+        status.aborted()
+        status.add_message("File name has illegal country code {:s}.".format(country_code))
+        return
+
+    # Get reference year.
+    reference_year = mobj.group("reference_year")
+    status.set_status_property("reference_year", reference_year)
 
     # get list of feature classes
     layer_names = get_fc_path(str(filepath))
