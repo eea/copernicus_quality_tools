@@ -321,28 +321,11 @@ def get_result(request, job_uuid):
 
         # special case of system error: show error information from the WPS xml document
         wps_info = parse_status_document(compose_wps_status_filepath(job_uuid).read_text())
-        if wps_info["status"] == "error":
-            error_check_index = 0
-            for check in context["result"]["detail"]:
-                if check["status"] == "running" and "exception" in job_status:
-                    check["messages"] = job_status["exception"]
+        if wps_info["status"] == "error" or job_status["exception"] is not None:
+            for error_check_index, check in enumerate(context["result"]["detail"]):
+                if check["status"] == "running":
+                    context["result"]["detail"][error_check_index]["status"] = "error"
                     break
-                else:
-                    error_check_index += 1
-            context["result"]["detail"][error_check_index]["status"] = "error"
-
-            if "exception" in job_status:
-                context["result"]["detail"][error_check_index]["message"] = job_status["exception"]
-
-            elif "log_info" in wps_info:
-                error_check_index = 0
-                for check in context["result"]["detail"]:
-                    if check["status"] == "running":
-                        break
-                    else:
-                        error_check_index += 1
-                context["result"]["detail"][error_check_index]["status"] = "error"
-                context["result"]["detail"][error_check_index]["message"] = wps_info["log_info"]
 
     else:
         context = {

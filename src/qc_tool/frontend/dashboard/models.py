@@ -49,8 +49,10 @@ class Delivery(models.Model):
             job_info = job_status_filepath.read_text()
             job_info = json.loads(job_info)
 
-            if self.last_wps_status == "error":
+            if (self.last_wps_status == "error"
+                or job_info["exception"] is not None):
                 self.last_job_status = "error"
+                self.last_job_percent = 100
             elif self.last_wps_status == "accepted":
                 self.last_job_status = "running"
                 self.last_job_percent = wps_doc["percent_complete"]
@@ -59,9 +61,6 @@ class Delivery(models.Model):
                 self.last_job_percent = wps_doc["percent_complete"]
             elif any((check["status"] in ("failed", "aborted") for check in job_info["checks"])):
                 self.last_job_status = "failed"
-                self.last_job_percent = 100
-            elif any(("status" not in check for check in job_info["checks"])):
-                self.last_job_status = "partial"
                 self.last_job_percent = 100
             elif any((check["status"] is None or check["status"] == "skipped" for check in job_info["checks"])):
                 self.last_job_status = "partial"
