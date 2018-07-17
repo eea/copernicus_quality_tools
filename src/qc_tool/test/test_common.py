@@ -49,25 +49,25 @@ class TestCommonWithConfig(TestCase):
         from qc_tool.common import compose_job_dir
         job_dir = compose_job_dir("abc-DEF-123")
         job_dir = str(job_dir)
-        self.assertEqual("/mnt/qc_tool_work/work/job_abcdef123", job_dir)
+        self.assertEqual("/mnt/qc_tool_volume/work/job_abcdef123", job_dir)
 
     def test_compose_job_status_filepath(self):
         from qc_tool.common import compose_job_status_filepath
         job_status_filepath = compose_job_status_filepath("abc-DEF-123")
         job_status_filepath = str(job_status_filepath)
-        self.assertEqual("/mnt/qc_tool_work/work/job_abcdef123/status.json", job_status_filepath)
+        self.assertEqual("/mnt/qc_tool_volume/work/job_abcdef123/status.json", job_status_filepath)
 
     def test_compose_wps_status_filepath(self):
         from qc_tool.common import compose_wps_status_filepath
         wps_status_filepath = compose_wps_status_filepath("abc-DEF-123")
         wps_status_filepath = str(wps_status_filepath)
-        self.assertEqual("/mnt/qc_tool_work/wps/output/abc-DEF-123.xml", wps_status_filepath)
+        self.assertEqual("/mnt/qc_tool_volume/wps/output/abc-DEF-123.xml", wps_status_filepath)
 
     def test_get_all_wps_uuids(self):
         from qc_tool.common import get_all_wps_uuids
-        ok_filepath = Path("/mnt/qc_tool_work/wps/output/6ec51f46-0714-4644-9723-9a0cdbf9e52d.xml")
+        ok_filepath = Path("/mnt/qc_tool_volume/wps/output/6ec51f46-0714-4644-9723-9a0cdbf9e52d.xml")
         ok_filepath.write_text("")
-        wrong_filepath = Path("/mnt/qc_tool_work/wps/output/XXc51f46-0714-4644-9723-9a0cdbf9e52d.xml")
+        wrong_filepath = Path("/mnt/qc_tool_volume/wps/output/XXc51f46-0714-4644-9723-9a0cdbf9e52d.xml")
         wrong_filepath.write_text("")
         wps_uuids = get_all_wps_uuids()
         self.assertListEqual(["6ec51f46-0714-4644-9723-9a0cdbf9e52d"],

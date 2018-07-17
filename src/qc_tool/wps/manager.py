@@ -9,6 +9,8 @@ from psycopg2 import connect
 
 from qc_tool.common import CONFIG
 from qc_tool.common import DB_FUNCTION_SCHEMA_NAME
+from qc_tool.common import JOB_OUTPUT_DIRNAME
+from qc_tool.common import JOB_TMP_DIRNAME
 from qc_tool.common import compose_job_dir
 
 
@@ -119,11 +121,11 @@ class JobdirManager():
     def create_dirs(self):
         self.job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
 
-        tmp_dir = self.job_dir.joinpath("tmp.d")
+        tmp_dir = self.job_dir.joinpath(JOB_TMP_DIRNAME)
         tmp_dir.mkdir(parents=True, exist_ok=self.exist_ok)
         self.tmp_dir = tmp_dir
 
-        output_dir = self.job_dir.joinpath("output.d")
+        output_dir = self.job_dir.joinpath(JOB_OUTPUT_DIRNAME)
         output_dir.mkdir(parents=True, exist_ok=self.exist_ok)
         self.output_dir = output_dir
 

@@ -53,7 +53,6 @@ class Test_clc_status(TestCase):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_uuid = uuid4().hex
         status_filepath = Path("/mnt/qc_tool_volume/work/").joinpath("job_{:s}".format(job_uuid), "status.json")
-        print(status_filepath)
         job_status = dispatch(job_uuid, "user_name", filepath, "clc", [])
         self.assertTrue(status_filepath.exists())
         job_status_from_file = status_filepath.read_text()
@@ -73,9 +72,7 @@ class Test_ua_shp(ProductTestCase):
                               "user_name",
                               filepath,
                               "ua",
-                              ["status.v3", "status.v4", "status.v5", "status.v6", "status.v8", "status.v11_ua",
-                               "status.v13", "status.v14"])
-        print(job_status["checks"])
+                              ["status.v5", "status.v6", "status.v8", "status.v11_ua", "status.v13", "status.v14"])
 
 
 class Test_ua_gdb(ProductTestCase):
@@ -89,9 +86,7 @@ class Test_ua_gdb(ProductTestCase):
                               "user_name",
                               filepath,
                               "ua_with_change",
-                              ["change.v3", "change.v4", "change.v5", "change.v6",
-                               "change.v8", "change.v11_ua", "change.v13", "change.v14"])
-        print(job_status["checks"])
+                              ["change.v5", "change.v6", "change.v8", "change.v11_ua", "change.v13", "change.v14"])
 
 
 class Test_update_status(ProductTestCase):
@@ -107,6 +102,6 @@ class Test_update_status(ProductTestCase):
                  "user_name",
                  filepath,
                  "clc",
-                 ["status.v3", "status.v4", "status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",
-                  "change.v3", "change.v4", "change.v5", "change.v6", "change.v8", "change.v11", "change.v13", "change.v14"],
+                 ["status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",
+                  "change.v5", "change.v6", "change.v8", "change.v11", "change.v13", "change.v14"],
                  update_status_func=my_update)

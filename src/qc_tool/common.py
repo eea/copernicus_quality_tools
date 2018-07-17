@@ -16,6 +16,10 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
 DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
+JOB_INPUT_DIRNAME = "input.d"
+JOB_OUTPUT_DIRNAME = "output.d"
+JOB_TMP_DIRNAME = "tmp.d"
+
 HASH_ALGORITHM = "sha256"
 HASH_BUFFER_SIZE = 1024 ** 2
 
@@ -112,7 +116,8 @@ def prepare_empty_job_status(product_ident):
                  "required": <>,
                  "system": <>,
                  "status": <>,
-                 "messages": <>}, ...]}
+                 "messages": <>,
+                 "error_table_filenames": <>}, ...]}
     """
     filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
     product_definition = filepath.read_text()
@@ -135,7 +140,8 @@ def prepare_empty_job_status(product_ident):
                       "required": check["required"],
                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
                       "status": None,
-                      "messages": None}
+                      "messages": None,
+                      "error_table_filenames": None}
         status["checks"].append(check_item)
     return status
 
@@ -159,6 +165,11 @@ def compose_wps_status_filepath(job_uuid):
     wps_status_filename = "{:s}.xml".format(str(job_uuid))
     wps_status_filepath = CONFIG["wps_output_dir"].joinpath(wps_status_filename)
     return wps_status_filepath
+
+def compose_error_table_filepath(job_uuid, error_table_filename):
+    job_dir = compose_job_dir(job_uuid)
+    error_table_filepath = job_dir.joinpath(JOB_OUTPUT_DIR).joinpath(error_table_filename)
+    return error_table_filepath
 
 def get_all_wps_uuids():
     status_document_regex = re.compile(r"[a-z0-9-]{36}\.xml")

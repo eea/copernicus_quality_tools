@@ -30,7 +30,7 @@ def subtract_border_polygons(cursor, border_layer_name, ident_colname, layer_nam
            "  boundary AS ("
            "    SELECT ST_Boundary(wkb_geometry) AS geom FROM {0:s}),"
            "  tr_boundary AS ("
-           "    SELECT ST_Boundary(wkb_geometry)) AS geom FROM {1:s} WHERE {2:s} LIKE '122%'),"
+           "    SELECT ST_Boundary(wkb_geometry) AS geom FROM {1:s} WHERE {2:s} LIKE '122%'),"
            "  ex_boundary AS ("
            "    SELECT DISTINCT lt.{3:s}, lt.wkb_geometry AS geom"
            "    FROM {1:s} lt INNER JOIN {4:s} et ON lt.{3:s} = et.{3:s}, boundary bt " 

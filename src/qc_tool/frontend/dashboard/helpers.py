@@ -14,6 +14,8 @@ from qc_tool.common import compose_job_dir
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_all_wps_uuids
+from qc_tool.common import JOB_INPUT_DIRNAME
+from qc_tool.common import JOB_OUTPUT_DIRNAME
 from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
 
 
@@ -238,12 +240,12 @@ def submit_job(job_uuid, input_filepath, submission_date):
     copyfile(src_filepath, dst_filepath)
 
     # Copy output.d.
-    src_filepath = job_dir.joinpath("output.d")
+    src_filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME)
     dst_filepath = job_submission_dir.joinpath(src_filepath.name)
     copytree(src_filepath, dst_filepath)
 
     # Copy the uploaded file.
-    dst_dir = job_submission_dir.joinpath("input.d")
+    dst_dir = job_submission_dir.joinpath(JOB_INPUT_DIRNAME)
     dst_dir.mkdir()
     dst_filepath = dst_dir.joinpath(src_filepath.name)
     copyfile(input_filepath, dst_filepath)

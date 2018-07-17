@@ -22,14 +22,14 @@
     },
     {
       "check_ident": "v3",
-      "required": false,
+      "required": true,
       "parameters": {
         "attribute_regexes": ["fid", "id", "du_id", "maes_1", "maes_2", "maes_3", "maes_4", "tcd", "ua", "area_ha", "nodata", "comment"]
       }
     },
     {
       "check_ident": "v4",
-      "required": false,
+      "required": true,
       "parameters": {
         "epsg": [3035]
       }

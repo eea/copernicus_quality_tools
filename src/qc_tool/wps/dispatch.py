@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+import csv
 import hashlib
 import json
 from contextlib import closing
@@ -41,7 +42,7 @@ def make_signature(filepath):
             h.update(buf)
     return h.hexdigest()
 
-def compile_check_suite(product_definition, optional_check_idents):
+def compile_check_suite(product_ident, product_definition, optional_check_idents):
     optional_check_idents = set(optional_check_idents)
     defined_optional_check_idents = {check["check_ident"]
                                      for check in product_definition["checks"] if not check["required"]}
@@ -50,8 +51,8 @@ def compile_check_suite(product_definition, optional_check_idents):
     incorrect_check_idents = optional_check_idents - defined_optional_check_idents
     if len(incorrect_check_idents) > 0:
         raise IncorrectCheckException("Incorrect checks passed.",
-                                      {"product": product_definition["product_ident"],
-                                       "incorrect": incorrect_check_idents})
+                                      {"product_ident": product_ident,
+                                       "incorrect_check_idents": incorrect_check_idents})
 
     # Compile check suite.
     skipped_idents = defined_optional_check_idents - optional_check_idents
@@ -60,17 +61,17 @@ def compile_check_suite(product_definition, optional_check_idents):
                    if check["required"] or check["check_ident"] in optional_check_idents]
     return check_suite, skipped_idents
 
-def dump_error_tables(connection, error_table_names, output_dir):
+def dump_error_table(connection, error_table_name, output_dir):
     cursor = connection.cursor()
-    for error_table_name in error_table_names:
-        sql = "SELECT * FROM {:s};".format(error_table_name)
-        cursor.execute(sql)
-        csv_filepath = output_dir.joinpath("{:s}.csv".format(error_table_name))
-        with open(csv_filepath, 'w') as csv_file:
-            csv_writer(csv_file)
-            for row in cursor.fetchall():
-                csv_writer.writerow(row)
+    sql = "SELECT * FROM {:s};".format(error_table_name)
+    cursor.execute(sql)
+    csv_filename = "{:s}.csv".format(error_table_name)
+    csv_filepath = output_dir.joinpath(csv_filename)
+    with open(str(csv_filepath), 'w') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerows(cursor.fetchall())
     cursor.close()
+    return csv_filename
 
 def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents, update_status_func=None):
     with ExitStack() as exit_stack:
@@ -92,7 +93,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
             check_defaults = load_check_defaults()
             product_definition = load_product_definition(product_ident)
 
-            check_suite, skipped_idents = compile_check_suite(product_definition, optional_check_idents)
+            check_suite, skipped_idents = compile_check_suite(product_ident, product_definition, optional_check_idents)
             for skipped_ident in skipped_idents:
                 job_status_check_idx[skipped_ident]["status"] = STATUS_SKIPPED_LABEL
 
@@ -136,14 +137,17 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                 job_check_status = job_status_check_idx[check["check_ident"]]
                 job_check_status["status"] = check_status.status
                 job_check_status["messages"] = check_status.messages
-                job_check_status["error_tables"] = check_status.error_tables
+
+                # Export error tables.
+                job_check_status["error_table_filenames"] = []
+                for error_table_name in check_status.error_table_names:
+                    error_table_filename = dump_error_table(job_params["connection_manager"].get_connection(),
+                                                            error_table_name,
+                                                            jobdir_manager.output_dir)
+                    job_check_status["error_table_filenames"].append(error_table_filename)
 
                 # Update job status properties.
                 job_status.update(check_status.status_properties)
-
-                dump_error_tables(job_params["connection_manager"].get_connection(),
-                                  check_status.error_tables,
-                                  jobdir_manager.output_dir)
 
                 # Abort validation job.
                 if check_status.is_aborted():
@@ -172,7 +176,7 @@ class CheckStatus():
     def __init__(self):
         self.status = "ok"
         self.messages = []
-        self.error_tables = []
+        self.error_table_names = []
         self.params = {}
         self.status_properties = {}
 
@@ -190,8 +194,8 @@ class CheckStatus():
         if self.status == "ok" and failed:
             self.failed()
 
-    def add_error_table(self, error_table):
-        self.error_tables.append(error_table)
+    def add_error_table(self, error_table_name):
+        self.error_table_names.append(error_table_name)
 
     def add_params(self, params_dict):
         self.params.update(params_dict)
