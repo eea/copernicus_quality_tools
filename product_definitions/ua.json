@@ -9,7 +9,7 @@
       "check_ident": "boundary.v1_ua",
       "required": true,
       "parameters": {
-        "layer_regex": "boundary(2006|2012|2018)_",
+        "layer_regex": "boundary(?P<reference_year>2006|2012|2018)_.*",
         "layer_count": 1,
         "is_border_source": true
       }
@@ -43,7 +43,7 @@
       "check_ident": "status.v1_ua",
       "required": true,
       "parameters": {
-        "layer_regex": ".*_ua(2006|2012|2018)$",
+        "layer_regex": ".*_ua(?P<reference_year>2006|2012|2018)$",
         "layer_count": 1,
         "is_border_source": false
       }
@@ -52,7 +52,7 @@
       "check_ident": "status.v2",
       "required": true,
       "parameters": {
-        "formats": [".gdb"]
+        "formats": [".gdb", ".shp"]
       }
     },
     {

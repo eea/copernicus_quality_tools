@@ -13,7 +13,6 @@ from qc_tool.wps.vector_check.v11 import subtract_table
 
 
 def create_all_breaking_mmu(cursor, ident_colname, layer_name, error_table_name, code_colname):
-    area_m = area_ha * 10000
     sql = ("CREATE TABLE {0:s} AS"
            "  SELECT {1:s} FROM {2:s}"
            "  WHERE ({3:s} LIKE '1%'  AND {3:s} NOT LIKE '122%' AND shape_area < 2500)"
@@ -62,7 +61,7 @@ def subtract_border_polygons(cursor, border_layer_name, ident_colname, layer_nam
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     border_source_layer = params["border_source_layer"]
-    for layer_name in params["db_layer_name"]:
+    for layer_name in params["db_layer_names"]:
         mobj = re.search(params["code_regex"], layer_name)
         code = mobj.group(1)
         code_colname = params["code_to_column_name"][code]
@@ -93,6 +92,6 @@ def run_check(params, status):
             drop_table(cursor, except_table_name)
         else:
             failed_ids_message = get_failed_ids_message(cursor, except_table_name, params["ident_colname"])
-            failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_nar_name, failed_ids_message)
+            failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_name, failed_ids_message)
             status.add_message(failed_message, failed=False)
             status.add_error_table(error_table_name)

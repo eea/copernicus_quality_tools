@@ -45,7 +45,7 @@ def run_check(params, status):
         matched_layer_names = []
         for layer_index in range(ds.GetLayerCount()):
             layer = ds.GetLayerByIndex(layer_index)
-            mobj = re.match(layer_regex, layer.GetName()):
+            mobj = re.match(layer_regex, layer.GetName())
             if mobj is not None:
                 layer_reference_year = mobj.group("reference_year")[-4:]
                 if reference_year is None or reference_year < layer_reference_year:
@@ -82,10 +82,12 @@ def run_check(params, status):
         matched_shp_filepaths = []
         for path in shp_filepaths:
             mobj = layer_regex.match(path.stem)
-            layer_reference_year = mobj.group("reference_year")[-4:]
-            if reference_year is None or reference_year < layer_reference_year:
-                reference_year = layer_reference_year
-            matched_shp_filepaths.append(path)
+            if mobj is not None:
+                layer_reference_year = mobj.group("reference_year")
+                layer_reference_year = layer_reference_year[-4:]
+                if reference_year is None or reference_year < layer_reference_year:
+                    reference_year = layer_reference_year
+                matched_shp_filepaths.append(path)
 
         if len(matched_shp_filepaths) == 0:
             status.aborted()
@@ -106,3 +108,5 @@ def run_check(params, status):
         # Get layers from shapefile names. Layer names are always considered lower-case.
         layer_sources = [(filepath.stem, filepath) for filepath in matched_shp_filepaths]
         status.add_params({"layer_sources": layer_sources})
+        if params.get("is_border_source", False):
+            status.add_params({"border_source_layer": layer_sources[0][0].lower()})

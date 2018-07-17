@@ -81,10 +81,10 @@ class TestV1_gdb(VectorCheckTestCase):
         self.params.update({
                             "unzip_dir": TEST_DATA_DIR.joinpath("vector", "clc"),
                             "filepath": TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb"),
-                            "country_codes": "(MT)",
-                            "file_name_regex": "^clc[0-9]{4}_countrycode.gdb$",
+                            "country_codes": ["cz", "sk", "mt"],
+                            "file_name_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
                             "layer_prefix": "^{countrycode:s}/clc",
-                            "layer_regex": "^{countrycode:s}/clc[0-9]{{2}}_{countrycode:s}$",
+                            "layer_regex": "^{countrycode:s}/clc(06|12|18)_{countrycode:s}$",
                             "layer_count": 2
                            })
 
@@ -130,7 +130,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
     def test_v1_ua_gdb_boundary_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
         status = self.status_class()
-        self.params["layer_regex"] = "boundary(2006|2012|2018)_.*$"
+        self.params["layer_regex"] = "boundary(?P<reference_year>2006|2012|2018)_.*$"
         self.params["layer_count"] = 1
         self.params["is_border_source"] = True
         run_check(self.params, status)
@@ -144,7 +144,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
     def test_v1_ua_gdb_status_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
         status = self.status_class()
-        self.params["layer_regex"] = ".*_ua(2006_2012|2012|2018)$"
+        self.params["layer_regex"] = ".*_ua(?P<reference_year>2006_2012|2012|2018)$"
         self.params["layer_count"] = 2
         run_check(self.params, status)
 
@@ -160,7 +160,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
     def test_v1_ua_gdb_change_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
         status = self.status_class()
-        self.params["layer_regex"] = ".*_change_(2006|2012)_(2012|2018)$"
+        self.params["layer_regex"] = ".*_change_(?P<reference_year1>2006|2012)_(?P<reference_year>2012|2018)$"
         self.params["layer_count"] = 1
         run_check(self.params, status)
 
@@ -174,7 +174,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         # test should fail if we pass in a geodatabase from another product
         self.params["unzip_dir"] = TEST_DATA_DIR.joinpath("vector", "clc")
         self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params["layer_regex"] = "boundary(2006|2012|2018)_.*$"
+        self.params["layer_regex"] = "boundary(?P<reference_year>2006|2012|2018)_.*$"
         self.params["layer_count"] = 1
         self.params["is_border_source"] = True
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -196,7 +196,7 @@ class TestV1_ua_shp(VectorCheckTestCase):
     def test_v1_ua_shp_boundary_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
         status = self.status_class()
-        self.params["layer_regex"] = "boundary(2006|2012|2018)_.*$"
+        self.params["layer_regex"] = "boundary(?P<reference_year>2006|2012|2018)_.*$"
         self.params["layer_count"] = 1
         self.params["is_border_source"] = True
         run_check(self.params, status)
@@ -211,7 +211,7 @@ class TestV1_ua_shp(VectorCheckTestCase):
     def test_v1_ua_shp_status_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
         status = self.status_class()
-        self.params["layer_regex"] = ".*_ua(2006|2012|2018)$"
+        self.params["layer_regex"] = ".*_ua(?P<reference_year>2006|2012|2018)$"
         self.params["layer_count"] = 1
         self.params["is_border_source"] = False
         run_check(self.params, status)
@@ -302,6 +302,24 @@ class TestV4(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
+    def test_shp(self):
+        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")})
+        status = self.status_class()
+        unzip_check(self.params, status)
+        self.params["unzip_dir"] = status.params["unzip_dir"]
+
+        from qc_tool.wps.vector_check.v1_ua import run_check as layer_check
+        self.params["layer_regex"] = ".*_ua(?P<reference_year>2006|2012|2018)$"
+        self.params["layer_count"] = 1
+        layer_check(self.params, status)
+        self.params["layer_sources"] = status.params["layer_sources"]
+
+        from qc_tool.wps.vector_check.v4 import run_check
+        self.params["epsg"] = [3035]
+        run_check(self.params, status)
+
     def test_fail(self):
         from qc_tool.wps.vector_check.v4 import run_check
         self.params["epsg"] = [7777]
@@ -340,6 +358,34 @@ class TestVImport2pg(VectorCheckTestCase):
         cur = self.params["connection_manager"].get_connection().cursor()
         cur.execute("""SELECT id FROM {:s};""".format(status.params["db_layer_names"][0]))
         self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
+
+    def test_v_import2pg_shapefile(self):
+        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")})
+        status = self.status_class()
+        unzip_check(self.params, status)
+        self.params["unzip_dir"] = status.params["unzip_dir"]
+
+        from qc_tool.wps.vector_check.v1_ua import run_check as layer_check
+        self.params["layer_regex"] = ".*_ua(?P<reference_year>2006|2012|2018)$"
+        self.params["layer_count"] = 1
+        layer_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+
+        self.params["layer_sources"] = status.params["layer_sources"]
+        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
+        import_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("db_layer_names", status.params)
+        print(status.params["db_layer_names"])
+        cur = self.params["connection_manager"].get_connection().cursor()
+        cur.execute("""SELECT * FROM {:s};""".format(status.params["db_layer_names"][0]))
+        self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
+
+
 
 
 class TestV5(VectorCheckTestCase):

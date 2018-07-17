@@ -13,17 +13,22 @@ def run_check(params, status):
 
     db_layer_names = []
     for layer_name, layer_filepath in params["layer_sources"]:
+
+        if layer_filepath.suffix.lower() == ".shp":
+            layer_filepath = layer_filepath.parent
+
         pc = run(["ogr2ogr",
                    "-overwrite",
-                   "-skipfailures",
                    "-f", "PostgreSQL",
                    "-lco", "SCHEMA={:s}".format(schema),
+                   "-nlt", "MULTIPOLYGON",
                    "PG:{:s}".format(dsn),
                    str(layer_filepath),
                    layer_name])
         if pc.returncode == 0:
-            db_layer_names.append(layer_name)
+            db_layer_names.append(layer_name.lower())
         else:
             status.aborted()
-            status.add_message("Importing of {:s} layer into PostGIS db failed.".format(layer_name))
+            status.add_message("Importing of layer {:s} into PostGIS db failed.".format(layer_name))
+
     status.add_params({"db_layer_names": db_layer_names})
