@@ -16,7 +16,7 @@ class TestGrass(RasterCheckTestCase):
         self.assertIsNotNone(self.jobdir_manager.job_dir, "job_dir should be a valid directory")
 
     def test_grass_location(self):
-        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
+        filepath = str(TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif"))
         tmp_dir = self.jobdir_manager.tmp_dir
 
         location_path = tmp_dir.joinpath("location")
@@ -30,7 +30,7 @@ class TestGrass(RasterCheckTestCase):
         self.assertEqual(p.returncode, 0, "GRASS should create the location without error.")
 
     def test_grass_import(self):
-        filepath = str(TEST_DATA_DIR.joinpath("fty_2015_020m_si_03035_d04_test.tif"))
+        filepath = str(TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif"))
 
         tmp_dir = self.jobdir_manager.tmp_dir
         location_path = tmp_dir.joinpath("location")

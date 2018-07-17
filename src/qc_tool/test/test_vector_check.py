@@ -325,7 +325,7 @@ class TestV4(VectorCheckTestCase):
         self.params["epsg"] = [7777]
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
 
 
 class TestVImport2pg(VectorCheckTestCase):
@@ -358,34 +358,6 @@ class TestVImport2pg(VectorCheckTestCase):
         cur = self.params["connection_manager"].get_connection().cursor()
         cur.execute("""SELECT id FROM {:s};""".format(status.params["db_layer_names"][0]))
         self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
-
-    def test_v_import2pg_shapefile(self):
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
-        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")})
-        status = self.status_class()
-        unzip_check(self.params, status)
-        self.params["unzip_dir"] = status.params["unzip_dir"]
-
-        from qc_tool.wps.vector_check.v1_ua import run_check as layer_check
-        self.params["layer_regex"] = ".*_ua(?P<reference_year>2006|2012|2018)$"
-        self.params["layer_count"] = 1
-        layer_check(self.params, status)
-
-        self.assertEqual("ok", status.status)
-
-        self.params["layer_sources"] = status.params["layer_sources"]
-        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
-        import_check(self.params, status)
-
-        self.assertEqual("ok", status.status)
-        self.assertIn("db_layer_names", status.params)
-        print(status.params["db_layer_names"])
-        cur = self.params["connection_manager"].get_connection().cursor()
-        cur.execute("""SELECT * FROM {:s};""".format(status.params["db_layer_names"][0]))
-        self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
-
-
 
 
 class TestV5(VectorCheckTestCase):
