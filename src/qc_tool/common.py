@@ -168,7 +168,7 @@ def compose_wps_status_filepath(job_uuid):
 
 def compose_error_table_filepath(job_uuid, error_table_filename):
     job_dir = compose_job_dir(job_uuid)
-    error_table_filepath = job_dir.joinpath(JOB_OUTPUT_DIR).joinpath(error_table_filename)
+    error_table_filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME).joinpath(error_table_filename)
     return error_table_filepath
 
 def get_all_wps_uuids():

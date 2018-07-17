@@ -30,6 +30,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from qc_tool.common import CONFIG
+from qc_tool.common import compose_error_table_filepath
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
@@ -285,6 +286,14 @@ def get_result_json(request, job_uuid):
     return JsonResponse(job_status, safe=False)
 
 @login_required
+def get_error_table(request, job_uuid, error_table_filename):
+    error_table_filepath = compose_error_table_filepath(job_uuid, error_table_filename)
+    content = error_table_filepath.read_text()
+    response = HttpResponse(content, content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="somefilename.csv"'
+    return response
+
+@login_required
 def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
@@ -296,12 +305,14 @@ def get_result(request, job_uuid):
         job_status = json.loads(job_status)
         job_timestamp = job_status_filepath.stat().st_mtime
         job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
+        job_reference_year = job_status["reference_year"]
         context = {
             'product_type_name': job_status["product_ident"],
             'product_type_description': job_status["description"],
             'filepath': job_status["filename"],
             'start_time': job_status["job_start_date"],
             'end_time': job_end_date,
+            'reference_year': job_reference_year,
             'result': {
                 'uuid': job_uuid,
                 'detail': job_status["checks"]
