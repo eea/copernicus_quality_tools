@@ -27,5 +27,6 @@ def run_check(params, status):
             if is_missing:
                 missing_attr_regexes.append(attr_regex)
         if len(missing_attr_regexes) > 0:
+            status.aborted()
             missing_attr_message = ", ".join(missing_attr_regexes)
             status.add_message("Layer {:s} has missing attributes: {:s}.".format(layer_name, missing_attr_message))
