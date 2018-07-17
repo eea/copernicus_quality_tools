@@ -208,7 +208,7 @@ def setup_config():
     config = {}
 
     # Parameters consumed by frontend.
-    config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/mnt/qc_tool_volume/frontend.sqlite3"))
+    config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/var/lib/qc_tool/frontend.sqlite3"))
     config["submission_dir"] = environ.get("SUBMISSION_DIR", "")
     if config["submission_dir"] == "":
         config["submission_dir"] = None

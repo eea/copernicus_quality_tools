@@ -16,12 +16,15 @@ services:
       - WPS_DIR=/mnt/qc_tool_work/wps
       - WORK_DIR=/mnt/qc_tool_work/work
       - FRONTEND_PORT=8000
-      - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
+      - FRONTEND_DB_PATH=/var/lib/qc_tool/frontend.sqlite3
       - WPS_URL=http://qc_tool_wps:5000/wps
+    networks:
+      - qc_tool_network
     volumes:
       - qc_tool_incoming:/mnt/qc_tool_incoming
       - qc_tool_submission:/mnt/qc_tool_submission
       - qc_tool_work:/mnt/qc_tool_work
+      - qc_tool_frontend:/var/lib/qc_tool
 
   qc_tool_wps:
     depends_on:
@@ -45,6 +48,8 @@ services:
       - LEAVE_SCHEMA=no
       - JOBDIR_EXIST_OK=no
       - LEAVE_JOBDIR=no
+    networks:
+      - qc_tool_network
     volumes:
       - qc_tool_boundary:/mnt/qc_tool_boundary
       - qc_tool_incoming:/mnt/qc_tool_incoming
@@ -55,9 +60,13 @@ services:
       context: .
       dockerfile: Dockerfile.postgis
     image: qc_tool_postgis
+    networks:
+      - qc_tool_network
 
 volumes:
   qc_tool_boundary:
+    driver: local
+  qc_tool_frontend:
     driver: local
   qc_tool_incoming:
     driver: local

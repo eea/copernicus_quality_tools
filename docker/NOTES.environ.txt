@@ -14,7 +14,8 @@ Service qc_tool_frontend
   * WPS_DIR, informs the frontend server where it should look for wps status files;
   * WORK_DIR, informs the frontend server where it should look for job output files;
   * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
-  * FRONTEND_DB_PATH, instructs the frontend server what sqlite database file to use, if the database file does not exist, it will be created;
+  * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
+      the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
   * SUBMISSION_DIR, if set instructs the frontend server where to put submissions, if not set or empty the feature is disabled;
   * WPS_URL, informs the frontend server of the url where the wps server can be reached;
 
@@ -36,3 +37,6 @@ Service qc_tool_wps
   * LEAVE_SCHEMA, if "yes" then job schema will not be dropped;
   * JOBDIR_EXIST_OK, if "yes" then job will not raise an error when the job's working directory already exists;
   * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed;
+
+
+NOTE! As stated above INCOMING_DIR, WPS_DIR and WORK_DIR must be reachable by both services!
