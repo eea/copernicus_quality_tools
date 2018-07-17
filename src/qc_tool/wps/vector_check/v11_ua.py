@@ -22,7 +22,7 @@ def create_all_breaking_mmu(cursor, ident_colname, layer_name, error_table_name,
     cursor.execute(sql)
     return cursor.rowcount
 
-def subtract_border_polygons(cursor, border_layer_name, ident_colname, layer_name, error_table_name, except_table_name):
+def subtract_border_polygons(cursor, border_layer_name, ident_colname, layer_name, error_table_name, except_table_name, code_colname):
     """Subtracts polygons at boundary."""
     create_table(cursor, ident_colname, except_table_name, error_table_name)
 
@@ -78,7 +78,8 @@ def run_check(params, status):
                                                                params["ident_colname"],
                                                                layer_name,
                                                                error_table_name,
-                                                               except_table_name)
+                                                               except_table_name,
+                                                               code_colname)
 
         # Clean the tables.
         if error_count == 0:
