@@ -10,6 +10,8 @@ ALTER SCHEMA public OWNER TO qc_job;
 
 CREATE EXTENSION postgis;
 
+GRANT ALL ON TABLE public.spatial_ref_sys TO qc_job;
+
 SET ROLE TO qc_job;
 
 CREATE SCHEMA qc_function;
