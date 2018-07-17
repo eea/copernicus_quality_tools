@@ -83,7 +83,8 @@ class RunChecks(Process):
                            data_type="string", min_occurs=1, max_occurs=1),
               LiteralInput("product_ident", "The identifier of the product denoting group of checks to be performed.",
                            data_type="string", min_occurs=1, max_occurs=1),
-              LiteralInput("optional_check_idents", "Comma separated identifiers of optional checks to be performed."),
+              LiteralInput("optional_check_idents", "Comma separated identifiers of optional checks to be performed.",
+                           data_type="string", min_occurs=1, max_occurs=1),
               LiteralInput("user_name", "The name of the user managing the delivery.",
                            data_type="string", min_occurs=0, max_occurs=1)]
     OUTPUTS = []

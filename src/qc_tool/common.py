@@ -209,9 +209,11 @@ def setup_config():
 
     # Parameters consumed by frontend.
     config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/mnt/qc_tool_volume/frontend.sqlite3"))
-    config["submission_dir"] = environ.get("SUBMISSION_DIR", None)
+    config["submission_dir"] = environ.get("SUBMISSION_DIR", "")
     if config["submission_dir"] == "":
         config["submission_dir"] = None
+    else:
+        config["submission_dir"] = Path(config["submission_dir"])
 
     # Parameters common to both frontend and wps.
     config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundary"))

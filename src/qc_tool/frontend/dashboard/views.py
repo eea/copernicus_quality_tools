@@ -29,6 +29,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from qc_tool.common import CONFIG
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
@@ -38,6 +39,7 @@ from qc_tool.common import prepare_empty_job_status
 from qc_tool.frontend.dashboard.helpers import format_date_utc
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import parse_status_document
+from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import Delivery
 
@@ -206,7 +208,7 @@ def delivery_delete(request):
 
 
 @csrf_exempt
-def delivery_submit_eea(request):
+def submit_delivery_to_eea(request):
     if request.method == "POST":
         file_id = request.POST.get("id")
         filename = request.POST.get("filename")
@@ -216,7 +218,20 @@ def delivery_submit_eea(request):
         d = Delivery.objects.get(id=file_id)
         d.date_submitted = timezone.now()
         d.save()
-        return JsonResponse({"status":"ok", "message": "File {0} successfully scheduled for EEA submission.".format(filename)})
+
+        try:
+            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+            submit_job(d.last_job_uuid, zip_filepath, CONFIG["submission_dir"], d.date_submitted)
+        except BaseException as e:
+            d.date_submitted = None
+            d.save()
+            logger.error("ERROR submitting delivery to EEA. file {:s}. exception {:s}".format(filename, str(e)))
+            raise IOError(e)
+            #return JsonResponse({"status": "error",
+            #                     "message": "ERROR submitting file {:s} to EEA. {:s}".format(filename, str(e))})
+
+        return JsonResponse({"status":"ok",
+                             "message": "File {0} successfully submitted to EEA.".format(filename)})
 
 @login_required
 def get_product_list(request):
@@ -527,7 +542,7 @@ def run_wps_execute(request):
             d = Delivery.objects.get(user=request.user, filename=file_name)
             d.init_status(product_ident)
             d.update_status(job_uuid)
-            logger.debug("Delivery {:d}: job status created with job_uuid={:s}.".format(d.id, str(d.job_uuid)))
+            logger.debug("Delivery {:d}: job status created with job_uuid={:s}.".format(d.id, str(job_uuid)))
 
             # The WPS process has been started asynchronously.
             result = {"status": "OK",

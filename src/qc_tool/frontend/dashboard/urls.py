@@ -10,7 +10,7 @@ urlpatterns = [
     re_path("data/delivery/list/", views.get_deliveries_json, name="deliveries_json"),
 
     path("delivery/delete/", views.delivery_delete, name="delivery_delete"),
-    path("delivery/submit/", views.delivery_submit_eea, name="delivery_submit"),
+    path("delivery/submit/", views.submit_delivery_to_eea, name="delivery_submit"),
 
     path("jobs/<filename>/", views.jobs, name="jobs"),
     path("data/jobs/<filename>/", views.get_jobs, name="jobs_json"),

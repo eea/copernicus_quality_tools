@@ -11,18 +11,18 @@ services:
       - 8000:8000
     environment:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
-      - SUBMISSION_DIR=/mnt/qc_tool_work/submision
-      - WPS_DIR=/mnt/qc_tool_work/wps
-      - WORK_DIR=/mnt/qc_tool_work/work
+      - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
+      - WPS_DIR=/mnt/qc_tool_volume/wps
+      - WORK_DIR=/mnt/qc_tool_volume/work
       - FRONTEND_PORT=8000
-      - FRONTEND_DB_PATH=/mnt/qc_tool_work/work/frontend.sqlite3
+      - FRONTEND_DB_PATH=/mnt/qc_tool_volume/work/frontend.sqlite3
       - WPS_URL=http://qc_tool_wps:5000/wps
     volumes:
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
       - /home/jiri/qc_tool/testdata:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/wps:/mnt/qc_tool_work/wps
-      - /home/jiri/work:/mnt/qc_tool_work/work
-      - /home/jiri/submission:/mnt/qc_tool_work/submisison
+      - /home/jiri/wps:/mnt/qc_tool_volume/wps
+      - /home/jiri/work:/mnt/qc_tool_volume/work
+      - /home/jiri/qc_tool_submission:/mnt/qc_tool_submission
 
   qc_tool_wps:
     depends_on:
@@ -34,8 +34,8 @@ services:
     environment:
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundary
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
-      - WPS_DIR=/mnt/qc_tool_work/wps
-      - WORK_DIR=/mnt/qc_tool_work/work
+      - WPS_DIR=/mnt/qc_tool_volume/wps
+      - WORK_DIR=/mnt/qc_tool_volume/work
       - WPS_PORT=5000
       - WPS_URL=http://qc_tool_wps:5000/wps
       - WPS_OUTPUT_URL=http://qc_tool_wps:5000/output
@@ -49,8 +49,9 @@ services:
     volumes:
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
       - /home/jiri/qc_tool/testdata:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/wps:/mnt/qc_tool_work/wps
-      - /home/jiri/work:/mnt/qc_tool_work/work
+      - /home/jiri/wps:/mnt/qc_tool_volume/wps
+      - /home/jiri/work:/mnt/qc_tool_volume/work
+      - /home/jiri/qc_tool_submission:/mnt/qc_tool_submission
 
   qc_tool_postgis:
     build:

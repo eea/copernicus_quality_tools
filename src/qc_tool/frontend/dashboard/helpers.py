@@ -2,7 +2,9 @@
 
 
 import json
+import re
 from datetime import datetime
+from pathlib import Path
 from shutil import copyfile
 from shutil import copytree
 
@@ -212,7 +214,7 @@ def parse_status_document(document_content):
 
     return doc
 
-def submit_job(job_uuid, input_filepath, submission_date):
+def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     # Load job status.
     status_filepath = compose_job_status_filepath(job_uuid)
     status = status_filepath.read_text()
@@ -227,30 +229,30 @@ def submit_job(job_uuid, input_filepath, submission_date):
 
     # Create submission directory for the job.
     submission_dirname = "{:s}-{:s}-{:s}.d".format(submission_date.strftime("%Y%m%d"),
-                                                   filename,
+                                                   uploaded_name,
                                                    job_uuid)
-    job_submission_dir = (CONFIG["submission_dir"].joinpath(status["product_ident"])
-                                                  .joinpath(reference_year)
-                                                  .joinpath(submission_dirname))
+    job_submission_dir = (submission_dir.joinpath(status["product_ident"])
+                                        .joinpath(reference_year)
+                                        .joinpath(submission_dirname))
     job_submission_dir.mkdir(parents=True, exist_ok=False)
 
     # Copy status.
     src_filepath = job_dir.joinpath("status.json")
     dst_filepath = job_submission_dir.joinpath(src_filepath.name)
-    copyfile(src_filepath, dst_filepath)
+    copyfile(str(src_filepath), str(dst_filepath))
 
     # Copy output.d.
     src_filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME)
     dst_filepath = job_submission_dir.joinpath(src_filepath.name)
-    copytree(src_filepath, dst_filepath)
+    copytree(str(src_filepath), str(dst_filepath))
 
     # Copy the uploaded file.
     dst_dir = job_submission_dir.joinpath(JOB_INPUT_DIRNAME)
     dst_dir.mkdir()
-    dst_filepath = dst_dir.joinpath(src_filepath.name)
-    copyfile(input_filepath, dst_filepath)
+    dst_filepath = dst_dir.joinpath(input_filepath.name)
+    copyfile(str(input_filepath), str(dst_filepath))
 
     # Put stamp confirming finished submission.
     dst_filepath = job_submission_dir.joinpath("SUBMITTED")
-    final_date = datetime.utcnow().isoformat(timespec="miliseconds")
+    final_date = datetime.utcnow().isoformat()
     dst_filepath.write_text(final_date)
