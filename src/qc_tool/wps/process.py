@@ -20,12 +20,6 @@ class CopSleep(Process):
                            data_type="float", min_occurs=0, max_occurs=1),
               LiteralInput("cycles", "Number of successive delays.",
                            data_type="positiveInteger", min_occurs=0, max_occurs=1),
-              LiteralInput("filepath", "Local filesystem path to the product to be checked.",
-                           data_type="string", min_occurs=0, max_occurs=1),
-              LiteralInput("layer_name", "The name of the layer to be checked.",
-                           data_type="string", min_occurs=0, max_occurs=1),
-              LiteralInput("product_ident", "The identifier of the product denoting group of checks to be performed.",
-                           data_type="string", min_occurs=0, max_occurs=1),
               LiteralInput("exit_ok", "false if the process should fail finally.",
                            data_type="boolean", min_occurs=0, max_occurs=1)]
     OUTPUTS = [LiteralOutput("result", "Result message.", data_type="string")]
@@ -45,22 +39,13 @@ class CopSleep(Process):
         # Prepare parameters.
         params = {"delay": 1.0,
                   "cycles": 0,
-                  "exit_ok": True,
-                  "product_ident": None,
-                  "layer_name": None,
-                  "filepath": None}
+                  "exit_ok": True}
         if "delay" in request.inputs:
             params["delay"] = request.inputs["delay"][0].data
         if "cycles" in request.inputs:
             params["cycles"] = request.inputs["cycles"][0].data
         if "exit_ok" in request.inputs:
             params["exit_ok"] = request.inputs["exit_ok"][0].data
-        if "filepath" in request.inputs:
-            params["filepath"] = Path(request.inputs["filepath"][0].data)
-        if "layer_name" in request.inputs:
-            params["layer_name"] = request.inputs["layer_name"][0].data
-        if "product_ident" in request.inputs:
-            params["product_ident"] = request.inputs["product_ident"][0].data
 
         # Do cycles of sleeping.
         if params["cycles"] >= 1:
