@@ -27,7 +27,6 @@ def get_check_function(check_ident):
     return func
 
 def load_all_check_functions():
-    import qc_tool.wps.common_check.dummy
     import qc_tool.wps.raster_check.r_unzip
     import qc_tool.wps.raster_check.r1
     import qc_tool.wps.raster_check.r2
