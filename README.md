@@ -15,29 +15,40 @@ The application is composed of:
 # Run the application
 
 (1) clone the source code from github.
+
 ```
 git clone https://github.com/eea/copernicus_quality_tools
 ```
 
 (2) go to docker directory.
+
 ```
 cd copernicus_quality_tools/docker
 ```
 
 (3) Create a copy of `docker-compose.service_provider.yml` and adjust the copy in accord with your environment.  For example see `docker-compose.igor.yml`.  The environment variables are described in [docker/NOTES.environ.txt](docker/NOTES.environ.txt).  There is also `docker-compose.eea.yml` prepared targeting eea infrastructure with submission feature enabled.
 
-(4) If you want to utilize source codes cloned in the step (1) you can overlay source codes already built inside the image.  You will apply docker bind mount.  For advice see the first item in section `volumes:` in [docker-compose.igor.yml](docker/docker-compose.igor.yml).
+(4) Run the application
 
-(5) Run the application
 ```
 sudo docker-compose -f ./docker-compose.yours.yml up
 ```
 
-(6) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000.
+(5) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000.
+
+(6) For initial signing in use user name `guest` and password `guest`.
 
 
-# Run tests
+# For developers.
+
+If you want to propagate your local source code into running containers you may apply docker bind mount.
+Such a way you overlay the source code already built in the image at `/usr/local/src/copernicus_quality_tools`.
+For advice see the example docker compose configuration [docker-compose.igor.yml](docker/docker-compose.igor.yml).
 
 There are already some automated tests at `src/qc_tool/test`.
-The tests are still under development.
-If you want to experiment with tests, there are instructions in [NOTES.txt](src/qc_tool/test/NOTES.txt).
+See the instructions in [NOTES.txt](src/qc_tool/test/NOTES.txt).
+
+The qc_tool_frontend service uses sqlite database originally located at `/var/lib/qc_tool/frontend.sqlite`.
+The initial database structure is made during docker build.
+The `service_provider` and `eea` configurations use named volumes for persisting such database.
+You are free to copy the database to other persistent location, however you must ensure setting up FRONTEND_DB_PATH properly.

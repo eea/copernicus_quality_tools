@@ -12,15 +12,13 @@ docker run --rm --publish 5432:5432 --name=qc_tool_postgis --tty --interactive q
 
 Setup MY_QC_TOOL_HOME to your development source files, eg.
 
-MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/volume-new/copernicus_quality_tools
+MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools
 
-Switch to another terminal and run the tests:
+Switch to other terminal and run tests at qc_tool_wps image:
 
 docker run --rm \
   --interactive --tty \
   --name=qc_tool_wps \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_wps python3 -m unittest qc_tool.test.test_dummy
-
-
+  qc_tool_wps python3 -m unittest discover qc_tool.test
