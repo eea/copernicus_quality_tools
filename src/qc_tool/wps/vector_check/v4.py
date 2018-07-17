@@ -18,6 +18,13 @@ def run_check(params, status):
             status.add_message("Layer {:s} has source data are not projected.".format(layer_name))
         else:
             epsg = srs.GetAttrValue("AUTHORITY", 1)
+
+            # special case for ETRS_1989_LAEA: epsg code should be 3035
+            if epsg is None:
+                projcs = srs.GetAttrValue("PROJCS")
+                if projcs == "ETRS_1989_LAEA":
+                    epsg = 3035
+
             if epsg is None:
                 status.add_message("Layer {:s} has missing EPSG authority.".format(layer_name))
             elif epsg not in map(str, params["epsg"]):

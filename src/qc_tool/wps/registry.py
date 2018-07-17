@@ -46,6 +46,7 @@ def load_all_check_functions():
     import qc_tool.wps.vector_check.v1_areacode
     import qc_tool.wps.vector_check.v1_gdb
     import qc_tool.wps.vector_check.v1_shp
+    import qc_tool.wps.vector_check.v1_ua
     import qc_tool.wps.vector_check.v2
     import qc_tool.wps.vector_check.v3
     import qc_tool.wps.vector_check.v4
@@ -53,5 +54,6 @@ def load_all_check_functions():
     import qc_tool.wps.vector_check.v6
     import qc_tool.wps.vector_check.v8
     import qc_tool.wps.vector_check.v11
+    import qc_tool.wps.vector_check.v11_ua
     import qc_tool.wps.vector_check.v13
     import qc_tool.wps.vector_check.v14

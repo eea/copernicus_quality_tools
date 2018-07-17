@@ -40,19 +40,19 @@
       "required": true
     },
     {
-      "check_ident": "v1",
-      "required": true,
-      "parameters": {
-        "formats": [".gdb"]
-      }
-    },
-    {
       "check_ident": "status.v1_ua",
       "required": true,
       "parameters": {
         "layer_regex": ".*_ua(?P<reference_year>2006_2012|2012|2018)$",
         "layer_count": 2,
         "is_border_source": false
+      }
+    },
+    {
+      "check_ident": "status.v2",
+      "required": true,
+      "parameters": {
+        "formats": [".gdb", ".shp"]
       }
     },
     {
@@ -99,12 +99,15 @@
       }
     },
     {
-      "check_ident": "change.v1_ua",
-      "required": true,
+      "check_ident": "status.v11_ua",
+      "required": false,
       "parameters": {
-        "layer_regex": ".*_change_(2006|2012)_(2012|2018)$",
-        "layer_count": 1,
-        "is_border_source": false
+        "ident_colname": "ident",
+        "code_regex": "(.{6})$",
+        "code_to_column_name": {"ua2006": "code2006",
+                                "ua2012": "code2012",
+                                "ua2018": "code2018"}
+
       }
     },
     {
@@ -126,13 +129,19 @@
       }
     },
     {
-      "check_ident": "change.v2_gdb",
+      "check_ident": "change.v1_ua",
       "required": true,
       "parameters": {
-        "file_name_regex": "^clc[a-z0-9]{6}_[a-z]*.gdb$",
-        "layer_prefix": "^{areacode:s}/{areacode:s}_change",
-        "layer_regex": "^{areacode:s}/{areacode:s}_change[0-9]{{4}}_[0-9]{{4}}",
-        "layer_count": 1
+        "layer_regex": ".*_change_(?P<reference_year1>2006|2012)_(?P<reference_year>2012|2018)$",
+        "layer_count": 1,
+        "is_border_source": false
+      }
+    },
+    {
+      "check_ident": "change.v2",
+      "required": true,
+      "parameters": {
+        "formats": [".gdb", ".shp"]
       }
     },
     {
@@ -166,8 +175,8 @@
       "parameters": {
         "ident_colname": "ident",
         "code_regex": "(.{16})$",
-        "code_to_column_def": {"change_2006_2012": [["code2006", "UA"], ["code2012", "UA"]],
-                               "change_2012_2018": [["code2012", "UA"], ["code2018", "UA"]]}
+        "code_to_column_defs": {"change_2006_2012": [["code2006", "UA"], ["code2012", "UA"]],
+                                "change_2012_2018": [["code2012", "UA"], ["code2018", "UA"]]}
       }
     },
     {

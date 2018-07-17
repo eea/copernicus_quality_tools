@@ -50,7 +50,7 @@ def compile_check_suite(product_definition, optional_check_idents):
     incorrect_check_idents = optional_check_idents - defined_optional_check_idents
     if len(incorrect_check_idents) > 0:
         raise IncorrectCheckException("Incorrect checks passed.",
-                                      {"product": product_ident,
+                                      {"product": product_definition["product_ident"],
                                        "incorrect": incorrect_check_idents})
 
     # Compile check suite.
