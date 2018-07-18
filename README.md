@@ -12,6 +12,8 @@ The application is composed of:
 
 * Note: docker-compose version 3 file format is used. In case of errors, please upgrade to a newer version.
 
+* For installation on Windows, see [docker/NOTES.windows](docker/NOTES.windows.md).
+
 # Run the application
 
 (1) clone the source code from github.
