@@ -25,7 +25,7 @@
       "check_ident": "boundary.v3",
       "required": true,
       "parameters": {
-        "attribute_regexes": ["objectid", "country", "cities", "shape_length", "shape_area"]
+        "attribute_regexes": ["country", "cities", "shape_length", "shape_area"]
       }
     },
     {
@@ -59,7 +59,7 @@
       "check_ident": "status.v3",
       "required": true,
       "parameters": {
-        "attribute_regexes": ["objectid", "country", "cities", "fua_or_cit", "code_[0-9]{4}", "item_[0-9]{4}", "prod_date", "ident", "shape_length", "shape_area"]
+        "attribute_regexes": ["country", "cities", "fua_or_cit", "code_[0-9]{4}", "item_[0-9]{4}", "prod_date", "ident", "shape_length", "shape_area"]
       }
     },
     {

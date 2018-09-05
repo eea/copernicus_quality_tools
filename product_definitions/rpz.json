@@ -24,7 +24,7 @@
       "check_ident": "v3",
       "required": true,
       "parameters": {
-        "attribute_regexes": ["fid", "id", "du_id", "maes_1", "maes_2", "maes_3", "maes_4", "tcd", "ua", "area_ha", "nodata", "comment"]
+        "attribute_regexes": ["id", "du_id", "maes_1", "maes_2", "maes_3", "maes_4", "tcd", "ua", "area_ha", "nodata", "comment"]
       }
     },
     {
