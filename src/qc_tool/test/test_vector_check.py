@@ -282,7 +282,7 @@ class TestV3(VectorCheckTestCase):
         self.params["attribute_regexes"] = ["id", "code_(06|12|18)", "area_ha", "remark", "extra_field"]
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
         self.assertEqual(2, len(status.messages))
         self.assertIn("has missing attributes: extra_field", status.messages[0])
 

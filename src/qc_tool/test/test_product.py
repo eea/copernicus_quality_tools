@@ -43,6 +43,21 @@ class Test_clc(TestCase):
         self.assertEqual("ok", job_status["checks"][2]["status"],
                          "Malta should pass the checks for the product clc.status.")
 
+    def test_malta_all_ok(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
+        job_status = dispatch(str(uuid4()),
+                              "user_name",
+                              filepath,
+                              "clc",
+                              ["status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",
+                               "change.v5", "change.v6", "change.v8", "change.v11", "change.v13", "change.v14"])
+
+        statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]
+        checks_not_ok = [check["check_ident"] for check in job_status["checks"] if check["status"] != "ok"]
+
+        self.assertEqual(len(statuses_ok), len(job_status["checks"]),
+                         "Checks {:s} do not have status ok.".format(",".join(checks_not_ok)))
+
 
 class Test_clc_status(TestCase):
     def setUp(self):
@@ -65,28 +80,40 @@ class Test_ua_shp(ProductTestCase):
     def setUp(self):
         super().setUp()
         load_all_check_functions()
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
 
     def test_run(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
+
         job_status = dispatch(str(uuid4()),
                               "user_name",
-                              filepath,
+                              self.filepath,
                               "ua",
                               ["status.v5", "status.v6", "status.v8", "status.v11_ua", "status.v13", "status.v14"])
+        statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]
+        checks_not_ok = [check["check_ident"] for check in job_status["checks"] if check["status"] != "ok"]
+
+        self.assertEqual(len(statuses_ok), len(job_status["checks"]),
+                         "Checks {:s} do not have status ok.".format(",".join(checks_not_ok)))
 
 
 class Test_ua_gdb(ProductTestCase):
     def setUp(self):
         super().setUp()
         load_all_check_functions()
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")
 
-    def test_run(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")
+    def test_run_all_ok(self):
         job_status = dispatch(str(uuid4()),
                               "user_name",
-                              filepath,
+                              self.filepath,
                               "ua_with_change",
                               ["change.v5", "change.v6", "change.v8", "change.v11_ua", "change.v13", "change.v14"])
+
+        statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]
+        checks_not_ok = [check["check_ident"] for check in job_status["checks"] if check["status"] != "ok"]
+
+        self.assertEqual(len(statuses_ok), len(job_status["checks"]),
+                         "Checks {:s} do not have status ok.".format(",".join(checks_not_ok)))
 
 
 class Test_update_status(ProductTestCase):
