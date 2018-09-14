@@ -11,20 +11,36 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
     dataset = gdal.Open(str(params["filepath"]))
+
     srs = osr.SpatialReference(dataset.GetProjection())
-    if srs.IsProjected() == 0:
-        status.add_message("The file has no projected coordinate system associated.")
+    if srs is None or srs.IsProjected() == 0:
+        status.add_message("The raster file has no projected coordinate system associated.")
         return
-    epsg = srs.GetAttrValue("AUTHORITY", 1)
-    if epsg is None:
-        status.add_message("The file has EPSG authority missing.")
-        return
-    try:
-        epsg = int(epsg)
-    except:
-        status.add_message("The EPSG code {:s} is not an integer number.".format(str(epsg)))
-        return
-    if epsg not in params["epsg"]:
-        status.add_message("EPSG code {:s} is not in applicable codes {:s}.".format(str(epsg), str(params["epsg"])))
-        return
-    return
+
+    # Search EPSG authority code
+    authority_name = srs.GetAuthorityName(None)
+    authority_code = srs.GetAuthorityCode(None)
+
+    if authority_name == "EPSG" and authority_code is not None:
+        # compare EPSG code using the root-level EPSG authority
+        if authority_code not in map(str, params["epsg"]):
+            status.aborted()
+            status.add_message("Raster has illegal EPSG code {:s}.".format(str(authority_code)))
+            return
+    else:
+        # If the EPSG code is not detected, try to compare if the actual and expected SRS instances represent
+        # the same spatial reference system.
+        srs_match = False
+        allowed_codes = params["epsg"]
+        for allowed_code in allowed_codes:
+            expected_srs = osr.SpatialReference()
+            expected_srs.ImportFromEPSG(allowed_code)
+            if srs.IsSame(expected_srs):
+                srs_match = True
+                break
+
+        if not srs_match:
+            status.aborted()
+            allowed_codes_msg = ", ".join(map(str, params["epsg"]))
+            status.add_message("The SRS of the raster is not in the list of allowed spatial reference systems. "
+                               "detected SRS: {:s}, list of allowed SRS's: {:s} ".format(srs.ExportToWkt(), allowed_codes_msg))
