@@ -296,11 +296,13 @@ class TestV4(VectorCheckTestCase):
                             "epsg": [23033]
                             })
 
-    def test(self):
+    def test_gdb(self):
         from qc_tool.wps.vector_check.v4 import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
+        self.assertIn("layer_srs_epsg", status.params)
+        self.assertEqual(23033, status.params["layer_srs_epsg"])
 
     def test_shp(self):
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
@@ -319,6 +321,9 @@ class TestV4(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v4 import run_check
         self.params["epsg"] = [3035]
         run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("layer_srs_epsg", status.params)
+        self.assertEqual(3035, status.params["layer_srs_epsg"])
 
     def test_fail(self):
         from qc_tool.wps.vector_check.v4 import run_check
@@ -326,6 +331,7 @@ class TestV4(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
+        self.assertNotIn("layer_srs_epsg", status.params)
 
 
 class TestVImport2pg(VectorCheckTestCase):

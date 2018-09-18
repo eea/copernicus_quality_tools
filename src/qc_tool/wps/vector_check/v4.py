@@ -24,28 +24,32 @@ def run_check(params, status):
         authority_code = srs.GetAuthorityCode(None)
 
         if authority_name == "EPSG" and authority_code is not None:
-            # compare EPSG code using the root-level EPSG authority
-            if authority_code not in map(str, params["epsg"]):
+            # compare EPSG code using the root-level EPSG authority in the SRS WKT of the layer.
+            if authority_code in map(str, params["epsg"]):
+                status.add_params({"layer_srs_epsg": int(authority_code)})
+                return
+            else:
                 status.aborted()
                 status.add_message("Layer {:s} has illegal EPSG code {:s}.".format(layer_name, str(authority_code)))
                 return
         else:
+            # FIXME this code is necessary for checking .shp files without EPSG authority in the .prj (from ESRI SW)
+            # there is a built-in function in GDAL 2.3 with similar SRS matching logic.
             # If the EPSG code is not detected, try to compare if the actual and expected SRS instances represent
             # the same spatial reference system.
-            srs_match = False
             allowed_codes = params["epsg"]
             for allowed_code in allowed_codes:
                 expected_srs = osr.SpatialReference()
                 expected_srs.ImportFromEPSG(allowed_code)
                 if srs.IsSame(expected_srs):
-                    srs_match = True
-                    break
+                    status.add_params({"layer_srs_epsg": int(allowed_code)})
+                    return
 
-            if not srs_match:
-                status.aborted()
-                status.add_message("The SRS of Layer {:s} is not in the list of allowed spatial reference systems. "
-                                   "detected SRS: {:s}, list of allowed SRS's: {:s} ".format(
-                    layer_name,
-                    srs.ExportToWkt(),
-                    ", ".join(map(str, params["epsg"]))
-                ))
+        # If we reached until this spot, no matching EPSG code or matching SRS instance could be found.
+        status.aborted()
+        status.add_message("The SRS of Layer {:s} is not in the list of allowed spatial reference systems. "
+                           "detected SRS: {:s}, list of allowed SRS's: {:s} ".format(
+            layer_name,
+            srs.ExportToWkt(),
+            ", ".join(map(str, params["epsg"]))
+        ))
