@@ -25,7 +25,8 @@ RUN cd /usr/local/src \
 RUN mkdir /var/lib/qc_tool \
     && cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
     && python3 -m qc_tool.frontend.manage migrate \
-    && python3 -m qc_tool.frontend.manage create_default_user --username guest --password guest
+    && python3 -m qc_tool.frontend.manage create_default_user --username admin --password admin --admin YES \
+    && python3 -m qc_tool.frontend.manage create_default_user --username guest --password guest --admin NO
 
 # Run frontend application.
 CMD python3 -m qc_tool.frontend.manage runserver 0.0.0.0:${FRONTEND_PORT:-8000}
