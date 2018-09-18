@@ -85,7 +85,7 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "code_regex": "(.{6})$",
+        "code_regex": "(ua2006|ua2012|ua2018)$",
         "code_to_column_defs": {"ua2006": [["code2006", "UA"]],
                                 "ua2012": [["code2012", "UA"]],
                                 "ua2018": [["code2018", "UA"]]}
@@ -103,7 +103,7 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "code_regex": "(.{6})$",
+        "code_regex": "(ua2006|ua2012|ua2018)$",
         "code_to_column_name": {"ua2006": "code2006",
                                 "ua2012": "code2012",
                                 "ua2018": "code2018"}
@@ -122,7 +122,7 @@
       "required": false,
       "parameters": {
         "ident_colname": "ident",
-        "code_regex": "(.{6})$",
+        "code_regex": "(ua2006|ua2012|ua2018)$",
         "code_to_column_names": {"ua2006": ["code2006"],
                                  "ua2012": ["code2012"],
                                  "ua2018": ["code2018"]}
