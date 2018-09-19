@@ -13,10 +13,6 @@ def run_check(params, status):
 
     db_layer_names = []
     for layer_name, layer_filepath in params["layer_sources"]:
-
-        if layer_filepath.suffix.lower() == ".shp":
-            layer_filepath = layer_filepath.parent
-
         pc = run(["ogr2ogr",
                    "-overwrite",
                    "-f", "PostgreSQL",
