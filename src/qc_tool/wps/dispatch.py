@@ -202,3 +202,17 @@ class CheckStatus():
 
     def set_status_property(self, key, value):
         self.status_properties[key] = value
+
+    def __repr__(self):
+        members_tpl = ("status={:s}"
+                       ", messages={:s}"
+                       ", error_table_names={:s}"
+                       ", params={:s}"
+                       ", status_properties={:s}")
+        members = members_tpl.format(repr(self.status),
+                                     repr(self.messages),
+                                     repr(self.error_table_names),
+                                     repr(self.params),
+                                     repr(self.status_properties))
+        ret = "{:s}({:s})".format(self.__class__.__name__, members)
+        return ret
