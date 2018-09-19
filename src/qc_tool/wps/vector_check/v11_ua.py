@@ -94,4 +94,4 @@ def run_check(params, status):
             failed_ids_message = get_failed_ids_message(cursor, except_table_name, params["ident_colname"])
             failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_name, failed_ids_message)
             status.add_message(failed_message, failed=False)
-            status.add_error_table(error_table_name)
+            status.add_error_table(except_table_name)
