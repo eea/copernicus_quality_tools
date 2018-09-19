@@ -17,6 +17,7 @@ def run_check(params, status):
                    "-overwrite",
                    "-f", "PostgreSQL",
                    "-lco", "SCHEMA={:s}".format(schema),
+                   "-lco", "PRECISION=NO",
                    "-nlt", "MULTIPOLYGON",
                    "PG:{:s}".format(dsn),
                    str(layer_filepath),
