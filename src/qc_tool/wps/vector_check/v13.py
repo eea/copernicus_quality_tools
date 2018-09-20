@@ -16,12 +16,12 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_name in params["db_layer_names"]:
         error_table_name = "{:s}_overlap_error".format(layer_name)
-        sql = SQL.format(error_table_name, params["ident_colname"], layer_name);
+        sql = SQL.format(error_table_name, params["fid_column_name"], layer_name);
         cursor.execute(sql)
         if cursor.rowcount == 0:
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:
-            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, params["ident_colname"])
-            failed_message = "The layer {:s} has overlapping items in rows: {:s}.".format(layer_name, failed_pairs_message)
+            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, params["fid_column_name"])
+            failed_message = "The layer {:s} has overlapping pairs in rows: {:s}.".format(layer_name, failed_pairs_message)
             status.add_message(failed_message)
             status.add_error_table(error_table_name)

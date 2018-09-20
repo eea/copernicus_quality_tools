@@ -45,14 +45,13 @@
       "check_ident": "change.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "id"
+        "unique_keys": ["id"]
       }
     },
     {
       "check_ident": "change.v6",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
         "code_regex": "^...(..)",
         "code_to_column_defs": {"06": [["code_00", "CLC"], ["code_06", "CLC"]],
                                 "12": [["code_06", "CLC"], ["code_12", "CLC"]],
@@ -61,17 +60,13 @@
     },
     {
       "check_ident": "change.v8",
-      "required": false,
-      "parameters": {
-        "ident_colname": "id"
-      }
+      "required": false
     },
     {
       "check_ident": "change.v11",
       "required": false,
       "parameters": {
         "area_ha": 5,
-        "ident_colname": "id",
         "code_regex": "^...(..)",
         "code_to_column_names": {"06": ["code_00", "code_06"],
 				 "12": ["code_06", "code_12"],
@@ -80,16 +75,12 @@
     },
     {
       "check_ident": "change.v13",
-      "required": false,
-      "parameters": {
-        "ident_colname": "id"
-      }
+      "required": false
     },
     {
       "check_ident": "change.v14",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
         "code_colnames": ["change"]
       }
     },
@@ -132,14 +123,13 @@
       "check_ident": "status.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "id"
+        "unique_keys": ["id"]
       }
     },
     {
       "check_ident": "status.v6",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
         "code_regex": "^...(..)",
         "code_to_column_defs": {"06": [["code_06", "CLC"]],
                                 "12": [["code_12", "CLC"]],
@@ -148,32 +138,24 @@
     },
     {
       "check_ident": "status.v8",
-      "required": false,
-      "parameters": {
-        "ident_colname": "id"
-      }
+      "required": false
     },
     {
       "check_ident": "status.v11",
       "required": false,
       "parameters": {
         "area_ha": 25,
-        "border_exception": true,
-        "ident_colname": "id"
+        "border_exception": true
       }
     },
     {
       "check_ident": "status.v13",
-      "required": false,
-      "parameters": {
-        "ident_colname": "id"
-      }
+      "required": false
     },
     {
       "check_ident": "status.v14",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
         "code_regex": "^...(..)",
         "code_to_column_names": {"06": ["code_06"],
                                  "12": ["code_12"],

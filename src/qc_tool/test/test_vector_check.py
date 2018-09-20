@@ -403,7 +403,7 @@ class TestV5(VectorCheckTestCase):
         self.params.update({"product_code": "cha",
                             "filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_sources": [["clc12_mt", TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")]],
-                            "ident_colname": "objectid"})
+                            "unique_keys": ["objectid"]})
         status = self.status_class()
         import_check(self.params, status)
         self.params["db_layer_names"] = status.params["db_layer_names"]
@@ -419,17 +419,16 @@ class TestV6(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
 
-
     def test_status_pass(self):
         from qc_tool.wps.vector_check.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE xxx18_zz (id integer, "
+        cursor.execute("CREATE TABLE xxx18_zz (fid integer, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO xxx18_zz VALUES (1, '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, '111', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params["db_layer_names"] = ["xxx18_zz"]
-        self.params["ident_colname"] = "id"
+        self.params["fid_column_name"] = "fid"
         self.params["code_regex"] = "^...(..)"
         self.params["code_to_column_defs"] = {"18": [["code_18", "CLC"]]}
         status = self.status_class()
@@ -439,14 +438,14 @@ class TestV6(VectorCheckTestCase):
     def test_change_fail(self):
         from qc_tool.wps.vector_check.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE cha18_xx (id integer, code_12 varchar, "
+        cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, 'xxx', 'xxx', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, 'xxx', '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
 
         self.params["db_layer_names"] = ["cha18_xx"]
-        self.params["ident_colname"] = "id"
+        self.params["fid_column_name"] = "fid"
         self.params["code_regex"] = "^...(..)"
         self.params["code_to_column_defs"] = {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}
         status = self.status_class()
@@ -461,7 +460,7 @@ class TestV8(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_sources": [["clc12_mt", gdb_filepath]],
-                            "ident_colname": "id"})
+                            "fid_column_name": "objectid"})
         status = self.status_class()
         import_check(self.params, status)
         self.params["db_layer_names"] = status.params["db_layer_names"]
@@ -480,7 +479,7 @@ class TestV11(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_sources": [["clc12_mt", gdb_filepath]],
-                            "ident_colname": "id",
+                            "fid_column_name": "objectid",
                             "area_ha": 25,
                             "border_source_layer": "clc12_mt",
                             "border_exception": True})
@@ -506,10 +505,10 @@ class TestV13(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE test_layer_1 (ident integer, wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("CREATE TABLE test_layer_2 (ident integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE test_layer_1 (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE test_layer_2 (fid integer, wkb_geometry geometry(Polygon, 4326));")
         self.params.update({"db_layer_names": ["test_layer_1", "test_layer_2"],
-                            "ident_colname": "ident"})
+                            "fid_column_name": "fid"})
 
     def test_non_overlapping(self):
         from qc_tool.wps.vector_check.v13 import run_check
