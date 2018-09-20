@@ -11,8 +11,12 @@ from qc_tool.wps.registry import register_check_function
 def create_all_breaking_neighbcode(cursor, fid_column_name, layer_name, error_table_name, code_colnames):
     sql = ("CREATE TABLE {0:s} AS"
            "  SELECT ta.{1:s} a_{1:s}, tb.{1:s} b_{1:s}"
-           "  FROM {2:s} ta INNER JOIN {2:s} tb ON ta.{1:s} < tb.{1:s}"
-           "  WHERE {3:s} AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, '*T*******');")
+           "  FROM {2:s} ta"
+           "    INNER JOIN {2:s} tb ON ta.{1:s} < tb.{1:s}"
+           "  WHERE"
+           "    {3:s}"
+           "    AND ta.wkb_geometry && tb.wkb_geometry"
+           "    AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, '*T*******');")
     code_where = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_colname) for code_colname in code_colnames)
     sql = sql.format(error_table_name, fid_column_name, layer_name, code_where)
     cursor.execute(sql)
