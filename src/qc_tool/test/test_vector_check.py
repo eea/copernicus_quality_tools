@@ -138,7 +138,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("Boundary2012_SK007L1_TRNAVA", status.params["layer_sources"][0][0])
+        self.assertEqual("boundary2012_sk007l1_trnava", status.params["layer_sources"][0][0])
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
 
     def test_v1_ua_gdb_status_ok(self):
@@ -154,8 +154,8 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][1][1].name)
         layer_names = [layer_source[0] for layer_source in status.params["layer_sources"]]
-        self.assertIn("SK007L1_TRNAVA_UA2006_2012", layer_names)
-        self.assertIn("SK007L1_TRNAVA_UA2012", layer_names)
+        self.assertIn("sk007l1_trnava_ua2006_2012", layer_names)
+        self.assertIn("sk007l1_trnava_ua2012", layer_names)
 
     def test_v1_ua_gdb_change_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -167,7 +167,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("SK007L1_TRNAVA_Change_2006_2012", status.params["layer_sources"][0][0])
+        self.assertEqual("sk007l1_trnava_change_2006_2012", status.params["layer_sources"][0][0])
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
 
     def test_v1_ua_gdb_fail(self):
@@ -204,7 +204,7 @@ class TestV1_ua_shp(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_sources"][0][0])
+        self.assertEqual("boundary2012_ee003l0_narva", status.params["layer_sources"][0][0])
         self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_sources"][0][1].name)
 
 
@@ -219,7 +219,7 @@ class TestV1_ua_shp(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_sources"][0][0])
+        self.assertEqual("ee003l0_narva_ua2012", status.params["layer_sources"][0][0])
         self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_sources"][0][1].name)
 
 
@@ -534,6 +534,6 @@ class TestV13(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        result = ['The layer test_layer_1 has overlapping items in rows: 1-5.',
-                  'The layer test_layer_2 has overlapping items in rows: 1-5, 1-6, 5-6.']
+        result = ['The layer test_layer_1 has overlapping pairs in rows: 1-5.',
+                  'The layer test_layer_2 has overlapping pairs in rows: 1-5, 1-6, 5-6.']
         self.assertEqual(result, status.messages)
