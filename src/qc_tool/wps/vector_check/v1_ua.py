@@ -69,7 +69,7 @@ def run_check(params, status):
             return
 
         # Geodatabase layers are OK --> add parameters to status and exit
-        layer_sources = [(layer_name, gdb_filepath) for layer_name in matched_layer_names]
+        layer_sources = [(layer_name.lower(), gdb_filepath) for layer_name in matched_layer_names]
         status.add_params({"layer_sources": layer_sources})
         if params.get("is_border_source", False):
             status.add_params({"border_source_layer": matched_layer_names[0]})
@@ -106,7 +106,7 @@ def run_check(params, status):
             return
 
         # Get layers from shapefile names. Layer names are always considered lower-case.
-        layer_sources = [(filepath.stem, filepath) for filepath in matched_shp_filepaths]
+        layer_sources = [(filepath.stem.lower(), filepath) for filepath in matched_shp_filepaths]
         status.add_params({"layer_sources": layer_sources})
         if params.get("is_border_source", False):
             status.add_params({"border_source_layer": layer_sources[0][0].lower()})

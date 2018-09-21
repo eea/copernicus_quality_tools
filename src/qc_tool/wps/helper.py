@@ -31,15 +31,15 @@ def shorten_failed_items_message(items, count):
         message += " and {:d} others".format(count - len(items))
     return message
 
-def get_failed_ids_message(cursor, error_table_name, ident_colname, limit=FAILED_ITEMS_LIMIT):
-    sql = "SELECT {0:s} FROM {1:s} ORDER BY {0:s};".format(ident_colname, error_table_name)
+def get_failed_items_message(cursor, error_table_name, ident_column_name, limit=FAILED_ITEMS_LIMIT):
+    sql = "SELECT {0:s} FROM {1:s} ORDER BY {0:s};".format(ident_column_name, error_table_name)
     cursor.execute(sql)
-    failed_ids = [row[0] for row in cursor.fetchmany(limit)]
-    failed_ids_message = shorten_failed_items_message(failed_ids, cursor.rowcount)
-    return failed_ids_message
+    failed_items = [row[0] for row in cursor.fetchmany(limit)]
+    failed_items_message = shorten_failed_items_message(failed_items, cursor.rowcount)
+    return failed_items_message
 
-def get_failed_pairs_message(cursor, error_table_name, ident_colname, limit=FAILED_ITEMS_LIMIT):
-    sql = "SELECT a_{0:s}, b_{0:s} FROM {1:s} ORDER BY a_{0:s}, b_{0:s};".format(ident_colname, error_table_name)
+def get_failed_pairs_message(cursor, error_table_name, ident_column_name, limit=FAILED_ITEMS_LIMIT):
+    sql = "SELECT a_{0:s}, b_{0:s} FROM {1:s} ORDER BY a_{0:s}, b_{0:s};".format(ident_column_name, error_table_name)
     cursor.execute(sql)
     failed_pairs = ["{:s}-{:s}".format(str(row[0]), str(row[1])) for row in cursor.fetchmany(FAILED_ITEMS_LIMIT)]
     failed_pairs_message = shorten_failed_items_message(failed_pairs, cursor.rowcount)

@@ -42,14 +42,13 @@
       "check_ident": "v5",
       "required": false,
       "parameters": {
-        "ident_colname": "id"
+        "unique_keys": ["id"]
       }
     },
     {
       "check_ident": "v6",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
         "column_defs": [["maes_1", "MAES1"],
                         ["maes_2", "MAES2"],
                         ["maes_3", "MAES3"],
@@ -58,33 +57,24 @@
     },
     {
       "check_ident": "v8",
-      "required": false,
-      "parameters": {
-        "ident_colname": "id"
-      }
+      "required": false
     },
     {
       "check_ident": "v11",
       "required": false,
       "parameters": {
         "area_ha": 0.5,
-        "border_exception": false,
-        "ident_colname": "id"
-
+        "border_exception": false
       }
     },
     {
       "check_ident": "v13",
-      "required": false,
-      "parameters": {
-        "ident_colname": "id"
-      }
+      "required": false
     },
     {
       "check_ident": "v14",
       "required": false,
       "parameters": {
-        "ident_colname": "id",
         "product_code": "rpz",
         "code_colnames": ["MAES_4"]
       }

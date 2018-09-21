@@ -17,5 +17,5 @@ def run_check(params, status):
     filepath = shp_filepaths[0]
 
     # Get layers.
-    layer_sources = [(filepath.stem, filepath)]
+    layer_sources = [(filepath.stem.lower(), filepath)]
     status.add_params({"layer_sources": layer_sources})

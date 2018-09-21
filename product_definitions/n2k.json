@@ -21,9 +21,7 @@
       "required": false,
       "parameters": {
         "area_ha": 0.5,
-        "border_exception": false,
-        "ident_colname": "id"
-
+        "border_exception": false
       }
     }
   ]

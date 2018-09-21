@@ -138,7 +138,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("Boundary2012_SK007L1_TRNAVA", status.params["layer_sources"][0][0])
+        self.assertEqual("boundary2012_sk007l1_trnava", status.params["layer_sources"][0][0])
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
 
     def test_v1_ua_gdb_status_ok(self):
@@ -154,8 +154,8 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][1][1].name)
         layer_names = [layer_source[0] for layer_source in status.params["layer_sources"]]
-        self.assertIn("SK007L1_TRNAVA_UA2006_2012", layer_names)
-        self.assertIn("SK007L1_TRNAVA_UA2012", layer_names)
+        self.assertIn("sk007l1_trnava_ua2006_2012", layer_names)
+        self.assertIn("sk007l1_trnava_ua2012", layer_names)
 
     def test_v1_ua_gdb_change_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -167,7 +167,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("SK007L1_TRNAVA_Change_2006_2012", status.params["layer_sources"][0][0])
+        self.assertEqual("sk007l1_trnava_change_2006_2012", status.params["layer_sources"][0][0])
         self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
 
     def test_v1_ua_gdb_fail(self):
@@ -204,7 +204,7 @@ class TestV1_ua_shp(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_sources"][0][0])
+        self.assertEqual("boundary2012_ee003l0_narva", status.params["layer_sources"][0][0])
         self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_sources"][0][1].name)
 
 
@@ -219,7 +219,7 @@ class TestV1_ua_shp(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_sources"][0][0])
+        self.assertEqual("ee003l0_narva_ua2012", status.params["layer_sources"][0][0])
         self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_sources"][0][1].name)
 
 
@@ -403,7 +403,7 @@ class TestV5(VectorCheckTestCase):
         self.params.update({"product_code": "cha",
                             "filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_sources": [["clc12_mt", TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")]],
-                            "ident_colname": "objectid"})
+                            "unique_keys": ["objectid"]})
         status = self.status_class()
         import_check(self.params, status)
         self.params["db_layer_names"] = status.params["db_layer_names"]
@@ -419,17 +419,16 @@ class TestV6(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
 
-
     def test_status_pass(self):
         from qc_tool.wps.vector_check.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE xxx18_zz (id integer, "
+        cursor.execute("CREATE TABLE xxx18_zz (fid integer, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO xxx18_zz VALUES (1, '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, '111', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params["db_layer_names"] = ["xxx18_zz"]
-        self.params["ident_colname"] = "id"
+        self.params["fid_column_name"] = "fid"
         self.params["code_regex"] = "^...(..)"
         self.params["code_to_column_defs"] = {"18": [["code_18", "CLC"]]}
         status = self.status_class()
@@ -439,14 +438,14 @@ class TestV6(VectorCheckTestCase):
     def test_change_fail(self):
         from qc_tool.wps.vector_check.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE cha18_xx (id integer, code_12 varchar, "
+        cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, 'xxx', 'xxx', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, 'xxx', '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
 
         self.params["db_layer_names"] = ["cha18_xx"]
-        self.params["ident_colname"] = "id"
+        self.params["fid_column_name"] = "fid"
         self.params["code_regex"] = "^...(..)"
         self.params["code_to_column_defs"] = {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}
         status = self.status_class()
@@ -461,7 +460,7 @@ class TestV8(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_sources": [["clc12_mt", gdb_filepath]],
-                            "ident_colname": "id"})
+                            "fid_column_name": "objectid"})
         status = self.status_class()
         import_check(self.params, status)
         self.params["db_layer_names"] = status.params["db_layer_names"]
@@ -480,7 +479,7 @@ class TestV11(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         self.params.update({"filepath": TEST_DATA_DIR.joinpath("clc2012_mt.gdb"),
                             "layer_sources": [["clc12_mt", gdb_filepath]],
-                            "ident_colname": "id",
+                            "fid_column_name": "objectid",
                             "area_ha": 25,
                             "border_source_layer": "clc12_mt",
                             "border_exception": True})
@@ -506,10 +505,10 @@ class TestV13(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE test_layer_1 (ident integer, wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("CREATE TABLE test_layer_2 (ident integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE test_layer_1 (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE test_layer_2 (fid integer, wkb_geometry geometry(Polygon, 4326));")
         self.params.update({"db_layer_names": ["test_layer_1", "test_layer_2"],
-                            "ident_colname": "ident"})
+                            "fid_column_name": "fid"})
 
     def test_non_overlapping(self):
         from qc_tool.wps.vector_check.v13 import run_check
@@ -535,6 +534,6 @@ class TestV13(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        result = ['The layer test_layer_1 has overlapping items in rows: 1-5.',
-                  'The layer test_layer_2 has overlapping items in rows: 1-5, 1-6, 5-6.']
+        result = ['The layer test_layer_1 has overlapping pairs in rows: 1-5.',
+                  'The layer test_layer_2 has overlapping pairs in rows: 1-5, 1-6, 5-6.']
         self.assertEqual(result, status.messages)

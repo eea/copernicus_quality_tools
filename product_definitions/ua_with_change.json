@@ -77,14 +77,13 @@
       "check_ident": "status.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "ident"
+        "unique_keys": ["ident"]
       }
     },
     {
       "check_ident": "status.v6",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
         "code_regex": "(ua2006|ua2012|ua2018)",
         "code_to_column_defs": {"ua2006": [["code2006", "UA"]],
                                 "ua2012": [["code2012", "UA"]],
@@ -93,16 +92,12 @@
     },
     {
       "check_ident": "status.v8",
-      "required": false,
-      "parameters": {
-        "ident_colname": "ident"
-      }
+      "required": false
     },
     {
       "check_ident": "status.v11_ua",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
         "code_regex": "(ua2006|ua2012|ua2018)",
         "code_to_column_name": {"ua2006": "code2006",
                                 "ua2012": "code2012",
@@ -112,16 +107,12 @@
     },
     {
       "check_ident": "status.v13",
-      "required": false,
-      "parameters": {
-        "ident_colname": "ident"
-      }
+      "required": false
     },
     {
       "check_ident": "status.v14",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
         "code_regex": "(ua2006|ua2012|ua2018)",
         "code_to_column_names": {"ua2006": ["code2006"],
                                  "ua2012": ["code2012"],
@@ -166,14 +157,13 @@
       "check_ident": "change.v5",
       "required": false,
       "parameters": {
-        "ident_colname": "ident"
+        "unique_keys": ["ident"]
       }
     },
     {
       "check_ident": "change.v6",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
         "code_regex": "(.{16})$",
         "code_to_column_defs": {"change_2006_2012": [["code2006", "UA"], ["code2012", "UA"]],
                                 "change_2012_2018": [["code2012", "UA"], ["code2018", "UA"]]}
@@ -181,16 +171,12 @@
     },
     {
       "check_ident": "change.v8",
-      "required": false,
-      "parameters": {
-        "ident_colname": "ident"
-      }
+      "required": false
     },
     {
       "check_ident": "change.v11_ua",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
         "code_regex": "(.{16})$",
         "code_to_column_name": {"change_2006_2012": "code2012",
                                 "change_2012_2018": "code2018"}
@@ -198,16 +184,12 @@
     },
     {
       "check_ident": "change.v13",
-      "required": false,
-      "parameters": {
-        "ident_colname": "ident"
-      }
+      "required": false
     },
     {
       "check_ident": "change.v14",
       "required": false,
       "parameters": {
-        "ident_colname": "ident",
         "code_regex": "(.{16})$",
         "code_to_column_names": {"change_2006_2012": ["code2006", "code2012"],
                                  "change_2012_2018": ["code2012", "code2018"]}
