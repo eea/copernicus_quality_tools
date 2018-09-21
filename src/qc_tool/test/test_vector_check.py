@@ -365,36 +365,13 @@ class TestVImport2pg(VectorCheckTestCase):
         cur.execute("""SELECT id FROM {:s};""".format(status.params["db_layer_names"][0]))
         self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
 
-    def test_v_import2pg_lugo(self):
-        from qc_tool.wps.vector_check.v_import2pg import run_check
-
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
-        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO.zip")})
+    def test_numeric_field_overflow(self):
+        shp_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO_boundary", "ES031L1_LUGO_UA2012_Boundary.shp")
+        self.params["layer_sources"] = [["es031l1_lugo_ua2012_boundary", shp_filepath]]
         status = self.status_class()
-        unzip_check(self.params, status)
-        self.params["unzip_dir"] = status.params["unzip_dir"]
-
-        from qc_tool.wps.vector_check.v1_ua import run_check as layer_check
-        self.params["layer_regex"] = ".*ua(?P<reference_year>2012)_boundary$"
-        self.params["layer_count"] = 1
-        layer_check(self.params, status)
-        self.params["layer_sources"] = status.params["layer_sources"]
-
-        from qc_tool.wps.vector_check.v4 import run_check as projection_check
-        self.params["epsg"] = [3035]
-        projection_check(self.params, status)
-
-        print(status.status)
-
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
-
         import_check(self.params, status)
         self.assertEqual("ok", status.status)
-
-        cur = self.params["connection_manager"].get_connection().cursor()
-        cur.execute("""SELECT * FROM {:s};""".format(status.params["db_layer_names"][0]))
-        self.assertLess(0, cur.rowcount, "imported table should have at least one row.")
 
 class TestV5(VectorCheckTestCase):
     def setUp(self):
