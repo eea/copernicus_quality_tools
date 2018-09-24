@@ -514,3 +514,50 @@ class TestV13(VectorCheckTestCase):
         result = ['The layer test_layer_1 has overlapping pairs in rows: 1-5.',
                   'The layer test_layer_2 has overlapping pairs in rows: 1-5, 1-6, 5-6.']
         self.assertEqual(result, status.messages)
+
+
+class TestV14(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        from qc_tool.wps.vector_check.v14 import run_check
+        self.run_check = run_check
+        self.status = self.status_class()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, attr_1 char(1), attr_2 char(1), wkb_geometry geometry(Polygon, 4326));")
+        self.params.update({"db_layer_names": ["test_layer"],
+                            "fid_column_name": "fid",
+                            "code_colnames": ["attr_1", "attr_2"]})
+
+    def test_disjoint_ok(self):
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'A', 'A', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.run_check(self.params, self.status)
+        self.assertEqual("ok", self.status.status)
+
+    def test_different_class_ok(self):
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'B', 'B', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                         " (3, 'C', 'B', ST_MakeEnvelope(3, 0, 4, 1, 4326)),"
+                                                         " (4, 'C', 'C', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+        self.run_check(self.params, self.status)
+        self.assertEqual("ok", self.status.status)
+
+    def test_touching_point_ok(self):
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'A', 'A', ST_MakeEnvelope(2, 1, 3, 2, 4326));")
+        self.run_check(self.params, self.status)
+        self.assertEqual("ok", self.status.status)
+
+    def test_touching_line_failed(self):
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'A', 'A', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.run_check(self.params, self.status)
+        self.assertEqual("failed", self.status.status)
+
+    def test_complex_failed(self):
+        polygon = "POLYGON((2 0, 2 0.5, 2.5 0.5, 2 1, 2 1.5, 2.5 1.5, 2 2, 2.5 2, 2 2.5, 2.5 2.5, 3 3, 3 0, 2 0))"
+        create_sql = ("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 3, 4326)),"
+                                                   " (2, 'A', 'A', ST_PolygonFromText('" + polygon + "', 4326));")
+        self.cursor.execute(create_sql)
+        self.run_check(self.params, self.status)
+        self.assertEqual("failed", self.status.status)

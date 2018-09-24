@@ -16,7 +16,7 @@ def create_all_breaking_neighbcode(cursor, fid_column_name, layer_name, error_ta
            "  WHERE"
            "    {3:s}"
            "    AND ta.wkb_geometry && tb.wkb_geometry"
-           "    AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, '*T*******');")
+           "    AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1;")
     code_where = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_colname) for code_colname in code_colnames)
     sql = sql.format(error_table_name, fid_column_name, layer_name, code_where)
     cursor.execute(sql)
