@@ -105,25 +105,37 @@ class Test_ua_gdb(ProductTestCase):
     def setUp(self):
         super().setUp()
         load_all_check_functions()
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")
+        # FIXME:
+        # Klagenfurt test zip should be removed while it fails in some checks.
+        # The new test zip should pass all checks with ok status.
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
 
-    def test_run_all_ok(self):
+    def test_run_ok(self):
+        expected_check_statuses = {"v_unzip": "ok",
+                                   "boundary.v1_ua": "ok",
+                                   "boundary.v2": "ok",
+                                   "boundary.v3": "ok",
+                                   "boundary.v4": "ok",
+                                   "boundary.v_import2pg": "ok",
+                                   "status.v1_ua": "ok",
+                                   "status.v2": "ok",
+                                   "status.v3": "ok",
+                                   "status.v4": "ok",
+                                   "status.v_import2pg": "ok",
+                                   "status.v5": "ok",
+                                   "status.v6": "ok",
+                                   "status.v8": "ok",
+                                   "status.v11_ua": "failed",
+                                   "status.v13": "failed",
+                                   "status.v14": "failed"}
         job_status = dispatch(str(uuid4()),
                               "user_name",
                               self.filepath,
                               "ua",
                               ["status.v5", "status.v6", "status.v8", "status.v11_ua", "status.v13", "status.v14"])
-
-        statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]
-        checks_not_ok = [check for check in job_status["checks"] if check["status"] != "ok"]
-        check_idents_not_ok = [check["check_ident"] for check in checks_not_ok]
-
-        for check in checks_not_ok:
-            print(check["check_ident"])
-            print(check["messages"])
-
-        self.assertEqual(len(statuses_ok), len(job_status["checks"]),
-                         "Checks {:s} do not have status ok.".format(",".join(check_idents_not_ok)))
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
 
 
 class Test_update_status(ProductTestCase):

@@ -22,3 +22,12 @@ docker run --rm \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
   qc_tool_wps python3 -m unittest discover qc_tool.test
+
+If you want to run tests from specific module only, then remove discover param, eg.
+
+docker run --rm \
+  --interactive --tty \
+  --name=qc_tool_wps \
+  --link=qc_tool_postgis \
+  --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
+  qc_tool_wps python3 -m unittest qc_tool.test.test_vector_check.test.TestV13
