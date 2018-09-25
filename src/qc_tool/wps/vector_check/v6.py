@@ -8,7 +8,7 @@ from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
 
 
-SQL = "CREATE TABLE {:s} AS SELECT {:s} FROM {:s} WHERE {:s} NOT IN (SELECT code FROM v6_code WHERE data_type=%s);"
+SQL = "CREATE TABLE {:s} AS SELECT {:s} FROM {:s} WHERE {:s} IS NULL OR {:s} NOT IN (SELECT code FROM v6_code WHERE data_type=%s);"
 
 
 @register_check_function(__name__)
@@ -24,7 +24,7 @@ def run_check(params, status):
 
         for column_name, value_set_name in column_defs:
             error_table_name = "{:s}_{:s}_validcodes_error".format(layer_name, column_name)
-            sql = SQL.format(error_table_name, params["fid_column_name"], layer_name, column_name)
+            sql = SQL.format(error_table_name, params["fid_column_name"], layer_name, column_name, column_name)
             cursor.execute(sql, (value_set_name,))
             if cursor.rowcount == 0:
                 cursor.execute("DROP TABLE {:s};".format(error_table_name))
