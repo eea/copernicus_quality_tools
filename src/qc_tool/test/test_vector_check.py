@@ -430,6 +430,26 @@ class TestV6(VectorCheckTestCase):
         self.assertEqual("failed", status.status)
         self.assertEqual(2, len(status.messages))
 
+    def test_null(self):
+        """
+        v6 should fail if code column has NULL values.
+        """
+        from qc_tool.wps.vector_check.v6 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
+                       "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+
+        self.params["db_layer_names"] = ["cha18_xx"]
+        self.params["fid_column_name"] = "fid"
+        self.params["code_regex"] = "^...(..)"
+        self.params["code_to_column_defs"] = {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(1, len(status.messages))
+
+
 class TestV8(VectorCheckTestCase):
     def setUp(self):
         gdb_filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
