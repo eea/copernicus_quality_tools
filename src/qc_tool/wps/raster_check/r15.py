@@ -59,8 +59,6 @@ def run_check(params, status):
             incorrect_colours.append({"class":code,
                                       "expected": expected_colours[code],
                                       "actual": actual_colours[code]})
-    print(incorrect_colours)
-    print(missing_codes)
 
     # simulate very long run
     time.sleep(120)

@@ -32,6 +32,5 @@ def run_check(params, status):
     # Get layers. Layer names are always considered lower-case.
     matched_filepath = matched_filepaths[0]
     layer_name = matched_filepath.stem.lower()
-    print(layer_name)
     layer_sources = [(layer_name, matched_filepath)]
     status.add_params({"layer_sources": layer_sources})

@@ -105,8 +105,7 @@ class Test_ua_gdb(ProductTestCase):
     def setUp(self):
         super().setUp()
         load_all_check_functions()
-        #self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")
 
     def test_run_all_ok(self):
         job_status = dispatch(str(uuid4()),
