@@ -30,4 +30,4 @@ docker run --rm \
   --name=qc_tool_wps \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_wps python3 -m unittest qc_tool.test.test_vector_check.test.TestV13
+  qc_tool_wps python3 -m unittest qc_tool.test.test_vector_check.TestV13

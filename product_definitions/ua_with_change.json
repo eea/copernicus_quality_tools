@@ -192,7 +192,8 @@
       "parameters": {
         "code_regex": "(.{16})$",
         "code_to_column_names": {"change_2006_2012": ["code2006", "code2012"],
-                                 "change_2012_2018": ["code2012", "code2018"]}
+                                 "change_2012_2018": ["code2012", "code2018"]},
+        "exclude_codes": ["122%"]
       }
     }
   ]

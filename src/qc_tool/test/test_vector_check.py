@@ -574,10 +574,24 @@ class TestV14(VectorCheckTestCase):
         self.run_check(self.params, self.status)
         self.assertEqual("failed", self.status.status)
 
-    def test_complex_failed(self):
+    def test_complex_geom_failed(self):
         polygon = "POLYGON((2 0, 2 0.5, 2.5 0.5, 2 1, 2 1.5, 2.5 1.5, 2 2, 2.5 2, 2 2.5, 2.5 2.5, 3 3, 3 0, 2 0))"
         create_sql = ("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 3, 4326)),"
                                                    " (2, 'A', 'A', ST_PolygonFromText('" + polygon + "', 4326));")
         self.cursor.execute(create_sql)
+        self.run_check(self.params, self.status)
+        self.assertEqual("failed", self.status.status)
+
+    def test_exclude_ok(self):
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'A', 'A', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.params["exclude_codes"] = ["A", "C%"]
+        self.run_check(self.params, self.status)
+        self.assertEqual("ok", self.status.status)
+
+    def test_exclude_failed(self):
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'A', 'A', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.params["exclude_codes"] = ["B", "C%"]
         self.run_check(self.params, self.status)
         self.assertEqual("failed", self.status.status)

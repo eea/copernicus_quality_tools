@@ -8,17 +8,23 @@ from qc_tool.wps.helper import get_failed_pairs_message
 from qc_tool.wps.registry import register_check_function
 
 
-def create_all_breaking_neighbcode(cursor, fid_column_name, layer_name, error_table_name, code_colnames):
+def create_all_breaking_neighbcode(cursor, fid_column_name, layer_name, error_table_name, code_colnames, exclude_codes):
+    pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_colname) for code_colname in code_colnames)
+    exclude_clause = " AND ".join("ta.{0:s} NOT LIKE '{1:s}'".format(code_colname, exclude_code)
+                                  for code_colname in code_colnames
+                                  for exclude_code in exclude_codes)
+    if len(exclude_clause) > 0:
+        exclude_clause = " AND " + exclude_clause
     sql = ("CREATE TABLE {0:s} AS"
            "  SELECT ta.{1:s} a_{1:s}, tb.{1:s} b_{1:s}"
            "  FROM {2:s} ta"
            "    INNER JOIN {2:s} tb ON ta.{1:s} < tb.{1:s}"
            "  WHERE"
            "    {3:s}"
+           "    {4:s}"
            "    AND ta.wkb_geometry && tb.wkb_geometry"
            "    AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1;")
-    code_where = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_colname) for code_colname in code_colnames)
-    sql = sql.format(error_table_name, fid_column_name, layer_name, code_where)
+    sql = sql.format(error_table_name, fid_column_name, layer_name, pair_clause, exclude_clause)
     cursor.execute(sql)
     return cursor.rowcount
 
@@ -33,9 +39,10 @@ def run_check(params, status):
             code_colnames = params["code_to_column_names"][code]
         else:
             code_colnames = params["code_colnames"]
+        exclude_codes = params.get("exclude_codes", [])
 
         error_table_name = "{:s}_neighbcode_error".format(layer_name)
-        error_count = create_all_breaking_neighbcode(cursor, params["fid_column_name"], layer_name, error_table_name, code_colnames)
+        error_count = create_all_breaking_neighbcode(cursor, params["fid_column_name"], layer_name, error_table_name, code_colnames, exclude_codes)
         if error_count == 0:
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:

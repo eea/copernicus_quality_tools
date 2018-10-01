@@ -127,7 +127,7 @@ class Test_ua_gdb(ProductTestCase):
                                    "status.v8": "ok",
                                    "status.v11_ua": "failed",
                                    "status.v13": "failed",
-                                   "status.v14": "failed"}
+                                   "status.v14": "ok"}
         job_status = dispatch(str(uuid4()),
                               "user_name",
                               self.filepath,
