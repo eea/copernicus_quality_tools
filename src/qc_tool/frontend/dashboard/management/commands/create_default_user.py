@@ -15,29 +15,25 @@ class Command(BaseCommand):
             help='the password of the new user',
         )
         parser.add_argument(
-            '--admin', dest='admin', required=False,
-            help='YES if the user should be admin, NO otherwise.'
+            '--superuser', dest='superuser', action='store_true',
+            help='if set then the new user will have superuser privileges.'
         )
 
     def handle(self, *args, **options):
         username = options['username']
         password = options['password']
-
-        if "admin" in options:
-            is_admin = options["admin"]
-        else:
-            is_admin = "NO"
+        is_superuser = options['superuser']
 
         print("username: {:s}".format(username))
         print("password: {:s}".format(password))
-        print("is_admin: {:s}".format(is_admin))
+        print("superuser: {0}".format(is_superuser))
 
         # create the user
         if User.objects.filter(username=username).exists():
             print("User not created. The user with username {:s} already exists.")
             return
 
-        if is_admin == "YES":
+        if is_superuser:
             # Creating a superuser (admin YES)
             User.objects.create_superuser(username=username,
                                             email="{:s}@{:s}.com".format(username, username),
