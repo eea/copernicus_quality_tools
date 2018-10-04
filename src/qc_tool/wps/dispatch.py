@@ -4,11 +4,13 @@
 import csv
 import hashlib
 import json
+import zipfile
 from contextlib import closing
 from contextlib import ExitStack
 from datetime import datetime
 from functools import partial
 from shutil import copyfile
+from subprocess import run
 from sys import exc_info
 from traceback import format_exc
 
@@ -61,17 +63,54 @@ def compile_check_suite(product_ident, product_definition, optional_check_idents
                    if check["required"] or check["check_ident"] in optional_check_idents]
     return check_suite, skipped_idents
 
-def dump_error_table(connection, error_table_name, output_dir):
+def dump_error_table(connection_manager, error_table_name, output_dir):
+
+    (dsn, schema) = connection_manager.get_dsn_schema()
+    connection = connection_manager.get_connection()
+    sql = "SELECT * FROM geometry_columns WHERE f_table_schema='{:s}' AND f_table_name='{:s}'".format(
+        schema, error_table_name
+    )
     cursor = connection.cursor()
-    sql = "SELECT * FROM {:s};".format(error_table_name)
     cursor.execute(sql)
-    csv_filename = "{:s}.csv".format(error_table_name)
-    csv_filepath = output_dir.joinpath(csv_filename)
-    with open(str(csv_filepath), 'w') as csv_file:
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerows(cursor.fetchall())
-    cursor.close()
-    return csv_filename
+    geometry_exists = cursor.fetchone() is not None
+
+    if geometry_exists:
+        cursor.close()
+        # the error table has a geometry column - it can be exported to shp
+        shp_filepath = output_dir.joinpath(error_table_name + ".shp")
+        export_cmd = [
+            "ogr2ogr",
+            "-f",
+            "ESRI Shapefile",
+            str(shp_filepath),
+            "PG:{:s} active_schema={:s}".format(dsn, schema),
+            error_table_name
+        ]
+        run(export_cmd)
+
+        if not shp_filepath.exists():
+            raise FileNotFoundError("exported error shapefile {:s} does not exist!".format(str(shp_filepath)))
+        # one shapefile layer is composed of multiple files (shp, shx, dbf, prj)
+        # all required files <error_table_name>.shp, <error_table_name>.dbf, <error_table_name>.shx
+        # are added into one zip archive.
+        zip_filepath = output_dir.joinpath(error_table_name + ".zip")
+        files_to_zip = [f for f in output_dir.iterdir() if f.stem == error_table_name]
+        with zipfile.ZipFile(str(zip_filepath), "w") as zf:
+            for f in files_to_zip:
+                zf.write(str(f), error_table_name + "/" + f.name)
+        return zip_filepath.name
+    else:
+        # the error table does not have a geometry column - it can be exported to csv
+        sql = "SELECT * FROM {:s};".format(error_table_name)
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        csv_filename = "{:s}.csv".format(error_table_name)
+        csv_filepath = output_dir.joinpath(csv_filename)
+        with open(str(csv_filepath), 'w') as csv_file:
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerows(cursor.fetchall())
+        cursor.close()
+        return csv_filename
 
 def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents, update_status_func=None):
     with ExitStack() as exit_stack:
@@ -138,12 +177,12 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                 job_check_status["status"] = check_status.status
                 job_check_status["messages"] = check_status.messages
 
-                # Export error tables.
+                # Export error tables as zipped shapefile or csv.
                 job_check_status["error_table_filenames"] = []
                 for error_table_name in check_status.error_table_names:
-                    error_table_filename = dump_error_table(job_params["connection_manager"].get_connection(),
-                                                            error_table_name,
-                                                            jobdir_manager.output_dir)
+                    error_table_filename = dump_error_table(job_params["connection_manager"],
+                                                                 error_table_name,
+                                                                 jobdir_manager.output_dir)
                     job_check_status["error_table_filenames"].append(error_table_filename)
 
                 # Update job status properties.

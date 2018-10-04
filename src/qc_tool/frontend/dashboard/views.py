@@ -288,9 +288,13 @@ def get_result_json(request, job_uuid):
 @login_required
 def get_error_table(request, job_uuid, error_table_filename):
     error_table_filepath = compose_error_table_filepath(job_uuid, error_table_filename)
-    content = error_table_filepath.read_text()
-    response = HttpResponse(content, content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="somefilename.csv"'
+    if error_table_filepath.suffix == "csv":
+        content = error_table_filepath.read_text()
+        response = HttpResponse(content, content_type="text/csv")
+    else:
+        response = HttpResponse(open(str(error_table_filepath), "rb"), content_type="application/zip")
+
+    response['Content-Disposition'] = 'attachment; filename="{:s}"'.format(error_table_filepath.name)
     return response
 
 @login_required
