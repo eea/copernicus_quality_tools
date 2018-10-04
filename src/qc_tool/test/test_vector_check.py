@@ -49,7 +49,7 @@ class TestUnzip(VectorCheckTestCase):
         self.assertEqual("aborted", status.status, "Unzipping a non-existent v_unzip should be aborted.")
 
 
-class TestV1_areacode(VectorCheckTestCase):
+class TestV1_rpz(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
@@ -60,7 +60,7 @@ class TestV1_areacode(VectorCheckTestCase):
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_areacode import run_check
+        from qc_tool.wps.vector_check.v1_rpz import run_check
         status = self.status_class()
         self.params["file_name_regex"] = "rpz_AREACODE[a-z]{1}_lclu_v[0-9]{2}.shp$"
         self.params["areacodes"] = ["du026", "du027"]
@@ -75,7 +75,7 @@ class TestV1_areacode(VectorCheckTestCase):
         self.assertEqual("rpz_DU026A_lclu_v01.shp", status.params["layer_sources"][0][1].name, "filename must match.")
 
 
-class TestV1_gdb(VectorCheckTestCase):
+class TestV1_clc(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.params.update({
@@ -88,8 +88,8 @@ class TestV1_gdb(VectorCheckTestCase):
                             "layer_count": 2
                            })
 
-    def test_v1_gdb_clc_ok(self):
-        from qc_tool.wps.vector_check.v1_gdb import run_check
+    def test_v1_clc_ok(self):
+        from qc_tool.wps.vector_check.v1_clc import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -102,16 +102,16 @@ class TestV1_gdb(VectorCheckTestCase):
         self.assertIn("clc12_mt", layer_names)
         self.assertIn("clc06_mt", layer_names)
 
-    def test_v1_gdb_prefix_fail(self):
+    def test_v1_clc_prefix_fail(self):
         self.params["layer_prefix"] = "^{countrycode:s}/cha"
-        from qc_tool.wps.vector_check.v1_gdb import run_check
+        from qc_tool.wps.vector_check.v1_clc import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
 
-    def test_v1_gdb_count_fail(self):
+    def test_v1_clc_count_fail(self):
         self.params["layer_count"] = 1
-        from qc_tool.wps.vector_check.v1_gdb import run_check
+        from qc_tool.wps.vector_check.v1_clc import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
@@ -241,7 +241,7 @@ class TestV2(VectorCheckTestCase):
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
         # setup step 2: get layer names
-        from qc_tool.wps.vector_check.v1_areacode import run_check as layer_check
+        from qc_tool.wps.vector_check.v1_rpz import run_check as layer_check
         status = self.status_class()
         self.params["file_name_regex"] = "rpz_AREACODE[a-z]{1}_lclu_v[0-9]{2}.shp$"
         self.params["areacodes"] = ["du026", "du027"]

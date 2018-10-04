@@ -91,7 +91,7 @@ def run_check(params, status):
 
             error_table_with_geom = error_table_name + "_shp"
             sql = ("CREATE TABLE {error_table_with_geom} AS"
-                   " SELECT a.{fid_column}, a.wkb_geometry FROM {errors} a "
+                   " SELECT a.{fid_column}, b.wkb_geometry FROM {errors} a "
                    " INNER JOIN {layer} b ON a.{fid_column} = b.{fid_column}")
 
             sql = sql.format(error_table_with_geom=error_table_with_geom,

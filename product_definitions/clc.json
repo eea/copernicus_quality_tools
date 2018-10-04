@@ -6,7 +6,7 @@
       "required": true
     },
     {
-      "check_ident": "change.v1_gdb",
+      "check_ident": "change.v1_clc",
       "required": true,
       "parameters": {
         "file_name_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
@@ -85,7 +85,7 @@
       }
     },
     {
-      "check_ident": "status.v1_gdb",
+      "check_ident": "status.v1_clc",
       "required": true,
       "parameters": {
         "file_name_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",

@@ -36,9 +36,9 @@ UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
 CHECK_FUNCTION_DESCRIPTIONS = {
     "v_unzip": "Unzips the delivery file.",
     "v_import2pg": "Import layers into PostGIS database.",
-    "v1_areacode": "Naming is in accord with specification.",
-    "v1_gdb": "Naming is in accord with specification.",
-    "v1_shp": "Naming is in accord with specification.",
+    "v1_clc": "Naming is in accord with specification (clc product).",
+    "v1_n2k": "Naming is in accord with specification (n2k product).",
+    "v1_rpz": "Naming is in accord with specification (rpz product).",
     "v1_ua": "Naming is in accord with specification.",
     "v2": "File format is correct.",
     "v3": "Attribute table contains prescribed attributes.",
