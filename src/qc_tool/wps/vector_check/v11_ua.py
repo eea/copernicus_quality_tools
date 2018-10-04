@@ -10,6 +10,7 @@ from qc_tool.wps.vector_check.v11 import count_table
 from qc_tool.wps.vector_check.v11 import create_table
 from qc_tool.wps.vector_check.v11 import drop_table
 from qc_tool.wps.vector_check.v11 import subtract_table
+from subprocess import run
 
 
 def create_all_breaking_mmu(cursor, fid_column_name, layer_name, error_table_name, code_colname):
@@ -87,7 +88,20 @@ def run_check(params, status):
             failed_items_message = get_failed_items_message(cursor, error_table_name, params["fid_column_name"])
             failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_name, failed_items_message)
             status.add_message(failed_message)
-            status.add_error_table(error_table_name)
+
+            error_table_with_geom = error_table_name + "_shp"
+            sql = ("CREATE TABLE {error_table_with_geom} AS"
+                   " SELECT a.{fid_column}, a.wkb_geometry FROM {errors} a "
+                   " INNER JOIN {layer} b ON a.{fid_column} = b.{fid_column}")
+
+            sql = sql.format(error_table_with_geom=error_table_with_geom,
+                             fid_column=params["fid_column_name"],
+                             errors=error_table_name,
+                             layer=layer_name)
+            cursor.execute(sql)
+
+            status.add_error_table(error_table_with_geom)
+
         if except_count == 0:
             drop_table(cursor, except_table_name)
         else:
