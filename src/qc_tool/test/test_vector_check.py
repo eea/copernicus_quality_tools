@@ -32,14 +32,14 @@ class TestUnzip(VectorCheckTestCase):
     def test_unzip_gdb(self):
         print("test_unzip_both_gdb")
         from qc_tool.wps.vector_check.v_unzip import run_check
-        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         self.assertIn("unzip_dir", status.params)
         unzip_dir = status.params["unzip_dir"]
         unzipped_subdir_names = [path.name for path in unzip_dir.glob("**") if path.is_dir()]
-        self.assertIn("SK007L1_TRNAVA.gdb", unzipped_subdir_names)
+        self.assertIn("DK001L2_KOBENHAVN_clip.gdb", unzipped_subdir_names)
 
     def test_unzip_invalid_file(self):
         from qc_tool.wps.vector_check.v_unzip import run_check
@@ -122,7 +122,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_gdb", "SK007L1_TRNAVA.gdb.zip")})
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
@@ -138,24 +138,26 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("boundary2012_sk007l1_trnava", status.params["layer_sources"][0][0])
-        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
+        self.assertEqual("boundary2012_dk001l2_kobenhavn", status.params["layer_sources"][0][0])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_sources"][0][1].name)
 
     def test_v1_ua_gdb_status_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
         status = self.status_class()
-        self.params["layer_regex"] = ".*_ua(?P<reference_year>2006_2012|2012|2018)$"
-        self.params["layer_count"] = 2
+        self.params["layer_regex"] = ".*_ua(?P<reference_year>2006|2012|2018)"
+        self.params["layer_count"] = 3
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
-        self.assertEqual(2, len(status.params["layer_sources"]))
-        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
-        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][1][1].name)
+        self.assertEqual(3, len(status.params["layer_sources"]))
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_sources"][0][1].name)
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_sources"][1][1].name)
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_sources"][2][1].name)
         layer_names = [layer_source[0] for layer_source in status.params["layer_sources"]]
-        self.assertIn("sk007l1_trnava_ua2006_2012", layer_names)
-        self.assertIn("sk007l1_trnava_ua2012", layer_names)
+        self.assertIn("dk001l2_kobenhavn_ua2006_2012", layer_names)
+        self.assertIn("dk001l2_kobenhavn_ua2006_revised", layer_names)
+        self.assertIn("dk001l2_kobenhavn_ua2012", layer_names)
 
     def test_v1_ua_gdb_change_ok(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -167,8 +169,8 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("layer_sources", status.params)
         self.assertEqual(1, len(status.params["layer_sources"]))
-        self.assertEqual("sk007l1_trnava_change_2006_2012", status.params["layer_sources"][0][0])
-        self.assertEqual("SK007L1_TRNAVA.gdb", status.params["layer_sources"][0][1].name)
+        self.assertEqual("dk001l2_kobenhavn_change_2006_2012", status.params["layer_sources"][0][0])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_sources"][0][1].name)
 
     def test_v1_ua_gdb_fail(self):
         # test should fail if we pass in a geodatabase from another product
