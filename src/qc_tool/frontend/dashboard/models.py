@@ -78,8 +78,10 @@ class Delivery(models.Model):
 
     filename = models.CharField(max_length=500)
     filepath = models.CharField(max_length=500)
+    size_bytes = models.IntegerField(null=True)
     #file = models.FileField(models.FileField(upload_to=user_directory_path))
     product_ident = models.CharField(max_length=64, blank=True, null=True)
+    product_description = models.CharField(max_length=500, blank=True, null=True)
     date_uploaded = models.DateTimeField(default=timezone.now)
     date_last_checked = models.DateTimeField(null=True)
     date_submitted = models.DateTimeField(null=True)
