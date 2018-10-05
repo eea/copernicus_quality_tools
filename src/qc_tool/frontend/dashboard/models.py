@@ -7,6 +7,7 @@ from django.utils import timezone
 from qc_tool.common import prepare_empty_job_status
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import compose_job_status_filepath
+from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import parse_status_document
 
 class Delivery(models.Model):
@@ -25,6 +26,7 @@ class Delivery(models.Model):
         self.last_wps_status = "accepted"
         self.last_job_status = "running"
         self.product_ident = product_ident
+        self.product_description = find_product_description(product_ident)
         self.empty_status_document = json.dumps(prepare_empty_job_status(product_ident))
         self.save()
 
