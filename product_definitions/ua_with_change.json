@@ -9,7 +9,7 @@
       "check_ident": "boundary.v1_ua",
       "required": true,
       "parameters": {
-        "layer_regex": "boundary(?P<reference_year>2006|2012|2018)_",
+        "layer_name_regex": "boundary(?P<reference_year>2006|2012|2018)_",
         "layer_count": 1,
         "is_border_source": true
       }
@@ -43,7 +43,7 @@
       "check_ident": "status_new.v1_ua",
       "required": true,
       "parameters": {
-        "layer_regex": ".*_ua(?P<reference_year>2012|2018)$",
+        "layer_name_regex": "_ua(?P<reference_year>2012|2018)$",
         "layer_count": 1,
         "is_border_source": false
       }
@@ -120,7 +120,7 @@
       "check_ident": "status_combined.v1_ua",
       "required": true,
       "parameters": {
-        "layer_regex": ".*_ua(?P<reference_year>2006)_2012$",
+        "layer_name_regex": "_ua(?P<reference_year>2006)_2012$",
         "layer_count": 1,
         "is_border_source": false
       }
@@ -194,7 +194,7 @@
       "check_ident": "status_revised.v1_ua",
       "required": true,
       "parameters": {
-        "layer_regex": ".*_ua(?P<reference_year>2006)_revised$",
+        "layer_name_regex": "_ua(?P<reference_year>2006)_revised$",
         "layer_count": 1,
         "is_border_source": false
       }
@@ -261,7 +261,7 @@
       "check_ident": "change.v1_ua",
       "required": true,
       "parameters": {
-        "layer_regex": ".*_change_(?P<reference_year1>2006|2012)_(?P<reference_year>2012|2018)$",
+        "layer_name_regex": "_change_(?P<reference_year1>2006|2012)_(?P<reference_year>2012|2018)$",
         "layer_count": 1,
         "is_border_source": false
       }

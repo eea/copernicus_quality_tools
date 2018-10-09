@@ -9,9 +9,9 @@
       "check_ident": "change.v1_clc",
       "required": true,
       "parameters": {
-        "file_name_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
-        "layer_prefix": "^{countrycode:s}/cha",
-        "layer_regex": "^{countrycode:s}/cha(06|12|18)_{countrycode:s}$",
+        "filename_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
+        "layer_prefix_regex": "^{countrycode:s}/cha",
+        "layer_name_regex": "^{countrycode:s}/cha(06|12|18)_{countrycode:s}$",
         "layer_count": 1,
 	"is_border_source": true
       }
@@ -88,9 +88,9 @@
       "check_ident": "status.v1_clc",
       "required": true,
       "parameters": {
-        "file_name_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
-        "layer_prefix": "^{countrycode:s}/clc",
-        "layer_regex": "^{countrycode:s}/clc(06|12|18)_{countrycode:s}$",
+        "filename_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
+        "layer_prefix_regex": "^{countrycode:s}/clc",
+        "layer_name_regex": "^{countrycode:s}/clc(06|12|18)_{countrycode:s}$",
         "layer_count": 2
       }
     },

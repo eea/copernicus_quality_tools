@@ -47,7 +47,7 @@ def run_check(params, status):
                 ##
                 ## FIXME: such construct is not really clear while it exploits mutable dictionaries
                 ## and bypasses currently standard use of status.add_params().
-                layer_info["pg_layer_name"] = layer_name
+                layer_info["pg_layer_name"] = layer_name.lower()
                 layer_info["pg_fid_name"] = dst_layer.GetFIDColumn()
 
                 ## Ensure all features has been imported.
