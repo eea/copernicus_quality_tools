@@ -14,33 +14,33 @@ def count_table(cursor, table_name):
     count = cursor.fetchone()[0]
     return count
 
-def create_table(cursor, fid_column_name, new_table_name, orig_table_name):
+def create_table(cursor, pg_fid_name, new_table_name, orig_table_name):
     sql = "CREATE TABLE {0:s} AS SELECT {1:s} FROM {2:s} WHERE FALSE;"
-    sql = sql.format(new_table_name, fid_column_name, orig_table_name)
+    sql = sql.format(new_table_name, pg_fid_name, orig_table_name)
     cursor.execute(sql)
 
 def drop_table(cursor, table_name):
     sql = "DROP TABLE IF EXISTS {:s};".format(table_name)
     cursor.execute(sql)
 
-def subtract_table(cursor, fid_column_name, first_table, second_table):
+def subtract_table(cursor, pg_fid_name, first_table, second_table):
     sql = "DELETE FROM {0:s} USING {1:s} WHERE {0:s}.{2:s} = {1:s}.{2:s};"
-    sql = sql.format(first_table, second_table, fid_column_name)
+    sql = sql.format(first_table, second_table, pg_fid_name)
     cursor.execute(sql)
     return cursor.rowcount
 
-def create_all_breaking_mmu(cursor, fid_column_name, layer_name, error_table_name, area_ha):
+def create_all_breaking_mmu(cursor, pg_fid_name, pg_layer_name, error_table_name, area_ha):
     area_m = area_ha * 10000
     sql = ("CREATE TABLE {:s} AS"
            " SELECT {:s} FROM {:s}"
            " WHERE shape_area < %s;")
-    sql = sql.format(error_table_name, fid_column_name, layer_name)
+    sql = sql.format(error_table_name, pg_fid_name, pg_layer_name)
     cursor.execute(sql, [area_m])
     return cursor.rowcount
 
-def subtract_border_polygons(cursor, border_layer_name, fid_column_name, layer_name, error_table_name, except_table_name):
+def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_name, error_table_name, except_table_name):
     """Subtracts polygons at boundary."""
-    create_table(cursor, fid_column_name, except_table_name, error_table_name)
+    create_table(cursor, pg_fid_name, except_table_name, error_table_name)
 
     # Fill except table with polygons taken from error table and touching boundary.
     sql = ("WITH boundary AS ("
@@ -51,19 +51,19 @@ def subtract_border_polygons(cursor, border_layer_name, fid_column_name, layer_n
            "  WHERE ST_Intersects(lt.wkb_geometry, boundary.wkb_geometry);")
     sql = sql.format(border_layer_name,
                      except_table_name,
-                     fid_column_name,
-                     layer_name,
+                     pg_fid_name,
+                     pg_layer_name,
                      error_table_name)
     cursor.execute(sql)
 
     # Delete an item from error table if it is in except table already.
-    subtract_table(cursor, fid_column_name, error_table_name, except_table_name)
+    subtract_table(cursor, pg_fid_name, error_table_name, except_table_name)
 
     error_count = count_table(cursor, error_table_name)
     except_count = count_table(cursor, except_table_name)
     return (error_count, except_count)
 
-def subtract_inner_polygons(cursor, fid_column_name, layer_name, error_table_name, except_table_name, code_colname, area_ha):
+def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name, except_table_name, code_colname, area_ha):
     """Subtracts polygons smaller than MMU which are part of dissolved polygons greater than MMU."""
     area_m = area_ha * 10000
     sql = ("WITH"
@@ -75,16 +75,16 @@ def subtract_inner_polygons(cursor, fid_column_name, layer_name, error_table_nam
            "  SELECT lt.{3:s}"
            "  FROM {0:s} lt INNER JOIN {4:s} et ON lt.{3:s} = et.{3:s}, big_dissolved "
            "  WHERE ST_Within(lt.wkb_geometry, big_dissolved.geom);")
-    sql = sql.format(layer_name,
+    sql = sql.format(pg_layer_name,
                      code_colname,
                      except_table_name,
-                     fid_column_name,
+                     pg_fid_name,
                      error_table_name,
-                     layer_name,)
+                     pg_layer_name)
     cursor.execute(sql, [area_m])
 
     # Delete an item from error table if it is in except table already.
-    subtract_table(cursor, fid_column_name, error_table_name, except_table_name)
+    subtract_table(cursor, pg_fid_name, error_table_name, except_table_name)
 
     error_count = count_table(cursor, error_table_name)
     except_count = count_table(cursor, except_table_name)
@@ -95,9 +95,9 @@ def subtract_inner_polygons(cursor, fid_column_name, layer_name, error_table_nam
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
-    for layer_name in params["db_layer_names"]:
+    for layer_info in params["layer_aliases"].values():
         if "code_regex" in params:
-            mobj = re.search(params["code_regex"], layer_name)
+            mobj = re.search(params["code_regex"], layer_info["pg_layer_name"])
             code = mobj.group(1)
             code_colnames = params["code_to_column_names"][code]
             border_exception = True
@@ -105,33 +105,33 @@ def run_check(params, status):
             code_colnames = []
             border_exception = params["border_exception"]
 
-        error_table_name = "{:s}_lessmmu_error".format(layer_name)
+        error_table_name = "{:s}_lessmmu_error".format(layer_info["pg_layer_name"])
         if not border_exception:
             # Status without border.
             error_count = create_all_breaking_mmu(cursor,
-                                                  params["fid_column_name"],
-                                                  layer_name,
+                                                  layer_info["pg_fid_name"],
+                                                  layer_info["pg_layer_name"],
                                                   error_table_name,
                                                   params["area_ha"])
             except_count = 0
         else:
-            except_table_name = "{:s}_lessmmu_except".format(layer_name)
+            except_table_name = "{:s}_lessmmu_except".format(layer_info["pg_layer_name"])
             border_source_layer = params["border_source_layer"]
             create_all_breaking_mmu(cursor,
-                                    params["fid_column_name"],
-                                    layer_name,
+                                    layer_info["pg_fid_name"],
+                                    layer_info["pg_layer_name"],
                                     error_table_name,
                                     params["area_ha"])
             (error_count, except_count) = subtract_border_polygons(cursor,
                                                                    border_source_layer,
-                                                                   params["fid_column_name"],
-                                                                   layer_name,
+                                                                   layer_info["pg_fid_name"],
+                                                                   layer_info["pg_layer_name"],
                                                                    error_table_name,
                                                                    except_table_name)
             for code_colname in code_colnames:
                 (error_count, except_count) = subtract_inner_polygons(cursor,
-                                                                      params["fid_column_name"],
-                                                                      layer_name,
+                                                                      layer_info["pg_fid_name"],
+                                                                      layer_info["pg_layer_name"],
                                                                       error_table_name,
                                                                       except_table_name,
                                                                       code_colname,
@@ -141,14 +141,14 @@ def run_check(params, status):
         if error_count == 0:
             drop_table(cursor, error_table_name)
         else:
-            failed_items_message = get_failed_items_message(cursor, error_table_name, params["fid_column_name"])
-            failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_name, failed_items_message)
+            failed_items_message = get_failed_items_message(cursor, error_table_name, layer_info["pg_fid_name"])
+            failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_info["pg_layer_name"], failed_items_message)
             status.add_message(failed_message)
             status.add_error_table(error_table_name)
         if except_count == 0:
             drop_table(cursor, except_table_name)
         else:
-            failed_items_message = get_failed_items_message(cursor, except_table_name, params["fid_column_name"])
+            failed_items_message = get_failed_items_message(cursor, except_table_name, layer_info["pg_fid_name"])
             failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_nar_name, failed_items_message)
             status.add_message(failed_message, failed=False)
             status.add_error_table(except_table_name)

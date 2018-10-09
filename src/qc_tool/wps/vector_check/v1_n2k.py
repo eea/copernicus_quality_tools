@@ -17,5 +17,6 @@ def run_check(params, status):
     filepath = shp_filepaths[0]
 
     # Get layers.
-    layer_sources = [(filepath.stem.lower(), filepath)]
-    status.add_params({"layer_sources": layer_sources})
+    layer_aliases = {"n2k_layer": {"src_filepath": filepath,
+                                   "src_layer_name": filepath.stem.lower()}}
+    status.add_params({"layer_aliases": layer_aliases})

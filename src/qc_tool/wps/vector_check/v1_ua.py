@@ -68,12 +68,12 @@ def run_check(params, status):
                                               params["layer_count"], ", ".join(matched_layer_names)))
             return
 
-        # Geodatabase layers are OK --> add parameters to status and exit
-        layer_sources = [(layer_name.lower(), gdb_filepath) for layer_name in matched_layer_names]
-        status.add_params({"layer_sources": layer_sources})
+        layer_aliases = {"layer_{:d}".format(i): {"src_filepath": gdb_filepath,
+                                                  "src_layer_name": layer_name.lower()}
+                         for i, layer_name in enumerate(matched_layer_names)}
+        status.add_params({"layer_aliases": layer_aliases})
         if params.get("is_border_source", False):
             status.add_params({"border_source_layer": matched_layer_names[0]})
-        return
 
     else:
         # option 2: SHAPEFILES
@@ -106,7 +106,9 @@ def run_check(params, status):
             return
 
         # Get layers from shapefile names. Layer names are always considered lower-case.
-        layer_sources = [(filepath.stem.lower(), filepath) for filepath in matched_shp_filepaths]
-        status.add_params({"layer_sources": layer_sources})
+        layer_aliases = {"layer_{:d}".format(i): {"src_filepath": shp_filepath,
+                                                  "src_layer_name": shp_filepath.stem.lower()}
+                         for i, shp_filepath in enumerate(matched_shp_filepaths)}
+        status.add_params({"layer_aliases": layer_aliases})
         if params.get("is_border_source", False):
-            status.add_params({"border_source_layer": layer_sources[0][0].lower()})
+            status.add_params({"border_source_layer": matched_shp_filepaths[0].stem.lower()})

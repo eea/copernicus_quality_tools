@@ -30,7 +30,6 @@ def run_check(params, status):
         return
 
     # Get layers. Layer names are always considered lower-case.
-    matched_filepath = matched_filepaths[0]
-    layer_name = matched_filepath.stem.lower()
-    layer_sources = [(layer_name, matched_filepath)]
-    status.add_params({"layer_sources": layer_sources})
+    layer_aliases = {"rpz_layer": {"src_filepath": matched_filepaths[0],
+                                   "src_layer_name": matched_filepaths[0].stem.lower()}}
+    status.add_params({"layer_aliases": layer_aliases})

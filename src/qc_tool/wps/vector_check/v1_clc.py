@@ -58,18 +58,18 @@ def run_check(params, status):
         status.add_message("Number of layers matching prefix '{:s}'"
                            " and number of layers matching regex '{:s}'"
                            " are not equal.".format(layer_prefix, layer_regex))
-        return
     elif len(layer_names_by_regex) != int(params["layer_count"]):
         status.aborted()
         status.add_message("Number of matching layers ({:d}) does not correspond with"
                            " declared number of layers({:d})".format(len(layer_names_by_regex),
                                                                      int(params["layer_count"])))
-        return
     else:
         # Strip country code feature dataset from layer name.
         layer_names = [layer_name.split("/")[-1] for layer_name in layer_names_by_regex]
-        layer_sources = [(layer_name, filepath) for layer_name in layer_names]
-        status.add_params({"layer_sources": layer_sources})
+
+        layer_aliases = {"layer_{:d}".format(i): {"src_filepath": filepath,
+                                                  "src_layer_name": layer_name}
+                         for i, layer_name in enumerate(layer_names)}
+        status.add_params({"layer_aliases": layer_aliases})
         if params.get("is_border_source", False):
             status.add_params({"border_source_layer": layer_names[0]})
-        return
