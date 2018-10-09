@@ -37,6 +37,7 @@ from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
 
+from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import format_date_utc
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import parse_status_document
@@ -87,47 +88,42 @@ def get_deliveries_json(request):
     The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
 
     :param request:
-    :return: list of delivery ZIP files and associated metadata in JSON format
+    :return: list of deliveries in JSON format
     """
 
     db_deliveries = Delivery.objects.filter(user_id=request.user.id)
+    ui_deliveries = []
 
-    valid_zip_files = [d for d in db_deliveries if Path(d.filepath).joinpath(d.filename).exists()]
+    for d in db_deliveries:
 
-    deliveries = []
-    for d in valid_zip_files:
-        # determine ZIP file size (todo: size_bytes should be saved in the deliveries table)
-        filepath = Path(d.filepath).joinpath(d.filename)
-        file_size = filepath.stat().st_size
-
-        # getting product description from product lookup table
-        product_description = "Unknown"
-        product_descriptions = get_product_descriptions()
-        if d.product_ident in product_descriptions:
-            product_description = product_descriptions[d.product_ident]
+        # For each delivery, check if an associated ZIP file actually exists in the file system.
+        if Path(d.filepath).joinpath(d.filename).exists():
+            actual_qc_status = d.last_job_status
+        else:
+            actual_qc_status = "file_not_found"
 
         delivery_is_submitted = d.date_submitted is not None
-        file_info = {"id": d.id,
+        delivery_info = {"id": d.id,
                      "filename": d.filename,
                      "filepath": d.filepath,
                      "date_uploaded": format_date_utc(d.date_uploaded),
                      "date_submitted": format_date_utc(d.date_submitted),
-                     "size_bytes": file_size,
+                     "size_bytes": d.size_bytes,
                      "product_ident": d.product_ident,
                      "username": request.user.username,
-                     "product_description": product_description,
+                     "product_description": d.product_description,
                      "last_job_uuid": d.last_job_uuid,
                      "date_last_checked": d.date_last_checked,
                      "last_job_status": d.last_job_status,
-                     "qc_status": d.last_job_status,
+                     "qc_status": actual_qc_status,
                      "last_wps_status": d.last_wps_status,
                      "percent": d.last_job_percent,
                      "is_submitted": delivery_is_submitted,
                      "submission_enabled": settings.SUBMISSION_ENABLED}
 
-        deliveries.append(file_info)
+        ui_deliveries.append(delivery_info)
+    return JsonResponse(ui_deliveries, safe=False)
 
-    return JsonResponse(deliveries, safe=False)
 
 @login_required
 def file_upload(request):
@@ -142,11 +138,12 @@ def file_upload(request):
             user_upload_path.mkdir(parents=True)
 
         if request.method == 'POST' and request.FILES["file"]:
-            myfile = request.FILES["file"]
 
+            # retrieve file info from uploaded zip file
+            myfile = request.FILES["file"]
             logger.info("Processing uploaded ZIP file: {:s}".format(myfile.name))
 
-            # Show error if a ZIP file with the same name already exists.
+            # Show error if a ZIP delivery with the same name uploaded by the same user already exists in the DB.
             existing_deliveries = Delivery.objects.filter(filename=myfile, user=request.user)
             if existing_deliveries.count() > 0:
                 logger.info("Upload rejected: file {:s} already exists for user {:s}".format(myfile.name,
@@ -158,16 +155,29 @@ def file_upload(request):
                                    "If you want to replace the file, please delete if first.".format(myfile)}
                 return JsonResponse(data)
 
-            logger.debug("saving uploaded file ...")
+            # Check if there is an abandoned ZIP file with the same name in the filesystem but not in the DB.
+            # if found, delete.
+            dst_filepath = user_upload_path.joinpath(myfile.name)
+            if dst_filepath.exists():
+                logger.debug("deleting abandoned zip file {:s}".format(str(dst_filepath)))
+                dst_filepath.unlink()
+
+            logger.debug("saving uploaded file to {:s}".format(str(dst_filepath)))
             fs = FileSystemStorage(str(user_upload_path))
             saved_filename = fs.save(myfile.name, myfile)
             logger.debug("uploaded file saved successfully to filesystem.")
+
+            # Assign product description based on product ident.
+            product_ident = guess_product_ident(myfile.name)
+            product_description = find_product_description(product_ident)
 
             # Save delivery metadata into the database.
             d = Delivery()
             d.filename = saved_filename
             d.filepath = user_upload_path
-            d.product_ident = guess_product_ident(myfile.name)
+            d.size_bytes = dst_filepath.stat().st_size
+            d.product_ident = product_ident
+            d.product_description = product_description
             d.wps_status = None
             d.job_status = "Not checked"
             d.user = request.user

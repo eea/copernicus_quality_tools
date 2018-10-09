@@ -17,6 +17,7 @@ $('#tbl-deliveries').bootstrapTable({
 function fileSizeFormatter(value, row) {
 
     function formatBytes(bytes,decimals) {
+       if(bytes == null) return null;
        if(bytes == 0) return '0 Bytes';
        var k = 1024,
            dm = decimals || 2,
@@ -39,11 +40,18 @@ function actionsFormatter(value, row) {
     // for example /start_job/1234/
     var start_job_url = '/start_job/' + row.id + '/';
     var btn_data = '<div class="btn-group">';
-
-
     var show_eea_button = row.eea_installation;
 
-    if (row.qc_status === "running" || row.is_submitted) {
+    if (row.qc_status === "file_not_found") {
+        // file not found --> QC button disabled, Delete button enabled
+        btn_data += "<a class=\"btn btn-sm btn-success\" role=\"button\" disabled data-toggle=\"tooltip\"";
+        btn_data += 'title="Cannot run quality controls for this delivery. delivery ZIP file not found.';
+        btn_data += '" href="' + start_job_url + '" ' + '>QC</a>';
+        btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
+        btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
+        btn_data += 'Delete</button>';
+
+    } else if (row.qc_status === "running" || row.is_submitted) {
         // job is running --> QC button disabled, Delete button disabled
         var tooltip_message = "QC checks are currently running.";
         if (row.is_submitted) {
@@ -96,11 +104,20 @@ function statusFormatter(value, row, index) {
 
     var uuid = row["last_job_uuid"];
 
+    if (value == "file_not_found") {
+        value = '<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"> </span>';
+        value += '<span class="text-danger"> FILE NOT FOUND</span>';
+        return value;
+    }
+
     if (value == "failed") {
         value = "checks failed";
     }
+    if (value == "accepted") {
+        value = "running (" + row.percent + "% )";
+    }
     if (value == "running") {
-        value = "running (" + row.percent + "% )"
+        value = "running (" + row.percent + "% )";
     }
     if (value == "ok") {
         if (row["is_submitted"]) {
@@ -109,6 +126,7 @@ function statusFormatter(value, row, index) {
             value = "checks passed";
         }
     }
+
 
     if (uuid) {
         return ['<a class="like" href="',

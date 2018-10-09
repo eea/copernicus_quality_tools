@@ -16,6 +16,7 @@ from qc_tool.common import compose_job_dir
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_all_wps_uuids
+from qc_tool.common import get_product_descriptions
 from qc_tool.common import JOB_INPUT_DIRNAME
 from qc_tool.common import JOB_OUTPUT_DIRNAME
 from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
@@ -31,6 +32,20 @@ def format_date_utc(db_date):
         return None
     else:
         return db_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
+
+def find_product_description(product_ident):
+    """
+    given a product ident, retrieve the product description.
+    :param product_ident: the product identifier, for example clc, rpz, ua.
+    :return: the product description string.
+    """
+    description = "Unknown"
+    product_descriptions = get_product_descriptions()
+    if product_ident in product_descriptions:
+        description = product_descriptions[product_ident]
+    return description
+
 
 def guess_product_ident(product_filename):
     """
