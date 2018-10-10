@@ -67,9 +67,9 @@ class TestV1_rpz(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual(1, len(status.params["layer_aliases"]))
-        self.assertEqual("rpz_DU026A_lclu_v01.shp", status.params["layer_aliases"]["rpz_layer"]["src_filepath"].name)
-        self.assertEqual("rpz_DU026A_lclu_v01", status.params["layer_aliases"]["rpz_layer"]["src_layer_name"])
+        self.assertEqual(1, len(status.params["layer_defs"]))
+        self.assertEqual("rpz_DU026A_lclu_v01.shp", status.params["layer_defs"]["rpz_layer"]["src_filepath"].name)
+        self.assertEqual("rpz_DU026A_lclu_v01", status.params["layer_defs"]["rpz_layer"]["src_layer_name"])
 
 
 class TestV1_clc(VectorCheckTestCase):
@@ -88,11 +88,11 @@ class TestV1_clc(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual(2, len(status.params["layer_aliases"]))
-        self.assertEqual("clc2012_mt.gdb", status.params["layer_aliases"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("clc06_MT", status.params["layer_aliases"]["layer_0"]["src_layer_name"])
-        self.assertEqual("clc2012_mt.gdb", status.params["layer_aliases"]["layer_1"]["src_filepath"].name)
-        self.assertEqual("clc12_MT", status.params["layer_aliases"]["layer_1"]["src_layer_name"])
+        self.assertEqual(2, len(status.params["layer_defs"]))
+        self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
+        self.assertEqual("clc06_MT", status.params["layer_defs"]["layer_0"]["src_layer_name"])
+        self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["layer_1"]["src_filepath"].name)
+        self.assertEqual("clc12_MT", status.params["layer_defs"]["layer_1"]["src_layer_name"])
 
     def test_mismatched_prefix_aborts(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
@@ -129,9 +129,9 @@ class TestV1_ua_gdb(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual("Boundary2012_DK001L2_KOBENHAVN", status.params["border_source_layer"])
-        self.assertEqual(1, len(status.params["layer_aliases"]))
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_aliases"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("Boundary2012_DK001L2_KOBENHAVN", status.params["layer_aliases"]["layer_0"]["src_layer_name"])
+        self.assertEqual(1, len(status.params["layer_defs"]))
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
+        self.assertEqual("Boundary2012_DK001L2_KOBENHAVN", status.params["layer_defs"]["layer_0"]["src_layer_name"])
 
     def test_status(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -142,13 +142,13 @@ class TestV1_ua_gdb(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertNotIn("border_source_layer", status.params)
-        self.assertEqual(3, len(status.params["layer_aliases"]))
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_aliases"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2012", status.params["layer_aliases"]["layer_0"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_aliases"]["layer_1"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2006_2012", status.params["layer_aliases"]["layer_1"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_aliases"]["layer_2"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2006_Revised", status.params["layer_aliases"]["layer_2"]["src_layer_name"])
+        self.assertEqual(3, len(status.params["layer_defs"]))
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_UA2012", status.params["layer_defs"]["layer_0"]["src_layer_name"])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_1"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_UA2006_2012", status.params["layer_defs"]["layer_1"]["src_layer_name"])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_2"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_UA2006_Revised", status.params["layer_defs"]["layer_2"]["src_layer_name"])
 
     def test_change(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -159,9 +159,9 @@ class TestV1_ua_gdb(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertNotIn("border_source_layer", status.params)
-        self.assertEqual(1, len(status.params["layer_aliases"]))
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_aliases"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_aliases"]["layer_0"]["src_layer_name"])
+        self.assertEqual(1, len(status.params["layer_defs"]))
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["layer_0"]["src_layer_name"])
 
     def test_non_existing_aborts(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -171,7 +171,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("aborted", status.status)
-        self.assertNotIn("layer_aliases", status.params)
+        self.assertNotIn("layer_defs", status.params)
 
 
 class TestV1_ua_shp(VectorCheckTestCase):
@@ -194,9 +194,9 @@ class TestV1_ua_shp(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["border_source_layer"])
-        self.assertEqual(1, len(status.params["layer_aliases"]))
-        self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_aliases"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_aliases"]["layer_0"]["src_layer_name"])
+        self.assertEqual(1, len(status.params["layer_defs"]))
+        self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
+        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_defs"]["layer_0"]["src_layer_name"])
 
     def test_status(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
@@ -208,9 +208,9 @@ class TestV1_ua_shp(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertNotIn("border_source_layer", status.params)
-        self.assertEqual(1, len(status.params["layer_aliases"]))
-        self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_aliases"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_aliases"]["layer_0"]["src_layer_name"])
+        self.assertEqual(1, len(status.params["layer_defs"]))
+        self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
+        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_defs"]["layer_0"]["src_layer_name"])
 
 
 class TestV2(VectorCheckTestCase):
@@ -233,7 +233,7 @@ class TestV2(VectorCheckTestCase):
 
         status = self.status_class()
         layer_check(self.params, status)
-        self.params["layer_aliases"] = status.params["layer_aliases"]
+        self.params["layer_defs"] = status.params["layer_defs"]
 
     def test(self):
         from qc_tool.wps.vector_check.v2 import run_check
@@ -253,10 +253,10 @@ class TestV3(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc06_mt"},
-                                              "layer_1": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc12_mt"}},
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc06_mt"},
+                                           "layer_1": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc12_mt"}},
                             "attribute_regexes": ["id", "code_(06|12|18)", "area_ha", "remark"]})
 
     def test(self):
@@ -278,10 +278,10 @@ class TestV4_gdb(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc06_mt"},
-                                              "layer_1": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc12_mt"}},
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc06_mt"},
+                                           "layer_1": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc12_mt"}},
                             "epsg": [23033]})
 
     def test(self):
@@ -319,7 +319,7 @@ class TestV4_shp(VectorCheckTestCase):
 
         status = self.status_class()
         layer_check(self.params, status)
-        self.params["layer_aliases"] = status.params["layer_aliases"]
+        self.params["layer_defs"] = status.params["layer_defs"]
 
     def test(self):
         from qc_tool.wps.vector_check.v4 import run_check
@@ -337,30 +337,30 @@ class TestVImport2pg(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc06_mt"},
-                                              "layer_1": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc12_mt"}}})
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc06_mt"},
+                                           "layer_1": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc12_mt"}}})
         status = self.status_class()
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual("clc06_mt", self.params["layer_aliases"]["layer_0"]["pg_layer_name"])
-        self.assertEqual("objectid", self.params["layer_aliases"]["layer_0"]["pg_fid_name"])
-        self.assertEqual("clc12_mt", self.params["layer_aliases"]["layer_1"]["pg_layer_name"])
-        self.assertEqual("objectid", self.params["layer_aliases"]["layer_1"]["pg_fid_name"])
+        self.assertEqual("clc06_mt", self.params["layer_defs"]["layer_0"]["pg_layer_name"])
+        self.assertEqual("objectid", self.params["layer_defs"]["layer_0"]["pg_fid_name"])
+        self.assertEqual("clc12_mt", self.params["layer_defs"]["layer_1"]["pg_layer_name"])
+        self.assertEqual("objectid", self.params["layer_defs"]["layer_1"]["pg_fid_name"])
 
         cur = self.params["connection_manager"].get_connection().cursor()
-        cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_aliases"]["layer_0"]["pg_layer_name"]))
+        cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_defs"]["layer_0"]["pg_layer_name"]))
         self.assertLess(0, cur.rowcount, "Table of the layer_0 should have at least one row.")
-        cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_aliases"]["layer_1"]["pg_layer_name"]))
+        cur.execute("""SELECT id FROM {:s};""".format(self.params["layer_defs"]["layer_1"]["pg_layer_name"]))
         self.assertLess(0, cur.rowcount, "Table of the layer_1 should have at least one row.")
 
     def test_bad_file_aborts(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
         bad_filepath = TEST_DATA_DIR.joinpath("raster", "checks", "r11", "test_raster1.tif")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": bad_filepath,
-                                                          "src_layer_name": "irrelevant_layer"}}})
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": bad_filepath,
+                                                       "src_layer_name": "irrelevant_layer"}}})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
@@ -369,8 +369,8 @@ class TestVImport2pg(VectorCheckTestCase):
         """ogr2ogr parameter PRECISION=NO should supress numeric field overflow error."""
         from qc_tool.wps.vector_check.v_import2pg import run_check
         shp_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO_boundary", "ES031L1_LUGO_UA2012_Boundary.shp")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": shp_filepath,
-                                                          "src_layer_name": "ES031L1_LUGO_UA2012_Boundary"}}})
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": shp_filepath,
+                                                       "src_layer_name": "ES031L1_LUGO_UA2012_Boundary"}}})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -381,8 +381,8 @@ class TestV5(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc12_mt"}},
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc12_mt"}},
                             "product_code": "cha",
                             "unique_keys": ["objectid"]})
         status = self.status_class()
@@ -407,8 +407,8 @@ class TestV6(VectorCheckTestCase):
         cursor.execute("INSERT INTO xxx18_zz VALUES (1, '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, '111', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
-        self.params.update({"layer_aliases": {"layer_0": {"pg_layer_name": "xxx18_zz",
-                                                          "pg_fid_name": "fid"}},
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx18_zz",
+                                                       "pg_fid_name": "fid"}},
                             "code_regex": "^...(..)",
                             "code_to_column_defs": {"18": [["code_18", "CLC"]]}})
         status = self.status_class()
@@ -423,8 +423,8 @@ class TestV6(VectorCheckTestCase):
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, 'xxx', 'xxx', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, 'xxx', '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
-        self.params.update({"layer_aliases": {"layer_0": {"pg_layer_name": "cha18_xx",
-                                                          "pg_fid_name": "fid"}},
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "cha18_xx",
+                                                       "pg_fid_name": "fid"}},
                             "code_regex": "^...(..)",
                             "code_to_column_defs": {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}})
         status = self.status_class()
@@ -439,8 +439,8 @@ class TestV6(VectorCheckTestCase):
         cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.params.update({"layer_aliases": {"layer_0": {"pg_layer_name": "cha18_xx",
-                                                          "pg_fid_name": "fid"}},
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "cha18_xx",
+                                                       "pg_fid_name": "fid"}},
                             "code_regex": "^...(..)",
                             "code_to_column_defs": {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}})
         status = self.status_class()
@@ -454,8 +454,8 @@ class TestV8(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc12_mt"}}})
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc12_mt"}}})
         status = self.status_class()
         import_check(self.params, status)
 
@@ -471,8 +471,8 @@ class TestV11(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_aliases": {"layer_0": {"src_filepath": gdb_dir,
-                                                          "src_layer_name": "clc12_mt"}},
+        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc12_mt"}},
                             "area_ha": 25,
                             "border_source_layer": "clc12_mt",
                             "border_exception": True})
@@ -499,10 +499,10 @@ class TestV13(VectorCheckTestCase):
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE test_layer_1 (fid integer, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("CREATE TABLE test_layer_2 (fid integer, wkb_geometry geometry(Polygon, 4326));")
-        self.params.update({"layer_aliases": {"layer_1": {"pg_layer_name": "test_layer_1",
-                                                          "pg_fid_name": "fid"},
-                                              "layer_2": {"pg_layer_name": "test_layer_2",
-                                                          "pg_fid_name": "fid"}}})
+        self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "test_layer_1",
+                                                       "pg_fid_name": "fid"},
+                                           "layer_2": {"pg_layer_name": "test_layer_2",
+                                                       "pg_fid_name": "fid"}}})
 
     def test_non_overlapping(self):
         from qc_tool.wps.vector_check.v13 import run_check
@@ -544,8 +544,8 @@ class TestV14(VectorCheckTestCase):
                             "  attr_1 char(1),"
                             "  attr_2 char(1),"
                             "  wkb_geometry geometry(Polygon, 4326));")
-        self.params.update({"layer_aliases": {"layer_0": {"pg_layer_name": "test_layer",
-                                                          "pg_fid_name": "fid"}},
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
+                                                       "pg_fid_name": "fid"}},
                             "code_colnames": ["attr_1", "attr_2"]})
 
     def test_disjoint(self):

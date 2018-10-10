@@ -10,13 +10,13 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    for layer_info in params["layer_aliases"].values():
-        ds = ogr.Open(str(layer_info["src_filepath"]))
-        layer = ds.GetLayerByName(layer_info["src_layer_name"])
+    for layer_def in params["layer_defs"].values():
+        ds = ogr.Open(str(layer_def["src_filepath"]))
+        layer = ds.GetLayerByName(layer_def["src_layer_name"])
         srs = layer.GetSpatialRef()
         if srs is None:
             status.aborted()
-            status.add_message("Layer {:s} has missing spatial reference system.".format(layer_info["src_layer_name"]))
+            status.add_message("Layer {:s} has missing spatial reference system.".format(layer_def["src_layer_name"]))
             return
 
         # Search EPSG authority code
@@ -30,7 +30,7 @@ def run_check(params, status):
                 return
             else:
                 status.aborted()
-                status.add_message("Layer {:s} has illegal EPSG code {:s}.".format(layer_info["src_layer_name"], str(authority_code)))
+                status.add_message("Layer {:s} has illegal EPSG code {:s}.".format(layer_def["src_layer_name"], str(authority_code)))
                 return
         else:
             # FIXME this code is necessary for checking .shp files without EPSG authority in the .prj (from ESRI SW)
@@ -49,6 +49,6 @@ def run_check(params, status):
         status.aborted()
         status.add_message("The SRS of Layer {:s} is not in the list of allowed spatial reference systems. "
                            "detected SRS: {:s}, "
-                           "list of allowed SRS's: {:s}.".format(layer_info["src_layer_name"],
+                           "list of allowed SRS's: {:s}.".format(layer_def["src_layer_name"],
                                                                  srs.ExportToWkt(),
                                                                  ", ".join(map(str, params["epsg"]))))

@@ -60,10 +60,10 @@ def run_check(params, status):
                                               params["layer_count"], ", ".join(matched_layer_names)))
             return
 
-        layer_aliases = {"layer_{:d}".format(i): {"src_filepath": gdb_dir,
-                                                  "src_layer_name": layer_name}
-                         for i, layer_name in enumerate(matched_layer_names)}
-        status.add_params({"layer_aliases": layer_aliases})
+        layer_defs = {"layer_{:d}".format(i): {"src_filepath": gdb_dir,
+                                               "src_layer_name": layer_name}
+                      for i, layer_name in enumerate(matched_layer_names)}
+        status.add_params({"layer_defs": layer_defs})
         if params.get("is_border_source", False):
             status.add_params({"border_source_layer": matched_layer_names[0]})
 
@@ -97,9 +97,9 @@ def run_check(params, status):
                                                ", ".join(layer_names)))
             return
 
-        layer_aliases = {"layer_{:d}".format(i): {"src_filepath": shp_filepath,
-                                                  "src_layer_name": shp_filepath.stem}
-                         for i, shp_filepath in enumerate(matched_shp_filepaths)}
-        status.add_params({"layer_aliases": layer_aliases})
+        layer_defs = {"layer_{:d}".format(i): {"src_filepath": shp_filepath,
+                                               "src_layer_name": shp_filepath.stem}
+                      for i, shp_filepath in enumerate(matched_shp_filepaths)}
+        status.add_params({"layer_defs": layer_defs})
         if params.get("is_border_source", False):
             status.add_params({"border_source_layer": matched_shp_filepaths[0].stem})

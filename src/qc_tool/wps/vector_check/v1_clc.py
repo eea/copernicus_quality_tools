@@ -57,9 +57,9 @@ def run_check(params, status):
         # Strip country code feature dataset from layer name.
         layer_names = [layer_name.split("/")[-1] for layer_name in layer_names_by_name]
 
-        layer_aliases = {"layer_{:d}".format(i): {"src_filepath": gdb_dir,
-                                                  "src_layer_name": layer_name}
-                         for i, layer_name in enumerate(layer_names)}
-        status.add_params({"layer_aliases": layer_aliases})
+        layer_defs = {"layer_{:d}".format(i): {"src_filepath": gdb_dir,
+                                               "src_layer_name": layer_name}
+                      for i, layer_name in enumerate(layer_names)}
+        status.add_params({"layer_defs": layer_defs})
         if params.get("is_border_source", False):
             status.add_params({"border_source_layer": layer_names[0]})

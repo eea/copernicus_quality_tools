@@ -17,15 +17,15 @@ SQL = ("CREATE TABLE {0:s} AS"
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
-    for layer_info in params["layer_aliases"].values():
-        error_table_name = "{:s}_overlap_error".format(layer_info["pg_layer_name"])
-        sql = SQL.format(error_table_name, layer_info["pg_fid_name"], layer_info["pg_layer_name"]);
+    for layer_def in params["layer_defs"].values():
+        error_table_name = "{:s}_overlap_error".format(layer_def["pg_layer_name"])
+        sql = SQL.format(error_table_name, layer_def["pg_fid_name"], layer_def["pg_layer_name"]);
 
         cursor.execute(sql)
         if cursor.rowcount == 0:
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:
-            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_info["pg_fid_name"])
-            failed_message = "The layer {:s} has overlapping pairs in rows: {:s}.".format(layer_info["pg_layer_name"], failed_pairs_message)
+            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_def["pg_fid_name"])
+            failed_message = "The layer {:s} has overlapping pairs in rows: {:s}.".format(layer_def["pg_layer_name"], failed_pairs_message)
             status.add_message(failed_message)
             status.add_error_table(error_table_name)

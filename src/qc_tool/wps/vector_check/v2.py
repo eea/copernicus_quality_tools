@@ -12,7 +12,7 @@ def run_check(params, status):
     # enable ogr to use exceptions
     ogr.UseExceptions()
 
-    filepaths = set(layer_info["src_filepath"] for layer_info in params["layer_aliases"].values())
+    filepaths = set(layer_def["src_filepath"] for layer_def in params["layer_defs"].values())
     for filepath in filepaths:
         ds_extension = filepath.suffix
         if (ds_extension not in params["formats"]
