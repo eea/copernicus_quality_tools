@@ -13,6 +13,7 @@
       "check_ident": "v2",
       "required": true,
       "parameters": {
+        "layers": ["n2k"],
         "formats": [".shp"]
       }
     },
@@ -20,6 +21,7 @@
       "check_ident": "v11",
       "required": false,
       "parameters": {
+        "layers": ["n2k"],
         "area_ha": 0.5,
         "border_exception": false
       }

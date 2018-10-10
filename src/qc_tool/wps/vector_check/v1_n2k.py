@@ -15,6 +15,6 @@ def run_check(params, status):
         return
 
     # Get layers.
-    layer_defs = {"n2k_layer": {"src_filepath": shp_filepaths[0],
-                                "src_layer_name": shp_filepaths[0].stem}}
+    layer_defs = {"n2k": {"src_filepath": shp_filepaths[0],
+                          "src_layer_name": shp_filepaths[0].stem}}
     status.add_params({"layer_defs": layer_defs})
