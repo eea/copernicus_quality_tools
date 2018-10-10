@@ -23,6 +23,9 @@ def dir_recursive_search(in_dir, regexp=".*", target="file", deep=9999, full_pat
         level += 1
     return results
 
+def do_layers(params):
+    return [params["layer_defs"][layer_alias] for layer_alias in params["layers"]]
+
 def shorten_failed_items_message(items, count):
     if len(items) == 0:
         return None

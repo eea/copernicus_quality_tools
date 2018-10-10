@@ -7,6 +7,7 @@ from subprocess import run
 from osgeo import ogr
 from osgeo.gdalconst import OF_READONLY
 
+from qc_tool.wps.helper import do_layers
 from qc_tool.wps.registry import register_check_function
 
 
@@ -14,7 +15,7 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
     dsn, schema =  params["connection_manager"].get_dsn_schema()
 
-    for layer_def in params["layer_defs"].values():
+    for layer_def in do_layers(params):
         layer_name = layer_def["src_layer_name"]
         pc = run(["ogr2ogr",
                    "-overwrite",

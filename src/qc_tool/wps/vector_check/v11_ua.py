@@ -4,6 +4,7 @@
 
 import re
 
+from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.v11 import count_table
@@ -62,7 +63,7 @@ def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_na
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     border_source_layer = params["border_source_layer"]
-    for layer_def in params["layer_defs"].values():
+    for layer_def in do_layers(params):
         mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
         code = mobj.group(1)
         code_colname = params["code_to_column_name"][code]

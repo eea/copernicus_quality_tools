@@ -5,12 +5,13 @@
 from osgeo import ogr
 from osgeo import osr
 
+from qc_tool.wps.helper import do_layers
 from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
 def run_check(params, status):
-    for layer_def in params["layer_defs"].values():
+    for layer_def in do_layers(params):
         ds = ogr.Open(str(layer_def["src_filepath"]))
         layer = ds.GetLayerByName(layer_def["src_layer_name"])
         srs = layer.GetSpatialRef()

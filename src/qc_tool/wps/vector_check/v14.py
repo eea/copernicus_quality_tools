@@ -4,6 +4,7 @@
 
 import re
 
+from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_pairs_message
 from qc_tool.wps.registry import register_check_function
 
@@ -32,7 +33,8 @@ def create_all_breaking_neighbcode(cursor, pg_fid_name, pg_layer_name, error_tab
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
-    for layer_def in params["layer_defs"].values():
+
+    for layer_def in do_layers(params):
         if "code_regex" in params:
             mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
             code = mobj.group(1)
