@@ -25,6 +25,6 @@ def run_check(params, status):
         status.add_message("There must be exactly one .shp file which conforms to prescribed naming convention.")
         return
 
-    layer_defs = {"rpz_layer": {"src_filepath": matched_shp_filepaths[0],
-                                "src_layer_name": matched_shp_filepaths[0].stem}}
+    layer_defs = {"rpz": {"src_filepath": matched_shp_filepaths[0],
+                          "src_layer_name": matched_shp_filepaths[0].stem}}
     status.add_params({"layer_defs": layer_defs})

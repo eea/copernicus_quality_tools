@@ -68,8 +68,8 @@ class TestV1_rpz(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("rpz_DU026A_lclu_v01.shp", status.params["layer_defs"]["rpz_layer"]["src_filepath"].name)
-        self.assertEqual("rpz_DU026A_lclu_v01", status.params["layer_defs"]["rpz_layer"]["src_layer_name"])
+        self.assertEqual("rpz_DU026A_lclu_v01.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
+        self.assertEqual("rpz_DU026A_lclu_v01", status.params["layer_defs"]["rpz"]["src_layer_name"])
 
 
 class TestV1_clc(VectorCheckTestCase):
@@ -234,7 +234,7 @@ class TestV2(VectorCheckTestCase):
         status = self.status_class()
         layer_check(self.params, status)
         self.params["layer_defs"] = status.params["layer_defs"]
-        self.params["layers"] = ["rpz_layer"]
+        self.params["layers"] = ["rpz"]
 
     def test(self):
         from qc_tool.wps.vector_check.v2 import run_check
