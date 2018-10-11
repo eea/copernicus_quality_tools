@@ -4,6 +4,7 @@
 
 import re
 
+from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
 
@@ -95,9 +96,9 @@ def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
-    for layer_info in params["layer_aliases"].values():
+    for layer_def in do_layers(params):
         if "code_regex" in params:
-            mobj = re.search(params["code_regex"], layer_info["pg_layer_name"])
+            mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
             code = mobj.group(1)
             code_colnames = params["code_to_column_names"][code]
             border_exception = True
@@ -105,33 +106,32 @@ def run_check(params, status):
             code_colnames = []
             border_exception = params["border_exception"]
 
-        error_table_name = "{:s}_lessmmu_error".format(layer_info["pg_layer_name"])
+        error_table_name = "{:s}_lessmmu_error".format(layer_def["pg_layer_name"])
         if not border_exception:
             # Status without border.
             error_count = create_all_breaking_mmu(cursor,
-                                                  layer_info["pg_fid_name"],
-                                                  layer_info["pg_layer_name"],
+                                                  layer_def["pg_fid_name"],
+                                                  layer_def["pg_layer_name"],
                                                   error_table_name,
                                                   params["area_ha"])
             except_count = 0
         else:
-            except_table_name = "{:s}_lessmmu_except".format(layer_info["pg_layer_name"])
-            border_source_layer = params["border_source_layer"]
+            except_table_name = "{:s}_lessmmu_except".format(layer_def["pg_layer_name"])
             create_all_breaking_mmu(cursor,
-                                    layer_info["pg_fid_name"],
-                                    layer_info["pg_layer_name"],
+                                    layer_def["pg_fid_name"],
+                                    layer_def["pg_layer_name"],
                                     error_table_name,
                                     params["area_ha"])
             (error_count, except_count) = subtract_border_polygons(cursor,
-                                                                   border_source_layer,
-                                                                   layer_info["pg_fid_name"],
-                                                                   layer_info["pg_layer_name"],
+                                                                   params["layer_defs"]["boundary"]["pg_layer_name"],
+                                                                   layer_def["pg_fid_name"],
+                                                                   layer_def["pg_layer_name"],
                                                                    error_table_name,
                                                                    except_table_name)
             for code_colname in code_colnames:
                 (error_count, except_count) = subtract_inner_polygons(cursor,
-                                                                      layer_info["pg_fid_name"],
-                                                                      layer_info["pg_layer_name"],
+                                                                      layer_def["pg_fid_name"],
+                                                                      layer_def["pg_layer_name"],
                                                                       error_table_name,
                                                                       except_table_name,
                                                                       code_colname,
@@ -141,14 +141,14 @@ def run_check(params, status):
         if error_count == 0:
             drop_table(cursor, error_table_name)
         else:
-            failed_items_message = get_failed_items_message(cursor, error_table_name, layer_info["pg_fid_name"])
-            failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_info["pg_layer_name"], failed_items_message)
+            failed_items_message = get_failed_items_message(cursor, error_table_name, layer_def["pg_fid_name"])
+            failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_def["pg_layer_name"], failed_items_message)
             status.add_message(failed_message)
             status.add_error_table(error_table_name)
         if except_count == 0:
             drop_table(cursor, except_table_name)
         else:
-            failed_items_message = get_failed_items_message(cursor, except_table_name, layer_info["pg_fid_name"])
+            failed_items_message = get_failed_items_message(cursor, except_table_name, layer_def["pg_fid_name"])
             failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_nar_name, failed_items_message)
             status.add_message(failed_message, failed=False)
             status.add_error_table(except_table_name)

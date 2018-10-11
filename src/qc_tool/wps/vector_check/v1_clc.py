@@ -4,6 +4,7 @@
 
 import re
 
+from qc_tool.wps.helper import LayerDefsBuilder
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
@@ -11,10 +12,15 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 @register_check_function(__name__)
 def run_check(params, status):
     # Find gdb directory.
-    gdb_dirs = [path for path in params["unzip_dir"].iterdir() if path.is_dir() and path.suffix.lower() == ".gdb"]
-    if len(gdb_dirs) != 1:
+    gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
+    if len(gdb_dirs) == 0:
         status.aborted()
-        status.add_message("There must be exactly one .gdb directory.")
+        status.add_message("Can not find geodatabase in the delivery.")
+        return
+    if len(gdb_dirs) > 1:
+        status.aborted()
+        status.add_message("There are more than one geodatabase found in the delivery:"
+                           " {:s}.".format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
     gdb_dir = gdb_dirs[0]
 
@@ -22,44 +28,46 @@ def run_check(params, status):
     mobj = re.compile(params["filename_regex"], re.IGNORECASE).search(gdb_dir.name)
     if mobj is None:
         status.aborted()
-        status.add_message("Filename does not conform to the naming convention.")
+        status.add_message("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))
         return
 
-    # Get country code.
-    countrycode = mobj.group("country_code")
-    if countrycode.lower() not in params["country_codes"]:
+    # Extract and check reference year.
+    #
+    # Reference year must not fall in the first campaign.
+    # The first campaign is there in order to be able to get the year of initial layer.
+    reference_year = mobj.group("reference_year")
+    if reference_year not in params["campaign_years"][1:]:
+        status.aborted()
+        status.add_message("Reference year {:s} does not fall in"
+                           " campaign years {!r:s}.".format(reference_year, params["campaign_years"][1:]))
+        return
+    status.set_status_property("reference_year", reference_year)
+
+    # Extract and check country code.
+    country_code = mobj.group("country_code")
+    if country_code.lower() not in params["country_codes"]:
         status.aborted()
         status.add_message("Filename has illegal country code {:s}.".format(country_code))
         return
 
-    # Get reference year.
-    reference_year = mobj.group("reference_year")
-    status.set_status_property("reference_year", reference_year)
+    # Read all layers.
+    builder = LayerDefsBuilder(status)
+    for layer_name in get_fc_path(str(gdb_dir)):
+        builder.add_layer_info(gdb_dir, layer_name)
 
-    # Get list of feature classes matching the layer prefix and layer name.
-    layer_names = get_fc_path(str(gdb_dir))
-    layer_prefix_regex = re.compile(params["layer_prefix_regex"].format(countrycode=countrycode), re.IGNORECASE)
-    layer_names_by_prefix = [layer_name for layer_name in layer_names if layer_prefix_regex.search(layer_name) is not None]
-    layer_name_regex = re.compile(params["layer_name_regex"].format(countrycode=countrycode), re.IGNORECASE)
-    layer_names_by_name = [layer_name for layer_name in layer_names if layer_prefix_regex.search(layer_name) is not None]
+    # Build layer defs.
+    builder.set_tpl_params(country_code=country_code, reference_year_tail=reference_year[-2:])
+    initial_year = params["campaign_years"][params["campaign_years"].index(reference_year) - 1]
+    builder.set_tpl_params(initial_year_tail=initial_year[-2:])
+    builder.extract_layer_def(params["reference_layer_regex"], "reference")
+    builder.extract_layer_def(params["change_layer_regex"], "change")
+    builder.extract_layer_def(params["initial_layer_regex"], "initial")
 
-    if set(layer_names_by_prefix) - set(layer_names_by_name):
-        status.aborted()
-        status.add_message("Number of layers matching prefix '{:s}'"
-                           " and number of layers matching name '{:s}'"
-                           " are not equal.".format(params["layer_prefix_regex"], params["layer_name_regex"]))
-    elif len(layer_names_by_name) != int(params["layer_count"]):
-        status.aborted()
-        status.add_message("Number of matching layers ({:d}) does not correspond with"
-                           " declared number of layers({:d})".format(len(layer_names_by_name),
-                                                                     int(params["layer_count"])))
-    else:
-        # Strip country code feature dataset from layer name.
-        layer_names = [layer_name.split("/")[-1] for layer_name in layer_names_by_name]
+    # Excessive layers should fail.
+    builder.check_excessive_layers()
 
-        layer_aliases = {"layer_{:d}".format(i): {"src_filepath": gdb_dir,
-                                                  "src_layer_name": layer_name}
-                         for i, layer_name in enumerate(layer_names)}
-        status.add_params({"layer_aliases": layer_aliases})
-        if params.get("is_border_source", False):
-            status.add_params({"border_source_layer": layer_names[0]})
+    # Strip prefixes from layer_defs.
+    layer_defs = builder.layer_defs
+    for layer_def in layer_defs.values():
+            layer_def["src_layer_name"] = layer_def["src_layer_name"].split("/")[-1]
+    status.add_params({"layer_defs": layer_defs})

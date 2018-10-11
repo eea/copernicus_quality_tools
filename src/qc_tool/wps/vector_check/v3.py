@@ -6,15 +6,16 @@ import re
 
 from osgeo import ogr
 
+from qc_tool.wps.helper import do_layers
 from qc_tool.wps.registry import register_check_function
 
 
 @register_check_function(__name__)
 def run_check(params, status):
     attr_regexes = [re.compile("{:s}$".format(attr_regex)) for attr_regex in params["attribute_regexes"]]
-    for layer_info in params["layer_aliases"].values():
-        ds = ogr.Open(str(layer_info["src_filepath"]))
-        layer = ds.GetLayerByName(layer_info["src_layer_name"])
+    for layer_def in do_layers(params):
+        ds = ogr.Open(str(layer_def["src_filepath"]))
+        layer = ds.GetLayerByName(layer_def["src_layer_name"])
         attr_names = [field_defn.name for field_defn in layer.schema]
         missing_attr_regexes = []
         for attr_regex in params["attribute_regexes"]:
@@ -29,4 +30,4 @@ def run_check(params, status):
         if len(missing_attr_regexes) > 0:
             status.aborted()
             missing_attr_message = ", ".join(missing_attr_regexes)
-            status.add_message("Layer {:s} has missing attributes: {:s}.".format(layer_info["src_layer_name"], missing_attr_message))
+            status.add_message("Layer {:s} has missing attributes: {:s}.".format(layer_def["src_layer_name"], missing_attr_message))

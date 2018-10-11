@@ -9,12 +9,17 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
     # Find the shp file.
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*") if path.is_file() and path.suffix.lower() == ".shp"]
+    if len(shp_filepaths) == 0:
+        status.aborted()
+        status.add_message("Can not find a shapefile in the delivery.")
+        return
     if len(shp_filepaths) != 1:
         status.aborted()
-        status.add_message("There must be exactly one .shp file in the zip file.")
+        status.add_message("There are more than one shapefile found in the delivery:"
+                           " {:s}.".format(", ".join(path.name for path in shp_filepaths)))
         return
 
     # Get layers.
-    layer_aliases = {"n2k_layer": {"src_filepath": shp_filepaths[0],
-                                   "src_layer_name": shp_filepaths[0].stem}}
-    status.add_params({"layer_aliases": layer_aliases})
+    layer_defs = {"n2k": {"src_filepath": shp_filepaths[0],
+                          "src_layer_name": shp_filepaths[0].stem}}
+    status.add_params({"layer_defs": layer_defs})

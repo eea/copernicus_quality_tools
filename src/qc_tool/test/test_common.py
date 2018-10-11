@@ -14,7 +14,7 @@ class TestCommon(TestCase):
         self.assertIn("checks", product_definition)
         self.assertLess(1, len(product_definition["checks"]))
         self.assertEqual({"check_ident": "change.v2",
-                          "parameters": {"formats": [".gdb"]},
+                          "parameters": {"layers": ["change"], "formats": [".gdb"]},
                           "required": True},
                          product_definition["checks"][2])
 

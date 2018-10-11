@@ -87,36 +87,31 @@ class Test_ua_shp(ProductTestCase):
 
     def test_run(self):
         expected_check_statuses = {"v_unzip": "ok",
-                                   "boundary.v1_ua": "ok",
+                                   "v1_ua": "ok",
                                    "boundary.v2": "ok",
                                    "boundary.v3": "ok",
                                    "boundary.v4": "ok",
                                    "boundary.v_import2pg": "ok",
-                                   "status.v1_ua": "ok",
-                                   "status.v2": "ok",
-                                   "status.v3": "ok",
-                                   "status.v4": "ok",
-                                   "status.v_import2pg": "ok",
-                                   "status.v5": "ok",
-                                   "status.v6": "ok",
-                                   "status.v8": "ok",
-                                   "status.v11_ua": "failed", #FIXME: the status should be ok in v11_ua.
-                                   "status.v13": "ok",
-                                   "status.v14": "ok"}
+                                   "reference.v2": "ok",
+                                   "reference.v3": "ok",
+                                   "reference.v4": "ok",
+                                   "reference.v_import2pg": "ok",
+                                   "reference.v5": "ok",
+                                   "reference.v6": "ok",
+                                   "reference.v8": "ok",
+                                   "reference.v11_ua": "failed", #FIXME: the status should be ok in v11_ua.
+                                   "reference.v13": "ok",
+                                   "reference.v14": "ok"}
         job_status = dispatch(str(uuid4()),
                               "user_name",
                               self.filepath,
                               "ua",
-                              ["status.v5", "status.v6", "status.v8", "status.v11_ua", "status.v13", "status.v14"])
-        check_statuses = dict((check_status["check_ident"], check_status["status"])
-                              for check_status in job_status["checks"])
-        self.assertDictEqual(expected_check_statuses, check_statuses)
-
-        job_status = dispatch(str(uuid4()),
-                              "user_name",
-                              self.filepath,
-                              "ua",
-                              ["status.v5", "status.v6", "status.v8", "status.v11_ua", "status.v13", "status.v14"])
+                              ["reference.v5",
+                               "reference.v6",
+                               "reference.v8",
+                               "reference.v11_ua",
+                               "reference.v13",
+                               "reference.v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -133,27 +128,26 @@ class Test_ua_gdb(ProductTestCase):
 
     def test_run_ok(self):
         expected_check_statuses = {"v_unzip": "ok",
-                                   "boundary.v1_ua": "ok",
+                                   "v1_ua": "ok",
                                    "boundary.v2": "ok",
                                    "boundary.v3": "ok",
                                    "boundary.v4": "ok",
                                    "boundary.v_import2pg": "ok",
-                                   "status.v1_ua": "ok",
-                                   "status.v2": "ok",
-                                   "status.v3": "ok",
-                                   "status.v4": "ok",
-                                   "status.v_import2pg": "ok",
-                                   "status.v5": "ok",
-                                   "status.v6": "ok",
-                                   "status.v8": "ok",
-                                   "status.v11_ua": "failed",
-                                   "status.v13": "failed",
-                                   "status.v14": "ok"}
+                                   "reference.v2": "ok",
+                                   "reference.v3": "ok",
+                                   "reference.v4": "ok",
+                                   "reference.v_import2pg": "ok",
+                                   "reference.v5": "ok",
+                                   "reference.v6": "ok",
+                                   "reference.v8": "ok",
+                                   "reference.v11_ua": "failed",
+                                   "reference.v13": "failed",
+                                   "reference.v14": "ok"}
         job_status = dispatch(str(uuid4()),
                               "user_name",
                               self.filepath,
                               "ua",
-                              ["status.v5", "status.v6", "status.v8", "status.v11_ua", "status.v13", "status.v14"])
+                              ["reference.v5", "reference.v6", "reference.v8", "reference.v11_ua", "reference.v13", "reference.v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -162,44 +156,40 @@ class Test_ua_gdb(ProductTestCase):
         self.maxDiff = None
         kobenhavn_filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
         expected_check_statuses = {"v_unzip": "ok",
-                                   "boundary.v1_ua": "ok",
+                                   "v1_ua": "ok",
                                    "boundary.v2": "ok",
                                    "boundary.v3": "ok",
                                    "boundary.v4": "ok",
                                    "boundary.v_import2pg": "ok",
-                                   "status_new.v1_ua": "ok",
-                                   "status_new.v2": "ok",
-                                   "status_new.v3": "ok",
-                                   "status_new.v4": "ok",
-                                   "status_new.v_import2pg": "ok",
-                                   "status_new.v5": "ok",
-                                   "status_new.v6": "ok",
-                                   "status_new.v8": "ok",
-                                   "status_new.v11_ua": "ok",
-                                   "status_new.v13": "ok",
-                                   "status_new.v14": "ok",
-                                   "status_combined.v1_ua": "ok",
-                                   "status_combined.v2": "ok",
-                                   "status_combined.v3": "ok",
-                                   "status_combined.v4": "ok",
-                                   "status_combined.v_import2pg": "ok",
-                                   "status_combined.v5": "ok",
-                                   "status_combined.v6": "ok",
-                                   "status_combined.v8": "ok",
-                                   "status_combined.v11_ua": "ok",
-                                   "status_combined.v13": "ok",
-                                   "status_combined.v14": "ok",
-                                   "status_revised.v1_ua": "ok",
-                                   "status_revised.v2": "ok",
-                                   "status_revised.v3": "ok",
-                                   "status_revised.v4": "ok",
-                                   "status_revised.v_import2pg": "ok",
-                                   "status_revised.v6": "ok",
-                                   "status_revised.v8": "ok",
-                                   "status_revised.v11_ua": "ok",
-                                   "status_revised.v13": "ok",
-                                   "status_revised.v14": "ok",
-                                   "change.v1_ua": "ok",
+                                   "reference.v2": "ok",
+                                   "reference.v3": "ok",
+                                   "reference.v4": "ok",
+                                   "reference.v_import2pg": "ok",
+                                   "reference.v5": "ok",
+                                   "reference.v6": "ok",
+                                   "reference.v8": "ok",
+                                   "reference.v11_ua": "ok",
+                                   "reference.v13": "ok",
+                                   "reference.v14": "ok",
+                                   "combined.v2": "ok",
+                                   "combined.v3": "ok",
+                                   "combined.v4": "ok",
+                                   "combined.v_import2pg": "ok",
+                                   "combined.v5": "ok",
+                                   "combined.v6": "ok",
+                                   "combined.v8": "ok",
+                                   "combined.v11_ua": "ok",
+                                   "combined.v13": "ok",
+                                   "combined.v14": "ok",
+                                   "revised.v2": "ok",
+                                   "revised.v3": "ok",
+                                   "revised.v4": "ok",
+                                   "revised.v_import2pg": "ok",
+                                   "revised.v6": "ok",
+                                   "revised.v8": "ok",
+                                   "revised.v11_ua": "ok",
+                                   "revised.v13": "ok",
+                                   "revised.v14": "ok",
                                    "change.v2": "ok",
                                    "change.v3": "ok",
                                    "change.v4": "ok",
@@ -209,54 +199,34 @@ class Test_ua_gdb(ProductTestCase):
                                    "change.v8": "ok",
                                    "change.v11_ua": "ok",
                                    "change.v13": "ok",
-                                   "change.v14": "ok",
-                                   }
+                                   "change.v14": "ok"}
         job_status = dispatch(str(uuid4()),
                               "user_name",
                               kobenhavn_filepath,
                               "ua_with_change",
-                              ["status_new.v5",
-                               "status_new.v6",
-                               "status_new.v8",
-                               "status_new.v11_ua",
-                               "status_new.v13",
-                               "status_new.v14",
-                               "status_combined.v5",
-                               "status_combined.v6",
-                               "status_combined.v8",
-                               "status_combined.v11_ua",
-                               "status_combined.v13",
-                               "status_combined.v14",
-                               "status_revised.v6",
-                               "status_revised.v8",
-                               "status_revised.v11_ua",
-                               "status_revised.v13",
-                               "status_revised.v14",
+                              ["reference.v5",
+                               "reference.v6",
+                               "reference.v8",
+                               "reference.v11_ua",
+                               "reference.v13",
+                               "reference.v14",
+                               "combined.v5",
+                               "combined.v6",
+                               "combined.v8",
+                               "combined.v11_ua",
+                               "combined.v13",
+                               "combined.v14",
+                               "revised.v6",
+                               "revised.v8",
+                               "revised.v11_ua",
+                               "revised.v13",
+                               "revised.v14",
                                "change.v5",
                                "change.v6",
                                "change.v8",
                                "change.v11_ua",
                                "change.v13",
-                               "change.v14",
-                               ])
+                               "change.v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
-
-
-class Test_update_status(ProductTestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
-
-    def test_run(self):
-        def my_update(check_ident, percent_done):
-            pass
-        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        dispatch(str(uuid4()),
-                 "user_name",
-                 filepath,
-                 "clc",
-                 ["status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",
-                  "change.v5", "change.v6", "change.v8", "change.v11", "change.v13", "change.v14"],
-                 update_status_func=my_update)

@@ -220,7 +220,8 @@ class CheckStatus():
         self.status_properties = {}
 
     def failed(self):
-        self.status = "failed"
+        if self.status == "ok":
+            self.status = "failed"
 
     def aborted(self):
         self.status = "aborted"
@@ -230,7 +231,7 @@ class CheckStatus():
 
     def add_message(self, message, failed=True):
         self.messages.append(message)
-        if self.status == "ok" and failed:
+        if failed:
             self.failed()
 
     def add_error_table(self, error_table_name):

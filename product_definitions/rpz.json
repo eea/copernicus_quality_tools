@@ -17,6 +17,7 @@
       "check_ident": "v2",
       "required": true,
       "parameters": {
+        "layers": ["rpz"],
         "formats": [".shp"]
       }
     },
@@ -24,6 +25,7 @@
       "check_ident": "v3",
       "required": true,
       "parameters": {
+        "layers": ["rpz"],
         "attribute_regexes": ["id", "du_id", "maes_1", "maes_2", "maes_3", "maes_4", "tcd", "ua", "area_ha", "nodata", "comment"]
       }
     },
@@ -31,17 +33,22 @@
       "check_ident": "v4",
       "required": true,
       "parameters": {
+        "layers": ["rpz"],
         "epsg": [3035]
       }
     },
     {
       "check_ident": "v_import2pg",
-      "required": true
+      "required": true,
+      "parameters": {
+        "layers": ["rpz"]
+      }
     },
     {
       "check_ident": "v5",
       "required": false,
       "parameters": {
+        "layers": ["rpz"],
         "unique_keys": ["id"]
       }
     },
@@ -49,6 +56,7 @@
       "check_ident": "v6",
       "required": false,
       "parameters": {
+        "layers": ["rpz"],
         "column_defs": [["maes_1", "MAES1"],
                         ["maes_2", "MAES2"],
                         ["maes_3", "MAES3"],
@@ -57,24 +65,32 @@
     },
     {
       "check_ident": "v8",
-      "required": false
+      "required": false,
+      "parameters": {
+        "layers": ["rpz"]
+      }
     },
     {
       "check_ident": "v11",
       "required": false,
       "parameters": {
+        "layers": ["rpz"],
         "area_ha": 0.5,
         "border_exception": false
       }
     },
     {
       "check_ident": "v13",
-      "required": false
+      "required": false,
+      "parameters": {
+        "layers": ["rpz"]
+      }
     },
     {
       "check_ident": "v14",
       "required": false,
       "parameters": {
+        "layers": ["rpz"],
         "product_code": "rpz",
         "code_colnames": ["MAES_4"]
       }
