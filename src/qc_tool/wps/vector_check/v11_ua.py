@@ -62,7 +62,6 @@ def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_na
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
-    border_source_layer = params["border_source_layer"]
     for layer_def in do_layers(params):
         mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
         code = mobj.group(1)
@@ -75,7 +74,7 @@ def run_check(params, status):
                                               error_table_name,
                                               code_colname)
         (error_count, except_count) = subtract_border_polygons(cursor,
-                                                               border_source_layer,
+                                                               params["layer_defs"]["boundary"]["pg_layer_name"],
                                                                layer_def["pg_fid_name"],
                                                                layer_def["pg_layer_name"],
                                                                error_table_name,

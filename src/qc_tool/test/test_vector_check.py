@@ -90,6 +90,7 @@ class TestV1_clc(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual(3, len(status.params["layer_defs"]))
+        print(status)
         self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("clc12_MT", status.params["layer_defs"]["reference"]["src_layer_name"])
         self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["initial"]["src_filepath"].name)
@@ -114,60 +115,37 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
+        self.params.update({"campaign_years": ["2006", "2012", "2018"],
+                            "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
+                            "boundary_layer_regex": "^boundary{reference_year:s}_",
+                            "revised_layer_regex": "_ua{revised_year:s}_revised$",
+                            "combined_layer_regex": "_ua{revised_year:s}_{reference_year:s}$",
+                            "change_layer_regex": "_change_{revised_year:s}_{reference_year:s}$"})
 
-    def test_boundary(self):
+    def test(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
-        self.params.update({"layer_name_regex": "boundary(?P<reference_year>2006|2012|2018)_.*$",
-                            "layer_count": 1,
-                            "is_border_source": True})
         status = self.status_class()
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual("Boundary2012_DK001L2_KOBENHAVN", status.params["border_source_layer"])
-        self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("Boundary2012_DK001L2_KOBENHAVN", status.params["layer_defs"]["layer_0"]["src_layer_name"])
-
-    def test_status(self):
-        from qc_tool.wps.vector_check.v1_ua import run_check
-        self.params.update({"layer_name_regex": ".*_ua(?P<reference_year>2006|2012|2018)",
-                            "layer_count": 3})
-        status = self.status_class()
-        run_check(self.params, status)
-
-        self.assertEqual("ok", status.status)
-        self.assertNotIn("border_source_layer", status.params)
-        self.assertEqual(3, len(status.params["layer_defs"]))
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2012", status.params["layer_defs"]["layer_0"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_1"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2006_2012", status.params["layer_defs"]["layer_1"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_2"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2006_Revised", status.params["layer_defs"]["layer_2"]["src_layer_name"])
-
-    def test_change(self):
-        from qc_tool.wps.vector_check.v1_ua import run_check
-        self.params.update({"layer_name_regex": ".*_change_(?P<reference_year1>2006|2012)_(?P<reference_year>2012|2018)$",
-                            "layer_count": 1})
-        status = self.status_class()
-        run_check(self.params, status)
-
-        self.assertEqual("ok", status.status)
-        self.assertNotIn("border_source_layer", status.params)
-        self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["layer_0"]["src_layer_name"])
+        self.assertEqual(5, len(status.params["layer_defs"]))
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["boundary"]["src_filepath"].name)
+        self.assertEqual("Boundary2012_DK001L2_KOBENHAVN", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["revised"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_UA2006_Revised", status.params["layer_defs"]["revised"]["src_layer_name"])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["combined"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_UA2006_2012", status.params["layer_defs"]["combined"]["src_layer_name"])
+        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["change"]["src_filepath"].name)
+        self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["change"]["src_layer_name"])
 
     def test_non_existing_aborts(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
-        self.params.update({"layer_name_regex": "non-existing-layer-name",
-                            "layer_count": 1})
+        self.params["boundary_layer_regex"] = "non-existing-layer-name"
         status = self.status_class()
         run_check(self.params, status)
-
         self.assertEqual("aborted", status.status)
-        self.assertNotIn("layer_defs", status.params)
 
 
 class TestV1_ua_shp(VectorCheckTestCase):
@@ -179,34 +157,21 @@ class TestV1_ua_shp(VectorCheckTestCase):
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
+        self.params.update({"campaign_years": ["2006", "2012", "2018"],
+                            "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
+                            "boundary_layer_regex": "^boundary{reference_year:s}_"})
 
-    def test_boundary(self):
+    def test(self):
         from qc_tool.wps.vector_check.v1_ua import run_check
-        self.params.update({"layer_name_regex": "boundary(?P<reference_year>2006|2012|2018)_.*$",
-                            "layer_count": 1,
-                            "is_border_source": True})
         status = self.status_class()
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["border_source_layer"])
-        self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_defs"]["layer_0"]["src_layer_name"])
-
-    def test_status(self):
-        from qc_tool.wps.vector_check.v1_ua import run_check
-        self.params.update({"layer_name_regex": ".*_ua(?P<reference_year>2006|2012|2018)$",
-                            "layer_count": 1,
-                            "is_border_source": False})
-        status = self.status_class()
-        run_check(self.params, status)
-
-        self.assertEqual("ok", status.status)
-        self.assertNotIn("border_source_layer", status.params)
-        self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_defs"]["layer_0"]["src_layer_name"])
+        self.assertEqual(2, len(status.params["layer_defs"]))
+        self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_defs"]["reference"]["src_filepath"].name)
+        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
+        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
 
 class TestV2(VectorCheckTestCase):
@@ -307,19 +272,19 @@ class TestV4_shp(VectorCheckTestCase):
 
         zip_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": zip_filepath,
-                            "layer_name_regex": ".*_ua(?P<reference_year>2006|2012|2018)$",
-                            "layer_count": 1,
-                            "epsg": [3035]})
-
+                            "filepath": zip_filepath})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
+        self.params.update({"campaign_years": ["2006", "2012", "2018"],
+                            "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
+                            "boundary_layer_regex": "^boundary{reference_year:s}_"})
         status = self.status_class()
         layer_check(self.params, status)
         self.params["layer_defs"] = status.params["layer_defs"]
-        self.params["layers"] =   ["layer_0"]
+        self.params.update({"layers": ["reference", "boundary"],
+                            "epsg": [3035]})
 
     def test(self):
         from qc_tool.wps.vector_check.v4 import run_check

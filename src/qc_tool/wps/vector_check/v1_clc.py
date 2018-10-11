@@ -4,6 +4,7 @@
 
 import re
 
+from qc_tool.wps.helper import LayerDefsBuilder
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
@@ -12,9 +13,14 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 def run_check(params, status):
     # Find gdb directory.
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
-    if len(gdb_dirs) != 1:
+    if len(gdb_dirs) == 0:
         status.aborted()
-        status.add_message("There must be exactly one .gdb directory in the delivery.")
+        status.add_message("Can not find geodatabase in the delivery.")
+        return
+    if len(gdb_dirs) > 1:
+        status.aborted()
+        status.add_message("There are more than one geodatabase found in the delivery:"
+                           " {:s}.".format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
     gdb_dir = gdb_dirs[0]
 
@@ -44,52 +50,24 @@ def run_check(params, status):
         status.add_message("Filename has illegal country code {:s}.".format(country_code))
         return
 
+    # Read all layers.
+    builder = LayerDefsBuilder(status)
+    for layer_name in get_fc_path(str(gdb_dir)):
+        builder.add_layer_info(gdb_dir, layer_name)
+
     # Build layer defs.
-    builder = LayerDefsBuilder(gdb_dir, status)
-    builder.add_tpl_param("country_code", country_code)
-    builder.add_tpl_param("reference_year_tail", reference_year[-2:])
+    builder.set_tpl_params(country_code=country_code, reference_year_tail=reference_year[-2:])
     initial_year = params["campaign_years"][params["campaign_years"].index(reference_year) - 1]
-    builder.add_tpl_param("initial_year_tail", initial_year[-2:])
-    builder.add_layer_def(params["reference_layer_regex"], "reference")
-    builder.add_layer_def(params["change_layer_regex"], "change")
-    builder.add_layer_def(params["initial_layer_regex"], "initial")
+    builder.set_tpl_params(initial_year_tail=initial_year[-2:])
+    builder.extract_layer_def(params["reference_layer_regex"], "reference")
+    builder.extract_layer_def(params["change_layer_regex"], "change")
+    builder.extract_layer_def(params["initial_layer_regex"], "initial")
 
     # Excessive layers should fail.
-    if len(builder.layer_names) > 0:
-        status.add_message("There are excessive layers: {:s}.".format(", ".join(builder.layer_names)))
+    builder.check_excessive_layers()
 
-    status.add_params({"layer_defs": builder.layer_defs})
-
-
-class LayerDefsBuilder():
-    def __init__(self, gdb_dir, status):
-        self.gdb_dir = gdb_dir
-        self.status = status
-        self.tpl_params = {}
-        self.layer_defs = {}
-        self.layer_names = get_fc_path(str(gdb_dir))
-
-    def add_tpl_param(self, tpl_key, tpl_value):
-        self.tpl_params[tpl_key] = tpl_value
-
-    def add_layer_def(self, regex, layer_alias):
-        regex = regex.format(**self.tpl_params)
-        regex = re.compile(regex, re.IGNORECASE)
-        matches = [name for name in self.layer_names if regex.search(name)]
-        if len(matches) == 0:
-            self.status.aborted()
-            self.status.add_message("Can not find {:s} layer.".format(layer_alias))
-            return
-        if len(matches) > 1:
-            self.status.aborted()
-            self.status.add_message("Found {:d} {:s} layers.".format(len(matches), layer_alias))
-            return
-
-        # Pop the layer name from the list.
-        layer_name = self.layer_names.pop(self.layer_names.index(matches[0]))
-
-        # Strip country code feature dataset from layer name.
-        layer_name = layer_name.split("/")[-1]
-
-        # Add layer def.
-        self.layer_defs[layer_alias] = {"src_filepath": self.gdb_dir, "src_layer_name": layer_name}
+    # Strip prefixes from layer_defs.
+    layer_defs = builder.layer_defs
+    for layer_def in layer_defs.values():
+            layer_def["src_layer_name"] = layer_def["src_layer_name"].split("/")[-1]
+    status.add_params({"layer_defs": layer_defs})

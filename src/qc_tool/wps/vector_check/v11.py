@@ -117,14 +117,13 @@ def run_check(params, status):
             except_count = 0
         else:
             except_table_name = "{:s}_lessmmu_except".format(layer_def["pg_layer_name"])
-            border_source_layer = params["border_source_layer"]
             create_all_breaking_mmu(cursor,
                                     layer_def["pg_fid_name"],
                                     layer_def["pg_layer_name"],
                                     error_table_name,
                                     params["area_ha"])
             (error_count, except_count) = subtract_border_polygons(cursor,
-                                                                   border_source_layer,
+                                                                   params["layer_defs"]["boundary"]["pg_layer_name"],
                                                                    layer_def["pg_fid_name"],
                                                                    layer_def["pg_layer_name"],
                                                                    error_table_name,

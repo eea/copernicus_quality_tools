@@ -6,18 +6,19 @@
       "required": true
     },
     {
-      "check_ident": "boundary.v1_ua",
+      "check_ident": "v1_ua",
       "required": true,
       "parameters": {
-        "layer_name_regex": "boundary(?P<reference_year>2006|2012|2018)_",
-        "layer_count": 1,
-        "is_border_source": true
+        "campaign_years": ["2006", "2012", "2018"],
+        "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
+        "boundary_layer_regex": "^boundary{reference_year:s}_"
       }
     },
     {
       "check_ident": "boundary.v2",
       "required": true,
       "parameters": {
+        "layers": ["boundary"],
         "formats": [".gdb", ".shp"]
       }
     },
@@ -25,6 +26,7 @@
       "check_ident": "boundary.v3",
       "required": true,
       "parameters": {
+        "layers": ["boundary"],
         "attribute_regexes": ["country", "cities"]
       }
     },
@@ -32,58 +34,61 @@
       "check_ident": "boundary.v4",
       "required": true,
       "parameters": {
+        "layers": ["boundary"],
         "epsg": [3035]
       }
     },
     {
       "check_ident": "boundary.v_import2pg",
-      "required": true
-    },
-    {
-      "check_ident": "status.v1_ua",
       "required": true,
       "parameters": {
-        "layer_name_regex": "_ua(?P<reference_year>2006|2012|2018)$",
-        "layer_count": 1,
-        "is_border_source": false
+        "layers": ["boundary"]
       }
     },
     {
-      "check_ident": "status.v2",
+      "check_ident": "reference.v2",
       "required": true,
       "parameters": {
+        "layers": ["reference"],
         "formats": [".gdb", ".shp"]
       }
     },
     {
-      "check_ident": "status.v3",
+      "check_ident": "reference.v3",
       "required": true,
       "parameters": {
+        "layers": ["reference"],
         "attribute_regexes": ["country", "cities", "(fua|luz)_or_cit", "code(2006|2012|2018)", "item(2006|2012|2018)", "prod_date", "ident"]
       }
     },
     {
-      "check_ident": "status.v4",
+      "check_ident": "reference.v4",
       "required": true,
       "parameters": {
+        "layers": ["reference"],
         "epsg": [3035]
       }
     },
     {
-      "check_ident": "status.v_import2pg",
-      "required": true
+      "check_ident": "reference.v_import2pg",
+      "required": true,
+      "parameters": {
+        "layers": ["reference"]
+      }
     },
     {
-      "check_ident": "status.v5",
+      "check_ident": "reference.v5",
       "required": false,
       "parameters": {
+        "layers": ["reference"],
         "unique_keys": ["ident"]
       }
     },
     {
-      "check_ident": "status.v6",
+      "check_ident": "reference.v6",
       "required": false,
       "parameters": {
+        "layers": ["reference"],
         "code_regex": "(ua2006|ua2012|ua2018)$",
         "code_to_column_defs": {"ua2006": [["code2006", "UA"]],
                                 "ua2012": [["code2012", "UA"]],
@@ -91,13 +96,17 @@
       }
     },
     {
-      "check_ident": "status.v8",
-      "required": false
-    },
-    {
-      "check_ident": "status.v11_ua",
+      "check_ident": "reference.v8",
       "required": false,
       "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "reference.v11_ua",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
         "code_regex": "(ua2006|ua2012|ua2018)$",
         "code_to_column_name": {"ua2006": "code2006",
                                 "ua2012": "code2012",
@@ -106,13 +115,17 @@
       }
     },
     {
-      "check_ident": "status.v13",
-      "required": false
-    },
-    {
-      "check_ident": "status.v14",
+      "check_ident": "reference.v13",
       "required": false,
       "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "reference.v14",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
         "code_regex": "(ua2006|ua2012|ua2018)$",
         "code_to_column_names": {"ua2006": ["code2006"],
                                  "ua2012": ["code2012"],
