@@ -242,21 +242,3 @@ class Test_ua_gdb(ProductTestCase):
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
-
-
-class Test_update_status(ProductTestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
-
-    def test_run(self):
-        def my_update(check_ident, percent_done):
-            pass
-        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        dispatch(str(uuid4()),
-                 "user_name",
-                 filepath,
-                 "clc",
-                 ["status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",
-                  "change.v5", "change.v6", "change.v8", "change.v11", "change.v13", "change.v14"],
-                 update_status_func=my_update)

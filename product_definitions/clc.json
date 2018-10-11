@@ -6,20 +6,21 @@
       "required": true
     },
     {
-      "check_ident": "change.v1_clc",
+      "check_ident": "v1_clc",
       "required": true,
       "parameters": {
+        "campaign_years": ["2000", "2006", "2012", "2018"],
         "filename_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
-        "layer_prefix_regex": "^{countrycode:s}/cha",
-        "layer_name_regex": "^{countrycode:s}/cha(06|12|18)_{countrycode:s}$",
-        "layer_count": 1,
-	"is_border_source": true
+        "reference_layer_regex": "^{country_code:s}/clc{reference_year_tail:s}_{country_code:s}$",
+        "initial_layer_regex": "^{country_code:s}/clc{initial_year_tail:s}_{country_code:s}$",
+        "change_layer_regex": "^{country_code:s}/cha{reference_year_tail:s}_{country_code:s}$"
       }
     },
     {
       "check_ident": "change.v2",
       "required": true,
       "parameters": {
+        "layers": ["change"],
         "formats": [".gdb"]
       }
     },
@@ -27,6 +28,7 @@
       "check_ident": "change.v3",
       "required": true,
       "parameters": {
+        "layers": ["change"],
         "attribute_regexes": ["id", "code_(06|12|18)", "change", "chtype", "area_ha", "remark"]
       }
     },
@@ -34,17 +36,22 @@
       "check_ident": "change.v4",
       "required": true,
       "parameters": {
+        "layers": ["change"],
         "epsg": [2462, 31287, 3812, 3908, 32634, 32635, 3765, 32636, 5514, 25832, 25833, 5316, 3301, 3067, 2154, 2154, 32620, 32620, 32622, 32738, 32740, 6204, 31466, 31467, 31468, 31469, 27700, 29903, 3109, 3108, 2100, 23700, 5325, 2157, 32632, 32633, 32634, 3909, 3059, 2056, 3346, 2169, 23033, 25834, 28992, 25832, 25833, 25834, 25835, 25836, 2180, 3763, 5014, 5015, 5016, 3844, 25834, 5514, 3912, 32628, 25829, 25830, 25831, 3006, 2056]
       }
     },
     {
       "check_ident": "change.v_import2pg",
-      "required": true
+      "required": true,
+      "parameters": {
+        "layers": ["change"]
+      }
     },
     {
       "check_ident": "change.v5",
       "required": false,
       "parameters": {
+        "layers": ["change"],
         "unique_keys": ["id"]
       }
     },
@@ -52,6 +59,7 @@
       "check_ident": "change.v6",
       "required": false,
       "parameters": {
+        "layers": ["change"],
         "code_regex": "^...(..)",
         "code_to_column_defs": {"06": [["code_00", "CLC"], ["code_06", "CLC"]],
                                 "12": [["code_06", "CLC"], ["code_12", "CLC"]],
@@ -60,12 +68,16 @@
     },
     {
       "check_ident": "change.v8",
-      "required": false
+      "required": false,
+      "parameters": {
+        "layers": ["change"]
+      }
     },
     {
       "check_ident": "change.v11",
       "required": false,
       "parameters": {
+        "layers": ["change"],
         "area_ha": 5,
         "code_regex": "^...(..)",
         "code_to_column_names": {"06": ["code_00", "code_06"],
@@ -75,29 +87,24 @@
     },
     {
       "check_ident": "change.v13",
-      "required": false
+      "required": false,
+      "parameters": {
+        "layers": ["change"]
+      }
     },
     {
       "check_ident": "change.v14",
       "required": false,
       "parameters": {
+        "layers": ["change"],
         "code_colnames": ["change"]
-      }
-    },
-    {
-      "check_ident": "status.v1_clc",
-      "required": true,
-      "parameters": {
-        "filename_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
-        "layer_prefix_regex": "^{countrycode:s}/clc",
-        "layer_name_regex": "^{countrycode:s}/clc(06|12|18)_{countrycode:s}$",
-        "layer_count": 2
       }
     },
     {
       "check_ident": "status.v2",
       "required": true,
       "parameters": {
+        "layers": ["reference", "initial"],
         "formats": [".gdb"]
       }
     },
@@ -105,6 +112,7 @@
       "check_ident": "status.v3",
       "required": true,
       "parameters": {
+        "layers": ["reference", "initial"],
         "attribute_regexes": ["id", "code_(06|12|18)", "area_ha", "remark"]
       }
     },
@@ -112,17 +120,22 @@
       "check_ident": "status.v4",
       "required": true,
       "parameters": {
+        "layers": ["reference", "initial"],
         "epsg": [2462, 31287, 3812, 3908, 32634, 32635, 3765, 32636, 5514, 25832, 25833, 5316, 3301, 3067, 2154, 2154, 32620, 32620, 32622, 32738, 32740, 6204, 31466, 31467, 31468, 31469, 27700, 29903, 3109, 3108, 2100, 23700, 5325, 2157, 32632, 32633, 32634, 3909, 3059, 2056, 3346, 2169, 23033, 25834, 28992, 25832, 25833, 25834, 25835, 25836, 2180, 3763, 5014, 5015, 5016, 3844, 25834, 5514, 3912, 32628, 25829, 25830, 25831, 3006, 2056, 3035]
       }
     },
     {
       "check_ident": "status.v_import2pg",
-      "required": true
+      "required": true,
+      "parameters": {
+        "layers": ["reference", "initial"]
+      }
     },
     {
       "check_ident": "status.v5",
       "required": false,
       "parameters": {
+        "layers": ["reference", "initial"],
         "unique_keys": ["id"]
       }
     },
@@ -130,6 +143,7 @@
       "check_ident": "status.v6",
       "required": false,
       "parameters": {
+        "layers": ["reference", "initial"],
         "code_regex": "^...(..)",
         "code_to_column_defs": {"06": [["code_06", "CLC"]],
                                 "12": [["code_12", "CLC"]],
@@ -138,24 +152,32 @@
     },
     {
       "check_ident": "status.v8",
-      "required": false
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial"]
+      }
     },
     {
       "check_ident": "status.v11",
       "required": false,
       "parameters": {
+        "layers": ["reference", "initial"],
         "area_ha": 25,
         "border_exception": true
       }
     },
     {
       "check_ident": "status.v13",
-      "required": false
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial"]
+      }
     },
     {
       "check_ident": "status.v14",
       "required": false,
       "parameters": {
+        "layers": ["reference", "initial"],
         "code_regex": "^...(..)",
         "code_to_column_names": {"06": ["code_06"],
                                  "12": ["code_12"],

@@ -77,10 +77,11 @@ class TestV1_clc(VectorCheckTestCase):
         super().setUp()
         self.params.update({"unzip_dir": TEST_DATA_DIR.joinpath("vector", "clc"),
                             "country_codes": ["cz", "sk", "mt"],
+                            "campaign_years": ["2006", "2012"],
                             "filename_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
-                            "layer_prefix_regex": "^{countrycode:s}/clc",
-                            "layer_name_regex": "^{countrycode:s}/clc(06|12|18)_{countrycode:s}$",
-                            "layer_count": 2})
+                            "reference_layer_regex": "^{country_code:s}/clc{reference_year_tail:s}_{country_code:s}$",
+                            "initial_layer_regex": "^{country_code:s}/clc{initial_year_tail:s}_{country_code:s}$",
+                            "change_layer_regex": "^{country_code:s}/cha{reference_year_tail:s}_{country_code:s}$"})
 
     def test(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
@@ -88,22 +89,17 @@ class TestV1_clc(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual(2, len(status.params["layer_defs"]))
-        self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["layer_0"]["src_filepath"].name)
-        self.assertEqual("clc06_MT", status.params["layer_defs"]["layer_0"]["src_layer_name"])
-        self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["layer_1"]["src_filepath"].name)
-        self.assertEqual("clc12_MT", status.params["layer_defs"]["layer_1"]["src_layer_name"])
+        self.assertEqual(3, len(status.params["layer_defs"]))
+        self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
+        self.assertEqual("clc12_MT", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["initial"]["src_filepath"].name)
+        self.assertEqual("clc06_MT", status.params["layer_defs"]["initial"]["src_layer_name"])
+        self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["change"]["src_filepath"].name)
+        self.assertEqual("cha12_MT", status.params["layer_defs"]["change"]["src_layer_name"])
 
-    def test_mismatched_prefix_aborts(self):
+    def test_mismatched_regex_aborts(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
-        self.params["layer_prefix_regex"] = "^{countrycode:s}/cha"
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("aborted", status.status)
-
-    def test_mismatched_count_aborts(self):
-        from qc_tool.wps.vector_check.v1_clc import run_check
-        self.params["layer_count"] = 1
+        self.params["initial_layer_regex"] = "^{country_code:s}/xxx{initial_year_tail:s}_{country_code:s}$"
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
