@@ -11,11 +11,11 @@ def run_check(params, status):
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*") if path.is_file() and path.suffix.lower() == ".shp"]
     if len(shp_filepaths) == 0:
         status.aborted()
-        status.add_message("Can not find a shapefile in the delivery.")
+        status.add_message("Can not find any shapefile in the delivery.")
         return
     if len(shp_filepaths) != 1:
         status.aborted()
-        status.add_message("There are more than one shapefile found in the delivery:"
+        status.add_message("More than one shapefile found in the delivery:"
                            " {:s}.".format(", ".join(path.name for path in shp_filepaths)))
         return
 

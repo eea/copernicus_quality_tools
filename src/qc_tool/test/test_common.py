@@ -13,8 +13,9 @@ class TestCommon(TestCase):
         product_definition = load_product_definition("clc")
         self.assertIn("checks", product_definition)
         self.assertLess(1, len(product_definition["checks"]))
-        self.assertEqual({"check_ident": "change.v2",
-                          "parameters": {"layers": ["change"], "formats": [".gdb"]},
+        self.assertEqual({"check_ident": "v2",
+                          "parameters": {"layers": ["reference", "initial", "change"],
+                                         "formats": [".gdb"]},
                           "required": True},
                          product_definition["checks"][2])
 
@@ -30,14 +31,14 @@ class TestCommon(TestCase):
         self.assertEqual("clc", status["product_ident"])
         self.assertEqual("CORINE Land Cover", status["description"])
         self.assertLess(4, len(status["checks"]))
-        self.assertEqual("change.v2", status["checks"][2]["check_ident"])
+        self.assertEqual("v2", status["checks"][2]["check_ident"])
         self.assertEqual("File format is correct.", status["checks"][2]["description"])
         self.assertTrue(status["checks"][1]["required"])
         self.assertFalse(status["checks"][1]["system"])
         self.assertIsNone(status["checks"][1]["status"])
         self.assertIsNone(status["checks"][1]["messages"])
-        self.assertEqual("change.v_import2pg", status["checks"][5]["check_ident"])
-        self.assertTrue(status["checks"][5]["system"])
+        self.assertEqual("v_import2pg", status["checks"][6]["check_ident"])
+        self.assertTrue(status["checks"][6]["system"])
 
 class TestCommonWithConfig(TestCase):
     def setUp(self):

@@ -81,7 +81,8 @@ class TestV1_clc(VectorCheckTestCase):
                             "filename_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
                             "reference_layer_regex": "^{country_code:s}/clc{reference_year_tail:s}_{country_code:s}$",
                             "initial_layer_regex": "^{country_code:s}/clc{initial_year_tail:s}_{country_code:s}$",
-                            "change_layer_regex": "^{country_code:s}/cha{reference_year_tail:s}_{country_code:s}$"})
+                            "change_layer_regex": "^{country_code:s}/cha{reference_year_tail:s}_{country_code:s}$",
+                            "boundary_dir": TEST_DATA_DIR.joinpath("boundary")})
 
     def test(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
@@ -89,14 +90,15 @@ class TestV1_clc(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual(3, len(status.params["layer_defs"]))
-        print(status)
+        self.assertEqual(4, len(status.params["layer_defs"]))
         self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("clc12_MT", status.params["layer_defs"]["reference"]["src_layer_name"])
         self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["initial"]["src_filepath"].name)
         self.assertEqual("clc06_MT", status.params["layer_defs"]["initial"]["src_layer_name"])
         self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["change"]["src_filepath"].name)
         self.assertEqual("cha12_MT", status.params["layer_defs"]["change"]["src_layer_name"])
+        self.assertEqual("boundary_mt.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
+        self.assertEqual("boundary_mt", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
     def test_mismatched_regex_aborts(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
@@ -444,14 +446,17 @@ class TestV11(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
-                                                       "src_layer_name": "clc12_mt"}},
-                            "layers": ["layer_0"],
+        boundary_filepath = TEST_DATA_DIR.joinpath("boundary", "vector", "boundary_mt.shp")
+        self.params.update({"layer_defs": {"reference": {"src_filepath": gdb_dir,
+                                                         "src_layer_name": "clc12_mt"},
+                                           "boundary": {"src_filepath": boundary_filepath,
+                                                        "src_layer_name": "boundary_mt"}},
+                            "layers": ["reference", "boundary"],
                             "area_ha": 25,
-                            "border_source_layer": "clc12_mt",
                             "border_exception": True})
         status = self.status_class()
         import_check(self.params, status)
+        self.params["layers"] = ["reference"]
 
     def test_small_mmu(self):
         from qc_tool.wps.vector_check.v11 import run_check

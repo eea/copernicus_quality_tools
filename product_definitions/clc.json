@@ -17,94 +17,10 @@
       }
     },
     {
-      "check_ident": "change.v2",
+      "check_ident": "v2",
       "required": true,
       "parameters": {
-        "layers": ["change"],
-        "formats": [".gdb"]
-      }
-    },
-    {
-      "check_ident": "change.v3",
-      "required": true,
-      "parameters": {
-        "layers": ["change"],
-        "attribute_regexes": ["id", "code_(06|12|18)", "change", "chtype", "area_ha", "remark"]
-      }
-    },
-    {
-      "check_ident": "change.v4",
-      "required": true,
-      "parameters": {
-        "layers": ["change"],
-        "epsg": [2462, 31287, 3812, 3908, 32634, 32635, 3765, 32636, 5514, 25832, 25833, 5316, 3301, 3067, 2154, 2154, 32620, 32620, 32622, 32738, 32740, 6204, 31466, 31467, 31468, 31469, 27700, 29903, 3109, 3108, 2100, 23700, 5325, 2157, 32632, 32633, 32634, 3909, 3059, 2056, 3346, 2169, 23033, 25834, 28992, 25832, 25833, 25834, 25835, 25836, 2180, 3763, 5014, 5015, 5016, 3844, 25834, 5514, 3912, 32628, 25829, 25830, 25831, 3006, 2056]
-      }
-    },
-    {
-      "check_ident": "change.v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["change"]
-      }
-    },
-    {
-      "check_ident": "change.v5",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "unique_keys": ["id"]
-      }
-    },
-    {
-      "check_ident": "change.v6",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "code_regex": "^...(..)",
-        "code_to_column_defs": {"06": [["code_00", "CLC"], ["code_06", "CLC"]],
-                                "12": [["code_06", "CLC"], ["code_12", "CLC"]],
-                                "18": [["code_12", "CLC"], ["code_18", "CLC"]]}
-      }
-    },
-    {
-      "check_ident": "change.v8",
-      "required": false,
-      "parameters": {
-        "layers": ["change"]
-      }
-    },
-    {
-      "check_ident": "change.v11",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "area_ha": 5,
-        "code_regex": "^...(..)",
-        "code_to_column_names": {"06": ["code_00", "code_06"],
-				 "12": ["code_06", "code_12"],
-				 "18": ["code_12", "code_18"]}
-      }
-    },
-    {
-      "check_ident": "change.v13",
-      "required": false,
-      "parameters": {
-        "layers": ["change"]
-      }
-    },
-    {
-      "check_ident": "change.v14",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "code_colnames": ["change"]
-      }
-    },
-    {
-      "check_ident": "status.v2",
-      "required": true,
-      "parameters": {
-        "layers": ["reference", "initial"],
+        "layers": ["reference", "initial", "change"],
         "formats": [".gdb"]
       }
     },
@@ -117,25 +33,33 @@
       }
     },
     {
-      "check_ident": "status.v4",
+      "check_ident": "change.v3",
       "required": true,
       "parameters": {
-        "layers": ["reference", "initial"],
+        "layers": ["change"],
+        "attribute_regexes": ["id", "code_(06|12|18)", "change", "chtype", "area_ha", "remark"]
+      }
+    },
+    {
+      "check_ident": "v4",
+      "required": true,
+      "parameters": {
+          "layers": ["reference", "initial", "change"],
         "epsg": [2462, 31287, 3812, 3908, 32634, 32635, 3765, 32636, 5514, 25832, 25833, 5316, 3301, 3067, 2154, 2154, 32620, 32620, 32622, 32738, 32740, 6204, 31466, 31467, 31468, 31469, 27700, 29903, 3109, 3108, 2100, 23700, 5325, 2157, 32632, 32633, 32634, 3909, 3059, 2056, 3346, 2169, 23033, 25834, 28992, 25832, 25833, 25834, 25835, 25836, 2180, 3763, 5014, 5015, 5016, 3844, 25834, 5514, 3912, 32628, 25829, 25830, 25831, 3006, 2056, 3035]
       }
     },
     {
-      "check_ident": "status.v_import2pg",
+      "check_ident": "v_import2pg",
       "required": true,
       "parameters": {
-        "layers": ["reference", "initial"]
+        "layers": ["reference", "initial", "change", "boundary"]
       }
     },
     {
-      "check_ident": "status.v5",
+      "check_ident": "v5",
       "required": false,
       "parameters": {
-        "layers": ["reference", "initial"],
+        "layers": ["reference", "initial", "change"],
         "unique_keys": ["id"]
       }
     },
@@ -151,10 +75,21 @@
       }
     },
     {
-      "check_ident": "status.v8",
+      "check_ident": "change.v6",
       "required": false,
       "parameters": {
-        "layers": ["reference", "initial"]
+        "layers": ["change"],
+        "code_regex": "^...(..)",
+        "code_to_column_defs": {"06": [["code_00", "CLC"], ["code_06", "CLC"]],
+                                "12": [["code_06", "CLC"], ["code_12", "CLC"]],
+                                "18": [["code_12", "CLC"], ["code_18", "CLC"]]}
+      }
+    },
+    {
+      "check_ident": "v8",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
       }
     },
     {
@@ -167,10 +102,22 @@
       }
     },
     {
-      "check_ident": "status.v13",
+      "check_ident": "change.v11",
       "required": false,
       "parameters": {
-        "layers": ["reference", "initial"]
+        "layers": ["change"],
+        "area_ha": 5,
+        "code_regex": "^...(..)",
+        "code_to_column_names": {"06": ["code_00", "code_06"],
+				 "12": ["code_06", "code_12"],
+				 "18": ["code_12", "code_18"]}
+      }
+    },
+    {
+      "check_ident": "v13",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
       }
     },
     {
@@ -182,6 +129,14 @@
         "code_to_column_names": {"06": ["code_06"],
                                  "12": ["code_12"],
                                  "18": ["code_18"]}
+      }
+    },
+    {
+      "check_ident": "change.v14",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "code_colnames": ["change"]
       }
     }
   ]

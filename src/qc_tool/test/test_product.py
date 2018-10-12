@@ -35,22 +35,24 @@ class Test_clc(TestCase):
     def setUp(self):
         super().setUp()
         load_all_check_functions()
+        from qc_tool.common import CONFIG
+        CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundary")
 
-    def test_malta(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_status = dispatch(str(uuid4()), "user_name", filepath, "clc", [])
-        self.assertEqual("change.v2", job_status["checks"][2]["check_ident"])
-        self.assertEqual("ok", job_status["checks"][2]["status"],
-                         "Malta should pass the checks for the product clc.status.")
-
-    def test_malta_all_ok(self):
+    def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_status = dispatch(str(uuid4()),
                               "user_name",
                               filepath,
                               "clc",
-                              ["status.v5", "status.v6", "status.v8", "status.v11", "status.v13", "status.v14",
-                               "change.v5", "change.v6", "change.v8", "change.v11", "change.v13", "change.v14"])
+                              ["v5",
+                               "status.v6",
+                               "change.v6",
+                               "v8",
+                               "status.v11",
+                               "change.v11",
+                               "v13",
+                               "status.v14",
+                               "change.v14"])
 
         statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]
         checks_not_ok = [check["check_ident"] for check in job_status["checks"] if check["status"] != "ok"]

@@ -18,7 +18,7 @@ def run_check(params, status):
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
     if len(gdb_dirs) > 1:
         status.aborted()
-        status.add_message("There are more than one geodatabase found in the delivery:"
+        status.add_message("More than one geodatabase found in the delivery:"
                            " {:s}.".format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
 

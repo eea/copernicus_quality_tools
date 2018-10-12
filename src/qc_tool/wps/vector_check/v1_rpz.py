@@ -13,7 +13,7 @@ def run_check(params, status):
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*") if path.is_file() and path.suffix.lower() == ".shp"]
     if len(shp_filepaths) == 0:
         status.aborted()
-        status.add_message("Can not find a shapefile in the delivery.")
+        status.add_message("Can not find any shapefile in the delivery.")
         return
 
     # Filter out shp filepaths by areacodes.
@@ -22,11 +22,11 @@ def run_check(params, status):
     matched_shp_filepaths = [shp_filepath for shp_filepath in shp_filepaths if filename_regex.search(shp_filepath.name)]
     if len(matched_shp_filepaths) == 0:
         status.aborted()
-        status.add_message("There is no shapefile having name in accord with specification.")
+        status.add_message("Can not find a shapefile having name following product specification.")
         return
     if len(matched_shp_filepaths) != 1:
         status.aborted()
-        status.add_message("There are more than one shapfile having name in accord with specification:"
+        status.add_message("Found more than one shapefile having name following product specification:"
                            " {:s}.".format(", ".join(path.name for path in matched_shp_filepaths)))
         return
 

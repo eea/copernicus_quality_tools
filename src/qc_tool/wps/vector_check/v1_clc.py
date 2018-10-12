@@ -19,7 +19,7 @@ def run_check(params, status):
         return
     if len(gdb_dirs) > 1:
         status.aborted()
-        status.add_message("There are more than one geodatabase found in the delivery:"
+        status.add_message("More than one geodatabase found in the delivery:"
                            " {:s}.".format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
     gdb_dir = gdb_dirs[0]
@@ -45,7 +45,8 @@ def run_check(params, status):
 
     # Extract and check country code.
     country_code = mobj.group("country_code")
-    if country_code.lower() not in params["country_codes"]:
+    country_code = country_code.lower()
+    if country_code not in params["country_codes"]:
         status.aborted()
         status.add_message("Filename has illegal country code {:s}.".format(country_code))
         return
@@ -70,4 +71,18 @@ def run_check(params, status):
     layer_defs = builder.layer_defs
     for layer_def in layer_defs.values():
             layer_def["src_layer_name"] = layer_def["src_layer_name"].split("/")[-1]
+
+    # Find boundary layer.
+    bdir = params["boundary_dir"].joinpath("vector")
+    boundary_filepaths = [path for path in bdir.glob("**/boundary_{:s}.shp".format(country_code)) if path.is_file()]
+    if len(boundary_filepaths) == 0:
+        status.aborted()
+        status.add_message("Can not find boundary for country {:s} under directory {:s}.".format(country_code, str(bdir)))
+        return
+    if len(boundary_filepaths) > 1:
+        status.aborted()
+        status.add_message("More than one boundary found for country {:s}: {:s}.".format(country_code, ", ".join(str(p) for p in boundary_filepaths)))
+        return
+    layer_defs["boundary"] = {"src_filepath": boundary_filepaths[0], "src_layer_name": boundary_filepaths[0].stem}
+
     status.add_params({"layer_defs": layer_defs})

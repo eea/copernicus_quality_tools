@@ -14,6 +14,7 @@ from subprocess import run
 from sys import exc_info
 from traceback import format_exc
 
+from qc_tool.common import CONFIG
 from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import HASH_BUFFER_SIZE
 from qc_tool.common import STATUS_RUNNING_LABEL
@@ -142,6 +143,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
             job_params["tmp_dir"] = jobdir_manager.tmp_dir
             job_params["output_dir"] = jobdir_manager.output_dir
             job_params["filepath"] = filepath
+            job_params["boundary_dir"] = CONFIG["boundary_dir"]
 
             for check_nr, check in enumerate(check_suite):
 
