@@ -18,6 +18,21 @@
       }
     },
     {
+      "check_ident": "v4",
+      "required": true,
+      "parameters": {
+        "layers": ["n2k"],
+        "epsg": [3035]
+      }
+    },
+    {
+      "check_ident": "v_import2pg",
+      "required": true,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
       "check_ident": "v11",
       "required": false,
       "parameters": {
