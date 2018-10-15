@@ -18,41 +18,10 @@
       }
     },
     {
-      "check_ident": "boundary.v2",
+      "check_ident": "v2",
       "required": true,
       "parameters": {
-        "layers": ["boundary"],
-        "formats": [".gdb", ".shp"]
-      }
-    },
-    {
-      "check_ident": "boundary.v3",
-      "required": true,
-      "parameters": {
-        "layers": ["boundary"],
-        "attribute_regexes": ["country", "cities"]
-      }
-    },
-    {
-      "check_ident": "boundary.v4",
-      "required": true,
-      "parameters": {
-        "layers": ["boundary"],
-        "epsg": [3035]
-      }
-    },
-    {
-      "check_ident": "boundary.v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["boundary"]
-      }
-    },
-    {
-      "check_ident": "reference.v2",
-      "required": true,
-      "parameters": {
-        "layers": ["reference"],
+        "layers": ["reference", "boundary", "combined", "revised", "change"],
         "formats": [".gdb", ".shp"]
       }
     },
@@ -65,25 +34,57 @@
       }
     },
     {
-      "check_ident": "reference.v4",
+      "check_ident": "boundary.v3",
       "required": true,
       "parameters": {
-        "layers": ["reference"],
+        "layers": ["boundary"],
+        "attribute_regexes": ["country", "cities"]
+      }
+    },
+    {
+      "check_ident": "combined.v3",
+      "required": true,
+      "parameters": {
+        "layers": ["combined"],
+        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "code2012", "item2012", "prod_date", "ident", "shape_length", "shape_area"]
+      }
+    },
+    {
+      "check_ident": "revised.v3",
+      "required": true,
+      "parameters": {
+        "layers": ["revised"],
+        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "prod_date", "shape_length", "shape_area"]
+      }
+    },
+    {
+      "check_ident": "change.v3",
+      "required": true,
+      "parameters": {
+        "layers": ["change"],
+        "attribute_regexes": ["country", "cities", "fua_or_cit", "code(2006|2012)", "code(2012|2018)", "item(2006|2012)", "item(2012|2018)", "prod_date", "ident", "shape_length", "shape_area"]
+      }
+    },
+    {
+      "check_ident": "v4",
+      "required": true,
+      "parameters": {
+        "layers": ["reference", "boundary", "combined", "revised", "change"],
         "epsg": [3035]
       }
     },
     {
-      "check_ident": "reference.v_import2pg",
+      "check_ident": "v_import2pg",
       "required": true,
       "parameters": {
-        "layers": ["reference"]
+        "layers": ["reference", "boundary", "combined", "revised", "change"]
       }
     },
     {
-      "check_ident": "reference.v5",
+      "check_ident": "v5",
       "required": false,
       "parameters": {
-        "layers": ["reference"],
+        "layers": ["reference", "combined", "change"],
         "unique_keys": ["ident"]
       }
     },
@@ -98,10 +99,38 @@
       }
     },
     {
-      "check_ident": "reference.v8",
+      "check_ident": "combined.v6",
       "required": false,
       "parameters": {
-        "layers": ["reference"]
+        "layers": ["combined"],
+        "code_regex": "(ua2006)",
+        "code_to_column_defs": {"ua2006": [["code2006", "UA"], ["code2012", "UA"]]}
+      }
+    },
+    {
+      "check_ident": "revised.v6",
+      "required": false,
+      "parameters": {
+        "layers": ["revised"],
+        "code_regex": "(ua2006)",
+        "code_to_column_defs": {"ua2006": [["code2006", "UA"]]}
+      }
+    },
+    {
+      "check_ident": "change.v6",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "code_regex": "(.{16})$",
+        "code_to_column_defs": {"change_2006_2012": [["code2006", "UA"], ["code2012", "UA"]],
+                                "change_2012_2018": [["code2012", "UA"], ["code2018", "UA"]]}
+      }
+    },
+    {
+      "check_ident": "v8",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "combined", "revised", "change"]
       }
     },
     {
@@ -116,78 +145,6 @@
       }
     },
     {
-      "check_ident": "reference.v13",
-      "required": false,
-      "parameters": {
-        "layers": ["reference"]
-      }
-    },
-    {
-      "check_ident": "reference.v14",
-      "required": false,
-      "parameters": {
-        "layers": ["reference"],
-        "code_regex": "(ua2012|ua2018)",
-        "code_to_column_names": {"ua2012": ["code2012"],
-                                 "ua2018": ["code2018"]}
-      }
-    },
-    {
-      "check_ident": "combined.v2",
-      "required": true,
-      "parameters": {
-        "layers": ["combined"],
-        "formats": [".gdb", ".shp"]
-      }
-    },
-    {
-      "check_ident": "combined.v3",
-      "required": true,
-      "parameters": {
-        "layers": ["combined"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "code2012", "item2012", "prod_date", "ident", "shape_length", "shape_area"]
-      }
-    },
-    {
-      "check_ident": "combined.v4",
-      "required": true,
-      "parameters": {
-        "layers": ["combined"],
-        "epsg": [3035]
-      }
-    },
-    {
-      "check_ident": "combined.v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["combined"]
-      }
-    },
-    {
-      "check_ident": "combined.v5",
-      "required": false,
-      "parameters": {
-        "layers": ["combined"],
-        "unique_keys": ["ident"]
-      }
-    },
-    {
-      "check_ident": "combined.v6",
-      "required": false,
-      "parameters": {
-        "layers": ["combined"],
-        "code_regex": "(ua2006)",
-        "code_to_column_defs": {"ua2006": [["code2006", "UA"], ["code2012", "UA"]]}
-      }
-    },
-    {
-      "check_ident": "combined.v8",
-      "required": false,
-      "parameters": {
-        "layers": ["combined"]
-      }
-    },
-    {
       "check_ident": "combined.v11_ua",
       "required": false,
       "parameters": {
@@ -195,69 +152,6 @@
         "code_regex": "(ua2006)",
         "code_to_column_name": {"ua2006": "code2006"}
 
-      }
-    },
-    {
-      "check_ident": "combined.v13",
-      "required": false,
-      "parameters": {
-        "layers": ["combined"]
-      }
-    },
-    {
-      "check_ident": "combined.v14",
-      "required": false,
-      "parameters": {
-        "layers": ["combined"],
-        "code_regex": "(ua2006)",
-        "code_to_column_names": {"ua2006": ["code2006", "code2012"]}
-      }
-    },
-    {
-      "check_ident": "revised.v2",
-      "required": true,
-      "parameters": {
-        "layers": ["revised"],
-        "formats": [".gdb", ".shp"]
-      }
-    },
-    {
-      "check_ident": "revised.v3",
-      "required": true,
-      "parameters": {
-        "layers": ["revised"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "prod_date", "shape_length", "shape_area"]
-      }
-    },
-    {
-      "check_ident": "revised.v4",
-      "required": true,
-      "parameters": {
-        "layers": ["revised"],
-        "epsg": [3035]
-      }
-    },
-    {
-      "check_ident": "revised.v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["revised"]
-      }
-    },
-    {
-      "check_ident": "revised.v6",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"],
-        "code_regex": "(ua2006)",
-        "code_to_column_defs": {"ua2006": [["code2006", "UA"]]}
-      }
-    },
-    {
-      "check_ident": "revised.v8",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"]
       }
     },
     {
@@ -271,78 +165,6 @@
       }
     },
     {
-      "check_ident": "revised.v13",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"]
-      }
-    },
-    {
-      "check_ident": "revised.v14",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"],
-        "code_regex": "(ua2006)",
-        "code_to_column_names": {"ua2006": ["code2006"]}
-      }
-    },
-    {
-      "check_ident": "change.v2",
-      "required": true,
-      "parameters": {
-        "layers": ["change"],
-        "formats": [".gdb", ".shp"]
-      }
-    },
-    {
-      "check_ident": "change.v3",
-      "required": true,
-      "parameters": {
-        "layers": ["change"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code(2006|2012)", "code(2012|2018)", "item(2006|2012)", "item(2012|2018)", "prod_date", "ident", "shape_length", "shape_area"]
-      }
-    },
-    {
-      "check_ident": "change.v4",
-      "required": true,
-      "parameters": {
-        "layers": ["change"],
-        "epsg": [3035]
-      }
-    },
-    {
-      "check_ident": "change.v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["change"]
-      }
-    },
-    {
-      "check_ident": "change.v5",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "unique_keys": ["ident"]
-      }
-    },
-    {
-      "check_ident": "change.v6",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "code_regex": "(.{16})$",
-        "code_to_column_defs": {"change_2006_2012": [["code2006", "UA"], ["code2012", "UA"]],
-                                "change_2012_2018": [["code2012", "UA"], ["code2018", "UA"]]}
-      }
-    },
-    {
-      "check_ident": "change.v8",
-      "required": false,
-      "parameters": {
-        "layers": ["change"]
-      }
-    },
-    {
       "check_ident": "change.v11_ua",
       "required": false,
       "parameters": {
@@ -353,10 +175,38 @@
       }
     },
     {
-      "check_ident": "change.v13",
+      "check_ident": "v13",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": ["reference", "combined", "revised", "change"]
+      }
+    },
+    {
+      "check_ident": "reference.v14",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "code_regex": "(ua2012|ua2018)",
+        "code_to_column_names": {"ua2012": ["code2012"],
+                                 "ua2018": ["code2018"]}
+      }
+    },
+    {
+      "check_ident": "combined.v14",
+      "required": false,
+      "parameters": {
+        "layers": ["combined"],
+        "code_regex": "(ua2006)",
+        "code_to_column_names": {"ua2006": ["code2006", "code2012"]}
+      }
+    },
+    {
+      "check_ident": "revised.v14",
+      "required": false,
+      "parameters": {
+        "layers": ["revised"],
+        "code_regex": "(ua2006)",
+        "code_to_column_names": {"ua2006": ["code2006"]}
       }
     },
     {
