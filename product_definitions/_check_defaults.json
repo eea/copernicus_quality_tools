@@ -38,7 +38,7 @@
       }
     },
     "r2": {
-      "extensions": [".tif", ".clr", ".xml", ".tif.vat.dbf"]
+      "extensions": [".tif", ".tfw", ".xml|.tif.xml", ".tif.vat.dbf"]
     }
   }
 }
