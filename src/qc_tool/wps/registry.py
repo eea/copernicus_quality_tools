@@ -37,6 +37,7 @@ def load_all_check_functions():
     import qc_tool.wps.raster_check.r7
     import qc_tool.wps.raster_check.r8
     import qc_tool.wps.raster_check.r9
+    import qc_tool.wps.raster_check.r10
     import qc_tool.wps.raster_check.r11
     import qc_tool.wps.raster_check.r14
     import qc_tool.wps.raster_check.r15

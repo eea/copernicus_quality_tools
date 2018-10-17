@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
+from pathlib import Path
 import numpy
 from osgeo import gdal
 from osgeo import ogr
@@ -14,20 +13,70 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
+
     # get countrycode from filename
     filename = params["filepath"].name.lower()
 
-    # get geometry on mapped area
-    ma_ds = ogr.Open(params["mapped_area"])
-    ma_lyr = ma_ds.GetLayer()
-    ma_ft = [ft for ft in ma_lyr if ft.GetField("CNTR").lower() == params["country_code"]][0]
-    ma_geom = ma_ft.GetGeometryRef()
+    country_code = params["country_code"]
+    print("country_code: {:s}".format(country_code))
+
+    # get raster resolution from the raster file
+    ds = gdal.Open(str(params["filepath"]))
+    # get raster pixel size
+    gt = ds.GetGeoTransform()
+    resolution = abs(gt[1])
+
+    # Find the external boundary raster mask layer.
+    raster_boundary_dir = params["boundary_dir"].joinpath("raster")
+    mask_file = raster_boundary_dir.joinpath("mask_{:03d}m_{:s}.tif".format(resolution, country_code))
+    print(mask_file)
+    return
+
+    # FIXME we need to work with a boundary raster mask.
+    # the code below needs to be rewritten.
+    boundary_filepaths = [path for path in bdir.glob("**/boundary_{:s}.shp".format(country_code)) if path.is_file()]
+    if len(boundary_filepaths) == 0:
+        status.aborted()
+        status.add_message(
+            "Can not find boundary for country {:s} under directory {:s}.".format(country_code, str(bdir)))
+        return
+    if len(boundary_filepaths) > 1:
+        status.aborted()
+        status.add_message("More than one boundary found for country {:s}: {:s}.".format(country_code, ", ".join(
+            str(p) for p in boundary_filepaths)))
+        return
+    #layer_defs["boundary"] = {"src_filepath": boundary_filepaths[0], "src_layer_name": boundary_filepaths[0].stem}
+
+    boundary_filepath = boundary_filepaths[0]
+    boundary_ds = ogr.Open(str(boundary_filepath))
+    if boundary_ds is None:
+        status.aborted()
+        status.add_message("Boundary file {:s} for country {:s} has incorrect file format and cannot be opened.".format(
+            boundary_filepath.name, country_code
+        ))
+
+    # ma_ds = ogr.Open(params["mapped_area"])
+    boundary_poly = ogr.Geometry(ogr.wkbMultiPolygon)
+    boundary_layer = boundary_ds.GetLayer()
+
+    for idx, feat in enumerate(boundary_layer):
+        if feat.GetField("CNTR_ID").lower() == country_code:
+            boundary_poly.AddGeometry(feat.GetGeometryRef().Clone())
+
+    boundary_ft = [ft for ft in boundary_layer if ft.GetField("CNTR_ID").lower() == country_code]
+    ma_geom = boundary_ft.GetGeometryRef()
+
+    multipol = ogr.Geometry(ogr.wkbMultiPolygon)
+    for feat in boundary_ft:
+        poly = feat.GetGeometryRef()
+        if poly:
+            multipol.AddGeometry(feat.GetGeometryRef().Clone())
 
     # open raster data source
     ras_ds = gdal.Open(str(params["filepath"]))
 
     # transform mapped_area geometry into raster SRS
-    source_sr = ma_lyr.GetSpatialRef()
+    source_sr = boundary_layer.GetSpatialRef()
     target_sr = osr.SpatialReference()
     target_sr.ImportFromWkt(ras_ds.GetProjectionRef())
     coordTrans = osr.CoordinateTransformation(source_sr, target_sr)

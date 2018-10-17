@@ -37,7 +37,7 @@ class Test_Raster(TestCase):
     # High resolution forest type (FTY) - 20m
     def test_fty_020m(self):
         product_ident = "fty_020m"
-        filepath = self.raster_data_dir.joinpath(product_ident, "fty_2015_020m_mt_03035_d04_clip.zip")
+        filepath = self.raster_data_dir.joinpath(product_ident, "FTY_2015_020m_mt_03035_d04_clip.zip")
         self.check_idents.append("r11")
         job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
