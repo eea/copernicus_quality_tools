@@ -26,7 +26,28 @@ def run_check(params, status):
     status.set_status_property("reference_year", mobj.group("reference_year"))
 
     # Check for supplementary files.
+
+    # The extension can be specified as .clr or .tif.clr (.clr|.tif.clr)
     for ext in params["extensions"]:
-        other_filepath = params["filepath"].with_suffix(ext)
-        if not other_filepath.exists():
-            status.add_message("The '{:s}' file is missing.".format(other_filepath.name))
+        if "|" in ext:
+            ext_options = ext.split("|")
+        else:
+            ext_options = [ext]
+
+        expected_supplementary_files = [params["filepath"].with_suffix(ext_opt).name for ext_opt in ext_options]
+
+        found_files = []
+        if len(expected_supplementary_files) == 1:
+            expected_files_msg = expected_supplementary_files[0]
+        else:
+            expected_files_msg = " or ".join(expected_supplementary_files)
+
+        for ext2 in ext_options:
+            other_filepath = params["filepath"].with_suffix(ext2)
+            if other_filepath.exists():
+                found_files.append(other_filepath.name)
+
+        if len(found_files) == 0:
+            status.aborted()
+            status.add_message("The expected  file '{:s}' is missing.".format(expected_files_msg))
+            return
