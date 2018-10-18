@@ -14,11 +14,10 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
 
-    # get countrycode from filename
+    # country code is part of job params from r1
     filename = params["filepath"].name.lower()
 
     country_code = params["country_code"]
-    print("country_code: {:s}".format(country_code))
 
     # get raster resolution from the raster file
     ds = gdal.Open(str(params["filepath"]))
@@ -28,8 +27,7 @@ def run_check(params, status):
 
     # Find the external boundary raster mask layer.
     raster_boundary_dir = params["boundary_dir"].joinpath("raster")
-    mask_file = raster_boundary_dir.joinpath("mask_{:03d}m_{:s}.tif".format(resolution, country_code))
-    print(mask_file)
+    mask_file = raster_boundary_dir.joinpath("mask_{:03d}m_{:s}.tif".format(int(resolution), country_code))
     return
 
     # FIXME we need to work with a boundary raster mask.
@@ -45,7 +43,6 @@ def run_check(params, status):
         status.add_message("More than one boundary found for country {:s}: {:s}.".format(country_code, ", ".join(
             str(p) for p in boundary_filepaths)))
         return
-    #layer_defs["boundary"] = {"src_filepath": boundary_filepaths[0], "src_layer_name": boundary_filepaths[0].stem}
 
     boundary_filepath = boundary_filepaths[0]
     boundary_ds = ogr.Open(str(boundary_filepath))
@@ -55,7 +52,6 @@ def run_check(params, status):
             boundary_filepath.name, country_code
         ))
 
-    # ma_ds = ogr.Open(params["mapped_area"])
     boundary_poly = ogr.Geometry(ogr.wkbMultiPolygon)
     boundary_layer = boundary_ds.GetLayer()
 
@@ -64,7 +60,7 @@ def run_check(params, status):
             boundary_poly.AddGeometry(feat.GetGeometryRef().Clone())
 
     boundary_ft = [ft for ft in boundary_layer if ft.GetField("CNTR_ID").lower() == country_code]
-    ma_geom = boundary_ft.GetGeometryRef()
+    ma_geom = boundary_ft[0].GetGeometryRef()
 
     multipol = ogr.Geometry(ogr.wkbMultiPolygon)
     for feat in boundary_ft:
