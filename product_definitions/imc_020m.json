@@ -16,7 +16,7 @@
     },
     {
       "check_ident": "r2",
-      "required": false,
+      "required": true,
       "parameters": {
         "file_name_regex": "^imc_(?P<reference_year>[0-9]{4})_020m_(?P<country_code>.+)_[0-9]{5}.*.tif$"
       }
