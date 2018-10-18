@@ -22,7 +22,7 @@ class TestR2(RasterCheckTestCase):
         print(status)
         self.assertEqual("ok", status.status, "raster check r2 should pass")
         self.assertEqual("mt", status.params["country_code"])
-        self.assertEqual("2015", status.status_properties["reference_year"])
+        self.assertEqual("2015", status.properties["reference_year"])
 
 
 class TestR11(RasterCheckTestCase):

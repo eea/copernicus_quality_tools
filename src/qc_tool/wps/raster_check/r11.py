@@ -32,13 +32,12 @@ def run_check(params, status):
 
     # (2) import the data into a GRASS mapset named PERMANENT
     mapset_path = location_path.joinpath("PERMANENT")
-    p2 = subprocess.run(["grass72",
-              str(mapset_path),
-              "--exec",
-              "r.in.gdal",
-                         "input={:s}".format(str(params["filepath"])),
-              "output=inpfile"],
-             check=True)
+    p2 = subprocess.run([GRASS_VERSION,
+            str(mapset_path),
+            "--exec",
+            "r.external",
+            "input={:s}".format(str(params["filepath"])),
+            "output=srcfile"], check=True)
     if p2.returncode != 0:
         status.add_message("GRASS GIS error: cannot import raster from {:s}".format(params["filepath"].name))
         return
@@ -50,9 +49,9 @@ def run_check(params, status):
               "--exec",
               "r.reclass.area",
               "--verbose",
-              "input=inpfile",
+              "input=srcfile",
               "output=lessmmu_raster",
-              "value={:f}".format(mmu_limit_ha),
+              "value={:.1f}".format(mmu_limit_ha),
               "mode=lesser",
               "method=reclass"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -106,7 +105,7 @@ def run_check(params, status):
     except BaseException as e:
         status.add_message("GRASS GIS error or OGR error."
                            " The shapefile {:s} cannot be opened."
-                           " Exception: {:s}".format(str(lessmmu_shp_path, str(e))))
+                           " Exception: {:s}".format(str(lessmmu_shp_path), str(e)))
         return
 
     lyr = ds_lessmmu.GetLayer()
