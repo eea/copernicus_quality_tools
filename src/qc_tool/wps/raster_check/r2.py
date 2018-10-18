@@ -11,6 +11,7 @@ def run_check(params, status):
     filename = params["filepath"].name.lower()
     mobj = re.match(params["file_name_regex"], filename)
     if mobj is None:
+        status.aborted()
         status.add_message("File name does not conform to the naming convention.")
         return
 

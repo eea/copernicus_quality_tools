@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?><gmd:MD_Metadata xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://schemas.opengis.net/iso/19139/20060504/gmd/gmd.xsd" xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" xmlns:xlink="http://www.w3.org/1999/xlink">
+<gmd:fileIdentifier>
+<gco:CharacterString>30788ac2-76d4-4639-a079-ba0f0c9ef03f</gco:CharacterString>
+</gmd:fileIdentifier>
+<gmd:language>
+<gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2/" codeListValue="eng">eng</gmd:LanguageCode>
+</gmd:language>
+<gmd:characterSet>
+<gmd:MD_CharacterSetCode codeSpace="ISOTC211/19115" codeListValue="utf8" codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_CharacterSetCode">utf8</gmd:MD_CharacterSetCode>
+</gmd:characterSet>
+<gmd:hierarchyLevel>
+<gmd:MD_ScopeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset">dataset</gmd:MD_ScopeCode>
+</gmd:hierarchyLevel>
+<gmd:contact>
+<gmd:CI_ResponsibleParty>
+<gmd:organisationName>
+<gco:CharacterString>GAF AG</gco:CharacterString>
+</gmd:organisationName>
+<gmd:contactInfo>
+<gmd:CI_Contact>
+<gmd:address>
+<gmd:CI_Address>
+<gmd:deliveryPoint>
+<gco:CharacterString>Arnulfstrasse 199</gco:CharacterString>
+</gmd:deliveryPoint>
+<gmd:city>
+<gco:CharacterString>Munich</gco:CharacterString>
+</gmd:city>
+<gmd:postalCode>
+<gco:CharacterString>80634</gco:CharacterString>
+</gmd:postalCode>
+<gmd:country>
+<gco:CharacterString>Germany</gco:CharacterString>
+</gmd:country>
+<gmd:electronicMailAddress>
+<gco:CharacterString>copernicus@gaf.de</gco:CharacterString>
+</gmd:electronicMailAddress>
+</gmd:CI_Address>
+</gmd:address>
+</gmd:CI_Contact>
+</gmd:contactInfo>
+<gmd:role>
+<gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
+</gmd:role>
+</gmd:CI_ResponsibleParty>
+</gmd:contact>
+<gmd:dateStamp>
+<gco:Date>2018-05-07</gco:Date>
+</gmd:dateStamp>
+<gmd:metadataStandardName>
+<gco:CharacterString>ISO19115</gco:CharacterString>
+</gmd:metadataStandardName>
+<gmd:metadataStandardVersion>
+<gco:CharacterString>2003/Cor.1:2006</gco:CharacterString>
+</gmd:metadataStandardVersion>
+<gmd:referenceSystemInfo>
+<gmd:MD_ReferenceSystem>
+<gmd:referenceSystemIdentifier>
+<gmd:RS_Identifier>
+<gmd:code>
+<gco:CharacterString>http://www.opengis.net/def/crs/EPSG/0/3035</gco:CharacterString>
+</gmd:code>
+<gmd:codeSpace>
+<gco:CharacterString>INSPIRE RS registry</gco:CharacterString>
+</gmd:codeSpace>
+</gmd:RS_Identifier>
+</gmd:referenceSystemIdentifier>
+</gmd:MD_ReferenceSystem>
+</gmd:referenceSystemInfo>
+<gmd:identificationInfo>
+<gmd:MD_DataIdentification>
+<gmd:citation>
+<gmd:CI_Citation>
+<gmd:title>
+<gco:CharacterString>Copernicus High Resolution Layer Forest: Forest Type 2015 - FTY 2015 100m, version 1</gco:CharacterString>
+</gmd:title>
+<gmd:date>
+<gmd:CI_Date>
+<gmd:date>
+<gco:Date>2018-05-02</gco:Date>
+</gmd:date>
+<gmd:dateType>
+<gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="creation">creation</gmd:CI_DateTypeCode>
+</gmd:dateType>
+</gmd:CI_Date>
+</gmd:date>
+<gmd:identifier>
+<gmd:RS_Identifier>
+<gmd:code>
+<gco:CharacterString>FTY_2015_100m_eu_03035_d02_full.tif</gco:CharacterString>
+</gmd:code>
+<gmd:codeSpace>
+<gco:CharacterString>EU.EUROPA.ENVIRONMENT.LC.FTY.STATUS2015</gco:CharacterString>
+</gmd:codeSpace>
+</gmd:RS_Identifier>
+</gmd:identifier>
+</gmd:CI_Citation>
+</gmd:citation>
+<gmd:abstract>
+<gco:CharacterString>Framework service contract for the Copernicus Land monitoring services – High Resolution land cover characteristics for the 2015 reference year. Production of the geospatial products of the Copernicus land Continental component land monitoring service: Lot 2 - Forest products for EEA39. Forest Type layer in 100m spatial resolution and European projection for the reference year 2015 (+/- 1 year).</gco:CharacterString>
+</gmd:abstract>
+<gmd:pointOfContact>
+<gmd:CI_ResponsibleParty>
+<gmd:organisationName>
+<gco:CharacterString>GAF AG</gco:CharacterString>
+</gmd:organisationName>
+<gmd:contactInfo>
+<gmd:CI_Contact>
+<gmd:address>
+<gmd:CI_Address>
+<gmd:electronicMailAddress>
+<gco:CharacterString>copernicus@gaf.de</gco:CharacterString>
+</gmd:electronicMailAddress>
+</gmd:CI_Address>
+</gmd:address>
+</gmd:CI_Contact>
+</gmd:contactInfo>
+<gmd:role>
+<gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
+</gmd:role>
+</gmd:CI_ResponsibleParty>
+</gmd:pointOfContact>
+<gmd:resourceMaintenance>
+<gmd:MD_MaintenanceInformation>
+<gmd:maintenanceAndUpdateFrequency>
+<gmd:MD_MaintenanceFrequencyCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_MaintenanceFrequencyCode" codeListValue="asNeeded">asNeeded</gmd:MD_MaintenanceFrequencyCode>
+</gmd:maintenanceAndUpdateFrequency>
+</gmd:MD_MaintenanceInformation>
+</gmd:resourceMaintenance>
+<gmd:descriptiveKeywords>
+<gmd:MD_Keywords>
+<gmd:keyword>
+<gco:CharacterString>Land cover</gco:CharacterString>
+</gmd:keyword>
+<gmd:thesaurusName>
+<gmd:CI_Citation>
+<gmd:title>
+<gco:CharacterString>GEMET - INSPIRE themes, version 1.0</gco:CharacterString>
+</gmd:title>
+<gmd:date>
+<gmd:CI_Date>
+<gmd:date>
+<gco:Date>2008-06-01</gco:Date>
+</gmd:date>
+<gmd:dateType>
+<gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+</gmd:dateType>
+</gmd:CI_Date>
+</gmd:date>
+</gmd:CI_Citation>
+</gmd:thesaurusName>
+</gmd:MD_Keywords>
+</gmd:descriptiveKeywords>
+<gmd:resourceConstraints>
+<gmd:MD_Constraints>
+<gmd:useLimitation>
+<gco:CharacterString>no limitations to public access</gco:CharacterString>
+</gmd:useLimitation>
+</gmd:MD_Constraints>
+</gmd:resourceConstraints>
+<gmd:resourceConstraints>
+<gmd:MD_LegalConstraints>
+<gmd:accessConstraints>
+<gmd:MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions">otherRestrictions</gmd:MD_RestrictionCode>
+</gmd:accessConstraints>
+<gmd:otherConstraints>
+<gco:CharacterString>no limitation</gco:CharacterString>
+</gmd:otherConstraints>
+</gmd:MD_LegalConstraints>
+</gmd:resourceConstraints>
+<gmd:spatialResolution>
+<gmd:MD_Resolution>
+<gmd:distance>
+<gco:Distance uom="meter">100</gco:Distance>
+</gmd:distance>
+</gmd:MD_Resolution>
+</gmd:spatialResolution>
+<gmd:language>
+<gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2/" codeListValue="eng">eng</gmd:LanguageCode>
+</gmd:language>
+<gmd:topicCategory>
+<gmd:MD_TopicCategoryCode>environment</gmd:MD_TopicCategoryCode>
+</gmd:topicCategory>
+<gmd:extent>
+<gmd:EX_Extent>
+<gmd:geographicElement>
+<gmd:EX_GeographicBoundingBox>
+<gmd:westBoundLongitude>
+<gco:Decimal>-31.410</gco:Decimal>
+</gmd:westBoundLongitude>
+<gmd:eastBoundLongitude>
+<gco:Decimal>45.270</gco:Decimal>
+</gmd:eastBoundLongitude>
+<gmd:southBoundLatitude>
+<gco:Decimal>24.800</gco:Decimal>
+</gmd:southBoundLatitude>
+<gmd:northBoundLatitude>
+<gco:Decimal>71.410</gco:Decimal>
+</gmd:northBoundLatitude>
+</gmd:EX_GeographicBoundingBox>
+</gmd:geographicElement>
+<gmd:temporalElement>
+<gmd:EX_TemporalExtent>
+<gmd:extent>
+<gml:TimePeriod gml:id="IDcd5p2b3k-c3m7-434b-abc7-4421n4co79jd" xsi:type="gml:TimePeriodType">
+<gml:beginPosition>2014-06-14</gml:beginPosition>
+<gml:endPosition>2016-09-29</gml:endPosition>
+</gml:TimePeriod>
+</gmd:extent>
+</gmd:EX_TemporalExtent>
+</gmd:temporalElement>
+</gmd:EX_Extent>
+</gmd:extent>
+</gmd:MD_DataIdentification>
+</gmd:identificationInfo>
+<gmd:distributionInfo>
+<gmd:MD_Distribution>
+<gmd:distributionFormat>
+<gmd:MD_Format>
+<gmd:name>
+<gco:CharacterString>TIF</gco:CharacterString>
+</gmd:name>
+<gmd:version>
+<gco:CharacterString>unknown</gco:CharacterString>
+</gmd:version>
+</gmd:MD_Format>
+</gmd:distributionFormat>
+<gmd:transferOptions>
+<gmd:MD_DigitalTransferOptions>
+<gmd:onLine>
+<gmd:CI_OnlineResource>
+<gmd:linkage>
+<gmd:URL>http://www.eea.europa.eu</gmd:URL>
+</gmd:linkage>
+<gmd:protocol>
+<gco:CharacterString>WWW:LINK-1.0-http--link</gco:CharacterString>
+</gmd:protocol>
+<gmd:function>
+<gmd:CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="information">information</gmd:CI_OnLineFunctionCode>
+</gmd:function>
+</gmd:CI_OnlineResource>
+</gmd:onLine>
+</gmd:MD_DigitalTransferOptions>
+</gmd:transferOptions>
+</gmd:MD_Distribution>
+</gmd:distributionInfo>
+<gmd:dataQualityInfo>
+<gmd:DQ_DataQuality>
+<gmd:scope>
+<gmd:DQ_Scope>
+<gmd:level>
+<gmd:MD_ScopeCode codeListValue="dataset" codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_ScopeCode">dataset</gmd:MD_ScopeCode>
+</gmd:level>
+</gmd:DQ_Scope>
+</gmd:scope>
+<gmd:report>
+<gmd:DQ_DomainConsistency xsi:type="gmd:DQ_DomainConsistency_Type">
+<gmd:result>
+<gmd:DQ_ConformanceResult xsi:type="gmd:DQ_ConformanceResult_Type">
+<gmd:specification>
+<gmd:CI_Citation>
+<gmd:title>
+<gco:CharacterString>Commission Regulation (EU) No 1089/2010 of 23 November 2010 implementing Directive 2007/2/EC of the European Parliament and of the Council as regards interoperability of spatial data sets and services</gco:CharacterString>
+</gmd:title>
+<gmd:date>
+<gmd:CI_Date>
+<gmd:date>
+<gco:Date>2010-12-08</gco:Date>
+</gmd:date>
+<gmd:dateType>
+<gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+</gmd:dateType>
+</gmd:CI_Date>
+</gmd:date>
+</gmd:CI_Citation>
+</gmd:specification>
+<gmd:explanation>
+<gco:CharacterString>See the referenced specification</gco:CharacterString>
+</gmd:explanation>
+<gmd:pass>
+<gco:Boolean>true</gco:Boolean>
+</gmd:pass>
+</gmd:DQ_ConformanceResult>
+</gmd:result>
+</gmd:DQ_DomainConsistency>
+</gmd:report>
+<gmd:report>
+<gmd:DQ_DomainConsistency xsi:type="gmd:DQ_DomainConsistency_Type">
+<gmd:result>
+<gmd:DQ_ConformanceResult xsi:type="gmd:DQ_ConformanceResult_Type">
+<gmd:specification>
+<gmd:CI_Citation>
+<gmd:title>
+<gco:CharacterString>Copernicus land monitoring service – pan-European products, 2015 reference year High resolution layer forest (lot 2): definitions and product specifications; Forest product definitions RY2015 V0.5.docx</gco:CharacterString>
+</gmd:title>
+<gmd:date>
+<gmd:CI_Date>
+<gmd:date>
+<gco:Date>2016-10-03</gco:Date>
+</gmd:date>
+<gmd:dateType>
+<gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="revision">revision</gmd:CI_DateTypeCode>
+</gmd:dateType>
+</gmd:CI_Date>
+</gmd:date>
+</gmd:CI_Citation>
+</gmd:specification>
+<gmd:explanation>
+<gco:CharacterString>See the referenced specification</gco:CharacterString>
+</gmd:explanation>
+<gmd:pass>
+<gco:Boolean>true</gco:Boolean>
+</gmd:pass>
+</gmd:DQ_ConformanceResult>
+</gmd:result>
+</gmd:DQ_DomainConsistency>
+</gmd:report>
+<gmd:report>
+<gmd:DQ_DomainConsistency xsi:type="gmd:DQ_DomainConsistency_Type">
+<gmd:result>
+<gmd:DQ_ConformanceResult xsi:type="gmd:DQ_ConformanceResult_Type">
+<gmd:specification>
+<gmd:CI_Citation>
+<gmd:title>
+<gco:CharacterString>http://www.eea.europa.eu/about-us/tenders/eea-idm-r0-16-003</gco:CharacterString>
+</gmd:title>
+<gmd:date>
+<gmd:CI_Date>
+<gmd:date>
+<gco:Date>2016-03-09</gco:Date>
+</gmd:date>
+<gmd:dateType>
+<gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+</gmd:dateType>
+</gmd:CI_Date>
+</gmd:date>
+</gmd:CI_Citation>
+</gmd:specification>
+<gmd:explanation>
+<gco:CharacterString>See the referenced specification</gco:CharacterString>
+</gmd:explanation>
+<gmd:pass gco:nilReason="template"/>
+</gmd:DQ_ConformanceResult>
+</gmd:result>
+</gmd:DQ_DomainConsistency>
+</gmd:report>
+<gmd:lineage>
+<gmd:LI_Lineage>
+<gmd:statement>
+<gco:CharacterString>Semi-automatic classification of pre-processed multitemporal High Resolution (HR) satellite image data (Sentinel-2, Landsat 8) with reference year 2015 (+/- 1 year), using supervised and unsupervised elements, leading to scene-based initial land cover classifications. Performing of a time series analysis to extract tree cover and its dominant leaf type information (broadleaved and coniferous). Subsequently, interactive manual corrections of the derived tree cover mask have been performed and integrated to a seamless mosaic. The thereof derived Dominant Leaf Type (DLT) product has been intersected with the Tree Cover Density (TCD) product considering a 10% density threshold and subsequently filtered with a Minimum Mapping Unit (MMU) of 0.5 ha. The 20m Forest Type product has been finally aggregated to 100m considering the CORINE Land Cover (CLC) definition of broadleaved, coniferous and mixed forest. Trees under agricultural or urban use as provided by the Forest Additional Support Layer (FADSL) have been explicitly excluded to follow the forest definition of the Food and Agriculture Organization (FAO). Geometric accuracy (positioning scale): Less than one pixel according to ortho-rectified satellite image base delivered by ESA. Thematic accuracy: Determined by the accuracy of the source Tree Cover Density and Dominant Leaf Type in 20m spatial resolution. Quality assurance follows the ISO9000 standards for Quality Management and comprises of dedicated procedures of ongoing quality checks (QA breakpoints) during implementation of the production chain, in order to keep persistent control over the various stages of production, assure fitness-for-purpose of the end-products and that all quality requirements are fulfilled. Priority has been given to the target thematic accuracies to be achieved by each product, as well as to the issues of product consistency (spatial, thematic, temporal) and homogeneity. Quality Assessment: The quality assessment has been performed according to INSPIRE Data Specifications. The data quality elements considered are: (i) Completeness, (ii) Logical Consistency, (iv) Thematic Accuracy, (v) Temporal quality and (vi) Usability. Each of them (excl. the Thematic Accuracy hereafter) forms a section in the QA/QC Procedures.</gco:CharacterString>
+</gmd:statement>
+</gmd:LI_Lineage>
+</gmd:lineage>
+</gmd:DQ_DataQuality>
+</gmd:dataQualityInfo>
+</gmd:MD_Metadata>

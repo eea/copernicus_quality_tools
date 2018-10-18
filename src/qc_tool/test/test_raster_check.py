@@ -10,14 +10,19 @@ from qc_tool.test.helper import RasterCheckTestCase
 class TestR2(RasterCheckTestCase):
     def test_r2(self):
         from qc_tool.wps.raster_check.r2 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif"),
-                  "country_codes": ["cz", "sk", "si"],
-                  "extensions": [".tif", ".tfw", ".clr", ".xml", ".tif.vat.dbf"],
-                  "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_020m_(?P<country_code>.+)_[0-9]{5}.*.tif$"}
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster",
+                                                     "fty_100m",
+                                                     "fty_2015_100m_mt_03035_d02_clip",
+                                                     "fty_2015_100m_mt_03035_d02_clip.tif"),
+                  "country_codes": ["mt", "eu"],
+                  "extensions": [".tif", ".tfw", ".xml|.tif.xml", ".tif.vat.dbf"],
+                  "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$"}
         status = self.status_class()
         run_check(params, status)
-        print(status.messages)
+        print(status)
         self.assertEqual("ok", status.status, "raster check r2 should pass")
+        self.assertEqual("mt", status.params["country_code"])
+        self.assertEqual("2015", status.status_properties["reference_year"])
 
 
 class TestR11(RasterCheckTestCase):
