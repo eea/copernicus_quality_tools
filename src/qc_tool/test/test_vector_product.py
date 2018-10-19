@@ -12,25 +12,6 @@ from qc_tool.wps.dispatch import dispatch
 from qc_tool.wps.registry import load_all_check_functions
 
 
-class Test_fty_YYYY_020m(TestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
-
-    def test(self):
-        filepath = TEST_DATA_DIR.joinpath("raster", "fty", "fty_2015_020m_si_03035_d04_test.tif.zip")
-        job_status = dispatch(str(uuid4()), "user_name", filepath, "fty_YYYY_020m", ["r2", "r3", "r4", "r5"])
-        self.assertEqual("r1", job_status["checks"][1]["check_ident"])
-        self.assertEqual("ok", job_status["checks"][1]["status"],
-                         "Slovenia test file should pass check for the product fty_YYYY_020m.")
-
-    def test_bad_extension(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_status = dispatch(str(uuid4()), "user_name", filepath, "fty_YYYY_020m", [])
-        self.assertEqual("r_unzip", job_status["checks"][0]["check_ident"])
-        self.assertEqual("aborted", job_status["checks"][0]["status"])
-
-
 class Test_clc(TestCase):
     def setUp(self):
         super().setUp()

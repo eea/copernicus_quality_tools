@@ -349,21 +349,45 @@ class TestVImport2pg(VectorCheckTestCase):
 class TestV5(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
-        gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
-                                                       "src_layer_name": "clc12_mt"}},
-                            "layers": ["layer_0"],
-                            "product_code": "cha",
-                            "unique_keys": ["objectid"]})
-        status = self.status_class()
-        import_check(self.params, status)
+        self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
 
     def test(self):
         from qc_tool.wps.vector_check.v5 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mytable (fid integer, "
+                       "unique_1 varchar, unique_2 integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mytable (fid, unique_1, unique_2, wkb_geometry) VALUES "
+                       " (1, 'a', 33, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 'b', 34, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 'c', 35, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid"}},
+                            "layers": ["layer_0"],
+                            "unique_keys": ["unique_1", "unique_2"]})
         status = self.status_class()
         run_check(self.params, status)
+        print(status)
         self.assertEqual("ok", status.status)
+
+    def test_fail(self):
+        from qc_tool.wps.vector_check.v5 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mytable (fid integer, "
+                       "ident varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mytable (fid, ident, wkb_geometry) VALUES "
+                       " (1, 'a', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 'b', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 'b', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid"}},
+                            "layers": ["layer_0"],
+                            "unique_keys": ["ident"]})
+        status = self.status_class()
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(1, len(status.messages))
+        self.assertEqual(1, len(status.support_files))
 
 
 class TestV6(VectorCheckTestCase):
