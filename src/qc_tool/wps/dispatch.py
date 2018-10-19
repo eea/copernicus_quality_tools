@@ -218,6 +218,7 @@ class CheckStatus():
         self.status = "ok"
         self.messages = []
         self.error_table_names = []
+        self.support_files = []
         self.params = {}
         self.status_properties = {}
 
@@ -239,6 +240,9 @@ class CheckStatus():
     def add_error_table(self, error_table_name):
         self.error_table_names.append(error_table_name)
 
+    def add_support_file(self, support_filename):
+        self.support_files.append(support_filename)
+
     def add_params(self, params_dict):
         self.params.update(params_dict)
 
@@ -249,11 +253,13 @@ class CheckStatus():
         members_tpl = ("status={:s}"
                        ", messages={:s}"
                        ", error_table_names={:s}"
+                       ", support_files={:s}"
                        ", params={:s}"
                        ", status_properties={:s}")
         members = members_tpl.format(repr(self.status),
                                      repr(self.messages),
                                      repr(self.error_table_names),
+                                     repr(self.support_files),
                                      repr(self.params),
                                      repr(self.status_properties))
         ret = "{:s}({:s})".format(self.__class__.__name__, members)

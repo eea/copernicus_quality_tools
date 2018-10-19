@@ -5,6 +5,7 @@
 import re
 
 from qc_tool.wps.helper import do_layers
+from qc_tool.wps.helper import dump_failed_items
 from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.v11 import count_table
@@ -89,18 +90,14 @@ def run_check(params, status):
             failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_def["pg_layer_name"], failed_items_message)
             status.add_message(failed_message)
 
-            error_table_with_geom = error_table_name + "_shp"
-            sql = ("CREATE TABLE {error_table_with_geom} AS"
-                   " SELECT a.{fid_column}, b.wkb_geometry FROM {errors} a "
-                   " INNER JOIN {layer} b ON a.{fid_column} = b.{fid_column}")
+            error_filename = dump_failed_items(params["connection_manager"],
+                                               error_table_name,
+                                               layer_def["pg_fid_name"],
+                                               layer_def["pg_layer_name"],
+                                               params["output_dir"])
 
-            sql = sql.format(error_table_with_geom=error_table_with_geom,
-                             fid_column=layer_def["pg_fid_name"],
-                             errors=error_table_name,
-                             layer=layer_def["pg_layer_name"])
-            cursor.execute(sql)
-
-            status.add_error_table(error_table_with_geom)
+            status.add_support_file(error_filename)
+            status.add_error_table(error_table_name)
 
         if except_count == 0:
             drop_table(cursor, except_table_name)
@@ -108,4 +105,11 @@ def run_check(params, status):
             failed_items_message = get_failed_items_message(cursor, except_table_name, layer_def["pg_fid_name"])
             failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_def["pg_layer_name"], failed_items_message)
             status.add_message(failed_message, failed=False)
+
+            exception_filename = dump_failed_items(params["connection_manager"],
+                                                   except_table_name,
+                                                   layer_def["pg_fid_name"],
+                                                   layer_def["pg_layer_name"],
+                                                   params["output_dir"])
+            status.add_support_file(exception_filename)
             status.add_error_table(except_table_name)
