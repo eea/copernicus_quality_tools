@@ -384,7 +384,6 @@ class TestV5(VectorCheckTestCase):
                             "unique_keys": ["ident"]})
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("failed", status.status)
         self.assertEqual(1, len(status.messages))
         self.assertEqual(1, len(status.support_files))
@@ -450,20 +449,37 @@ class TestV6(VectorCheckTestCase):
 class TestV8(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
-        gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
-                                                       "src_layer_name": "clc12_mt"}},
-                            "layers": ["layer_0"]})
-        status = self.status_class()
-        import_check(self.params, status)
+        self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
 
     def test(self):
         from qc_tool.wps.vector_check.v8 import run_check
         status = self.status_class()
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mytable (fid integer, "
+                       "wkb_geometry geometry(Multipolygon, 4326));")
+        cursor.execute("INSERT INTO mytable "
+                       "VALUES (1, ST_Multi(ST_MakeEnvelope(0, 0, 1, 1, 4326))),"
+                       "       (3, ST_Multi(ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid"}},
+                            "layers": ["layer_0"]})
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
+    def test_fail(self):
+        from qc_tool.wps.vector_check.v8 import run_check
+        status = self.status_class()
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mytable (fid integer, wkb_geometry geometry(Multipolygon, 4326));")
+        cursor.execute("INSERT INTO mytable "
+                       "VALUES (1, ST_Union(ST_MakeEnvelope(0, 0, 1, 1, 4326), "
+                       "                    ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable", "pg_fid_name": "fid"}},
+                            "layers": ["layer_0"]})
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(1, len(status.support_files))
 
 class TestV11(VectorCheckTestCase):
     def setUp(self):
