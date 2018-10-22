@@ -392,8 +392,10 @@ class TestV5(VectorCheckTestCase):
 class TestV6(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
+        self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
+        self.params.update({"codes": {"CLC":['111','112'], "INTEGER_CODES":[1, 2, 3, 4]}})
 
-    def test_status_pass(self):
+    def test_string_codes(self):
         from qc_tool.wps.vector_check.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE xxx18_zz (fid integer, "
@@ -409,6 +411,41 @@ class TestV6(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
+
+    def test_integer_codes(self):
+        from qc_tool.wps.vector_check.v6 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE xxx12_zz (fid integer, "
+                       "code_12 integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO xxx12_zz VALUES (1, 2, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 3, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 4, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx12_zz",
+                                                       "pg_fid_name": "fid"}},
+                            "layers": ["layer_0"],
+                            "code_regex": "^...(..)",
+                            "code_to_column_defs": {"12": [["code_12", "INTEGER_CODES"]]}})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, len(status.support_files))
+
+    def test_integer_codes_fail(self):
+        from qc_tool.wps.vector_check.v6 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE xxx12_zz (fid integer, "
+                       "code_12 integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO xxx12_zz VALUES (1, 2, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 9999, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 9999, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx12_zz",
+                                                       "pg_fid_name": "fid"}},
+                            "layers": ["layer_0"],
+                            "code_regex": "^...(..)",
+                            "code_to_column_defs": {"12": [["code_12", "INTEGER_CODES"]]}})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
 
     def test_change_fail(self):
         from qc_tool.wps.vector_check.v6 import run_check
