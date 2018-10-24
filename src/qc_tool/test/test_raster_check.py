@@ -19,10 +19,9 @@ class TestR2(RasterCheckTestCase):
                   "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$"}
         status = self.status_class()
         run_check(params, status)
-        print(status)
         self.assertEqual("ok", status.status, "raster check r2 should pass")
         self.assertEqual("mt", status.params["country_code"])
-        self.assertEqual("2015", status.properties["reference_year"])
+        self.assertEqual("2015", status.status_properties["reference_year"])
 
 
 class TestR11(RasterCheckTestCase):

@@ -30,7 +30,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from qc_tool.common import CONFIG
-from qc_tool.common import compose_error_table_filepath
+from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
@@ -296,15 +296,15 @@ def get_result_json(request, job_uuid):
     return JsonResponse(job_status, safe=False)
 
 @login_required
-def get_error_table(request, job_uuid, error_table_filename):
-    error_table_filepath = compose_error_table_filepath(job_uuid, error_table_filename)
-    if error_table_filepath.suffix == "csv":
-        content = error_table_filepath.read_text()
+def get_attachment(request, job_uuid, attachment_filename):
+    attachment_filepath = compose_attachment_filepath(job_uuid, attachment_filename)
+    if attachment_filepath.suffix == "csv":
+        content = attachment_filepath.read_text()
         response = HttpResponse(content, content_type="text/csv")
     else:
-        response = HttpResponse(open(str(error_table_filepath), "rb"), content_type="application/zip")
+        response = HttpResponse(open(str(attachment_filepath), "rb"), content_type="application/zip")
 
-    response['Content-Disposition'] = 'attachment; filename="{:s}"'.format(error_table_filepath.name)
+    response['Content-Disposition'] = 'attachment; filename="{:s}"'.format(attachment_filepath.name)
     return response
 
 @login_required

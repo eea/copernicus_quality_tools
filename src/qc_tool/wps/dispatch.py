@@ -180,12 +180,12 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                 job_check_status["messages"] = check_status.messages
 
                 # Export error tables as zipped shapefile or csv.
-                job_check_status["error_table_filenames"] = []
+                job_check_status["attachment_filenames"] = []
                 for error_table_name in check_status.error_table_names:
                     error_table_filename = dump_error_table(job_params["connection_manager"],
-                                                                 error_table_name,
-                                                                 jobdir_manager.output_dir)
-                    job_check_status["error_table_filenames"].append(error_table_filename)
+                                                            error_table_name,
+                                                            jobdir_manager.output_dir)
+                    job_check_status["attachment_filenames"].append(error_table_filename)
 
                 # Update job status properties.
                 job_status.update(check_status.status_properties)
@@ -218,7 +218,7 @@ class CheckStatus():
         self.status = "ok"
         self.messages = []
         self.error_table_names = []
-        self.support_files = []
+        self.attachment_filenames = []
         self.params = {}
         self.status_properties = {}
 
@@ -240,8 +240,8 @@ class CheckStatus():
     def add_error_table(self, error_table_name):
         self.error_table_names.append(error_table_name)
 
-    def add_support_file(self, support_filename):
-        self.support_files.append(support_filename)
+    def add_attachment(self, filename):
+        self.attachment_filenames.append(filename)
 
     def add_params(self, params_dict):
         self.params.update(params_dict)
@@ -253,13 +253,13 @@ class CheckStatus():
         members_tpl = ("status={:s}"
                        ", messages={:s}"
                        ", error_table_names={:s}"
-                       ", support_files={:s}"
+                       ", attachment_filenames={:s}"
                        ", params={:s}"
                        ", status_properties={:s}")
         members = members_tpl.format(repr(self.status),
                                      repr(self.messages),
                                      repr(self.error_table_names),
-                                     repr(self.support_files),
+                                     repr(self.attachment_filenames),
                                      repr(self.params),
                                      repr(self.status_properties))
         ret = "{:s}({:s})".format(self.__class__.__name__, members)

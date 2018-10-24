@@ -366,7 +366,6 @@ class TestV5(VectorCheckTestCase):
                             "unique_keys": ["unique_1", "unique_2"]})
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("ok", status.status)
 
     def test_fail(self):
@@ -386,7 +385,7 @@ class TestV5(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
         self.assertEqual(1, len(status.messages))
-        self.assertEqual(1, len(status.support_files))
+        self.assertEqual(1, len(status.attachment_filenames))
 
 
 class TestV6(VectorCheckTestCase):
@@ -428,7 +427,6 @@ class TestV6(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.assertEqual(1, len(status.support_files))
 
     def test_integer_codes_fail(self):
         from qc_tool.wps.vector_check.v6 import run_check
@@ -446,6 +444,7 @@ class TestV6(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
+        self.assertEqual(1, len(status.attachment_filenames))
 
     def test_change_fail(self):
         from qc_tool.wps.vector_check.v6 import run_check
@@ -514,9 +513,8 @@ class TestV8(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable", "pg_fid_name": "fid"}},
                             "layers": ["layer_0"]})
         run_check(self.params, status)
-        print(status)
         self.assertEqual("failed", status.status)
-        self.assertEqual(1, len(status.support_files))
+        self.assertEqual(1, len(status.attachment_filenames))
 
 class TestV11(VectorCheckTestCase):
     def setUp(self):

@@ -117,7 +117,7 @@ def prepare_empty_job_status(product_ident):
                  "system": <>,
                  "status": <>,
                  "messages": <>,
-                 "error_table_filenames": <>}, ...]}
+                 "attachment_filenames": <>}, ...]}
     """
     filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
     product_definition = filepath.read_text()
@@ -141,7 +141,7 @@ def prepare_empty_job_status(product_ident):
                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
                       "status": None,
                       "messages": None,
-                      "error_table_filenames": None}
+                      "attachment_filenames": None}
         status["checks"].append(check_item)
     return status
 
@@ -166,10 +166,10 @@ def compose_wps_status_filepath(job_uuid):
     wps_status_filepath = CONFIG["wps_output_dir"].joinpath(wps_status_filename)
     return wps_status_filepath
 
-def compose_error_table_filepath(job_uuid, error_table_filename):
+def compose_attachment_filepath(job_uuid, filename):
     job_dir = compose_job_dir(job_uuid)
-    error_table_filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME).joinpath(error_table_filename)
-    return error_table_filepath
+    filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME).joinpath(filename)
+    return filepath
 
 def get_all_wps_uuids():
     status_document_regex = re.compile(r"[a-z0-9-]{36}\.xml")

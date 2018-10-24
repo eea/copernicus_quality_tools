@@ -96,7 +96,7 @@ def run_check(params, status):
                                                layer_def["pg_layer_name"],
                                                params["output_dir"])
 
-            status.add_support_file(error_filename)
+            status.add_attachment(error_filename)
             status.add_error_table(error_table_name)
 
         if except_count == 0:
@@ -111,5 +111,5 @@ def run_check(params, status):
                                                    layer_def["pg_fid_name"],
                                                    layer_def["pg_layer_name"],
                                                    params["output_dir"])
-            status.add_support_file(exception_filename)
+            status.add_attachment(exception_filename)
             status.add_error_table(except_table_name)

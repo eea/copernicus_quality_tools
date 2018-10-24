@@ -35,5 +35,5 @@ def run_check(params, status):
                                                    layer_def["pg_fid_name"],
                                                    layer_def["pg_layer_name"],
                                                    params["output_dir"])
-                status.add_support_file(report_filename)
+                status.add_attachment(report_filename)
                 status.add_error_table(error_table_name)

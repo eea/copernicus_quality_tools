@@ -83,8 +83,8 @@
                             <td class="danger">{{detail.description}}</td>
                             <td class="danger">{{detail.status}}</td>
                             <td class="danger">
-                                {% for error_filename in detail.error_table_filenames %}
-                                <a href="/error_table/{{ result.uuid }}/{{ error_filename }}">{{error_filename}}</a><br>
+                                {% for attachment_filename in detail.attachment_filenames %}
+                                <a href="/attachment/{{ result.uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
                                 {% endfor %}</td>
                             <td class="danger">{% for msg in detail.messages %}{{msg}}<br>{% endfor %}</td>
                             {% endif %}
