@@ -5,7 +5,6 @@
 import re
 
 from qc_tool.wps.helper import do_layers
-from qc_tool.wps.helper import dump_failed_items
 from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.vector_check.v11 import count_table
@@ -89,15 +88,7 @@ def run_check(params, status):
             failed_items_message = get_failed_items_message(cursor, error_table_name, layer_def["pg_fid_name"])
             failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_def["pg_layer_name"], failed_items_message)
             status.add_message(failed_message)
-
-            error_filename = dump_failed_items(params["connection_manager"],
-                                               error_table_name,
-                                               layer_def["pg_fid_name"],
-                                               layer_def["pg_layer_name"],
-                                               params["output_dir"])
-
-            status.add_attachment(error_filename)
-            status.add_error_table(error_table_name)
+            status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         if except_count == 0:
             drop_table(cursor, except_table_name)
@@ -105,11 +96,4 @@ def run_check(params, status):
             failed_items_message = get_failed_items_message(cursor, except_table_name, layer_def["pg_fid_name"])
             failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_def["pg_layer_name"], failed_items_message)
             status.add_message(failed_message, failed=False)
-
-            exception_filename = dump_failed_items(params["connection_manager"],
-                                                   except_table_name,
-                                                   layer_def["pg_fid_name"],
-                                                   layer_def["pg_layer_name"],
-                                                   params["output_dir"])
-            status.add_attachment(exception_filename)
-            status.add_error_table(except_table_name)
+            status.add_error_table(except_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])

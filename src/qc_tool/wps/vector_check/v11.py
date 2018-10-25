@@ -144,11 +144,11 @@ def run_check(params, status):
             failed_items_message = get_failed_items_message(cursor, error_table_name, layer_def["pg_fid_name"])
             failed_message = "The layer {:s} has polygons with area less then MMU in rows: {:s}.".format(layer_def["pg_layer_name"], failed_items_message)
             status.add_message(failed_message)
-            status.add_error_table(error_table_name)
+            status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
         if except_count == 0:
             drop_table(cursor, except_table_name)
         else:
             failed_items_message = get_failed_items_message(cursor, except_table_name, layer_def["pg_fid_name"])
             failed_message = "The layer {:s} has exceptional polygons with area less then MMU in rows: {:s}.".format(layer_nar_name, failed_items_message)
             status.add_message(failed_message, failed=False)
-            status.add_error_table(except_table_name)
+            status.add_error_table(except_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])

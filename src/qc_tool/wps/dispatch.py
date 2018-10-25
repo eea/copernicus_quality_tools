@@ -4,15 +4,14 @@
 import csv
 import hashlib
 import json
-import zipfile
 from contextlib import closing
 from contextlib import ExitStack
 from datetime import datetime
 from functools import partial
-from shutil import copyfile
 from subprocess import run
 from sys import exc_info
 from traceback import format_exc
+from zipfile import ZipFile
 
 from qc_tool.common import CONFIG
 from qc_tool.common import HASH_ALGORITHM
@@ -53,9 +52,8 @@ def compile_check_suite(product_ident, product_definition, optional_check_idents
     # Ensure passed optional checks take part in product.
     incorrect_check_idents = optional_check_idents - defined_optional_check_idents
     if len(incorrect_check_idents) > 0:
-        raise IncorrectCheckException("Incorrect checks passed.",
-                                      {"product_ident": product_ident,
-                                       "incorrect_check_idents": incorrect_check_idents})
+        raise QCException("Incorrect checks passed.", {"product_ident": product_ident,
+                                                       "incorrect_check_idents": incorrect_check_idents})
 
     # Compile check suite.
     skipped_idents = defined_optional_check_idents - optional_check_idents
@@ -64,54 +62,89 @@ def compile_check_suite(product_ident, product_definition, optional_check_idents
                    if check["required"] or check["check_ident"] in optional_check_idents]
     return check_suite, skipped_idents
 
-def dump_error_table(connection_manager, error_table_name, output_dir):
-
-    (dsn, schema) = connection_manager.get_dsn_schema()
+def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fid_name, output_dir):
     connection = connection_manager.get_connection()
-    sql = "SELECT * FROM geometry_columns WHERE f_table_schema='{:s}' AND f_table_name='{:s}'".format(
-        schema, error_table_name
-    )
-    cursor = connection.cursor()
-    cursor.execute(sql)
-    geometry_exists = cursor.fetchone() is not None
+    (dsn, schema) = connection_manager.get_dsn_schema()
+    conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
+    csv_filepath = output_dir.joinpath("{:s}.csv".format(error_table_name))
+    shp_filepath = output_dir.joinpath("{:s}.shp".format(error_table_name))
+    zip_filepath = output_dir.joinpath("{:s}.zip".format(error_table_name))
 
-    if geometry_exists:
-        cursor.close()
-        # the error table has a geometry column - it can be exported to shp
-        shp_filepath = output_dir.joinpath(error_table_name + ".shp")
-        export_cmd = [
-            "ogr2ogr",
-            "-f",
-            "ESRI Shapefile",
-            str(shp_filepath),
-            "PG:{:s} active_schema={:s}".format(dsn, schema),
-            error_table_name
-        ]
-        run(export_cmd)
+    # Extract column names of the error table.
+    with closing(connection.cursor()) as cursor:
+        cursor.execute("SELECT * FROM {:s};".format(error_table_name))
+        column_names = [column.name for column in cursor.description]
+        column_names.sort()
 
-        if not shp_filepath.exists():
-            raise FileNotFoundError("exported error shapefile {:s} does not exist!".format(str(shp_filepath)))
-        # one shapefile layer is composed of multiple files (shp, shx, dbf, prj)
-        # all required files <error_table_name>.shp, <error_table_name>.dbf, <error_table_name>.shx
-        # are added into one zip archive.
-        zip_filepath = output_dir.joinpath(error_table_name + ".zip")
-        files_to_zip = [f for f in output_dir.iterdir() if f.stem == error_table_name]
-        with zipfile.ZipFile(str(zip_filepath), "w") as zf:
-            for f in files_to_zip:
-                zf.write(str(f), error_table_name + "/" + f.name)
-        return zip_filepath.name
+    # Prepare sql command for ogr2ogr.
+    if len(column_names) == 0:
+        raise QCException("Error table {:s} has no column.".format(error_table_name))
+    if len(column_names) == 1:
+        # Error table contains one column of feature fids.
+        ogr2ogr_sql = ("SELECT *"
+                       " FROM {src_table_name:s}"
+                       " WHERE {pg_fid_name:s} IN"
+                        " (SELECT {column_0:s}"
+                         " FROM {error_table_name:s})"
+                       " ORDER BY {pg_fid_name:s};")
+        ogr2ogr_sql = ogr2ogr_sql.format(src_table_name=src_table_name,
+                                         pg_fid_name=pg_fid_name,
+                                         column_0=column_names[0],
+                                         error_table_name=error_table_name)
+    elif len(column_names) == 2:
+        # Error table contains two columns representing pairs of feature fids.
+        ogr2ogr_sql = ("SELECT *"
+                       " FROM {src_table_name:s}"
+                       " WHERE {pg_fid_name:s} IN"
+                        " (SELECT {column_0:s}"
+                         " FROM {error_table_name:s} "
+                         " UNION"
+                         " SELECT {column_1:s} "
+                         " FROM {error_table_name:s})"
+                       " ORDER BY {pg_fid_name:s};")
+        ogr2ogr_sql = ogr2ogr_sql.format(src_table_name=src_table_name,
+                                         pg_fid_name=pg_fid_name,
+                                         column_0=column_names[0],
+                                         column_1=column_names[1],
+                                         error_table_name=error_table_name)
     else:
-        # the error table does not have a geometry column - it can be exported to csv
-        sql = "SELECT * FROM {:s};".format(error_table_name)
-        cursor = connection.cursor()
+        raise QCException("Error table {:s} has unexpected columns: {:s}.".format(error_table_name,
+                                                                                  repr(column_names)))
+    # Export error table content into csv.
+    sql = "SELECT * FROM {:s} ORDER BY {:s};".format(error_table_name, ", ".join(column_names))
+    with closing(connection.cursor()) as cursor:
         cursor.execute(sql)
-        csv_filename = "{:s}.csv".format(error_table_name)
-        csv_filepath = output_dir.joinpath(csv_filename)
-        with open(str(csv_filepath), 'w') as csv_file:
+        with closing(open(str(csv_filepath), 'w')) as csv_file:
             csv_writer = csv.writer(csv_file)
             csv_writer.writerows(cursor.fetchall())
-        cursor.close()
-        return csv_filename
+
+    # Export error features into shp.
+    args = ["ogr2ogr",
+            "-f", "ESRI Shapefile",
+            "-sql", ogr2ogr_sql,
+            str(shp_filepath),
+            conn_string]
+    run(args)
+
+    # Gather all files to be zipped.
+    filepaths_to_zip = [f for f in output_dir.iterdir() if f.stem == error_table_name]
+
+    # Ensure csv and shp files are present.
+    if csv_filepath not in filepaths_to_zip:
+        raise QCException("Dumped csv file {:s} is missing.".format(csv_filepath))
+    if shp_filepath not in filepaths_to_zip:
+        raise QCException("Dumped shp file {:s} is missing.".format(shp_filepath))
+
+    # Zip the files.
+    with ZipFile(str(zip_filepath), "w") as zf:
+        for filepath in filepaths_to_zip:
+            zf.write(str(filepath), filepath.name)
+
+    # Remove zipped files.
+    for filepath in filepaths_to_zip:
+        filepath.unlink()
+
+    return zip_filepath.name
 
 def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents, update_status_func=None):
     with ExitStack() as exit_stack:
@@ -180,12 +213,14 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                 job_check_status["messages"] = check_status.messages
 
                 # Export error tables as zipped shapefile or csv.
-                job_check_status["attachment_filenames"] = []
-                for error_table_name in check_status.error_table_names:
-                    error_table_filename = dump_error_table(job_params["connection_manager"],
-                                                            error_table_name,
-                                                            jobdir_manager.output_dir)
-                    job_check_status["attachment_filenames"].append(error_table_filename)
+                job_check_status["attachment_filenames"] = check_status.attachment_filenames.copy()
+                for (error_table_name, src_table_name, pg_fid_name) in check_status.error_table_infos:
+                    attachment_filename = dump_error_table(job_params["connection_manager"],
+                                                           error_table_name,
+                                                           src_table_name,
+                                                           pg_fid_name,
+                                                           jobdir_manager.output_dir)
+                    job_check_status["attachment_filenames"].append(attachment_filename)
 
                 # Update job status properties.
                 job_status.update(check_status.status_properties)
@@ -209,7 +244,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
     return job_status
 
 
-class IncorrectCheckException(Exception):
+class QCException(Exception):
     pass
 
 
@@ -217,7 +252,7 @@ class CheckStatus():
     def __init__(self):
         self.status = "ok"
         self.messages = []
-        self.error_table_names = []
+        self.error_table_infos = []
         self.attachment_filenames = []
         self.params = {}
         self.status_properties = {}
@@ -237,8 +272,8 @@ class CheckStatus():
         if failed:
             self.failed()
 
-    def add_error_table(self, error_table_name):
-        self.error_table_names.append(error_table_name)
+    def add_error_table(self, error_table_name, src_table_name, pg_fid_name):
+        self.error_table_infos.append((error_table_name, src_table_name, pg_fid_name))
 
     def add_attachment(self, filename):
         self.attachment_filenames.append(filename)

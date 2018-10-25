@@ -19,7 +19,7 @@ SQL = ("CREATE TABLE {0:s} AS"
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
-        error_table_name = "{:s}_overlap_error".format(layer_def["pg_layer_name"])
+        error_table_name = "v13_{:s}_error".format(layer_def["pg_layer_name"])
         sql = SQL.format(error_table_name, layer_def["pg_fid_name"], layer_def["pg_layer_name"]);
 
         cursor.execute(sql)
@@ -29,4 +29,4 @@ def run_check(params, status):
             failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_def["pg_fid_name"])
             failed_message = "The layer {:s} has overlapping pairs in rows: {:s}.".format(layer_def["pg_layer_name"], failed_pairs_message)
             status.add_message(failed_message)
-            status.add_error_table(error_table_name)
+            status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])

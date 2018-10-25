@@ -385,7 +385,6 @@ class TestV5(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
         self.assertEqual(1, len(status.messages))
-        self.assertEqual(1, len(status.attachment_filenames))
 
 
 class TestV6(VectorCheckTestCase):
@@ -444,7 +443,6 @@ class TestV6(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.assertEqual(1, len(status.attachment_filenames))
 
     def test_change_fail(self):
         from qc_tool.wps.vector_check.v6 import run_check
@@ -514,7 +512,6 @@ class TestV8(VectorCheckTestCase):
                             "layers": ["layer_0"]})
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.assertEqual(1, len(status.attachment_filenames))
 
 class TestV11(VectorCheckTestCase):
     def setUp(self):

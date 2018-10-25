@@ -7,6 +7,7 @@ from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
+from qc_tool.common import compose_attachment_filepath
 from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
 from qc_tool.wps.registry import load_all_check_functions
@@ -174,3 +175,34 @@ class Test_ua_gdb(ProductTestCase):
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
+
+
+class Test_dump_error_table(ProductTestCase):
+    def setUp(self):
+        super().setUp()
+        load_all_check_functions()
+
+    def test(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
+        expected_check_statuses = {"v_unzip": "ok",
+                                   "v1_ua": "ok",
+                                   "v2": "ok",
+                                   "boundary.v3": "ok",
+                                   "reference.v3": "ok",
+                                   "v4": "ok",
+                                   "v_import2pg": "ok",
+                                   "v5": "skipped",
+                                   "v6": "skipped",
+                                   "v8": "skipped",
+                                   "v11_ua": "skipped",
+                                   "v13": "failed",
+                                   "v14": "skipped"}
+        job_status = dispatch(str(uuid4()),
+                              "user_name",
+                              filepath,
+                              "ua",
+                              ["v13"])
+        check_statuses = dict((check_status["check_ident"], check_status["status"]) for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
+        zip_filepath = compose_attachment_filepath(job_status["job_uuid"], "v13_at006l1_klagenfurt_ua2012_error.zip")
+        self.assertTrue(zip_filepath.is_file())
