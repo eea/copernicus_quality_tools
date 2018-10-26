@@ -8,7 +8,6 @@ from pathlib import Path, PurePath
 from psycopg2 import connect
 
 from qc_tool.common import CONFIG
-from qc_tool.common import DB_FUNCTION_SCHEMA_NAME
 from qc_tool.common import JOB_OUTPUT_DIRNAME
 from qc_tool.common import JOB_TMP_DIRNAME
 from qc_tool.common import compose_job_dir
@@ -36,7 +35,6 @@ class ConnectionException(Exception):
 
 
 class ConnectionManager():
-    func_schema_name = DB_FUNCTION_SCHEMA_NAME
     job_schema_name_tpl = "job_{:s}"
 
     def __init__(self, job_uuid, host, port, user, db_name, leave_schema):
@@ -67,15 +65,15 @@ class ConnectionManager():
         self.connection = connection
         self.connection.autocommit = True
 
-    def _create_schema(self):
+    def _create_job_schema(self):
         job_uuid = self.job_uuid.lower().replace("-", "")
         job_schema_name = self.job_schema_name_tpl.format(job_uuid)
         with closing(self.connection.cursor()) as cursor:
             cursor.execute("CREATE SCHEMA {:s};".format(job_schema_name))
             self.job_schema_name = job_schema_name
-            cursor.execute("SET search_path TO {:s}, {:s}, public;".format(job_schema_name, self.func_schema_name))
+            cursor.execute("SET search_path TO {:s}, public;".format(job_schema_name))
 
-    def _drop_schema(self):
+    def _drop_job_schema(self):
         with closing(self.connection.cursor()) as cursor:
             cursor.execute("DROP SCHEMA {:s} CASCADE;".format(self.job_schema_name))
             self.job_schema_name = None
@@ -90,14 +88,14 @@ class ConnectionManager():
             return self.connection
         self._create_connection()
         if self.job_schema_name is None:
-            self._create_schema()
+            self._create_job_schema()
         return self.connection
 
     def close(self):
         if not self.leave_schema and self.job_schema_name is not None:
             if not self._is_connected():
                 conn = self._create_connection()
-            self._drop_schema()
+            self._drop_job_schema()
         if self._is_connected():
             self.connection.close()
         self.connection = None

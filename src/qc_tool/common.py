@@ -13,8 +13,6 @@ QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
 PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 CHECK_DEFAULTS_FILEPATH = PRODUCT_DIR.joinpath("_check_defaults.json")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
-DB_FUNCTION_DIR = QC_TOOL_HOME.joinpath("src/qc_tool/wps/db_functions")
-DB_FUNCTION_SCHEMA_NAME = "qc_function"
 
 JOB_INPUT_DIRNAME = "input.d"
 JOB_OUTPUT_DIRNAME = "output.d"

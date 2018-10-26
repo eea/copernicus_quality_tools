@@ -10,15 +10,10 @@ RUN apt-get -y update \
     && add-apt-repository "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" \
     && wget --quiet --output-document=- https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt-get -y update \
-    && apt-get -y upgrade \
-    && apt-get -y install git
+    && apt-get -y upgrade
 
 # Install postgresql & postgis.
 RUN apt-get -y install postgresql-10-postgis-2.4
-
-# Install qc tool.
-RUN cd /usr/local/src \
-    && git clone https://github.com/eea/copernicus_quality_tools
 
 USER postgres
 
@@ -32,8 +27,6 @@ RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_too
     && echo "listen_addresses='*'" >>/etc/postgresql/10/main/postgresql.conf \
     && /etc/init.d/postgresql start \
     && psql --file=/usr/local/src/init_qc_tool_db.sql \
-    && cat /usr/local/src/copernicus_quality_tools/src/qc_tool/wps/db_functions/*.sql \
-       | psql --host=127.0.0.1 --dbname=qc_tool_db --username=qc_job --file=- \
     && /etc/init.d/postgresql stop
 
 VOLUME ["/var/log/postgresql"]

@@ -3,24 +3,18 @@
 
 import json
 from pathlib import Path
-from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
-from qc_tool.wps.registry import load_all_check_functions
 
 
-class Test_clc(TestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
+class Test_clc(ProductTestCase):
+    def test(self):
         from qc_tool.common import CONFIG
         CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundary")
-
-    def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_status = dispatch(str(uuid4()),
                               "user_name",
@@ -43,11 +37,7 @@ class Test_clc(TestCase):
                          "Checks {:s} do not have status ok.".format(",".join(checks_not_ok)))
 
 
-class Test_clc_status(TestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
-
+class Test_clc_status(ProductTestCase):
     def test_status_json(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_uuid = uuid4().hex
@@ -61,15 +51,11 @@ class Test_clc_status(TestCase):
 
 
 class Test_ua_shp(ProductTestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
+    def test(self):
         # FIXME:
         # Narva test zip should be removed while it fails in some checks.
         # The new test zip should pass all checks with ok status.
         self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
-
-    def test(self):
         expected_check_statuses = {"v_unzip": "ok",
                                    "v1_ua": "ok",
                                    "v2": "ok",
@@ -94,10 +80,6 @@ class Test_ua_shp(ProductTestCase):
 
 
 class Test_ua_gdb(ProductTestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
-
     def test_klagenfurt(self):
         # FIXME:
         # Klagenfurt test zip should be removed while it fails in some checks.
@@ -178,10 +160,6 @@ class Test_ua_gdb(ProductTestCase):
 
 
 class Test_dump_error_table(ProductTestCase):
-    def setUp(self):
-        super().setUp()
-        load_all_check_functions()
-
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
         expected_check_statuses = {"v_unzip": "ok",

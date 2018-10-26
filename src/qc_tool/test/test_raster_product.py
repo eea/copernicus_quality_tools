@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
+
 from unittest import TestCase
 from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
+from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
-from qc_tool.wps.registry import load_all_check_functions
 
-class Test_Raster(TestCase):
 
-    """
-    Helper function to display messages of aborted, failed or skipped checks in
-    case of test failure.
-    """
+class Test_Raster(ProductTestCase):
     def show_messages(self, job_status):
+        """
+        Helper function to display messages of aborted, failed or skipped checks in
+        case of test failure.
+        """
         checks_not_ok = [check for check in job_status["checks"] if check["status"] != "ok"]
         msg = ""
         for check in checks_not_ok:
@@ -25,7 +26,6 @@ class Test_Raster(TestCase):
 
     def setUp(self):
         super().setUp()
-        load_all_check_functions()
 
         self.maxDiff = None
         self.raster_data_dir = TEST_DATA_DIR.joinpath("raster")
