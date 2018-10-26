@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 
-from unittest import TestCase
-from uuid import uuid4
-
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
@@ -39,7 +36,7 @@ class Test_Raster(ProductTestCase):
         product_ident = "fty_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "FTY_2015_020m_mt_03035_d04_clip.zip")
         self.check_idents.append("r11")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -47,7 +44,7 @@ class Test_Raster(ProductTestCase):
     def test_fty_100m(self):
         product_ident = "fty_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "fty_2015_100m_mt_03035_d02_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -56,7 +53,7 @@ class Test_Raster(ProductTestCase):
         product_ident = "gra_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "GRA_2015_020m_mt_03035_V1_clip.zip")
         self.check_idents.append("r11")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -64,7 +61,7 @@ class Test_Raster(ProductTestCase):
     def test_gra_100m(self):
         product_ident = "gra_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "GRA_2015_100m_mt_03035_V1_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -72,7 +69,7 @@ class Test_Raster(ProductTestCase):
     def test_imc_020m(self):
         product_ident = "imc_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMC_1215_020m_mt_03035_d02_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -80,7 +77,7 @@ class Test_Raster(ProductTestCase):
     def test_imc_100m(self):
         product_ident = "imc_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMC_1215_100m_mt_03035_d02_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -88,7 +85,7 @@ class Test_Raster(ProductTestCase):
     def test_imd_020m(self):
         product_ident = "imd_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMD_2015_020m_mt_03035_d04_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -96,7 +93,7 @@ class Test_Raster(ProductTestCase):
     def test_imd_100m(self):
         product_ident = "imd_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMD_2015_100m_mt_03035_d02_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -104,7 +101,7 @@ class Test_Raster(ProductTestCase):
     def test_tcd_020m(self):
         product_ident = "tcd_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "TCD_2015_020m_mt_03035_d04_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -112,7 +109,7 @@ class Test_Raster(ProductTestCase):
     def test_tcd_100m(self):
         product_ident = "tcd_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "TCD_2015_100m_mt_03035_d03_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -120,7 +117,7 @@ class Test_Raster(ProductTestCase):
     def test_waw_020m(self):
         product_ident = "waw_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "WAW_2015_020m_mt_03035_d06_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))
 
@@ -128,6 +125,6 @@ class Test_Raster(ProductTestCase):
     def test_waw_100m(self):
         product_ident = "waw_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "WAW_2015_100m_mt_03035_d02_clip.zip")
-        job_status = dispatch(str(uuid4()), self.username, filepath, product_ident, self.check_idents)
+        job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
         self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
                         self.show_messages(job_status))

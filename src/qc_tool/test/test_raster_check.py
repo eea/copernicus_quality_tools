@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 
-from unittest import TestCase
-
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import RasterCheckTestCase
 

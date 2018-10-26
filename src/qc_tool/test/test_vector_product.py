@@ -3,7 +3,6 @@
 
 import json
 from pathlib import Path
-from uuid import uuid4
 
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.common import compose_attachment_filepath
@@ -16,7 +15,7 @@ class Test_clc(ProductTestCase):
         from qc_tool.common import CONFIG
         CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundary")
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_status = dispatch(str(uuid4()),
+        job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
                               "clc",
@@ -40,9 +39,8 @@ class Test_clc(ProductTestCase):
 class Test_clc_status(ProductTestCase):
     def test_status_json(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_uuid = uuid4().hex
-        status_filepath = Path("/mnt/qc_tool_volume/work/").joinpath("job_{:s}".format(job_uuid), "status.json")
-        job_status = dispatch(job_uuid, "user_name", filepath, "clc", [])
+        status_filepath = Path("/mnt/qc_tool_volume/work/").joinpath("job_{:s}".format(self.job_uuid), "status.json")
+        job_status = dispatch(self.job_uuid, "user_name", filepath, "clc", [])
         self.assertTrue(status_filepath.exists())
         job_status_from_file = status_filepath.read_text()
         job_status_from_file = json.loads(job_status_from_file)
@@ -69,7 +67,7 @@ class Test_ua_shp(ProductTestCase):
                                    "v11_ua": "failed",
                                    "v13": "ok",
                                    "v14": "ok"}
-        job_status = dispatch(str(uuid4()),
+        job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "ua",
@@ -98,7 +96,7 @@ class Test_ua_gdb(ProductTestCase):
                                    "v11_ua": "failed",
                                    "v13": "failed",
                                    "v14": "ok"}
-        job_status = dispatch(str(uuid4()),
+        job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
                               "ua",
@@ -135,7 +133,7 @@ class Test_ua_gdb(ProductTestCase):
                                    "combined.v14": "ok",
                                    "revised.v14": "ok",
                                    "change.v14": "ok"}
-        job_status = dispatch(str(uuid4()),
+        job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
                               "ua_with_change",
@@ -175,7 +173,7 @@ class Test_dump_error_table(ProductTestCase):
                                    "v11_ua": "skipped",
                                    "v13": "failed",
                                    "v14": "skipped"}
-        job_status = dispatch(str(uuid4()),
+        job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
                               "ua",
