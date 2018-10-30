@@ -14,16 +14,16 @@ from qc_tool.wps.vector_check.v11 import subtract_table
 from subprocess import run
 
 
-def create_all_breaking_mmu(cursor, pg_fid_name, pg_layer_name, error_table_name, code_colname):
+def create_all_breaking_mmu(cursor, pg_fid_name, pg_layer_name, error_table_name, code_column_name):
     sql = ("CREATE TABLE {0:s} AS"
            "  SELECT {1:s} FROM {2:s}"
            "  WHERE ({3:s} LIKE '1%'  AND {3:s} NOT LIKE '122%' AND shape_area < 2500)"
            "        OR ({3:s} NOT LIKE '1%' AND {3:s} NOT LIKE '9%' AND shape_area < 10000);")
-    sql = sql.format(error_table_name, pg_fid_name, pg_layer_name, code_colname)
+    sql = sql.format(error_table_name, pg_fid_name, pg_layer_name, code_column_name)
     cursor.execute(sql)
     return cursor.rowcount
 
-def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_name, error_table_name, except_table_name, code_colname):
+def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_name, error_table_name, except_table_name, code_column_name):
     """Subtracts polygons at boundary."""
     create_table(cursor, pg_fid_name, except_table_name, error_table_name)
 
@@ -45,7 +45,7 @@ def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_na
            "  SELECT {3:s} FROM ex_tr_boundary;")
     sql = sql.format(border_layer_name,
                      pg_layer_name,
-                     code_colname,
+                     code_column_name,
                      pg_fid_name,
                      error_table_name,
                      except_table_name)
@@ -63,23 +63,20 @@ def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_na
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
-        mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
-        code = mobj.group(1)
-        code_colname = params["code_to_column_name"][code]
         error_table_name = "{:s}_lessmmu_error".format(layer_def["pg_layer_name"])
         except_table_name = "{:s}_lessmmu_except".format(layer_def["pg_layer_name"])
         error_count = create_all_breaking_mmu(cursor,
                                               layer_def["pg_fid_name"],
                                               layer_def["pg_layer_name"],
                                               error_table_name,
-                                              code_colname)
+                                              params["code_column_name"])
         (error_count, except_count) = subtract_border_polygons(cursor,
                                                                params["layer_defs"]["boundary"]["pg_layer_name"],
                                                                layer_def["pg_fid_name"],
                                                                layer_def["pg_layer_name"],
                                                                error_table_name,
                                                                except_table_name,
-                                                               code_colname)
+                                                               params["code_column_name"])
 
         # Clean the tables.
         if error_count == 0:

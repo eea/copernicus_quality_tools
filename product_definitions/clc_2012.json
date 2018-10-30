@@ -119,10 +119,7 @@
       "parameters": {
         "layers": ["change"],
         "area_m2": 50000,
-        "code_regex": "^...(..)",
-        "code_to_column_names": {"06": ["code_00", "code_06"],
-				 "12": ["code_06", "code_12"],
-				 "18": ["code_12", "code_18"]}
+        "code_column_names": ["code_06", "code_12"]
       }
     },
     {

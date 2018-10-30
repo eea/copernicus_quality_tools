@@ -63,7 +63,7 @@ def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_na
     except_count = count_table(cursor, except_table_name)
     return (error_count, except_count)
 
-def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name, except_table_name, code_colname, area_m2):
+def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name, except_table_name, code_column_name, area_m2):
     """Subtracts polygons smaller than MMU which are part of dissolved polygons greater than MMU."""
     sql = ("WITH"
            "  all_dissolved AS ("
@@ -75,7 +75,7 @@ def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name
            "  FROM {0:s} lt INNER JOIN {4:s} et ON lt.{3:s} = et.{3:s}, big_dissolved "
            "  WHERE ST_Within(lt.wkb_geometry, big_dissolved.geom);")
     sql = sql.format(pg_layer_name,
-                     code_colname,
+                     code_column_name,
                      except_table_name,
                      pg_fid_name,
                      error_table_name,
@@ -95,13 +95,11 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):
-        if "code_regex" in params:
-            mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
-            code = mobj.group(1)
-            code_colnames = params["code_to_column_names"][code]
+        if "code_column_names" in params:
+            code_column_names = params["code_column_names"]
             border_exception = True
         else:
-            code_colnames = []
+            code_column_names = []
             border_exception = params["border_exception"]
 
         error_table_name = "{:s}_lessmmu_error".format(layer_def["pg_layer_name"])
@@ -126,13 +124,13 @@ def run_check(params, status):
                                                                    layer_def["pg_layer_name"],
                                                                    error_table_name,
                                                                    except_table_name)
-            for code_colname in code_colnames:
+            for code_column_name in code_column_names:
                 (error_count, except_count) = subtract_inner_polygons(cursor,
                                                                       layer_def["pg_fid_name"],
                                                                       layer_def["pg_layer_name"],
                                                                       error_table_name,
                                                                       except_table_name,
-                                                                      code_colname,
+                                                                      code_column_name,
                                                                       params["area_m2"])
 
         # Clean the tables.

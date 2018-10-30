@@ -112,44 +112,20 @@
       }
     },
     {
-      "check_ident": "reference.v11_ua",
+      "check_ident": "reference_change.v11_ua",
       "required": false,
       "parameters": {
-        "layers": ["reference"],
-        "code_regex": "(ua2012|ua2018)",
-        "code_to_column_name": {"ua2012": "code2012",
-                                "ua2018": "code2018"}
-
+        "layers": ["reference", "change"],
+        "code_column_name": "code2012"
       }
     },
     {
-      "check_ident": "combined.v11_ua",
+      "check_ident": "revised_combined.v11_ua",
       "required": false,
       "parameters": {
-        "layers": ["combined"],
-        "code_regex": "(ua2006)",
-        "code_to_column_name": {"ua2006": "code2006"}
+        "layers": ["revised", "combined"],
+        "code_column_name": "code2006"
 
-      }
-    },
-    {
-      "check_ident": "revised.v11_ua",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"],
-        "code_regex": "(ua2006)",
-        "code_to_column_name": {"ua2006": "code2006"}
-
-      }
-    },
-    {
-      "check_ident": "change.v11_ua",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "code_regex": "(.{16})$",
-        "code_to_column_name": {"change_2006_2012": "code2012",
-                                "change_2012_2018": "code2018"}
       }
     },
     {
