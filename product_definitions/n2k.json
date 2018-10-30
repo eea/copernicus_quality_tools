@@ -37,7 +37,7 @@
       "required": false,
       "parameters": {
         "layers": ["n2k"],
-        "area_ha": 0.5,
+        "area_m2": 5000,
         "border_exception": false
       }
     }

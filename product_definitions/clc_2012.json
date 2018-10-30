@@ -107,7 +107,7 @@
       "required": false,
       "parameters": {
         "layers": ["reference", "initial"],
-        "area_ha": 25,
+        "area_m2": 250000,
         "border_exception": true
       }
     },
@@ -116,7 +116,7 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "area_ha": 5,
+        "area_m2": 50000,
         "code_regex": "^...(..)",
         "code_to_column_names": {"06": ["code_00", "code_06"],
 				 "12": ["code_06", "code_12"],

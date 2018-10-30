@@ -75,7 +75,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "area_ha": 0.5,
+        "area_m2": 5000,
         "border_exception": false
       }
     },

@@ -30,13 +30,12 @@ def subtract_table(cursor, pg_fid_name, first_table, second_table):
     cursor.execute(sql)
     return cursor.rowcount
 
-def create_all_breaking_mmu(cursor, pg_fid_name, pg_layer_name, error_table_name, area_ha):
-    area_m = area_ha * 10000
+def create_all_breaking_mmu(cursor, pg_fid_name, pg_layer_name, error_table_name, area_m2):
     sql = ("CREATE TABLE {:s} AS"
            " SELECT {:s} FROM {:s}"
            " WHERE shape_area < %s;")
     sql = sql.format(error_table_name, pg_fid_name, pg_layer_name)
-    cursor.execute(sql, [area_m])
+    cursor.execute(sql, [area_m2])
     return cursor.rowcount
 
 def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_name, error_table_name, except_table_name):
@@ -64,9 +63,8 @@ def subtract_border_polygons(cursor, border_layer_name, pg_fid_name, pg_layer_na
     except_count = count_table(cursor, except_table_name)
     return (error_count, except_count)
 
-def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name, except_table_name, code_colname, area_ha):
+def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name, except_table_name, code_colname, area_m2):
     """Subtracts polygons smaller than MMU which are part of dissolved polygons greater than MMU."""
-    area_m = area_ha * 10000
     sql = ("WITH"
            "  all_dissolved AS ("
            "    SELECT (ST_Dump(ST_Union(wkb_geometry))).geom geom FROM {0:s} GROUP BY {1:s}),"
@@ -82,7 +80,7 @@ def subtract_inner_polygons(cursor, pg_fid_name, pg_layer_name, error_table_name
                      pg_fid_name,
                      error_table_name,
                      pg_layer_name)
-    cursor.execute(sql, [area_m])
+    cursor.execute(sql, [area_m2])
 
     # Delete an item from error table if it is in except table already.
     subtract_table(cursor, pg_fid_name, error_table_name, except_table_name)
@@ -113,7 +111,7 @@ def run_check(params, status):
                                                   layer_def["pg_fid_name"],
                                                   layer_def["pg_layer_name"],
                                                   error_table_name,
-                                                  params["area_ha"])
+                                                  params["area_m2"])
             except_count = 0
         else:
             except_table_name = "{:s}_lessmmu_except".format(layer_def["pg_layer_name"])
@@ -121,7 +119,7 @@ def run_check(params, status):
                                     layer_def["pg_fid_name"],
                                     layer_def["pg_layer_name"],
                                     error_table_name,
-                                    params["area_ha"])
+                                    params["area_m2"])
             (error_count, except_count) = subtract_border_polygons(cursor,
                                                                    params["layer_defs"]["boundary"]["pg_layer_name"],
                                                                    layer_def["pg_fid_name"],
@@ -135,7 +133,7 @@ def run_check(params, status):
                                                                       error_table_name,
                                                                       except_table_name,
                                                                       code_colname,
-                                                                      params["area_ha"])
+                                                                      params["area_m2"])
 
         # Clean the tables.
         if error_count == 0:
