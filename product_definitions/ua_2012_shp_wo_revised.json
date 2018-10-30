@@ -66,10 +66,7 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_regex": "(ua2006|ua2012|ua2018)$",
-        "code_to_column_defs": {"ua2006": [["code2006", "UA"]],
-                                "ua2012": [["code2012", "UA"]],
-                                "ua2018": [["code2018", "UA"]]}
+        "column_defs": [["code2012", "UA"]]
       }
     },
     {

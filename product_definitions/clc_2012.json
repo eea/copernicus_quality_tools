@@ -74,14 +74,19 @@
       }
     },
     {
-      "check_ident": "status.v6",
+      "check_ident": "reference.v6",
       "required": false,
       "parameters": {
-        "layers": ["reference", "initial"],
-        "code_regex": "^...(..)",
-        "code_to_column_defs": {"06": [["code_06", "CLC"]],
-                                "12": [["code_12", "CLC"]],
-                                "18": [["code_18", "CLC"]]}
+        "layers": ["reference"],
+        "column_defs": [["code_12", "CLC"]]
+      }
+    },
+    {
+      "check_ident": "initial.v6",
+      "required": false,
+      "parameters": {
+        "layers": ["initial"],
+        "column_defs": [["code_06", "CLC"]]
       }
     },
     {
@@ -89,10 +94,7 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "code_regex": "^...(..)",
-        "code_to_column_defs": {"06": [["code_00", "CLC"], ["code_06", "CLC"]],
-                                "12": [["code_06", "CLC"], ["code_12", "CLC"]],
-                                "18": [["code_12", "CLC"], ["code_18", "CLC"]]}
+        "column_defs": [["code_06", "CLC"], ["code_12", "CLC"]]
       }
     },
     {

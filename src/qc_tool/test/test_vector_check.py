@@ -402,8 +402,7 @@ class TestV6(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx18_zz",
                                                        "pg_fid_name": "fid"}},
                             "layers": ["layer_0"],
-                            "code_regex": "^...(..)",
-                            "code_to_column_defs": {"18": [["code_18", "CLC"]]}})
+                            "column_defs": [["code_18", "CLC"]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -419,8 +418,7 @@ class TestV6(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx12_zz",
                                                        "pg_fid_name": "fid"}},
                             "layers": ["layer_0"],
-                            "code_regex": "^...(..)",
-                            "code_to_column_defs": {"12": [["code_12", "INTEGER_CODES"]]}})
+                            "column_defs": [["code_12", "INTEGER_CODES"]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -436,8 +434,7 @@ class TestV6(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx12_zz",
                                                        "pg_fid_name": "fid"}},
                             "layers": ["layer_0"],
-                            "code_regex": "^...(..)",
-                            "code_to_column_defs": {"12": [["code_12", "INTEGER_CODES"]]}})
+                            "column_defs": [["code_12", "INTEGER_CODES"]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -453,8 +450,7 @@ class TestV6(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "cha18_xx",
                                                        "pg_fid_name": "fid"}},
                             "layers": ["layer_0"],
-                            "code_regex": "^...(..)",
-                            "code_to_column_defs": {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}})
+                            "column_defs": [["code_12", "CLC"], ["code_18", "CLC"]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -470,8 +466,7 @@ class TestV6(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "cha18_xx",
                                                        "pg_fid_name": "fid"}},
                             "layers": ["layer_0"],
-                            "code_regex": "^...(..)",
-                            "code_to_column_defs": {"18": [["code_12", "CLC"], ["code_18", "CLC"]]}})
+                            "column_defs": [["code_12", "CLC"], ["code_18", "CLC"]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)

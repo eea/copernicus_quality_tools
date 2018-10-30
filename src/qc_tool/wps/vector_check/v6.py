@@ -21,14 +21,7 @@ SQL = ("CREATE TABLE {0:s} AS"
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
-        if "code_regex" in params:
-            mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
-            code = mobj.group(1)
-            column_defs = params["code_to_column_defs"][code]
-        else:
-            column_defs = params["column_defs"]
-
-        for column_name, value_set_name in column_defs:
+        for column_name, value_set_name in params["column_defs"]:
             error_table_name = "{:s}_{:s}_validcodes_error".format(layer_def["pg_layer_name"], column_name)
             sql = SQL.format(error_table_name,
                              layer_def["pg_fid_name"],
