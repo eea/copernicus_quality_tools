@@ -28,7 +28,8 @@ class Test_clc(ProductTestCase):
                                "status.v11",
                                "change.v11",
                                "v13",
-                               "status.v14",
+                               "reference.v14",
+                               "initial.v14",
                                "change.v14"])
 
         statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]

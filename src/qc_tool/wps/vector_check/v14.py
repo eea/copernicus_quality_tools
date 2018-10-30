@@ -9,10 +9,10 @@ from qc_tool.wps.helper import get_failed_pairs_message
 from qc_tool.wps.registry import register_check_function
 
 
-def create_all_breaking_neighbcode(cursor, pg_fid_name, pg_layer_name, error_table_name, code_colnames, exclude_codes):
-    pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_colname) for code_colname in code_colnames)
-    exclude_clause = " AND ".join("ta.{0:s} NOT LIKE '{1:s}'".format(code_colname, exclude_code)
-                                  for code_colname in code_colnames
+def create_all_breaking_neighbcode(cursor, pg_fid_name, pg_layer_name, error_table_name, code_column_names, exclude_codes):
+    pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_column_name) for code_column_name in code_column_names)
+    exclude_clause = " AND ".join("ta.{0:s} NOT LIKE '{1:s}'".format(code_column_name, exclude_code)
+                                  for code_column_name in code_column_names
                                   for exclude_code in exclude_codes)
     if len(exclude_clause) > 0:
         exclude_clause = " AND " + exclude_clause
@@ -35,16 +35,14 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):
-        if "code_regex" in params:
-            mobj = re.search(params["code_regex"], layer_def["pg_layer_name"])
-            code = mobj.group(1)
-            code_colnames = params["code_to_column_names"][code]
-        else:
-            code_colnames = params["code_colnames"]
         exclude_codes = params.get("exclude_codes", [])
-
         error_table_name = "{:s}_neighbcode_error".format(layer_def["pg_layer_name"])
-        error_count = create_all_breaking_neighbcode(cursor, layer_def["pg_fid_name"], layer_def["pg_layer_name"], error_table_name, code_colnames, exclude_codes)
+        error_count = create_all_breaking_neighbcode(cursor,
+                                                     layer_def["pg_fid_name"],
+                                                     layer_def["pg_layer_name"],
+                                                     error_table_name,
+                                                     params["code_column_names"],
+                                                     exclude_codes)
         if error_count == 0:
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:

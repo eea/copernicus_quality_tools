@@ -140,18 +140,7 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_regex": "(ua2012|ua2018)",
-        "code_to_column_names": {"ua2012": ["code2012"],
-                                 "ua2018": ["code2018"]}
-      }
-    },
-    {
-      "check_ident": "combined.v14",
-      "required": false,
-      "parameters": {
-        "layers": ["combined"],
-        "code_regex": "(ua2006)",
-        "code_to_column_names": {"ua2006": ["code2006", "code2012"]}
+        "code_column_names": ["code2012"]
       }
     },
     {
@@ -159,8 +148,15 @@
       "required": false,
       "parameters": {
         "layers": ["revised"],
-        "code_regex": "(ua2006)",
-        "code_to_column_names": {"ua2006": ["code2006"]}
+        "code_column_names": ["code2006"]
+      }
+    },
+    {
+      "check_ident": "combined.v14",
+      "required": false,
+      "parameters": {
+        "layers": ["combined"],
+        "code_column_names": ["code2006", "code2012"]
       }
     },
     {
@@ -168,9 +164,7 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "code_regex": "(.{16})$",
-        "code_to_column_names": {"change_2006_2012": ["code2006", "code2012"],
-                                 "change_2012_2018": ["code2012", "code2018"]},
+        "code_column_names": ["code2006", "code2012"],
         "exclude_codes": ["122%"]
       }
     }

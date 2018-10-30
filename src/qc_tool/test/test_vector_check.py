@@ -592,7 +592,7 @@ class TestV14(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
                                                        "pg_fid_name": "fid"}},
                             "layers": ["layer_0"],
-                            "code_colnames": ["attr_1", "attr_2"]})
+                            "code_column_names": ["attr_1", "attr_2"]})
 
     def test_disjoint(self):
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"

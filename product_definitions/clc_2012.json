@@ -130,14 +130,19 @@
       }
     },
     {
-      "check_ident": "status.v14",
+      "check_ident": "reference.v14",
       "required": false,
       "parameters": {
-        "layers": ["reference", "initial"],
-        "code_regex": "^...(..)",
-        "code_to_column_names": {"06": ["code_06"],
-                                 "12": ["code_12"],
-                                 "18": ["code_18"]}
+        "layers": ["reference"],
+        "code_column_names": ["code_12"]
+      }
+    },
+    {
+      "check_ident": "initial.v14",
+      "required": false,
+      "parameters": {
+        "layers": ["initial"],
+        "code_column_names": ["code_06"]
       }
     },
     {
@@ -145,7 +150,7 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "code_colnames": ["change"]
+        "code_column_names": ["change"]
       }
     }
   ]

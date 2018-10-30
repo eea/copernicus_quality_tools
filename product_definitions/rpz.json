@@ -91,8 +91,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "product_code": "rpz",
-        "code_colnames": ["MAES_4"]
+        "code_column_names": ["MAES_4"]
       }
     }
   ]
