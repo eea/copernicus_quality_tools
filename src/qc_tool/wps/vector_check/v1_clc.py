@@ -11,6 +11,10 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 
 @register_check_function(__name__)
 def run_check(params, status):
+    # Fix reference year.
+    reference_year = params["reference_year"]
+    status.set_status_property("reference_year", reference_year)
+
     # Find gdb directory.
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
     if len(gdb_dirs) == 0:
@@ -31,18 +35,6 @@ def run_check(params, status):
         status.add_message("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))
         return
 
-    # Extract and check reference year.
-    #
-    # Reference year must not fall in the first campaign.
-    # The first campaign is there in order to be able to get the year of initial layer.
-    reference_year = mobj.group("reference_year")
-    if reference_year not in params["campaign_years"][1:]:
-        status.aborted()
-        status.add_message("Reference year {:s} does not fall in"
-                           " campaign years {!r:s}.".format(reference_year, params["campaign_years"][1:]))
-        return
-    status.set_status_property("reference_year", reference_year)
-
     # Extract and check country code.
     country_code = mobj.group("country_code")
     country_code = country_code.lower()
@@ -57,9 +49,7 @@ def run_check(params, status):
         builder.add_layer_info(gdb_dir, layer_name)
 
     # Build layer defs.
-    builder.set_tpl_params(country_code=country_code, reference_year_tail=reference_year[-2:])
-    initial_year = params["campaign_years"][params["campaign_years"].index(reference_year) - 1]
-    builder.set_tpl_params(initial_year_tail=initial_year[-2:])
+    builder.set_tpl_params(country_code=country_code)
     builder.extract_layer_def(params["reference_layer_regex"], "reference")
     builder.extract_layer_def(params["change_layer_regex"], "change")
     builder.extract_layer_def(params["initial_layer_regex"], "initial")

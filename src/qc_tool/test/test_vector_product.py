@@ -6,6 +6,7 @@ from pathlib import Path
 
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.common import compose_attachment_filepath
+from qc_tool.common import compose_job_status_filepath
 from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
 
@@ -18,7 +19,7 @@ class Test_clc(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
-                              "clc",
+                              "clc_2012",
                               ["v5",
                                "status.v6",
                                "change.v6",
@@ -39,8 +40,8 @@ class Test_clc(ProductTestCase):
 class Test_clc_status(ProductTestCase):
     def test_status_json(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        status_filepath = Path("/mnt/qc_tool_volume/work/").joinpath("job_{:s}".format(self.job_uuid), "status.json")
-        job_status = dispatch(self.job_uuid, "user_name", filepath, "clc", [])
+        status_filepath = compose_job_status_filepath(self.job_uuid)
+        job_status = dispatch(self.job_uuid, "user_name", filepath, "clc_2012", [])
         self.assertTrue(status_filepath.exists())
         job_status_from_file = status_filepath.read_text()
         job_status_from_file = json.loads(job_status_from_file)

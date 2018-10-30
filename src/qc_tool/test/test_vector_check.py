@@ -75,11 +75,11 @@ class TestV1_clc(VectorCheckTestCase):
         super().setUp()
         self.params.update({"unzip_dir": TEST_DATA_DIR.joinpath("vector", "clc"),
                             "country_codes": ["cz", "sk", "mt"],
-                            "campaign_years": ["2006", "2012"],
-                            "filename_regex": "^clc(?P<reference_year>[0-9]{4})_(?P<country_code>.+).gdb$",
-                            "reference_layer_regex": "^{country_code:s}/clc{reference_year_tail:s}_{country_code:s}$",
-                            "initial_layer_regex": "^{country_code:s}/clc{initial_year_tail:s}_{country_code:s}$",
-                            "change_layer_regex": "^{country_code:s}/cha{reference_year_tail:s}_{country_code:s}$",
+                            "reference_year": "2012",
+                            "filename_regex": "^clc2012_(?P<country_code>.+).gdb$",
+                            "reference_layer_regex": "^{country_code:s}/clc12_{country_code:s}$",
+                            "initial_layer_regex": "^{country_code:s}/clc06_{country_code:s}$",
+                            "change_layer_regex": "^{country_code:s}/cha12_{country_code:s}$",
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundary")})
 
     def test(self):
@@ -100,7 +100,7 @@ class TestV1_clc(VectorCheckTestCase):
 
     def test_mismatched_regex_aborts(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
-        self.params["initial_layer_regex"] = "^{country_code:s}/xxx{initial_year_tail:s}_{country_code:s}$"
+        self.params["initial_layer_regex"] = "^{country_code:s}/xxx_{country_code:s}$"
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
