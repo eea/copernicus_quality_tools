@@ -115,15 +115,15 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
-        self.params.update({"campaign_years": ["2006", "2012", "2018"],
-                            "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
-                            "boundary_layer_regex": "^boundary{reference_year:s}_",
-                            "revised_layer_regex": "_ua{revised_year:s}_revised$",
-                            "combined_layer_regex": "_ua{revised_year:s}_{reference_year:s}$",
-                            "change_layer_regex": "_change_{revised_year:s}_{reference_year:s}$"})
+        self.params.update({"reference_year": "2012",
+                            "reference_layer_regex": "_ua2012$",
+                            "boundary_layer_regex": "^boundary2012_",
+                            "revised_layer_regex": "_ua2006_revised$",
+                            "combined_layer_regex": "_ua2006_2012$",
+                            "change_layer_regex": "_change_2006_2012$"})
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_ua import run_check
+        from qc_tool.wps.vector_check.v1_ua_gdb import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -141,7 +141,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["change"]["src_layer_name"])
 
     def test_non_existing_aborts(self):
-        from qc_tool.wps.vector_check.v1_ua import run_check
+        from qc_tool.wps.vector_check.v1_ua_gdb import run_check
         self.params["boundary_layer_regex"] = "non-existing-layer-name"
         status = self.status_class()
         run_check(self.params, status)
@@ -157,12 +157,12 @@ class TestV1_ua_shp(VectorCheckTestCase):
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
-        self.params.update({"campaign_years": ["2006", "2012", "2018"],
-                            "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
-                            "boundary_layer_regex": "^boundary{reference_year:s}_"})
+        self.params.update({"reference_year": "2012",
+                            "reference_layer_regex": "_ua2012$",
+                            "boundary_layer_regex": "^boundary2012_"})
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_ua import run_check
+        from qc_tool.wps.vector_check.v1_ua_shp import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -268,7 +268,7 @@ class TestV4_shp(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
-        from qc_tool.wps.vector_check.v1_ua import run_check as layer_check
+        from qc_tool.wps.vector_check.v1_ua_shp import run_check as layer_check
 
         zip_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
@@ -277,9 +277,9 @@ class TestV4_shp(VectorCheckTestCase):
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
-        self.params.update({"campaign_years": ["2006", "2012", "2018"],
-                            "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
-                            "boundary_layer_regex": "^boundary{reference_year:s}_"})
+        self.params.update({"reference_year": "2012",
+                            "reference_layer_regex": "_ua2012$",
+                            "boundary_layer_regex": "^boundary2012_"})
         status = self.status_class()
         layer_check(self.params, status)
         self.params["layer_defs"] = status.params["layer_defs"]

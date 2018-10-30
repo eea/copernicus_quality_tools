@@ -1,0 +1,114 @@
+{
+  "description": "Urban Atlas 2012, shapefile, without revised layer.",
+  "checks": [
+    {
+      "check_ident": "v_unzip",
+      "required": true
+    },
+    {
+      "check_ident": "v1_ua_shp",
+      "required": true,
+      "parameters": {
+        "reference_year": "2012",
+        "reference_layer_regex": "_ua2012$",
+        "boundary_layer_regex": "^boundary2012_"
+      }
+    },
+    {
+      "check_ident": "v2",
+      "required": true,
+      "parameters": {
+        "layers": ["reference", "boundary"],
+        "formats": [".shp"]
+      }
+    },
+    {
+      "check_ident": "reference.v3",
+      "required": true,
+      "parameters": {
+        "layers": ["reference"],
+        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2012", "item2012", "prod_date", "ident", "shape_leng", "shape_area"]
+      }
+    },
+    {
+      "check_ident": "boundary.v3",
+      "required": true,
+      "parameters": {
+        "layers": ["boundary"],
+        "attribute_regexes": ["country", "cities"]
+      }
+    },
+    {
+      "check_ident": "v4",
+      "required": true,
+      "parameters": {
+        "layers": ["reference", "boundary"],
+        "epsg": [3035]
+      }
+    },
+    {
+      "check_ident": "v_import2pg",
+      "required": true,
+      "parameters": {
+        "layers": ["reference", "boundary"]
+      }
+    },
+    {
+      "check_ident": "v5",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "unique_keys": ["ident"]
+      }
+    },
+    {
+      "check_ident": "v6",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "code_regex": "(ua2006|ua2012|ua2018)$",
+        "code_to_column_defs": {"ua2006": [["code2006", "UA"]],
+                                "ua2012": [["code2012", "UA"]],
+                                "ua2018": [["code2018", "UA"]]}
+      }
+    },
+    {
+      "check_ident": "v8",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "v11_ua",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "code_regex": "(ua2006|ua2012|ua2018)$",
+        "code_to_column_name": {"ua2006": "code2006",
+                                "ua2012": "code2012",
+                                "ua2018": "code2018"}
+
+      }
+    },
+    {
+      "check_ident": "v13",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "v14",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "code_regex": "(ua2006|ua2012|ua2018)$",
+        "code_to_column_names": {"ua2006": ["code2006"],
+                                 "ua2012": ["code2012"],
+                                 "ua2018": ["code2018"]},
+        "exclude_codes": ["122%"]
+      }
+    }
+  ]
+}

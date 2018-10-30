@@ -56,7 +56,7 @@ class Test_ua_shp(ProductTestCase):
         # The new test zip should pass all checks with ok status.
         self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_ua": "ok",
+                                   "v1_ua_shp": "ok",
                                    "v2": "ok",
                                    "reference.v3": "ok",
                                    "boundary.v3": "ok",
@@ -71,7 +71,7 @@ class Test_ua_shp(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
-                              "ua_2012_wo_revised",
+                              "ua_2012_shp_wo_revised",
                               ["v5", "v6", "v8", "v11_ua", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
@@ -85,7 +85,7 @@ class Test_ua_gdb(ProductTestCase):
         # The new test zip should pass all checks with ok status.
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
         expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_ua": "ok",
+                                   "v1_ua_gdb": "ok",
                                    "v2": "ok",
                                    "reference.v3": "ok",
                                    "boundary.v3": "ok",
@@ -100,7 +100,7 @@ class Test_ua_gdb(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
-                              "ua_2012_wo_revised",
+                              "ua_2012_gdb_wo_revised",
                               ["v5", "v6", "v8", "v11_ua", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
@@ -110,7 +110,7 @@ class Test_ua_gdb(ProductTestCase):
         self.maxDiff = None
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
         expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_ua": "ok",
+                                   "v1_ua_gdb": "ok",
                                    "v2": "ok",
                                    "reference.v3": "ok",
                                    "boundary.v3": "ok",
@@ -136,7 +136,7 @@ class Test_ua_gdb(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
-                              "ua_2012",
+                              "ua_2012_gdb",
                               ["v5",
                                "reference.v6",
                                "combined.v6",
@@ -161,7 +161,7 @@ class Test_dump_error_table(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
         expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_ua": "ok",
+                                   "v1_ua_gdb": "ok",
                                    "v2": "ok",
                                    "reference.v3": "ok",
                                    "boundary.v3": "ok",
@@ -176,7 +176,7 @@ class Test_dump_error_table(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
-                              "ua_2012_wo_revised",
+                              "ua_2012_gdb_wo_revised",
                               ["v13"])
         check_statuses = dict((check_status["check_ident"], check_status["status"]) for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)

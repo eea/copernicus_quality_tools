@@ -1,12 +1,12 @@
 {
-  "description": "Urban Atlas 2012, all layers included.",
+  "description": "Urban Atlas 2012, geodatabase, all layers included.",
   "checks": [
     {
       "check_ident": "v_unzip",
       "required": true
     },
     {
-      "check_ident": "v1_ua",
+      "check_ident": "v1_ua_gdb",
       "required": true,
       "parameters": {
         "reference_year": "2012",
@@ -22,7 +22,7 @@
       "required": true,
       "parameters": {
         "layers": ["reference", "boundary", "combined", "revised", "change"],
-        "formats": [".gdb", ".shp"]
+        "formats": [".gdb"]
       }
     },
     {
