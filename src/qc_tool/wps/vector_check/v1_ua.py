@@ -14,6 +14,9 @@ def run_check(params, status):
     """
     Find layers in a file geodatabase (.gdb) or in a directory with shapefiles.
     """
+    # Fix reference year.
+    status.set_status_property("reference_year", params["reference_year"])
+
     # Find gdb folder.
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
     if len(gdb_dirs) > 1:
@@ -57,28 +60,10 @@ def run_check(params, status):
 
     # Build layer defs for reference and boundary layers.
     builder.extract_layer_def(params["reference_layer_regex"], "reference")
-    if status.is_aborted():
-        return
-    reference_year = builder.layer_defs["reference"]["groups"]["reference_year"]
-    if reference_year not in params["campaign_years"]:
-        status.aborted()
-        status.add_message("Reference year {:s} does not fall in"
-                           " campaign years {!r:s}.".format(reference_year, params["campaign_years"][1:]))
-        return
-    status.set_status_property("reference_year", reference_year)
-    builder.set_tpl_params(reference_year=reference_year)
     builder.extract_layer_def(params["boundary_layer_regex"], "boundary")
 
     # Build layer defs for revised, combined and change layers.
     if layer_count == 5:
-        reference_year_idx = params["campaign_years"].index(reference_year)
-        if reference_year_idx == 0:
-            status.aborted()
-            status.add_message("Can not search for revised layer"
-                               " when there is no previous campaign year for {:s}.".format(reference_year))
-            return
-        revised_year = params["campaign_years"][reference_year_idx - 1]
-        builder.set_tpl_params(revised_year=revised_year)
         builder.extract_layer_def(params["revised_layer_regex"], "revised")
         builder.extract_layer_def(params["combined_layer_regex"], "combined")
         builder.extract_layer_def(params["change_layer_regex"], "change")

@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas with Change Layer",
+  "description": "Urban Atlas 2012, all layers included.",
   "checks": [
     {
       "check_ident": "v_unzip",
@@ -9,12 +9,12 @@
       "check_ident": "v1_ua",
       "required": true,
       "parameters": {
-        "campaign_years": ["2006", "2012", "2018"],
-        "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
-        "boundary_layer_regex": "^boundary{reference_year:s}_",
-        "revised_layer_regex": "_ua{revised_year:s}_revised$",
-        "combined_layer_regex": "_ua{revised_year:s}_{reference_year:s}$",
-        "change_layer_regex": "_change_{revised_year:s}_{reference_year:s}$"
+        "reference_year": "2012",
+        "reference_layer_regex": "_ua2012$",
+        "boundary_layer_regex": "^boundary2012_",
+        "revised_layer_regex": "_ua2006_revised$",
+        "combined_layer_regex": "_ua2006_2012$",
+        "change_layer_regex": "_change_2006_2012$"
       }
     },
     {
@@ -30,7 +30,7 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code(2012|2018)", "item(2012|2018)", "prod_date", "ident", "shape_length", "shape_area"]
+          "attribute_regexes": ["country", "cities", "fua_or_cit", "code2012", "item2012", "prod_date", "ident", "shape_length", "shape_area"]
       }
     },
     {
@@ -42,14 +42,6 @@
       }
     },
     {
-      "check_ident": "combined.v3",
-      "required": true,
-      "parameters": {
-        "layers": ["combined"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "code2012", "item2012", "prod_date", "ident", "shape_length", "shape_area"]
-      }
-    },
-    {
       "check_ident": "revised.v3",
       "required": true,
       "parameters": {
@@ -58,11 +50,11 @@
       }
     },
     {
-      "check_ident": "change.v3",
+      "check_ident": "combined.v3",
       "required": true,
       "parameters": {
-        "layers": ["change"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code(2006|2012)", "code(2012|2018)", "item(2006|2012)", "item(2012|2018)", "prod_date", "ident", "shape_length", "shape_area"]
+        "layers": ["combined", "change"],
+        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "code2012", "item2012", "prod_date", "ident", "shape_length", "shape_area"]
       }
     },
     {

@@ -71,7 +71,7 @@ class Test_ua_shp(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
-                              "ua",
+                              "ua_2012_wo_revised",
                               ["v5", "v6", "v8", "v11_ua", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
@@ -100,7 +100,7 @@ class Test_ua_gdb(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
-                              "ua",
+                              "ua_2012_wo_revised",
                               ["v5", "v6", "v8", "v11_ua", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
@@ -114,9 +114,8 @@ class Test_ua_gdb(ProductTestCase):
                                    "v2": "ok",
                                    "reference.v3": "ok",
                                    "boundary.v3": "ok",
-                                   "combined.v3": "ok",
                                    "revised.v3": "ok",
-                                   "change.v3": "ok",
+                                   "combined.v3": "ok",
                                    "v4": "ok",
                                    "v_import2pg": "ok",
                                    "v5": "ok",
@@ -137,7 +136,7 @@ class Test_ua_gdb(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
-                              "ua_with_change",
+                              "ua_2012",
                               ["v5",
                                "reference.v6",
                                "combined.v6",
@@ -164,8 +163,8 @@ class Test_dump_error_table(ProductTestCase):
         expected_check_statuses = {"v_unzip": "ok",
                                    "v1_ua": "ok",
                                    "v2": "ok",
-                                   "boundary.v3": "ok",
                                    "reference.v3": "ok",
+                                   "boundary.v3": "ok",
                                    "v4": "ok",
                                    "v_import2pg": "ok",
                                    "v5": "skipped",
@@ -177,7 +176,7 @@ class Test_dump_error_table(ProductTestCase):
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
-                              "ua",
+                              "ua_2012_wo_revised",
                               ["v13"])
         check_statuses = dict((check_status["check_ident"], check_status["status"]) for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)

@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas",
+  "description": "Urban Atlas 2012, without revised layer.",
   "checks": [
     {
       "check_ident": "v_unzip",
@@ -9,9 +9,9 @@
       "check_ident": "v1_ua",
       "required": true,
       "parameters": {
-        "campaign_years": ["2006", "2012", "2018"],
-        "reference_layer_regex": "_ua(?P<reference_year>[0-9]{{4}})$",
-        "boundary_layer_regex": "^boundary{reference_year:s}_"
+        "reference_year": "2012",
+        "reference_layer_regex": "_ua2012$",
+        "boundary_layer_regex": "^boundary2012_"
       }
     },
     {
@@ -27,7 +27,7 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "attribute_regexes": ["country", "cities", "(fua|luz)_or_cit", "code(2006|2012|2018)", "item(2006|2012|2018)", "prod_date", "ident"]
+        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2012", "item2012", "prod_date", "ident", "shape_length", "shape_area"]
       }
     },
     {

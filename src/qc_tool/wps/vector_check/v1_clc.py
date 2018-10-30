@@ -12,8 +12,7 @@ from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
 @register_check_function(__name__)
 def run_check(params, status):
     # Fix reference year.
-    reference_year = params["reference_year"]
-    status.set_status_property("reference_year", reference_year)
+    status.set_status_property("reference_year", params["reference_year"])
 
     # Find gdb directory.
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
@@ -45,6 +44,11 @@ def run_check(params, status):
 
     # Read all layers.
     builder = LayerDefsBuilder(status)
+    # NOTE:
+    # Normally we would use ogr for reading layer names.
+    # However, we are reading the layers using get_fc_path() function.
+    # Such function returns the whole name including feature dataset component
+    # (the part before "/").
     for layer_name in get_fc_path(str(gdb_dir)):
         builder.add_layer_info(gdb_dir, layer_name)
 
@@ -57,7 +61,7 @@ def run_check(params, status):
     # Excessive layers should fail.
     builder.check_excessive_layers()
 
-    # Strip prefixes from layer_defs.
+    # Strip feature dataset component from layer_defs.
     layer_defs = builder.layer_defs
     for layer_def in layer_defs.values():
             layer_def["src_layer_name"] = layer_def["src_layer_name"].split("/")[-1]
