@@ -9,10 +9,6 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    # convert mmu limit from 'ha' to 'pix' (expected pixel size of 20m)
-    # mmu_limit = int(ceil(params["area_ha"]*25))
-    # for example 20x20 pixel and 5ha mmu -> 125 pixels mmu_limit
-
     lessmmu_shp_path = params["output_dir"].joinpath("lessmmu_areas.shp")
 
     GRASS_VERSION = "grass72"
@@ -41,7 +37,7 @@ def run_check(params, status):
         return
 
     # (3) run r.reclass.area (area is already in hectares)
-    mmu_limit_ha = params["area_ha"]
+    mmu_limit_ha = params["area_m2"] / 10000
     p3 = subprocess.run([GRASS_VERSION,
               str(mapset_path),
               "--exec",
@@ -112,6 +108,6 @@ def run_check(params, status):
     if lessmmu_count == 0:
         return
     else:
-        status.add_message("The data source has {:s} objects under MMU limit"
-                           " of {:s} ha.".format(str(lessmmu_count), str(params["area_ha"])))
+        status.add_message("The data source has {:d} objects under MMU limit of {:f} ha."
+                           .format(lessmmu_count, params["area_m2"] / 10000))
         return

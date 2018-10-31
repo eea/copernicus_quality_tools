@@ -77,7 +77,7 @@
       "check_ident": "r11",
       "required": false,
       "parameters": {
-        "area_ha": 0.5
+        "area_m2": 5000
       }
     },
     {

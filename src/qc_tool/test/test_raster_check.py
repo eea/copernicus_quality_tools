@@ -31,7 +31,7 @@ class TestR11(RasterCheckTestCase):
     def test_r11(self):
         from qc_tool.wps.raster_check.r11 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_incorrect.tif"),
-                  "area_ha": 0.5,
+                  "area_m2": 5000,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
@@ -41,7 +41,7 @@ class TestR11(RasterCheckTestCase):
     def test_r11_correct_pass(self):
         from qc_tool.wps.raster_check.r11 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
-                  "area_ha": 0.5,
+                  "area_m2": 5000,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
@@ -51,7 +51,7 @@ class TestR11(RasterCheckTestCase):
     def test_r11_incorrect_fail(self):
         from qc_tool.wps.raster_check.r11 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_incorrect.tif"),
-                  "area_ha": 0.5,
+                  "area_m2": 5000,
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
