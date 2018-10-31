@@ -1,7 +1,5 @@
 {
-    "description": "CORINE Land Cover 2012",
-    "parameters": {
-    },
+  "description": "CORINE Land Cover 2012",
   "checks": [
     {
       "check_ident": "v_unzip",
@@ -31,7 +29,7 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "attribute_regexes": ["id", "code_12", "area_ha", "remark"]
+        "attribute_regexes": ["id", "code_12", "area_ha", "remark", "shape_area", "shape_length"]
       }
     },
     {
@@ -39,7 +37,7 @@
       "required": true,
       "parameters": {
         "layers": ["initial"],
-        "attribute_regexes": ["id", "code_06", "area_ha", "remark"]
+        "attribute_regexes": ["id", "code_06", "area_ha", "remark", "shape_area", "shape_length"]
       }
     },
     {
@@ -47,7 +45,7 @@
       "required": true,
       "parameters": {
         "layers": ["change"],
-        "attribute_regexes": ["id", "code_06", "code_12", "change", "chtype", "area_ha", "remark"]
+        "attribute_regexes": ["id", "code_06", "code_12", "change", "chtype", "area_ha", "remark", "shape_area", "shape_length"]
       }
     },
     {
@@ -150,7 +148,7 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "code_column_names": ["change"]
+        "code_column_names": ["code_06", "code_12"]
       }
     }
   ]
