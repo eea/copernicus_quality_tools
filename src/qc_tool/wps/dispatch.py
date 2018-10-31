@@ -287,13 +287,13 @@ class CheckStatus():
     def __repr__(self):
         members_tpl = ("status={:s}"
                        ", messages={:s}"
-                       ", error_table_names={:s}"
+                       ", error_table_infos={:s}"
                        ", attachment_filenames={:s}"
                        ", params={:s}"
                        ", status_properties={:s}")
         members = members_tpl.format(repr(self.status),
                                      repr(self.messages),
-                                     repr(self.error_table_names),
+                                     repr(self.error_table_infos),
                                      repr(self.attachment_filenames),
                                      repr(self.params),
                                      repr(self.status_properties))

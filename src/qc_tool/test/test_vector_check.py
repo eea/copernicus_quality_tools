@@ -518,19 +518,19 @@ class TestV11(VectorCheckTestCase):
                                                         "src_layer_name": "boundary_mt"}},
                             "layers": ["reference", "boundary"],
                             "area_m2": 250000,
-                            "border_exception": True})
+                            "area_column_name": "shape_area"})
         status = self.status_class()
         import_check(self.params, status)
         self.params["layers"] = ["reference"]
 
     def test_small_mmu(self):
-        from qc_tool.wps.vector_check.v11 import run_check
+        from qc_tool.wps.vector_check.v11_clc_status import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status, "Check result should be ok for MMU=25ha.")
 
     def test_big_mmu_fails(self):
-        from qc_tool.wps.vector_check.v11 import run_check
+        from qc_tool.wps.vector_check.v11_clc_status import run_check
         self.params["area_m2"] = 2500000
         status = self.status_class()
         run_check(self.params, status)

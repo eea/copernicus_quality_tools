@@ -103,21 +103,23 @@
       }
     },
     {
-      "check_ident": "status.v11",
+      "check_ident": "v11_clc_status",
       "required": false,
       "parameters": {
         "layers": ["reference", "initial"],
         "area_m2": 250000,
-        "border_exception": true
+        "area_column_name": "shape_area"
       }
     },
     {
-      "check_ident": "change.v11",
+      "check_ident": "v11_clc_change",
       "required": false,
       "parameters": {
         "layers": ["change"],
         "area_m2": 50000,
-        "code_column_names": ["code_06", "code_12"]
+        "area_column_name": "shape_area",
+        "initial_code_column_name": "code_06",
+        "final_code_column_name": "code_12"
       }
     },
     {
