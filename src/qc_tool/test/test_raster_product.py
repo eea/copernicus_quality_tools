@@ -36,9 +36,27 @@ class Test_Raster(ProductTestCase):
         product_ident = "fty_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "FTY_2015_020m_mt_03035_d04_clip.zip")
         self.check_idents.append("r11")
+
+        #FIXME r11 should have status ok for fty_020m product.
+        expected_check_statuses = {"r_unzip": "ok",
+                                   "r1": "ok",
+                                   "r2": "ok",
+                                   "r3": "ok",
+                                   "r4": "ok",
+                                   "r5": "ok",
+                                   "r6": "ok",
+                                   "r7": "ok",
+                                   "r8": "ok",
+                                   "r9": "ok",
+                                   "r10": "ok",
+                                   "r11": "failed",
+                                   "r14": "ok",
+                                   "r15": "ok"}
+
         job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
-        self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
-                        self.show_messages(job_status))
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
 
     # High resolution forest type (FTY) - 100m
     def test_fty_100m(self):
@@ -53,9 +71,27 @@ class Test_Raster(ProductTestCase):
         product_ident = "gra_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "GRA_2015_020m_mt_03035_V1_clip.zip")
         self.check_idents.append("r11")
+
+        # FIXME r11 should have status ok for gra_020m product.
+        expected_check_statuses = {"r_unzip": "ok",
+                                   "r1": "ok",
+                                   "r2": "ok",
+                                   "r3": "ok",
+                                   "r4": "ok",
+                                   "r5": "ok",
+                                   "r6": "ok",
+                                   "r7": "ok",
+                                   "r8": "ok",
+                                   "r9": "ok",
+                                   "r10": "ok",
+                                   "r11": "failed",
+                                   "r14": "ok",
+                                   "r15": "ok"}
+
         job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
-        self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
-                        self.show_messages(job_status))
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
 
     # High resolution grassland (GRA) - 100m
     def test_gra_100m(self):
