@@ -67,14 +67,14 @@ class Test_ua_shp(ProductTestCase):
                                    "v5": "ok",
                                    "v6": "ok",
                                    "v8": "ok",
-                                   "v11_ua": "failed",
+                                   "v11_ua_status": "ok",
                                    "v13": "ok",
                                    "v14": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "ua_2012_shp_wo_revised",
-                              ["v5", "v6", "v8", "v11_ua", "v13", "v14"])
+                              ["v5", "v6", "v8", "v11_ua_status", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -96,14 +96,14 @@ class Test_ua_gdb(ProductTestCase):
                                    "v5": "ok",
                                    "v6": "ok",
                                    "v8": "ok",
-                                   "v11_ua": "failed",
+                                   "v11_ua_status": "failed",
                                    "v13": "failed",
                                    "v14": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
                               "ua_2012_gdb_wo_revised",
-                              ["v5", "v6", "v8", "v11_ua", "v13", "v14"])
+                              ["v5", "v6", "v8", "v11_ua_status", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -125,11 +125,11 @@ class Test_ua_gdb(ProductTestCase):
                                    "revised.v6": "ok",
                                    "combined.v6": "ok",
                                    "v8": "ok",
-                                   "reference_change.v11_ua": "ok",
-                                   "revised_combined.v11_ua": "ok",
+                                   "reference.v11_ua_status": "ok",
+                                   "revised.v11_ua_status": "ok",
+                                   "change.v11_ua_change": "ok",
                                    "v13": "ok",
                                    "reference.v14": "ok",
-                                   "combined.v14": "ok",
                                    "revised.v14": "ok",
                                    "change.v14": "ok"}
         job_status = dispatch(self.job_uuid,
@@ -141,11 +141,11 @@ class Test_ua_gdb(ProductTestCase):
                                "revised.v6",
                                "combined.v6",
                                "v8",
-                               "reference_change.v11_ua",
-                               "revised_combined.v11_ua",
+                               "reference.v11_ua_status",
+                               "revised.v11_ua_status",
+                               "change.v11_ua_change",
                                "v13",
                                "reference.v14",
-                               "combined.v14",
                                "revised.v14",
                                "change.v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
@@ -166,7 +166,7 @@ class Test_dump_error_table(ProductTestCase):
                                    "v5": "skipped",
                                    "v6": "skipped",
                                    "v8": "skipped",
-                                   "v11_ua": "skipped",
+                                   "v11_ua_status": "skipped",
                                    "v13": "failed",
                                    "v14": "skipped"}
         job_status = dispatch(self.job_uuid,

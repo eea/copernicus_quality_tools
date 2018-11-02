@@ -112,20 +112,31 @@
       }
     },
     {
-      "check_ident": "reference_change.v11_ua",
+      "check_ident": "reference.v11_ua_status",
       "required": false,
       "parameters": {
-        "layers": ["reference", "change"],
+        "layers": ["reference"],
+        "area_column_name": "shape_area",
         "code_column_name": "code2012"
       }
     },
     {
-      "check_ident": "revised_combined.v11_ua",
+      "check_ident": "revised.v11_ua_status",
       "required": false,
       "parameters": {
         "layers": ["revised", "combined"],
+        "area_column_name": "shape_area",
         "code_column_name": "code2006"
-
+      }
+    },
+    {
+      "check_ident": "change.v11_ua_change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "area_column_name": "shape_area",
+        "initial_code_column_name": "code2006",
+        "final_code_column_name": "code2012"
       }
     },
     {
@@ -140,7 +151,8 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_column_names": ["code2012"]
+        "code_column_names": ["code2012"],
+        "exclude_codes": ["122%"]
       }
     },
     {
@@ -148,22 +160,15 @@
       "required": false,
       "parameters": {
         "layers": ["revised"],
-        "code_column_names": ["code2006"]
-      }
-    },
-    {
-      "check_ident": "combined.v14",
-      "required": false,
-      "parameters": {
-        "layers": ["combined"],
-        "code_column_names": ["code2006", "code2012"]
+        "code_column_names": ["code2006"],
+        "exclude_codes": ["122%"]
       }
     },
     {
       "check_ident": "change.v14",
       "required": false,
       "parameters": {
-        "layers": ["change"],
+        "layers": ["combined", "change"],
         "code_column_names": ["code2006", "code2012"],
         "exclude_codes": ["122%"]
       }
