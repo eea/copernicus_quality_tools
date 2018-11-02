@@ -93,7 +93,7 @@
       "required": false,
       "parameters": {
         "layers": ["revised"],
-        "column_defs": [["code2006", "UA"]]
+        "column_defs": [["code2006", "UA2006"]]
       }
     },
     {
@@ -101,7 +101,7 @@
       "required": false,
       "parameters": {
         "layers": ["combined", "change"],
-        "column_defs": [["code2006", "UA"], ["code2012", "UA"]]
+        "column_defs": [["code2006", "UA2006"], ["code2012", "UA"]]
       }
     },
     {
