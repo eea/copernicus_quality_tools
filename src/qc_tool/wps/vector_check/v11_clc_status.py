@@ -21,14 +21,23 @@ def run_check(params, status):
                       "area_column_name": params["area_column_name"],
                       "area_m2": params["area_m2"],
                       "boundary_items_table": "v11_{:s}_boundary_items".format(layer_def["pg_layer_name"]),
+                      "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
                       "exception_table": "v11_{:s}_exception".format(layer_def["pg_layer_name"]),
                       "error_table": "v11_{:s}_error".format(layer_def["pg_layer_name"])}
 
-        # Create intermediate table of boundary items.
+        # Create intermediate table of items touching boundary.
         sql = ("CREATE TABLE {boundary_items_table} AS"
                " SELECT DISTINCT layer.{fid_name}"
-               " FROM {layer_name} layer, {boundary_layer_name} b"
-               " WHERE ST_Dimension(ST_Intersection(layer.wkb_geometry, ST_Boundary(ST_Transform(b.wkb_geometry, ST_SRID(layer.wkb_geometry))))) >= 1;")
+               " FROM {layer_name} layer, {boundary_layer_name} boundary"
+               " WHERE ST_Dimension(ST_Intersection(layer.wkb_geometry, ST_Boundary(ST_Transform(boundary.wkb_geometry, ST_SRID(layer.wkb_geometry))))) >= 1;")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # Create table of general items.
+        sql = ("CREATE TABLE {general_table} AS"
+               " SELECT {fid_name}"
+               " FROM {layer_name}"
+               " WHERE {area_column_name} >= {area_m2};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -37,8 +46,8 @@ def run_check(params, status):
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  (NOT {area_column_name} >= {area_m2})"
-               "  AND {fid_name} IN (SELECT {fid_name} FROM {boundary_items_table});")
+               "  {fid_name} IN (SELECT {fid_name} FROM {boundary_items_table})"
+               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -54,7 +63,7 @@ def run_check(params, status):
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  NOT {area_column_name} >= {area_m2}"
+               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
                "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)

@@ -77,10 +77,11 @@
       }
     },
     {
-      "check_ident": "v11_ua",
+      "check_ident": "v11_ua_status",
       "required": false,
       "parameters": {
         "layers": ["reference"],
+        "area_column_name": "shape_area",
         "code_column_name": "code2012"
       }
     },

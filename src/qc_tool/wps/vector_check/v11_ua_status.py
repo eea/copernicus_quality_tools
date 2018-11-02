@@ -19,14 +19,25 @@ def run_check(params, status):
                       "fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
-                      "area_m2": params["area_m2"],
-                      "initial_code_column_name": params["initial_code_column_name"],
-                      "final_code_column_name": params["final_code_column_name"],
+                      "code_column_name": params["code_column_name"],
                       "boundary_items_table": "v11_{:s}_boundary_items".format(layer_def["pg_layer_name"]),
-                      "complex_items_table": "v11_{:s}_complex_items".format(layer_def["pg_layer_name"]),
+                      "cloud_items_table": "v11_{:s}_cloud_items".format(layer_def["pg_layer_name"]),
                       "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
                       "exception_table": "v11_{:s}_exception".format(layer_def["pg_layer_name"]),
+                      "warning_table": "v11_{:s}_warning".format(layer_def["pg_layer_name"]),
                       "error_table": "v11_{:s}_error".format(layer_def["pg_layer_name"])}
+
+        # Create table of general items.
+        sql = ("CREATE TABLE {general_table} AS"
+               " SELECT {fid_name}"
+               " FROM {layer_name}"
+               " WHERE"
+               "  {code_column_name} LIKE '122%'"
+               "  OR ({code_column_name} LIKE '1%' AND {area_column_name} >= 2500)"
+               "  OR ({code_column_name} SIMILAR TO '[2-5]%' AND {area_column_name} >= 10000)"
+               "  OR {code_column_name} LIKE '9%';")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
 
         # Create intermediate table of items touching boundary.
         sql = ("CREATE TABLE {boundary_items_table} AS"
@@ -36,23 +47,13 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
-        # Create intermediate table of items taking part in complex change.
-        sql = ("CREATE TABLE {complex_items_table} AS"
-               " SELECT DISTINCT ch1.{fid_name}"
-               " FROM {layer_name} ch1, {layer_name} ch2"
+        # Create intermediate table of items touching cloud.
+        sql = ("CREATE TABLE {cloud_items_table} AS"
+               " SELECT DISTINCT layer.{fid_name}"
+               " FROM {layer_name} layer, {layer_name} cloud"
                " WHERE"
-               "  ch1.{fid_name} <> ch2.{fid_name}"
-               "  AND (ch1.{initial_code_column_name} = ch2.{initial_code_column_name} OR ch1.{final_code_column_name} = ch2.{final_code_column_name})"
-               "  AND ch1.{area_column_name} + ch2.{area_column_name} >= {area_m2}"
-               "  AND ST_Dimension(ST_Intersection(ch1.wkb_geometry, ch2.wkb_geometry)) >= 1;")
-        sql = sql.format(**sql_params)
-        cursor.execute(sql)
-
-        # Create table of general items.
-        sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE {area_column_name} >= {area_m2};")
+               "   (layer.{code_column_name} NOT LIKE '9%' AND cloud.{code_column_name} LIKE '9%')"
+               "   AND ST_Dimension(ST_Intersection(layer.wkb_geometry, cloud.wkb_geometry)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -61,8 +62,8 @@ def run_check(params, status):
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  ({fid_name} IN (SELECT {fid_name} FROM {boundary_items_table})"
-               "   OR {fid_name} IN (SELECT {fid_name} FROM {complex_items_table}))"
+               "  ({fid_name} IN (SELECT {fid_name} FROM {cloud_items_table})"
+               "   OR ({fid_name} IN (SELECT {fid_name} FROM {boundary_items_table}) AND {area_column_name} >= 100))"
                "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
@@ -74,13 +75,34 @@ def run_check(params, status):
             status.add_message(message, failed=False)
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
+        # Create table of warning items.
+        sql = ("CREATE TABLE {warning_table} AS"
+               " SELECT DISTINCT layer.{fid_name}"
+               " FROM {layer_name} layer, {layer_name} road"
+               " WHERE"
+               "  layer.{area_column_name} >= 500"
+               "  AND (layer.{code_column_name} NOT LIKE '122%' AND road.{code_column_name} LIKE '122%')"
+               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, road.wkb_geometry)) >= 1"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+            
+        # Report warning items.
+        items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
+        if items_message is not None:
+            message = "The layer {:s} has warning features: {:s}.".format(layer_def["pg_layer_name"], items_message)
+            status.add_message(message, failed=False)
+            status.add_error_table(sql_params["warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
                "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table})"
+               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {warning_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
