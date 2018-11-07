@@ -4,6 +4,7 @@
 
 from pathlib import Path
 import numpy
+import subprocess
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -14,159 +15,199 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
 
-    # country code is part of job params from r1
-    filename = params["filepath"].name.lower()
-
     country_code = params["country_code"]
 
     # get raster resolution from the raster file
     ds = gdal.Open(str(params["filepath"]))
-    # get raster pixel size
-    gt = ds.GetGeoTransform()
-    resolution = abs(gt[1])
+    # get raster corners and resolution
+    ds_gt = ds.GetGeoTransform()
+    ds_ulx = ds_gt[0]
+    ds_xres = ds_gt[1]
+    ds_uly = ds_gt[3]
+    ds_yres = ds_gt[5]
+    ds_lrx = ds_ulx + (ds.RasterXSize * ds_xres)
+    ds_lry = ds_uly + (ds.RasterYSize * ds_yres)
+
+    ds_band = ds.GetRasterBand(1)
+    nodata_value_ds = ds_band.GetNoDataValue()
+
+    ds_ring = ogr.Geometry(ogr.wkbLinearRing)
+    ds_ring.AddPoint(ds_ulx, ds_uly)
+    ds_ring.AddPoint(ds_ulx, ds_lry)
+    ds_ring.AddPoint(ds_lrx, ds_lry)
+    ds_ring.AddPoint(ds_lrx, ds_uly)
+    ds_ring.AddPoint(ds_ulx, ds_uly)
+    ds_envelope = ogr.Geometry(ogr.wkbPolygon)
+    ds_envelope.AddGeometry(ds_ring)
 
     # Find the external boundary raster mask layer.
     raster_boundary_dir = params["boundary_dir"].joinpath("raster")
-    mask_file = raster_boundary_dir.joinpath("mask_{:03d}m_{:s}.tif".format(int(resolution), country_code))
-    return
-
-    # FIXME we need to work with a boundary raster mask.
-    # the code below needs to be rewritten.
-    boundary_filepaths = [path for path in bdir.glob("**/boundary_{:s}.shp".format(country_code)) if path.is_file()]
-    if len(boundary_filepaths) == 0:
-        status.aborted()
-        status.add_message(
-            "Can not find boundary for country {:s} under directory {:s}.".format(country_code, str(bdir)))
+    mask_file = raster_boundary_dir.joinpath("mask_{:03d}m_{:s}.tif".format(int(ds_xres), country_code))
+    mask_ds = gdal.Open(str(mask_file))
+    if mask_ds is None:
+        status.add_message("Can not find reference boundary mask file {:s}.".format(mask_file.name))
         return
-    if len(boundary_filepaths) > 1:
-        status.aborted()
-        status.add_message("More than one boundary found for country {:s}: {:s}.".format(country_code, ", ".join(
-            str(p) for p in boundary_filepaths)))
+    mask_band = mask_ds.GetRasterBand(1)
+    nodata_value_mask = mask_band.GetNoDataValue()
+
+    mask_gt = mask_ds.GetGeoTransform()
+    mask_ulx = mask_gt[0]
+    mask_xres = mask_gt[1]
+    mask_uly = mask_gt[3]
+    mask_yres = mask_gt[5]
+    mask_lrx = ds_ulx + (mask_ds.RasterXSize * mask_xres)
+    mask_lry = ds_uly + (mask_ds.RasterYSize * mask_yres)
+
+    mask_ring = ogr.Geometry(ogr.wkbLinearRing)
+    mask_ring.AddPoint(mask_ulx, mask_uly)
+    mask_ring.AddPoint(mask_ulx, mask_lry)
+    mask_ring.AddPoint(mask_lrx, mask_lry)
+    mask_ring.AddPoint(mask_lrx, mask_uly)
+    mask_ring.AddPoint(mask_ulx, mask_uly)
+    mask_envelope = ogr.Geometry(ogr.wkbPolygon)
+    mask_envelope.AddGeometry(mask_ring)
+
+    # Check if the dataset is fully covered by the mask.
+    ds_inside_mask = (ds_ulx >= mask_ulx and ds_uly <= mask_uly and ds_lrx <= mask_lrx and ds_lry >= mask_lry)
+    if not ds_inside_mask:
+        extent_message = "raster is not fully contained inside the boundary mask."
+        extent_message += "raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
+        extent_message += "boundary mask extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
+        status.add_message(extent_message)
         return
 
-    boundary_filepath = boundary_filepaths[0]
-    boundary_ds = ogr.Open(str(boundary_filepath))
-    if boundary_ds is None:
-        status.aborted()
-        status.add_message("Boundary file {:s} for country {:s} has incorrect file format and cannot be opened.".format(
-            boundary_filepath.name, country_code
-        ))
+    # Check if raster resolution and boundary mask resolution matches.
+    if ds_xres != mask_xres or ds_yres != mask_yres:
+        status.add_message("Resolution of the raster [{:f}, {:f}] does not match the "
+                           "resolution of the boundary mask [{:f}, {:f}]).".format(ds_xres, ds_yres, mask_xres, mask_yres))
+        return
 
-    boundary_poly = ogr.Geometry(ogr.wkbMultiPolygon)
-    boundary_layer = boundary_ds.GetLayer()
+    # Check if origin of mask is aligned with origin of raster
+    if abs(ds_ulx - mask_ulx) % ds_xres > 0:
+        status.add_message("X coordinates of the raster are not exactly aligned with x coordinates of boundary mask."
+                           "Raster origin: {:f}, Mask origin: {:f}".format(ds_ulx, mask_ulx))
+        return
 
-    for idx, feat in enumerate(boundary_layer):
-        if feat.GetField("CNTR_ID").lower() == country_code:
-            boundary_poly.AddGeometry(feat.GetGeometryRef().Clone())
+    if abs(ds_uly - mask_uly) % ds_yres > 0:
+        status.add_message("Y coordinates of the raster are not exactly aligned with Y coordinates of boundary mask."
+                           "Raster origin: {:f}, Mask origin: {:f}".format(ds_uly, mask_uly))
+        return
 
-    boundary_ft = [ft for ft in boundary_layer if ft.GetField("CNTR_ID").lower() == country_code]
-    ma_geom = boundary_ft[0].GetGeometryRef()
+    # Calculate offset of checked raster dataset [ulx, uly] from boundary mask [ulx, uly].
+    mask_add_cols = int(abs(ds_ulx - mask_ulx) / abs(ds_xres))
+    mask_add_rows = int(abs(ds_uly - mask_uly) / abs(ds_yres))
 
-    multipol = ogr.Geometry(ogr.wkbMultiPolygon)
-    for feat in boundary_ft:
-        poly = feat.GetGeometryRef()
-        if poly:
-            multipol.AddGeometry(feat.GetGeometryRef().Clone())
+    print("ds_ulx: {:f} mask_ulx: {:f} mask_add_cols: {:f}".format(ds_ulx, mask_ulx, mask_add_cols))
+    print("ds_uly: {:f} mask_uly: {:f} mask_add_rows: {:f}".format(ds_uly, mask_uly, mask_add_rows))
 
-    # open raster data source
-    ras_ds = gdal.Open(str(params["filepath"]))
+    print("RasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize))
 
-    # transform mapped_area geometry into raster SRS
-    source_sr = boundary_layer.GetSpatialRef()
-    target_sr = osr.SpatialReference()
-    target_sr.ImportFromWkt(ras_ds.GetProjectionRef())
-    coordTrans = osr.CoordinateTransformation(source_sr, target_sr)
-    ma_geom.Transform(coordTrans)
+    # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
+    #blocksize = 100
+    blocksize = 1024
+    n_block_cols = int(ds.RasterXSize / blocksize)
+    n_block_rows = int(ds.RasterYSize / blocksize)
 
-    # load raster band, get NoData value
-    ras_band = ras_ds.GetRasterBand(1)
-    NoData = ras_band.GetNoDataValue()
-    ras_band.DeleteNoDataValue()
+    # Handle special case when the last block in a row or column only partially covers the raster.
+    last_block_width = blocksize
+    last_block_height = blocksize
 
-    # Get raster info
-    transform = ras_ds.GetGeoTransform()
+    if n_block_cols * blocksize < ds.RasterXSize:
+        last_block_width = ds.RasterXSize - (n_block_cols * blocksize)
+        n_block_cols = n_block_cols + 1
 
-    # get coordinates of upper left corner of input raster
-    ULX = transform[0]
-    ULY = transform[3]
+    if n_block_rows * blocksize < ds.RasterXSize:
+        last_block_height = ds.RasterYSize - (n_block_rows * blocksize)
+        n_block_rows = n_block_rows + 1
 
-    # get pixel size
-    pixelWidth = transform[1]
-    pixelHeight = transform[5]
+    print("n_block_rows: {:d} last_block_width: {:d}".format(n_block_rows, last_block_width))
+    print("n_block_cols: {:d} last_block_height: {:d}".format(n_block_cols, last_block_height))
 
-    # in case of geometry of multipolygon type
-    if ma_geom.GetGeometryName() == 'MULTIPOLYGON':
+    # creating an OUTPUT dataset for writing error raster cells
+    src_stem = params["filepath"].stem
+    error_raster_filepath = params["output_dir"].joinpath(src_stem + "_nodata_pixels.tif")
+    driver = gdal.GetDriverByName('GTiff')
+    x_pixels = int(round(ds.RasterXSize))
+    y_pixels = int(round(ds.RasterYSize))
+    error_ds = driver.Create(str(error_raster_filepath), x_pixels, y_pixels, 1, gdal.GDT_Byte, ['COMPRESS=LZW'])
+    error_ds.SetGeoTransform((ds_ulx, ds_xres, 0, ds_uly, 0, ds_yres))
 
-        # prepare lists for x,y coordinates of polygon vertexes
-        pointsX = []
-        pointsY = []
+    # set output projection
+    error_sr = osr.SpatialReference()
+    error_sr.ImportFromWkt(ds.GetProjectionRef())
+    error_ds.SetProjection(error_sr.ExportToWkt())
 
-        # browse through multipart geometry
-        for i in range(0, ma_geom.GetGeometryCount()):
-            geomSingle = ma_geom.GetGeometryRef(i)
+    error_ds.GetRasterBand(1).SetNoDataValue(0)
+    error_band = error_ds.GetRasterBand(1)
 
-            ring = geomSingle.GetGeometryRef(0)
+    # processing of mask is done in tiles (for better performance)
+    nodata_count_total = 0
+    ds_xoff = 0
+    ds_yoff = 0
+    for row in range(n_block_rows):
+        ds_xoff = 0
+        blocksize_y = blocksize
+        if row == n_block_rows - 1:
+            blocksize_y = last_block_height # special case for last row
+        for col in range(n_block_cols):
+            blocksize_x = blocksize
+            if col == n_block_cols - 1:
+                blocksize_x = last_block_width # special case for last column
 
-            # browse through polygons and write x,y coordinates of vertexes to lists
-            for p in range(ring.GetPointCount()):
-                x, y, z = ring.GetPoint(p)
-                pointsX.append(x)
-                pointsY.append(y)
+            print("row: {:d} col: {:d} blocksize_x: {:d} blocksize_y: {:d}".format(row, col, blocksize_x, blocksize_y))
 
-    elif ma_geom.GetGeometryName() == 'POLYGON':
+            # reading the block from the checked raster dataset.
+            arr_ds = ds_band.ReadAsArray(ds_xoff, ds_yoff, blocksize_x, blocksize_y)
 
-        # prepare lists for x,y coordinates of polygon vertexes
-        pointsX = []
-        pointsY = []
+            # reading the block directly from the boundary mask dataset using computed offsets.
+            arr_ma = mask_band.ReadAsArray(ds_xoff + mask_add_cols, ds_yoff + mask_add_rows, blocksize_x, blocksize_y)
 
-        ring = ma_geom.GetGeometryRef(0)
+            arr_ds_int = (arr_ds != nodata_value_ds).astype(int) # converting boolean array to int array
+            arr_ma_int = (arr_ma != nodata_value_mask).astype(int) # converting boolean array to int array
+            arr_nodata = ((arr_ds_int - arr_ma_int) < 0)
+            nodata_count = numpy.sum(arr_nodata)
 
-        # browse through polygons and write x,y coordinates of vertexes to list
-        for p in range(ring.GetPointCount()):
-            x, y, z = ring.GetPoint(p)
-            pointsX.append(x)
-            pointsY.append(y)
+            print("row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count))
 
-    # get coordinates of polygons bounding box
-    Xmin = min(pointsX)
-    Xmax = max(pointsX)
-    Ymin = min(pointsY)
-    Ymax = max(pointsY)
+            if nodata_count > 0:
+                # write detected NoData pixels [subtracted < 0] to a the error raster.
+                nodata_pixels = arr_nodata.astype('byte')
+                error_band.WriteArray(nodata_pixels, ds_xoff, ds_yoff)
 
-    # prepare pixel coordinates of upper left corner of bounding box and it's pixel size
-    Xoff = int((Xmin - ULX) / pixelWidth)
-    Yoff = int((ULY - Ymax) / pixelWidth)
-    xcount = int((Xmax - Xmin) / pixelWidth) + 1
-    ycount = int((Ymax - Ymin) / pixelWidth) + 1
+            nodata_count_total += nodata_count
 
-    # Create memory target raster
-    target_ds = gdal.GetDriverByName('MEM').Create('', xcount, ycount, 1, gdal.GDT_Byte)
-    target_ds.SetGeoTransform((Xmin, pixelWidth, 0, Ymax, 0, pixelHeight))
+            ds_xoff += blocksize
+        ds_yoff += blocksize
 
-    # Rasterize polygon geometry
-    rast_ogr_ds = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
-    rast_mem_lyr = rast_ogr_ds.CreateLayer('poly', srs=target_sr)
+    # free memory for checked raster and for boundary mask raster
+    ds = None
+    ds_mask = None
 
-    feat = ogr.Feature(rast_mem_lyr.GetLayerDefn())
-    feat.SetGeometry(ma_geom)
-    rast_mem_lyr.CreateFeature(feat)
-    gdal.RasterizeLayer(target_ds, [1], rast_mem_lyr, burn_values=[1], options=["ALL_TOUCHED=True"])
+    if nodata_count_total == 0:
+        # check is OK, no NoData pixels were detected inside mapped area.
+        # clean up the empty error raster file.
+        error_ds.FlushCache()
+        error_ds = None
+        error_raster_filepath.unlink()
+        return
 
-    # check if bounding box is within the input raster
-    if (0 <= Xoff and (Xoff + xcount) <= ras_band.XSize) and (
-                    0 <= Yoff and (Yoff + ycount) <= ras_band.YSize):
-        srcRasterArray = ras_band.ReadAsArray(Xoff, Yoff, xcount, ycount).astype(numpy.int)
+    else:
+        # export the nodata_error raster to a shapefile using gdal_polygonize.
+        export_polygonized_errors = True
+        if export_polygonized_errors:
+            error_shp_filepath = Path(str(error_raster_filepath).replace(".tif", ".shp"))
+            error_layername = error_shp_filepath.stem
+            drv = ogr.GetDriverByName("ESRI Shapefile")
+            dst_ds = drv.CreateDataSource(str(error_shp_filepath))
+            error_shp_srs = osr.SpatialReference()
+            error_shp_srs.ImportFromWkt(error_ds.GetProjectionRef())
+            dst_layer = dst_ds.CreateLayer(error_layername, srs=error_shp_srs)
+            gdal.Polygonize(error_band, error_band, dst_layer, -1, [], callback=None)
+            dst_ds.FlushCache()
+            dst_ds = None
 
-        # read mask (bounding box raster) as array
-        mask = target_ds.GetRasterBand(1)
-        maskArray = mask.ReadAsArray(0, 0, xcount, ycount).astype(numpy.int)
-        maskArray = numpy.logical_not(maskArray)
+        error_ds.FlushCache()
+        error_ds = None
 
-        # Mask zone of raster and fill gaps by 9999
-        zonearray = numpy.ma.masked_array(srcRasterArray, maskArray).astype(int)
-
-        if NoData in zonearray:
-            status.add_message("NoData pixels occured in mapped area.")
-            return
-        else:
-            return
+        status.add_message("{:d} NoData pixels were found in the mapped area.".format(nodata_count_total))
+        return

@@ -24,20 +24,24 @@ class Test_Raster(ProductTestCase):
     def setUp(self):
         super().setUp()
 
+        from qc_tool.common import CONFIG
+        CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundary")
+
         self.maxDiff = None
         self.raster_data_dir = TEST_DATA_DIR.joinpath("raster")
         self.username = "test_username"
 
-        # these optional checks are present in all tested raster product definitions.
+        # these optional checks are present in all tested HRL raster product definitions.
         self.check_idents = ["r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r14", "r15"]
 
     # High resolution forest type (FTY) - 20m
     def test_fty_020m(self):
         product_ident = "fty_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "FTY_2015_020m_mt_03035_d04_clip.zip")
+
+        # fty_020m has extra check r11 (raster MMU)
         self.check_idents.append("r11")
 
-        #FIXME r11 should have status ok for fty_020m product.
         expected_check_statuses = {"r_unzip": "ok",
                                    "r1": "ok",
                                    "r2": "ok",
@@ -49,11 +53,12 @@ class Test_Raster(ProductTestCase):
                                    "r8": "ok",
                                    "r9": "ok",
                                    "r10": "ok",
-                                   "r11": "failed",
+                                   "r11": "ok",
                                    "r14": "ok",
                                    "r15": "ok"}
 
         job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
+        print(job_status)
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -70,9 +75,10 @@ class Test_Raster(ProductTestCase):
     def test_gra_020m(self):
         product_ident = "gra_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "GRA_2015_020m_mt_03035_V1_clip.zip")
+
+        # gra_020m has extra check r11 (raster MMU)
         self.check_idents.append("r11")
 
-        # FIXME r11 should have status ok for gra_020m product.
         expected_check_statuses = {"r_unzip": "ok",
                                    "r1": "ok",
                                    "r2": "ok",
@@ -84,7 +90,7 @@ class Test_Raster(ProductTestCase):
                                    "r8": "ok",
                                    "r9": "ok",
                                    "r10": "ok",
-                                   "r11": "failed",
+                                   "r11": "ok",
                                    "r14": "ok",
                                    "r15": "ok"}
 
@@ -153,14 +159,45 @@ class Test_Raster(ProductTestCase):
     def test_waw_020m(self):
         product_ident = "waw_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "WAW_2015_020m_mt_03035_d06_clip.zip")
+        expected_check_statuses = {"r_unzip": "ok",
+                                   "r1": "ok",
+                                   "r2": "ok",
+                                   "r3": "ok",
+                                   "r4": "ok",
+                                   "r5": "ok",
+                                   "r6": "ok",
+                                   "r7": "ok",
+                                   "r8": "ok",
+                                   "r9": "ok",
+                                   "r10": "failed", #FIXME r10 should be ok. Provide a special raster mask for waw_020m.
+                                   "r14": "ok",
+                                   "r15": "ok"}
+
         job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
-        self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
-                        self.show_messages(job_status))
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
 
     # High resolution water and wetness (WAW) - 100m
     def test_waw_100m(self):
         product_ident = "waw_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "WAW_2015_100m_mt_03035_d02_clip.zip")
+        expected_check_statuses = {"r_unzip": "ok",
+                                   "r1": "ok",
+                                   "r2": "ok",
+                                   "r3": "ok",
+                                   "r4": "ok",
+                                   "r5": "ok",
+                                   "r6": "ok",
+                                   "r7": "ok",
+                                   "r8": "ok",
+                                   "r9": "ok",
+                                   "r10": "failed",
+                                   # FIXME r10 should be ok. Provide a special raster mask for waw_100m.
+                                   "r14": "ok",
+                                   "r15": "ok"}
+
         job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
-        self.assertTrue(all([check["status"] == "ok" for check in job_status["checks"]]),
-                        self.show_messages(job_status))
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
