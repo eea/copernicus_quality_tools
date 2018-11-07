@@ -69,9 +69,10 @@ def run_check(params, status):
 
 
     # (3) run r.reclass.area (area is already in hectares)
-    # FIXME GRASS GIS reports patches with area exactly equal to params["area_m2"] as less than MMU.
-    # therefore the area_m2 is reduced by half of raster pixel area before running the GRASS GIS commands.
     
+    # NOTE: GRASS GIS reports patches with area exactly equal to params["area_m2"] as less than MMU.
+    # therefore the area_m2 is reduced by half of raster pixel area before running the GRASS GIS commands.
+
     half_pixel_m2 = (20.0 * 20.0 * 0.1) # FIXME use half of actual raster pixel area.
     mmu_limit_ha = (params["area_m2"] - half_pixel_m2) / 10000
 
@@ -86,7 +87,6 @@ def run_check(params, status):
               "mode=lesser",
               "method=reclass"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
-    print(str(p3.stdout))
     if "No areas of size less than or equal to" in str(p3.stdout):
         return
 
