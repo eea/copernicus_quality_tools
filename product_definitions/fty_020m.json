@@ -77,7 +77,8 @@
       "check_ident": "r11",
       "required": false,
       "parameters": {
-        "area_m2": 5000
+        "area_m2": 5000,
+        "groupcodes": [[1, 2]]
       }
     },
     {

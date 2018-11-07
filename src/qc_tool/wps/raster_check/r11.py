@@ -36,19 +36,57 @@ def run_check(params, status):
         status.add_message("GRASS GIS error: cannot import raster from {:s}".format(params["filepath"].name))
         return
 
+    # (2a) run r.reclass in case of groupcodes parameter.
+    # this option is to reclassify codes belonging to a group (for example, decidous and conifer forest -> forest)
+    reclass_raster = "srcfile"
+    if "groupcodes" in params:
+        # creating a reclass rule file.
+        # each line of the file has entries like:
+        # code_0 code_1 code_2 = new_code0
+        # code_3 code_4 = new_code3
+        rules_filepath = params["output_dir"].joinpath("rules.txt")
+        with rules_filepath.open(mode='w') as f:
+            for group in params["groupcodes"]:
+                original_codes = [str(code) for code in group]
+                new_code = original_codes[0]
+                reclass_rule = " ".join(original_codes) + " = " + new_code
+                f.write(reclass_rule)
+
+        reclass_raster = "srcfile_reclass"
+        p2a = subprocess.run([GRASS_VERSION,
+                              str(mapset_path),
+                              "--exec",
+                              "r.reclass",
+                              "--verbose",
+                              "--overwrite",
+                              "input=srcfile",
+                              "output={:s}".format(reclass_raster),
+                              "rules={:s}".format(str(rules_filepath)),
+                              ])
+        if p2a.returncode != 0:
+            status.add_message("GRASS GIS error in r.reclass")
+            return
+
+
     # (3) run r.reclass.area (area is already in hectares)
-    mmu_limit_ha = params["area_m2"] / 10000
+    # FIXME GRASS GIS reports patches with area exactly equal to params["area_m2"] as less than MMU.
+    # therefore the area_m2 is reduced by half of raster pixel area before running the GRASS GIS commands.
+    
+    half_pixel_m2 = (20.0 * 20.0 * 0.1) # FIXME use half of actual raster pixel area.
+    mmu_limit_ha = (params["area_m2"] - half_pixel_m2) / 10000
+
     p3 = subprocess.run([GRASS_VERSION,
               str(mapset_path),
               "--exec",
               "r.reclass.area",
               "--verbose",
-              "input=srcfile",
+              "input={:s}".format(reclass_raster),
               "output=lessmmu_raster",
-              "value={:.1f}".format(mmu_limit_ha),
+              "value={:.4f}".format(mmu_limit_ha),
               "mode=lesser",
               "method=reclass"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
+    print(str(p3.stdout))
     if "No areas of size less than or equal to" in str(p3.stdout):
         return
 
