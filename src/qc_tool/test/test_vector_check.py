@@ -219,8 +219,8 @@ class TestV3(VectorCheckTestCase):
                                                        "src_layer_name": "clc06_mt"},
                                            "layer_1": {"src_filepath": gdb_dir,
                                                        "src_layer_name": "clc12_mt"}},
-                            "layers": ["layer_0", "layer_1"],
-                            "attribute_regexes": ["id", "code_(06|12|18)", "area_ha", "remark"]})
+                            "layers": ["layer_0"],
+                            "attribute_regexes": ["id", "code_06", "area_ha", "remark"]})
 
     def test(self):
         from qc_tool.wps.vector_check.v3 import run_check
@@ -234,7 +234,7 @@ class TestV3(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
-        self.assertEqual(2, len(status.messages))
+        self.assertEqual(1, len(status.messages))
 
 
 class TestV4_gdb(VectorCheckTestCase):
