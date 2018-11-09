@@ -511,31 +511,27 @@ class Test_v11_clc_status(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_clc_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 100, 100, 4326));")
-        cursor.execute("CREATE TABLE layer (fid integer, shape_area real, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, shape_area real, wkb_geometry geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO layer VALUES (10, 250001, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (12, 250000, ST_MakeEnvelope(12, 0, 13, 2, 4326));")
-        # Exception feature touching boundary.
-        cursor.execute("INSERT INTO layer VALUES (20, 249999, ST_MakeEnvelope(20, 0, 21, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (10, 250001, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (12, 250000, ST_MakeEnvelope(12, 0, 13, 2, 4326));")
+        # Exception feature being at the boundary.
+        cursor.execute("INSERT INTO reference VALUES (20, 249999, ST_MakeEnvelope(20, 0, 21, 2, 4326));")
         # Error feature.
-        cursor.execute("INSERT INTO layer VALUES (30, 249999, ST_MakeEnvelope(30, 1, 31, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (30, 249999, ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
 
-        self.params.update({"layer_defs": {"boundary": {"pg_layer_name": "boundary",
-                                                        "pg_fid_name": "fid"},
-                                           "layer": {"pg_layer_name": "layer",
-                                                     "pg_fid_name": "fid"}},
-                            "layers": ["layer"],
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
+                                                         "pg_fid_name": "fid"}},
+                            "layers": ["reference"],
                             "area_column_name": "shape_area",
                             "area_m2": 250000})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_layer_general;")
+        cursor.execute("SELECT fid FROM v11_reference_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_layer_exception;")
+        cursor.execute("SELECT fid FROM v11_reference_exception ORDER BY fid;")
         self.assertListEqual([(20,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_layer_error;")
+        cursor.execute("SELECT fid FROM v11_reference_error ORDER BY fid;")
         self.assertListEqual([(30,)], cursor.fetchall())
 
 
@@ -543,45 +539,41 @@ class Test_v11_clc_change(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_clc_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 100, 100, 4326));")
-        cursor.execute("CREATE TABLE layer (fid integer, shape_area real, code1 char(1), code2 char(1), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(1), code2 char(1), wkb_geometry geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO layer VALUES (10, 50001, 'X', 'X', ST_MakeEnvelope(10, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (12, 50000, 'X', 'X', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (10, 50001, 'X', 'X', ST_MakeEnvelope(10, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (12, 50000, 'X', 'X', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
         # General features touching boundary.
-        cursor.execute("INSERT INTO layer VALUES (14, 50001, 'X', 'X', ST_MakeEnvelope(14, 0, 15, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (16, 50000, 'X', 'X', ST_MakeEnvelope(16, 0, 17, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (14, 50001, 'X', 'X', ST_MakeEnvelope(14, 0, 15, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (16, 50000, 'X', 'X', ST_MakeEnvelope(16, 0, 17, 2, 4326));")
         # Exception feature touching boundary.
-        cursor.execute("INSERT INTO layer VALUES (20, 49999, 'X', 'X', ST_MakeEnvelope(20, 0, 21, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (20, 49999, 'X', 'X', ST_MakeEnvelope(20, 0, 21, 2, 4326));")
         # Exception pair of features taking part in complex change with the same code in initial year.
-        cursor.execute("INSERT INTO layer VALUES (22, 40000, 'X', '1', ST_MakeEnvelope(22, 1, 23, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (23, 10000, 'X', '2', ST_MakeEnvelope(23, 1, 24, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (22, 40000, 'A', '1', ST_MakeEnvelope(22, 1, 23, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (23, 10000, 'A', '2', ST_MakeEnvelope(23, 1, 24, 2, 4326));")
         # Exception pair of features taking part in complex change with the same code in final year.
-        cursor.execute("INSERT INTO layer VALUES (25, 40000, '1', 'X', ST_MakeEnvelope(25, 1, 26, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (26, 10000, '2', 'X', ST_MakeEnvelope(26, 1, 27, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (25, 40000, '1', 'B', ST_MakeEnvelope(25, 1, 26, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (26, 10000, '2', 'B', ST_MakeEnvelope(26, 1, 27, 2, 4326));")
         # Error feature.
-        cursor.execute("INSERT INTO layer VALUES (30, 49999, 'X', 'X', ST_MakeEnvelope(30, 1, 31, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (30, 49999, 'C', 'C', ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
         # Error feature, complex change with total area below limit.
-        cursor.execute("INSERT INTO layer VALUES (32, 40000, '1', 'X', ST_MakeEnvelope(32, 1, 33, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (33,  9999, '2', 'X', ST_MakeEnvelope(33, 1, 34, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (32, 40000, '1', 'D', ST_MakeEnvelope(10.1, 1.1, 10.5, 1.9, 4326));")
+        cursor.execute("INSERT INTO change VALUES (33,  9999, '2', 'D', ST_MakeEnvelope(10.5, 1.1, 10.9, 1.9, 4326));")
 
-        self.params.update({"layer_defs": {"boundary": {"pg_layer_name": "boundary",
-                                                        "pg_fid_name": "fid"},
-                                           "layer": {"pg_layer_name": "layer",
-                                                     "pg_fid_name": "fid"}},
-                            "layers": ["layer"],
+        self.params.update({"layer_defs": {"change": {"pg_layer_name": "change",
+                                                      "pg_fid_name": "fid"}},
+                            "layers": ["change"],
                             "area_column_name": "shape_area",
                             "area_m2": 50000,
                             "initial_code_column_name": "code1",
                             "final_code_column_name": "code2"})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT * FROM v11_layer_general;")
+        cursor.execute("SELECT * FROM v11_change_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,)], cursor.fetchall())
-        cursor.execute("SELECT * FROM v11_layer_exception;")
+        cursor.execute("SELECT * FROM v11_change_exception ORDER BY fid;")
         self.assertListEqual([(20,), (22,), (23,), (25,), (26,)], cursor.fetchall())
-        cursor.execute("SELECT * FROM v11_layer_error;")
+        cursor.execute("SELECT * FROM v11_change_error ORDER BY fid;")
         self.assertListEqual([(30,), (32,), (33,)], cursor.fetchall())
 
 
@@ -589,70 +581,66 @@ class Test_v11_ua_status(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_ua_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 100, 100, 4326));")
-        cursor.execute("CREATE TABLE layer (fid integer, shape_area real, code char(5), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, shape_area real, code char(5), wkb_geometry geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO layer VALUES (10, 1, '122', ST_MakeEnvelope(10, 1, 11, 8, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (12, 1, '1228', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (14, 1, '12288', ST_MakeEnvelope(14, 1, 15, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (16, 1, '1228', ST_MakeEnvelope(16, 1, 17, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (10, 1, '122', ST_MakeEnvelope(10, 1, 11, 8, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (12, 1, '1228', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (14, 1, '12288', ST_MakeEnvelope(14, 1, 15, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (16, 1, '1228', ST_MakeEnvelope(16, 1, 17, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (18, 2501, '1', ST_MakeEnvelope(18, 1, 19, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (20, 2500, '1', ST_MakeEnvelope(20, 1, 21, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (18, 2501, '1', ST_MakeEnvelope(10, 8, 19, 10, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (20, 2500, '1', ST_MakeEnvelope(20, 1, 21, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (22, 10000, '2', ST_MakeEnvelope(22, 1, 23, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (24, 10000, '3', ST_MakeEnvelope(24, 1, 25, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (26, 10000, '4', ST_MakeEnvelope(26, 1, 27, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (28, 10000, '5', ST_MakeEnvelope(28, 1, 29, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (22, 10000, '2', ST_MakeEnvelope(59, 0, 80, 3, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (24, 10000, '3', ST_MakeEnvelope(24, 1, 25, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (26, 10000, '4', ST_MakeEnvelope(26, 1, 27, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (28, 10000, '5', ST_MakeEnvelope(28, 1, 29, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (30, 1, '9', ST_MakeEnvelope(30, 1, 31, 4, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (30, 1, '9', ST_MakeEnvelope(30, 1, 31, 4, 4326));")
 
         # Exception features, touches fid=30.
-        cursor.execute("INSERT INTO layer VALUES (40, 1, '2', ST_MakeEnvelope(31, 3, 41, 4, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (40, 1, '2', ST_MakeEnvelope(31, 3, 41, 4, 4326));")
 
         # Exception feature, touches boundary.
-        cursor.execute("INSERT INTO layer VALUES (42, 100, '2', ST_MakeEnvelope(42, 0, 43, 4, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (42, 100, '2', ST_MakeEnvelope(42, 0, 43, 4, 4326));")
 
         # Warning feature, touches fid=10.
-        cursor.execute("INSERT INTO layer VALUES (50, 500, '2', ST_MakeEnvelope(11, 5, 51, 6, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (50, 500, '2', ST_MakeEnvelope(10.1, 8, 11, 9, 4326));")
 
         # Error features breaking general requirements.
-        cursor.execute("INSERT INTO layer VALUES (60, 1, '123', ST_MakeEnvelope(60, 1, 61, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (60, 1, '123', ST_MakeEnvelope(60, 1, 61, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (62, 2499, '1', ST_MakeEnvelope(63, 1, 63, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (64, 2499, '13', ST_MakeEnvelope(65, 1, 65, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (62, 2499, '1', ST_MakeEnvelope(63, 1, 63, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (64, 2499, '13', ST_MakeEnvelope(65, 1, 65, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (66, 9999, '2', ST_MakeEnvelope(67, 1, 67, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (68, 9999, '3', ST_MakeEnvelope(69, 1, 69, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (70, 9999, '4', ST_MakeEnvelope(71, 1, 71, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (72, 9999, '5', ST_MakeEnvelope(73, 1, 73, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (74, 20000, '6', ST_MakeEnvelope(75, 1, 75, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (76, 20000, '7', ST_MakeEnvelope(77, 1, 77, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (78, 20000, '8', ST_MakeEnvelope(79, 1, 79, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (66, 9999, '2', ST_MakeEnvelope(67, 1, 67, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (68, 9999, '3', ST_MakeEnvelope(69, 1, 69, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (70, 9999, '4', ST_MakeEnvelope(71, 1, 71, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (72, 9999, '5', ST_MakeEnvelope(73, 1, 73, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (74, 20000, '6', ST_MakeEnvelope(75, 1, 75, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (76, 20000, '7', ST_MakeEnvelope(77, 1, 77, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (78, 20000, '8', ST_MakeEnvelope(79, 1, 79, 2, 4326));")
 
         # Error feature breaking exception requirements.
-        cursor.execute("INSERT INTO layer VALUES (80, 99, '4', ST_MakeEnvelope(80, 0, 81, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (80, 99, '4', ST_MakeEnvelope(80, 0, 81, 2, 4326));")
 
         # Error feature breaking warning requirements, touches fid=10.
-        cursor.execute("INSERT INTO layer VALUES (82, 499, '2', ST_MakeEnvelope(11, 7, 83, 8, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (82, 499, '2', ST_MakeEnvelope(10.1, 8, 11, 9, 4326));")
 
-        self.params.update({"layer_defs": {"boundary": {"pg_layer_name": "boundary",
-                                                        "pg_fid_name": "fid"},
-                                           "layer": {"pg_layer_name": "layer",
-                                                     "pg_fid_name": "fid"}},
-                            "layers": ["layer"],
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
+                                                         "pg_fid_name": "fid"}},
+                            "layers": ["reference"],
                             "area_column_name": "shape_area",
                             "code_column_name": "code"})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_layer_general;")
+        cursor.execute("SELECT fid FROM v11_reference_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,), (18,), (20,), (22,), (24,), (26,), (28,), (30,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_layer_exception;")
+        cursor.execute("SELECT fid FROM v11_reference_exception ORDER BY fid;")
         self.assertListEqual([(40,), (42,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_layer_warning;")
+        cursor.execute("SELECT fid FROM v11_reference_warning ORDER BY fid;")
         self.assertListEqual([(50,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_layer_error;")
+        cursor.execute("SELECT fid FROM v11_reference_error ORDER BY fid;")
         self.assertListEqual([(60,), (62,), (64,), (66,), (68,), (70,), (72,), (74,), (76,), (78,), (80,), (82,)], cursor.fetchall())
 
 
@@ -660,56 +648,52 @@ class Test_v11_ua_change(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_ua_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 100, 100, 4326));")
-        cursor.execute("CREATE TABLE layer (fid integer, shape_area real, code1 char(5), code2 char(5), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(5), code2 char(5), wkb_geometry geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO layer VALUES (10, 1001, 'X', '1', ST_MakeEnvelope(10, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (12, 1000, 'X', '1', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (14, 1000, 'X', '12', ST_MakeEnvelope(14, 1, 15, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (10, 1001, 'X', '1', ST_MakeEnvelope(10, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (12, 1000, 'X', '1', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (14, 1000, 'X', '12', ST_MakeEnvelope(14, 1, 15, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (16, 2500, 'X', '2', ST_MakeEnvelope(16, 1, 17, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (18, 2500, 'X', '3', ST_MakeEnvelope(18, 1, 19, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (20, 2500, 'X', '4', ST_MakeEnvelope(20, 1, 21, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (22, 2500, 'X', '5', ST_MakeEnvelope(22, 1, 23, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (16, 2500, 'X', '2', ST_MakeEnvelope(16, 1, 17, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (18, 2500, 'X', '3', ST_MakeEnvelope(18, 1, 19, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (20, 2500, 'X', '4', ST_MakeEnvelope(20, 1, 21, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (22, 2500, 'X', '5', ST_MakeEnvelope(22, 1, 23, 2, 4326));")
 
         # Exception features.
-        cursor.execute("INSERT INTO layer VALUES (30, 1, '122', 'X', ST_MakeEnvelope(30, 1, 31, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (32, 1, 'X', '122', ST_MakeEnvelope(32, 1, 33, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (30, 1, '122', 'X', ST_MakeEnvelope(30, 1, 31, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (32, 1, 'X', '122', ST_MakeEnvelope(32, 1, 33, 2, 4326));")
 
         # Error features breaking general requirements.
-        cursor.execute("INSERT INTO layer VALUES (40, 999, 'X', '1', ST_MakeEnvelope(40, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (42, 999, 'X', '12', ST_MakeEnvelope(42, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (40, 999, 'X', '1', ST_MakeEnvelope(40, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (42, 999, 'X', '12', ST_MakeEnvelope(42, 1, 11, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (44, 2499, 'X', '2', ST_MakeEnvelope(44, 1, 45, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (46, 2499, 'X', '3', ST_MakeEnvelope(46, 1, 46, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (48, 2499, 'X', '4', ST_MakeEnvelope(48, 1, 48, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (50, 2499, 'X', '5', ST_MakeEnvelope(50, 1, 50, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (44, 2499, 'X', '2', ST_MakeEnvelope(44, 1, 45, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (46, 2499, 'X', '3', ST_MakeEnvelope(46, 1, 46, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (48, 2499, 'X', '4', ST_MakeEnvelope(48, 1, 48, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (50, 2499, 'X', '5', ST_MakeEnvelope(50, 1, 50, 2, 4326));")
 
-        cursor.execute("INSERT INTO layer VALUES (52, 20000, 'X', '6', ST_MakeEnvelope(52, 1, 53, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (54, 20000, 'X', '7', ST_MakeEnvelope(54, 1, 55, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (56, 20000, 'X', '8', ST_MakeEnvelope(56, 1, 57, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (58, 20000, 'X', '9', ST_MakeEnvelope(58, 1, 59, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (52, 20000, 'X', '6', ST_MakeEnvelope(52, 1, 53, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (54, 20000, 'X', '7', ST_MakeEnvelope(54, 1, 55, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (56, 20000, 'X', '8', ST_MakeEnvelope(56, 1, 57, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (58, 20000, 'X', '9', ST_MakeEnvelope(58, 1, 59, 2, 4326));")
 
         # Error features breaking exception requirements.
-        cursor.execute("INSERT INTO layer VALUES (60, 1, '123', 'X', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
-        cursor.execute("INSERT INTO layer VALUES (62, 1, 'X', '123', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (60, 1, '123', 'X', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (62, 1, 'X', '123', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
 
-        self.params.update({"layer_defs": {"boundary": {"pg_layer_name": "boundary",
-                                                        "pg_fid_name": "fid"},
-                                           "layer": {"pg_layer_name": "layer",
-                                                     "pg_fid_name": "fid"}},
-                            "layers": ["layer"],
+        self.params.update({"layer_defs": {"change": {"pg_layer_name": "change",
+                                                      "pg_fid_name": "fid"}},
+                            "layers": ["change"],
                             "area_column_name": "shape_area",
                             "initial_code_column_name": "code1",
                             "final_code_column_name": "code2"})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_layer_general;")
+        cursor.execute("SELECT fid FROM v11_change_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,), (18,), (20,), (22,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_layer_exception;")
+        cursor.execute("SELECT fid FROM v11_change_exception ORDER BY fid;")
         self.assertListEqual([(30,), (32,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_layer_error;")
+        cursor.execute("SELECT fid FROM v11_change_error ORDER BY fid;")
         self.assertListEqual([(40,), (42,), (44,), (46,), (48,), (50,), (52,), (54,), (56,), (58,), (60,), (62,)], cursor.fetchall())
 
 

@@ -15,39 +15,38 @@ def run_check(params, status):
 
     for layer_def in do_layers(params):
         # Prepare parameters used in sql clauses.
-        sql_params = {"boundary_layer_name": params["layer_defs"]["boundary"]["pg_layer_name"],
-                      "fid_name": layer_def["pg_fid_name"],
+        sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
                       "area_m2": params["area_m2"],
-                      "boundary_items_table": "v11_{:s}_boundary_items".format(layer_def["pg_layer_name"]),
                       "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
                       "exception_table": "v11_{:s}_exception".format(layer_def["pg_layer_name"]),
                       "error_table": "v11_{:s}_error".format(layer_def["pg_layer_name"])}
-
-        # Create intermediate table of items touching boundary.
-        sql = ("CREATE TABLE {boundary_items_table} AS"
-               " SELECT DISTINCT layer.{fid_name}"
-               " FROM {layer_name} layer, {boundary_layer_name} boundary"
-               " WHERE ST_Dimension(ST_Intersection(layer.wkb_geometry, ST_Boundary(ST_Transform(boundary.wkb_geometry, ST_SRID(layer.wkb_geometry))))) >= 1;")
-        sql = sql.format(**sql_params)
-        cursor.execute(sql)
 
         # Create table of general items.
         sql = ("CREATE TABLE {general_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
-               " WHERE {area_column_name} >= {area_m2};")
+               " WHERE"
+               "  {area_column_name} >= {area_m2};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Create table of exception items.
         sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
+               " WITH"
+               "  boundary AS ("
+               "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
+               "   FROM {layer_name}),"
+               "  layer AS ("
+               "   SELECT *"
+               "   FROM {layer_name}"
+               "   WHERE"
+               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
+               " SELECT layer.{fid_name}"
+               " FROM layer, boundary"
                " WHERE"
-               "  {fid_name} IN (SELECT {fid_name} FROM {boundary_items_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
+               "  ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
