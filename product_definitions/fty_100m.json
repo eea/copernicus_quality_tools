@@ -69,8 +69,12 @@
         "validcodes": [0, 1, 2, 3, 254, 255]
       }
     },
-     {
+    {
       "check_ident": "r10",
+      "required": false
+    },
+    {
+      "check_ident": "r12",
       "required": false
     },
     {

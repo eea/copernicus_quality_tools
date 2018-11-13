@@ -74,6 +74,10 @@
       "required": false
     },
     {
+      "check_ident": "r12",
+      "required": false
+    },
+    {
       "check_ident": "r14",
       "required": false,
       "parameters": {}

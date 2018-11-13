@@ -14,23 +14,11 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
 
     # check existence of xml metadata file.
-    xml_suffixes = [".xml", ".tif.xml"]
-    expected_xml_files = [params["filepath"].with_suffix(ext_opt) for ext_opt in xml_suffixes]
-    expected_xml_filenames = [f.name for f in expected_xml_files]
+    xml_filepath = params["filepath"].with_suffix(".xml")
 
-    xml_filepaths = []
-    for suffix in xml_suffixes:
-        xml_filepath = params["filepath"].with_suffix(suffix)
-        if xml_filepath.exists():
-            xml_filepaths.append(xml_filepath)
-
-    if len(xml_filepaths) == 0:
-        status.add_message("Expected xml metadata file {:s} is missing.".format(" or ".join(expected_xml_filenames)))
+    if not xml_filepath.exists():
+        status.add_message("Expected xml metadata file {:s} is missing.".format(xml_filepath.name))
         return
-
-    if len(xml_filepaths) > 1:
-        found_xml_filenames = [f.name for f in xml_filepaths]
-        status.add_message("More than one xml metadata file found: {:s}".format(", ".join(found_xml_filenames)))
 
     # FIXME before sending to INSPIRE validator, also check if the file is a non-empty and valid XML document.
 
@@ -41,7 +29,7 @@ def run_check(params, status):
 
     headers = {'Accept': 'application/json', 'Content-Type': 'text/plain'}
 
-    metadata = xml_filepaths[0].read_text(encoding='utf-8')
+    metadata = xml_filepath.read_text(encoding='utf-8')
 
     response = requests.post(url, data=metadata.encode('utf-8'), headers=headers)
     report_url = response.headers['Location']

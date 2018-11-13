@@ -32,7 +32,7 @@ class Test_Raster(ProductTestCase):
         self.username = "test_username"
 
         # these optional checks are present in all tested HRL raster product definitions.
-        self.check_idents = ["r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r14", "r15"]
+        self.check_idents = ["r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r12", "r14", "r15"]
 
     # High resolution forest type (FTY) - 20m
     def test_fty_020m(self):
@@ -54,11 +54,11 @@ class Test_Raster(ProductTestCase):
                                    "r9": "ok",
                                    "r10": "ok",
                                    "r11": "ok",
+                                   "r12": "ok",
                                    "r14": "ok",
                                    "r15": "ok"}
 
         job_status = dispatch(self.job_uuid, self.username, filepath, product_ident, self.check_idents)
-        print(job_status)
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -91,6 +91,7 @@ class Test_Raster(ProductTestCase):
                                    "r9": "ok",
                                    "r10": "ok",
                                    "r11": "ok",
+                                   "r12": "ok",
                                    "r14": "ok",
                                    "r15": "ok"}
 
@@ -170,6 +171,7 @@ class Test_Raster(ProductTestCase):
                                    "r8": "ok",
                                    "r9": "ok",
                                    "r10": "failed", #FIXME r10 should be ok. Provide a special raster mask for waw_020m.
+                                   "r12": "ok",
                                    "r14": "ok",
                                    "r15": "ok"}
 
@@ -194,6 +196,7 @@ class Test_Raster(ProductTestCase):
                                    "r9": "ok",
                                    "r10": "failed",
                                    # FIXME r10 should be ok. Provide a special raster mask for waw_100m.
+                                   "r12": "ok",
                                    "r14": "ok",
                                    "r15": "ok"}
 
