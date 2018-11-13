@@ -69,7 +69,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "r9": "Pixel values check.",
     "r10": "In the mapped area are no NoData pixels.",
     "r11": "Minimum mapping unit check.",
-    "r12": "(no description)",
+    "r12": "Raster metadata is compliant with INSPIRE specifications.",
     "r13": "(no description)",
     "r14": "Raster has a color table.",
     "r15": "Colors in the color table match product specification."}
