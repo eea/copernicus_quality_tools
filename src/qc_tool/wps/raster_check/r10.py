@@ -15,6 +15,9 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
 
+    # set this to true for printing partial progress to standard output.
+    print_progress = False
+
     country_code = params["country_code"]
 
     # get raster resolution from the raster file
@@ -97,13 +100,12 @@ def run_check(params, status):
     mask_add_cols = int(abs(ds_ulx - mask_ulx) / abs(ds_xres))
     mask_add_rows = int(abs(ds_uly - mask_uly) / abs(ds_yres))
 
-    print("ds_ulx: {:f} mask_ulx: {:f} mask_add_cols: {:f}".format(ds_ulx, mask_ulx, mask_add_cols))
-    print("ds_uly: {:f} mask_uly: {:f} mask_add_rows: {:f}".format(ds_uly, mask_uly, mask_add_rows))
-
-    print("RasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize))
+    if print_progress:
+        print("ds_ulx: {:f} mask_ulx: {:f} mask_add_cols: {:f}".format(ds_ulx, mask_ulx, mask_add_cols))
+        print("ds_uly: {:f} mask_uly: {:f} mask_add_rows: {:f}".format(ds_uly, mask_uly, mask_add_rows))
+        print("RasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize))
 
     # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
-    #blocksize = 100
     blocksize = 1024
     n_block_cols = int(ds.RasterXSize / blocksize)
     n_block_rows = int(ds.RasterYSize / blocksize)
@@ -120,8 +122,9 @@ def run_check(params, status):
         last_block_height = ds.RasterYSize - (n_block_rows * blocksize)
         n_block_rows = n_block_rows + 1
 
-    print("n_block_rows: {:d} last_block_width: {:d}".format(n_block_rows, last_block_width))
-    print("n_block_cols: {:d} last_block_height: {:d}".format(n_block_cols, last_block_height))
+    if print_progress:
+        print("n_block_rows: {:d} last_block_width: {:d}".format(n_block_rows, last_block_width))
+        print("n_block_cols: {:d} last_block_height: {:d}".format(n_block_cols, last_block_height))
 
     # creating an OUTPUT dataset for writing error raster cells
     src_stem = params["filepath"].stem
@@ -154,7 +157,6 @@ def run_check(params, status):
             if col == n_block_cols - 1:
                 blocksize_x = last_block_width # special case for last column
 
-            print("row: {:d} col: {:d} blocksize_x: {:d} blocksize_y: {:d}".format(row, col, blocksize_x, blocksize_y))
 
             # reading the block from the checked raster dataset.
             arr_ds = ds_band.ReadAsArray(ds_xoff, ds_yoff, blocksize_x, blocksize_y)
@@ -167,7 +169,9 @@ def run_check(params, status):
             arr_nodata = ((arr_ds_int - arr_ma_int) < 0)
             nodata_count = numpy.sum(arr_nodata)
 
-            print("row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count))
+            if print_progress:
+                print("row: {:d} col: {:d} blocksize_x: {:d} blocksize_y: {:d}".format(row, col, blocksize_x, blocksize_y))
+                print("row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count))
 
             if nodata_count > 0:
                 # write detected NoData pixels [subtracted < 0] to a the error raster.
