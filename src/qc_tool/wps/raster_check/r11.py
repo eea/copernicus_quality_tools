@@ -4,6 +4,7 @@
 
 import subprocess
 
+from osgeo import gdal
 from osgeo import ogr
 from qc_tool.wps.registry import register_check_function
 
@@ -11,7 +12,19 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
     lessmmu_shp_path = params["output_dir"].joinpath("lessmmu_areas.shp")
 
+    # NOTE: GRASS function r.reclass.area reports patches with area exactly equal to params["area_m2"] as less than MMU.
+    # therefore the area_m2 is reduced by PIXEL_AREA_M2 * PIXEL_SIZE_TOLERANCE before running the r.reclass.area command.
+    PIXEL_SIZE_TOLERANCE = 0.1
     GRASS_VERSION = "grass72"
+
+    # (0) find out pixel size of raster (using gdal)
+    ds = gdal.Open(str(params["filepath"]))
+    # get raster resolution in map units
+    gt = ds.GetGeoTransform()
+    x_res = gt[1]
+    y_res = gt[5]
+    ds = None
+    pixel_area_m2 = abs(x_res * y_res)
 
     # (1) create a new GRASS location named "location" in the job directory
     location_path = params["tmp_dir"].joinpath("location")
@@ -68,12 +81,8 @@ def run_check(params, status):
             return
 
 
-    # (3) run r.reclass.area (area is already in hectares)
-    
-    # NOTE: GRASS GIS reports patches with area exactly equal to params["area_m2"] as less than MMU.
-    # therefore the area_m2 is reduced by half of raster pixel area before running the GRASS GIS commands.
-
-    half_pixel_m2 = (20.0 * 20.0 * 0.1) # FIXME use half of actual raster pixel area.
+    # (3) run r.reclass.area (the area parameter must be converted to hectares)
+    half_pixel_m2 = (pixel_area_m2 * PIXEL_SIZE_TOLERANCE)
     mmu_limit_ha = (params["area_m2"] - half_pixel_m2) / 10000
 
     p3 = subprocess.run([GRASS_VERSION,
