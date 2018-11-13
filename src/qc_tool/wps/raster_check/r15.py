@@ -60,9 +60,6 @@ def run_check(params, status):
                                       "expected": expected_colours[code],
                                       "actual": actual_colours[code]})
 
-    # simulate very long run
-    time.sleep(120)
-
     # report raster values with missing entries in the colour table
     if len(missing_codes) > 0:
         status.add_message("The raster colour table does not have entries for raster values {:s}.".format(", ".join(missing_codes)))
