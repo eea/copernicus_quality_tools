@@ -6,16 +6,18 @@ import subprocess
 
 from osgeo import gdal
 from osgeo import ogr
+from qc_tool.wps.helper import zip_shapefile
 from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    lessmmu_shp_path = params["output_dir"].joinpath("lessmmu_areas.shp")
-
     # NOTE: GRASS function r.reclass.area reports patches with area exactly equal to params["area_m2"] as less than MMU.
     # therefore the area_m2 is reduced by PIXEL_AREA_M2 * PIXEL_SIZE_TOLERANCE before running the r.reclass.area command.
     PIXEL_SIZE_TOLERANCE = 0.1
     GRASS_VERSION = "grass72"
+
+    lessmmu_shp_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_lessmmu_error.shp")
+    print(lessmmu_shp_filepath)
 
     # (0) find out pixel size of raster (using gdal)
     ds = gdal.Open(str(params["filepath"]))
@@ -126,27 +128,27 @@ def run_check(params, status):
               "--exec",
               "v.out.ogr",
               "input=lessmmu_areas",
-              "output={:s}".format(str(lessmmu_shp_path)),
+              "output={:s}".format(str(lessmmu_shp_filepath)),
               "format=ESRI_Shapefile"],
              check=True)
     if p5.returncode != 0:
         status.add_message("GRASS GIS error in executing v.out.ogr")
         return
 
-    if not lessmmu_shp_path.exists():
-        status.add_message("GRASS GIS error. exported lessmmu_areas shapefile {:s} does not exist.".format(str(lessmmu_shp_path)))
+    if not lessmmu_shp_filepath.exists():
+        status.add_message("GRASS GIS error. exported lessmmu_areas shapefile {:s} does not exist.".format(lessmmu_shp_filepath.name))
         return
 
     ogr.UseExceptions()
     try:
-        ds_lessmmu = ogr.Open(str(lessmmu_shp_path))
+        ds_lessmmu = ogr.Open(str(lessmmu_shp_filepath))
         if ds_lessmmu is None:
-            status.add_message("GRASS GIS error or OGR error. The file {:s} can not be opened.".format(str(lessmmu_shp_path)))
+            status.add_message("GRASS GIS error or OGR error. The file {:s} can not be opened.".format(lessmmu_shp_filepath.name))
             return
     except BaseException as e:
         status.add_message("GRASS GIS error or OGR error."
                            " The shapefile {:s} cannot be opened."
-                           " Exception: {:s}".format(str(lessmmu_shp_path), str(e)))
+                           " Exception: {:s}".format(lessmmu_shp_filepath.name, str(e)))
         return
 
     lyr = ds_lessmmu.GetLayer()
@@ -157,4 +159,8 @@ def run_check(params, status):
     else:
         status.add_message("The data source has {:d} objects under MMU limit of {:f} ha."
                            .format(lessmmu_count, params["area_m2"] / 10000))
+
+        # Zip the lessmmu_error shp, dbf, shx into one shapefile attachment
+        error_zip_filename = zip_shapefile(lessmmu_shp_filepath)
+        status.add_attachment(error_zip_filename)
         return

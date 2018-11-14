@@ -5,7 +5,7 @@ import csv
 import os
 import re
 import subprocess
-import zipfile
+from zipfile import ZipFile
 
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
@@ -34,6 +34,29 @@ def get_failed_pairs_message(cursor, error_table_name, pg_fid_name, limit=FAILED
     failed_pairs = ["{:s}-{:s}".format(str(row[0]), str(row[1])) for row in cursor.fetchmany(limit)]
     failed_pairs_message = shorten_failed_items_message(failed_pairs, cursor.rowcount)
     return failed_pairs_message
+
+def zip_shapefile(shp_filepath):
+    # Gather all files to be zipped.
+    shp_without_extension = shp_filepath.stem
+    output_dir = shp_filepath.parent
+    filepaths_to_zip = [f for f in output_dir.iterdir() if f.stem == shp_without_extension]
+
+    required_extensions = [".shp", ".dbf", ".shx", ".prj"]
+    for ext in required_extensions:
+        ext_filepath = output_dir.joinpath("{:s}{:s}".format(shp_without_extension, ext))
+        if ext_filepath not in filepaths_to_zip:
+            raise FileNotFoundError("Dumped {:s} file {:s} is missing.".format(ext, ext_filepath))
+
+    # Zip the files.
+    zip_filepath = output_dir.joinpath("{:s}.zip".format(shp_without_extension))
+    with ZipFile(str(zip_filepath), "w") as zf:
+        for filepath in filepaths_to_zip:
+            zf.write(str(filepath), filepath.name)
+
+    # Remove zipped files.
+    for filepath in filepaths_to_zip:
+        filepath.unlink()
+    return zip_filepath.name
 
 
 class LayerDefsBuilder():

@@ -22,6 +22,34 @@ class TestR2(RasterCheckTestCase):
         self.assertEqual("2015", status.status_properties["reference_year"])
 
 
+class TestR10(RasterCheckTestCase):
+    def test(self):
+        from qc_tool.wps.raster_check.r10 import run_check
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "complete_raster_100m_testaoi.tif"),
+                  "country_code": "testaoi",
+                  "boundary_dir": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "boundary"),
+                  "tmp_dir": self.jobdir_manager.tmp_dir,
+                  "output_dir": self.jobdir_manager.output_dir}
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("ok", status.status, "Raster check r10 should pass "
+                                              "if the raster does not have NoData values inside the AOI.")
+
+    def test_fail(self):
+        from qc_tool.wps.raster_check.r10 import run_check
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "incomplete_raster_100m_testaoi.tif"),
+                  "country_code": "testaoi",
+                  "boundary_dir": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "boundary"),
+                  "tmp_dir": self.jobdir_manager.tmp_dir,
+                  "output_dir": self.jobdir_manager.output_dir}
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("failed", status.status, "Raster check r10 should fail "
+                                                  "if the raster has NoData values in the AOI.")
+        self.assertIn("incomplete_raster_100m_testaoi_completeness_error.zip", status.attachment_filenames)
+        self.assertTrue(params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
+
+
 class TestR11(RasterCheckTestCase):
     def test_r11_dirs(self):
         self.assertTrue(self.jobdir_manager.job_dir.exists(), "job_dir directory must exist.")
@@ -59,7 +87,7 @@ class TestR11(RasterCheckTestCase):
         self.assertNotIn("GRASS GIS error", status.messages[0])
         self.assertEqual("failed", status.status, "Raster check r11 should fail for raster with patches < 0.5 ha.")
         self.assertIn("3", status.messages[0], "There should be 3 polygons with MMU error.")
-        # self.assertIn()
+        self.assertIn("r11_raster_incorrect_lessmmu_error.zip", status.attachment_filenames)
         # Note: We should also test the existence of the lessmmu_areas.shp shapefile inside output_dir.
 
 

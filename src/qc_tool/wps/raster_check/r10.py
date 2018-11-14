@@ -4,13 +4,12 @@
 
 from pathlib import Path
 import numpy
-import subprocess
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
 from qc_tool.wps.registry import register_check_function
-
+from qc_tool.wps.helper import zip_shapefile
 
 @register_check_function(__name__)
 def run_check(params, status):
@@ -128,7 +127,7 @@ def run_check(params, status):
 
     # creating an OUTPUT dataset for writing error raster cells
     src_stem = params["filepath"].stem
-    error_raster_filepath = params["output_dir"].joinpath(src_stem + "_nodata_pixels.tif")
+    error_raster_filepath = params["output_dir"].joinpath(src_stem + "_completeness_error.tif")
     driver = gdal.GetDriverByName('GTiff')
     x_pixels = int(round(ds.RasterXSize))
     y_pixels = int(round(ds.RasterYSize))
@@ -197,18 +196,19 @@ def run_check(params, status):
 
     else:
         # export the nodata_error raster to a shapefile using gdal_polygonize.
-        export_polygonized_errors = True
-        if export_polygonized_errors:
-            error_shp_filepath = Path(str(error_raster_filepath).replace(".tif", ".shp"))
-            error_layername = error_shp_filepath.stem
-            drv = ogr.GetDriverByName("ESRI Shapefile")
-            dst_ds = drv.CreateDataSource(str(error_shp_filepath))
-            error_shp_srs = osr.SpatialReference()
-            error_shp_srs.ImportFromWkt(error_ds.GetProjectionRef())
-            dst_layer = dst_ds.CreateLayer(error_layername, srs=error_shp_srs)
-            gdal.Polygonize(error_band, error_band, dst_layer, -1, [], callback=None)
-            dst_ds.FlushCache()
-            dst_ds = None
+        error_shp_filepath = Path(str(error_raster_filepath).replace(".tif", ".shp"))
+        error_layername = error_shp_filepath.stem
+        drv = ogr.GetDriverByName("ESRI Shapefile")
+        error_shp_ds = drv.CreateDataSource(str(error_shp_filepath))
+        error_shp_srs = osr.SpatialReference()
+        error_shp_srs.ImportFromWkt(error_ds.GetProjectionRef())
+        dst_layer = error_shp_ds.CreateLayer(error_layername, srs=error_shp_srs)
+        gdal.Polygonize(error_band, error_band, dst_layer, -1, [], callback=None)
+        error_shp_ds.FlushCache()
+        error_shp_ds = None
+
+        error_filename = zip_shapefile(error_shp_filepath)
+        status.add_attachment(error_filename)
 
         error_ds.FlushCache()
         error_ds = None
