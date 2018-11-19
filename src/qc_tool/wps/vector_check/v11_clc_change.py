@@ -4,9 +4,13 @@
 
 import re
 
+from qc_tool.wps.helper import ComplexChangeCollector
 from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
+
+
+CLUSTER_TABLE_NAME = "cpxch_cluster"
 
 
 @register_check_function(__name__)
@@ -22,6 +26,7 @@ def run_check(params, status):
                       "initial_code_column_name": params["initial_code_column_name"],
                       "final_code_column_name": params["final_code_column_name"],
                       "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
+                      "cluster_table": CLUSTER_TABLE_NAME,
                       "exception_table": "v11_{:s}_exception".format(layer_def["pg_layer_name"]),
                       "error_table": "v11_{:s}_error".format(layer_def["pg_layer_name"])}
 
@@ -49,19 +54,49 @@ def run_check(params, status):
                " SELECT layer.{fid_name}"
                " FROM layer, boundary"
                " WHERE"
-               "  ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1"
-               # Complex change items.
-               " UNION"
-               " SELECT ch1.{fid_name}"
-               " FROM layer ch1, {layer_name} ch2"
-               " WHERE"
-               "  ch1.{fid_name} <> ch2.{fid_name}"
-               "  AND (ch1.{initial_code_column_name} = ch2.{initial_code_column_name}"
-               "       OR ch1.{final_code_column_name} = ch2.{final_code_column_name})"
-               "  AND ch1.{area_column_name} + ch2.{area_column_name} >= {area_m2}"
-               "  AND ST_Dimension(ST_Intersection(ch1.wkb_geometry, ch2.wkb_geometry)) >= 1;")
+               "  ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
+
+        # Add exceptions comming from complex change.
+        # Do that once for initial code and once again for final code.
+        for code_column_name in (params["initial_code_column_name"],
+                                 params["final_code_column_name"]):
+
+            # Find potential bad fids.
+            sql = ("SELECT {fid_name}"
+                   " FROM {layer_name}"
+                   " WHERE"
+                   "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+            bad_fids = [row[0] for row in cursor.fetchall()]
+
+            # Build clusters from bad fids.
+            ccc = ComplexChangeCollector(cursor,
+                                         CLUSTER_TABLE_NAME,
+                                         layer_def["pg_layer_name"],
+                                         layer_def["pg_fid_name"],
+                                         params["initial_code_column_name"])
+            ccc.create_cluster_table()
+            ccc.build_clusters(bad_fids)
+            del ccc
+
+            # Add good fids to exception.
+            sql = ("INSERT INTO {exception_table}"
+                   " SELECT fid"
+                   " FROM {cluster_table}"
+                   " WHERE "
+                   "  fid NOT IN (SELECT {fid_name} FROM {general_table})"
+                   "  AND fid NOT IN (SELECT {fid_name} FROM {exception_table})"
+                   "  AND cluster_id IN ("
+                   "   SELECT cluster_id"
+                   "   FROM {cluster_table} INNER JOIN {layer_name} layer ON {cluster_table}.fid = layer.{fid_name}"
+                   "   GROUP BY cluster_id"
+                   "   HAVING sum(layer.shape_area) > 50000);")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
 
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])

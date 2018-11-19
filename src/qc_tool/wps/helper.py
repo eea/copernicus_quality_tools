@@ -106,3 +106,73 @@ class LayerDefsBuilder():
             desc = ", ".join(info["src_layer_name"] for info in self.layer_infos)
             self.status.failed()
             self.status.add_message("There are excessive layers: {:s}.".format(desc))
+
+
+class ComplexChangeCollector():
+    """Collects members of complex changes across the layer.
+
+    The set of features participating in one complex change is called cluster here.
+    Clusters are built so that every fid passed to collect_clusters() becomes member of just one cluster.
+
+    The class presumes that the type of fid column is always integer.
+    """
+    def __init__(self, cursor, cluster_table, layer_name, fid_name, code_column_name):
+        self.cursor = cursor
+        self.sql_params = {"cluster_table": cluster_table,
+                           "layer_name": layer_name,
+                           "fid_name": fid_name,
+                           "code_column_name": code_column_name}
+
+    def create_cluster_table(self):
+        self.cursor.execute("DROP TABLE IF EXISTS {cluster_table};".format(**self.sql_params))
+        self.cursor.execute("CREATE TABLE {cluster_table} (cluster_id integer, cycle_nr integer, fid integer);".format(**self.sql_params))
+
+    def build_clusters(self, fids):
+        for fid in fids:
+            self.collect_cluster_members(fid)
+
+    def collect_cluster_members(self, fid):
+        # Check the feature is not a member of any already built cluster.
+        sql = "SELECT fid FROM {cluster_table} WHERE fid = %s;".format(**self.sql_params)
+        self.cursor.execute(sql, [fid])
+        if self.cursor.rowcount >= 1:
+            return
+
+        # Init cycle counter.
+        cycle_nr = 0
+
+        # Insert initial member.
+        sql = ("INSERT INTO {cluster_table}"
+               " SELECT {cluster_id}, {cycle_nr}, {fid_name}"
+               " FROM {layer_name}"
+               " WHERE fid = {cluster_id};")
+        sql = sql.format(**self.sql_params, cluster_id=fid, cycle_nr=cycle_nr)
+        self.cursor.execute(sql)
+
+        # Collect all remaining members.
+        # Every cycle extends the cluster by members which are neighbours of the members
+        # added in the previous cycle.
+        while True:
+            cycle_nr += 1
+            sql = ("WITH"
+                   " last_members AS ("
+                   "  SELECT *"
+                   "  FROM {layer_name}"
+                   "  WHERE {fid_name} IN ("
+                   "   SELECT fid"
+                   "   FROM {cluster_table}"
+                   "   WHERE cluster_id = {cluster_id} AND cycle_nr = {cycle_nr} - 1)),"
+                   " other AS ("
+                   "  SELECT *"
+                   "  FROM {layer_name}"
+                   "  WHERE {fid_name} NOT IN (SELECT fid FROM {cluster_table})) "
+                   "INSERT INTO {cluster_table}"
+                   " SELECT DISTINCT {cluster_id}, {cycle_nr}, other.{fid_name}"
+                   " FROM last_members, other"
+                   " WHERE"
+                   "  last_members.{code_column_name} = other.{code_column_name}"
+                   "  AND ST_Dimension(ST_Intersection(last_members.wkb_geometry, other.wkb_geometry)) >= 1;")
+            sql = sql.format(**self.sql_params, cluster_id=fid, cycle_nr=cycle_nr)
+            self.cursor.execute(sql)
+            if self.cursor.rowcount <= 0:
+                break
