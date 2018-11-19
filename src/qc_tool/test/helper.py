@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 
-from contextlib import closing
 from contextlib import ExitStack
 from unittest import TestCase
 from uuid import uuid4

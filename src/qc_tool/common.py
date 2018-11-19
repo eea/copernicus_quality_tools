@@ -51,7 +51,6 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v11": "Minimum mapping unit check.",
     "v11_clc_change": "Minimum mapping unit check, Corine Land Cover change layer.",
     "v11_clc_status": "Minimum mapping unit check, Corine Land Cover status layer.",
-    "v11_ua": "Minimum mapping unit check.",
     "v11_ua_change": "Minimum mapping unit check, Urban Atlas change layer.",
     "v11_ua_status": "Minimum mapping unit check, Urban Atlas status layer.",
     "v12": "(no description)",
