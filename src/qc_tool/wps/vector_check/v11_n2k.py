@@ -98,7 +98,7 @@ def run_check(params, status):
                                          CLUSTER_TABLE_NAME,
                                          layer_def["pg_layer_name"],
                                          layer_def["pg_fid_name"],
-                                         params["initial_code_column_name"])
+                                         code_column_name)
             ccc.create_cluster_table()
             ccc.build_clusters(bad_fids)
             del ccc

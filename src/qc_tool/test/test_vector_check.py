@@ -539,31 +539,39 @@ class Test_v11_clc_change(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_clc_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
+
+        # Add layer for boundary creation.
+        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+
+        # Add layer to be checked.
         cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(1), code2 char(1), wkb_geometry geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO change VALUES (10, 50001, 'X', 'X', ST_MakeEnvelope(10, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (12, 50000, 'X', 'X', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (10, 50001, 'X', 'X', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO change VALUES (12, 50000, 'X', 'X', ST_MakeEnvelope(0, 2, 1, 3, 4326));")
         # General features touching boundary.
-        cursor.execute("INSERT INTO change VALUES (14, 50001, 'X', 'X', ST_MakeEnvelope(14, 0, 15, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (16, 50000, 'X', 'X', ST_MakeEnvelope(16, 0, 17, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (14, 50001, 'X', 'X', ST_MakeEnvelope(-1, 4, 1, 5, 4326));")
+        cursor.execute("INSERT INTO change VALUES (16, 50000, 'X', 'X', ST_MakeEnvelope(-1, 6, 1, 7, 4326));")
         # Exception feature touching boundary.
-        cursor.execute("INSERT INTO change VALUES (20, 49999, 'X', 'X', ST_MakeEnvelope(20, 0, 21, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (20, 49999, 'X', 'X', ST_MakeEnvelope(-1, 8, 1, 9, 4326));")
         # Exception pair of features taking part in complex change with the same code in initial year.
-        cursor.execute("INSERT INTO change VALUES (22, 40000, 'A', '1', ST_MakeEnvelope(22, 1, 23, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (23, 10000, 'A', '2', ST_MakeEnvelope(23, 1, 24, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (22, 40000, 'A', '1', ST_MakeEnvelope(0, 10, 1, 11, 4326));")
+        cursor.execute("INSERT INTO change VALUES (23, 10000, 'A', '2', ST_MakeEnvelope(1, 10, 2, 11, 4326));")
         # Exception pair of features taking part in complex change with the same code in final year.
-        cursor.execute("INSERT INTO change VALUES (25, 40000, '1', 'B', ST_MakeEnvelope(25, 1, 26, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (26, 10000, '2', 'B', ST_MakeEnvelope(26, 1, 27, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (25, 40000, '1', 'B', ST_MakeEnvelope(0, 12, 1, 13, 4326));")
+        cursor.execute("INSERT INTO change VALUES (26, 10000, '2', 'B', ST_MakeEnvelope(1, 12, 2, 13, 4326));")
         # Error feature.
-        cursor.execute("INSERT INTO change VALUES (30, 49999, 'C', 'C', ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
+        cursor.execute("INSERT INTO change VALUES (30, 49999, 'C', 'C', ST_MakeEnvelope(0, 14, 1, 15, 4326));")
         # Error feature, complex change with total area below limit.
-        cursor.execute("INSERT INTO change VALUES (32, 40000, '1', 'D', ST_MakeEnvelope(10.1, 1.1, 10.5, 1.9, 4326));")
-        cursor.execute("INSERT INTO change VALUES (33,  9999, '2', 'D', ST_MakeEnvelope(10.5, 1.1, 10.9, 1.9, 4326));")
+        cursor.execute("INSERT INTO change VALUES (32, 40000, '1', 'D', ST_MakeEnvelope(0, 16, 1, 17, 4326));")
+        cursor.execute("INSERT INTO change VALUES (33,  9999, '2', 'D', ST_MakeEnvelope(1, 16, 2, 17, 4326));")
 
         self.params.update({"layer_defs": {"change": {"pg_layer_name": "change",
-                                                      "pg_fid_name": "fid"}},
+                                                      "pg_fid_name": "fid"},
+                                           "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["change"],
+                            "boundary_layer": "boundary",
                             "area_column_name": "shape_area",
                             "area_m2": 50000,
                             "initial_code_column_name": "code1",

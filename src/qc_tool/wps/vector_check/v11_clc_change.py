@@ -21,6 +21,7 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
+                      "boundary_layer_name": params["layer_defs"][params["boundary_layer"]]["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
                       "area_m2": params["area_m2"],
                       "initial_code_column_name": params["initial_code_column_name"],
@@ -44,7 +45,7 @@ def run_check(params, status):
                " WITH"
                "  boundary AS ("
                "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
-               "   FROM {layer_name}),"
+               "   FROM {boundary_layer_name}),"
                "  layer AS ("
                "   SELECT *"
                "   FROM {layer_name}"
@@ -78,7 +79,7 @@ def run_check(params, status):
                                          CLUSTER_TABLE_NAME,
                                          layer_def["pg_layer_name"],
                                          layer_def["pg_fid_name"],
-                                         params["initial_code_column_name"])
+                                         code_column_name)
             ccc.create_cluster_table()
             ccc.build_clusters(bad_fids)
             del ccc
@@ -94,7 +95,7 @@ def run_check(params, status):
                    "   SELECT cluster_id"
                    "   FROM {cluster_table} INNER JOIN {layer_name} ON {cluster_table}.fid = {layer_name}.{fid_name}"
                    "   GROUP BY cluster_id"
-                   "   HAVING sum({layer_name}.shape_area) > 50000);")
+                   "   HAVING sum({layer_name}.shape_area) >= 50000);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 

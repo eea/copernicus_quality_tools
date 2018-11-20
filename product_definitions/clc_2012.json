@@ -116,6 +116,7 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
+        "boundary_layer": "reference",
         "area_m2": 50000,
         "area_column_name": "shape_area",
         "initial_code_column_name": "code_06",
