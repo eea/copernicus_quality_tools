@@ -728,6 +728,51 @@ class TestV11(VectorCheckTestCase):
         self.assertEqual("failed", status.status, "Check result should be 'failed' for MMU=250ha.")
 
 
+class Test_v11_n2k(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.wps.vector_check.v11_n2k import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE n2k (fid integer, shape_area real, code integer, wkb_geometry geometry(Polygon, 4326));")
+
+        # Artificial boundary as a general feature.
+        cursor.execute("INSERT INTO n2k VALUES (0, 5000, 10, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+
+        # Features touching boundary.
+        cursor.execute("INSERT INTO n2k VALUES (10, 1000, 8, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (11, 999, 8, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
+
+        # Linear features.
+        cursor.execute("INSERT INTO n2k VALUES (20, 1000, 121, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (21, 1000, 1211, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (22, 1000, 122, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (23, 1000, 911, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (24, 1000, 912, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (25, 999, 121, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
+
+        # Urban feature touching road or railway.
+        cursor.execute("INSERT INTO n2k VALUES (30, 2500, 1, ST_MakeEnvelope(1, 14, 2, 15, 4326));")
+
+        # Complex change features.
+        cursor.execute("INSERT INTO n2k VALUES (40, 2000, 9, ST_MakeEnvelope(0, 16, 1, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (41, 2000, 9, ST_MakeEnvelope(1, 16, 2, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (42, 2000, 9, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
+
+        self.params.update({"layer_defs": {"n2k": {"pg_layer_name": "n2k",
+                                                   "pg_fid_name": "fid"}},
+                            "layers": ["n2k"],
+                            "area_column_name": "shape_area",
+                            "area_m2": 5000,
+                            "initial_code_column_name": "code",
+                            "final_code_column_name": "code"})
+        run_check(self.params, self.status_class())
+        cursor.execute("SELECT fid FROM v11_n2k_general ORDER BY fid;")
+        self.assertListEqual([(0,)], cursor.fetchall())
+        cursor.execute("SELECT fid FROM v11_n2k_exception ORDER BY fid;")
+        self.assertListEqual([(10,), (20,), (21,), (22,), (23,), (24,), (30,), (40,), (41,), (42,)], cursor.fetchall())
+        cursor.execute("SELECT fid FROM v11_n2k_error ORDER BY fid;")
+        self.assertListEqual([(11,), (25,)], cursor.fetchall())
+
+
 class TestV13(VectorCheckTestCase):
     def setUp(self):
         super().setUp()

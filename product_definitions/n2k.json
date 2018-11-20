@@ -33,12 +33,13 @@
       }
     },
     {
-      "check_ident": "v11",
+      "check_ident": "v11_n2k",
       "required": false,
       "parameters": {
         "layers": ["n2k"],
         "area_m2": 5000,
-        "border_exception": false
+        "initial_code_column_name": "MAES_4_06",
+        "final_code_column_name": "MAES_4_12"
       }
     }
   ]
