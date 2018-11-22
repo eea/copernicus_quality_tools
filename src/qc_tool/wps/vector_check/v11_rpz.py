@@ -25,7 +25,6 @@ def run_check(params, status):
                       "area_m2": params["area_m2"],
                       "code_column_name": params["final_code_column_name"],
                       "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
-                      "cluster_table": CLUSTER_TABLE_NAME,
                       "exception_table": "v11_{:s}_exception".format(layer_def["pg_layer_name"]),
                       "error_table": "v11_{:s}_error".format(layer_def["pg_layer_name"])}
 
@@ -47,17 +46,12 @@ def run_check(params, status):
                "   SELECT *"
                "   FROM {layer_name}"
                "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})),"
-               "  randr AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {code_column_name}::text SIMILAR TO '(121|122)%')"
+               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
                # Items touching boundary.
                " SELECT layer.{fid_name}"
                " FROM layer, boundary"
                " WHERE"
-               "  layer.{area_column_name} >= 1000"
+               "  layer.{area_column_name} >= 2000"
                "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1"
                # Linear features.
                " UNION"
@@ -65,58 +59,16 @@ def run_check(params, status):
                " FROM layer"
                " WHERE"
                "  layer.{area_column_name} >= 1000"
-               "  AND layer.{code_column_name}::text SIMILAR TO '(121|122|911|912)%'"
-               # Urban features touching road or railway.
+               "  AND layer.{code_column_name}::text SIMILAR TO '(1211|1212|911%)'"
+               # Features completely covered by Urban Atlas Core Region.
                " UNION"
                " SELECT layer.{fid_name}"
-               " FROM layer, randr"
+               " FROM layer"
                " WHERE"
                "  layer.{area_column_name} >= 2500"
-               "  AND layer.{code_column_name}::text LIKE '1%'"
-               "  AND layer.{code_column_name}::text NOT SIMILAR TO '(10|121|122)%'"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, randr.wkb_geometry)) >= 1;")
+               "  AND layer.ua IS NOT NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
-
-        # Add exceptions comming from complex change.
-        # Do that once for initial code and once again for final code.
-        for code_column_name in (params["initial_code_column_name"],
-                                 params["final_code_column_name"]):
-
-            # Find potential bad fids.
-            sql = ("SELECT {fid_name}"
-                   " FROM {layer_name}"
-                   " WHERE"
-                   "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
-            bad_fids = [row[0] for row in cursor.fetchall()]
-
-            # Build clusters from bad fids.
-            ccc = ComplexChangeCollector(cursor,
-                                         CLUSTER_TABLE_NAME,
-                                         layer_def["pg_layer_name"],
-                                         layer_def["pg_fid_name"],
-                                         code_column_name)
-            ccc.create_cluster_table()
-            ccc.build_clusters(bad_fids)
-            del ccc
-
-            # Add good fids to exception.
-            sql = ("INSERT INTO {exception_table}"
-                   " SELECT fid"
-                   " FROM {cluster_table}"
-                   " WHERE "
-                   "  fid NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND fid NOT IN (SELECT {fid_name} FROM {exception_table})"
-                   "  AND cluster_id IN ("
-                   "   SELECT cluster_id"
-                   "   FROM {cluster_table} INNER JOIN {layer_name} ON {cluster_table}.fid = {layer_name}.{fid_name}"
-                   "   GROUP BY cluster_id"
-                   "   HAVING sum({layer_name}.shape_area) > 5000);")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
 
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])

@@ -781,6 +781,47 @@ class Test_v11_n2k(VectorCheckTestCase):
         self.assertListEqual([(11,), (25,)], cursor.fetchall())
 
 
+class Test_v11_rpz(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.wps.vector_check.v11_rpz import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE rpz (fid integer, shape_area real, code integer, ua char(1), wkb_geometry geometry(Polygon, 4326));")
+
+        # Artificial boundary as a general feature.
+        cursor.execute("INSERT INTO rpz VALUES (0, 5000, 10, NULL, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+
+        # Features touching boundary.
+        cursor.execute("INSERT INTO rpz VALUES (10, 2000, 8, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (11, 1999, 8, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
+
+        # Linear features.
+        cursor.execute("INSERT INTO rpz VALUES (20, 1000, 1211, NULL, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (21, 1000, 1212, NULL, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (22, 1000, 911, NULL, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (23, 1000, 9111, NULL, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (24, 999, 1211, NULL, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (25, 1000, 2, NULL, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
+
+        # Feature covered by Urban Atlas Core Region.
+        cursor.execute("INSERT INTO rpz VALUES (30, 2500, 1, 'U', ST_MakeEnvelope(1, 16, 2, 17, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (31, 2499, 1, 'U', ST_MakeEnvelope(1, 18, 2, 19, 4326));")
+
+        self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz",
+                                                   "pg_fid_name": "fid"}},
+                            "layers": ["rpz"],
+                            "area_column_name": "shape_area",
+                            "area_m2": 5000,
+                            "initial_code_column_name": "code",
+                            "final_code_column_name": "code"})
+        run_check(self.params, self.status_class())
+        cursor.execute("SELECT fid FROM v11_rpz_general ORDER BY fid;")
+        self.assertListEqual([(0,)], cursor.fetchall())
+        cursor.execute("SELECT fid FROM v11_rpz_exception ORDER BY fid;")
+        self.assertListEqual([(10,), (20,), (21,), (22,), (23,), (30,)], cursor.fetchall())
+        cursor.execute("SELECT fid FROM v11_rpz_error ORDER BY fid;")
+        self.assertListEqual([(11,), (24,), (25,), (31,)], cursor.fetchall())
+
+
 class TestV13(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
