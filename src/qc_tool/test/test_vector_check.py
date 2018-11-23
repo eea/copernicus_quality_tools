@@ -705,37 +705,6 @@ class Test_v11_ua_change(VectorCheckTestCase):
         self.assertListEqual([(40,), (42,), (44,), (46,), (48,), (50,), (52,), (54,), (56,), (58,), (60,), (62,)], cursor.fetchall())
 
 
-class TestV11(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
-        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
-        gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        boundary_filepath = TEST_DATA_DIR.joinpath("boundary", "vector", "boundary_mt.shp")
-        self.params.update({"layer_defs": {"reference": {"src_filepath": gdb_dir,
-                                                         "src_layer_name": "clc12_mt"},
-                                           "boundary": {"src_filepath": boundary_filepath,
-                                                        "src_layer_name": "boundary_mt"}},
-                            "layers": ["reference", "boundary"],
-                            "area_m2": 250000,
-                            "area_column_name": "shape_area"})
-        status = self.status_class()
-        import_check(self.params, status)
-        self.params["layers"] = ["reference"]
-
-    def test_small_mmu(self):
-        from qc_tool.wps.vector_check.v11_clc_status import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("ok", status.status, "Check result should be ok for MMU=25ha.")
-
-    def test_big_mmu_fails(self):
-        from qc_tool.wps.vector_check.v11_clc_status import run_check
-        self.params["area_m2"] = 2500000
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("failed", status.status, "Check result should be 'failed' for MMU=250ha.")
-
-
 class Test_v11_n2k(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_n2k import run_check
