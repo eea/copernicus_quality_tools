@@ -53,7 +53,7 @@ class Test_clc_status(ProductTestCase):
 
 class Test_rpz(ProductTestCase):
     def test(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU026A.shp.zip")
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip2.zip")
         expected_check_statuses = {"v_unzip": "ok",
                                    "v1_rpz": "ok",
                                    "v2": "ok",
@@ -63,9 +63,32 @@ class Test_rpz(ProductTestCase):
                                    "v5": "ok",
                                    "v6": "ok",
                                    "v8": "ok",
-                                   "v11_rpz": "ok",
+                                   "v11_rpz": "ok", #FIXME
                                    "v13": "ok",
-                                   "v14": "ok"}
+                                   "v14": "ok"} #FIXME
+        job_status = dispatch(self.job_uuid,
+                              "user_name",
+                              self.filepath,
+                              "rpz",
+                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14"])
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
+
+    def test_inside_ua_core(self):
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip1.zip")
+        expected_check_statuses = {"v_unzip": "ok",
+                                   "v1_rpz": "ok",
+                                   "v2": "ok",
+                                   "v3": "ok",
+                                   "v4": "ok",
+                                   "v_import2pg": "ok",
+                                   "v5": "ok",
+                                   "v6": "ok",
+                                   "v8": "ok",
+                                   "v11_rpz": "failed", #the dataset contains very small polygons < 0.2ha touching border.
+                                   "v13": "ok",
+                                   "v14": "failed"} #FIXME? neighbouring road polygons in UA core region
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
