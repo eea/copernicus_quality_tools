@@ -22,7 +22,7 @@ def run_check(params, status):
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
-                      "area_m2": params["area_m2"],
+                      "area_ha": params["area_ha"],
                       "code_column_name": params["final_code_column_name"],
                       "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
                       "cluster_table": CLUSTER_TABLE_NAME,
@@ -33,7 +33,7 @@ def run_check(params, status):
         sql = ("CREATE TABLE {general_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
-               " WHERE {area_column_name} >= {area_m2};")
+               " WHERE {area_column_name} >= {area_ha};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -57,21 +57,21 @@ def run_check(params, status):
                " SELECT layer.{fid_name}"
                " FROM layer, boundary"
                " WHERE"
-               "  layer.{area_column_name} >= 1000"
+               "  layer.{area_column_name} >= 0.1"
                "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1"
                # Linear features.
                " UNION"
                " SELECT layer.{fid_name}"
                " FROM layer"
                " WHERE"
-               "  layer.{area_column_name} >= 1000"
+               "  layer.{area_column_name} >= 0.1"
                "  AND layer.{code_column_name}::text SIMILAR TO '(121|122|911|912)%'"
                # Urban features touching road or railway.
                " UNION"
                " SELECT layer.{fid_name}"
                " FROM layer, randr"
                " WHERE"
-               "  layer.{area_column_name} >= 2500"
+               "  layer.{area_column_name} >= 0.25"
                "  AND layer.{code_column_name}::text LIKE '1%'"
                "  AND layer.{code_column_name}::text NOT SIMILAR TO '(10|121|122)%'"
                "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, randr.wkb_geometry)) >= 1;")
@@ -114,7 +114,7 @@ def run_check(params, status):
                    "   SELECT cluster_id"
                    "   FROM {cluster_table} INNER JOIN {layer_name} ON {cluster_table}.fid = {layer_name}.{fid_name}"
                    "   GROUP BY cluster_id"
-                   "   HAVING sum({layer_name}.shape_area) > 5000);")
+                   "   HAVING sum({layer_name}.{area_column_name}) > 0.5);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 

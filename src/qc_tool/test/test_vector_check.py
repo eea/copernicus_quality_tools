@@ -705,71 +705,40 @@ class Test_v11_ua_change(VectorCheckTestCase):
         self.assertListEqual([(40,), (42,), (44,), (46,), (48,), (50,), (52,), (54,), (56,), (58,), (60,), (62,)], cursor.fetchall())
 
 
-class TestV11(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
-        from qc_tool.wps.vector_check.v_import2pg import run_check as import_check
-        gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
-        boundary_filepath = TEST_DATA_DIR.joinpath("boundary", "vector", "boundary_mt.shp")
-        self.params.update({"layer_defs": {"reference": {"src_filepath": gdb_dir,
-                                                         "src_layer_name": "clc12_mt"},
-                                           "boundary": {"src_filepath": boundary_filepath,
-                                                        "src_layer_name": "boundary_mt"}},
-                            "layers": ["reference", "boundary"],
-                            "area_m2": 250000,
-                            "area_column_name": "shape_area"})
-        status = self.status_class()
-        import_check(self.params, status)
-        self.params["layers"] = ["reference"]
-
-    def test_small_mmu(self):
-        from qc_tool.wps.vector_check.v11_clc_status import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("ok", status.status, "Check result should be ok for MMU=25ha.")
-
-    def test_big_mmu_fails(self):
-        from qc_tool.wps.vector_check.v11_clc_status import run_check
-        self.params["area_m2"] = 2500000
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("failed", status.status, "Check result should be 'failed' for MMU=250ha.")
-
-
 class Test_v11_n2k(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_n2k import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE n2k (fid integer, shape_area real, code integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, wkb_geometry geometry(Polygon, 4326));")
 
         # Artificial boundary as a general feature.
-        cursor.execute("INSERT INTO n2k VALUES (0, 5000, 10, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (0, 0.5, 10, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
         # Features touching boundary.
-        cursor.execute("INSERT INTO n2k VALUES (10, 1000, 8, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (11, 999, 8, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (10, 0.1, 8, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (11, 0.0999, 8, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
 
         # Linear features.
-        cursor.execute("INSERT INTO n2k VALUES (20, 1000, 121, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (21, 1000, 1211, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (22, 1000, 122, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (23, 1000, 911, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (24, 1000, 912, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (25, 999, 121, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (20, 0.1, 121, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (21, 0.1, 1211, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (22, 0.1, 122, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (23, 0.1, 911, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (24, 0.1, 912, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (25, 0.0999, 121, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
 
         # Urban feature touching road or railway.
-        cursor.execute("INSERT INTO n2k VALUES (30, 2500, 1, ST_MakeEnvelope(1, 14, 2, 15, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (30, 0.25, 1, ST_MakeEnvelope(1, 14, 2, 15, 4326));")
 
         # Complex change features.
-        cursor.execute("INSERT INTO n2k VALUES (40, 2000, 9, ST_MakeEnvelope(0, 16, 1, 17, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (41, 2000, 9, ST_MakeEnvelope(1, 16, 2, 17, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (42, 2000, 9, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (40, 0.2, 9, ST_MakeEnvelope(0, 16, 1, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (41, 0.2, 9, ST_MakeEnvelope(1, 16, 2, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (42, 0.2, 9, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
 
         self.params.update({"layer_defs": {"n2k": {"pg_layer_name": "n2k",
                                                    "pg_fid_name": "fid"}},
                             "layers": ["n2k"],
-                            "area_column_name": "shape_area",
-                            "area_m2": 5000,
+                            "area_column_name": "area_ha",
+                            "area_ha": 0.5,
                             "initial_code_column_name": "code",
                             "final_code_column_name": "code"})
         run_check(self.params, self.status_class())
@@ -785,32 +754,32 @@ class Test_v11_rpz(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v11_rpz import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE rpz (fid integer, shape_area real, code integer, ua char(1), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE rpz (fid integer, area_ha real, code integer, ua char(1), wkb_geometry geometry(Polygon, 4326));")
 
         # Artificial boundary as a general feature.
-        cursor.execute("INSERT INTO rpz VALUES (0, 5000, 10, NULL, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (0, 0.5, 10, NULL, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
         # Features touching boundary.
-        cursor.execute("INSERT INTO rpz VALUES (10, 2000, 8, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (11, 1999, 8, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (10, 0.2, 8, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (11, 0.1999, 8, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
 
         # Linear features.
-        cursor.execute("INSERT INTO rpz VALUES (20, 1000, 1211, NULL, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (21, 1000, 1212, NULL, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (22, 1000, 911, NULL, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (23, 1000, 9111, NULL, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (24, 999, 1211, NULL, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (25, 1000, 2, NULL, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (20, 0.1, 1211, NULL, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (21, 0.1, 1212, NULL, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (22, 0.1, 911, NULL, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (23, 0.1, 9111, NULL, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (24, 0.0999, 1211, NULL, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (25, 0.1, 2, NULL, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
 
         # Feature covered by Urban Atlas Core Region.
-        cursor.execute("INSERT INTO rpz VALUES (30, 2500, 1, 'U', ST_MakeEnvelope(1, 16, 2, 17, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (31, 2499, 1, 'U', ST_MakeEnvelope(1, 18, 2, 19, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (30, 0.25, 1, 'U', ST_MakeEnvelope(1, 16, 2, 17, 4326));")
+        cursor.execute("INSERT INTO rpz VALUES (31, 0.2499, 1, 'U', ST_MakeEnvelope(1, 18, 2, 19, 4326));")
 
         self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz",
                                                    "pg_fid_name": "fid"}},
                             "layers": ["rpz"],
-                            "area_column_name": "shape_area",
-                            "area_m2": 5000,
+                            "area_column_name": "area_ha",
+                            "area_ha": 0.5,
                             "initial_code_column_name": "code",
                             "final_code_column_name": "code"})
         run_check(self.params, self.status_class())
