@@ -51,11 +51,33 @@ class Test_clc_status(ProductTestCase):
                          "Job status returned by dispatch() must be the same as stored in status.json file.")
 
 
+class Test_rpz(ProductTestCase):
+    def test(self):
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU026A.shp.zip")
+        expected_check_statuses = {"v_unzip": "ok",
+                                   "v1_rpz": "ok",
+                                   "v2": "ok",
+                                   "v3": "ok",
+                                   "v4": "ok",
+                                   "v_import2pg": "ok",
+                                   "v5": "ok",
+                                   "v6": "ok",
+                                   "v8": "ok",
+                                   "v11_rpz": "ok",
+                                   "v13": "ok",
+                                   "v14": "ok"}
+        job_status = dispatch(self.job_uuid,
+                              "user_name",
+                              self.filepath,
+                              "rpz",
+                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14"])
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
+
+
 class Test_ua_shp(ProductTestCase):
     def test(self):
-        # FIXME:
-        # Narva test zip should be removed while it fails in some checks.
-        # The new test zip should pass all checks with ok status.
         self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         expected_check_statuses = {"v_unzip": "ok",
                                    "v1_ua_shp": "ok",
