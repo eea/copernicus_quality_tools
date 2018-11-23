@@ -10,9 +10,6 @@ from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
 
 
-CLUSTER_TABLE_NAME = "n2k_complex_change"
-
-
 @register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
@@ -23,7 +20,7 @@ def run_check(params, status):
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
                       "area_ha": params["area_ha"],
-                      "code_column_name": params["final_code_column_name"],
+                      "code_column_name": params["code_column_name"],
                       "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
                       "exception_table": "v11_{:s}_exception".format(layer_def["pg_layer_name"]),
                       "error_table": "v11_{:s}_error".format(layer_def["pg_layer_name"])}

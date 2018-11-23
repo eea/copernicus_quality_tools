@@ -76,7 +76,7 @@
       "parameters": {
         "layers": ["rpz"],
         "area_column_name": "area_ha",
-        "area_ha": 5,
+        "area_ha": 0.5,
         "code_column_name": "MAES_4"
       }
     },
