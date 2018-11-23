@@ -37,7 +37,8 @@
       "required": false,
       "parameters": {
         "layers": ["n2k"],
-        "area_m2": 5000,
+        "area_column_name": "area_ha",
+        "area_ha": 5,
         "initial_code_column_name": "MAES_4_06",
         "final_code_column_name": "MAES_4_12"
       }

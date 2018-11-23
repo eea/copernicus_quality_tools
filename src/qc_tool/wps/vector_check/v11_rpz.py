@@ -22,7 +22,7 @@ def run_check(params, status):
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
-                      "area_m2": params["area_m2"],
+                      "area_ha": params["area_ha"],
                       "code_column_name": params["final_code_column_name"],
                       "general_table": "v11_{:s}_general".format(layer_def["pg_layer_name"]),
                       "exception_table": "v11_{:s}_exception".format(layer_def["pg_layer_name"]),
@@ -32,7 +32,7 @@ def run_check(params, status):
         sql = ("CREATE TABLE {general_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
-               " WHERE {area_column_name} >= {area_m2};")
+               " WHERE {area_column_name} >= {area_ha};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -51,21 +51,21 @@ def run_check(params, status):
                " SELECT layer.{fid_name}"
                " FROM layer, boundary"
                " WHERE"
-               "  layer.{area_column_name} >= 2000"
+               "  layer.{area_column_name} >= 0.2"
                "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1"
                # Linear features.
                " UNION"
                " SELECT layer.{fid_name}"
                " FROM layer"
                " WHERE"
-               "  layer.{area_column_name} >= 1000"
+               "  layer.{area_column_name} >= 0.1"
                "  AND layer.{code_column_name}::text SIMILAR TO '(1211|1212|911%)'"
                # Features completely covered by Urban Atlas Core Region.
                " UNION"
                " SELECT layer.{fid_name}"
                " FROM layer"
                " WHERE"
-               "  layer.{area_column_name} >= 2500"
+               "  layer.{area_column_name} >= 0.25"
                "  AND layer.ua IS NOT NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
