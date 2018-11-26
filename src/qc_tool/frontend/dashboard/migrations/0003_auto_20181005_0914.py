@@ -20,6 +20,11 @@ class Migration(migrations.Migration):
             name='size_bytes',
             field=models.IntegerField(null=True),
         ),
+        migrations.AddField(
+            model_name='delivery',
+            name='size_bytes2',
+            field=models.IntegerField(null=True),
+        ),
         migrations.AlterModelTable(
             name='delivery',
             table='deliverys2',
