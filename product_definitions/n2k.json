@@ -18,6 +18,14 @@
       }
     },
     {
+      "check_ident": "v3",
+      "required": true,
+      "parameters": {
+        "layers": ["n2k"],
+        "attribute_regexes": ["id", "uid", "sitecode", "grasstype", "maes_1_12", "maes_2_12", "maes_3_12", "maes_4_12", "comment_12", "nodata_12", "maes_1_06", "maes_2_06", "maes_3_06", "maes_4_06", "comment_06", "nodata_06", "changecode", "area_ha"]
+      }
+    },
+    {
       "check_ident": "v4",
       "required": true,
       "parameters": {
@@ -33,14 +41,60 @@
       }
     },
     {
+      "check_ident": "v5",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "unique_keys": ["uid"]
+
+      }
+    },
+    {
+      "check_ident": "v6",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "column_defs": [["maes_1_06", "MAES1"],
+                        ["maes_2_06", "MAES2"],
+                        ["maes_3_06", "MAES3"],
+                        ["maes_4_06", "MAES4"],
+                        ["maes_1_12", "MAES1"],
+                        ["maes_2_12", "MAES2"],
+                        ["maes_3_12", "MAES3"],
+                        ["maes_4_12", "MAES4"]]
+      }
+    },
+    {
+      "check_ident": "v8",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
       "check_ident": "v11_n2k",
       "required": false,
       "parameters": {
         "layers": ["n2k"],
         "area_column_name": "area_ha",
-        "area_ha": 5,
-        "initial_code_column_name": "MAES_4_06",
-        "final_code_column_name": "MAES_4_12"
+        "area_ha": 0.5,
+        "initial_code_column_name": "maes_4_06",
+        "final_code_column_name": "maes_4_12"
+      }
+    },
+    {
+      "check_ident": "v13",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
+      "check_ident": "v14",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "code_column_names": ["maes_4_06", "maes_4_12"]
       }
     }
   ]
