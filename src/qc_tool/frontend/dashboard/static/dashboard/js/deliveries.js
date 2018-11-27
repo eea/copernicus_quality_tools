@@ -114,10 +114,18 @@ function statusFormatter(value, row, index) {
         value = "checks failed";
     }
     if (value == "accepted") {
-        value = "running (" + row.percent + "% )";
+        if(row.percent == null) {
+            value = "running (0 %)";
+        } else {
+            value = "running (" + row.percent + "% )";
+        }
     }
     if (value == "running") {
-        value = "running (" + row.percent + "% )";
+        if(row.percent == null) {
+            value = "running (0 %)";
+        } else {
+            value = "running (" + row.percent + "% )";
+        }
     }
     if (value == "ok") {
         if (row["is_submitted"]) {
@@ -126,7 +134,6 @@ function statusFormatter(value, row, index) {
             value = "checks passed";
         }
     }
-
 
     if (uuid) {
         return ['<a class="like" href="',
