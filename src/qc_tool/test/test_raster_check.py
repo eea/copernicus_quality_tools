@@ -53,42 +53,27 @@ class TestR10(RasterCheckTestCase):
 class TestR11(RasterCheckTestCase):
     def test_r11_dirs(self):
         self.assertTrue(self.jobdir_manager.job_dir.exists(), "job_dir directory must exist.")
-        self.assertTrue(self.jobdir_manager.tmp_dir.exists(), "tmp_dir directory must exist.")
         self.assertTrue(self.jobdir_manager.output_dir.exists(), "output_dir directory must exist.")
 
-    def test(self):
+    def test_ok(self):
         from qc_tool.wps.raster_check.r11 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
-                  "area_m2": 5000,
-                  "tmp_dir": self.jobdir_manager.tmp_dir,
+                  "area_pixels": 13,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
         run_check(params, status)
-        self.assertEqual("ok", status.status, "Raster check r11 should pass for raster with patches > 0.5 ha.")
-
-    def test_grass_ok(self):
-        from qc_tool.wps.raster_check.r11 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_incorrect.tif"),
-                  "area_m2": 5000,
-                  "tmp_dir": self.jobdir_manager.tmp_dir,
-                  "output_dir": self.jobdir_manager.output_dir}
-        status = self.status_class()
-        run_check(params, status)
-        self.assertNotIn("GRASS GIS error", status.messages[0])
+        self.assertEqual("ok", status.status, "Raster check r11 should pass for test raster with patches >= 13 pixels.")
 
     def test_fail(self):
         from qc_tool.wps.raster_check.r11 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_incorrect.tif"),
-                  "area_m2": 5000,
-                  "tmp_dir": self.jobdir_manager.tmp_dir,
+                  "area_pixels": 13,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
         run_check(params, status)
-        self.assertNotIn("GRASS GIS error", status.messages[0])
-        self.assertEqual("failed", status.status, "Raster check r11 should fail for raster with patches < 0.5 ha.")
-        self.assertIn("3", status.messages[0], "There should be 3 polygons with MMU error.")
+        self.assertEqual("failed", status.status, "Raster check r11 should fail for raster with patches < 13 pixels.")
+        self.assertIn("1", status.messages[0], "There should be 1 object with MMU error.")
         self.assertIn("r11_raster_incorrect_lessmmu_error.zip", status.attachment_filenames)
-        # Note: We should also test the existence of the lessmmu_areas.shp shapefile inside output_dir.
 
 
 class TestR12(RasterCheckTestCase):

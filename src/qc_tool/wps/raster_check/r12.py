@@ -5,6 +5,7 @@ import json
 #import urllib3
 from pathlib import Path
 import requests
+from requests.exceptions import ConnectionError
 
 
 from qc_tool.wps.registry import register_check_function
@@ -31,9 +32,13 @@ def run_check(params, status):
 
     metadata = xml_filepath.read_text(encoding='utf-8')
 
-    response = requests.post(url, data=metadata.encode('utf-8'), headers=headers)
-    report_url = response.headers['Location']
-    json_data = response.json()
+    try:
+        response = requests.post(url, data=metadata.encode('utf-8'), headers=headers)
+        report_url = response.headers['Location']
+        json_data = response.json()
+    except ConnectionError:
+        status.add_message("Unable to validate INSPIRE metadata. Internet connection is not accessible.")
+        return
 
     # Completeness_indicator is 100.0 means that INSPIRE validation is OK (even if there are some warnings).
     completeness_indicator = json_data['value']['CompletenessIndicator']
