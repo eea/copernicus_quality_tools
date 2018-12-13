@@ -23,8 +23,8 @@ RUN apt-get -y update \
 # Install geo environment.
 RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy
 
-# Install grass.
-RUN apt-get -y install grass-core
+# Install scikit-image.
+RUN pip3 install scikit-image
 
 # Install flask & pywps.
 RUN apt-get -y install gcc python3-dev libproj-dev python3-lxml \

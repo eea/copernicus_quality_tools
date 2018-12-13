@@ -77,8 +77,9 @@
       "check_ident": "r11",
       "required": false,
       "parameters": {
-        "area_m2": 5000,
-        "groupcodes": [[1, 2]]
+        "area_pixels": 13,
+        "groupcodes": [[1, 2]],
+        "exclude_codes": 254
       }
     },
     {
