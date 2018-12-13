@@ -217,11 +217,14 @@ class TestV3(VectorCheckTestCase):
         super().setUp()
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
-                                                       "src_layer_name": "clc06_mt"},
-                                           "layer_1": {"src_filepath": gdb_dir,
                                                        "src_layer_name": "clc12_mt"}},
                             "layers": ["layer_0"],
-                            "attribute_regexes": ["id", "code_06", "area_ha", "remark"]})
+                            "attributes": {"id": "string",
+                                           "code_12": "string",
+                                           "area_ha": "real",
+                                           "remark": "string",
+                                           "shape_length": "real",
+                                           "shape_area": "real"}})
 
     def test(self):
         from qc_tool.wps.vector_check.v3 import run_check
@@ -231,11 +234,10 @@ class TestV3(VectorCheckTestCase):
 
     def test_missing_attribute_aborts(self):
         from qc_tool.wps.vector_check.v3 import run_check
-        self.params["attribute_regexes"] = ["missing_attribute"]
+        self.params["attributes"]["missing_attribute"] = "string"
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
-        self.assertEqual(1, len(status.messages))
 
 
 class TestV4_gdb(VectorCheckTestCase):

@@ -187,21 +187,21 @@ class Test_ua_gdb(ProductTestCase):
                                    "reference.v3": "ok",
                                    "boundary.v3": "ok",
                                    "revised.v3": "ok",
-                                   "combined.v3": "ok",
+                                   "combined_change.v3": "ok",
                                    "v4": "ok",
                                    "v_import2pg": "ok",
                                    "v5": "ok",
                                    "reference.v6": "ok",
                                    "revised.v6": "ok",
-                                   "combined.v6": "ok",
+                                   "combined_change.v6": "ok",
                                    "v8": "ok",
                                    "reference.v11_ua_status": "ok",
-                                   "revised.v11_ua_status": "ok",
+                                   "revised_combined.v11_ua_status": "ok",
                                    "change.v11_ua_change": "ok",
                                    "v13": "ok",
                                    "reference.v14": "ok",
                                    "revised.v14": "ok",
-                                   "change.v14": "ok"}
+                                   "combined_change.v14": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
@@ -209,15 +209,15 @@ class Test_ua_gdb(ProductTestCase):
                               ["v5",
                                "reference.v6",
                                "revised.v6",
-                               "combined.v6",
+                               "combined_change.v6",
                                "v8",
                                "reference.v11_ua_status",
-                               "revised.v11_ua_status",
+                               "revised_combined.v11_ua_status",
                                "change.v11_ua_change",
                                "v13",
                                "reference.v14",
                                "revised.v14",
-                               "change.v14"])
+                               "combined_change.v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)

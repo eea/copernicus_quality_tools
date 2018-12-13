@@ -22,7 +22,24 @@
       "required": true,
       "parameters": {
         "layers": ["n2k"],
-        "attribute_regexes": ["id", "uid", "sitecode", "grasstype", "maes_1_12", "maes_2_12", "maes_3_12", "maes_4_12", "comment_12", "nodata_12", "maes_1_06", "maes_2_06", "maes_3_06", "maes_4_06", "comment_06", "nodata_06", "changecode", "area_ha"]
+        "attributes": {"id": "integer",
+                       "uid": "string",
+                       "sitecode": "string",
+                       "grasstype": "string",
+                       "maes_1_06": "integer",
+                       "maes_2_06": "integer",
+                       "maes_3_06": "integer",
+                       "maes_4_06": "integer",
+                       "comment_06": "string",
+                       "nodata_06": "integer",
+                       "maes_1_12": "integer",
+                       "maes_2_12": "integer",
+                       "maes_3_12": "integer",
+                       "maes_4_12": "integer",
+                       "comment_12": "string",
+                       "nodata_12": "integer",
+                       "changecode": "string",
+                       "area_ha": "real"}
       }
     },
     {

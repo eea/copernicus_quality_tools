@@ -29,7 +29,12 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "attribute_regexes": ["id", "code_12", "area_ha", "remark", "shape_area", "shape_length"]
+        "attributes": {"id": "string",
+                       "remark": "string",
+                       "area_ha": "real",
+                       "shape_area": "real",
+                       "shape_length": "real",
+                       "code_12": "string"}
       }
     },
     {
@@ -37,7 +42,12 @@
       "required": true,
       "parameters": {
         "layers": ["initial"],
-        "attribute_regexes": ["id", "code_06", "area_ha", "remark", "shape_area", "shape_length"]
+        "attributes": {"id": "string",
+                       "remark": "string",
+                       "area_ha": "real",
+                       "shape_area": "real",
+                       "shape_length": "real",
+                       "code_06": "string"}
       }
     },
     {
@@ -45,7 +55,15 @@
       "required": true,
       "parameters": {
         "layers": ["change"],
-        "attribute_regexes": ["id", "code_06", "code_12", "change", "chtype", "area_ha", "remark", "shape_area", "shape_length"]
+        "attributes": {"id": "string",
+                       "remark": "string",
+                       "area_ha": "real",
+                       "shape_area": "real",
+                       "shape_length": "real",
+                       "change": "string",
+                       "code_06": "string",
+                       "code_12": "string",
+                       "chtype": "string"}
       }
     },
     {

@@ -30,7 +30,15 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-          "attribute_regexes": ["country", "cities", "fua_or_cit", "code2012", "item2012", "prod_date", "ident", "shape_leng", "shape_area"]
+        "attributes": {"country": "string",
+                       "cities": "string",
+                       "fua_or_cit": "string",
+                       "prod_date": "string",
+                       "shape_leng": "real",
+                       "shape_area": "real",
+                       "code2012": "string",
+                       "item2012": "string",
+                       "ident": "string"}
       }
     },
     {
@@ -38,7 +46,11 @@
       "required": true,
       "parameters": {
         "layers": ["boundary"],
-        "attribute_regexes": ["country", "cities"]
+        "attributes": {"country": "string",
+                       "cities": "string",
+                       "fua_or_cit": "string",
+                       "shape_leng": "real",
+                       "shape_area": "real"}
       }
     },
     {
@@ -46,15 +58,32 @@
       "required": true,
       "parameters": {
         "layers": ["revised"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "prod_date", "shape_leng", "shape_area"]
+        "attributes": {"country": "string",
+                       "cities": "string",
+                       "fua_or_cit": "string",
+                       "prod_date": "string",
+                       "perimeter": "real",
+                       "area": "real",
+                       "code2006": "string",
+                       "item2006": "string"}
       }
     },
     {
-      "check_ident": "combined.v3",
+      "check_ident": "combined_change.v3",
       "required": true,
       "parameters": {
         "layers": ["combined", "change"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2006", "item2006", "code2012", "item2012", "prod_date", "ident", "shape_leng", "shape_area"]
+        "attributes": {"country": "string",
+                       "cities": "string",
+                       "fua_or_cit": "string",
+                       "prod_date": "string",
+                       "perimeter": "real",
+                       "area": "real",
+                       "code2006": "string",
+                       "item2006": "string",
+                       "code2012": "string",
+                       "item2012": "string",
+                       "ident": "string"}
       }
     },
     {
@@ -97,7 +126,7 @@
       }
     },
     {
-      "check_ident": "combined.v6",
+      "check_ident": "combined_change.v6",
       "required": false,
       "parameters": {
         "layers": ["combined", "change"],
@@ -121,7 +150,7 @@
       }
     },
     {
-      "check_ident": "revised.v11_ua_status",
+      "check_ident": "revised_combined.v11_ua_status",
       "required": false,
       "parameters": {
         "layers": ["revised", "combined"],
@@ -165,7 +194,7 @@
       }
     },
     {
-      "check_ident": "change.v14",
+      "check_ident": "combined_change.v14",
       "required": false,
       "parameters": {
         "layers": ["combined", "change"],

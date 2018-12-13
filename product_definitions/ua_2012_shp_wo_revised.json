@@ -27,7 +27,15 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "attribute_regexes": ["country", "cities", "fua_or_cit", "code2012", "item2012", "prod_date", "ident", "shape_leng", "shape_area"]
+        "attributes": {"country": "string",
+                       "cities": "string",
+                       "fua_or_cit": "string",
+                       "prod_date": "string",
+                       "shape_leng": "real",
+                       "shape_area": "real",
+                       "code2012": "string",
+                       "item2012": "string",
+                       "ident": "string"}
       }
     },
     {
@@ -35,7 +43,11 @@
       "required": true,
       "parameters": {
         "layers": ["boundary"],
-        "attribute_regexes": ["country", "cities"]
+        "attributes": {"country": "string",
+                       "cities": "string",
+                       "fua_or_cit": "string",
+                       "shape_leng": "real",
+                       "shape_area": "real"}
       }
     },
     {
