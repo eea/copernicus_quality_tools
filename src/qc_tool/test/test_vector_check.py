@@ -52,7 +52,7 @@ class TestV1_rpz(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU026A.shp.zip")})
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip2.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
@@ -60,14 +60,14 @@ class TestV1_rpz(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v1_rpz import run_check
         self.params.update({"filename_regex": "^rpz_{areacodes:s}[a-z]_lclu_v[0-9]{{2}}.shp$",
-                            "areacodes": ["du026", "du027"]})
+                            "areacodes": ["du026", "du027", "du032"]})
         status = self.status_class()
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
         self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("rpz_DU026A_lclu_v01.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
-        self.assertEqual("rpz_DU026A_lclu_v01", status.params["layer_defs"]["rpz"]["src_layer_name"])
+        self.assertEqual("rpz_DU032A_lclu_v97.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
+        self.assertEqual("rpz_DU032A_lclu_v97", status.params["layer_defs"]["rpz"]["src_layer_name"])
 
 
 class TestV1_clc(VectorCheckTestCase):
@@ -180,13 +180,13 @@ class TestV2(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         from qc_tool.wps.vector_check.v1_rpz import run_check as layer_check
 
-        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU026A.shp.zip")
+        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip2.zip")
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": rpz_filepath,
                             "formats": [".gdb", ".shp"],
                             "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"},
                             "filename_regex": "^rpz_{areacodes:s}[a-z]_lclu_v[0-9]{{2}}.shp$",
-                            "areacodes": ["du026", "du027"]})
+                            "areacodes": ["du032"]})
 
         status = self.status_class()
         unzip_check(self.params, status)
@@ -194,6 +194,7 @@ class TestV2(VectorCheckTestCase):
 
         status = self.status_class()
         layer_check(self.params, status)
+
         self.params["layer_defs"] = status.params["layer_defs"]
         self.params["layers"] = ["rpz"]
 
@@ -780,8 +781,7 @@ class Test_v11_rpz(VectorCheckTestCase):
                             "layers": ["rpz"],
                             "area_column_name": "area_ha",
                             "area_ha": 0.5,
-                            "initial_code_column_name": "code",
-                            "final_code_column_name": "code"})
+                            "code_column_name": "code"})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM v11_rpz_general ORDER BY fid;")
         self.assertListEqual([(0,)], cursor.fetchall())
