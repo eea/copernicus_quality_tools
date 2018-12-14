@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import json
-#import urllib3
-from pathlib import Path
-import requests
-from requests.exceptions import ConnectionError
+from urllib import request
+from urllib.error import HTTPError
+from xml.etree import ElementTree
 
 
 from qc_tool.wps.registry import register_check_function
@@ -18,25 +17,30 @@ def run_check(params, status):
     xml_filepath = params["filepath"].with_suffix(".xml")
 
     if not xml_filepath.exists():
-        status.add_message("Expected xml metadata file {:s} is missing.".format(xml_filepath.name))
+        status.add_message("Expected XML metadata file {:s} is missing.".format(xml_filepath.name))
         return
 
-    # FIXME before sending to INSPIRE validator, also check if the file is a non-empty and valid XML document.
+    # check if the metadata file is a valid xml document.
+    try:
+        ElementTree.parse(str(xml_filepath))
+    except ElementTree.ParseError:
+        status.add_message("XML metadata file {:s} is not a valid XML document.".format(xml_filepath.name))
+        return
 
     METADATA_SERVICE_HOST = 'http://inspire-geoportal.ec.europa.eu'
     METADATA_SERVICE_ENDPOINT = 'GeoportalProxyWebServices/resources/INSPIREResourceTester'
 
     url = '{}/{}'.format(METADATA_SERVICE_HOST, METADATA_SERVICE_ENDPOINT)
-
     headers = {'Accept': 'application/json', 'Content-Type': 'text/plain'}
-
     metadata = xml_filepath.read_text(encoding='utf-8')
 
+    # post the metadata file content to INSPIRE validator API.
     try:
-        response = requests.post(url, data=metadata.encode('utf-8'), headers=headers)
-        report_url = response.headers['Location']
-        json_data = response.json()
-    except ConnectionError:
+        req = request.Request(url, data=metadata.encode('utf-8'), headers=headers)
+        with request.urlopen(req) as resp:
+            report_url = resp.headers['Location']
+            json_data = json.loads(resp.read().decode('utf-8'))
+    except HTTPError:
         status.add_message("Unable to validate INSPIRE metadata. Internet connection is not accessible.")
         return
 
