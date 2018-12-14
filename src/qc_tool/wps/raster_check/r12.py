@@ -45,9 +45,21 @@ def run_check(params, status):
         return
 
     # Completeness_indicator is 100.0 means that INSPIRE validation is OK (even if there are some warnings).
-    completeness_indicator = json_data['value']['CompletenessIndicator']
+    if "value" not in json_data or json_data["value"] is None:
+        inspire_ok = False
 
-    if completeness_indicator != 100:
+    elif "CompletenessIndicator" not in json_data["value"]:
+        inspire_ok = False
+
+    elif json_data["value"]["CompletenessIndicator"] is None:
+        inspire_ok = False
+
+    elif json_data["value"]["CompletenessIndicator"] != 100:
+        inspire_ok = False
+    else:
+        inspire_ok = True
+
+    if not inspire_ok:
         status.add_message("INSPIRE metadata is incomplete. See attached report for details."
                            "More details are at URL: {:s}".format(report_url))
 
