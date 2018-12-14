@@ -57,6 +57,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v12": "(no description)",
     "v13": "There are no overlapping polygons.",
     "v14": "No neighbouring polygons with the same code.",
+    "v15": "Vector metadata is compliant with INSPIRE specifications.",
     "r_unzip": "Unzips the source file.",
     "r1": "File format is allowed.",
     "r2": "File names match file naming conventions.",
