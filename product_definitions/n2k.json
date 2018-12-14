@@ -113,6 +113,13 @@
         "layers": ["n2k"],
         "code_column_names": ["maes_4_06", "maes_4_12"]
       }
+    },
+    {
+      "check_ident": "v15",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
     }
   ]
 }

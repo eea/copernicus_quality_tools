@@ -30,7 +30,8 @@ class Test_clc(ProductTestCase):
                                "v13",
                                "reference.v14",
                                "initial.v14",
-                               "change.v14"])
+                               "change.v14",
+                               "v15"])
 
         statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]
         checks_not_ok = [check["check_ident"] for check in job_status["checks"] if check["status"] != "ok"]
@@ -65,12 +66,13 @@ class Test_n2k(ProductTestCase):
                                    "v8": "ok",
                                    "v11_n2k": "ok",
                                    "v13": "ok",
-                                   "v14": "ok"}
+                                   "v14": "ok",
+                                   "v15": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "n2k",
-                              ["v5", "v6", "v8", "v11_n2k", "v13", "v14"])
+                              ["v5", "v6", "v8", "v11_n2k", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -90,12 +92,13 @@ class Test_rpz(ProductTestCase):
                                    "v8": "ok",
                                    "v11_rpz": "ok",
                                    "v13": "ok",
-                                   "v14": "ok"}
+                                   "v14": "ok",
+                                   "v15": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "rpz",
-                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14"])
+                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -113,12 +116,13 @@ class Test_rpz(ProductTestCase):
                                    "v8": "ok",
                                    "v11_rpz": "failed", #the dataset contains very small polygons < 0.2ha touching border.
                                    "v13": "ok",
-                                   "v14": "failed"} #FIXME? neighbouring road polygons in UA core region
+                                   "v14": "failed", # FIXME? neighbouring road polygons in UA core region
+                                   "v15": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "rpz",
-                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14"])
+                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -139,12 +143,14 @@ class Test_ua_shp(ProductTestCase):
                                    "v8": "ok",
                                    "v11_ua_status": "ok",
                                    "v13": "ok",
-                                   "v14": "ok"}
+                                   "v14": "ok",
+                                   "v15": "failed" #FIXME provide INSPIRE-compliant UA metadata file.
+                                   }
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "ua_2012_shp_wo_revised",
-                              ["v5", "v6", "v8", "v11_ua_status", "v13", "v14"])
+                              ["v5", "v6", "v8", "v11_ua_status", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)

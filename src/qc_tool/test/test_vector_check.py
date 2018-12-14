@@ -904,3 +904,35 @@ class TestV14(VectorCheckTestCase):
         status = self.status_class()
         self.run_check(self.params, status)
         self.assertEqual("failed", status.status)
+
+
+class TestV15(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.xml_dir = TEST_DATA_DIR.joinpath("metadata")
+        self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
+        self.params["output_dir"] = self.params["jobdir_manager"].output_dir
+        self.params["layers"] = ["layer0"]
+
+
+    def test(self):
+        from qc_tool.wps.vector_check.v15 import run_check
+        self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire-good.shp")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_missing_xml_fail(self):
+        from qc_tool.wps.vector_check.v15 import run_check
+        self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire-missing-metadata.gdb")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+
+    def test_fail(self):
+        from qc_tool.wps.vector_check.v15 import run_check
+        self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire-bad.shp")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("inspire-bad_metadata_error.json", status.attachment_filenames)

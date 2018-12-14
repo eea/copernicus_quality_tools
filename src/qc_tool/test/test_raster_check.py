@@ -77,28 +77,30 @@ class TestR11(RasterCheckTestCase):
 
 
 class TestR12(RasterCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.xml_dir = TEST_DATA_DIR.joinpath("metadata")
+        self.params ={"output_dir": self.jobdir_manager.output_dir}
+
     def test(self):
         from qc_tool.wps.raster_check.r12 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r12", "inspire-good.tif"),
-                  "output_dir": self.jobdir_manager.output_dir}
+        self.params["filepath"] = self.xml_dir.joinpath("inspire-good.tif")
         status = self.status_class()
-        run_check(params, status)
+        run_check(self.params, status)
         self.assertEqual("ok", status.status, "Raster check r12 should pass for raster with valid metadata file.")
 
     def test_missing_xml_fail(self):
         from qc_tool.wps.raster_check.r12 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r12", "inspire-missing-metadata.tif"),
-                  "output_dir": self.jobdir_manager.output_dir}
+        self.params["filepath"] = self.xml_dir.joinpath("inspire-missing-metadata.tif")
         status = self.status_class()
-        run_check(params, status)
+        run_check(self.params, status)
         self.assertEqual("failed", status.status, "Raster check r12 should fail for raster with missing xml file.")
 
     def test_fail(self):
         from qc_tool.wps.raster_check.r12 import run_check
-        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r12", "inspire-bad.tif"),
-                  "output_dir": self.jobdir_manager.output_dir}
+        self.params["filepath"] = self.xml_dir.joinpath("inspire-bad.tif")
         status = self.status_class()
-        run_check(params, status)
+        run_check(self.params, status)
         self.assertEqual("failed", status.status, "Raster check r12 should fail for raster with non-compliant xml file.")
         self.assertIn("inspire-bad_metadata_error.json", status.attachment_filenames)
 

@@ -171,6 +171,13 @@
         "layers": ["change"],
         "code_column_names": ["code_06", "code_12"]
       }
+    },
+    {
+      "check_ident": "v15",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
     }
   ]
 }

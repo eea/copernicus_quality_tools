@@ -112,6 +112,13 @@
         "code_column_names": ["code2012"],
         "exclude_codes": ["122%"]
       }
+    },
+    {
+      "check_ident": "v15",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "boundary"]
+      }
     }
   ]
 }

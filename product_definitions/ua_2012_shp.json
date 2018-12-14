@@ -201,6 +201,13 @@
         "code_column_names": ["code2006", "code2012"],
         "exclude_codes": ["122%"]
       }
+    },
+    {
+      "check_ident": "v15",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "combined", "revised", "change", "boundary"]
+      }
     }
   ]
 }
