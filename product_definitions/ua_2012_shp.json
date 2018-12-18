@@ -150,10 +150,10 @@
       }
     },
     {
-      "check_ident": "revised_combined.v11_ua_status",
+      "check_ident": "revised.v11_ua_status",
       "required": false,
       "parameters": {
-        "layers": ["revised", "combined"],
+        "layers": ["revised"],
         "area_column_name": "shape_area",
         "code_column_name": "code2006"
       }
