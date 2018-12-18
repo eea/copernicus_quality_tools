@@ -45,6 +45,9 @@ def run_check(params, status):
     # Find the external boundary raster mask layer.
     raster_boundary_dir = params["boundary_dir"].joinpath("raster")
     mask_file = raster_boundary_dir.joinpath("mask_{:03d}m_{:s}.tif".format(int(ds_xres), country_code))
+    if not mask_file.exists():
+        status.add_message("Can not find reference boundary mask file {:s}.".format(mask_file.name))
+        return
     mask_ds = gdal.Open(str(mask_file))
     if mask_ds is None:
         status.add_message("Can not find reference boundary mask file {:s}.".format(mask_file.name))
