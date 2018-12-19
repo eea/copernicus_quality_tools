@@ -40,21 +40,12 @@ function display_product_info(product_ident) {
                 tbody += "<tr>";
                 tbody += "<td>" + checks[i].check_ident + "</td>";
 
-
-                if (checks[i].check_ident === "r10") {
-                    tbody += '<td>' + checks[i].description + '<br><br><div class="alert alert-warning">'
-                    tbody += 'Warning: Cannot run check. Reference boundary file HRL_boundary.shp not found!</div></td>';
-                    tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" disabled';
-                    tbody += "></td>";
-
-                } else {
-                    tbody += "<td>" + checks[i].description + "</td>";
-                    tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" checked';
-                    if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
-                        tbody += " disabled";
-                    }
-                    tbody += "></td>";
+                tbody += "<td>" + checks[i].description + "</td>";
+                tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" checked';
+                if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
+                    tbody += " disabled";
                 }
+                tbody += "></td>";
             }
             tbody += "</tr>";
         }
@@ -68,9 +59,9 @@ function display_product_info(product_ident) {
         //$("#runs-bar").removeClass("hidden");
 
         // show json product type config file link if hidden
-        $("#product_type_link").attr("href", "/data/product_config/" + product_ident + "/");
-        if($("#product_type_link").is(':hidden')){
-            $("#product_type_link").show();
+        $("#product_link").attr("href", "/data/product_config/" + product_ident + "/");
+        if($("#product_link").is(':hidden')){
+            $("#product_link").show();
         }
 
         //listen to checkbox events
@@ -86,9 +77,9 @@ function display_product_info(product_ident) {
         var product_error_msg = 'Error in configuration of <strong>' + product_ident + '</strong> product!'
         $("#error_placeholder").html('<div class="alert alert-danger">' + product_error_msg + '</div>');
         // show json product type config file link if hidden
-        $("#product_type_link").attr("href", "/data/product_config/" + product_ident + "/");
-        if($("#product_type_link").is(':hidden')){
-            $("#product_type_link").show();
+        $("#product_link").attr("href", "/data/product_config/" + product_ident + "/");
+        if($("#product_link").is(':hidden')){
+            $("#product_link").show();
         }
     });
 }
@@ -97,7 +88,7 @@ function display_product_info(product_ident) {
 $(document).ready(function() {
 
     $("#tbl_check_details").hide();
-    $("#product_type_link").hide();
+    $("#product_link").hide();
 
     var selected_product_ident = document.getElementById("preselected_product").value;
 
@@ -117,8 +108,8 @@ $(document).ready(function() {
                 options += '<option value=' + prods[i].name + '>' + prods[i].description + '</option>';
             }
         }
-        document.getElementById("select_product_type").options.length = 0;
-        document.getElementById("select_product_type").innerHTML = options;
+        document.getElementById("select_product").options.length = 0;
+        document.getElementById("select_product").innerHTML = options;
 
         // display checks for pre-selected product type
         if (selected_product_exists) {
@@ -133,7 +124,7 @@ $(document).ready(function() {
     });
 
     // When product type is changed in the dropdown, update product detail info.
-    $('#select_product_type').change(function() {
+    $('#select_product').change(function() {
         //populate product type info
         var optionSelected = $("option:selected", this);
         display_product_info(this.value);
@@ -178,7 +169,7 @@ function run_checks() {
     });
 
     var data = {
-        "product_type_name": $("#select_product_type").val(),
+        "product_ident": $("#select_product").val(),
         "filepath": $("#current_username").val() + "/" + $("#preselected_file").val(),
         "optional_check_idents": selected_checks.join(",")
     };

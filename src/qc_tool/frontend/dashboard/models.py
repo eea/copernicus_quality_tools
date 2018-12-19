@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+from datetime import datetime
 
 from django.db import models
 from django.utils import timezone
@@ -7,6 +8,7 @@ from django.utils import timezone
 from qc_tool.common import prepare_empty_job_status
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import compose_job_status_filepath
+from qc_tool.frontend.dashboard import statuses
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import parse_status_document
 
@@ -23,65 +25,81 @@ class Delivery(models.Model):
 
     def init_status(self, product_ident):
         # initializes the status with an empty job status document.
-        self.last_wps_status = "accepted"
-        self.last_job_status = "running"
+        self.last_job_percent = 0
+        self.last_wps_status = statuses.WPS_ACCEPTED
+        self.last_job_status = statuses.JOB_RUNNING
         self.product_ident = product_ident
         self.product_description = find_product_description(product_ident)
         self.empty_status_document = json.dumps(prepare_empty_job_status(product_ident))
         self.save()
 
-    def update_status(self, job_uuid):
+    def update_status(self, job_uuid=None):
 
-        self.last_job_uuid = job_uuid
-        # updates the status using the status of the job uuid.
-        # get job info from status document (assuming document exists)
-        wps_status_filepath = compose_wps_status_filepath(job_uuid)
+        if job_uuid is not None:
+            self.last_job_uuid = job_uuid
+        # Updates the status using the status of the job uuid.
+        # Get job info from status document (assuming document exists)
+        wps_status_filepath = compose_wps_status_filepath(self.last_job_uuid)
         wps_status = wps_status_filepath.read_text()
         wps_doc = parse_status_document(wps_status)
 
-        # (1) Exception in job status document - run has stopped
         self.last_wps_status = wps_doc["status"]
         self.last_job_status = self.last_wps_status
 
         self.date_last_checked = wps_doc["end_time"]
 
-        job_status_filepath = compose_job_status_filepath(job_uuid)
-        job_info = {"status": None}
+        job_status_filepath = compose_job_status_filepath(self.last_job_uuid)
         if job_status_filepath.exists():
             job_info = job_status_filepath.read_text()
             job_info = json.loads(job_info)
 
-            if (self.last_wps_status == "error"
+            # Set progress percent (from wps doc)
+            if self.last_wps_status == statuses.WPS_ACCEPTED:
+                self.last_job_percent = 0
+            elif self.last_wps_status == statuses.WPS_STARTED:
+                self.last_job_percent = wps_doc["percent_complete"]
+            elif self.last_wps_status in (statuses.WPS_SUCCEEDED, statuses.WPS_FAILED):
+                self.last_job_percent = 100
+            else:
+                self.last_job_percent = 0
+
+            # Set status (from job status doc)
+            if (self.last_wps_status == statuses.WPS_FAILED
                 or job_info["exception"] is not None):
-                self.last_job_status = "error"
-                self.last_job_percent = 100
-            elif self.last_wps_status == "accepted":
-                self.last_job_status = "running"
-                self.last_job_percent = wps_doc["percent_complete"]
-            elif self.last_wps_status == "started":
-                self.last_job_status = "running"
-                self.last_job_percent = wps_doc["percent_complete"]
+                self.last_job_status = statuses.JOB_ERROR
+            elif self.last_wps_status in(statuses.WPS_ACCEPTED, statuses.WPS_STARTED):
+                self.last_job_status = statuses.JOB_RUNNING
             elif any((check["status"] in ("failed", "aborted") for check in job_info["checks"])):
-                self.last_job_status = "failed"
-                self.last_job_percent = 100
+                self.last_job_status = statuses.JOB_FAILED
             elif any((check["status"] is None or check["status"] == "skipped" for check in job_info["checks"])):
-                self.last_job_status = "partial"
-                self.last_job_percent = 100
+                self.last_job_status = statuses.JOB_PARTIAL
             elif all((check["status"] == "ok" for check in job_info["checks"])):
-                self.last_job_status = "ok"
-                self.last_job_percent = 100
+                self.last_job_status = statuses.JOB_OK
             else:
                 self.last_job_status = None
 
+            # Check expired job
+            # expire_timeout_s = 86400
+            expire_timeout_s = 43200
+            if self.last_job_status == statuses.JOB_RUNNING:
+                job_timestamp = job_status_filepath.stat().st_mtime
+                job_last_updated = datetime.utcfromtimestamp(job_timestamp)
+                if (datetime.now() - job_last_updated).total_seconds() > expire_timeout_s:
+                    self.last_job_status = statuses.JOB_EXPIRED
+
         self.save()
 
+        is_submitted = self.date_submitted is not None
+
         # return JsonResponse()
-        return {"job_status": self.last_job_status, "wps_doc_status": self.last_wps_status, "percent": self.last_job_percent}
+        return {"is_submitted": is_submitted,
+                "job_status": self.last_job_status,
+                "wps_doc_status": self.last_wps_status,
+                "percent": self.last_job_percent}
 
     filename = models.CharField(max_length=500)
     filepath = models.CharField(max_length=500)
     size_bytes = models.IntegerField(null=True)
-    #file = models.FileField(models.FileField(upload_to=user_directory_path))
     product_ident = models.CharField(max_length=64, blank=True, null=True)
     product_description = models.CharField(max_length=500, blank=True, null=True)
     date_uploaded = models.DateTimeField(default=timezone.now)

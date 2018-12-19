@@ -36,6 +36,7 @@ function dateFormatter(value, row) {
    }
 }
 
+
 function actionsFormatter(value, row) {
     // for example /start_job/1234/
     var start_job_url = '/start_job/' + row.id + '/';
@@ -87,7 +88,6 @@ function actionsFormatter(value, row) {
             }
         }
     }
-
     btn_data += '</div>';
     return btn_data;
 }
@@ -113,14 +113,8 @@ function statusFormatter(value, row, index) {
     if (value == "failed") {
         value = "checks failed";
     }
-    if (value == "accepted") {
-        if(row.percent == null) {
-            value = "running (0 %)";
-        } else {
-            value = "running (" + row.percent + "% )";
-        }
-    }
-    if (value == "running") {
+
+    if (value == "accepted" || value == "running") {
         if(row.percent == null) {
             value = "running (0 %)";
         } else {
@@ -152,12 +146,11 @@ function statusCellStyle(value, row, index) {
     if (value == "ok") {
         return { classes: "success"}
     }
-    if (value == "failed" || value == "error" || value == "NOT OK") {
+    if (value == "failed" || value == "error" || value == "expired") {
         return { classes: "danger" }
     }
     return {};
 }
-
 
 function delete_function(id, filename) {
     var dlg_ok = BootstrapDialog.show({
@@ -188,7 +181,6 @@ function delete_function(id, filename) {
         }]
     });
 }
-
 
 function submit_eea_function(id, filename) {
     console.log("clicked submit to EEA!");
@@ -224,6 +216,62 @@ function submit_eea_function(id, filename) {
         });
 }
 
+function refresh_job_statuses() {
+    // find deliveries with 'running' status
+    $("a").each(function() {
+        if($(this).text().startsWith("running")) {
+            var hyperlink = $(this);
+
+            // extract job_uuid from the hyperlink
+            var url_parts = hyperlink.attr("href").split("/");
+            var job_uuid = url_parts[url_parts.length - 1];
+
+            $.ajax({
+                type:"get",
+                url:"/delivery/refresh_status/" + job_uuid + "/",
+                datatype:"html",
+                success:function(data)
+                {
+                    // get row index
+                    var row = hyperlink.parent().parent();
+
+                    var index = row.attr("data-index");
+                    if (!index) {
+                        console.log(index);
+                        console.log(row.parent().html());
+                    }
+
+                    var rowData = $("#tbl-deliveries").bootstrapTable('getData')[index];
+
+                    // update QC status of the row.
+                    rowData.last_job_uuid = job_uuid;
+                    rowData.qc_status = data.job_status;
+                    rowData.last_job_status = data.job_status;
+                    rowData.percent = data.percent;
+                    rowData.is_submitted = data.is_submitted;
+
+                    // Update background colour of the status cell.
+                    var newCellStyle = statusCellStyle(rowData.qc_status, rowData, index);
+                    hyperlink.parent().toggleClass(newCellStyle.classes);
+
+                    // Redraw action buttons.
+                    var original_buttons = hyperlink.parent().parent().find(".btn-group");
+                    var new_buttons = actionsFormatter(null, rowData);
+                    original_buttons.replaceWith(new_buttons);
+
+                    // Update content of the status cell (status and percent).
+                    var new_status_cell = statusFormatter(rowData.qc_status, rowData);
+                    //hyperlink.text(new_status_cell.text());
+                    hyperlink.replaceWith(new_status_cell);
+                }
+            });
+        }
+    });
+}
+
 $(document).ready(function(){
     $('[data-toggle="tooltip"]').tooltip();
+
+    // start the timer for the deliveries. Check for updates every 5 seconds.
+    setInterval(function(){refresh_job_statuses();}, 5000);
 });

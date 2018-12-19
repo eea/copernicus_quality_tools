@@ -18,9 +18,8 @@ from xml.etree import ElementTree
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import MultipleObjectsReturned, PermissionDenied, ObjectDoesNotExist
 from django.core.files.storage import FileSystemStorage
-from django.db import connection
 
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -42,8 +41,8 @@ from qc_tool.frontend.dashboard.helpers import format_date_utc
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import parse_status_document
 from qc_tool.frontend.dashboard.helpers import submit_job
-from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.statuses import JOB_DELIVERY_NOT_FOUND
 
 
 logger = logging.getLogger(__name__)
@@ -55,13 +54,6 @@ def deliveries(request):
     Displays the main page with uploaded files and action buttons
     """
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED})
-
-@login_required
-def jobs(request, filename):
-    """
-    Displays the page with history of jobs for a specific file
-    """
-    return render(request, "dashboard/jobs.html", {"filename": filename})
 
 
 @login_required
@@ -100,7 +92,7 @@ def get_deliveries_json(request):
         if Path(d.filepath).joinpath(d.filename).exists():
             actual_qc_status = d.last_job_status
         else:
-            actual_qc_status = "file_not_found"
+            actual_qc_status = JOB_DELIVERY_NOT_FOUND
 
         delivery_is_submitted = d.date_submitted is not None
         delivery_info = {"id": d.id,
@@ -168,7 +160,8 @@ def file_upload(request):
             logger.debug("uploaded file saved successfully to filesystem.")
 
             # Assign product description based on product ident.
-            product_ident = guess_product_ident(myfile.name)
+            product_ident = guess_product_ident(Path(user_upload_path).joinpath(myfile.name))
+            logger.debug(product_ident)
             product_description = find_product_description(product_ident)
 
             # Save delivery metadata into the database.
@@ -298,14 +291,31 @@ def get_result_json(request, job_uuid):
 @login_required
 def get_attachment(request, job_uuid, attachment_filename):
     attachment_filepath = compose_attachment_filepath(job_uuid, attachment_filename)
-    if attachment_filepath.suffix == "csv":
+    if attachment_filepath.suffix == ".csv":
         content = attachment_filepath.read_text()
         response = HttpResponse(content, content_type="text/csv")
+    elif attachment_filepath.suffix == ".json":
+        content = attachment_filepath.read_text()
+        response = HttpResponse(content, content_type="application/json")
     else:
         response = HttpResponse(open(str(attachment_filepath), "rb"), content_type="application/zip")
 
     response['Content-Disposition'] = 'attachment; filename="{:s}"'.format(attachment_filepath.name)
     return response
+
+@login_required
+def refresh_job_status(request, job_uuid):
+    try:
+        delivery = Delivery.objects.get(last_job_uuid=job_uuid)
+        status = delivery.update_status()
+        if not Path(delivery.filepath).joinpath(delivery.filename).exists():
+            status = JOB_DELIVERY_NOT_FOUND
+        return JsonResponse(status)
+    except ObjectDoesNotExist:
+        return JsonResponse({"job_status": None, "wps_doc_status": None, "percent": None})
+    except MultipleObjectsReturned:
+        return JsonResponse({"job_status": None, "wps_doc_status": None, "percent": None})
+
 
 @login_required
 def get_result(request, job_uuid):
@@ -321,8 +331,8 @@ def get_result(request, job_uuid):
         job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
         job_reference_year = job_status["reference_year"]
         context = {
-            'product_type_name': job_status["product_ident"],
-            'product_type_description': job_status["description"],
+            'product_ident': job_status["product_ident"],
+            'product_description': job_status["description"],
             'filepath': job_status["filename"],
             'start_time': job_status["job_start_date"],
             'end_time': job_end_date,
@@ -343,8 +353,8 @@ def get_result(request, job_uuid):
 
     else:
         context = {
-            'product_type_name': None,
-            'product_type_description': None,
+            'product_ident': None,
+            'product_description': None,
             'filepath': None,
             'start_time': None,
             'end_time': None,
@@ -356,151 +366,6 @@ def get_result(request, job_uuid):
 
     return render(request, 'dashboard/result.html', context)
 
-@login_required
-def get_jobs(request, filename):
-    """
-    Returns the list of all QA jobs (both running and completed) in JSON format
-    :param request:
-    :param filename: filename the name of the uploaded file (same as file hash)
-    """
-    sql = """
-    SELECT j.*, f.filename AS file_filename from dashboard_job j
-    INNER JOIN dashboard_delivery f
-    ON j.filename = f.filename
-    WHERE file_filename = "{:s}"
-    AND f.user_id = {:d}
-    ORDER BY end DESC
-    """.format(filename, request.user.id)
-    logger.debug(sql)
-
-    with connection.cursor() as cur:
-        cur.execute(sql)
-        columns = [col[0] for col in cur.description]
-        job_infos = [
-            dict(zip(columns, row))
-            for row in cur.fetchall()
-        ]
-
-        # Optional check idents: Did the user intend to run a full set of checks for the product?
-        for job_info in job_infos:
-            product_ident = job_info["product_ident"]
-            product_def = load_product_definition(product_ident)
-            all_checks = product_def["checks"]
-            available_optional_checks = [check for check in all_checks if check["required"] == False]
-
-            selected_optional_checks = available_optional_checks
-            job_status_filepath = compose_job_status_filepath(job_info["job_uuid"])
-            if job_status_filepath.exists():
-                job_status = job_status_filepath.read_text()
-                job_status = json.loads(job_status)
-                if "optional_check_idents" in job_status:
-                    selected_optional_checks = job_status["optional_check_idents"]
-
-            if len(selected_optional_checks) == len(available_optional_checks):
-                job_info["all_checks_selected"] = True
-            else:
-                job_info["all_checks_selected"] = False
-
-            job_info["start"] = str(job_info["start"]).replace(" ", "T") + "Z"
-            if job_info["end"] is not None:
-                job_info["end"] = str(job_info["end"]).replace(" ", "T") + "Z"
-
-        return JsonResponse(job_infos, safe=False)
-
-
-
-
-def save_job_info(job_uuid, user, product_ident, filename):
-    """
-    Saving a job info to database based on the job's uuid
-    We only update an entry in deliveries.
-    TODO: move this function to the job model.
-    :param job_uuid: the UUID assigned by the WPS server.
-    :return:
-    """
-    try:
-        job = Job.objects.get(job_uuid=job_uuid)
-    except Job.DoesNotExist:
-        job = Job(job_uuid=job_uuid)
-
-    # get job info from status document (assuming document exists)
-    wps_status_filepath = compose_wps_status_filepath(job_uuid)
-    wps_status = wps_status_filepath.read_text()
-    wps_doc = parse_status_document(wps_status)
-
-    if user is not None:
-        job.user = user
-
-    # (1) Exception in job status document - run has stopped
-    if wps_doc["status"] == "error":
-        job.status = "error"
-
-    job.end = wps_doc["end_time"]
-
-    job_status_filepath = compose_job_status_filepath(job_uuid)
-    job_info = {"status": None}
-    if job_status_filepath.exists():
-        job_info = job_status_filepath.read_text()
-        job_info = json.loads(job_info)
-
-        #job_filename = job_info["filename"]
-        #job.filename = job_filename
-
-        job.start = job_info["job_start_date"]
-
-        job.product_ident = job_info["product_ident"]
-
-        if wps_doc["status"] == "error":
-            job.status = "error"
-        elif wps_doc["status"] == "accepted":
-            job.status = "accepted"
-        elif wps_doc["status"] == "started":
-            job.status = "started"
-        elif any((check["status"] in ("failed", "aborted") for check in job_info["checks"])):
-            job.status = "failed"
-        elif any(("status" not in check for check in job_info["checks"])):
-            job.status = "partial"
-        elif any((check["status"] is None or check["status"] == "skipped" for check in job_info["checks"])):
-            job.status = "partial"
-        elif all((check["status"] == "ok" for check in job_info["checks"])):
-            job.status = "ok"
-        else:
-            job.status = "unknown"
-
-    else:
-        job.start = datetime.fromtimestamp(wps_status_filepath.stat().st_mtime)
-        job.status = wps_doc["status"]
-
-
-        #if filename is not None:
-        #    job_filepath = Path(settings.MEDIA_ROOT, user.username, filename)
-        #    job.filename = job_filepath.name
-        if product_ident is not None:
-            job.product_ident = product_ident
-
-    # retrieve the file info from the database
-
-    file_info = Delivery.objects.get(filename=filename, user=user)
-    job.filename = file_info.filename
-    job.filepath = file_info.filepath
-
-    #save job info to database
-    job.save()
-
-    #return JsonResponse()
-    job_info["status"] = job.status
-    return {"job_status": job.status, "wps_doc_status": wps_doc["status"], "job_info": job_info}
-
-
-@csrf_exempt
-def save_job(request):
-    user = request.user
-    filename = request.GET.get("filename")
-    product_ident = request.GET.get("product_ident")
-    job_uuid = request.GET.get("job_uuid")
-    out = save_job_info(job_uuid, user, product_ident, filename)
-    return JsonResponse(out, safe=False)
-
 
 @csrf_exempt
 def run_wps_execute(request):
@@ -508,7 +373,7 @@ def run_wps_execute(request):
     Called from the UI - forwards the call to WPS and runs the process
     """
     try:
-        product_ident = request.POST.get("product_type_name")
+        product_ident = request.POST.get("product_ident")
         filepath = request.POST.get("filepath")
         optional_check_idents = request.POST.get("optional_check_idents")
 
@@ -571,36 +436,3 @@ def run_wps_execute(request):
         error_response = {"status": "ERR", "message": "WPS server probably does not respond. Error details: %s" % (e)}
         js = json.dumps(error_response)
         return HttpResponse(js, content_type='application/json')
-
-
-def check_processes():
-    # runs the timer every 10 seconds
-    time.sleep(10)
-    counter = 0
-    while True:
-        time.sleep(10)
-        counter += 1
-
-        logger.debug("check_processes()")
-        db_deliveries = Delivery.objects.filter(last_wps_status__in=["accepted", "started"])
-        n_updates = 0
-        logger.debug("items to update: {:d}".format(len(list(db_deliveries))))
-        for d in db_deliveries:
-            d.update_status(d.last_job_uuid)
-            n_updates += 1
-
-        msg = "Running the timer: {:d} .....{:d} jobs updated.".format(counter, n_updates)
-        logger.debug(msg)
-
-
-def startup():
-    """
-    Launches a timer on server startup.
-    """
-    logger.debug("STARTUP !!!!!")
-
-    t = threading.Thread(target=check_processes)
-    t.setDaemon(True)
-    t.start()
-
-

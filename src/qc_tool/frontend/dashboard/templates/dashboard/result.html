@@ -32,7 +32,7 @@
                     <div class="panel panel-default"><div class="panel-body">
                     <dl class="row">
                       <dt class="col-sm-2">Product</dt>
-                      <dd class="col-sm-10">{{product_type_description}}</dd>
+                      <dd class="col-sm-10">{{product_description}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Reference Year</dt>
@@ -86,7 +86,7 @@
                                 {% for attachment_filename in detail.attachment_filenames %}
                                 <a href="/attachment/{{ result.uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
                                 {% endfor %}</td>
-                            <td class="danger">{% for msg in detail.messages %}{{msg}}<br>{% endfor %}</td>
+                            <td class="danger"><ul>{% for msg in detail.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
                             {% endif %}
                         </tr>
                         {% endfor %}

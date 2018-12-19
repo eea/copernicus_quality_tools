@@ -37,13 +37,13 @@
                                 <div class="row">
                                     <div class="col-lg-3 col-md-4 col-xs-12">
                                         <div class="form-group">
-                                            <label for="select_product_type">Select Product Type</label>
+                                            <label for="select_product">Select Product Type</label>
                                             <span>  - </span>
                                             <input id="preselected_product" type="hidden" value="{{ product }}">
                                             <input id="preselected_file" type="hidden" value="{{ filename }}">
                                             <input id="current_username" type="hidden" value="{{ user.get_username }}">
-                                            <select id="select_product_type" name="select_product_type" class="form-control" required
-                                            data-error-msg="Please select a product type.">
+                                            <select id="select_product" name="select_product" class="form-control" required
+                                            data-error-msg="Please select a product.">
                                             </select>
                                         </div>
                                     </div>
@@ -67,7 +67,7 @@
                                 <br>
 
                                 <div class="form-group">
-                                <a id="product_type_link" href="/data/product_config/unknown/">Show Product Configuration</a>
+                                <a id="product_link" href="/data/product_config/unknown/">Show Product Configuration</a>
                                 </div>
                                 <br>
 

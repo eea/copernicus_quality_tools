@@ -2,25 +2,26 @@
 
 
 import json
+import logging
 import re
 from datetime import datetime
-from pathlib import Path
 from shutil import copyfile
 from shutil import copytree
+from zipfile import ZipFile
 
-from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from lxml import etree
 
 from qc_tool.common import compose_job_dir
 from qc_tool.common import compose_job_status_filepath
-from qc_tool.common import compose_wps_status_filepath
-from qc_tool.common import get_all_wps_uuids
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import JOB_INPUT_DIRNAME
 from qc_tool.common import JOB_OUTPUT_DIRNAME
 from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
 
+from qc_tool.frontend.dashboard import statuses
+
+logger = logging.getLogger(__name__)
 
 def format_date_utc(db_date):
     """
@@ -47,63 +48,52 @@ def find_product_description(product_ident):
     return description
 
 
-def guess_product_ident(product_filename):
+def guess_product_ident(delivery_filepath):
     """
     Tries to guess the product ident from the uploaded file name
     This should use the file_name_regex in each product's configuration
-    :param product_filename:
-    :return:
     """
     is_20m_raster = False
     is_100m_raster = False
-    is_vector = False
+    prod_abbrev = "abc"
 
-    if "_020m" in product_filename:
+    fn = delivery_filepath.name.lower()
+    if len(fn) > 3:
+        prod_abbrev = fn[0:3]
+
+    if "_020m" in fn:
         is_20m_raster = True
-    if "_100m" in product_filename:
+    if "_100m" in fn:
         is_100m_raster = True
 
+    if prod_abbrev in ("fty", "gra", "waw", "imc", "imd", "tcd"):
+        if is_20m_raster:
+            return prod_abbrev + "_020m"
+        if is_100m_raster:
+            return prod_abbrev + "100m"
 
-    fn = product_filename.lower()
-
-    if fn.startswith("clc"):
+    elif fn.startswith("clc"):
         return "clc"
     elif fn.startswith("ua"):
         return "ua"
     elif fn.startswith("rpz"):
         return "rpz"
-    elif fn.startswith("fty"):
-        if "_020m" in fn:
-            return "fty_YYYY_020m"
-        else:
-            return "fty_YYYY_100m"
-    else:
-        return None
+    elif re.match(r"[a-z]{2}[0-9]{3}l[0-9]_[a-z]+", fn):
+        logger.debug("delivery is likely to be urban atlas ...")
 
-def update_jobs_db():
-    """
-    updates the jobs table. This will be moved to the Job model.
-    :return: a list of job infos.
-    """
-    job_infos = []
-    for job_uuid in get_all_wps_uuids():
-        wps_status_filepath = compose_wps_status_filepath(job_uuid)
-        wps_status = wps_status_filepath.read_text()
-        job_info = parse_status_document(wps_status)
-        job_info["uid"] = job_uuid
+        # urban atlas product guessing from name
+        logger.debug(delivery_filepath)
+        if delivery_filepath.exists():
+            with ZipFile(str(delivery_filepath), 'r') as myzip:
+                namelist = myzip.namelist()
+                for name in namelist:
+                    logger.debug(name)
+                    if name.endswith(".shp") and "ua2012" in name.lower():
+                        return "ua_2012_shp_wo_revised"
+                    elif ".gdb" in name:
+                        return "ua_2012_gdb"
+            return None
 
-        job_status_filepath = compose_job_status_filepath(job_uuid)
-        if job_status_filepath.exists() and job_info["status"] == "finished":
-            job_status = job_status_filepath.read_text()
-            job_status = json.loads(job_status)
-            overall_status_ok = all((check["status"] in ("ok", "skipped") for check in job_status["checks"]))
-            job_info["overall_result"] = ["FAILED", "PASSED"][overall_status_ok]
-
-        job_infos.append(job_info)
-
-    # sort by start_time in descending order
-    job_infos = sorted(job_infos, key=lambda ji: ji['start_time'], reverse=True)
-    return job_infos
 
 def parse_status_document(document_content):
     """
@@ -115,11 +105,6 @@ def parse_status_document(document_content):
               percent_complete, wps_status_location, status, result, log_info]
 
     """
-
-    STATUS_ACCEPTED = 'accepted'
-    STATUS_FAILED = 'error'
-    STATUS_STARTED = 'started'
-    STATUS_SUCCEEDED = 'finished'
 
     doc = {'uuid': None,
            'filepath': None,
@@ -170,8 +155,8 @@ def parse_status_document(document_content):
     status_tags = tree.xpath('//wps:Status', namespaces=ns)
     if len(status_tags) == 0:
         # this meens there is no status element --- some exception occurred during that request
-        doc['status'] = STATUS_FAILED
-        doc['overall_result'] = STATUS_FAILED
+        doc['status'] = statuses.WPS_FAILED
+        doc['overall_result'] = statuses.WPS_FAILED
         return doc
 
     status_tag = status_tags[0]
@@ -181,7 +166,7 @@ def parse_status_document(document_content):
     error_tags = status_tag.findall('wps:ProcessFailed', ns)
 
     if len(accepted_tags) > 0:
-        doc['status'] = STATUS_ACCEPTED
+        doc['status'] = statuses.WPS_ACCEPTED
         doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
         doc['log_info'] = accepted_tags[0].text
         doc['result'] = dict()
@@ -193,7 +178,7 @@ def parse_status_document(document_content):
         return doc
 
     elif len(started_tags) > 0:
-        doc['status'] = STATUS_STARTED
+        doc['status'] = statuses.WPS_STARTED
         started_tag = started_tags[0]
         doc['log_info'] = started_tag.text
         doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
@@ -204,7 +189,7 @@ def parse_status_document(document_content):
         doc["result"]["unknown"] = {"status": status, "message": doc["log_info"]}
 
     elif len(succeeded_tags) > 0:
-        doc['status'] = STATUS_SUCCEEDED
+        doc['status'] = statuses.WPS_SUCCEEDED
         doc['log_info'] = succeeded_tags[0].text
         doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
         doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
@@ -212,7 +197,7 @@ def parse_status_document(document_content):
 
     # wps:ProcessFailed means there was an unhandled exception (error) in the process
     elif len(error_tags) > 0:
-        doc['status'] = STATUS_FAILED
+        doc['status'] = statuses.WPS_FAILED
         doc['start_time'] = parse_datetime(status_tag.attrib['creationTime'])
         doc['end_time'] = parse_datetime(status_tag.attrib['creationTime'])
 
@@ -223,8 +208,8 @@ def parse_status_document(document_content):
             for detail_tag in sub_tag:
                 doc['log_info'] = detail_tag.text
         doc['result'] = dict()
-        doc['result']['unknown'] = {'status': STATUS_FAILED, 'message': doc['log_info']}
-        doc['overall_result'] = 'ERROR'
+        doc['result']['unknown'] = {'status': statuses.WPS_FAILED, 'message': doc['log_info']}
+        doc['overall_result'] = statuses.WPS_FAILED
         return doc
 
     return doc
