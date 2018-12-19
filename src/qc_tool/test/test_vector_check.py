@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 
+from unittest import expectedFailure
+
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
 
@@ -509,6 +511,43 @@ class TestV8(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
 
+
+class Test_V10(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.wps.vector_check.v10 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO boundary VALUES (ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        cursor.execute("CREATE TABLE reference (wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(2, 2, 5, 5, 4326));")
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
+                                           "boundary": {"pg_layer_name": "boundary"}},
+                            "layers": ["reference"]})
+        run_check(self.params, self.status_class())
+        cursor.execute("SELECT * FROM v10_reference_error;")
+        self.assertEqual(0, cursor.rowcount, "There are gaps.")
+
+    # FIXME:
+    # If boundary and layer use different SRS there is no chance that the unions of both match.
+    # So it is needed to introduce tolerance somehow to ignore marginal gaps.
+    @expectedFailure
+    def test_different_srs(self):
+        from qc_tool.wps.vector_check.v10 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        # Create boundary in UTM zone 31M.
+        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO boundary VALUES (ST_Transform(ST_MakeEnvelope(0, 0, 1, 1, 3035), 4326));")
+        cursor.execute("CREATE TABLE reference (wkb_geometry geometry(Polygon, 3035));")
+        cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 3035));")
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
+                                           "boundary": {"pg_layer_name": "boundary"}},
+                            "layers": ["reference"]})
+
+        run_check(self.params, self.status_class())
+        cursor.execute("SELECT * FROM v10_reference_error;")
+        self.assertEqual(0, cursor.rowcount, "There are gaps.")
 
 class Test_v11_clc_status(VectorCheckTestCase):
     def test(self):

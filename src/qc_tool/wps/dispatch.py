@@ -146,6 +146,38 @@ def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fi
 
     return zip_filepath.name
 
+def dump_full_table(connection_manager, table_name, output_dir):
+    connection = connection_manager.get_connection()
+    (dsn, schema) = connection_manager.get_dsn_schema()
+    conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
+    shp_filepath = output_dir.joinpath("{:s}.shp".format(table_name))
+    zip_filepath = output_dir.joinpath("{:s}.zip".format(table_name))
+
+    # Export geom features into shp.
+    args = ["ogr2ogr",
+            "-f", "ESRI Shapefile",
+            str(shp_filepath),
+            conn_string]
+    run(args)
+
+    # Gather all files to be zipped.
+    filepaths_to_zip = [f for f in output_dir.iterdir() if f.stem == table_name]
+
+    # Ensure shp files are present.
+    if shp_filepath not in filepaths_to_zip:
+        raise QCException("Dumped shp file {:s} is missing.".format(shp_filepath))
+
+    # Zip the files.
+    with ZipFile(str(zip_filepath), "w") as zf:
+        for filepath in filepaths_to_zip:
+            zf.write(str(filepath), filepath.name)
+
+    # Remove zipped files.
+    for filepath in filepaths_to_zip:
+        filepath.unlink()
+
+    return zip_filepath.name
+
 def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents, update_status_func=None):
     with ExitStack() as exit_stack:
         # Prepare job directory structure.
@@ -211,15 +243,22 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                 job_check_status = job_status_check_idx[check["check_ident"]]
                 job_check_status["status"] = check_status.status
                 job_check_status["messages"] = check_status.messages
-
-                # Export error tables as zipped shapefile or csv.
                 job_check_status["attachment_filenames"] = check_status.attachment_filenames.copy()
+
+                # Export error tables to csv and zipped shapefile.
                 for (error_table_name, src_table_name, pg_fid_name) in check_status.error_table_infos:
                     attachment_filename = dump_error_table(job_params["connection_manager"],
                                                            error_table_name,
                                                            src_table_name,
                                                            pg_fid_name,
                                                            jobdir_manager.output_dir)
+                    job_check_status["attachment_filenames"].append(attachment_filename)
+
+                # Export full tables to zipped shapefile.
+                for table_name in check_status.full_table_names:
+                    attachment_filename = dump_full_table(job_params["connection_manager"],
+                                                          error_table_name,
+                                                          jobdir_manager.output_dir)
                     job_check_status["attachment_filenames"].append(attachment_filename)
 
                 # Update job status properties.
@@ -253,6 +292,7 @@ class CheckStatus():
         self.status = "ok"
         self.messages = []
         self.error_table_infos = []
+        self.full_table_names = []
         self.attachment_filenames = []
         self.params = {}
         self.status_properties = {}
@@ -274,6 +314,9 @@ class CheckStatus():
 
     def add_error_table(self, error_table_name, src_table_name, pg_fid_name):
         self.error_table_infos.append((error_table_name, src_table_name, pg_fid_name))
+
+    def add_full_table(self, table_name):
+        self.full_table_names.append(table_name)
 
     def add_attachment(self, filename):
         self.attachment_filenames.append(filename)
