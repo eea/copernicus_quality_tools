@@ -11,9 +11,15 @@ def run_check(params, status):
     # Fix reference year.
     status.set_status_property("reference_year", params["reference_year"])
 
-    # Read all layer infos into builder.
+    # Find all shapefiles.
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*")
                      if path.is_file() and path.suffix.lower() == ".shp"]
+    if len(shp_filepaths) == 0:
+        status.aborted()
+        status.add_message("No shapefile has been found in the delivery.")
+        return
+
+    # Read all layer infos into builder.
     builder = LayerDefsBuilder(status)
     for filepath in shp_filepaths:
         builder.add_layer_info(filepath, filepath.stem)

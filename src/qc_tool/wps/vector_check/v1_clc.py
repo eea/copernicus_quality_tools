@@ -18,12 +18,12 @@ def run_check(params, status):
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
     if len(gdb_dirs) == 0:
         status.aborted()
-        status.add_message("Can not find geodatabase in the delivery.")
+        status.add_message("No geodatabase has been found in the delivery.")
         return
     if len(gdb_dirs) > 1:
         status.aborted()
-        status.add_message("More than one geodatabase found in the delivery:"
-                           " {:s}.".format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
+        status.add_message("More than one geodatabase have been found in the delivery: {:s}."
+                           .format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
     gdb_dir = gdb_dirs[0]
 
@@ -71,11 +71,11 @@ def run_check(params, status):
     boundary_filepaths = [path for path in bdir.glob("**/boundary_{:s}.shp".format(country_code)) if path.is_file()]
     if len(boundary_filepaths) == 0:
         status.aborted()
-        status.add_message("Can not find boundary for country {:s} under directory {:s}.".format(country_code, str(bdir)))
+        status.add_message("No boundary has been found for country {:s} under directory {:s}.".format(country_code, str(bdir)))
         return
     if len(boundary_filepaths) > 1:
         status.aborted()
-        status.add_message("More than one boundary found for country {:s}: {:s}.".format(country_code, ", ".join(str(p) for p in boundary_filepaths)))
+        status.add_message("More than one boundary have been found for country {:s}: {:s}.".format(country_code, ", ".join(str(p) for p in boundary_filepaths)))
         return
     layer_defs["boundary"] = {"src_filepath": boundary_filepaths[0], "src_layer_name": boundary_filepaths[0].stem}
 
