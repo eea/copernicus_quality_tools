@@ -1,0 +1,125 @@
+{
+  "description": "Natura 2000",
+  "checks": [
+    {
+      "check_ident": "v_unzip",
+      "required": true
+    },
+    {
+      "check_ident": "v1_n2k",
+      "required": true
+    },
+    {
+      "check_ident": "v2",
+      "required": true,
+      "parameters": {
+        "layers": ["n2k"],
+        "formats": [".shp"]
+      }
+    },
+    {
+      "check_ident": "v3",
+      "required": true,
+      "parameters": {
+        "layers": ["n2k"],
+        "attributes": {"id": "integer",
+                       "uid": "string",
+                       "sitecode": "string",
+                       "grasstype": "string",
+                       "maes_1_06": "integer",
+                       "maes_2_06": "integer",
+                       "maes_3_06": "integer",
+                       "maes_4_06": "integer",
+                       "comment_06": "string",
+                       "nodata_06": "integer",
+                       "maes_1_12": "integer",
+                       "maes_2_12": "integer",
+                       "maes_3_12": "integer",
+                       "maes_4_12": "integer",
+                       "comment_12": "string",
+                       "nodata_12": "integer",
+                       "changecode": "string",
+                       "area_ha": "real"}
+      }
+    },
+    {
+      "check_ident": "v4",
+      "required": true,
+      "parameters": {
+        "layers": ["n2k"],
+        "epsg": [3035]
+      }
+    },
+    {
+      "check_ident": "v_import2pg",
+      "required": true,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
+      "check_ident": "v5",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "unique_keys": ["uid"]
+
+      }
+    },
+    {
+      "check_ident": "v6",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "column_defs": [["maes_1_06", "MAES1"],
+                        ["maes_2_06", "MAES2"],
+                        ["maes_3_06", "MAES3"],
+                        ["maes_4_06", "MAES4"],
+                        ["maes_1_12", "MAES1"],
+                        ["maes_2_12", "MAES2"],
+                        ["maes_3_12", "MAES3"],
+                        ["maes_4_12", "MAES4"]]
+      }
+    },
+    {
+      "check_ident": "v8",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
+      "check_ident": "v11_n2k",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "area_column_name": "area_ha",
+        "area_ha": 0.5,
+        "initial_code_column_name": "maes_4_06",
+        "final_code_column_name": "maes_4_12"
+      }
+    },
+    {
+      "check_ident": "v13",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
+      "check_ident": "v14",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "code_column_names": ["maes_4_06", "maes_4_12"]
+      }
+    },
+    {
+      "check_ident": "v15",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    }
+  ]
+}
