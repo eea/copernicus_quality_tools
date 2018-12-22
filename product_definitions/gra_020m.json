@@ -71,14 +71,18 @@
     },
     {
       "check_ident": "r10",
-      "required": false
+      "required": false,
+      "parameters": {
+        "outside_area_code": 255
+      }
     },
     {
       "check_ident": "r11",
       "required": false,
       "parameters": {
         "area_pixels": 25,
-        "exclude_codes": 254
+        "exclude_codes": [254, 255],
+        "nodata_value": 255
       }
     },
     {

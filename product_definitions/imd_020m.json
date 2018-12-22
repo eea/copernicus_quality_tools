@@ -71,7 +71,10 @@
     },
     {
       "check_ident": "r10",
-      "required": false
+      "required": false,
+      "parameters": {
+        "outside_area_code": 255
+      }
     },
     {
       "check_ident": "r12",

@@ -22,11 +22,33 @@ class TestR2(RasterCheckTestCase):
         self.assertEqual("2015", status.status_properties["reference_year"])
 
 
+class TestR9(RasterCheckTestCase):
+    def test(self):
+        from qc_tool.wps.raster_check.r9 import run_check
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "complete_raster_100m_testaoi.tif"),
+                  "validcodes": [0, 1]}
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_fail(self):
+        from qc_tool.wps.raster_check.r9 import run_check
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "complete_raster_100m_testaoi.tif"),
+                  "validcodes": [1, 2, 255]}
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("failed", status.status, "Raster check r9 should fail "
+                                                  "if the raster has invalid codes.")
+        self.assertIn("invalid codes: 0.", status.messages[0])
+
+
 class TestR10(RasterCheckTestCase):
     def test(self):
         from qc_tool.wps.raster_check.r10 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "complete_raster_100m_testaoi.tif"),
                   "country_code": "testaoi",
+                  "outside_area_code": 255,
+                  "mask": "default",
                   "boundary_dir": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "boundary"),
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
@@ -39,6 +61,8 @@ class TestR10(RasterCheckTestCase):
         from qc_tool.wps.raster_check.r10 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "incomplete_raster_100m_testaoi.tif"),
                   "country_code": "testaoi",
+                  "outside_area_code": 255,
+                  "mask": "default",
                   "boundary_dir": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "boundary"),
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
@@ -59,6 +83,7 @@ class TestR11(RasterCheckTestCase):
         from qc_tool.wps.raster_check.r11 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
                   "area_pixels": 13,
+                  "nodata_value": 0,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
         run_check(params, status)
@@ -68,6 +93,7 @@ class TestR11(RasterCheckTestCase):
         from qc_tool.wps.raster_check.r11 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_incorrect.tif"),
                   "area_pixels": 13,
+                  "nodata_value": 0,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
         run_check(params, status)
