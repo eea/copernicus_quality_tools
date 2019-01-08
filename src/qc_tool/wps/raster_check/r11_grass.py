@@ -17,7 +17,6 @@ def run_check(params, status):
     GRASS_VERSION = "grass72"
 
     lessmmu_shp_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_lessmmu_error.shp")
-    print(lessmmu_shp_filepath)
 
     # (0) find out pixel size of raster (using gdal)
     ds = gdal.Open(str(params["filepath"]))
