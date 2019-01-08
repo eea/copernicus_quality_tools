@@ -61,8 +61,8 @@ class TestV1_rpz(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.wps.vector_check.v1_rpz import run_check
-        self.params.update({"filename_regex": "^rpz_{areacodes:s}[a-z]_lclu_v[0-9]{{2}}.shp$",
-                            "areacodes": ["du026", "du027", "du032"]})
+        self.params.update({"filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu_v[0-9]{2}.shp$",
+                            "areacodes": ["026", "027", "032"]})
         status = self.status_class()
         run_check(self.params, status)
 
@@ -187,8 +187,8 @@ class TestV2(VectorCheckTestCase):
                             "filepath": rpz_filepath,
                             "formats": [".gdb", ".shp"],
                             "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"},
-                            "filename_regex": "^rpz_{areacodes:s}[a-z]_lclu_v[0-9]{{2}}.shp$",
-                            "areacodes": ["du032"]})
+                            "filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu_v[0-9]{2}.shp$",
+                            "areacodes": ["032"]})
 
         status = self.status_class()
         unzip_check(self.params, status)
