@@ -71,14 +71,14 @@
       "required": false,
       "parameters": {
         "layers": ["n2k"],
-        "column_defs": [["maes_1_06", "MAES1"],
-                        ["maes_2_06", "MAES2"],
-                        ["maes_3_06", "MAES3"],
-                        ["maes_4_06", "MAES4"],
-                        ["maes_1_12", "MAES1"],
-                        ["maes_2_12", "MAES2"],
-                        ["maes_3_12", "MAES3"],
-                        ["maes_4_12", "MAES4"]]
+        "column_defs": [["maes_1_06", "MAES1_N2K"],
+                        ["maes_2_06", "MAES2_N2K"],
+                        ["maes_3_06", "MAES3_N2K"],
+                        ["maes_4_06", "MAES4_N2K"],
+                        ["maes_1_12", "MAES1_N2K"],
+                        ["maes_2_12", "MAES2_N2K"],
+                        ["maes_3_12", "MAES3_N2K"],
+                        ["maes_4_12", "MAES4_N2K"]]
       }
     },
     {

@@ -54,7 +54,7 @@ class Test_clc_status(ProductTestCase):
 
 class Test_n2k(ProductTestCase):
     def test(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "oblik_srdov_brnik.zip")
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip")
         expected_check_statuses = {"v_unzip": "ok",
                                    "v1_n2k": "ok",
                                    "v2": "ok",
@@ -63,6 +63,30 @@ class Test_n2k(ProductTestCase):
                                    "v_import2pg": "ok",
                                    "v5": "ok",
                                    "v6": "ok",
+                                   "v8": "ok",
+                                   "v11_n2k": "ok",
+                                   "v13": "ok",
+                                   "v14": "ok",
+                                   "v15": "ok"}
+        job_status = dispatch(self.job_uuid,
+                              "user_name",
+                              self.filepath,
+                              "n2k",
+                              ["v5", "v6", "v8", "v11_n2k", "v13", "v14", "v15"])
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
+
+    def test_fail(self):
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_wrong.zip")
+        expected_check_statuses = {"v_unzip": "ok",
+                                   "v1_n2k": "ok",
+                                   "v2": "ok",
+                                   "v3": "ok",
+                                   "v4": "ok",
+                                   "v_import2pg": "ok",
+                                   "v5": "ok",
+                                   "v6": "failed", # a delivery with old version of n2k MAES codes should fail.
                                    "v8": "ok",
                                    "v11_n2k": "ok",
                                    "v13": "ok",
