@@ -220,7 +220,7 @@ def setup_config():
         config["submission_dir"] = Path(config["submission_dir"])
 
     # Parameters common to both frontend and wps.
-    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundary"))
+    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundaries"))
     config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
     config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_tool_volume/wps"))
     config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_volume/work"))
