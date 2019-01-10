@@ -127,7 +127,7 @@ def export_shapefile(regions, raster_ds, shp_filepath):
 def run_check(params, status):
 
     # set this to true for printing partial progress to standard output.
-    report_progress = False
+    report_progress = True
 
     # The checked raster is not read into memory as a whole. Instead it is read in tiles.
     # Instead, ReadAsArray is used to read subsets of the raster (tiles) on demand.
@@ -257,7 +257,7 @@ def run_check(params, status):
                 tile_inner = reclassify_values(tile_inner, params["groupcodes"])
 
             # label the inner array and find patches < MMU
-            labels_inner = measure.label(tile_inner, background=NODATA, connectivity=1)
+            labels_inner = measure.label(tile_inner, background=NODATA, neighbors=4)
             regions_inner = measure.regionprops(labels_inner)
             regions_inner_lessMMU = [r for r in regions_inner if r.area < MMU]
 
@@ -310,7 +310,7 @@ def run_check(params, status):
             if use_reclassify:
                 tile_buffered = reclassify_values(tile_buffered, params["groupcodes"])
 
-            labels_buf = measure.label(tile_buffered, background=NODATA, connectivity=1)
+            labels_buf = measure.label(tile_buffered, background=NODATA, neighbors=4)
             buf_regions = measure.regionprops(labels_buf)
             buf_regions_small = [r for r in buf_regions if r.area < MMU]
             buf_labels_small = [r.label for r in buf_regions_small]
