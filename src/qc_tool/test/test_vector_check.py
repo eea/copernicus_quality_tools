@@ -54,7 +54,7 @@ class TestV1_rpz(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip2.zip")})
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
@@ -68,8 +68,8 @@ class TestV1_rpz(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("rpz_DU032A_lclu_v97.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
-        self.assertEqual("rpz_DU032A_lclu_v97", status.params["layer_defs"]["rpz"]["src_layer_name"])
+        self.assertEqual("rpz_DU032B_lclu_v97.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
+        self.assertEqual("rpz_DU032B_lclu_v97", status.params["layer_defs"]["rpz"]["src_layer_name"])
 
 
 class TestV1_clc(VectorCheckTestCase):
@@ -182,7 +182,7 @@ class TestV2(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         from qc_tool.wps.vector_check.v1_rpz import run_check as layer_check
 
-        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip2.zip")
+        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip")
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": rpz_filepath,
                             "formats": [".gdb", ".shp"],

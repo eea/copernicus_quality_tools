@@ -104,7 +104,7 @@ class Test_n2k(ProductTestCase):
 
 class Test_rpz(ProductTestCase):
     def test(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip2.zip")
+        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip")
         expected_check_statuses = {"v_unzip": "ok",
                                    "v1_rpz": "ok",
                                    "v2": "ok",

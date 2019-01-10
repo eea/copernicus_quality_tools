@@ -127,7 +127,7 @@ def export_shapefile(regions, raster_ds, shp_filepath):
 def run_check(params, status):
 
     # set this to true for printing partial progress to standard output.
-    report_progress = True
+    report_progress = False
 
     # The checked raster is not read into memory as a whole. Instead it is read in tiles.
     # Instead, ReadAsArray is used to read subsets of the raster (tiles) on demand.

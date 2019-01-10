@@ -47,6 +47,7 @@ services:
       - JOBDIR_EXIST_OK=no
       - LEAVE_JOBDIR=no
     volumes:
+      - /home/jiri/github/copernicus_quality_tools/testing_data/boundaries:/mnt/qc_tool_boundary/boundaries
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
       - /home/jiri/qc_tool/testdata:/mnt/qc_tool_incoming/incoming
       - /home/jiri/wps:/mnt/qc_tool_volume/wps

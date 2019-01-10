@@ -73,6 +73,7 @@
       "check_ident": "r10",
       "required": false,
       "parameters": {
+        "mask": "default",
         "outside_area_code": 255
       }
     },
@@ -83,6 +84,7 @@
         "area_pixels": 13,
         "groupcodes": [[1, 2]],
         "exclude_codes": [254, 255],
+        "neighbour_exclude_values": [],
         "nodata_value": 255
       }
     },

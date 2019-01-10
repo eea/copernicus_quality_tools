@@ -48,8 +48,8 @@ class TestR10(RasterCheckTestCase):
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "complete_raster_100m_testaoi.tif"),
                   "country_code": "testaoi",
                   "outside_area_code": 255,
-                  "mask": "default",
-                  "boundary_dir": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "boundary"),
+                  "mask": "test",
+                  "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
@@ -62,8 +62,8 @@ class TestR10(RasterCheckTestCase):
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "incomplete_raster_100m_testaoi.tif"),
                   "country_code": "testaoi",
                   "outside_area_code": 255,
-                  "mask": "default",
-                  "boundary_dir": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "boundary"),
+                  "mask": "test",
+                  "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
                   "tmp_dir": self.jobdir_manager.tmp_dir,
                   "output_dir": self.jobdir_manager.output_dir}
         status = self.status_class()
