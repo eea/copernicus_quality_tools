@@ -42,6 +42,41 @@ def reclassify_values(arr, groups):
     return arr_copy
 
 
+def patch_touches_cell_with_value(coordinates, tile, neighbour_values):
+    """
+    Takes a list of [row, column] cell coordinates and inspects if at least one of the coordinates
+    has a neighbour cell having value in [values].
+    This function can be used for detecting patches touching cloud or patches touching ocean.
+    :param coordinates: The patch of same-value raster cells.
+    :param tile: The numpy array raster tile to take values from.
+    :param neighbour_values: A 1d array of integer values to comapare the neighbour cells with.
+    :return: True if at least one neighbouring cell has one of neighbour_values, false othervise
+    """
+    for coor in coordinates:
+        c_down = coor[0] + 1
+        c_up = coor[0] - 1
+        c_right = coor[1] + 1
+        c_left = coor[1] - 1
+
+        # top neighbour
+        if c_up >= 0:
+            if tile[c_up, coor[1]] in neighbour_values:
+                return True
+        # bottom neighbour
+        if c_down < tile.shape[0]:
+            if tile[c_down, coor[1]] in neighbour_values:
+                return True
+        # left neighbour
+        if c_left >= 0:
+            if tile[coor[0], c_left] in neighbour_values:
+                return True
+        # right neighbour
+        if c_right < tile.shape[1]:
+            if tile[coor[0], c_right] in neighbour_values:
+                return True
+    return False
+
+
 def export_shapefile(regions, raster_ds, shp_filepath):
     """
     Exports a list of lessMMU region dictionaries to a point shapefile
@@ -91,7 +126,11 @@ def export_shapefile(regions, raster_ds, shp_filepath):
 @register_check_function(__name__)
 def run_check(params, status):
 
+    # set this to true for printing partial progress to standard output.
+    report_progress = True
+
     # The checked raster is not read into memory as a whole. Instead it is read in tiles.
+    # Instead, ReadAsArray is used to read subsets of the raster (tiles) on demand.
     ds = gdal.Open(str(params["filepath"]))
 
     # Determine if a "reclassify" step is required based on the "groupcodes" parameter setting.
@@ -100,18 +139,16 @@ def run_check(params, status):
     else:
         use_reclassify = False
 
-    nRasterCols = ds.RasterXSize
-    nRasterRows = ds.RasterYSize
-
-    # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
-    BLOCKSIZE = 2048
-    MMU = params["area_pixels"]
-
     # NoData value can optionally be set as parameter
+    # cell values with NODATA are excluded from MMU analysis.
     if "nodata_value" in params:
         NODATA = params["nodata_value"]
     else:
         NODATA = ds.GetRasterBand(1).GetNoDataValue()
+
+    # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
+    BLOCKSIZE = 2048
+    MMU = params["area_pixels"]
 
     # Some classes can optionally be excluded from MMU requirements.
     # Pixels belonging to these classes are reported as exceptions.
@@ -119,6 +156,17 @@ def run_check(params, status):
         exclude_values = params["exclude_values"]
     else:
         exclude_values = []
+
+    # neighbouring values to exclude.
+    # patches with area < MMU which touch a patch having class in neighbour_exclude_values are reported
+    # as exceptions.
+    if "neighbour_exclude_values" in params:
+        neighbour_exclude_values = params["neighbour_exclude_values"]
+    else:
+        neighbour_exclude_values = []
+
+    nRasterCols = ds.RasterXSize
+    nRasterRows = ds.RasterYSize
 
     # tile buffer width. Must be bigger then number of pixels in MMU.
     # set buffer width =128 so that size of tile with buffer is a multiple of GDAL GeoTiff block size.
@@ -215,20 +263,24 @@ def run_check(params, status):
 
             # find lessMMU patches inside inner array not touching edge
             regions_lessMMU_edge = [r for r in regions_inner_lessMMU
-                              if r.bbox[0] == 0 or r.bbox[1] == 0
-                              or r.bbox[2] == block_width_inner or r.bbox[3] == block_height_inner]
+                                    if r.bbox[0] == 0
+                                    or r.bbox[1] == 0
+                                    or r.bbox[2] == block_width_inner
+                                    or r.bbox[3] == block_height_inner]
             labels_lessMMU_edge = [r.label for r in regions_lessMMU_edge]
 
             regions_lessMMU_inside = [r for r in regions_inner_lessMMU if r.label not in labels_lessMMU_edge]
 
             # progress reporting..
-            msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h}"
-            msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner, h=block_height_inner)
-            if len(regions_lessMMU_inside) > 0:
-                print(msg_tile + " found {:d} areas < MMU".format(len(regions_lessMMU_inside), tileRow, tileCol))
-            else:
-                print(msg_tile)
+            if report_progress:
+                msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h}"
+                msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner, h=block_height_inner)
+                if len(regions_lessMMU_inside) > 0:
+                    print(msg_tile + " found {:d} areas < MMU".format(len(regions_lessMMU_inside), tileRow, tileCol))
+                else:
+                    print(msg_tile)
 
+            # inspect inner patches
             for r in regions_lessMMU_inside:
                 first_coord_x = r.coords[0][0]
                 first_coord_y = r.coords[0][1]
@@ -242,6 +294,8 @@ def run_check(params, status):
                                 "coords": absolute_coords}
                 if lessMMU_value in exclude_values:
                     regions_lessMMU_except.append(lessMMU_info)
+                elif patch_touches_cell_with_value(r.coords, tile_inner, neighbour_exclude_values):
+                    regions_lessMMU_except.append(lessMMU_info)
                 else:
                     regions_lessMMU.append(lessMMU_info)
 
@@ -249,25 +303,28 @@ def run_check(params, status):
             if len(regions_lessMMU_edge) == 0:
                 continue
 
+            # read the outer array expanded by buffer with width=number of pixels in MMU
             tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
 
             # reclassify outer tile array if some patches should be grouped together
             if use_reclassify:
                 tile_buffered = reclassify_values(tile_buffered, params["groupcodes"])
 
-            # outer array: expanded by buffer with width=number of pixels in MMU
             labels_buf = measure.label(tile_buffered, background=NODATA, connectivity=1)
             buf_regions = measure.regionprops(labels_buf)
             buf_regions_small = [r for r in buf_regions if r.area < MMU]
             buf_labels_small = [r.label for r in buf_regions_small]
 
+            # edge_regions_small is used for reporting only.
             edge_regions_small = []
+
             for r in regions_lessMMU_edge:
                 first_coord_x = r.coords[0][0]
                 first_coord_y = r.coords[0][1]
                 val = tile_inner[first_coord_x, first_coord_y]
 
-                # get corresponding value in buffered array..
+                # get corresponding value of tile edge patch in buffered array..
+                # if the inner tile edge patch has area < MMU also in the expanded tile, report it.
                 coord_x_buf = first_coord_x + xOffRelative
                 coord_y_buf = first_coord_y + yOffRelative
                 lbl_buf = labels_buf[coord_x_buf, coord_y_buf]
@@ -285,12 +342,13 @@ def run_check(params, status):
 
                     if val in exclude_values:
                         regions_lessMMU_except.append(lessMMU_info)
+                    elif patch_touches_cell_with_value(r_buf.coords, tile_buffered, neighbour_exclude_values):
+                        regions_lessMMU_except.append(lessMMU_info)
                     else:
                         regions_lessMMU.append(lessMMU_info)
 
-            if len(edge_regions_small) > 0:
+            if report_progress and len(edge_regions_small) > 0:
                 # report actual edge regions < MMU after applying buffer
-                # read buffered tile
                 print("xOff {:d} yOff {:d} xOffInner {:d} yOffInner {:d}".format(xOff, yOff, xOffInner, yOffInner))
 
                 msg_tile = "BUFFER: tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h}"
