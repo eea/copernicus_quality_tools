@@ -83,8 +83,8 @@
       "parameters": {
         "area_pixels": 13,
         "groupcodes": [[1, 2]],
-        "exclude_codes": [254, 255],
-        "neighbour_exclude_values": [],
+        "value_exception_codes": [254, 255],
+        "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
       }
     },

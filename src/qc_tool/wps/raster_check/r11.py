@@ -144,7 +144,7 @@ def run_check(params, status):
     if "nodata_value" in params:
         NODATA = params["nodata_value"]
     else:
-        NODATA = ds.GetRasterBand(1).GetNoDataValue()
+        NODATA = -1 # FIXME use a value that is outside of the range of possible raster values.
 
     # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
     BLOCKSIZE = 2048
@@ -152,16 +152,16 @@ def run_check(params, status):
 
     # Some classes can optionally be excluded from MMU requirements.
     # Pixels belonging to these classes are reported as exceptions.
-    if "exclude_values" in params:
-        exclude_values = params["exclude_values"]
+    if "value_exception_codes" in params:
+        exclude_values = params["value_exception_codes"]
     else:
         exclude_values = []
 
     # neighbouring values to exclude.
     # patches with area < MMU which touch a patch having class in neighbour_exclude_values are reported
     # as exceptions.
-    if "neighbour_exclude_values" in params:
-        neighbour_exclude_values = params["neighbour_exclude_values"]
+    if "neighbour_exception_codes" in params:
+        neighbour_exclude_values = params["neighbour_exception_codes"]
     else:
         neighbour_exclude_values = []
 

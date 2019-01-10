@@ -81,7 +81,8 @@
       "required": false,
       "parameters": {
         "area_pixels": 25,
-        "exclude_codes": [254, 255],
+        "value_exception_codes": [254, 255],
+        "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
       }
     },
