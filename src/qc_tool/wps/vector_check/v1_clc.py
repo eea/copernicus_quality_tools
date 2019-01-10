@@ -67,8 +67,8 @@ def run_check(params, status):
             layer_def["src_layer_name"] = layer_def["src_layer_name"].split("/")[-1]
 
     # Find boundary layer.
-    bdir = params["boundary_dir"].joinpath("vector")
-    boundary_filepaths = [path for path in bdir.glob("**/boundary_{:s}.shp".format(country_code)) if path.is_file()]
+    bdir = params["boundary_dir"].joinpath("vector", "clc")
+    boundary_filepaths = [path for path in bdir.glob("boundary_clc_{:s}.shp".format(country_code)) if path.is_file()]
     if len(boundary_filepaths) == 0:
         status.aborted()
         status.add_message("No boundary has been found for country {:s} under directory {:s}.".format(country_code, str(bdir)))

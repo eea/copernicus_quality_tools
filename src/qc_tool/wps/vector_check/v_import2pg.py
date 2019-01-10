@@ -59,4 +59,4 @@ def run_check(params, status):
                     status.add_message("Imported layer {:s} has only {:d} out of {:d} features loaded.".format(layer_name, dst_count, src_count))
         else:
             status.aborted()
-            status.add_message("Importing of layer {:s} into PostGIS db failed.".format(layer_name))
+            status.add_message("Failed to import layer {:s} into PostGIS.".format(layer_name))

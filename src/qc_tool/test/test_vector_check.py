@@ -82,7 +82,7 @@ class TestV1_clc(VectorCheckTestCase):
                             "reference_layer_regex": "^{country_code:s}/clc12_{country_code:s}$",
                             "initial_layer_regex": "^{country_code:s}/clc06_{country_code:s}$",
                             "change_layer_regex": "^{country_code:s}/cha12_{country_code:s}$",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundary")})
+                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
 
     def test(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
@@ -97,8 +97,8 @@ class TestV1_clc(VectorCheckTestCase):
         self.assertEqual("clc06_MT", status.params["layer_defs"]["initial"]["src_layer_name"])
         self.assertEqual("clc2012_mt.gdb", status.params["layer_defs"]["change"]["src_filepath"].name)
         self.assertEqual("cha12_MT", status.params["layer_defs"]["change"]["src_layer_name"])
-        self.assertEqual("boundary_mt.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
-        self.assertEqual("boundary_mt", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertEqual("boundary_clc_mt.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
+        self.assertEqual("boundary_clc_mt", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
     def test_mismatched_regex_aborts(self):
         from qc_tool.wps.vector_check.v1_clc import run_check
@@ -301,9 +301,6 @@ class TestV4_shp(VectorCheckTestCase):
 
 
 class TestVImport2pg(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
-
     def test(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
