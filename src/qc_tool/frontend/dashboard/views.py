@@ -2,6 +2,8 @@
 
 import logging
 import json
+import sys
+import traceback
 import os
 import time
 import threading
@@ -183,10 +185,14 @@ def file_upload(request):
             return JsonResponse(data)
 
     except BaseException as e:
+        logger.debug("upload exception!")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        msg = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        logger.debug(msg)
         data = {'is_valid': False,
                 'name': None,
                 'url': None,
-                'message': str(e)}
+                'message': msg}
 
         return JsonResponse(data)
 
