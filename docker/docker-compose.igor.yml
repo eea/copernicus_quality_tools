@@ -29,7 +29,7 @@ services:
       dockerfile: Dockerfile.wps
     image: qc_tool_wps
     environment:
-      - BOUNDARY_DIR=/mnt/qc_tool_bondary/boundary
+      - BOUNDARY_DIR=/mnt/qc_tool_bondary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - WPS_DIR=/mnt/qc_tool_work/wps
       - WORK_DIR=/mnt/qc_tool_work/work
@@ -45,7 +45,7 @@ services:
       - LEAVE_JOBDIR=no
     volumes:
       - /mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-      - /mnt/pracovni-archiv-01/projects/cop15m/boundary:/mnt/qc_tool_boundary/boundary
+      - /mnt/pracovni-archiv-01/projects/cop15m/boundaries:/mnt/qc_tool_boundary/boundaries
       - /mnt/pracovni-archiv-01/projects/cop15m/incoming:/mnt/qc_tool_incoming/incoming
       - /mnt/pracovni-archiv-01/projects/cop15m/igor/qc_tool_work:/mnt/qc_tool_work
 

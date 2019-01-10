@@ -46,10 +46,8 @@ def run_check(params, status):
                     status.add_params({"layer_srs_epsg": int(allowed_code)})
                     return
 
-        # If we reached until this spot, no matching EPSG code or matching SRS instance could be found.
+        # No matching SRS has been found.
         status.aborted()
-        status.add_message("The SRS of Layer {:s} is not in the list of allowed spatial reference systems. "
-                           "detected SRS: {:s}, "
-                           "list of allowed SRS's: {:s}.".format(layer_def["src_layer_name"],
-                                                                 srs.ExportToWkt(),
-                                                                 ", ".join(map(str, params["epsg"]))))
+        status.add_message("The SRS of the layer {:s} is not in the list of allowed spatial reference systems."
+                           " Detected SRS: {:s}"
+                           .format(layer_def["src_layer_name"], srs.ExportToWkt()))

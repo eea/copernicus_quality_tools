@@ -44,17 +44,17 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v4": "CRS of layer expressed as EPSG code match reference EPSG code.",
     "v5": "Unique identifier check.",
     "v6": "Valid codes check.",
-    "v7": "(no description)",
+    "v7": "Non-probable changes.",
     "v8": "No multipart polygons.",
     "v9": "(no description)",
-    "v10": "(no description)",
+    "v10": "Completeness.",
     "v11_clc_change": "Minimum mapping unit check, Corine Land Cover change layer.",
     "v11_clc_status": "Minimum mapping unit check, Corine Land Cover status layer.",
     "v11_n2k": "Minimum mapping unit check, Natura 2000.",
     "v11_rpz": "Minimum mapping unit check, Riparian zones.",
     "v11_ua_change": "Minimum mapping unit check, Urban Atlas change layer.",
     "v11_ua_status": "Minimum mapping unit check, Urban Atlas status layer.",
-    "v12": "(no description)",
+    "v12": "Minimum mapping width.",
     "v13": "There are no overlapping polygons.",
     "v14": "No neighbouring polygons with the same code.",
     "v15": "Vector metadata is compliant with INSPIRE specifications.",
@@ -220,7 +220,7 @@ def setup_config():
         config["submission_dir"] = Path(config["submission_dir"])
 
     # Parameters common to both frontend and wps.
-    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundary"))
+    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundaries"))
     config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
     config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_tool_volume/wps"))
     config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_volume/work"))

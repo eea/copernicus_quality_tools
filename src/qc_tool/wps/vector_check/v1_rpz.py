@@ -16,21 +16,27 @@ def run_check(params, status):
         status.aborted()
         status.add_message("No shapefile has been found in the delivery.")
         return
-
-    # Filter out shp filepaths by areacodes.
-    areacodes_subregex = "({:s})".format("|".join(params["areacodes"]))
-    filename_regex = re.compile(params["filename_regex"].format(areacodes=areacodes_subregex), re.IGNORECASE)
-    matched_shp_filepaths = [shp_filepath for shp_filepath in shp_filepaths if filename_regex.search(shp_filepath.name)]
-    if len(matched_shp_filepaths) == 0:
+    if len(shp_filepaths) > 1:
         status.aborted()
-        status.add_message("No shapefile with a name following product specification has been found.")
+        status.add_message("More than one shapefile have been found in the delivery: {:s}."
+                           .format(", ".join([shp_filepath.name for shp_filepath in shp_filepaths])))
         return
-    if len(matched_shp_filepaths) > 1:
+    shp_filepath = shp_filepaths[0]
+
+    # Check filename and areacode.
+    mobj = re.compile(params["filename_regex"], re.IGNORECASE).search(shp_filepath.name)
+    if mobj is None:
         status.aborted()
-        status.add_message("More than one shapefile with a name following product specification have been found: {:s}."
-                           .format(", ".join(path.name for path in matched_shp_filepaths)))
+        status.add_message("Shapefile name {:s} is not in accord with specification."
+                           .format(shp_filepath.name))
+        return
+    if mobj.group("areacode") not in params["areacodes"]:
+        status.aborted()
+        status.add_message("The areacode {:s} extracted from the name of the shapefile"
+                           " is not in the list of allowed areacodes."
+                           .format(mobj["areacode"]))
         return
 
-    layer_defs = {"rpz": {"src_filepath": matched_shp_filepaths[0],
-                          "src_layer_name": matched_shp_filepaths[0].stem}}
+    layer_defs = {"rpz": {"src_filepath": shp_filepath,
+                          "src_layer_name": shp_filepath.stem}}
     status.add_params({"layer_defs": layer_defs})
