@@ -70,8 +70,11 @@
                             <td class="success">{{detail.check_ident}}</td>
                             <td class="success">{{detail.description}}</td>
                             <td class="success">{{detail.status}}</td>
-                            <td class="success"></td>
-                            <td class="success"></td>
+                            <td class="success">
+                                {% for attachment_filename in detail.attachment_filenames %}
+                                <a href="/attachment/{{ result.uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
+                                {% endfor %}</td>
+                            <td class="success"><ul>{% for msg in detail.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
                             {% elif detail.status == "skipped" or detail.status == None %}
                             <td>{{detail.check_ident}}</td>
                             <td>{{detail.description}}</td>
