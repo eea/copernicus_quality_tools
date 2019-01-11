@@ -40,7 +40,7 @@ def run_check(params, status):
         # Create table of exception items.
         sql = ("CREATE TABLE {exception_table} AS"
                " WITH"
-               "  boundary AS ("
+               "  margin AS ("
                "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
                "   FROM {layer_name}),"
                "  layer AS ("
@@ -53,12 +53,12 @@ def run_check(params, status):
                "   FROM {layer_name}"
                "   WHERE"
                "    {code_column_name}::text SIMILAR TO '(121|122)%')"
-               # Items touching boundary.
+               # Marginal features.
                " SELECT layer.{fid_name}"
-               " FROM layer, boundary"
+               " FROM layer, margin"
                " WHERE"
                "  layer.{area_column_name} >= 0.1"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1"
+               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1"
                # Linear features.
                " UNION"
                " SELECT layer.{fid_name}"

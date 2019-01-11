@@ -21,7 +21,7 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "boundary_layer_name": params["layer_defs"][params["boundary_layer"]]["pg_layer_name"],
+                      "margin_layer_name": params["layer_defs"]["reference"]["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
                       "area_m2": params["area_m2"],
                       "initial_code_column_name": params["initial_code_column_name"],
@@ -43,19 +43,19 @@ def run_check(params, status):
         # Create table of exception items.
         sql = ("CREATE TABLE {exception_table} AS"
                " WITH"
-               "  boundary AS ("
+               "  margin AS ("
                "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
-               "   FROM {boundary_layer_name}),"
+               "   FROM {margin_layer_name}),"
                "  layer AS ("
                "   SELECT *"
                "   FROM {layer_name}"
                "   WHERE"
                "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
-               # Items touching boundary.
+               # Marginal features.
                " SELECT layer.{fid_name}"
-               " FROM layer, boundary"
+               " FROM layer, margin"
                " WHERE"
-               "  ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1;")
+               "  ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

@@ -605,9 +605,9 @@ class Test_v11_clc_change(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v11_clc_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
 
-        # Add layer for boundary creation.
-        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+        # Artificial margin.
+        cursor.execute("CREATE TABLE margin (wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO margin VALUES (ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
         # Add layer to be checked.
         cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(1), code2 char(1), wkb_geometry geometry(Polygon, 4326));")
@@ -615,10 +615,10 @@ class Test_v11_clc_change(VectorCheckTestCase):
         # General features.
         cursor.execute("INSERT INTO change VALUES (10, 50001, 'X', 'X', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         cursor.execute("INSERT INTO change VALUES (12, 50000, 'X', 'X', ST_MakeEnvelope(0, 2, 1, 3, 4326));")
-        # General features touching boundary.
+        # General features at margin.
         cursor.execute("INSERT INTO change VALUES (14, 50001, 'X', 'X', ST_MakeEnvelope(-1, 4, 1, 5, 4326));")
         cursor.execute("INSERT INTO change VALUES (16, 50000, 'X', 'X', ST_MakeEnvelope(-1, 6, 1, 7, 4326));")
-        # Exception feature touching boundary.
+        # Exception feature at margin.
         cursor.execute("INSERT INTO change VALUES (20, 49999, 'X', 'X', ST_MakeEnvelope(-1, 8, 1, 9, 4326));")
         # Exception pair of features taking part in complex change with the same code in initial year.
         cursor.execute("INSERT INTO change VALUES (22, 40000, 'A', '1', ST_MakeEnvelope(0, 10, 1, 11, 4326));")
@@ -634,9 +634,8 @@ class Test_v11_clc_change(VectorCheckTestCase):
 
         self.params.update({"layer_defs": {"change": {"pg_layer_name": "change",
                                                       "pg_fid_name": "fid"},
-                                           "boundary": {"pg_layer_name": "boundary"}},
+                                           "reference": {"pg_layer_name": "margin"}},
                             "layers": ["change"],
-                            "boundary_layer": "boundary",
                             "area_column_name": "shape_area",
                             "area_m2": 50000,
                             "initial_code_column_name": "code1",
@@ -675,7 +674,7 @@ class Test_v11_ua_status(VectorCheckTestCase):
         # Exception features, touches fid=30.
         cursor.execute("INSERT INTO reference VALUES (40, 1, '2', ST_MakeEnvelope(31, 3, 41, 4, 4326));")
 
-        # Exception feature, touches boundary.
+        # Exception feature at margin.
         cursor.execute("INSERT INTO reference VALUES (42, 100, '2', ST_MakeEnvelope(42, 0, 43, 4, 4326));")
 
         # Warning feature, touches fid=10.
@@ -776,10 +775,10 @@ class Test_v11_n2k(VectorCheckTestCase):
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, wkb_geometry geometry(Polygon, 4326));")
 
-        # Artificial boundary as a general feature.
+        # Artificial margin as a general feature.
         cursor.execute("INSERT INTO n2k VALUES (0, 0.5, 10, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
-        # Features touching boundary.
+        # Marginal features.
         cursor.execute("INSERT INTO n2k VALUES (10, 0.1, 8, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
         cursor.execute("INSERT INTO n2k VALUES (11, 0.0999, 8, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
 
@@ -821,10 +820,10 @@ class Test_v11_rpz(VectorCheckTestCase):
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE rpz (fid integer, area_ha real, code integer, ua char(1), wkb_geometry geometry(Polygon, 4326));")
 
-        # Artificial boundary as a general feature.
+        # Artificial margin as a general feature.
         cursor.execute("INSERT INTO rpz VALUES (0, 0.5, 10, NULL, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
-        # Features touching boundary.
+        # Marginal features.
         cursor.execute("INSERT INTO rpz VALUES (10, 0.2, 8, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
         cursor.execute("INSERT INTO rpz VALUES (11, 0.1999, 8, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
 
