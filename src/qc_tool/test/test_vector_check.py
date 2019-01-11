@@ -49,12 +49,13 @@ class TestUnzip(VectorCheckTestCase):
         self.assertEqual("aborted", status.status, "Unzipping a non-existent v_unzip should be aborted.")
 
 
-class TestV1_rpz(VectorCheckTestCase):
+class Test_v1_rpz(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip")})
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip"),
+                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
@@ -67,12 +68,36 @@ class TestV1_rpz(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual(1, len(status.params["layer_defs"]))
         self.assertEqual("rpz_DU032B_lclu_v97.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
         self.assertEqual("rpz_DU032B_lclu_v97", status.params["layer_defs"]["rpz"]["src_layer_name"])
+        self.assertEqual("boundary_rpz.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
+        self.assertEqual("boundary_rpz", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
 
-class TestV1_clc(VectorCheckTestCase):
+class Test_v1_n2k(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip"),
+                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
+        status = self.status_class()
+        unzip_check(self.params, status)
+        self.params["unzip_dir"] = status.params["unzip_dir"]
+
+    def test(self):
+        from qc_tool.wps.vector_check.v1_n2k import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual("n2k_du001z_lclu_v99_20190108.shp", status.params["layer_defs"]["n2k"]["src_filepath"].name)
+        self.assertEqual("n2k_du001z_lclu_v99_20190108", status.params["layer_defs"]["n2k"]["src_layer_name"])
+        self.assertEqual("boundary_n2k.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
+        self.assertEqual("boundary_n2k", status.params["layer_defs"]["boundary"]["src_layer_name"])
+
+
+class Test_v1_clc(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.params.update({"unzip_dir": TEST_DATA_DIR.joinpath("vector", "clc"),
@@ -183,7 +208,8 @@ class TestV2(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v1_rpz import run_check as layer_check
 
         rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip")
-        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
+        self.params.update({"boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": rpz_filepath,
                             "formats": [".gdb", ".shp"],
                             "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"},

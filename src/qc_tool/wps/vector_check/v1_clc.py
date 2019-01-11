@@ -67,16 +67,11 @@ def run_check(params, status):
             layer_def["src_layer_name"] = layer_def["src_layer_name"].split("/")[-1]
 
     # Find boundary layer.
-    bdir = params["boundary_dir"].joinpath("vector", "clc")
-    boundary_filepaths = [path for path in bdir.glob("boundary_clc_{:s}.shp".format(country_code)) if path.is_file()]
-    if len(boundary_filepaths) == 0:
+    boundary_filepath = params["boundary_dir"].joinpath("vector", "clc", "boundary_clc_{:s}.shp".format(country_code))
+    if not boundary_filepath.is_file():
         status.aborted()
-        status.add_message("No boundary has been found for country {:s} under directory {:s}.".format(country_code, str(bdir)))
+        status.add_message("No boundary has been found at {:s}.".format(str(boundary_filepath)))
         return
-    if len(boundary_filepaths) > 1:
-        status.aborted()
-        status.add_message("More than one boundary have been found for country {:s}: {:s}.".format(country_code, ", ".join(str(p) for p in boundary_filepaths)))
-        return
-    layer_defs["boundary"] = {"src_filepath": boundary_filepaths[0], "src_layer_name": boundary_filepaths[0].stem}
+    layer_defs["boundary"] = {"src_filepath": boundary_filepath, "src_layer_name": boundary_filepath.stem}
 
     status.add_params({"layer_defs": layer_defs})

@@ -22,4 +22,13 @@ def run_check(params, status):
     # Get layers.
     layer_defs = {"n2k": {"src_filepath": shp_filepaths[0],
                           "src_layer_name": shp_filepaths[0].stem}}
+
+    # Find boundary layer.
+    boundary_filepath = params["boundary_dir"].joinpath("vector", "boundary_n2k.shp")
+    if not boundary_filepath.is_file():
+        status.aborted()
+        status.add_message("No boundary has been found at {:s}.".format(str(boundary_filepath)))
+        return
+    layer_defs["boundary"] = {"src_filepath": boundary_filepath, "src_layer_name": boundary_filepath.stem}
+
     status.add_params({"layer_defs": layer_defs})
