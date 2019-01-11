@@ -21,11 +21,12 @@ RUN apt-get -y update \
     && apt-get -y install git
 
 # Install geo environment.
-RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy python3-skimage
+RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy
 
-# Install flask & pywps.
+# Install scikit-image & flask & pywps.
 RUN apt-get -y install gcc python3-dev libproj-dev python3-lxml \
     && pip3 install --upgrade setuptools \
+    && pip3 install scikit-image \
     && pip3 install Flask \
     && env PROJ_DIR=/usr pip3 install pyproj \
     && cd /usr/local/src \

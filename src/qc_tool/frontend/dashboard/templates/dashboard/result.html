@@ -75,7 +75,13 @@
                                 <a href="/attachment/{{ result.uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
                                 {% endfor %}</td>
                             <td class="success"><ul>{% for msg in detail.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
-                            {% elif detail.status == "skipped" or detail.status == None %}
+                            {% elif detail.status == "skipped" or detail.status == "running" %}
+                            <td>{{detail.check_ident}}</td>
+                            <td>{{detail.description}}</td>
+                            <td>{{detail.status}}</td>
+                            <td></td>
+                            <td></td>
+                            {% elif detail.status == None %}
                             <td>{{detail.check_ident}}</td>
                             <td>{{detail.description}}</td>
                             <td></td>
