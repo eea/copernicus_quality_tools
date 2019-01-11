@@ -44,6 +44,15 @@
                                             <input id="current_username" type="hidden" value="{{ user.get_username }}">
                                             <select id="select_product" name="select_product" class="form-control" required
                                             data-error-msg="Please select a product.">
+                                                <option hidden >Select product type ...</option>
+                                                {% for prod in product_list %}
+                                                {% if prod.name == product %}
+                                                <option value="{{prod.name}}" selected>{{prod.description}}</option>
+                                                {% else %}
+                                                <option value="{{prod.name}}">{{prod.description}}</option>
+                                                {% endif %}
+                                                {% endfor %}
+
                                             </select>
                                         </div>
                                     </div>

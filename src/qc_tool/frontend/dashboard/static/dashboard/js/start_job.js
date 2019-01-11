@@ -92,32 +92,6 @@ $(document).ready(function() {
 
     var selected_product_ident = document.getElementById("preselected_product").value;
 
-    // retrieve list of available product types (product is pre-selected from url parameter)
-    $.getJSON("/data/product_list/", function(obj) {
-
-        var selected_product_exists = false;
-        var prods = obj.product_list;
-
-        var options = '';
-        options += '<option hidden >Select product type ...</option>';
-        for (var i=0;i<prods.length;i++){
-            if(prods[i].name === selected_product_ident) {
-                options += '<option value=' + prods[i].name + ' selected>' + prods[i].description + '</option>';
-                selected_product_exists = true;
-            } else {
-                options += '<option value=' + prods[i].name + '>' + prods[i].description + '</option>';
-            }
-        }
-        document.getElementById("select_product").options.length = 0;
-        document.getElementById("select_product").innerHTML = options;
-
-        // display checks for pre-selected product type
-        if (selected_product_exists) {
-            display_product_info(selected_product_ident);
-        }
-    });
-
-
     $('#check_form').submit(function(event){
         event.preventDefault();
         run_checks();
