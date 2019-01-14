@@ -19,10 +19,11 @@ services:
       - WPS_URL=http://qc_tool_wps:5000/wps
     volumes:
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-      - /home/jiri/qc_tool/testdata:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/wps:/mnt/qc_tool_volume/wps
-      - /home/jiri/work:/mnt/qc_tool_volume/work
-      - /home/jiri/qc_tool_submission:/mnt/qc_tool_submission
+      - /home/jiri/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /home/jiri/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /home/jiri/qc_tool/qc_tool_wps:/mnt/qc_tool_volume/wps
+      - /home/jiri/qc_tool/qc_tool_work:/mnt/qc_tool_volume/work
+      - /home/jiri/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
 
   qc_tool_wps:
     depends_on:
@@ -47,12 +48,12 @@ services:
       - JOBDIR_EXIST_OK=no
       - LEAVE_JOBDIR=no
     volumes:
-      - /home/jiri/github/copernicus_quality_tools/testing_data/boundaries:/mnt/qc_tool_boundary/boundaries
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-      - /home/jiri/qc_tool/testdata:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/wps:/mnt/qc_tool_volume/wps
-      - /home/jiri/work:/mnt/qc_tool_volume/work
-      - /home/jiri/qc_tool_submission:/mnt/qc_tool_submission
+      - /home/jiri/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /home/jiri/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /home/jiri/qc_tool/qc_tool_wps:/mnt/qc_tool_volume/wps
+      - /home/jiri/qc_tool/qc_tool_work:/mnt/qc_tool_volume/work
+      - /home/jiri/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
 
   qc_tool_postgis:
     build:

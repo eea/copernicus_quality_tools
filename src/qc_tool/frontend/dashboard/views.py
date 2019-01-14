@@ -3,6 +3,7 @@
 import logging
 import json
 import sys
+import shutil
 import traceback
 import os
 import time
@@ -16,6 +17,7 @@ from pathlib import Path
 from requests import get as requests_get
 from requests.exceptions import RequestException
 from xml.etree import ElementTree
+from zipfile import ZipFile
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -204,6 +206,104 @@ def file_upload(request):
         return JsonResponse(data)
 
     return render(request, 'dashboard/file_upload.html')
+
+
+
+
+@login_required
+def boundaries(request):
+    """
+    Returns a list of all boundary aoi files in the active boundary package in html format.
+    """
+    return render(request, 'dashboard/boundaries.html', {})
+
+
+@login_required
+def get_boundaries_json(request, boundary_type):
+    """
+    Returns a list of all boundary aoi files in the active boundary package in json format.
+
+    :param request:
+    :return: list of boundary .tif or .shp file infos with name and size in JSON format
+    """
+    boundary_list = []
+
+    if boundary_type == "raster":
+        raster_dir = CONFIG["boundary_dir"].joinpath("raster")
+        raster_filepaths = [path for path in raster_dir.glob("**/*") if
+                            path.is_file() and path.suffix.lower() == ".tif"]
+        for r in raster_filepaths:
+            boundary_list.append({"filepath": str(r), "filename": r.name, "size_bytes": r.stat().st_size, "type": "raster"})
+
+    else:
+        vector_dir = CONFIG["boundary_dir"].joinpath("vector")
+        vector_filepaths = [path for path in vector_dir.glob("**/*") if
+                            path.is_file() and path.suffix.lower() == ".shp"]
+        for v in vector_filepaths:
+            boundary_list.append({"filepath": str(v), "filename": v.name, "size_bytes": v.stat().st_size, "type": "vector"})
+
+    return JsonResponse(boundary_list, safe=False)
+
+
+@login_required
+def boundaries_upload(request):
+    """
+    Uploading boundary package via web console.
+    default location for storing boundary package is CONFIG["boundary_dir"].
+    """
+    try:
+        boundary_upload_path = Path(CONFIG["boundary_dir"])
+
+        if request.method == 'POST' and request.FILES["file"]:
+
+            # retrieve file info from uploaded zip file
+            myfile = request.FILES["file"]
+            logger.info("Processing uploaded boundary ZIP file: {:s}".format(myfile.name))
+
+            # Check if there is an existing boundary package and boundary ZIP file. If found, delete.
+            dst_filepath = boundary_upload_path.joinpath(myfile.name)
+            if dst_filepath.exists():
+                logger.debug("deleting abandoned zip file {:s}".format(str(dst_filepath)))
+                dst_filepath.unlink()
+
+            logger.debug("saving uploaded boundary zip file to {:s}".format(str(dst_filepath)))
+            fs = FileSystemStorage(str(boundary_upload_path))
+            fs.save(myfile.name, myfile)
+            logger.debug("uploaded boundary zip file saved successfully to filesystem.")
+
+            # Delete unzipped boundary files.
+            raster_dir = boundary_upload_path.joinpath("raster")
+            if raster_dir.exists():
+                shutil.rmtree(str(raster_dir))
+
+            vector_dir = boundary_upload_path.joinpath("vector")
+            if vector_dir.exists():
+                shutil.rmtree(str(vector_dir))
+
+            # Unzip the uploaded boundary package.
+            with ZipFile(str(dst_filepath)) as zip_file:
+                zip_file.extractall(path=str(boundary_upload_path))
+
+            data = {'is_valid': True,
+                    'name': myfile.name,
+                    'url': myfile.name}
+            return JsonResponse(data)
+
+    except BaseException as e:
+        logger.debug("upload exception!")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        msg = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        logger.debug(msg)
+        data = {'is_valid': False,
+                'name': None,
+                'url': None,
+                'message': msg}
+
+        return JsonResponse(data)
+
+    return render(request, 'dashboard/boundaries_upload.html')
+
+
 
 @csrf_exempt
 def delivery_delete(request):

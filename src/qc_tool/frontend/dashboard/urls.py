@@ -21,6 +21,10 @@ urlpatterns = [
 
     path('upload/', views.file_upload, name='file_upload'),
 
+    path("data/boundaries/<boundary_type>/", views.get_boundaries_json, name="boundaries_json"),
+    path('boundaries/', views.boundaries, name='boundaries'),
+    path('boundaries_upload/', views.boundaries_upload, name='boundaries_upload'),
+
     path("run_wps_execute", views.run_wps_execute, name="run_wps_execute"),
 
     path("start_job/<int:delivery_id>/", views.start_job, name="start_job"),

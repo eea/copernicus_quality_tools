@@ -70,12 +70,10 @@ def guess_product_ident(delivery_filepath):
         if is_20m_raster:
             return prod_abbrev + "_020m"
         if is_100m_raster:
-            return prod_abbrev + "100m"
+            return prod_abbrev + "_100m"
 
-    elif fn.startswith("clc"):
-        return "clc"
-    elif fn.startswith("ua"):
-        return "ua"
+    elif fn.startswith("clc2012"):
+        return "clc_2012"
     elif fn.startswith("rpz"):
         return "rpz"
     elif re.match(r"[a-z]{2}[0-9]{3}l[0-9]_[a-z]+", fn):

@@ -1,0 +1,76 @@
+{% extends "dashboard/base.html" %}
+{% load staticfiles %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
+{% endblock css %}
+
+{% block content %}
+
+    <div class="container-fluid main" style="padding-top: 70px;">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="{% url 'deliveries' %}">Copernicus QC Tool</a></li>
+              <li class="active"><a href="">Boundaries</a></li>
+            </ol>
+
+            <div class="main">
+
+                <!-- Nav tabs -->
+                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Boundary Package</a></li>
+                    <!--
+                    <li role="presentation"><a id="tab_templates" href="#servers" aria-controls="messages" role="tab" data-toggle="tab">New Check Job</a></li>
+                    -->
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane active" id="recent">
+                        <div id="runs-toolbar-1">
+                            <a href="{% url 'boundaries_upload' %}" class="btn btn-success" role="button">
+                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                Upload Boundary Package
+                            </a>
+                        </div>
+                        <h2>Raster AOI boundary files</h2>
+                        <table id="tbl-boundaries-raster" class="table" data-toggle="table" data-sort-name="filename" data-sort-order="asc">
+                            <thead>
+                            <tr>
+                                <th data-field="filename" data-sortable="true">Name</th>
+                                <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
+                            </tr>
+                            </thead>
+                           <tbody>
+                           </tbody>
+                        </table>
+                        <h2>Vector AOI boundary files</h2>
+                        <table id="tbl-boundaries-vector" class="table" data-toggle="table" data-sort-name="filename" data-sort-order="asc">
+                            <thead>
+                            <tr>
+                                <th data-field="filename" data-sortable="true">Name</th>
+                                <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
+                            </tr>
+                            </thead>
+                           <tbody>
+                           </tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <br><br><br><br>
+
+{% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
+    <script src="{% static 'dashboard/js/boundaries.js' %}"></script>
+{% endblock js %}

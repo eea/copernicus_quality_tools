@@ -21,6 +21,7 @@ services:
     networks:
       - qc_tool_network
     volumes:
+      - qc_tool_boundary:/mnt/qc_tool_boundary
       - qc_tool_incoming:/mnt/qc_tool_incoming
       - qc_tool_submission:/mnt/qc_tool_submission
       - qc_tool_work:/mnt/qc_tool_work
