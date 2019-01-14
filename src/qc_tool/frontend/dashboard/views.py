@@ -67,15 +67,17 @@ def start_job(request, delivery_id):
     delivery = get_object_or_404(Delivery, pk=delivery_id)
 
     product_infos = get_product_descriptions()
-    product_list = [{'name': product_ident, 'description': product_description}
-                    for product_ident, product_description in product_infos.items()]
-    product_list = sorted(product_list, key=lambda x: x['description'])
+    product_list = [{"product_ident": product_ident, "product_description": product_name}
+                    for product_ident, product_name in product_infos.items()]
+    product_list = sorted(product_list, key=lambda x: x["product_description"])
 
     # Starting a job for a submitted delivery is not permitted.
     if delivery.date_submitted is not None:
         raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
 
-    context = {"filename": delivery.filename, "product": delivery.product_ident, "product_list": product_list}
+    context = {"filename": delivery.filename,
+               "product_ident": delivery.product_ident,
+               "product_list": product_list}
     return render(request, "dashboard/start_job.html", context)
 
 

@@ -13,7 +13,7 @@
 
             <ol class="breadcrumb">
               <li><a href="{% url 'deliveries' %}">Copernicus QC Tool</a></li>
-              <li class="active"><a href="">New Job</a></li>
+              <li class="active"><a href="">New QC Job</a></li>
             </ol>
 
             <div class="main">
@@ -22,7 +22,11 @@
                     <div class="panel panel-primary">
                         <div class="panel-heading">
                             <div class="panel-title">
-                                Setup new QA job for product <strong>{{product}}</strong> (file: <strong>{{filename}}</strong>)
+                                {% if product_ident %}
+                                Setup new QC job for product <strong>{{product_ident}}</strong> (delivery: <strong>{{filename}}</strong>)
+                                {% else %}
+                                Setup new QC job for delivery: <strong>{{filename}}</strong>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="panel-body">
@@ -31,28 +35,27 @@
                                 <fieldset></fieldset>
 
                                 <div class="form-group">
-                                    <label>Selected file: {{filename}}</label>
+                                    <label>Selected delivery file: {{filename}}</label>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-lg-3 col-md-4 col-xs-12">
                                         <div class="form-group">
-                                            <label for="select_product">Select Product Type</label>
+                                            <label for="select_product">Select Product</label>
                                             <span>  - </span>
-                                            <input id="preselected_product" type="hidden" value="{{ product }}">
+                                            <input id="preselected_product" type="hidden" value="{{ product_ident }}">
                                             <input id="preselected_file" type="hidden" value="{{ filename }}">
                                             <input id="current_username" type="hidden" value="{{ user.get_username }}">
                                             <select id="select_product" name="select_product" class="form-control" required
                                             data-error-msg="Please select a product.">
-                                                <option hidden >Select product type ...</option>
-                                                {% for prod in product_list %}
-                                                {% if prod.name == product %}
-                                                <option value="{{prod.name}}" selected>{{prod.description}}</option>
-                                                {% else %}
-                                                <option value="{{prod.name}}">{{prod.description}}</option>
-                                                {% endif %}
+                                                <option hidden >Select product ...</option>
+                                                {% for p in product_list %}
+                                                    {% if p.product_ident == product_ident %}
+                                                <option value="{{p.product_ident}}" selected>{{p.product_description}}</option>
+                                                    {% else %}
+                                                <option value="{{p.product_ident}}">{{p.product_description}}</option>
+                                                    {% endif %}
                                                 {% endfor %}
-
                                             </select>
                                         </div>
                                     </div>
@@ -75,14 +78,12 @@
                                 </table>
                                 <br>
 
-                                <div class="form-group">
-                                <a id="product_link" href="/data/product_config/unknown/">Show Product Configuration</a>
-                                </div>
+                                <div id="product_link_placeholder" class="form-group"></div>
                                 <br>
 
-                                <button type="submit" class="btn btn-success">
+                                <button id="btn_run" type="submit" class="btn btn-success">
                                     <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                    Run QC Session
+                                    Run QC
                                 </button>
 
                             </form>

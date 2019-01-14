@@ -56,13 +56,13 @@ function display_product_info(product_ident) {
         if($("#tbl_check_details").is(":hidden")){
             $("#tbl_check_details").show();
         }
-        //$("#runs-bar").removeClass("hidden");
 
-        // show json product type config file link if hidden
-        $("#product_link").attr("href", "/data/product_config/" + product_ident + "/");
-        if($("#product_link").is(':hidden')){
-            $("#product_link").show();
-        }
+        // update product config link
+        $("#product_link_placeholder").html(
+        '<a href="/data/product_config/' + product_ident + '/">Show Product Configuration</a>');
+
+        // enable Run QC button
+        $("#btn_run").prop("disabled", false);
 
         //listen to checkbox events
         toggle_select_buttons();
@@ -76,11 +76,9 @@ function display_product_info(product_ident) {
         $("#tbl_check_details > tbody").html("");
         var product_error_msg = 'Error in configuration of <strong>' + product_ident + '</strong> product!'
         $("#error_placeholder").html('<div class="alert alert-danger">' + product_error_msg + '</div>');
-        // show json product type config file link if hidden
-        $("#product_link").attr("href", "/data/product_config/" + product_ident + "/");
-        if($("#product_link").is(':hidden')){
-            $("#product_link").show();
-        }
+        // update product config link
+        $("#product_link_placeholder").html(
+        '<a href="/data/product_config/' + product_ident + '/">Show Product Configuration</a>');
     });
 }
 
@@ -88,19 +86,25 @@ function display_product_info(product_ident) {
 $(document).ready(function() {
 
     $("#tbl_check_details").hide();
-    $("#product_link").hide();
-
     var selected_product_ident = document.getElementById("preselected_product").value;
+    if (selected_product_ident != "None") {
+        display_product_info(selected_product_ident);
+        $("#tbl_check_details").show();
+    } else {
+        $("#tbl_check_details").hide();
+        $("#tbl_check_details > tbody").html("");
+        $("#product_link_placeholder").html("");
+        $("#btn_run").prop("disabled", true);
+    }
 
+    // When user clicks the "Launch QA session" button.
     $('#check_form').submit(function(event){
         event.preventDefault();
         run_checks();
     });
 
-    // When product type is changed in the dropdown, update product detail info.
     $('#select_product').change(function() {
-        //populate product type info
-        var optionSelected = $("option:selected", this);
+        //populate product type info based on selected product ident.
         display_product_info(this.value);
     });
 });
@@ -129,6 +133,7 @@ function run_checks() {
 
     $('#modal-spinner').modal('show');
 
+    // WPS execute must be called via server-side proxy to bypass CORS restriction.
     var run_url = "/run_wps_execute";
 
     // retrieve the checkboxes
@@ -147,7 +152,6 @@ function run_checks() {
         "filepath": $("#current_username").val() + "/" + $("#preselected_file").val(),
         "optional_check_idents": selected_checks.join(",")
     };
-    console.log(data);
 
     $.ajax({
         type: "POST",
