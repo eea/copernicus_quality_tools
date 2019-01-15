@@ -13,11 +13,17 @@ from qc_tool.wps.registry import register_check_function
 @register_check_function(__name__)
 def run_check(params, status):
 
-    # check existence of xml metadata file.
-    xml_filepath = params["filepath"].with_suffix(".xml")
+    # check existence of xml metadata file .xml or .tif.xml
+    xml_filepath1 = params["filepath"].with_suffix(".xml")
+    xml_filepath2 = params["filepath"].with_suffix(".tif.xml")
 
-    if not xml_filepath.exists():
-        status.add_message("Expected XML metadata file {:s} is missing.".format(xml_filepath.name))
+    if xml_filepath1.exists():
+        xml_filepath = xml_filepath1
+    elif xml_filepath2.exists():
+        xml_filepath = xml_filepath2
+    else:
+        status.add_message("Expected XML metadata file {:s} or {:s} is missing."
+                           .format(xml_filepath1.name, xml_filepath2.name))
         return
 
     # check if the metadata file is a valid xml document.
