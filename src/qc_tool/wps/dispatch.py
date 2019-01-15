@@ -298,7 +298,7 @@ class CheckStatus():
         self.status_properties = {}
 
     def failed(self):
-        if self.status == "ok":
+        if self.status != "aborted":
             self.status = "failed"
 
     def aborted(self):

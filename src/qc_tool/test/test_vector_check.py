@@ -535,42 +535,89 @@ class TestV8(VectorCheckTestCase):
         self.assertEqual("failed", status.status)
 
 
-class Test_V10(VectorCheckTestCase):
+class Test_v10(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO boundary VALUES (ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        self.cursor.execute("CREATE TABLE reference (wkb_geometry geometry(Polygon, 4326));")
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
+                                           "boundary": {"pg_layer_name": "boundary"}},
+                            "layers": ["reference"]})
+
     def test(self):
         from qc_tool.wps.vector_check.v10 import run_check
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
-        cursor.execute("CREATE TABLE reference (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(2, 2, 5, 5, 4326));")
-        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
-                                           "boundary": {"pg_layer_name": "boundary"}},
-                            "layers": ["reference"]})
-        run_check(self.params, self.status_class())
-        cursor.execute("SELECT * FROM v10_reference_error;")
-        self.assertEqual(0, cursor.rowcount, "There are gaps.")
+        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(2, 2, 4, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(4, 2, 5, 5, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.assertEqual(0, self.cursor.rowcount)
 
-    # FIXME:
-    # If boundary and layer use different SRS there is no chance that the unions of both match.
-    # So it is needed to introduce tolerance somehow to ignore marginal gaps.
-    @expectedFailure
-    def test_different_srs(self):
+    def test_fail(self):
         from qc_tool.wps.vector_check.v10 import run_check
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        # Create boundary in UTM zone 31M.
-        cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO boundary VALUES (ST_Transform(ST_MakeEnvelope(0, 0, 1, 1, 3035), 4326));")
-        cursor.execute("CREATE TABLE reference (wkb_geometry geometry(Polygon, 3035));")
-        cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 3035));")
+        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.assertEqual(1, self.cursor.rowcount)
+
+
+class Test_v10_unit(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE boundary (unit CHAR(1), wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO boundary VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO boundary VALUES ('A', ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
+        self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(8, 8, 9, 9, 4326));")
+        self.cursor.execute("INSERT INTO boundary VALUES ('C', ST_MakeEnvelope(10, 10, 11, 11, 4326));")
+        self.cursor.execute("CREATE TABLE reference (unit CHAR(1), wkb_geometry geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
                                            "boundary": {"pg_layer_name": "boundary"}},
-                            "layers": ["reference"]})
+                            "layers": ["reference"],
+                            "join_column_name": "unit"})
 
-        run_check(self.params, self.status_class())
-        cursor.execute("SELECT * FROM v10_reference_error;")
-        self.assertEqual(0, cursor.rowcount, "There are gaps.")
+    def test(self):
+        from qc_tool.wps.vector_check.v10_unit import run_check
+        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(2, 2, 4, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(4, 2, 5, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES ('B', ST_MakeEnvelope(6, 6, 9, 9, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.assertEqual(0, self.cursor.rowcount)
+
+    def test_fail(self):
+        from qc_tool.wps.vector_check.v10_unit import run_check
+        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(2, 2, 5, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.assertEqual(1, self.cursor.rowcount)
+
+    def test_warning(self):
+        from qc_tool.wps.vector_check.v10_unit import run_check
+        self.cursor.execute("INSERT INTO reference VALUES ('D', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT * FROM v10_reference_warning;")
+        self.assertEqual(2, self.cursor.rowcount)
+
 
 class Test_v11_clc_status(VectorCheckTestCase):
     def test(self):
