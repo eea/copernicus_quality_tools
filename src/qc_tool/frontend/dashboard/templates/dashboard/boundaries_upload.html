@@ -1,0 +1,97 @@
+{% extends "dashboard/base.html" %}
+{% load staticfiles %}
+
+{% block css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'dashboard/css/fileinput.min.css' %}" type="text/css" media="screen" />
+{% endblock %}
+
+{% block content %}
+
+    <div class="container-fluid main" style="padding-top: 70px;">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="/">Copernicus QC Tool</a></li>
+                <li><a href="/boundaries/">Boundaries</a></li>
+              <li class="active"><a href="">Upload Boundary Package</a></li>
+            </ol>
+
+            <div class="main">
+
+                <div id="tool-canvas">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <div class="panel-title">
+                                Upload Boundary Package
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <h4>Select Boundary Package ZIP File to Upload</h4>
+
+                            {# 1. BUTTON TO TRIGGER THE ACTION #}
+                            <button type="button" class="btn btn-primary js-upload-files">
+                              <span class="glyphicon glyphicon-cloud-upload"></span> Upload boundary package (.zip) ...
+                            </button>
+
+                            {# 2. FILE INPUT TO BE USED BY THE PLUG-IN #}
+                            <input id="fileupload" type="file" name="file" accept="application/zip" multiple
+                                   style="display: none;"
+                                   data-url="{% url 'boundaries_upload' %}"
+                                   data-form-data='{"csrfmiddlewaretoken": "{{ csrf_token }}"}'>
+
+                            <div class="modal fade" id="modal-progress" data-backdrop="static" data-keyboard="false">
+                              <div class="modal-dialog">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <h4 class="modal-title">Uploading...</h4>
+                                  </div>
+                                  <div class="modal-body">
+                                    <div class="progress">
+                                      <div class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {# 3. TABLE TO DISPLAY THE UPLOADED FILES #}
+                            <table id="files_table" class="table table-bordered">
+                              <tbody>
+                                {% for uploaded_file in uploaded_files %}
+                                  <tr>
+                                    <td><a href="{{ uploaded_file.filename }}">{{ uploaded_file.filename }}</a></td>
+                                  </tr>
+                                {% endfor %}
+                              </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <br><br><br><br>
+
+    {% include "dashboard/html-spinner.html" %}
+
+
+{% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+
+    {# JQUERY FILE UPLOAD SCRIPTS #}
+   <script src="{% static 'dashboard/js/jquery-file-upload/vendor/jquery.ui.widget.js' %}"></script>
+   <script src="{% static 'dashboard/js/jquery-file-upload/jquery.iframe-transport.js' %}"></script>
+   <script src="{% static 'dashboard/js/jquery-file-upload/jquery.fileupload.js' %}"></script>
+
+    {# UPLOADING PAGE SCRIPTS #}
+    <script src="{% static 'dashboard/js/boundaries_upload.js' %}"></script>
+
+{% endblock js %}

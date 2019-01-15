@@ -11,6 +11,7 @@ services:
     ports:
       - 8000:8000
     environment:
+      - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - WPS_DIR=/mnt/qc_tool_volume/wps
       - WORK_DIR=/mnt/qc_tool_volume/work
@@ -31,6 +32,7 @@ services:
       dockerfile: Dockerfile.wps
     image: qc_tool_wps
     environment:
+      - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - WPS_DIR=/mnt/qc_tool_volume/wps
       - WORK_DIR=/mnt/qc_tool_volume/work
