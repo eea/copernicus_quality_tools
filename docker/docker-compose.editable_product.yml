@@ -20,6 +20,7 @@ services:
     networks:
       - qc_tool_network
     volumes:
+      - qc_tool_boundary:/mnt/qc_tool_boundary
       - qc_tool_volume:/mnt/qc_tool_volume
       - qc_tool_frontend:/var/lib/qc_tool
       - ../../copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
@@ -48,6 +49,7 @@ services:
     networks:
       - qc_tool_network
     volumes:
+      - qc_tool_boundary:/mnt/qc_tool_boundary
       - qc_tool_volume:/mnt/qc_tool_volume
       - ../../copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
