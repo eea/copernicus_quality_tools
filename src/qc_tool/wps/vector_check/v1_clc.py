@@ -27,8 +27,8 @@ def run_check(params, status):
         return
     gdb_dir = gdb_dirs[0]
 
-    # Check file name.
-    mobj = re.compile(params["filename_regex"], re.IGNORECASE).search(gdb_dir.name)
+    # Check gdb filename.
+    mobj = re.compile(params["gdb_filename_regex"], re.IGNORECASE).search(gdb_dir.name)
     if mobj is None:
         status.aborted()
         status.add_message("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))

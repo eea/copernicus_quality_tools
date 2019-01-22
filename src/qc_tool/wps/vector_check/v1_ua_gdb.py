@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 
+import re
+
 from osgeo import ogr
 
 from qc_tool.wps.helper import LayerDefsBuilder
@@ -25,6 +27,13 @@ def run_check(params, status):
                            .format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
     gdb_dir = gdb_dirs[0]
+
+    # Check gdb filename.
+    mobj = re.compile(params["gdb_filename_regex"], re.IGNORECASE).search(gdb_dir.name)
+    if mobj is None:
+        status.aborted()
+        status.add_message("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))
+        return
 
     # Read all layer infos into builder.
     builder = LayerDefsBuilder(status)

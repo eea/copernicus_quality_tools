@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "filename_regex": "^clc2012_(?P<country_code>.+).gdb$",
+        "gdb_filename_regex": "^clc2012_(?P<country_code>.+).gdb$",
         "reference_layer_regex": "^{country_code:s}/clc12_{country_code:s}$",
         "initial_layer_regex": "^{country_code:s}/clc06_{country_code:s}$",
         "change_layer_regex": "^{country_code:s}/cha12_{country_code:s}$"

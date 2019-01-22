@@ -103,7 +103,7 @@ class Test_v1_clc(VectorCheckTestCase):
         self.params.update({"unzip_dir": TEST_DATA_DIR.joinpath("vector", "clc"),
                             "country_codes": ["cz", "sk", "mt"],
                             "reference_year": "2012",
-                            "filename_regex": "^clc2012_(?P<country_code>.+).gdb$",
+                            "gdb_filename_regex": "^clc2012_(?P<country_code>.+).gdb$",
                             "reference_layer_regex": "^{country_code:s}/clc12_{country_code:s}$",
                             "initial_layer_regex": "^{country_code:s}/clc06_{country_code:s}$",
                             "change_layer_regex": "^{country_code:s}/cha12_{country_code:s}$",
@@ -133,7 +133,7 @@ class Test_v1_clc(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
 
-class TestV1_ua_gdb(VectorCheckTestCase):
+class Test_v1_ua_gdb(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
@@ -143,6 +143,7 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
         self.params.update({"reference_year": "2012",
+                            "gdb_filename_regex": "^[a-z0-9]{7}_.*$",
                             "reference_layer_regex": "_ua2012$",
                             "boundary_layer_regex": "^boundary2012_",
                             "revised_layer_regex": "_ua2006_revised$",
@@ -167,7 +168,20 @@ class TestV1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["change"]["src_filepath"].name)
         self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["change"]["src_layer_name"])
 
-    def test_non_existing_aborts(self):
+    def test_bad_gdb_filename_aborts(self):
+        from qc_tool.wps.vector_check.v1_ua_gdb import run_check
+
+        # Rename gdb filename to bad one.
+        from shutil import move
+        src_gdb_filepath = self.params["unzip_dir"].joinpath("DK001L2_KOBENHAVN_clip.gdb")
+        dst_gdb_filepath = src_gdb_filepath.with_name("XDK001L2_KOBENHAVN_clip.gdb")
+        src_gdb_filepath.rename(dst_gdb_filepath)
+
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+
+    def test_missing_layer_aborts(self):
         from qc_tool.wps.vector_check.v1_ua_gdb import run_check
         self.params["boundary_layer_regex"] = "non-existing-layer-name"
         status = self.status_class()

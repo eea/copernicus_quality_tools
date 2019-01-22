@@ -10,6 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
+        "gdb_filename_regex": "^[a-z0-9]{7}_.*$",
         "reference_layer_regex": "_ua2012$",
         "boundary_layer_regex": "^boundary2012_",
         "revised_layer_regex": "_ua2006_revised$",
