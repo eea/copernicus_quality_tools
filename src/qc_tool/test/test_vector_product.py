@@ -25,6 +25,7 @@ class Test_clc(ProductTestCase):
                                "v8",
                                "v11_clc_status",
                                "v11_clc_change",
+                               "v12",
                                "v13",
                                "reference.v14",
                                "initial.v14",
@@ -63,6 +64,7 @@ class Test_n2k(ProductTestCase):
                                    "v6": "ok",
                                    "v8": "ok",
                                    "v11_n2k": "ok",
+                                   "v12": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
                                    "v15": "ok"}
@@ -70,7 +72,7 @@ class Test_n2k(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "n2k",
-                              ["v5", "v6", "v8", "v11_n2k", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v11_n2k", "v12", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -87,6 +89,7 @@ class Test_n2k(ProductTestCase):
                                    "v6": "failed", # a delivery with old version of n2k MAES codes should fail.
                                    "v8": "ok",
                                    "v11_n2k": "ok",
+                                   "v12": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
                                    "v15": "ok"}
@@ -94,7 +97,7 @@ class Test_n2k(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "n2k",
-                              ["v5", "v6", "v8", "v11_n2k", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v11_n2k", "v12", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -113,6 +116,7 @@ class Test_rpz(ProductTestCase):
                                    "v6": "ok",
                                    "v8": "ok",
                                    "v11_rpz": "ok",
+                                   "v12": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
                                    "v15": "ok"}
@@ -120,7 +124,7 @@ class Test_rpz(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "rpz",
-                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v11_rpz", "v12", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -137,6 +141,7 @@ class Test_rpz(ProductTestCase):
                                    "v6": "ok",
                                    "v8": "ok",
                                    "v11_rpz": "failed", #the dataset contains very small polygons < 0.2ha touching border.
+                                   "v12": "ok",
                                    "v13": "ok",
                                    "v14": "failed", # FIXME? neighbouring road polygons in UA core region
                                    "v15": "ok"}
@@ -144,7 +149,7 @@ class Test_rpz(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "rpz",
-                              ["v5", "v6", "v8", "v11_rpz", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v11_rpz", "v12", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -164,6 +169,7 @@ class Test_ua_shp(ProductTestCase):
                                    "v6": "ok",
                                    "v8": "ok",
                                    "v11_ua_status": "ok",
+                                   "v12_ua": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
                                    "v15": "failed" #FIXME provide INSPIRE-compliant UA metadata file.
@@ -172,7 +178,7 @@ class Test_ua_shp(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "ua_2012_shp_wo_revised",
-                              ["v5", "v6", "v8", "v11_ua_status", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v11_ua_status", "v12_ua", "v13", "v14", "v15"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -195,13 +201,14 @@ class Test_ua_gdb(ProductTestCase):
                                    "v6": "ok",
                                    "v8": "ok",
                                    "v11_ua_status": "failed",
+                                   "v12_ua": "ok",
                                    "v13": "failed",
                                    "v14": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
                               "ua_2012_gdb_wo_revised",
-                              ["v5", "v6", "v8", "v11_ua_status", "v13", "v14"])
+                              ["v5", "v6", "v8", "v11_ua_status", "v12_ua", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -226,6 +233,8 @@ class Test_ua_gdb(ProductTestCase):
                                    "reference.v11_ua_status": "ok",
                                    "revised.v11_ua_status": "ok",
                                    "change.v11_ua_change": "ok",
+                                   "reference.v12_ua": "ok",
+                                   "revised.v12_ua": "ok",
                                    "v13": "ok",
                                    "reference.v14": "ok",
                                    "revised.v14": "ok",
@@ -242,6 +251,8 @@ class Test_ua_gdb(ProductTestCase):
                                "reference.v11_ua_status",
                                "revised.v11_ua_status",
                                "change.v11_ua_change",
+                               "reference.v12_ua",
+                               "revised.v12_ua",
                                "v13",
                                "reference.v14",
                                "revised.v14",
@@ -265,6 +276,7 @@ class Test_dump_error_table(ProductTestCase):
                                    "v6": "skipped",
                                    "v8": "skipped",
                                    "v11_ua_status": "skipped",
+                                   "v12_ua": "skipped",
                                    "v13": "failed",
                                    "v14": "skipped"}
         job_status = dispatch(self.job_uuid,

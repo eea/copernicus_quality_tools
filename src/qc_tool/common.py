@@ -55,6 +55,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v11_ua_change": "Minimum mapping unit check, Urban Atlas change layer.",
     "v11_ua_status": "Minimum mapping unit check, Urban Atlas status layer.",
     "v12": "Minimum mapping width.",
+    "v12_ua": "Minimum mapping width (ua product).",
     "v13": "There are no overlapping polygons.",
     "v14": "No neighbouring polygons with the same code.",
     "v15": "Vector metadata is compliant with INSPIRE specifications.",

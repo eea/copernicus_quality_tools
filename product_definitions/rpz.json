@@ -95,6 +95,14 @@
       }
     },
     {
+      "check_ident": "v12",
+      "required": false,
+      "parameters": {
+        "layers": ["rpz"],
+        "mmw": 10.0
+      }
+    },
+    {
       "check_ident": "v13",
       "required": false,
       "parameters": {

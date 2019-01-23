@@ -927,6 +927,52 @@ class Test_v11_rpz(VectorCheckTestCase):
         self.assertListEqual([(11,), (24,), (25,), (31,)], cursor.fetchall())
 
 
+class Test_v12(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.wps.vector_check.v12 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mmw (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(10, 10, 13, 11, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (2, ST_MakeEnvelope(20, 20, 23, 23, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (3, ST_Difference(ST_MakeEnvelope(30, 30, 39, 39, 4326),"
+                                                               " ST_MakeEnvelope(33, 30, 36, 38, 4326)));")
+
+        self.params.update({"layer_defs": {"mmw": {"pg_layer_name": "mmw",
+                                                   "pg_fid_name": "fid"}},
+                            "layers": ["mmw"],
+                            "mmw": 1.0})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        cursor.execute("SELECT fid FROM v12_mmw_warning ORDER BY fid;")
+        self.assertListEqual([(1,), (3,)], cursor.fetchall())
+
+
+class Test_v12_ua(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.wps.vector_check.v12_ua import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mmw (fid integer, code char(5), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (1, '12', ST_MakeEnvelope(10, 10, 13, 11, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (2, '12', ST_MakeEnvelope(20, 20, 23, 23, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (3, '12', ST_Difference(ST_MakeEnvelope(30, 30, 39, 39, 4326),"
+                                                                     " ST_MakeEnvelope(33, 30, 36, 38, 4326)));")
+        cursor.execute("INSERT INTO mmw VALUES (4, '122', ST_MakeEnvelope(40, 40, 43, 41, 4326));")
+
+        self.params.update({"layer_defs": {"mmw": {"pg_layer_name": "mmw",
+                                                   "pg_fid_name": "fid"}},
+                            "layers": ["mmw"],
+                            "code_column_name": "code",
+                            "mmw": 1.0})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        cursor.execute("SELECT fid FROM v12_mmw_exception ORDER BY fid;")
+        self.assertListEqual([(4,)], cursor.fetchall())
+        cursor.execute("SELECT fid FROM v12_mmw_warning ORDER BY fid;")
+        self.assertListEqual([(1,), (3,)], cursor.fetchall())
+
+
 class TestV13(VectorCheckTestCase):
     def setUp(self):
         super().setUp()

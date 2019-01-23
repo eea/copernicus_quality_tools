@@ -170,6 +170,24 @@
       }
     },
     {
+      "check_ident": "reference.v12_ua",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "code_column_name": "code2012",
+        "mmw": 10.0
+      }
+    },
+    {
+      "check_ident": "revised.v12_ua",
+      "required": false,
+      "parameters": {
+        "layers": ["revised"],
+        "code_column_name": "code2006",
+        "mmw": 10.0
+      }
+    },
+    {
       "check_ident": "v13",
       "required": false,
       "parameters": {
