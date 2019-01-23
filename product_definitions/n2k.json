@@ -7,7 +7,10 @@
     },
     {
       "check_ident": "v1_n2k",
-      "required": true
+      "required": true,
+      "parameters": {
+        "n2k_layer_regex": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"
+      }
     },
     {
       "check_ident": "v2",

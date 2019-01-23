@@ -80,6 +80,7 @@ class Test_v1_n2k(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip"),
+                            "n2k_layer_regex": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$",
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
         status = self.status_class()
         unzip_check(self.params, status)
@@ -95,6 +96,18 @@ class Test_v1_n2k(VectorCheckTestCase):
         self.assertEqual("n2k_du001z_lclu_v99_20190108", status.params["layer_defs"]["n2k"]["src_layer_name"])
         self.assertEqual("boundary_n2k.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_n2k", status.params["layer_defs"]["boundary"]["src_layer_name"])
+
+    def test_bad_layer_name_aborts(self):
+        from qc_tool.wps.vector_check.v1_n2k import run_check
+
+        # Rename layer to bad one.
+        src_gdb_filepath = self.params["unzip_dir"].joinpath("n2k_du001z_lclu_v99_20170108", "n2k_du001z_lclu_v99_20190108.shp")
+        dst_gdb_filepath = src_gdb_filepath.with_name("Xn2k_du001z_lclu_v99_20190108.shp")
+        src_gdb_filepath.rename(dst_gdb_filepath)
+
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
 
 
 class Test_v1_clc(VectorCheckTestCase):
@@ -172,7 +185,6 @@ class Test_v1_ua_gdb(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v1_ua_gdb import run_check
 
         # Rename gdb filename to bad one.
-        from shutil import move
         src_gdb_filepath = self.params["unzip_dir"].joinpath("DK001L2_KOBENHAVN_clip.gdb")
         dst_gdb_filepath = src_gdb_filepath.with_name("XDK001L2_KOBENHAVN_clip.gdb")
         src_gdb_filepath.rename(dst_gdb_filepath)
