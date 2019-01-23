@@ -13,8 +13,6 @@ from qc_tool.wps.dispatch import dispatch
 
 class Test_clc(ProductTestCase):
     def test(self):
-        from qc_tool.common import CONFIG
-        CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundaries")
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         job_status = dispatch(self.job_uuid,
                               "user_name",

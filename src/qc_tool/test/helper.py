@@ -5,6 +5,8 @@ from contextlib import ExitStack
 from unittest import TestCase
 from uuid import uuid4
 
+from qc_tool.common import CONFIG
+from qc_tool.common import TEST_DATA_DIR
 from qc_tool.wps.dispatch import CheckStatus
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
@@ -16,6 +18,9 @@ class ProductTestCase(TestCase):
         super().setUp()
         load_all_check_functions()
         self.job_uuid = str(uuid4())
+
+        # Set up boundary dir to testing sources.
+        CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundaries")
 
 
 class RasterCheckTestCase(TestCase):

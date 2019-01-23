@@ -24,9 +24,6 @@ class Test_Raster(ProductTestCase):
     def setUp(self):
         super().setUp()
 
-        from qc_tool.common import CONFIG
-        CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundaries")
-
         self.maxDiff = None
         self.raster_data_dir = TEST_DATA_DIR.joinpath("raster")
         self.username = "test_username"
