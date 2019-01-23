@@ -304,6 +304,10 @@ class CheckStatus():
     def aborted(self):
         self.status = "aborted"
 
+    def cancelled(self):
+        if self.status != "aborted":
+            self.status = "cancelled"
+
     def is_aborted(self):
         return self.status == "aborted"
 

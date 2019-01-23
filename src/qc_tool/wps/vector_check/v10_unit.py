@@ -13,6 +13,11 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
+    if params["layer_defs"]["boundary"] is None:
+        status.cancelled()
+        status.add_message("Check cancelled due to boundary not being available.", failed=False)
+        return
+
     for layer_def in do_layers(params):
         # Prepare parameters used in sql clauses.
         sql_params = {"layer_name": layer_def["pg_layer_name"],
