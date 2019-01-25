@@ -4,6 +4,7 @@
 import json
 from urllib import request
 from urllib.error import HTTPError
+from urllib.error import URLError
 from xml.etree import ElementTree
 
 
@@ -43,11 +44,14 @@ def run_check(params, status):
     # post the metadata file content to INSPIRE validator API.
     try:
         req = request.Request(url, data=metadata.encode('utf-8'), headers=headers)
-        with request.urlopen(req) as resp:
+        with request.urlopen(req, timeout=1) as resp:
             report_url = resp.headers['Location']
             json_data = json.loads(resp.read().decode('utf-8'))
     except HTTPError:
         status.add_message("Unable to validate INSPIRE metadata. Internet connection is not accessible.")
+        return
+    except URLError:
+        status.add_message("Unable to validate INSPIRE metadata. Internet connection timeout.")
         return
 
     # Completeness_indicator is 100.0 means that INSPIRE validation is OK (even if there are some warnings).
