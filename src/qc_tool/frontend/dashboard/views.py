@@ -50,7 +50,6 @@ from qc_tool.frontend.dashboard.statuses import JOB_DELIVERY_NOT_FOUND
 
 
 logger = logging.getLogger(__name__)
-timer_is_running = False
 
 @login_required
 def deliveries(request):
