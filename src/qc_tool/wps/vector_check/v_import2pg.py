@@ -15,7 +15,8 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
     dsn, schema =  params["connection_manager"].get_dsn_schema()
 
-    for layer_def in do_layers(params):
+    # Import all layers found in layer_defs.
+    for layer_def in params["layer_defs"].values():
         layer_name = layer_def["src_layer_name"]
         pc = run(["ogr2ogr",
                    "-overwrite",

@@ -76,10 +76,7 @@
     },
     {
       "check_ident": "v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["reference", "initial", "change", "boundary"]
-      }
+      "required": true
     },
     {
       "check_ident": "v5",
@@ -118,6 +115,13 @@
       "required": false,
       "parameters": {
         "layers": ["reference", "initial", "change"]
+      }
+    },
+    {
+      "check_ident": "v10",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial"]
       }
     },
     {

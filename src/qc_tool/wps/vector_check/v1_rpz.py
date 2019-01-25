@@ -42,10 +42,10 @@ def run_check(params, status):
 
     # Find boundary layer.
     boundary_filepath = params["boundary_dir"].joinpath("vector", "boundary_rpz.shp")
-    if not boundary_filepath.is_file():
-        status.aborted()
-        status.add_message("No boundary has been found at {:s}.".format(str(boundary_filepath)))
-        return
-    layer_defs["boundary"] = {"src_filepath": boundary_filepath, "src_layer_name": boundary_filepath.stem}
+    if boundary_filepath.is_file():
+        layer_defs["boundary"] = {"src_filepath": boundary_filepath, "src_layer_name": boundary_filepath.stem}
+    else:
+        status.add_message("No boundary has been found at {:s}.".format(str(boundary_filepath)),
+                           failed=False)
 
     status.add_params({"layer_defs": layer_defs})

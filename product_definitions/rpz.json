@@ -53,10 +53,7 @@
     },
     {
       "check_ident": "v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["rpz"]
-      }
+      "required": true
     },
     {
       "check_ident": "v5",
@@ -82,6 +79,14 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"]
+      }
+    },
+    {
+      "check_ident": "v10_unit",
+      "required": false,
+      "parameters": {
+        "layers": ["rpz"],
+        "boundary_unit_column_name": "du_id"
       }
     },
     {

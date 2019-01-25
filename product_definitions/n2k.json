@@ -55,10 +55,7 @@
     },
     {
       "check_ident": "v_import2pg",
-      "required": true,
-      "parameters": {
-        "layers": ["n2k"]
-      }
+      "required": true
     },
     {
       "check_ident": "v5",
@@ -89,6 +86,14 @@
       "required": false,
       "parameters": {
         "layers": ["n2k"]
+      }
+    },
+    {
+      "check_ident": "v10_unit",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "boundary_unit_column_name": "id"
       }
     },
     {

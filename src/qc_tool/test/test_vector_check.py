@@ -608,7 +608,7 @@ class Test_v10_unit(VectorCheckTestCase):
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
-                            "join_column_name": "unit"})
+                            "boundary_unit_column_name": "unit"})
 
     def test(self):
         from qc_tool.wps.vector_check.v10_unit import run_check
