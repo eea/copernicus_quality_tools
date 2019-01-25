@@ -142,12 +142,9 @@ class ComplexChangeCollector():
         cycle_nr = 0
 
         # Insert initial member.
-        sql = ("INSERT INTO {cluster_table}"
-               " SELECT {cluster_id}, {cycle_nr}, {fid_name}"
-               " FROM {layer_name}"
-               " WHERE fid = {cluster_id};")
-        sql = sql.format(**self.sql_params, cluster_id=fid, cycle_nr=cycle_nr)
-        self.cursor.execute(sql)
+        sql = "INSERT INTO {cluster_table} VALUES (%s, %s, %s);"
+        sql = sql.format(**self.sql_params)
+        self.cursor.execute(sql, [fid, cycle_nr, fid])
 
         # Collect all remaining members.
         # Every cycle extends the cluster by members which are neighbours of the members
