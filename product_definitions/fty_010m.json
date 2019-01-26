@@ -1,0 +1,115 @@
+{
+  "description": "HRL Forest Type (10m)",
+  "parameters": {
+  },
+  "checks": [
+    {
+      "check_ident": "r_unzip",
+      "required": true
+    },
+    {
+      "check_ident": "r1",
+      "required": true,
+      "parameters": {
+        "formats": [".tif"]
+      }
+    },
+    {
+      "check_ident": "r2",
+      "required": true,
+      "parameters": {
+        "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_010m_(?P<country_code>.+)_[0-9]{5}.*.tif$"
+      }
+    },
+    {
+      "check_ident": "r3",
+      "required": false,
+      "parameters": {
+        "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)"]
+      }
+    },
+    {
+      "check_ident": "r4",
+      "required": false,
+      "parameters": {
+        "epsg": [3035]
+      }
+    },
+    {
+      "check_ident": "r5",
+      "required": false,
+      "parameters": {
+        "pixelsize": 10
+      }
+    },
+    {
+      "check_ident": "r6",
+      "required": false,
+      "parameters": {
+      }
+    },
+    {
+      "check_ident": "r7",
+      "required": false,
+      "parameters": {
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "r8",
+      "required": false,
+      "parameters": {
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "r9",
+      "required": false,
+      "parameters": {
+        "validcodes": [0, 1, 2, 254, 255]
+      }
+    },
+    {
+      "check_ident": "r10",
+      "required": false,
+      "parameters": {
+        "mask": "default",
+        "outside_area_code": 255
+      }
+    },
+    {
+      "check_ident": "r11",
+      "required": false,
+      "parameters": {
+        "area_pixels": 60,
+        "groupcodes": [[1, 2]],
+        "value_exception_codes": [254, 255],
+        "neighbour_exception_codes": [254, 255],
+        "nodata_value": 255
+      }
+    },
+    {
+      "check_ident": "r12",
+      "required": false,
+      "parameters": {}
+    },
+    {
+      "check_ident": "r14",
+      "required": false,
+      "parameters": {}
+    },
+    {
+      "check_ident": "r15",
+      "required": false,
+      "parameters": {
+        "colours": {
+          "0":[240, 240, 240],
+          "1":[70, 158, 74],
+          "2":[28, 92, 36],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }
+      }
+    }
+  ]
+}
