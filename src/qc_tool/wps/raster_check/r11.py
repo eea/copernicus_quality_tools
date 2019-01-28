@@ -282,8 +282,8 @@ def run_check(params, status):
 
             # find lessMMU patches inside inner array not touching edge
             regions_lessMMU_edge = [r for r in regions_inner_lessMMU
-                                    if r.bbox[0] == xOffRelative # == 0
-                                    or r.bbox[1] == yOffRelative # == 0
+                                    if r.bbox[0] == 0
+                                    or r.bbox[1] == 0
                                     or r.bbox[2] == block_width_inner
                                     or r.bbox[3] == block_height_inner]
             labels_lessMMU_edge = [r.label for r in regions_lessMMU_edge]
