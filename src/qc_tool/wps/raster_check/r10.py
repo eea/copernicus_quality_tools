@@ -23,8 +23,8 @@ def run_check(params, status):
 
     # set this to true for writing partial progress to a text file.
     report_progress = True
-    progress_filepath = params["output_dir"].joinpath(__name__ + "_progress.txt")
-    percent_filepath = params["output_dir"].joinpath(__name__ + "_percent.txt")
+    progress_filepath = params["output_dir"].joinpath(__name__.split(".")[-1] + "_progress.txt")
+    percent_filepath = params["output_dir"].joinpath(__name__.split(".")[-1] + "_percent.txt")
 
     # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
     blocksize = 2048

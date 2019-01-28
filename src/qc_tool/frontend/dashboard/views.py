@@ -442,6 +442,7 @@ def get_result(request, job_uuid):
         job_timestamp = job_status_filepath.stat().st_mtime
         job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
         job_reference_year = job_status["reference_year"]
+
         context = {
             'product_ident': job_status["product_ident"],
             'product_description': job_status["description"],
@@ -463,6 +464,17 @@ def get_result(request, job_uuid):
                     context["result"]["detail"][error_check_index]["status"] = "error"
                     break
 
+        # inject partial check percentage.
+        for check_index, check in enumerate(context["result"]["detail"]):
+            if check["status"] == "running":
+                percentage_filename = "{:s}_percent.txt".format(check["check_ident"])
+                percentage_filepath = job_status_filepath.parent.joinpath("output.d", percentage_filename)
+                if percentage_filepath.exists():
+                    percent = percentage_filepath.read_text()
+                    context["result"]["detail"][check_index]["status"] = "running ({:s}%)".format(percent)
+
+
+
     else:
         context = {
             'product_ident': None,
@@ -475,7 +487,7 @@ def get_result(request, job_uuid):
                 'detail': []
             }
         }
-
+    print(context)
     return render(request, 'dashboard/result.html', context)
 
 
