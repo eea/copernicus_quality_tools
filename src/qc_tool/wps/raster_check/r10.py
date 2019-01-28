@@ -18,7 +18,7 @@ def run_check(params, status):
     report_progress = True
 
     # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
-    blocksize = 4096
+    blocksize = 2048
 
     country_code = params["country_code"]
 
@@ -141,6 +141,10 @@ def run_check(params, status):
     ds_xoff = 0
     ds_yoff = 0
     for row in range(n_block_rows):
+
+        if report_progress:
+            print("completeness check, row: {:d}/{:d}".format(row, n_block_rows))
+
         ds_xoff = 0
         blocksize_y = blocksize
         if row == n_block_rows - 1:
@@ -150,27 +154,33 @@ def run_check(params, status):
             if col == n_block_cols - 1:
                 blocksize_x = last_block_width # special case for last column
 
+            # reading the block directly from the boundary mask dataset using computed offsets.
+            arr_mask = mask_band.ReadAsArray(ds_xoff + mask_add_cols, ds_yoff + mask_add_rows, blocksize_x, blocksize_y)
+
+            # if mask has all values unmapped => skip
+            if numpy.max(arr_mask) == nodata_value_mask:
+                continue
 
             # reading the block from the checked raster dataset.
             arr_ds = ds_band.ReadAsArray(ds_xoff, ds_yoff, blocksize_x, blocksize_y)
 
-            # reading the block directly from the boundary mask dataset using computed offsets.
-            arr_mask = mask_band.ReadAsArray(ds_xoff + mask_add_cols, ds_yoff + mask_add_rows, blocksize_x, blocksize_y)
-
             arr_ds_unmapped = (arr_ds == nodata_value_ds)
+
+            # if block in dataset has all cells mapped, then skip.
+            if numpy.max(arr_ds_unmapped) == False:
+                continue
+
+            # find unmapped pixels inside mask
             arr_mask_bool = (arr_mask != nodata_value_mask)
 
-            #arr_ds_int = (arr_ds != nodata_value_ds).astype(int) # converting boolean array to int array
-            #arr_ma_int = (arr_ma != nodata_value_mask).astype(int) # converting boolean array to int array
             arr_nodata = (arr_ds_unmapped * arr_mask_bool)
             nodata_count = numpy.sum(arr_nodata)
 
-            if report_progress:
-                print("row: {:d} col: {:d} blocksize_x: {:d} blocksize_y: {:d}".format(row, col, blocksize_x, blocksize_y))
-                print("row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count))
-
             if nodata_count > 0:
                 # write detected NoData pixels [subtracted < 0] to a the error raster.
+                if report_progress:
+                    print("row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count))
+
                 nodata_pixels = arr_nodata.astype('byte')
                 error_band.WriteArray(nodata_pixels, ds_xoff, ds_yoff)
 

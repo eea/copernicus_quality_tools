@@ -9,6 +9,11 @@ from qc_tool.wps.helper import zip_shapefile
 from qc_tool.wps.registry import register_check_function
 
 
+def write_progress(progress_filepath, message):
+    with open(str(progress_filepath, "a")) as f:
+        f.write(message + "\n")
+
+
 def convert_area_to_pixels(raster_ds, area_m2):
     """
     Convert MMU in square metres to MMU in pixels.
@@ -126,8 +131,9 @@ def export_shapefile(regions, raster_ds, shp_filepath):
 @register_check_function(__name__)
 def run_check(params, status):
 
-    # set this to true for printing partial progress to standard output.
+    # set this to true for reporting partial progress to a _progress.txt file.
     report_progress = True
+    progress_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_progress.txt")
 
     # The checked raster is not read into memory as a whole. Instead it is read in tiles.
     # Instead, ReadAsArray is used to read subsets of the raster (tiles) on demand.
@@ -147,7 +153,7 @@ def run_check(params, status):
         NODATA = -1 # FIXME use a value that is outside of the range of possible raster values.
 
     # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
-    BLOCKSIZE = 4096
+    BLOCKSIZE = 1024
     MMU = params["area_pixels"]
 
     # Some classes can optionally be excluded from MMU requirements.
@@ -191,7 +197,8 @@ def run_check(params, status):
     last_row = nTileRows - 1
 
     if report_progress:
-        print("processing {:d} tiles: {:d} rows, {:d} columns".format(nTileRows * nTileCols, nTileRows, nTileCols))
+        msg = "processing {:d} tiles: {:d} rows, {:d} columns".format(nTileRows * nTileCols, nTileRows, nTileCols)
+        write_progress(progress_filepath, msg)
 
     # TILES: ITERATE ROWS
     for tileRow in range(nTileRows):
@@ -253,7 +260,7 @@ def run_check(params, status):
                 if report_progress:
                     msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h} all values same."
                     msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner, h=block_height_inner)
-                    print(msg_tile)
+                    write_progress(progress_filepath, msg_tile)
                 continue
 
             # reclassify inner tile array if some patches should be grouped together
@@ -277,12 +284,11 @@ def run_check(params, status):
 
             # progress reporting..
             if report_progress:
-                msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h}"
-                msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner, h=block_height_inner)
+                msg = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h}"
+                msg = msg.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner, h=block_height_inner)
                 if len(regions_lessMMU_inside) > 0:
-                    print(msg_tile + " found {:d} areas < MMU".format(len(regions_lessMMU_inside), tileRow, tileCol))
-                else:
-                    print(msg_tile)
+                    msg += " found {:d} areas < MMU".format(len(regions_lessMMU_inside), tileRow, tileCol)
+                write_progress(progress_filepath, msg)
 
             # inspect inner patches
             for r in regions_lessMMU_inside:
@@ -307,9 +313,9 @@ def run_check(params, status):
             if len(regions_lessMMU_edge) == 0:
                 continue
             elif report_progress:
-                msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h} INSPECTING EDGE PATCHES"
-                msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width, h=block_height)
-                print(msg_tile)
+                msg = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h} INSPECTING EDGE PATCHES"
+                msg = msg.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width, h=block_height)
+                write_progress(progress_filepath, msg)
 
             # read the outer array expanded by buffer with width=number of pixels in MMU
             tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
@@ -366,12 +372,13 @@ def run_check(params, status):
 
             if report_progress and len(edge_regions_small) > 0:
                 # report actual edge regions < MMU after applying buffer
-                print("xOff {:d} yOff {:d} xOffInner {:d} yOffInner {:d}".format(xOff, yOff, xOffInner, yOffInner))
-
-                msg_tile = "BUFFER: tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h}"
-                print(msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width, h=block_height))
-                print("found {:d} edge areas < MMU in tile {:d}, {:d}".
-                    format(len(edge_regions_small), tileRow, tileCol))
+                msg = "xOff {:d} yOff {:d} xOffInner {:d} yOffInner {:d}".format(xOff, yOff, xOffInner, yOffInner)
+                write_progress(progress_filepath, msg)
+                msg = "BUFFER: tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h}"
+                msg = msg.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width, h=block_height)
+                num_edge_patches = len(edge_regions_small)
+                msg += " found {:d} edge areas < MMU in tile {:d}, {:d}".format(num_edge_patches, tileRow, tileCol)
+                write_progress(progress_filepath, msg)
 
     # FINAL REPORT is saved to a point Shapefile.
     # The shapefile contains one sample point from each lessMMU patch.
