@@ -81,7 +81,7 @@
       "check_ident": "r11",
       "required": false,
       "parameters": {
-        "area_pixels": 60,
+        "area_pixels": 50,
         "groupcodes": [[1, 2]],
         "value_exception_codes": [254, 255],
         "neighbour_exception_codes": [254, 255],
