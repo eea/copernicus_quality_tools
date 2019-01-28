@@ -133,7 +133,7 @@ def run_check(params, status):
 
     # set this to true for reporting partial progress to a _progress.txt file.
     report_progress = True
-    progress_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_progress.txt")
+    progress_filepath = params["output_dir"].joinpath(__name__ + "_progress.txt")
 
     # The checked raster is not read into memory as a whole. Instead it is read in tiles.
     # Instead, ReadAsArray is used to read subsets of the raster (tiles) on demand.

@@ -11,11 +11,17 @@ from osgeo import osr
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import zip_shapefile
 
+
+def write_progress(progress_filepath, message):
+    with open(str(progress_filepath), "a") as f:
+        f.write(message + "\n")
+
 @register_check_function(__name__)
 def run_check(params, status):
 
-    # set this to true for printing partial progress to standard output.
+    # set this to true for writing partial progress to a text file.
     report_progress = True
+    progress_filepath = params["output_dir"].joinpath(__name__ + "_progress.txt")
 
     # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
     blocksize = 2048
@@ -96,9 +102,10 @@ def run_check(params, status):
     mask_add_rows = int(abs(ds_uly - mask_uly) / abs(ds_yres))
 
     if report_progress:
-        print("ds_ulx: {:f} mask_ulx: {:f} mask_add_cols: {:f}".format(ds_ulx, mask_ulx, mask_add_cols))
-        print("ds_uly: {:f} mask_uly: {:f} mask_add_rows: {:f}".format(ds_uly, mask_uly, mask_add_rows))
-        print("RasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize))
+        msg = "ds_ulx: {:f} mask_ulx: {:f} mask_add_cols: {:f}".format(ds_ulx, mask_ulx, mask_add_cols)
+        msg += "\nds_uly: {:f} mask_uly: {:f} mask_add_rows: {:f}".format(ds_uly, mask_uly, mask_add_rows)
+        msg += "\nRasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize)
+        write_progress(progress_filepath, msg)
 
     n_block_cols = int(ds.RasterXSize / blocksize)
     n_block_rows = int(ds.RasterYSize / blocksize)
@@ -116,8 +123,10 @@ def run_check(params, status):
         n_block_rows = n_block_rows + 1
 
     if report_progress:
-        print("n_block_rows: {:d} last_block_width: {:d}".format(n_block_rows, last_block_width))
-        print("n_block_cols: {:d} last_block_height: {:d}".format(n_block_cols, last_block_height))
+        write_progress(progress_filepath,
+                       "n_block_rows: {:d} last_block_width: {:d}".format(n_block_rows, last_block_width))
+        write_progress(progress_filepath,
+                       "n_block_cols: {:d} last_block_height: {:d}".format(n_block_cols, last_block_height))
 
     # creating an OUTPUT dataset for writing error raster cells
     src_stem = params["filepath"].stem
@@ -143,7 +152,7 @@ def run_check(params, status):
     for row in range(n_block_rows):
 
         if report_progress:
-            print("completeness check, row: {:d}/{:d}".format(row, n_block_rows))
+            write_progress(progress_filepath, "completeness check, row: {:d}/{:d}".format(row, n_block_rows))
 
         ds_xoff = 0
         blocksize_y = blocksize
@@ -179,7 +188,8 @@ def run_check(params, status):
             if nodata_count > 0:
                 # write detected NoData pixels [subtracted < 0] to a the error raster.
                 if report_progress:
-                    print("row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count))
+                    msg = "row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count)
+                    write_progress(progress_filepath, msg)
 
                 nodata_pixels = arr_nodata.astype('byte')
                 error_band.WriteArray(nodata_pixels, ds_xoff, ds_yoff)
