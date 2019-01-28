@@ -15,12 +15,16 @@ from qc_tool.wps.helper import zip_shapefile
 def run_check(params, status):
 
     # set this to true for printing partial progress to standard output.
-    print_progress = False
+    report_progress = True
+
+    # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
+    blocksize = 4096
 
     country_code = params["country_code"]
 
     # get raster resolution from the raster file
     ds = gdal.Open(str(params["filepath"]))
+
     # get raster corners and resolution
     ds_gt = ds.GetGeoTransform()
     ds_ulx = ds_gt[0]
@@ -33,14 +37,6 @@ def run_check(params, status):
     ds_band = ds.GetRasterBand(1)
     nodata_value_ds = params["outside_area_code"]
 
-    ds_ring = ogr.Geometry(ogr.wkbLinearRing)
-    ds_ring.AddPoint(ds_ulx, ds_uly)
-    ds_ring.AddPoint(ds_ulx, ds_lry)
-    ds_ring.AddPoint(ds_lrx, ds_lry)
-    ds_ring.AddPoint(ds_lrx, ds_uly)
-    ds_ring.AddPoint(ds_ulx, ds_uly)
-    ds_envelope = ogr.Geometry(ogr.wkbPolygon)
-    ds_envelope.AddGeometry(ds_ring)
 
     # Find the external boundary raster mask layer.
     raster_boundary_dir = params["boundary_dir"].joinpath("raster")
@@ -60,6 +56,7 @@ def run_check(params, status):
     mask_band = mask_ds.GetRasterBand(1)
     nodata_value_mask = mask_band.GetNoDataValue()
 
+    # get aoi mask corners and resolution
     mask_gt = mask_ds.GetGeoTransform()
     mask_ulx = mask_gt[0]
     mask_xres = mask_gt[1]
@@ -67,15 +64,6 @@ def run_check(params, status):
     mask_yres = mask_gt[5]
     mask_lrx = ds_ulx + (mask_ds.RasterXSize * mask_xres)
     mask_lry = ds_uly + (mask_ds.RasterYSize * mask_yres)
-
-    mask_ring = ogr.Geometry(ogr.wkbLinearRing)
-    mask_ring.AddPoint(mask_ulx, mask_uly)
-    mask_ring.AddPoint(mask_ulx, mask_lry)
-    mask_ring.AddPoint(mask_lrx, mask_lry)
-    mask_ring.AddPoint(mask_lrx, mask_uly)
-    mask_ring.AddPoint(mask_ulx, mask_uly)
-    mask_envelope = ogr.Geometry(ogr.wkbPolygon)
-    mask_envelope.AddGeometry(mask_ring)
 
     # Check if the dataset is fully covered by the mask.
     ds_inside_mask = (ds_ulx >= mask_ulx and ds_uly <= mask_uly and ds_lrx <= mask_lrx and ds_lry >= mask_lry)
@@ -107,13 +95,11 @@ def run_check(params, status):
     mask_add_cols = int(abs(ds_ulx - mask_ulx) / abs(ds_xres))
     mask_add_rows = int(abs(ds_uly - mask_uly) / abs(ds_yres))
 
-    if print_progress:
+    if report_progress:
         print("ds_ulx: {:f} mask_ulx: {:f} mask_add_cols: {:f}".format(ds_ulx, mask_ulx, mask_add_cols))
         print("ds_uly: {:f} mask_uly: {:f} mask_add_rows: {:f}".format(ds_uly, mask_uly, mask_add_rows))
         print("RasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize))
 
-    # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
-    blocksize = 1024
     n_block_cols = int(ds.RasterXSize / blocksize)
     n_block_rows = int(ds.RasterYSize / blocksize)
 
@@ -129,7 +115,7 @@ def run_check(params, status):
         last_block_height = ds.RasterYSize - (n_block_rows * blocksize)
         n_block_rows = n_block_rows + 1
 
-    if print_progress:
+    if report_progress:
         print("n_block_rows: {:d} last_block_width: {:d}".format(n_block_rows, last_block_width))
         print("n_block_cols: {:d} last_block_height: {:d}".format(n_block_cols, last_block_height))
 
@@ -169,14 +155,17 @@ def run_check(params, status):
             arr_ds = ds_band.ReadAsArray(ds_xoff, ds_yoff, blocksize_x, blocksize_y)
 
             # reading the block directly from the boundary mask dataset using computed offsets.
-            arr_ma = mask_band.ReadAsArray(ds_xoff + mask_add_cols, ds_yoff + mask_add_rows, blocksize_x, blocksize_y)
+            arr_mask = mask_band.ReadAsArray(ds_xoff + mask_add_cols, ds_yoff + mask_add_rows, blocksize_x, blocksize_y)
 
-            arr_ds_int = (arr_ds != nodata_value_ds).astype(int) # converting boolean array to int array
-            arr_ma_int = (arr_ma != nodata_value_mask).astype(int) # converting boolean array to int array
-            arr_nodata = ((arr_ds_int - arr_ma_int) < 0)
+            arr_ds_unmapped = (arr_ds == nodata_value_ds)
+            arr_mask_bool = (arr_mask != nodata_value_mask)
+
+            #arr_ds_int = (arr_ds != nodata_value_ds).astype(int) # converting boolean array to int array
+            #arr_ma_int = (arr_ma != nodata_value_mask).astype(int) # converting boolean array to int array
+            arr_nodata = (arr_ds_unmapped * arr_mask_bool)
             nodata_count = numpy.sum(arr_nodata)
 
-            if print_progress:
+            if report_progress:
                 print("row: {:d} col: {:d} blocksize_x: {:d} blocksize_y: {:d}".format(row, col, blocksize_x, blocksize_y))
                 print("row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count))
 
