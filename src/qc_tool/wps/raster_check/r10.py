@@ -53,11 +53,15 @@ def run_check(params, status):
     mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), country_code))
 
     if not mask_file.exists():
-        status.add_message("Can not find reference boundary mask file {:s}.".format(mask_file.name))
+        status.cancelled()
+        status.add_message("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name),
+                           failed=False)
         return
     mask_ds = gdal.Open(str(mask_file))
     if mask_ds is None:
-        status.add_message("Can not find reference boundary mask file {:s}.".format(mask_file.name))
+        status.cancelled()
+        status.add_message("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name),
+                           failed=False)
         return
     mask_band = mask_ds.GetRasterBand(1)
     nodata_value_mask = mask_band.GetNoDataValue()
@@ -74,7 +78,7 @@ def run_check(params, status):
     # Check if the dataset is fully covered by the mask.
     ds_inside_mask = (ds_ulx >= mask_ulx and ds_uly <= mask_uly and ds_lrx <= mask_lrx and ds_lry >= mask_lry)
     if not ds_inside_mask:
-        extent_message = "raster is not fully contained inside the boundary mask."
+        extent_message = "raster is not fully contained inside the boundary mask {:s}.".format(mask_ident)
         extent_message += "raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
         extent_message += "boundary mask extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
         status.add_message(extent_message)
@@ -83,7 +87,8 @@ def run_check(params, status):
     # Check if raster resolution and boundary mask resolution matches.
     if ds_xres != mask_xres or ds_yres != mask_yres:
         status.add_message("Resolution of the raster [{:f}, {:f}] does not match the "
-                           "resolution of the boundary mask [{:f}, {:f}]).".format(ds_xres, ds_yres, mask_xres, mask_yres))
+                           "resolution [{:f}, {:f}] of the boundary mask {:s}.tif.".format(ds_xres, ds_yres, mask_xres,
+                                                                                       mask_yres, mask_ident))
         return
 
     # Check if origin of mask is aligned with origin of raster
