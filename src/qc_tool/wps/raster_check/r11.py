@@ -10,7 +10,7 @@ from qc_tool.wps.registry import register_check_function
 
 
 def write_progress(progress_filepath, message):
-    with open(str(progress_filepath, "a")) as f:
+    with open(str(progress_filepath), "a") as f:
         f.write(message + "\n")
 
 
@@ -252,8 +252,14 @@ def run_check(params, status):
             if block_width <= buffer_width:
                 continue
 
+            # read whole array (with buffers)
+            tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
+
+            # inner tile is subset of buffered tile
+            tile_inner = tile_buffered[yOffRelative: yOffRelative + block_height_inner, xOffRelative: xOffRelative + block_width_inner]
+
             # read inner array (without buffer)
-            tile_inner = ds.ReadAsArray(xOffInner, yOffInner, block_width_inner, block_height_inner)
+            # tile_inner = ds.ReadAsArray(xOffInner, yOffInner, block_width_inner, block_height_inner)
 
             # special case: if the tile has all values equal then skip MMW checks.
             if tile_inner.min() == tile_inner.max():
@@ -265,7 +271,8 @@ def run_check(params, status):
 
             # reclassify inner tile array if some patches should be grouped together
             if use_reclassify:
-                tile_inner = reclassify_values(tile_inner, params["groupcodes"])
+                #tile_inner = reclassify_values(tile_inner, params["groupcodes"])
+                tile_buffered = reclassify_values(tile_buffered, params["groupcodes"])
 
             # label the inner array and find patches < MMU
             labels_inner = measure.label(tile_inner, background=NODATA, neighbors=4)
@@ -274,8 +281,8 @@ def run_check(params, status):
 
             # find lessMMU patches inside inner array not touching edge
             regions_lessMMU_edge = [r for r in regions_inner_lessMMU
-                                    if r.bbox[0] == 0
-                                    or r.bbox[1] == 0
+                                    if r.bbox[0] == xOffRelative # == 0
+                                    or r.bbox[1] == yOffRelative # == 0
                                     or r.bbox[2] == block_width_inner
                                     or r.bbox[3] == block_height_inner]
             labels_lessMMU_edge = [r.label for r in regions_lessMMU_edge]
@@ -318,20 +325,23 @@ def run_check(params, status):
                 write_progress(progress_filepath, msg)
 
             # read the outer array expanded by buffer with width=number of pixels in MMU
-            tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
+
+            # no need, already read ...
+            # tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
 
             # optimization: set pixels not within buffer zone (deep inside outer array) to background.
-            inner_buf_startcol = buffer_width * 2
-            inner_buf_startrow = buffer_width * 2
-            inner_buf_endcol = block_width - buffer_width * 2
-            inner_buf_endrow = block_height - buffer_width * 2
+            inner_buf_startcol = xOffRelative + MMU
+            inner_buf_startrow = yOffRelative + MMU
+            inner_buf_endcol = xOffRelative + block_width_inner - MMU
+            inner_buf_endrow = yOffRelative + block_height_inner - MMU
             if inner_buf_endcol > inner_buf_startcol and inner_buf_endrow > inner_buf_startrow:
                 tile_buffered[inner_buf_startrow:inner_buf_endrow,
                               inner_buf_startcol:inner_buf_endcol] = NODATA
 
+            # no need to reclassify, already reclassified ..
             # reclassify outer tile array if some patches should be grouped together
-            if use_reclassify:
-                tile_buffered = reclassify_values(tile_buffered, params["groupcodes"])
+            # if use_reclassify:
+            #     tile_buffered = reclassify_values(tile_buffered, params["groupcodes"])
 
             labels_buf = measure.label(tile_buffered, background=NODATA, neighbors=4)
             buf_regions = measure.regionprops(labels_buf)
