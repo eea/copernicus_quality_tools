@@ -255,24 +255,25 @@ def run_check(params, status):
             # read whole array (with buffers)
             tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
 
-            # inner tile is subset of buffered tile
-            tile_inner = tile_buffered[yOffRelative: yOffRelative + block_height_inner, xOffRelative: xOffRelative + block_width_inner]
-
-            # read inner array (without buffer)
-            # tile_inner = ds.ReadAsArray(xOffInner, yOffInner, block_width_inner, block_height_inner)
-
             # special case: if the tile has all values equal then skip MMW checks.
-            if tile_inner.min() == tile_inner.max():
+            if tile_buffered.min() == tile_buffered.max():
                 if report_progress:
                     msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h} all values same."
-                    msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner, h=block_height_inner)
+                    msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner,
+                                               h=block_height_inner)
                     write_progress(progress_filepath, msg_tile)
                 continue
 
             # reclassify inner tile array if some patches should be grouped together
             if use_reclassify:
-                #tile_inner = reclassify_values(tile_inner, params["groupcodes"])
+                # tile_inner = reclassify_values(tile_inner, params["groupcodes"])
                 tile_buffered = reclassify_values(tile_buffered, params["groupcodes"])
+
+            # inner tile is subset of buffered tile
+            tile_inner = tile_buffered[yOffRelative: yOffRelative + block_height_inner, xOffRelative: xOffRelative + block_width_inner]
+
+            # read inner array (without buffer)
+            # tile_inner = ds.ReadAsArray(xOffInner, yOffInner, block_width_inner, block_height_inner)
 
             # label the inner array and find patches < MMU
             labels_inner = measure.label(tile_inner, background=NODATA, neighbors=4)
