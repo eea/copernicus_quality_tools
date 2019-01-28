@@ -147,7 +147,7 @@ def run_check(params, status):
         NODATA = -1 # FIXME use a value that is outside of the range of possible raster values.
 
     # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
-    BLOCKSIZE = 2048
+    BLOCKSIZE = 4096
     MMU = params["area_pixels"]
 
     # Some classes can optionally be excluded from MMU requirements.
@@ -169,10 +169,7 @@ def run_check(params, status):
     nRasterRows = ds.RasterYSize
 
     # tile buffer width. Must be bigger then number of pixels in MMU.
-    # set buffer width =128 so that size of tile with buffer is a multiple of GDAL GeoTiff block size.
-    buffer_width = 128
-    if buffer_width < MMU:
-        buffer_width = MMU
+    buffer_width = MMU + 1
 
     # special handling of very small rasters - no need to split in multiple tiles
     if buffer_width >= nRasterCols:
@@ -192,6 +189,9 @@ def run_check(params, status):
     nTileRows = int(math.ceil(nRasterRows / BLOCKSIZE))
     last_col = nTileCols - 1
     last_row = nTileRows - 1
+
+    if report_progress:
+        print("processing {:d} tiles: {:d} rows, {:d} columns".format(nTileRows * nTileCols, nTileRows, nTileCols))
 
     # TILES: ITERATE ROWS
     for tileRow in range(nTileRows):
@@ -250,6 +250,10 @@ def run_check(params, status):
 
             # special case: if the tile has all values equal then skip MMW checks.
             if tile_inner.min() == tile_inner.max():
+                if report_progress:
+                    msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h} all values same."
+                    msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width_inner, h=block_height_inner)
+                    print(msg_tile)
                 continue
 
             # reclassify inner tile array if some patches should be grouped together
@@ -302,9 +306,22 @@ def run_check(params, status):
             # no need to read-in buffered tile if there are no suspect lessMMU patches at edge of inner tile
             if len(regions_lessMMU_edge) == 0:
                 continue
+            elif report_progress:
+                msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h} INSPECTING EDGE PATCHES"
+                msg_tile = msg_tile.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width, h=block_height)
+                print(msg_tile)
 
             # read the outer array expanded by buffer with width=number of pixels in MMU
             tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
+
+            # optimization: set pixels not within buffer zone (deep inside outer array) to background.
+            inner_buf_startcol = buffer_width * 2
+            inner_buf_startrow = buffer_width * 2
+            inner_buf_endcol = block_width - buffer_width * 2
+            inner_buf_endrow = block_height - buffer_width * 2
+            if inner_buf_endcol > inner_buf_startcol and inner_buf_endrow > inner_buf_startrow:
+                tile_buffered[inner_buf_startrow:inner_buf_endrow,
+                              inner_buf_startcol:inner_buf_endcol] = NODATA
 
             # reclassify outer tile array if some patches should be grouped together
             if use_reclassify:
