@@ -8,6 +8,8 @@ from skimage import measure
 from qc_tool.wps.helper import zip_shapefile
 from qc_tool.wps.registry import register_check_function
 
+def write_percent(percent_filepath, percent):
+    percent_filepath.write_text(str(percent))
 
 def write_progress(progress_filepath, message):
     with open(str(progress_filepath), "a") as f:
@@ -134,6 +136,7 @@ def run_check(params, status):
     # set this to true for reporting partial progress to a _progress.txt file.
     report_progress = True
     progress_filepath = params["output_dir"].joinpath(__name__ + "_progress.txt")
+    percent_filepath = params["output_dir"].joinpath(__name__ + "_percent.txt")
 
     # The checked raster is not read into memory as a whole. Instead it is read in tiles.
     # Instead, ReadAsArray is used to read subsets of the raster (tiles) on demand.
@@ -202,6 +205,11 @@ def run_check(params, status):
 
     # TILES: ITERATE ROWS
     for tileRow in range(nTileRows):
+
+        if report_progress:
+            progress_percent = int(100 *((tileRow + 1) / nTileRows))
+            write_percent(percent_filepath, progress_percent)
+
         if tileRow == 0:
             # first row
             yOff = 0

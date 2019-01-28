@@ -11,6 +11,8 @@ from osgeo import osr
 from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import zip_shapefile
 
+def write_percent(percent_filepath, percent):
+    percent_filepath.write_text(str(percent))
 
 def write_progress(progress_filepath, message):
     with open(str(progress_filepath), "a") as f:
@@ -22,6 +24,7 @@ def run_check(params, status):
     # set this to true for writing partial progress to a text file.
     report_progress = True
     progress_filepath = params["output_dir"].joinpath(__name__ + "_progress.txt")
+    percent_filepath = params["output_dir"].joinpath(__name__ + "_percent.txt")
 
     # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
     blocksize = 2048
@@ -158,6 +161,8 @@ def run_check(params, status):
 
         if report_progress:
             write_progress(progress_filepath, "completeness check, row: {:d}/{:d}".format(row, n_block_rows))
+            progress_percent = int(100 * ((row + 1) / n_block_rows))
+            write_percent(percent_filepath, progress_percent)
 
         ds_xoff = 0
         blocksize_y = blocksize
