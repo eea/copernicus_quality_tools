@@ -153,7 +153,7 @@ def run_check(params, status):
         NODATA = -1 # FIXME use a value that is outside of the range of possible raster values.
 
     # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
-    BLOCKSIZE = 1024
+    BLOCKSIZE = 2048
     MMU = params["area_pixels"]
 
     # Some classes can optionally be excluded from MMU requirements.
