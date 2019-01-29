@@ -33,11 +33,11 @@ def run_check(params, status):
                 status.aborted()
                 status.add_message("Layer {:s} has illegal EPSG code {:s}.".format(layer_def["src_layer_name"], str(authority_code)))
                 return
-        else:
-            # FIXME this code is necessary for checking .shp files without EPSG authority in the .prj (from ESRI SW)
+        elif "auto_identify_epsg" in params and params["auto_identify_epsg"] == True:
+            # setting auto_identify_epsg can be used for less-strict checking of .prj files without EPSG authority (from ESRI SW)
             # there is a built-in function in GDAL 2.3 with similar SRS matching logic.
-            # If the EPSG code is not detected, try to compare if the actual and expected SRS instances represent
-            # the same spatial reference system.
+            # If the EPSG code is not detected, this code tries to compare if the actual and expected SRS instances represent
+            # the same spatial reference system. The default setting of auto_identify_epsg is False.
             allowed_codes = params["epsg"]
             for allowed_code in allowed_codes:
                 expected_srs = osr.SpatialReference()
@@ -45,7 +45,12 @@ def run_check(params, status):
                 if srs.IsSame(expected_srs):
                     status.add_params({"layer_srs_epsg": int(allowed_code)})
                     return
-
+        else:
+            # the setting is strict and no EPSG code has been found in the SRS of the layer.
+            status.aborted()
+            status.add_message("The SRS of the layer {:s} does not have an EPSG code specified."
+                               " Detected SRS: {:s}"
+                               .format(layer_def["src_layer_name"], srs.ExportToWkt()))
         # No matching SRS has been found.
         status.aborted()
         status.add_message("The SRS of the layer {:s} is not in the list of allowed spatial reference systems."
