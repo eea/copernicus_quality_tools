@@ -257,7 +257,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                 # Export full tables to zipped shapefile.
                 for table_name in check_status.full_table_names:
                     attachment_filename = dump_full_table(job_params["connection_manager"],
-                                                          error_table_name,
+                                                          table_name,
                                                           jobdir_manager.output_dir)
                     job_check_status["attachment_filenames"].append(attachment_filename)
 
