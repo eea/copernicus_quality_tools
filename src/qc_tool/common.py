@@ -48,6 +48,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v8": "No multipart polygons.",
     "v9": "(no description)",
     "v10": "Completeness.",
+    "v10_unit": "Completeness, multiple boundary units.",
     "v11_clc_change": "Minimum mapping unit check, Corine Land Cover change layer.",
     "v11_clc_status": "Minimum mapping unit check, Corine Land Cover status layer.",
     "v11_n2k": "Minimum mapping unit check, Natura 2000.",
