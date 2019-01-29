@@ -157,7 +157,8 @@ def dump_full_table(connection_manager, table_name, output_dir):
     args = ["ogr2ogr",
             "-f", "ESRI Shapefile",
             str(shp_filepath),
-            conn_string]
+            conn_string,
+            table_name]
     run(args)
 
     # Gather all files to be zipped.
