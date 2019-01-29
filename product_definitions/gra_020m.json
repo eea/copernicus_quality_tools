@@ -25,7 +25,7 @@
       "check_ident": "r3",
       "required": false,
       "parameters": {
-        "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)"]
+        "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)", "(class_name|classnames)"]
       }
     },
     {
