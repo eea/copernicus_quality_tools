@@ -174,7 +174,8 @@ def dump_full_table(connection_manager, table_name, output_dir):
 
     # Remove zipped files.
     for filepath in filepaths_to_zip:
-        filepath.unlink()
+        if filepath.is_file():
+            filepath.unlink()
 
     return zip_filepath.name
 
