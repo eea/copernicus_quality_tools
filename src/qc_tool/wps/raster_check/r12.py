@@ -34,6 +34,11 @@ def run_check(params, status):
         status.add_message("XML metadata file {:s} is not a valid XML document.".format(xml_filepath.name))
         return
 
+    if "skip_inspire_check" in params and params["skip_inspire_check"]:
+        status.add_message("Online validation using INSPIRE geoportal has been skipped.", failed=False)
+        print("INSPIRE SKIPPED")
+        return
+
     METADATA_SERVICE_HOST = 'http://inspire-geoportal.ec.europa.eu'
     METADATA_SERVICE_ENDPOINT = 'GeoportalProxyWebServices/resources/INSPIREResourceTester'
 
@@ -44,7 +49,7 @@ def run_check(params, status):
     # post the metadata file content to INSPIRE validator API.
     try:
         req = request.Request(url, data=metadata.encode('utf-8'), headers=headers)
-        with request.urlopen(req, timeout=1) as resp:
+        with request.urlopen(req, timeout=10) as resp:
             report_url = resp.headers['Location']
             json_data = json.loads(resp.read().decode('utf-8'))
     except HTTPError:

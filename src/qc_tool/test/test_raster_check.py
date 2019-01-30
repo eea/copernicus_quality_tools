@@ -60,7 +60,7 @@ class TestR10(RasterCheckTestCase):
     def test_fail(self):
         from qc_tool.wps.raster_check.r10 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "incomplete_raster_100m_testaoi.tif"),
-                  "country_code": "testaoi",
+                  "country_code": "testaoi2",
                   "outside_area_code": 255,
                   "mask": "test",
                   "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
@@ -106,7 +106,7 @@ class TestR12(RasterCheckTestCase):
     def setUp(self):
         super().setUp()
         self.xml_dir = TEST_DATA_DIR.joinpath("metadata")
-        self.params ={"output_dir": self.jobdir_manager.output_dir}
+        self.params.update({"output_dir": self.jobdir_manager.output_dir})
 
     def test(self):
         from qc_tool.wps.raster_check.r12 import run_check
@@ -125,10 +125,10 @@ class TestR12(RasterCheckTestCase):
     def test_fail(self):
         from qc_tool.wps.raster_check.r12 import run_check
         self.params["filepath"] = self.xml_dir.joinpath("inspire-bad.tif")
+        self.params["skip_inspire_check"] = False
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status, "Raster check r12 should fail for raster with non-compliant xml file.")
-        self.assertIn("inspire-bad_metadata_error.json", status.attachment_filenames)
 
 
 class TestR15(RasterCheckTestCase):

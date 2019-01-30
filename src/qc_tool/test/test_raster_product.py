@@ -167,7 +167,7 @@ class Test_Raster(ProductTestCase):
                                    "r7": "ok",
                                    "r8": "ok",
                                    "r9": "ok",
-                                   "r10": "failed", #FIXME r10 should be ok. Provide a special raster mask for waw_020m.
+                                   "r10": "cancelled", #FIXME r10 should be ok. Provide a special raster mask for waw_020m.
                                    "r12": "ok",
                                    "r14": "ok",
                                    "r15": "ok"}
@@ -191,7 +191,7 @@ class Test_Raster(ProductTestCase):
                                    "r7": "ok",
                                    "r8": "ok",
                                    "r9": "ok",
-                                   "r10": "failed",
+                                   "r10": "cancelled",
                                    # FIXME r10 should be ok. Provide a special raster mask for waw_100m.
                                    "r12": "ok",
                                    "r14": "ok",
