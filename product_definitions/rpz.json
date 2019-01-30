@@ -48,7 +48,8 @@
       "required": true,
       "parameters": {
         "layers": ["rpz"],
-        "epsg": [3035]
+        "epsg": [3035],
+        "auto_identify_epsg": true
       }
     },
     {

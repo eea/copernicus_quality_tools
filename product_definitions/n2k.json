@@ -50,7 +50,8 @@
       "required": true,
       "parameters": {
         "layers": ["n2k"],
-        "epsg": [3035]
+        "epsg": [3035],
+        "auto_identify_epsg": true
       }
     },
     {

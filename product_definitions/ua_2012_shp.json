@@ -91,7 +91,8 @@
       "required": true,
       "parameters": {
         "layers": ["reference", "boundary", "combined", "revised", "change"],
-        "epsg": [3035]
+        "epsg": [3035],
+        "auto_identify_epsg": true
       }
     },
     {
