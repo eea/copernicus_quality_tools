@@ -212,6 +212,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
             job_params["filepath"] = filepath
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
 
+            job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
+
             for check_nr, check in enumerate(check_suite):
 
                 # Update status.json.

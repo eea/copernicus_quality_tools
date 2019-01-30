@@ -246,6 +246,8 @@ def setup_config():
     config["jobdir_exist_ok"] = environ.get("JOBDIR_EXIST_OK", "no") == "yes"
     config["leave_jobdir"] = environ.get("LEAVE_JOBDIR", "no") == "yes"
 
+    config["skip_inspire_check"] = environ.get("SKIP_INSPIRE_CHECK", "no") == "yes"
+
     return config
 
 CONFIG = setup_config()
