@@ -10,6 +10,7 @@ There is no path related to host viewpoint.
 Service qc_tool_frontend
 ------------------------
 
+  * BOUNDARY_DIR, instructs the frontend server where it should store boundary vectors and masks;
   * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
   * WPS_DIR, informs the frontend server where it should look for wps status files;
   * WORK_DIR, informs the frontend server where it should look for job output files;
@@ -23,7 +24,7 @@ Service qc_tool_frontend
 Service qc_tool_wps
 -------------------
 
-  * BOUNDARY_DIR, informs the check function where to look for boundary vectors;
+  * BOUNDARY_DIR, informs the check function where to look for boundary vectors and masks;
   * INCOMING_DIR, informs the job where it should look for uploaded files;
   * WPS_DIR, instructs the wps server where it should store its operational files;
   * WORK_DIR, instructs the running jobs where it should store its operational files;
@@ -37,6 +38,7 @@ Service qc_tool_wps
   * LEAVE_SCHEMA, if "yes" then job schema will not be dropped;
   * JOBDIR_EXIST_OK, if "yes" then job will not raise an error when the job's working directory already exists;
   * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed;
+  * SKIP_INSPIRE_CHECK, if "yes" then connecting to Inspire geoportal for metadata checks will be skipped;
 
 
-NOTE! As stated above INCOMING_DIR, WPS_DIR and WORK_DIR must be reachable by both services!
+NOTE! As stated above BOUNDARY_DIR, INCOMING_DIR, WPS_DIR and WORK_DIR must be reachable by both services!
