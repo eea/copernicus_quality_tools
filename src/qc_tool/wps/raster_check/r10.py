@@ -150,8 +150,8 @@ def run_check(params, status):
     error_sr.ImportFromWkt(ds.GetProjectionRef())
     error_ds.SetProjection(error_sr.ExportToWkt())
 
-    error_ds.GetRasterBand(1).SetNoDataValue(0)
     error_band = error_ds.GetRasterBand(1)
+    error_band.SetNoDataValue(0)
 
     # processing of mask is done in tiles (for better performance)
     nodata_count_total = 0
@@ -161,7 +161,7 @@ def run_check(params, status):
 
         if report_progress:
             write_progress(progress_filepath, "completeness check, row: {:d}/{:d}".format(row, n_block_rows))
-            progress_percent = int(100 * ((row + 1) / n_block_rows))
+            progress_percent = int(90 * ((row + 1) / n_block_rows))
             write_percent(percent_filepath, progress_percent)
 
         ds_xoff = 0
@@ -177,23 +177,18 @@ def run_check(params, status):
             arr_mask = mask_band.ReadAsArray(ds_xoff + mask_add_cols, ds_yoff + mask_add_rows, blocksize_x, blocksize_y)
 
             # if mask has all values unmapped => skip
-            if numpy.max(arr_mask) == nodata_value_mask:
+            if numpy.max(arr_mask) == 0:
                 continue
 
             # reading the block from the checked raster dataset.
             arr_ds = ds_band.ReadAsArray(ds_xoff, ds_yoff, blocksize_x, blocksize_y)
 
-            arr_ds_unmapped = (arr_ds == nodata_value_ds)
-
-            # if block in dataset has all cells mapped, then skip.
-            if numpy.max(arr_ds_unmapped) == False:
-                continue
+            arr_ds_mapped = (arr_ds != nodata_value_ds).astype(int)
+            arr_mask_mapped = (arr_mask != nodata_value_mask).astype(int)
+            arr_nodata = ((arr_ds_mapped - arr_mask_mapped) < 0)
 
             # find unmapped pixels inside mask
-            arr_mask_bool = (arr_mask != nodata_value_mask)
-
-            arr_nodata = (arr_ds_unmapped * arr_mask_bool)
-            nodata_count = numpy.sum(arr_nodata)
+            nodata_count = int(numpy.sum(arr_nodata))
 
             if nodata_count > 0:
                 # write detected NoData pixels [subtracted < 0] to a the error raster.
