@@ -294,6 +294,33 @@ class TestV3(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
 
+class Test_v4_clc(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
+        boundary_path = TEST_DATA_DIR.joinpath("boundaries", "vector", "clc", "boundary_clc_mt.shp")
+        self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
+                                                        "src_layer_name": boundary_path.stem},
+                                           "layer_0": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc06_mt"},
+                                           "layer_1": {"src_filepath": gdb_dir,
+                                                       "src_layer_name": "clc12_mt"}},
+                            "layers": ["layer_0", "layer_1"]})
+
+    def test(self):
+        from qc_tool.wps.vector_check.v4_clc import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_missing_boundary_cancelled(self):
+        from qc_tool.wps.vector_check.v4_clc import run_check
+        del self.params["layer_defs"]["boundary"]
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("cancelled", status.status)
+
+
 class TestV4_gdb(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
@@ -321,12 +348,10 @@ class TestV4_gdb(VectorCheckTestCase):
         self.assertNotIn("layer_srs_epsg", status.params)
 
 
-class TestV4_shp(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
+class Test_v4_shp(VectorCheckTestCase):
+    def test(self):
+        # Unzip the datasource.
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
-        from qc_tool.wps.vector_check.v1_ua_shp import run_check as layer_check
-
         zip_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": zip_filepath})
@@ -334,21 +359,21 @@ class TestV4_shp(VectorCheckTestCase):
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
-        self.params.update({"reference_year": "2012",
-                            "reference_layer_regex": "_ua2012$",
-                            "boundary_layer_regex": "^boundary2012_"})
-        status = self.status_class()
-        layer_check(self.params, status)
-        self.params["layer_defs"] = status.params["layer_defs"]
-        self.params.update({"layers": ["reference", "boundary"],
-                            "epsg": [3035]})
-
-    def test(self):
+        # Run the check.
         from qc_tool.wps.vector_check.v4 import run_check
+        shp_dir = self.params["unzip_dir"].joinpath("EE003L0_NARVA", "Shapefiles")
+        reference_path = shp_dir.joinpath("EE003L0_NARVA_UA2012.shp")
+        boundary_path = shp_dir.joinpath("Boundary2012_EE003L0_NARVA.shp")
+        self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
+                                                        "src_layer_name": boundary_path.stem},
+                                           "reference": {"src_filepath": reference_path,
+                                                         "src_layer_name": reference_path.stem}},
+                            "layers": ["boundary", "reference"],
+                            "epsg": [3035],
+                            "auto_identify_epsg": True})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.assertIn("layer_srs_epsg", status.params)
         self.assertEqual(3035, status.params["layer_srs_epsg"])
 
 
@@ -639,7 +664,6 @@ class Test_v10_unit(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO reference VALUES (NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("ok", status.status)
         self.cursor.execute("SELECT * FROM v10_reference_warning;")
         self.assertEqual(2, self.cursor.rowcount)

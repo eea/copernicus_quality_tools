@@ -52,6 +52,7 @@ def load_all_check_functions():
     import qc_tool.wps.vector_check.v2
     import qc_tool.wps.vector_check.v3
     import qc_tool.wps.vector_check.v4
+    import qc_tool.wps.vector_check.v4_clc
     import qc_tool.wps.vector_check.v5
     import qc_tool.wps.vector_check.v6
     import qc_tool.wps.vector_check.v8
