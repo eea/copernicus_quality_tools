@@ -337,7 +337,6 @@ class TestV4_gdb(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.assertEqual(23033, status.params["layer_srs_epsg"])
 
     def test_mismatched_epsg_aborts(self):
         from qc_tool.wps.vector_check.v4 import run_check
@@ -345,7 +344,6 @@ class TestV4_gdb(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
-        self.assertNotIn("layer_srs_epsg", status.params)
 
 
 class Test_v4_shp(VectorCheckTestCase):
@@ -374,7 +372,6 @@ class Test_v4_shp(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.assertEqual(3035, status.params["layer_srs_epsg"])
 
 
 class Test_v4_auto_identify_epsg(VectorCheckTestCase):
@@ -389,7 +386,6 @@ class Test_v4_auto_identify_epsg(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.assertEqual(3035, status.params["layer_srs_epsg"])
 
 
 class TestVImport2pg(VectorCheckTestCase):
