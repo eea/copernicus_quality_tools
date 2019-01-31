@@ -377,6 +377,21 @@ class Test_v4_shp(VectorCheckTestCase):
         self.assertEqual(3035, status.params["layer_srs_epsg"])
 
 
+class Test_v4_auto_identify_epsg(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.wps.vector_check.v4 import run_check
+        boundary_path = TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO_boundary", "ES031L1_LUGO_UA2012_Boundary.shp")
+        self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
+                                                        "src_layer_name": boundary_path.stem}},
+                            "layers": ["boundary"],
+                            "epsg": [3035],
+                            "auto_identify_epsg": True})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertEqual(3035, status.params["layer_srs_epsg"])
+
+
 class TestVImport2pg(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
