@@ -56,11 +56,23 @@ class TestR10(RasterCheckTestCase):
         run_check(params, status)
         self.assertEqual("ok", status.status, "Raster check r10 should pass "
                                               "if the raster does not have NoData values inside the AOI.")
+    def test_cancelled(self):
+        from qc_tool.wps.raster_check.r10 import run_check
+        params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "incomplete_raster_100m_testaoi.tif"),
+                  "country_code": "non-existing-country",
+                  "outside_area_code": 255,
+                  "mask": "test",
+                  "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                  "tmp_dir": self.jobdir_manager.tmp_dir,
+                  "output_dir": self.jobdir_manager.output_dir}
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("cancelled", status.status, "r10 should cancel when boundary file cannot be found.")
 
     def test_fail(self):
         from qc_tool.wps.raster_check.r10 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r10", "incomplete_raster_100m_testaoi.tif"),
-                  "country_code": "testaoi2",
+                  "country_code": "testaoi",
                   "outside_area_code": 255,
                   "mask": "test",
                   "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
