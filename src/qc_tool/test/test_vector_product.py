@@ -79,32 +79,6 @@ class Test_n2k(ProductTestCase):
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
 
-    def test_fail(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_wrong.zip")
-        expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_n2k": "ok",
-                                   "v2": "ok",
-                                   "v3": "ok",
-                                   "v4": "ok",
-                                   "v_import2pg": "ok",
-                                   "v5": "ok",
-                                   "v6": "failed", # a delivery with old version of n2k MAES codes should fail.
-                                   "v8": "ok",
-                                   "v10_unit": "ok",
-                                   "v11_n2k": "ok",
-                                   "v12": "ok",
-                                   "v13": "ok",
-                                   "v14": "ok",
-                                   "v15": "ok"}
-        job_status = dispatch(self.job_uuid,
-                              "user_name",
-                              self.filepath,
-                              "n2k",
-                              ["v5", "v6", "v8", "v10_unit", "v11_n2k", "v12", "v13", "v14", "v15"])
-        check_statuses = dict((check_status["check_ident"], check_status["status"])
-                              for check_status in job_status["checks"])
-        self.assertDictEqual(expected_check_statuses, check_statuses)
-
 
 class Test_rpz(ProductTestCase):
     def test(self):
@@ -123,32 +97,6 @@ class Test_rpz(ProductTestCase):
                                    "v12": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
-                                   "v15": "ok"}
-        job_status = dispatch(self.job_uuid,
-                              "user_name",
-                              self.filepath,
-                              "rpz",
-                              ["v5", "v6", "v8", "v10_unit", "v11_rpz", "v12", "v13", "v14", "v15"])
-        check_statuses = dict((check_status["check_ident"], check_status["status"])
-                              for check_status in job_status["checks"])
-        self.assertDictEqual(expected_check_statuses, check_statuses)
-
-    def test_inside_ua_core(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032A_clip1.zip")
-        expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_rpz": "ok",
-                                   "v2": "ok",
-                                   "v3": "ok",
-                                   "v4": "ok",
-                                   "v_import2pg": "ok",
-                                   "v5": "ok",
-                                   "v6": "ok",
-                                   "v8": "ok",
-                                   "v10_unit": "ok",
-                                   "v11_rpz": "failed", #the dataset contains very small polygons < 0.2ha touching border.
-                                   "v12": "ok",
-                                   "v13": "ok",
-                                   "v14": "failed", # FIXME? neighbouring road polygons in UA core region
                                    "v15": "ok"}
         job_status = dispatch(self.job_uuid,
                               "user_name",
@@ -191,36 +139,7 @@ class Test_ua_shp(ProductTestCase):
 
 
 class Test_ua_gdb(ProductTestCase):
-    def test_klagenfurt(self):
-        # FIXME:
-        # Klagenfurt test zip should be removed while it fails in some checks.
-        # The new test zip should pass all checks with ok status.
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
-        expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_ua_gdb": "ok",
-                                   "v2": "ok",
-                                   "reference.v3": "ok",
-                                   "boundary.v3": "ok",
-                                   "v4": "ok",
-                                   "v_import2pg": "ok",
-                                   "v5": "ok",
-                                   "v6": "ok",
-                                   "v8": "ok",
-                                   "v10": "ok",
-                                   "v11_ua_status": "failed",
-                                   "v12_ua": "ok",
-                                   "v13": "failed",
-                                   "v14": "ok"}
-        job_status = dispatch(self.job_uuid,
-                              "user_name",
-                              filepath,
-                              "ua_2012_gdb_wo_revised",
-                              ["v5", "v6", "v8", "v10", "v11_ua_status", "v12_ua", "v13", "v14"])
-        check_statuses = dict((check_status["check_ident"], check_status["status"])
-                              for check_status in job_status["checks"])
-        self.assertDictEqual(expected_check_statuses, check_statuses)
-
-    def test_kobenhavn(self):
+    def test(self):
         self.maxDiff = None
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
         expected_check_statuses = {"v_unzip": "ok",
@@ -269,32 +188,3 @@ class Test_ua_gdb(ProductTestCase):
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
-
-
-class Test_dump_error_table(ProductTestCase):
-    def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "AT006L1_KLAGENFURT.zip")
-        expected_check_statuses = {"v_unzip": "ok",
-                                   "v1_ua_gdb": "ok",
-                                   "v2": "ok",
-                                   "reference.v3": "ok",
-                                   "boundary.v3": "ok",
-                                   "v4": "ok",
-                                   "v_import2pg": "ok",
-                                   "v5": "skipped",
-                                   "v6": "skipped",
-                                   "v8": "skipped",
-                                   "v10": "skipped",
-                                   "v11_ua_status": "skipped",
-                                   "v12_ua": "skipped",
-                                   "v13": "failed",
-                                   "v14": "skipped"}
-        job_status = dispatch(self.job_uuid,
-                              "user_name",
-                              filepath,
-                              "ua_2012_gdb_wo_revised",
-                              ["v13"])
-        check_statuses = dict((check_status["check_ident"], check_status["status"]) for check_status in job_status["checks"])
-        self.assertDictEqual(expected_check_statuses, check_statuses)
-        zip_filepath = compose_attachment_filepath(job_status["job_uuid"], "v13_at006l1_klagenfurt_ua2012_error.zip")
-        self.assertTrue(zip_filepath.is_file())
