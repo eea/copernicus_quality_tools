@@ -56,15 +56,11 @@ def run_check(params, status):
     mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), country_code))
 
     if not mask_file.exists():
-        status.cancelled()
-        status.add_message("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name),
-                           failed=False)
+        status.cancelled("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
         return
     mask_ds = gdal.Open(str(mask_file))
     if mask_ds is None:
-        status.cancelled()
-        status.add_message("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name),
-                           failed=False)
+        status.cancelled("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
         return
     mask_band = mask_ds.GetRasterBand(1)
     nodata_value_mask = mask_band.GetNoDataValue()
@@ -84,25 +80,25 @@ def run_check(params, status):
         extent_message = "raster is not fully contained inside the boundary mask {:s}.".format(mask_ident)
         extent_message += "raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
         extent_message += "boundary mask extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
-        status.add_message(extent_message)
+        status.failed(extent_message)
         return
 
     # Check if raster resolution and boundary mask resolution matches.
     if ds_xres != mask_xres or ds_yres != mask_yres:
-        status.add_message("Resolution of the raster [{:f}, {:f}] does not match the "
-                           "resolution [{:f}, {:f}] of the boundary mask {:s}.tif.".format(ds_xres, ds_yres, mask_xres,
-                                                                                       mask_yres, mask_ident))
+        status.failed("Resolution of the raster [{:f}, {:f}] does not match "
+                      "the resolution [{:f}, {:f}] of the boundary mask {:s}.tif."
+                      .format(ds_xres, ds_yres, mask_xres, mask_yres, mask_ident))
         return
 
     # Check if origin of mask is aligned with origin of raster
     if abs(ds_ulx - mask_ulx) % ds_xres > 0:
-        status.add_message("X coordinates of the raster are not exactly aligned with x coordinates of boundary mask."
-                           "Raster origin: {:f}, Mask origin: {:f}".format(ds_ulx, mask_ulx))
+        status.failed("X coordinates of the raster are not exactly aligned with x coordinates of boundary mask."
+                      "Raster origin: {:f}, Mask origin: {:f}".format(ds_ulx, mask_ulx))
         return
 
     if abs(ds_uly - mask_uly) % ds_yres > 0:
-        status.add_message("Y coordinates of the raster are not exactly aligned with Y coordinates of boundary mask."
-                           "Raster origin: {:f}, Mask origin: {:f}".format(ds_uly, mask_uly))
+        status.failed("Y coordinates of the raster are not exactly aligned with Y coordinates of boundary mask."
+                      "Raster origin: {:f}, Mask origin: {:f}".format(ds_uly, mask_uly))
         return
 
     # Calculate offset of checked raster dataset [ulx, uly] from boundary mask [ulx, uly].
@@ -235,5 +231,5 @@ def run_check(params, status):
         error_ds.FlushCache()
         error_ds = None
 
-        status.add_message("{:d} NoData pixels were found in the mapped area.".format(nodata_count_total))
+        status.failed("{:d} NoData pixels were found in the mapped area.".format(nodata_count_total))
         return

@@ -301,24 +301,25 @@ class CheckStatus():
         self.params = {}
         self.status_properties = {}
 
-    def failed(self):
+    def aborted(self, message):
+        self.messages.append(message)
+        self.status = "aborted"
+
+    def failed(self, message):
+        self.messages.append(message)
         if self.status != "aborted":
             self.status = "failed"
 
-    def aborted(self):
-        self.status = "aborted"
-
-    def cancelled(self):
-        if self.status != "aborted":
+    def cancelled(self, message):
+        self.messages.append(message)
+        if self.status not in ("aborted", "failed"):
             self.status = "cancelled"
+
+    def info(self, message):
+        self.messages.append(message)
 
     def is_aborted(self):
         return self.status == "aborted"
-
-    def add_message(self, message, failed=True):
-        self.messages.append(message)
-        if failed:
-            self.failed()
 
     def add_error_table(self, error_table_name, src_table_name, pg_fid_name):
         self.error_table_infos.append((error_table_name, src_table_name, pg_fid_name))

@@ -11,15 +11,13 @@ def run_check(params, status):
     filename = params["filepath"].name.lower()
     mobj = re.match(params["file_name_regex"], filename)
     if mobj is None:
-        status.aborted()
-        status.add_message("File name does not conform to the naming convention.")
+        status.aborted("File name does not conform to the naming convention.")
         return
 
     # Get country code.
     country_code = mobj.group("country_code")
     if country_code not in params["country_codes"]:
-        status.aborted()
-        status.add_message("File name has illegal country code {:s}.".format(country_code))
+        status.aborted("File name has illegal country code {:s}.".format(country_code))
         return
     status.add_params({"country_code": country_code})
 
@@ -49,6 +47,5 @@ def run_check(params, status):
                 found_files.append(other_filepath.name)
 
         if len(found_files) == 0:
-            status.aborted()
-            status.add_message("The expected  file '{:s}' is missing.".format(expected_files_msg))
+            status.aborted("The expected  file '{:s}' is missing.".format(expected_files_msg))
             return

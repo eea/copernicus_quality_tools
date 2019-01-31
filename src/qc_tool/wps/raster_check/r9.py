@@ -15,10 +15,10 @@ def run_check(params, status):
     try:
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
-            status.add_message("The file can not be opened.")
+            status.failed("The file can not be opened.")
             return
     except:
-        status.add_message("The file can not be opened.")
+        status.failed("The file can not be opened.")
         return
 
     # get dictionary of pixel 'codes-counts'
@@ -35,10 +35,6 @@ def run_check(params, status):
     for code in used_codes:
         if code not in params["validcodes"]:
             invalid_codes.append(str(code))
-
-    if not invalid_codes:
-        return
-    else:
+    if len(invalid_codes) > 0:
         invalid_codes_str = ', '.join(invalid_codes)
-        status.add_message("Pixels contain invalid codes: {:s}.".format(invalid_codes_str))
-        return
+        status.failed("Pixels contain invalid codes: {:s}.".format(invalid_codes_str))

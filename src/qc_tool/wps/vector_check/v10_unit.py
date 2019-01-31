@@ -14,8 +14,7 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     if "boundary" not in params["layer_defs"]:
-        status.cancelled()
-        status.add_message("Check cancelled due to boundary not being available.", failed=False)
+        status.cancelled("Check cancelled due to boundary not being available.")
         return
 
     for layer_def in do_layers(params):
@@ -47,8 +46,7 @@ def run_check(params, status):
 
         # Report error items.
         if cursor.rowcount > 0:
-            message = "The layer {:s} has {:d} gap(s).".format(layer_def["pg_layer_name"], cursor.rowcount)
-            status.add_message(message)
+            status.failed("The layer {:s} has {:d} gap(s).".format(layer_def["pg_layer_name"], cursor.rowcount))
             status.add_full_table(sql_params["error_table"])
 
         # Find warning features.
@@ -62,6 +60,6 @@ def run_check(params, status):
 
         # Report warning items.
         if cursor.rowcount > 0:
-            message = "The layer {:s} has {:d} feature(s) of unknown boundary unit.".format(layer_def["pg_layer_name"], cursor.rowcount)
-            status.add_message(message, failed=False)
+            status.info("The layer {:s} has {:d} feature(s) of unknown boundary unit."
+                        .format(layer_def["pg_layer_name"], cursor.rowcount))
             status.add_full_table(sql_params["warning_table"])

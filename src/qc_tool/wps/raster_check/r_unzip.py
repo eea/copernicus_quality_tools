@@ -19,16 +19,14 @@ def run_check(params, status):
         with ZipFile(str(zip_filepath)) as zip_file:
             zip_file.extractall(path=str(extract_dir))
     except Exception as ex:
-        status.aborted()
-        status.add_message("Error unzipping file {:s}.".format(zip_filepath.filename))
+        status.aborted("Error unzipping file {:s}.".format(zip_filepath.filename))
         return
 
     # Find tif file.
     tif_filepaths = [path for path in list(extract_dir.glob("**/*")) if path.name.lower().endswith(".tif")]
     if len(tif_filepaths) != 1 or not tif_filepaths[0].is_file():
-        status.aborted()
-        status.add_message("There must be exactly one .tif file in the zip file."
-                           " Found {:d} .tif files.".format(len(tif_filepaths)))
+        status.aborted("There must be exactly one .tif file in the zip file. Found {:d} .tif files."
+                       .format(len(tif_filepaths)))
         return
 
     status.add_params({"filepath": tif_filepaths[0]})

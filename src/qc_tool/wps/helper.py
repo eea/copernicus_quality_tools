@@ -81,15 +81,12 @@ class LayerDefsBuilder():
         regex = re.compile(regex, re.IGNORECASE)
         matched_infos = [info for info in self.layer_infos if regex.search(info["src_layer_name"])]
         if len(matched_infos) == 0:
-            self.status.aborted()
-            self.status.add_message("Can not find {:s} layer.".format(layer_alias))
+            self.status.aborted("Can not find {:s} layer.".format(layer_alias))
             return
         if len(matched_infos) > 1:
             layer_names = [item["src_layer_name"] for item in matched_infos]
-            self.status.aborted()
-            self.status.add_message("Found {:d} {:s} layers: {:s}.".format(len(matched_infos),
-                                                                           layer_alias,
-                                                                           ", ".join(layer_names)))
+            self.status.aborted("Found {:d} {:s} layers: {:s}."
+                                .format(len(matched_infos), layer_alias, ", ".join(layer_names)))
             return
 
         # Pop the layer info from the source list.
@@ -104,8 +101,7 @@ class LayerDefsBuilder():
     def check_excessive_layers(self):
         if len(self.layer_infos) > 0:
             desc = ", ".join(info["src_layer_name"] for info in self.layer_infos)
-            self.status.failed()
-            self.status.add_message("There are excessive layers: {:s}.".format(desc))
+            self.status.failed("There are excessive layers: {:s}.".format(desc))
 
 
 class ComplexChangeCollector():

@@ -35,8 +35,7 @@ def run_check(params, status):
         elif xml_filepath4.exists():
             xml_filepath = xml_filepath4
         else:
-            msg = "Expected XML metadata file {:s} or {:s} or is missing.".format(xml_filepath1.name, xml_filepath2.name)
-            status.add_message(msg)
+            status.failed("Expected XML metadata file {:s} or {:s} or is missing.".format(xml_filepath1.name, xml_filepath2.name))
             return
 
         # If multiple layers share the same xml file,
@@ -48,7 +47,7 @@ def run_check(params, status):
         try:
             ElementTree.parse(str(xml_filepath))
         except ElementTree.ParseError:
-            status.add_message("XML metadata file {:s} is not a valid XML document.".format(xml_filepath.name))
+            status.failed("XML metadata file {:s} is not a valid XML document.".format(xml_filepath.name))
             return
 
         METADATA_SERVICE_HOST = 'http://inspire-geoportal.ec.europa.eu'
@@ -65,10 +64,10 @@ def run_check(params, status):
                 report_url = resp.headers['Location']
                 json_data = json.loads(resp.read().decode('utf-8'))
         except HTTPError:
-            status.add_message("Unable to validate INSPIRE metadata. Internet connection is not accessible.")
+            status.failed("Unable to validate INSPIRE metadata. Internet connection is not accessible.")
             return
         except URLError:
-            status.add_message("Unable to validate INSPIRE metadata. Internet connection timeout.")
+            status.failed("Unable to validate INSPIRE metadata. Internet connection timeout.")
             return
 
         # Completeness_indicator is 100.0 means that INSPIRE validation is OK (even if there are some warnings).
@@ -87,8 +86,8 @@ def run_check(params, status):
             inspire_ok = True
 
         if not inspire_ok:
-            status.add_message("INSPIRE metadata is in incorrect format or incomplete. See attached report for details."
-                               "More details are at URL: {:s}".format(report_url))
+            status.failed("INSPIRE metadata is in incorrect format or incomplete. See attached report for details."
+                          "More details are at URL: {:s}".format(report_url))
 
             # save the attachment to output directory.
             metadata_report_filepath = params["output_dir"].joinpath(src_filepath.stem + "_metadata_error.json")

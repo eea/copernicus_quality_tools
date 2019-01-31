@@ -15,10 +15,10 @@ def run_check(params, status):
     try:
         ds_open = gdal.Open(str(params["filepath"]))
         if ds_open is None:
-            status.add_message("The file can not be opened.")
+            status.failed("The file can not be opened.")
             return
     except:
-        status.add_message("The file can not be opened.")
+        status.failed("The file can not be opened.")
         return
 
     # upper-left coordinate divided by pixel-size must leave no remainder
@@ -29,14 +29,11 @@ def run_check(params, status):
     pixelsizey = gt[5]
 
     if ulx % pixelsizex != 0 or uly % pixelsizey != 0:
-        return {"status": "failed",
-                "messages": ["The upper-left X, Y coordinates are not divisible by pixel-size with no remainder."]}
+        status.failed("The upper-left X, Y coordinates are not divisible by pixel-size with no remainder.")
+        return
 
     # Pan-European layers must fit to the LEAC 1 km grid
     filename = params["filepath"].name
     if "_eu_" in filename:
         if ulx % 1000 != 0 or uly % 1000 != 0:
-            status.add_mesage("The raster origin does not fit to the LEAC 1 km grid.")
-            return
-
-    return
+            status.failed("The raster origin does not fit to the LEAC 1 km grid.")

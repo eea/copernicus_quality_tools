@@ -14,7 +14,7 @@ def run_check(params, status):
 
     srs = osr.SpatialReference(dataset.GetProjection())
     if srs is None or srs.IsProjected() == 0:
-        status.add_message("The raster file has no projected coordinate system associated.")
+        status.failed("The raster file has no projected coordinate system associated.")
         return
 
     # Search EPSG authority code
@@ -24,8 +24,7 @@ def run_check(params, status):
     if authority_name == "EPSG" and authority_code is not None:
         # compare EPSG code using the root-level EPSG authority
         if authority_code not in map(str, params["epsg"]):
-            status.aborted()
-            status.add_message("Raster has illegal EPSG code {:s}.".format(str(authority_code)))
+            status.aborted("Raster has illegal EPSG code {:s}.".format(str(authority_code)))
             return
     else:
         # If the EPSG code is not detected, try to compare if the actual and expected SRS instances represent
@@ -40,7 +39,6 @@ def run_check(params, status):
                 break
 
         if not srs_match:
-            status.aborted()
             allowed_codes_msg = ", ".join(map(str, params["epsg"]))
-            status.add_message("The SRS of the raster is not in the list of allowed spatial reference systems. "
-                               "detected SRS: {:s}, list of allowed SRS's: {:s} ".format(srs.ExportToWkt(), allowed_codes_msg))
+            status.aborted("The SRS of the raster is not in the list of allowed spatial reference systems. "
+                           "detected SRS: {:s}, list of allowed SRS's: {:s} ".format(srs.ExportToWkt(), allowed_codes_msg))

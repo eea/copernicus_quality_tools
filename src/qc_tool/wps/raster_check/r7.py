@@ -16,15 +16,13 @@ def run_check(params, status):
     ds = gdal.Open(str(params["filepath"]))
 
     if ds is None:
-        status.aborted()
-        status.add_message("The raster {:s} could not be opened.".format(params["filepath"].name))
+        status.aborted("The raster {:s} could not be opened.".format(params["filepath"].name))
         return
 
     # get the number of bands
     num_bands = ds.RasterCount
     if num_bands != 1:
-        status.add_message("The raster has {:d} bands."
-                           " The expected number of bands is one.".format(num_bands))
+        status.failed("The raster has {:d} bands. The expected number of bands is one.".format(num_bands))
         return
 
     # get the DataType of the band ("Byte" means 8-bit depth)
@@ -32,9 +30,6 @@ def run_check(params, status):
     actual_datatype = gdal.GetDataTypeName(band.DataType)
 
     # compare actual data type to expected data excpected_type
-    if str(actual_datatype).lower() == str(expected_datatype).lower():
-        return
-    else:
-        status.add_message("The raster data type '{:s}' does not match"
-                           " the expected data type '{:s}'.".format(actual_datatype, expected_datatype))
-        return
+    if str(actual_datatype).lower() != str(expected_datatype).lower():
+        status.failed("The raster data type '{:s}' does not match the expected data type '{:s}'."
+                      .format(actual_datatype, expected_datatype))

@@ -121,8 +121,7 @@ def run_check(params, status):
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])
         if items_message is not None:
-            message = "The layer {:s} has exception features: {:s}.".format(layer_def["pg_layer_name"], items_message)
-            status.add_message(message, failed=False)
+            status.info("The layer {:s} has exception features: {:s}.".format(layer_def["pg_layer_name"], items_message))
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of error items.
@@ -138,6 +137,5 @@ def run_check(params, status):
         # Report error items.
         items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
         if items_message is not None:
-            message = "The layer {:s} has error features: {:s}.".format(layer_def["pg_layer_name"], items_message)
-            status.add_message(message)
+            status.failed("The layer {:s} has error features: {:s}.".format(layer_def["pg_layer_name"], items_message))
             status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])

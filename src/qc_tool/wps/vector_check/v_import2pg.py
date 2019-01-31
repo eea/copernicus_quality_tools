@@ -41,8 +41,7 @@ def run_check(params, status):
             # NOTE: GetLayerByName() works case insensitive in this case.
             dst_layer = dst_datasource.GetLayerByName(layer_name)
             if dst_layer is None:
-                status.aborted()
-                status.add_message("Just imported layer {:s} can not be found in postgis.".format(layer_name))
+                status.aborted("Just imported layer {:s} can not be found in postgis.".format(layer_name))
 
             else:
                 ## Set pg info back to layer_defs.
@@ -56,8 +55,6 @@ def run_check(params, status):
                 src_count = src_layer.GetFeatureCount()
                 dst_count = dst_layer.GetFeatureCount()
                 if src_count != dst_count:
-                    status.aborted()
-                    status.add_message("Imported layer {:s} has only {:d} out of {:d} features loaded.".format(layer_name, dst_count, src_count))
+                    status.aborted("Imported layer {:s} has only {:d} out of {:d} features loaded.".format(layer_name, dst_count, src_count))
         else:
-            status.aborted()
-            status.add_message("Failed to import layer {:s} into PostGIS.".format(layer_name))
+            status.aborted("Failed to import layer {:s} into PostGIS.".format(layer_name))

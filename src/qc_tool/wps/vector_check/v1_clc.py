@@ -17,29 +17,25 @@ def run_check(params, status):
     # Find gdb directory.
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
     if len(gdb_dirs) == 0:
-        status.aborted()
-        status.add_message("No geodatabase has been found in the delivery.")
+        status.aborted("No geodatabase has been found in the delivery.")
         return
     if len(gdb_dirs) > 1:
-        status.aborted()
-        status.add_message("More than one geodatabase have been found in the delivery: {:s}."
-                           .format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
+        status.aborted("More than one geodatabase have been found in the delivery: {:s}."
+                       .format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
     gdb_dir = gdb_dirs[0]
 
     # Check gdb filename.
     mobj = re.compile(params["gdb_filename_regex"], re.IGNORECASE).search(gdb_dir.name)
     if mobj is None:
-        status.aborted()
-        status.add_message("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))
+        status.aborted("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))
         return
 
     # Extract and check country code.
     country_code = mobj.group("country_code")
     country_code = country_code.lower()
     if country_code not in params["country_codes"]:
-        status.aborted()
-        status.add_message("Filename has illegal country code {:s}.".format(country_code))
+        status.aborted("Filename has illegal country code {:s}.".format(country_code))
         return
 
     # Read all layers.
@@ -71,7 +67,6 @@ def run_check(params, status):
     if boundary_filepath.is_file():
         layer_defs["boundary"] = {"src_filepath": boundary_filepath, "src_layer_name": boundary_filepath.stem}
     else:
-        status.add_message("No boundary has been found at {:s}.".format(str(boundary_filepath)),
-                           failed=False)
+        status.info("No boundary has been found at {:s}.".format(str(boundary_filepath)))
 
     status.add_params({"layer_defs": layer_defs})

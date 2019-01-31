@@ -13,28 +13,24 @@ def run_check(params, status):
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*")
                      if path.is_file() and path.suffix.lower() == ".shp"]
     if len(shp_filepaths) == 0:
-        status.aborted()
-        status.add_message("No shapefile has been found in the delivery.")
+        status.aborted("No shapefile has been found in the delivery.")
         return
     if len(shp_filepaths) > 1:
-        status.aborted()
-        status.add_message("More than one shapefile have been found in the delivery: {:s}."
-                           .format(", ".join([shp_filepath.name for shp_filepath in shp_filepaths])))
+        status.aborted("More than one shapefile have been found in the delivery: {:s}."
+                       .format(", ".join([shp_filepath.name for shp_filepath in shp_filepaths])))
         return
     shp_filepath = shp_filepaths[0]
 
     # Check filename and areacode.
     mobj = re.compile(params["filename_regex"], re.IGNORECASE).search(shp_filepath.name)
     if mobj is None:
-        status.aborted()
-        status.add_message("Shapefile name {:s} is not in accord with specification."
-                           .format(shp_filepath.name))
+        status.aborted("Shapefile name {:s} is not in accord with specification."
+                       .format(shp_filepath.name))
         return
     if mobj.group("areacode") not in params["areacodes"]:
-        status.aborted()
-        status.add_message("The areacode {:s} extracted from the name of the shapefile"
-                           " is not in the list of allowed areacodes."
-                           .format(mobj["areacode"]))
+        status.aborted("The areacode {:s} extracted from the name of the shapefile"
+                       " is not in the list of allowed areacodes."
+                       .format(mobj["areacode"]))
         return
 
     layer_defs = {"rpz": {"src_filepath": shp_filepath,
@@ -45,7 +41,6 @@ def run_check(params, status):
     if boundary_filepath.is_file():
         layer_defs["boundary"] = {"src_filepath": boundary_filepath, "src_layer_name": boundary_filepath.stem}
     else:
-        status.add_message("No boundary has been found at {:s}.".format(str(boundary_filepath)),
-                           failed=False)
+        status.info("No boundary has been found at {:s}.".format(str(boundary_filepath)))
 
     status.add_params({"layer_defs": layer_defs})

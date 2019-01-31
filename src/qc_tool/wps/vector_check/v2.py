@@ -18,8 +18,7 @@ def run_check(params, status):
         ds_extension = filepath.suffix
         if (ds_extension not in params["formats"]
             or ds_extension not in params["drivers"]):
-            status.aborted()
-            status.add_message("The source file has forbidden extension: {:s}".format(ds_extension))
+            status.aborted("The source file has forbidden extension: {:s}".format(ds_extension))
         else:
             ds_open = None
             try:
@@ -27,10 +26,8 @@ def run_check(params, status):
             except:
                 pass
             if ds_open is None:
-                status.aborted()
-                status.add_message("The source file can not be opened.")
+                status.aborted("The source file can not be opened.")
             else:
                 drivername = ds_open.GetDriver().GetName()
                 if drivername != params["drivers"][ds_extension]:
-                    status.aborted()
-                    status.add_message("The file format is invalid.")
+                    status.aborted("The file format is invalid.")

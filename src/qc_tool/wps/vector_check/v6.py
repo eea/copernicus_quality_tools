@@ -33,10 +33,9 @@ def run_check(params, status):
 
             cursor.execute(sql, (allowed_codes,))
             if cursor.rowcount == 0:
-
                 cursor.execute("DROP TABLE {:s};".format(error_table_name))
             else:
                 failed_items_message = get_failed_items_message(cursor, error_table_name, layer_def["pg_fid_name"])
-                failed_message = "The layer {:s} has column {:s} with invalid codes in rows: {:s}.".format(layer_def["pg_layer_name"], column_name, failed_items_message)
-                status.add_message(failed_message)
+                status.failed("The layer {:s} has column {:s} with invalid codes in rows: {:s}."
+                              .format(layer_def["pg_layer_name"], column_name, failed_items_message))
                 status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])

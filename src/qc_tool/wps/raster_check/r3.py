@@ -16,7 +16,7 @@ def run_check(params, status):
     dbf_filepath = params["filepath"].with_name(dbf_filename)
 
     if not dbf_filepath.is_file():
-        status.add_message("Attribute table file (.vat.dbf) is missing.")
+        status.failed("Attribute table file (.vat.dbf) is missing.")
         return
 
     ds = ogr.Open(str(dbf_filepath))
@@ -34,4 +34,4 @@ def run_check(params, status):
             missing_attr_regexes.append(attr_regex)
     if len(missing_attr_regexes) > 0:
         missing_attr_message = ", ".join(missing_attr_regexes)
-        status.add_message("Raster attribute table has missing attributes: {:s}.".format(missing_attr_message))
+        status.failed("Raster attribute table has missing attributes: {:s}.".format(missing_attr_message))

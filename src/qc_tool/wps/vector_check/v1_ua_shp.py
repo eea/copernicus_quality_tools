@@ -15,8 +15,7 @@ def run_check(params, status):
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*")
                      if path.is_file() and path.suffix.lower() == ".shp"]
     if len(shp_filepaths) == 0:
-        status.aborted()
-        status.add_message("No shapefile has been found in the delivery.")
+        status.aborted("No shapefile has been found in the delivery.")
         return
 
     # Read all layer infos into builder.

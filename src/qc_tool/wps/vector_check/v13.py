@@ -27,6 +27,6 @@ def run_check(params, status):
             cursor.execute("DROP TABLE {:s};".format(error_table_name))
         else:
             failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_def["pg_fid_name"])
-            failed_message = "The layer {:s} has overlapping pairs in rows: {:s}.".format(layer_def["pg_layer_name"], failed_pairs_message)
-            status.add_message(failed_message)
+            status.failed("The layer {:s} has overlapping pairs in rows: {:s}."
+                          .format(layer_def["pg_layer_name"], failed_pairs_message))
             status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])

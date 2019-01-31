@@ -18,29 +18,25 @@ def run_check(params, status):
     # Find gdb folder.
     gdb_dirs = [path for path in params["unzip_dir"].glob("**") if path.suffix.lower() == ".gdb"]
     if len(gdb_dirs) == 0:
-        status.aborted()
-        status.add_message("No geodatabase has been found in the delivery.")
+        status.aborted("No geodatabase has been found in the delivery.")
         return
     if len(gdb_dirs) > 1:
-        status.aborted()
-        status.add_message("More than one geodatabase have been found in the delivery: {:s}."
-                           .format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
+        status.aborted("More than one geodatabase have been found in the delivery: {:s}."
+                       .format(", ".join([gdb_dir.name for gdb_dir in gdb_dirs])))
         return
     gdb_dir = gdb_dirs[0]
 
     # Check gdb filename.
     mobj = re.compile(params["gdb_filename_regex"], re.IGNORECASE).search(gdb_dir.name)
     if mobj is None:
-        status.aborted()
-        status.add_message("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))
+        status.aborted("Gdb filename {:s} is not in accord with specification.".format(gdb_dir.name))
         return
 
     # Read all layer infos into builder.
     builder = LayerDefsBuilder(status)
     ds = ogr.Open(str(gdb_dir))
     if ds is None:
-        status.aborted()
-        status.add_message("Can not open geodatabase {:s}.".format(gdb_dir.name))
+        status.aborted("Can not open geodatabase {:s}.".format(gdb_dir.name))
         return
     for layer_index in range(ds.GetLayerCount()):
         layer = ds.GetLayerByIndex(layer_index)

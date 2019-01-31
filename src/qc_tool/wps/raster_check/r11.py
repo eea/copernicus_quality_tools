@@ -408,8 +408,8 @@ def run_check(params, status):
         export_shapefile(regions_lessMMU_except, ds, exceptions_shp_filepath)
         error_zip_filename = zip_shapefile(exceptions_shp_filepath)
         status.add_attachment(error_zip_filename)
-        status.add_message("The data source has {:d} exceptional objects under MMU limit of {:d} pixels."
-                           .format(len(regions_lessMMU_except), params["area_pixels"]), failed=False)
+        status.info("The data source has {:d} exceptional objects under MMU limit of {:d} pixels."
+                    .format(len(regions_lessMMU_except), params["area_pixels"]))
 
     # lessMMU patches not belonging to exclude_values are reported in the error shapefile.
     if len(regions_lessMMU) > 0:
@@ -417,6 +417,6 @@ def run_check(params, status):
         export_shapefile(regions_lessMMU, ds, errors_shp_filepath)
         error_zip_filename = zip_shapefile(errors_shp_filepath)
         status.add_attachment(error_zip_filename)
-        status.add_message("The data source has {:d} error objects under MMU limit of {:d} pixels."
-                           .format(len(regions_lessMMU), params["area_pixels"]))
+        status.failed("The data source has {:d} error objects under MMU limit of {:d} pixels."
+                      .format(len(regions_lessMMU), params["area_pixels"]))
         return
