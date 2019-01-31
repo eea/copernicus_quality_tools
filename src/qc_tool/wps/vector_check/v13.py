@@ -21,11 +21,8 @@ def run_check(params, status):
     for layer_def in do_layers(params):
         error_table_name = "v13_{:s}_error".format(layer_def["pg_layer_name"])
         sql = SQL.format(error_table_name, layer_def["pg_fid_name"], layer_def["pg_layer_name"]);
-
         cursor.execute(sql)
-        if cursor.rowcount == 0:
-            cursor.execute("DROP TABLE {:s};".format(error_table_name))
-        else:
+        if cursor.rowcount > 0:
             failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_def["pg_fid_name"])
             status.failed("The layer {:s} has overlapping pairs in rows: {:s}."
                           .format(layer_def["pg_layer_name"], failed_pairs_message))

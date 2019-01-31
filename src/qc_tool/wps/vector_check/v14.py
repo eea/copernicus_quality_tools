@@ -36,16 +36,14 @@ def run_check(params, status):
 
     for layer_def in do_layers(params):
         exclude_codes = params.get("exclude_codes", [])
-        error_table_name = "{:s}_neighbcode_error".format(layer_def["pg_layer_name"])
+        error_table_name = "v14_{:s}_error".format(layer_def["pg_layer_name"])
         error_count = create_all_breaking_neighbcode(cursor,
                                                      layer_def["pg_fid_name"],
                                                      layer_def["pg_layer_name"],
                                                      error_table_name,
                                                      params["code_column_names"],
                                                      exclude_codes)
-        if error_count == 0:
-            cursor.execute("DROP TABLE {:s};".format(error_table_name))
-        else:
+        if error_count > 0:
             failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_def["pg_fid_name"])
             status.failed("The layer {:s} has neighbouring polygons with the same codes in rows: {:s}."
                           .format(layer_def["pg_layer_name"], failed_pairs_message))

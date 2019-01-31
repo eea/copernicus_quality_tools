@@ -22,7 +22,7 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
         for column_name, value_set_name in params["column_defs"]:
-            error_table_name = "{:s}_{:s}_validcodes_error".format(layer_def["pg_layer_name"], column_name)
+            error_table_name = "v6_{:s}_{:s}_error".format(layer_def["pg_layer_name"], column_name)
             sql = SQL.format(error_table_name,
                              layer_def["pg_fid_name"],
                              layer_def["pg_layer_name"],
@@ -32,9 +32,7 @@ def run_check(params, status):
             allowed_codes = tuple(params["codes"][value_set_name],)
 
             cursor.execute(sql, (allowed_codes,))
-            if cursor.rowcount == 0:
-                cursor.execute("DROP TABLE {:s};".format(error_table_name))
-            else:
+            if cursor.rowcount > 0:
                 failed_items_message = get_failed_items_message(cursor, error_table_name, layer_def["pg_fid_name"])
                 status.failed("The layer {:s} has column {:s} with invalid codes in rows: {:s}."
                               .format(layer_def["pg_layer_name"], column_name, failed_items_message))

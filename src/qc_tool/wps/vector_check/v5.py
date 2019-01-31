@@ -14,17 +14,13 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
         for unique_key in params["unique_keys"]:
-            error_table_name = "{:s}_{:s}_uniqueid_error".format(layer_def["pg_layer_name"], unique_key)
-
+            error_table_name = "v5_{:s}_{:s}_error".format(layer_def["pg_layer_name"], unique_key)
             sql = SQL.format(error_table_name,
                              layer_def["pg_fid_name"],
                              unique_key,
-                             layer_def["pg_layer_name"]
-                             )
+                             layer_def["pg_layer_name"])
             cursor.execute(sql)
-            if cursor.rowcount == 0:
-                cursor.execute("DROP TABLE {:s};".format(error_table_name))
-            else:
+            if cursor.rowcount > 0:
                 failed_items_message = get_failed_items_message(cursor, error_table_name, layer_def["pg_fid_name"])
                 status.failed("The column {:s}.{:s} has non-unique values in rows: {:s}."
                               .format(layer_def["pg_layer_name"], unique_key, failed_items_message))
