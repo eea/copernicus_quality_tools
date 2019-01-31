@@ -91,15 +91,22 @@ def run_check(params, status):
         return
 
     # read-in the actual tif.clr color table into a dictionary
-    lines = [line.rstrip('\n') for line in open(str(clr_filepath))]
+    lines = clr_filepath.read_text().splitlines()
     actual_colours = {}
     for line in lines:
+        line = line.strip()
+        if line == "":
+            continue
         items = line.split(" ")
         if len(items) != 4:
             status.failed("The colour table text file {:s} is in incorrect format.".format(clr_filename))
             return
         index = items[0]
-        rgb = [int(items[1]), int(items[2]), int(items[3])]
+        try:
+            rgb = [int(items[1]), int(items[2]), int(items[3])]
+        except ValueError as ex:
+            status.failed("The colour table {:s} is in incorrect format.".format(clr_filename))
+            return
         actual_colours[index] = rgb
 
     # Check colours in .tif.clr file

@@ -9,8 +9,6 @@ from pathlib import Path
 
 import flask
 import pywps
-from pywps import Service
-from pywps.configuration import get_config_value
 
 from qc_tool.common import CONFIG
 from qc_tool.wps.process import CopSleep
@@ -60,7 +58,7 @@ def run_server():
     # So we can not adjust the logging later.
     # Moreover, the service fails immediately while the path to log file
     # specified in config file does not even exist yet.
-    service = Service(processes, [])
+    service = pywps.Service(processes, [])
     app.run(threaded=True, host="0.0.0.0", port=CONFIG["wps_port"])
 
 
