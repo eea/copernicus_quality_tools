@@ -14,6 +14,30 @@ from qc_tool.wps.dispatch import dispatch
 class Test_clc(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
+
+        expected_check_statuses = {"v_unzip": "ok",
+                                   "v1_clc": "ok",
+                                   "v2": "ok",
+                                   "reference.v3": "ok",
+                                   "initial.v3": "ok",
+                                   "change.v3": "ok",
+                                   "v4_clc": "ok",
+                                   "v_import2pg": "ok",
+                                   "v5": "ok",
+                                   "reference.v6": "ok",
+                                   "initial.v6": "ok",
+                                   "change.v6": "ok",
+                                   "v8": "ok",
+                                   "v10": "ok",
+                                   "v11_clc_status": "ok",
+                                   "v11_clc_change": "ok",
+                                   "v12": "ok",
+                                   "v13": "ok",
+                                   "reference.v14": "ok",
+                                   "initial.v14": "ok",
+                                   "change.v14": "ok",
+                                   "v15": "skipped"}
+
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               filepath,
@@ -30,14 +54,11 @@ class Test_clc(ProductTestCase):
                                "v13",
                                "reference.v14",
                                "initial.v14",
-                               "change.v14",
-                               "v15"])
+                               "change.v14"])
 
-        statuses_ok = [check for check in job_status["checks"] if check["status"] == "ok"]
-        checks_not_ok = [check["check_ident"] for check in job_status["checks"] if check["status"] != "ok"]
-
-        self.assertEqual(len(statuses_ok), len(job_status["checks"]),
-                         "Checks {:s} do not have status ok.".format(",".join(checks_not_ok)))
+        check_statuses = dict((check_status["check_ident"], check_status["status"])
+                              for check_status in job_status["checks"])
+        self.assertDictEqual(expected_check_statuses, check_statuses)
 
 
 class Test_clc_status(ProductTestCase):
@@ -69,12 +90,12 @@ class Test_n2k(ProductTestCase):
                                    "v12": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
-                                   "v15": "ok"}
+                                   "v15": "skipped"}  # v15 is intentionally skipped.
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "n2k",
-                              ["v5", "v6", "v8", "v10_unit", "v11_n2k", "v12", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v10_unit", "v11_n2k", "v12", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -97,12 +118,12 @@ class Test_rpz(ProductTestCase):
                                    "v12": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
-                                   "v15": "ok"}
+                                   "v15": "skipped"}  # v15 is intentionally skipped.
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "rpz",
-                              ["v5", "v6", "v8", "v10_unit", "v11_rpz", "v12", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v10_unit", "v11_rpz", "v12", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -126,13 +147,13 @@ class Test_ua_shp(ProductTestCase):
                                    "v12_ua": "ok",
                                    "v13": "ok",
                                    "v14": "ok",
-                                   "v15": "failed" #FIXME provide INSPIRE-compliant UA metadata file.
+                                   "v15": "skipped"  # v15 is intentionally skipped.
                                    }
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "ua_2012_shp_wo_revised",
-                              ["v5", "v6", "v8", "v10", "v11_ua_status", "v12_ua", "v13", "v14", "v15"])
+                              ["v5", "v6", "v8", "v10", "v11_ua_status", "v12_ua", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
