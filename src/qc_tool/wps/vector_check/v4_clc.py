@@ -38,7 +38,7 @@ def run_check(params, status):
         srs = layer.GetSpatialRef()
         boundary_authority_code = srs.GetAuthorityCode(None)
         if authority_code != boundary_authority_code:
-            status.cancelled("Check cancelled while the layer {:s} has epsg code {:s} different from boundary epsg code {:s}."
+            status.cancelled("Check cancelled while layer {:s} has epsg code {:s} different from boundary epsg code {:s}."
                              .format(layer_def["src_layer_name"], authority_code, boundary_authority_code))
             return
         status.add_params({"layer_srs_epsg": int(authority_code)})

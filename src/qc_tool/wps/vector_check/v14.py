@@ -45,6 +45,6 @@ def run_check(params, status):
                                                      exclude_codes)
         if error_count > 0:
             failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_def["pg_fid_name"])
-            status.failed("The layer {:s} has neighbouring polygons with the same codes in rows: {:s}."
-                          .format(layer_def["pg_layer_name"], failed_pairs_message))
+            status.failed("Layer {:s} has neighbouring polygons with the same codes in features with {:s}: {:s}."
+                          .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], failed_pairs_message))
             status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])

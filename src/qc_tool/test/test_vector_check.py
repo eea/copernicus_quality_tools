@@ -449,7 +449,8 @@ class TestV5(VectorCheckTestCase):
                        " (2, 'b', 34, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 'c', 35, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "unique_keys": ["unique_1", "unique_2"]})
         status = self.status_class()
@@ -466,7 +467,8 @@ class TestV5(VectorCheckTestCase):
                        " (2, 'b', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 'b', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "unique_keys": ["ident"]})
         status = self.status_class()
@@ -490,7 +492,8 @@ class TestV6(VectorCheckTestCase):
                                                   " (2, '111', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx18_zz",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "column_defs": [["code_18", "CLC"]]})
         status = self.status_class()
@@ -506,7 +509,8 @@ class TestV6(VectorCheckTestCase):
                        " (2, 3, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 4, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx12_zz",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "column_defs": [["code_12", "INTEGER_CODES"]]})
         status = self.status_class()
@@ -522,7 +526,8 @@ class TestV6(VectorCheckTestCase):
                        " (2, 9999, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 9999, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "xxx12_zz",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "column_defs": [["code_12", "INTEGER_CODES"]]})
         status = self.status_class()
@@ -538,7 +543,8 @@ class TestV6(VectorCheckTestCase):
                                                   " (2, 'xxx', 'xxx', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, 'xxx', '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "cha18_xx",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "column_defs": [["code_12", "CLC"], ["code_18", "CLC"]]})
         status = self.status_class()
@@ -554,7 +560,8 @@ class TestV6(VectorCheckTestCase):
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "cha18_xx",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "column_defs": [["code_12", "CLC"], ["code_18", "CLC"]]})
         status = self.status_class()
@@ -578,7 +585,8 @@ class TestV8(VectorCheckTestCase):
                        "VALUES (1, ST_Multi(ST_MakeEnvelope(0, 0, 1, 1, 4326))),"
                        "       (3, ST_Multi(ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"]})
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -591,7 +599,9 @@ class TestV8(VectorCheckTestCase):
         cursor.execute("INSERT INTO mytable "
                        "VALUES (1, ST_Union(ST_MakeEnvelope(0, 0, 1, 1, 4326), "
                        "                    ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
-        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable", "pg_fid_name": "fid"}},
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"]})
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -695,7 +705,8 @@ class Test_v11_clc_status(VectorCheckTestCase):
         cursor.execute("INSERT INTO reference VALUES (30, 249999, ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
 
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
-                                                         "pg_fid_name": "fid"}},
+                                                         "pg_fid_name": "fid",
+                                                         "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
                             "area_m2": 250000})
@@ -741,7 +752,8 @@ class Test_v11_clc_change(VectorCheckTestCase):
         cursor.execute("INSERT INTO change VALUES (33,  9999, '2', 'D', ST_MakeEnvelope(1, 16, 2, 17, 4326));")
 
         self.params.update({"layer_defs": {"change": {"pg_layer_name": "change",
-                                                      "pg_fid_name": "fid"},
+                                                      "pg_fid_name": "fid",
+                                                      "fid_display_name": "row number"},
                                            "reference": {"pg_layer_name": "margin"}},
                             "layers": ["change"],
                             "area_column_name": "shape_area",
@@ -809,7 +821,8 @@ class Test_v11_ua_status(VectorCheckTestCase):
         cursor.execute("INSERT INTO reference VALUES (82, 499, '2', ST_MakeEnvelope(10.1, 8, 11, 9, 4326));")
 
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
-                                                         "pg_fid_name": "fid"}},
+                                                         "pg_fid_name": "fid",
+                                                         "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
                             "code_column_name": "code"})
@@ -863,7 +876,8 @@ class Test_v11_ua_change(VectorCheckTestCase):
         cursor.execute("INSERT INTO change VALUES (62, 1, 'X', '123', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
 
         self.params.update({"layer_defs": {"change": {"pg_layer_name": "change",
-                                                      "pg_fid_name": "fid"}},
+                                                      "pg_fid_name": "fid",
+                                                      "fid_display_name": "row number"}},
                             "layers": ["change"],
                             "area_column_name": "shape_area",
                             "initial_code_column_name": "code1",
@@ -907,7 +921,8 @@ class Test_v11_n2k(VectorCheckTestCase):
         cursor.execute("INSERT INTO n2k VALUES (42, 0.2, 9, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
 
         self.params.update({"layer_defs": {"n2k": {"pg_layer_name": "n2k",
-                                                   "pg_fid_name": "fid"}},
+                                                   "pg_fid_name": "fid",
+                                                   "fid_display_name": "row number"}},
                             "layers": ["n2k"],
                             "area_column_name": "area_ha",
                             "area_ha": 0.5,
@@ -948,7 +963,8 @@ class Test_v11_rpz(VectorCheckTestCase):
         cursor.execute("INSERT INTO rpz VALUES (31, 0.2499, 1, 'U', ST_MakeEnvelope(1, 18, 2, 19, 4326));")
 
         self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz",
-                                                   "pg_fid_name": "fid"}},
+                                                   "pg_fid_name": "fid",
+                                                   "fid_display_name": "row number"}},
                             "layers": ["rpz"],
                             "area_column_name": "area_ha",
                             "area_ha": 0.5,
@@ -973,7 +989,8 @@ class Test_v12(VectorCheckTestCase):
                                                                " ST_MakeEnvelope(33, 30, 36, 38, 4326)));")
 
         self.params.update({"layer_defs": {"mmw": {"pg_layer_name": "mmw",
-                                                   "pg_fid_name": "fid"}},
+                                                   "pg_fid_name": "fid",
+                                                   "fid_display_name": "row number"}},
                             "layers": ["mmw"],
                             "mmw": 1.0})
         status = self.status_class()
@@ -995,7 +1012,8 @@ class Test_v12_ua(VectorCheckTestCase):
         cursor.execute("INSERT INTO mmw VALUES (4, '122', ST_MakeEnvelope(40, 40, 43, 41, 4326));")
 
         self.params.update({"layer_defs": {"mmw": {"pg_layer_name": "mmw",
-                                                   "pg_fid_name": "fid"}},
+                                                   "pg_fid_name": "fid",
+                                                   "fid_display_name": "row number"}},
                             "layers": ["mmw"],
                             "code_column_name": "code",
                             "mmw": 1.0})
@@ -1015,9 +1033,11 @@ class TestV13(VectorCheckTestCase):
         cursor.execute("CREATE TABLE test_layer_1 (fid integer, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("CREATE TABLE test_layer_2 (fid integer, wkb_geometry geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "test_layer_1",
-                                                       "pg_fid_name": "fid"},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"},
                                            "layer_2": {"pg_layer_name": "test_layer_2",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_1", "layer_2"]})
 
     def test_non_overlapping(self):
@@ -1061,7 +1081,8 @@ class TestV14(VectorCheckTestCase):
                             "  attr_2 char(1),"
                             "  wkb_geometry geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
-                                                       "pg_fid_name": "fid"}},
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "code_column_names": ["attr_1", "attr_2"]})
 

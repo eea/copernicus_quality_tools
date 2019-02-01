@@ -35,5 +35,5 @@ def run_check(params, status):
 
         # Report error items.
         if cursor.rowcount > 0:
-            status.failed("The layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
+            status.failed("Layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
             status.add_full_table(sql_params["error_table"])

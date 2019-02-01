@@ -23,7 +23,7 @@ def run_check(params, status):
     # Check layer name.
     mobj = re.compile(params["n2k_layer_regex"], re.IGNORECASE).search(shp_filepath.stem)
     if mobj is None:
-        status.aborted("The layer name {:s} is not in accord with specification.".format(shp_filepath.stem))
+        status.aborted("Layer {:s} has illegal name.".format(shp_filepath.stem))
         return
 
     # Get layers.

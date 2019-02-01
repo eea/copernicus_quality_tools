@@ -49,7 +49,11 @@ def run_check(params, status):
                 ## FIXME: such construct is not really clear while it exploits mutable dictionaries
                 ## and bypasses currently standard use of status.add_params().
                 layer_def["pg_layer_name"] = layer_name.lower()
-                layer_def["pg_fid_name"] = dst_layer.GetFIDColumn()
+                layer_def["pg_fid_name"] = dst_layer.GetFIDColumn().lower()
+                if layer_def["pg_fid_name"] == "objectid":
+                    layer_def["fid_display_name"] = "objectid"
+                else:
+                    layer_def["fid_display_name"] = "row number"
 
                 ## Ensure all features has been imported.
                 src_count = src_layer.GetFeatureCount()

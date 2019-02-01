@@ -46,7 +46,7 @@ def run_check(params, status):
 
         # Report error items.
         if cursor.rowcount > 0:
-            status.failed("The layer {:s} has {:d} gap(s).".format(layer_def["pg_layer_name"], cursor.rowcount))
+            status.failed("Layer {:s} has {:d} gap(s).".format(layer_def["pg_layer_name"], cursor.rowcount))
             status.add_full_table(sql_params["error_table"])
 
         # Find warning features.
@@ -60,6 +60,6 @@ def run_check(params, status):
 
         # Report warning items.
         if cursor.rowcount > 0:
-            status.info("The layer {:s} has {:d} feature(s) of unknown boundary unit."
+            status.info("Layer {:s} has {:d} feature(s) of unknown boundary unit."
                         .format(layer_def["pg_layer_name"], cursor.rowcount))
             status.add_full_table(sql_params["warning_table"])

@@ -30,5 +30,6 @@ def run_check(params, status):
         # Report warning features.
         items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
         if items_message is not None:
-            status.info("The layer {:s} has warning features: {:s}.".format(layer_def["pg_layer_name"], items_message))
+            status.info("Layer {:s} has warning features with {:s}: {:s}."
+                        .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])

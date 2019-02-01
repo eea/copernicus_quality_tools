@@ -34,6 +34,6 @@ def run_check(params, status):
             cursor.execute(sql, (allowed_codes,))
             if cursor.rowcount > 0:
                 failed_items_message = get_failed_items_message(cursor, error_table_name, layer_def["pg_fid_name"])
-                status.failed("The layer {:s} has column {:s} with invalid codes in rows: {:s}."
-                              .format(layer_def["pg_layer_name"], column_name, failed_items_message))
+                status.failed("Layer {:s} has column {:s} with invalid codes in features with {:s}: {:s}."
+                              .format(layer_def["pg_layer_name"], column_name, layer_def["fid_display_name"], failed_items_message))
                 status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
