@@ -1026,7 +1026,7 @@ class Test_v12_ua(VectorCheckTestCase):
         self.assertListEqual([(1,), (3,)], cursor.fetchall())
 
 
-class TestV13(VectorCheckTestCase):
+class Test_v13(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         cursor = self.params["connection_manager"].get_connection().cursor()
@@ -1064,8 +1064,8 @@ class TestV13(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        result = {"The layer test_layer_1 has overlapping pairs in rows: 1-5.",
-                  "The layer test_layer_2 has overlapping pairs in rows: 1-5, 1-6, 5-6."}
+        result = {"Layer test_layer_1 has overlapping pairs in features with row number: 1-5.",
+                  "Layer test_layer_2 has overlapping pairs in features with row number: 1-5, 1-6, 5-6."}
         self.assertSetEqual(result, set(status.messages))
 
 

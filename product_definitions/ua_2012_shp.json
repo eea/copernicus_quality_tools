@@ -42,18 +42,6 @@
       }
     },
     {
-      "check_ident": "boundary.v3",
-      "required": true,
-      "parameters": {
-        "layers": ["boundary"],
-        "attributes": {"country": "string",
-                       "cities": "string",
-                       "fua_or_cit": "string",
-                       "shape_leng": "real",
-                       "shape_area": "real"}
-      }
-    },
-    {
       "check_ident": "revised.v3",
       "required": true,
       "parameters": {
