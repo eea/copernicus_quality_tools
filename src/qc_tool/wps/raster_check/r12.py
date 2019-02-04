@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import socket
 from urllib import request
 from urllib.error import HTTPError
 from urllib.error import URLError
@@ -34,11 +35,6 @@ def run_check(params, status):
         status.failed("XML metadata file {:s} is not a valid XML document.".format(xml_filepath.name))
         return
 
-    if "skip_inspire_check" in params and params["skip_inspire_check"]:
-        status.info("Online validation using INSPIRE geoportal has been skipped.")
-        print("INSPIRE SKIPPED")
-        return
-
     METADATA_SERVICE_HOST = 'http://inspire-geoportal.ec.europa.eu'
     METADATA_SERVICE_ENDPOINT = 'GeoportalProxyWebServices/resources/INSPIREResourceTester'
 
@@ -47,39 +43,47 @@ def run_check(params, status):
     metadata = xml_filepath.read_text(encoding='utf-8')
 
     # post the metadata file content to INSPIRE validator API.
+    inspire_validator_running = False
     try:
         req = request.Request(url, data=metadata.encode('utf-8'), headers=headers)
-        with request.urlopen(req, timeout=10) as resp:
+        with request.urlopen(req, timeout=60) as resp:
             report_url = resp.headers['Location']
             json_data = json.loads(resp.read().decode('utf-8'))
+            inspire_validator_running = True
     except HTTPError:
-        status.failed("Unable to validate INSPIRE metadata. Internet connection is not accessible.")
-        return
+        status.info("Unable to validate INSPIRE metadata by validator {:s}. "
+                    "Internet connection is not accessible."
+                    .format(METADATA_SERVICE_HOST))
     except URLError:
-        status.failed("Unable to validate INSPIRE metadata. Internet connection timeout.")
-        return
+        status.info("Unable to validate INSPIRE metadata by validator {:s}. "
+                    "Internet connection timeout."
+                    .format(METADATA_SERVICE_HOST))
+    except socket.timeout:
+        status.info("Unable to validate INSPIRE metadata by validator {:s}. "
+                    "Internet connection timeout."
+                    .format(METADATA_SERVICE_HOST))
 
-    # Completeness_indicator is 100.0 means that INSPIRE validation is OK (even if there are some warnings).
-    if "value" not in json_data or json_data["value"] is None:
-        inspire_ok = False
+    if inspire_validator_running:
+        # Completeness_indicator is 100.0 means that INSPIRE validation is OK (even if there are some warnings).
+        if "value" not in json_data or json_data["value"] is None:
+            inspire_ok = False
 
-    elif "CompletenessIndicator" not in json_data["value"]:
-        inspire_ok = False
+        elif "CompletenessIndicator" not in json_data["value"]:
+            inspire_ok = False
 
-    elif json_data["value"]["CompletenessIndicator"] is None:
-        inspire_ok = False
+        elif json_data["value"]["CompletenessIndicator"] is None:
+            inspire_ok = False
 
-    elif json_data["value"]["CompletenessIndicator"] != 100:
-        inspire_ok = False
-    else:
-        inspire_ok = True
+        elif json_data["value"]["CompletenessIndicator"] != 100:
+            inspire_ok = False
+        else:
+            inspire_ok = True
 
-    if not inspire_ok:
-        status.failed("INSPIRE metadata is incomplete. See attached report for details."
-                      " More details are at URL: {:s}".format(report_url))
+        if not inspire_ok:
+            status.failed("INSPIRE metadata is incomplete. See attached report for details.")
 
-        # save the attachment to output directory.
-        metadata_report_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_metadata_error.json")
-        metadata_report_filepath.write_text(json.dumps(json_data, indent=4, sort_keys=True))
-        status.add_attachment(metadata_report_filepath.name)
-        return
+            # save the attachment to output directory.
+            metadata_report_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_metadata_error.json")
+            metadata_report_filepath.write_text(json.dumps(json_data, indent=4, sort_keys=True))
+            status.add_attachment(metadata_report_filepath.name)
+            return

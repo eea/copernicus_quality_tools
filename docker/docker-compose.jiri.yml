@@ -47,7 +47,6 @@ services:
       - LEAVE_SCHEMA=no
       - JOBDIR_EXIST_OK=no
       - LEAVE_JOBDIR=no
-      - SKIP_INSPIRE_CHECK=yes
     volumes:
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
       - /home/jiri/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
