@@ -54,7 +54,7 @@ class Test_v1_rpz(VectorCheckTestCase):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip"),
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip"),
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
         status = self.status_class()
         unzip_check(self.params, status)
@@ -62,14 +62,14 @@ class Test_v1_rpz(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.wps.vector_check.v1_rpz import run_check
-        self.params.update({"filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu_v[0-9]{2}.shp$",
-                            "areacodes": ["026", "027", "032"]})
+        self.params.update({"filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}.shp$",
+                            "areacodes": ["007"]})
         status = self.status_class()
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual("rpz_DU032B_lclu_v97.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
-        self.assertEqual("rpz_DU032B_lclu_v97", status.params["layer_defs"]["rpz"]["src_layer_name"])
+        self.assertEqual("rpz_DU007T_lclu2012_v01.shp", status.params["layer_defs"]["rpz"]["src_filepath"].name)
+        self.assertEqual("rpz_DU007T_lclu2012_v01", status.params["layer_defs"]["rpz"]["src_layer_name"])
         self.assertEqual("boundary_rpz.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_rpz", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
@@ -233,14 +233,14 @@ class TestV2(VectorCheckTestCase):
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
         from qc_tool.wps.vector_check.v1_rpz import run_check as layer_check
 
-        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "RPZ_LCLU_DU032B_clip2.zip")
+        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
         self.params.update({"boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
                             "tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": rpz_filepath,
                             "formats": [".gdb", ".shp"],
                             "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"},
-                            "filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu_v[0-9]{2}.shp$",
-                            "areacodes": ["032"]})
+                            "filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}.shp$",
+                            "areacodes": ["007"]})
 
         status = self.status_class()
         unzip_check(self.params, status)

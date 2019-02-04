@@ -14,7 +14,7 @@
                       "020", "021", "022", "023", "024", "025", "026", "027", "028", "029",
                       "030", "031", "032", "033", "034", "035", "036", "037", "038", "039",
                       "040", "041", "042", "043"],
-        "filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu_v[0-9]{2}.shp$"
+        "filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}.shp$"
       }
     },
     {
@@ -36,7 +36,6 @@
                        "maes_2": "integer",
                        "maes_3": "integer",
                        "maes_4": "integer",
-                       "tcd": "string",
                        "ua": "string",
                        "area_ha": "real",
                        "nodata": "integer",
@@ -69,10 +68,10 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "column_defs": [["maes_1", "MAES1"],
-                        ["maes_2", "MAES2"],
-                        ["maes_3", "MAES3"],
-                        ["maes_4", "MAES4"]]
+        "column_defs": [["maes_1", "MAES1_RPZ"],
+                        ["maes_2", "MAES2_RPZ"],
+                        ["maes_3", "MAES3_RPZ"],
+                        ["maes_4", "MAES4_RPZ"]]
       }
     },
     {
