@@ -388,7 +388,7 @@ class Test_v4_auto_identify_epsg(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
 
-class TestVImport2pg(VectorCheckTestCase):
+class Test_v_import2pg(VectorCheckTestCase):
     def test(self):
         from qc_tool.wps.vector_check.v_import2pg import run_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
@@ -432,6 +432,31 @@ class TestVImport2pg(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
+
+
+class Test_run_is_valid_check(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.layer_def = {"pg_fid_name": "fid",
+                          "pg_layer_name": "test_layer",
+                          "fid_display_name": "row number"}
+
+    def test(self):
+        from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
+        status = self.status_class()
+        run_is_valid_check(self.cursor, status, self.layer_def)
+        self.assertEqual("ok", status.status)
+
+    def test_aborted(self):
+        from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
+        # Insert self-intersecting polygon.
+        self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText('POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', 4326));")
+        status = self.status_class()
+        run_is_valid_check(self.cursor, status, self.layer_def)
+        self.assertEqual("aborted", status.status)
 
 
 class TestV5(VectorCheckTestCase):
