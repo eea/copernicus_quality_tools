@@ -452,12 +452,12 @@ class Test_run_is_valid_check(VectorCheckTestCase):
 
     def test_intersecting_ring_forming_hole(self):
         from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
-        # ESRI shapefile allows this, OGC simple features does not
+        # ESRI shapefile allows this, OGC simple features does not. Requirement is to follow OGC specification.
         self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText("
                             "'POLYGON((0 0, 2 0, 1 1, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))', 4326));")
         status = self.status_class()
         run_is_valid_check(self.cursor, status, self.layer_def)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("aborted", status.status)
 
     def test_aborted(self):
         from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
