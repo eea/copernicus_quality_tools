@@ -9,20 +9,10 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    # enable gdal to use exceptions
-    gdal.UseExceptions()
-
-    try:
-        ds_open = gdal.Open(str(params["filepath"]))
-        if ds_open is None:
-            status.failed("The file can not be opened.")
-            return
-    except:
-        status.failed("The file can not be opened.")
-        return
+    ds = gdal.Open(str(params["filepath"]))
 
     # get dictionary of pixel 'codes-counts'
-    ds_band = ds_open.GetRasterBand(1)
+    ds_band = ds.GetRasterBand(1)
     counts = ds_band.GetHistogram()
     codes = range(len(counts))
     hist = dict(zip(codes, counts))

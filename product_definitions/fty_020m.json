@@ -94,12 +94,7 @@
       "parameters": {}
     },
     {
-      "check_ident": "r14",
-      "required": false,
-      "parameters": {}
-    },
-    {
-      "check_ident": "r15",
+      "check_ident": "r13",
       "required": false,
       "parameters": {
         "colours": {

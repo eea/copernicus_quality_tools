@@ -40,8 +40,7 @@ def load_all_check_functions():
     import qc_tool.wps.raster_check.r10
     import qc_tool.wps.raster_check.r11
     import qc_tool.wps.raster_check.r12
-    import qc_tool.wps.raster_check.r14
-    import qc_tool.wps.raster_check.r15
+    import qc_tool.wps.raster_check.r13
     import qc_tool.wps.vector_check.v_import2pg
     import qc_tool.wps.vector_check.v_unzip
     import qc_tool.wps.vector_check.v1_clc

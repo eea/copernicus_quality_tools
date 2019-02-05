@@ -30,7 +30,7 @@ class Test_Raster(ProductTestCase):
 
         # these optional checks are present in all tested HRL raster product definitions.
         # NOTE: r12 INSPIRE metadata check is skipped on purpose. It is already tested in test_raster_check.
-        self.check_idents = ["r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r14", "r15"]
+        self.check_idents = ["r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r13"]
 
         # all checks are expected to finish with ok status by default.
         self.expected_check_statuses = {"r_unzip": "ok",
@@ -45,8 +45,7 @@ class Test_Raster(ProductTestCase):
                                         "r9": "ok",
                                         "r10": "ok",
                                         "r12": "skipped", # INSPIRE metadata check is skipped in product tests.
-                                        "r14": "ok",
-                                        "r15": "ok"}
+                                        "r13": "ok"}
 
     # High resolution forest type (FTY) - 20m
     def test_fty_020m(self):

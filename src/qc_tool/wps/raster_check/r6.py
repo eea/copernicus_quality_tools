@@ -9,20 +9,11 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    # enable gdal to use exceptions
-    gdal.UseExceptions()
 
-    try:
-        ds_open = gdal.Open(str(params["filepath"]))
-        if ds_open is None:
-            status.failed("The file can not be opened.")
-            return
-    except:
-        status.failed("The file can not be opened.")
-        return
+    ds = gdal.Open(str(params["filepath"]))
 
     # upper-left coordinate divided by pixel-size must leave no remainder
-    gt = ds_open.GetGeoTransform()
+    gt = ds.GetGeoTransform()
     ulx = gt[0]
     uly = gt[3]
     pixelsizex = gt[1]

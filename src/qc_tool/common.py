@@ -74,9 +74,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "r10": "Raster completeness check.",
     "r11": "Minimum mapping unit check.",
     "r12": "Raster metadata is compliant with INSPIRE specifications.",
-    "r13": "(no description)",
-    "r14": "Raster has a color table.",
-    "r15": "Colors in the color table match product specification."}
+    "r13": "Colors in the color table match product specification."}
 
 SYSTEM_CHECK_FUNCTIONS = ["r_unzip", "v_import2pg", "v_unzip"]
 

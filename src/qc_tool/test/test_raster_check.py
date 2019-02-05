@@ -143,9 +143,9 @@ class TestR12(RasterCheckTestCase):
         self.assertEqual("failed", status.status, "Raster check r12 should fail for raster with non-compliant xml file.")
 
 
-class TestR15(RasterCheckTestCase):
+class TestR13(RasterCheckTestCase):
     def test(self):
-        from qc_tool.wps.raster_check.r15 import run_check
+        from qc_tool.wps.raster_check.r13 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
                   "colours": {"0": [240, 240, 240],
                               "1": [70, 158, 74],
@@ -154,10 +154,10 @@ class TestR15(RasterCheckTestCase):
                               "255": [0, 0, 0]}}
         status = self.status_class()
         run_check(params, status)
-        self.assertEqual("ok", status.status, "Check r15 with correct colours should pass.")
+        self.assertEqual("ok", status.status, "Check r13 with correct colours should pass.")
 
     def test_fail(self):
-        from qc_tool.wps.raster_check.r15 import run_check
+        from qc_tool.wps.raster_check.r13 import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "r11", "r11_raster_correct.tif"),
                   "colours": {"0": [240, 240, 240],
                               "1": [70, 158, 74],
@@ -166,4 +166,4 @@ class TestR15(RasterCheckTestCase):
                               "255": [0, 0, 99]}}
         status = self.status_class()
         run_check(params, status)
-        self.assertEqual("failed", status.status, "Check r15 with incorrect colours should fail.")
+        self.assertEqual("failed", status.status, "Check r13 with incorrect colours should fail.")

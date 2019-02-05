@@ -12,21 +12,10 @@ from qc_tool.wps.registry import register_check_function
 
 @register_check_function(__name__)
 def run_check(params, status):
-    ds = gdal.Open(str(params["filepath"]))
 
     geotiff_name = params["filepath"].name
 
-    if ds is None:
-        status.aborted("The raster {:s} could not be opened.".format(geotiff_name))
-        return
-
-    # get the number of bands
-    num_bands = ds.RasterCount
-    if num_bands != 1:
-        status.failed("The raster has {:d} bands. The expected number of bands is one.".format(num_bands))
-        return
-
-    # get the DataType of the band ("Byte" means 8-bit depth)
+    ds = gdal.Open(str(params["filepath"]))
     band = ds.GetRasterBand(1)
 
     # check the color table of the band
@@ -67,8 +56,10 @@ def run_check(params, status):
     if len(incorrect_colours) > 0:
         colour_reports = []
         for c in incorrect_colours:
-            colour_reports.append("value:{0}, expected RGB:{1}, actual RGB:{2}".format(c["class"], c["expected"], c["actual"]))
-        status.failed("The raster colour table has some incorrect colours. {:s}".format("; ".join(colour_reports)))
+            colour_reports.append("value:{0}, expected RGB:{1}, actual RGB:{2}"
+                                  .format(c["class"], c["expected"], c["actual"]))
+        status.failed("The raster colour table has some incorrect colours. {:s}"
+                      .format("; ".join(colour_reports)))
         return
 
     # Check existence of a .tif.clr or .clr file.
@@ -136,5 +127,3 @@ def run_check(params, status):
         status.failed("The raster colour text file {:s} has some incorrect colours. {:s}"
                       .format(clr_filename, "; ".join(colour_reports)))
         return
-
-

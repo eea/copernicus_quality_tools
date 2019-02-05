@@ -15,19 +15,12 @@ def run_check(params, status):
     # set compression type names to lowercase
     allowed_compression_types = [c.lower() for c in params["compression"]]
 
-    try:
-        ds_open = gdal.Open(str(params["filepath"]))
-        if ds_open is None:
-            status.failed("The file can not be opened.")
-            return
-    except:
-        status.failed("The file can not be opened.")
-        return
+    ds = gdal.Open(str(params["filepath"]))
 
     # get raster metadata
-    meta = ds_open.GetMetadata('IMAGE_STRUCTURE')
+    meta = ds.GetMetadata("IMAGE_STRUCTURE")
 
-    compression = meta.get('COMPRESSION', None)
+    compression = meta.get("COMPRESSION", None)
 
     if compression is None:
         status.failed("The raster data compression is not set.")
