@@ -29,7 +29,9 @@ def run_check(params, status):
         sql = ("CREATE TABLE {general_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
-               " WHERE {area_column_name} >= {area_ha};")
+               " WHERE"
+               "  ua IS NOT NULL"
+               "  OR {area_column_name} >= {area_ha};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -38,7 +40,9 @@ def run_check(params, status):
                " WITH"
                "  margin AS ("
                "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
-               "   FROM {layer_name}),"
+               "   FROM {layer_name}"
+               "   WHERE"
+               "    ua IS NULL),"
                "  layer AS ("
                "   SELECT *"
                "   FROM {layer_name}"
@@ -56,14 +60,7 @@ def run_check(params, status):
                " FROM layer"
                " WHERE"
                "  layer.{area_column_name} >= 0.1"
-               "  AND layer.{code_column_name}::text SIMILAR TO '(1211|1212|911%)'"
-               # Features completely covered by Urban Atlas Core Region.
-               " UNION"
-               " SELECT layer.{fid_name}"
-               " FROM layer"
-               " WHERE"
-               "  layer.{area_column_name} >= 0.25"
-               "  AND layer.ua IS NOT NULL;")
+               "  AND layer.{code_column_name}::text SIMILAR TO '(1211|1212|911%)';")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
