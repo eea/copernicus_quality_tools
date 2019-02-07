@@ -96,7 +96,11 @@
         "layers": ["rpz"],
         "area_column_name": "area_ha",
         "area_ha": 0.5,
-        "code_column_name": "MAES_4"
+        "code_column_name": "MAES_4",
+        "urban_feature_codes": [1111, 1112, 1113, 1120, 1210, 1220, 1230, 1240, 1310, 1320, 1400],
+        "linear_feature_codes": [1210, 1220, 6220, 9110, 9120],
+        "exception_comments": ["Area size exception (inside RZ_AoI / outside UA Core Region)",
+                               "Area size exception (at RZ_AoI / UA Core Region)"]
       }
     },
     {

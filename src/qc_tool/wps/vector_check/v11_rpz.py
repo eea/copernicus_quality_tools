@@ -36,6 +36,7 @@ def run_check(params, status):
         cursor.execute(sql)
 
         # Create table of exception items.
+        sql_execute_params = {}
         sql = ("CREATE TABLE {exception_table} AS"
                " WITH"
                "  margin AS ("
@@ -53,16 +54,36 @@ def run_check(params, status):
                " FROM layer, margin"
                " WHERE"
                "  layer.{area_column_name} >= 0.2"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1"
-               # Linear features.
-               " UNION"
-               " SELECT layer.{fid_name}"
-               " FROM layer"
-               " WHERE"
-               "  layer.{area_column_name} >= 0.1"
-               "  AND layer.{code_column_name}::text SIMILAR TO '(1211|1212|911%)';")
+               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1")
+        # Urban features.
+        if len(params["urban_feature_codes"]) > 0:
+            sql_execute_params["urban_codes"] = tuple(params["urban_feature_codes"])
+            sql += (" UNION"
+                    " SELECT {fid_name}"
+                    " FROM layer"
+                    " WHERE"
+                    "  {area_column_name} >= 0.25"
+                    "  AND {code_column_name} IN %(urban_codes)s")
+        # Linear features.
+        if len(params["linear_feature_codes"]) > 0:
+            sql_execute_params["linear_codes"] = tuple(params["linear_feature_codes"])
+            sql += (" UNION"
+                    " SELECT {fid_name}"
+                    " FROM layer"
+                    " WHERE"
+                    "  {area_column_name} >= 0.1"
+                    "  AND {code_column_name} IN %(linear_codes)s")
+        # Features with specific comments.
+        if len(params["exception_comments"]) > 0:
+            sql_execute_params["exception_comments"] = tuple(params["exception_comments"])
+            sql += (" UNION"
+                    " SELECT {fid_name}"
+                    " FROM layer"
+                    " WHERE"
+                    "  comment IN %(exception_comments)s")
+        sql += ";"
         sql = sql.format(**sql_params)
-        cursor.execute(sql)
+        cursor.execute(sql, sql_execute_params)
 
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])

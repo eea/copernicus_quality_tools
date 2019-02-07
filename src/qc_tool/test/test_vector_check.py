@@ -972,32 +972,44 @@ class Test_v11_n2k(VectorCheckTestCase):
 
 
 class Test_v11_rpz(VectorCheckTestCase):
-    def test(self):
-        from qc_tool.wps.vector_check.v11_rpz import run_check
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE rpz (fid integer, area_ha real, code integer, ua char(1), wkb_geometry geometry(Polygon, 4326));")
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE rpz (fid integer, area_ha real, code integer, ua char(1), comment varchar(40), wkb_geometry geometry(Polygon, 4326));")
 
         # Artificial margin as a general feature.
-        cursor.execute("INSERT INTO rpz VALUES (0, 0.5, 10, NULL, ST_MakeEnvelope(-1, -1, 50, 50, 4326));")
-
-        # Marginal features.
-        cursor.execute("INSERT INTO rpz VALUES (10, 0.2, 8, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (11, 0.1999, 8, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
-
-        # Marginal features touching Urban Atlas Core Region.
-        cursor.execute("INSERT INTO rpz VALUES (12, 0.2, 8, NULL, ST_MakeEnvelope(49, 0, 50, 1, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (13, 0.19, 8, NULL, ST_MakeEnvelope(49, 2, 50, 3, 4326))")
-
-        # Linear features.
-        cursor.execute("INSERT INTO rpz VALUES (20, 0.1, 1211, NULL, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (21, 0.1, 1212, NULL, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (22, 0.1, 911, NULL, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (23, 0.1, 9111, NULL, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (24, 0.0999, 1211, NULL, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
-        cursor.execute("INSERT INTO rpz VALUES (25, 0.1, 2, NULL, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (0, 0.5, 10, NULL, NULL, ST_MakeEnvelope(-1, -1, 50, 50, 4326));")
 
         # Feature being part of Urban Atlas Core Region.
-        cursor.execute("INSERT INTO rpz VALUES (30, 0.01, 1, 'U', ST_MakeEnvelope(50, -1, 51, 50, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (1, 0.01, 1, 'U', NULL, ST_MakeEnvelope(50, -1, 51, 50, 4326));")
+
+        # Marginal features.
+        self.cursor.execute("INSERT INTO rpz VALUES (10, 0.2, 8, NULL, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (11, 0.19, 8, NULL, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
+
+        # Marginal features touching Urban Atlas Core Region.
+        self.cursor.execute("INSERT INTO rpz VALUES (12, 0.2, 8, NULL, NULL, ST_MakeEnvelope(49, 0, 50, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (13, 0.19, 8, NULL, NULL, ST_MakeEnvelope(49, 2, 50, 3, 4326))")
+
+        # Urban features.
+        self.cursor.execute("INSERT INTO rpz VALUES (20, 0.25, 1111, NULL, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (21, 0.24, 1111, NULL, NULL, ST_MakeEnvelope(2, 1, 3, 2, 4326))")
+        self.cursor.execute("INSERT INTO rpz VALUES (22, 0.25, 1112, NULL, NULL, ST_MakeEnvelope(2, 2, 3, 3, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (23, 0.24, 1112, NULL, NULL, ST_MakeEnvelope(2, 3, 3, 4, 4326))")
+        self.cursor.execute("INSERT INTO rpz VALUES (24, 0.25, 1113, NULL, NULL, ST_MakeEnvelope(2, 4, 3, 5, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (25, 0.24, 1113, NULL, NULL, ST_MakeEnvelope(2, 5, 3, 6, 4326))")
+
+        # Linear features.
+        self.cursor.execute("INSERT INTO rpz VALUES (30, 0.1,  1210, NULL, NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (31, 0.09, 1210, NULL, NULL, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (32, 0.1,  1220, NULL, NULL, ST_MakeEnvelope(4, 2, 5, 3, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (33, 0.09, 1220, NULL, NULL, ST_MakeEnvelope(4, 3, 5, 4, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (34, 0.1,  1230, NULL, NULL, ST_MakeEnvelope(4, 4, 5, 5, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (35, 0.09, 1230, NULL, NULL, ST_MakeEnvelope(4, 5, 5, 6, 4326));")
+
+        # Features with specific comment.
+        self.cursor.execute("INSERT INTO rpz VALUES (40, 0, 8, NULL, 'comment1', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (41, 0, 8, NULL, 'comment1 nok', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
 
         self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz",
                                                    "pg_fid_name": "fid",
@@ -1005,14 +1017,27 @@ class Test_v11_rpz(VectorCheckTestCase):
                             "layers": ["rpz"],
                             "area_column_name": "area_ha",
                             "area_ha": 0.5,
-                            "code_column_name": "code"})
+                            "code_column_name": "code",
+                            "urban_feature_codes": [1111, 1112],
+                            "linear_feature_codes": [1210, 1220],
+                            "exception_comments": ["comment1"]})
+
+    def test(self):
+        from qc_tool.wps.vector_check.v11_rpz import run_check
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_rpz_general ORDER BY fid;")
-        self.assertListEqual([(0,), (30,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_rpz_exception ORDER BY fid;")
-        self.assertListEqual([(10,), (12,), (20,), (21,), (22,), (23,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_rpz_error ORDER BY fid;")
-        self.assertListEqual([(11,), (13,), (24,), (25,)], cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM v11_rpz_general ORDER BY fid;")
+        self.assertListEqual([(0,), (1,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM v11_rpz_exception ORDER BY fid;")
+        self.assertListEqual([(10,), (12,), (20,), (22,), (30,), (32,), (40,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM v11_rpz_error ORDER BY fid;")
+        self.assertListEqual([(11,), (13,), (21,), (23,), (24,), (25,), (31,), (33,), (34,), (35,), (41,)], self.cursor.fetchall())
+
+    def test_empty_codes(self):
+        from qc_tool.wps.vector_check.v11_rpz import run_check
+        self.params.update({"urban_feature_codes": [],
+                            "linear_feature_codes": [],
+                            "exception_comments": []})
+        run_check(self.params, self.status_class())
 
 
 class Test_v12(VectorCheckTestCase):
