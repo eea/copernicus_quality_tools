@@ -1,4 +1,5 @@
 import json
+from contextlib import ExitStack
 from datetime import datetime
 from os.path import normpath
 from pathlib import Path
@@ -10,7 +11,6 @@ from reportlab.platypus import Frame, Image, PageTemplate, Paragraph, BaseDocTem
 
 def overall_status(status):
     check_statuses = [check["status"] for check in status["checks"]]
-    print(check_statuses)
     if all(check_status == "ok" for check_status in check_statuses):
         return "Checks Passed"
     elif any(check_status in ["failed", "aborted"] for check_status in check_statuses):
@@ -57,96 +57,100 @@ def write_pdf_report(status_filepath, report_filepath=None):
 
     # Add logo images. The three logos are placed inside an invisible table.
     report_logo_dirpath = Path(normpath(str(Path(__file__).joinpath("../report_images"))))
-    copernicus_image = Image(str(report_logo_dirpath.joinpath("copernicus_logo_resized.png")), width=123, height=53)
-    eea_image = Image(str(report_logo_dirpath.joinpath("eea_full_logo_resized.png")), width=178, height=38)
-    land_image = Image(str(report_logo_dirpath.joinpath("land_monitoring_logo_resized.png")), width=124, height=57)
-    image_data = [[copernicus_image, land_image, eea_image]]
-    image_table=Table(image_data, hAlign="CENTER", colWidths=[130, 150, 200], rowHeights=60)
-    image_table_style = TableStyle([("VALIGN", (0, 0), (-1,-1), "CENTER")])
-    image_table.setStyle(image_table_style)
-    text.append(image_table)
-    text.append(Paragraph("", style_normal))
+    with open(str(report_logo_dirpath.joinpath("copernicus_logo_resized.png")), "rb") as copernicus_f, \
+        open(str(report_logo_dirpath.joinpath("eea_full_logo_resized.png")), "rb") as eea_f, \
+        open(str(report_logo_dirpath.joinpath("land_monitoring_logo_resized.png")), "rb") as land_f:
 
-    # Add main heading
-    text.append(Paragraph("QC tool check report", styles["Heading1"]))
+        copernicus_image = Image(copernicus_f, width=123, height=53)
+        eea_image = Image(eea_f, width=178, height=38)
+        land_image = Image(land_f, width=124, height=57)
+        image_data = [[copernicus_image, land_image, eea_image]]
+        image_table=Table(image_data, hAlign="CENTER", colWidths=[130, 150, 200], rowHeights=60)
+        image_table_style = TableStyle([("VALIGN", (0, 0), (-1,-1), "CENTER")])
+        image_table.setStyle(image_table_style)
+        text.append(image_table)
+        text.append(Paragraph("", style_normal))
 
-    # Add summary table
-    text.append(Paragraph("", styles["Heading1"]))
-    text.append(Paragraph("Report summary", styles["Heading2"]))
-    status_file = ["File name", status["filename"]]
-    status_product = ["Product", status["product_ident"]]
-    display_date = datetime.strptime(status["job_finish_date"], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M:%S")
-    status_date = ["Checked on", display_date]
-    status_result = overall_status(status)
-    if status_result == "Checks Passed":
-        status_result_style = style_check_ok
-    elif status_result == "Checks Failed":
-        status_result_style = style_check_failed
-    else:
-        status_result_style = style_check_partial
+        # Add main heading
+        text.append(Paragraph("QC tool check report", styles["Heading1"]))
 
-    status_result = ["Overall result", Paragraph(status_result, status_result_style)]
-    summary_data = [status_file, status_product, status_date, status_result]
-    summary_table = Table(summary_data, hAlign="LEFT", colWidths=[90, None])
-    summary_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
-                                ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-                                ("VALIGN", (0, 0), (-1,-1), "TOP")])
-    summary_table.setStyle(summary_style)
-    text.append(summary_table)
-
-    # Detail table title
-    text.append(Paragraph("", style_normal))
-    text.append(Paragraph("", style_normal))
-    text.append(Paragraph("Report details", styles["Heading2"]))
-
-    # Detail table header row
-    check_table_header = [Paragraph("<b>CHECK</b>", style_normal),
-                          Paragraph("<b>DESCRIPTION</b>", style_normal),
-                          Paragraph("<b>STATUS</b>", style_normal),
-                          Paragraph("<b>MESSAGES</b>", style_normal)]
-    check_data = [check_table_header]
-
-    # Detail table data. Text colour is displayed based on check status.
-    for check in status["checks"]:
-        check_status = check["status"]
-        if check_status is None:
-            check_status = "skipped"
-        if check_status == "ok":
-            display_ident = Paragraph(check["check_ident"], style_check_default)
-            display_description = Paragraph(check["description"], style_check_default)
-            display_status = Paragraph("<b>" + check_status + "</b>", style_check_ok)
-        elif check_status in ["aborted", "failed", "error"]:
-            display_ident = Paragraph(check["check_ident"], style_check_failed)
-            display_status = Paragraph(check_status, style_check_failed)
-            display_description = Paragraph(check["description"], style_check_failed)
+        # Add summary table
+        text.append(Paragraph("", styles["Heading1"]))
+        text.append(Paragraph("Report summary", styles["Heading2"]))
+        status_file = ["File name", status["filename"]]
+        status_product = ["Product", status["product_ident"]]
+        display_date = datetime.strptime(status["job_finish_date"], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M:%S")
+        status_date = ["Checked on", display_date]
+        status_result = overall_status(status)
+        if status_result == "Checks Passed":
+            status_result_style = style_check_ok
+        elif status_result == "Checks Failed":
+            status_result_style = style_check_failed
         else:
-            display_ident = Paragraph(check["check_ident"], style_check_default)
-            display_status = Paragraph(check_status, style_check_default)
-            display_description = Paragraph(check["description"], style_check_default)
+            status_result_style = style_check_partial
 
-        messages = check.get("messages", [])
-        if messages is None:
-            messages = []
-        display_messages = []
-        for message in messages:
-            display_messages.append(Paragraph(message, style_body))
+        status_result = ["Overall result", Paragraph(status_result, status_result_style)]
+        summary_data = [status_file, status_product, status_date, status_result]
+        summary_table = Table(summary_data, hAlign="LEFT", colWidths=[90, None])
+        summary_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
+                                    ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+                                    ("VALIGN", (0, 0), (-1,-1), "TOP")])
+        summary_table.setStyle(summary_style)
+        text.append(summary_table)
 
-        check_info = [display_ident,
-                      display_description,
-                      display_status,
-                      display_messages
-                      ]
-        check_data.append(check_info)
+        # Detail table title
+        text.append(Paragraph("", style_normal))
+        text.append(Paragraph("", style_normal))
+        text.append(Paragraph("Report details", styles["Heading2"]))
 
-    detail_table=Table(check_data, hAlign="LEFT", colWidths=[90, None, 60, None])
-    detail_table_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
-                                     ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
-                                     ("VALIGN", (0, 0), (-1,-1), "TOP")])
-    detail_table.setStyle(detail_table_style)
-    text.append(detail_table)
+        # Detail table header row
+        check_table_header = [Paragraph("<b>CHECK</b>", style_normal),
+                              Paragraph("<b>DESCRIPTION</b>", style_normal),
+                              Paragraph("<b>STATUS</b>", style_normal),
+                              Paragraph("<b>MESSAGES</b>", style_normal)]
+        check_data = [check_table_header]
 
-    text.append(Paragraph("", style_normal))
-    text.append(Paragraph("", style_normal))
-    text.append(Paragraph("", style_normal))
+        # Detail table data. Text colour is displayed based on check status.
+        for check in status["checks"]:
+            check_status = check["status"]
+            if check_status is None:
+                check_status = "skipped"
+            if check_status == "ok":
+                display_ident = Paragraph(check["check_ident"], style_check_default)
+                display_description = Paragraph(check["description"], style_check_default)
+                display_status = Paragraph("<b>" + check_status + "</b>", style_check_ok)
+            elif check_status in ["aborted", "failed", "error"]:
+                display_ident = Paragraph(check["check_ident"], style_check_failed)
+                display_status = Paragraph(check_status, style_check_failed)
+                display_description = Paragraph(check["description"], style_check_failed)
+            else:
+                display_ident = Paragraph(check["check_ident"], style_check_default)
+                display_status = Paragraph(check_status, style_check_default)
+                display_description = Paragraph(check["description"], style_check_default)
 
-    doc.build(text)
+            messages = check.get("messages", [])
+            if messages is None:
+                messages = []
+            display_messages = []
+            for message in messages:
+                display_messages.append(Paragraph(message, style_body))
+
+            check_info = [display_ident,
+                          display_description,
+                          display_status,
+                          display_messages
+                          ]
+            check_data.append(check_info)
+
+        detail_table=Table(check_data, hAlign="LEFT", colWidths=[90, None, 60, None])
+        detail_table_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
+                                         ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
+                                         ("VALIGN", (0, 0), (-1,-1), "TOP")])
+        detail_table.setStyle(detail_table_style)
+        text.append(detail_table)
+
+        text.append(Paragraph("", style_normal))
+        text.append(Paragraph("", style_normal))
+        text.append(Paragraph("", style_normal))
+
+        doc.build(text)
