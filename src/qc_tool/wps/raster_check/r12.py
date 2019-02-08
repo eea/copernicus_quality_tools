@@ -80,7 +80,10 @@ def run_check(params, status):
             inspire_ok = True
 
         if not inspire_ok:
-            status.failed("INSPIRE metadata is incomplete. See attached report for details.")
+            status.failed("Using INSPIRE validator service {:s}. "
+                          "INSPIRE metadata file {:s} is not valid or incomplete. "
+                          "See attached report for details."
+                          .format(METADATA_SERVICE_HOST, xml_filepath.name))
 
             # save the attachment to output directory.
             metadata_report_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_metadata_error.json")
