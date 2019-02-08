@@ -24,6 +24,7 @@ from qc_tool.common import load_check_defaults
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
 from qc_tool.common import strip_prefix
+from qc_tool.wps.report import write_pdf_report
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 from qc_tool.wps.registry import get_check_function
@@ -283,6 +284,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                 job_status["exception"] = format_exc()
             job_status["job_finish_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
             write_job_status(status_filepath, job_status)
+            write_pdf_report(status_filepath)
 
     return job_status
 

@@ -5,14 +5,8 @@ import json
 import sys
 import shutil
 import traceback
-import os
-import time
-import threading
-import uuid
-import zipfile
 
 from datetime import datetime
-from math import ceil
 from pathlib import Path
 from requests import get as requests_get
 from requests.exceptions import RequestException
@@ -25,8 +19,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied, ObjectDoesNotExist
 from django.core.files.storage import FileSystemStorage
 
-from django.http import HttpResponse
-from django.http import JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.utils import timezone
@@ -34,6 +27,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_attachment_filepath
+from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
@@ -381,7 +375,6 @@ def get_product_config(request, product_ident):
     product_config = load_product_definition(product_ident)
     return JsonResponse(product_config)
 
-@login_required
 def get_wps_status_xml(request, job_uuid):
     """
     Shows the WPS status xml document of the selected job.
@@ -390,15 +383,19 @@ def get_wps_status_xml(request, job_uuid):
     wps_status = wps_status_filepath.read_text()
     return HttpResponse(wps_status, content_type="application/xml")
 
-@login_required
-def get_result_json(request, job_uuid):
-    """
-    Shows the JSON status xml document of the selected job.
-    """
+def get_json_report(request, job_uuid):
     job_status_filepath = compose_job_status_filepath(job_uuid)
     job_status = job_status_filepath.read_text()
     job_status = json.loads(job_status)
     return JsonResponse(job_status, safe=False)
+
+def get_pdf_report(request, job_uuid):
+    report_filepath = compose_job_report_filepath(job_uuid)
+    try:
+        return FileResponse(open(str(report_filepath), "rb"), content_type='application/pdf')
+    except FileNotFoundError:
+        raise Http404()
+
 
 @login_required
 def get_attachment(request, job_uuid, attachment_filename):
@@ -443,17 +440,25 @@ def get_result(request, job_uuid):
         job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
         job_reference_year = job_status["reference_year"]
 
+        # Check existence of pdf report
+        pdf_report_filepath = compose_job_report_filepath(job_uuid)
+        if pdf_report_filepath.is_file():
+            pdf_report_exists = True
+        else:
+            pdf_report_exists = False
+
         context = {
-            'product_ident': job_status["product_ident"],
-            'product_description': job_status["description"],
-            'filepath': job_status["filename"],
-            'start_time': job_status["job_start_date"],
-            'end_time': job_end_date,
-            'reference_year': job_reference_year,
-            'result': {
-                'uuid': job_uuid,
-                'detail': job_status["checks"]
-            }
+            "product_ident": job_status["product_ident"],
+            "product_description": job_status["description"],
+            "filepath": job_status["filename"],
+            "start_time": job_status["job_start_date"],
+            "end_time": job_end_date,
+            "reference_year": job_reference_year,
+            "pdf_report_exists": pdf_report_exists,
+            "result": {
+                "uuid": job_uuid,
+                "detail": job_status["checks"]
+            },
         }
 
         # special case of system error: show error information from the WPS xml document
@@ -477,18 +482,18 @@ def get_result(request, job_uuid):
 
     else:
         context = {
-            'product_ident': None,
-            'product_description': None,
-            'filepath': None,
-            'start_time': None,
-            'end_time': None,
-            'result': {
-                'uuid': job_uuid,
-                'detail': []
+            "product_ident": None,
+            "product_description": None,
+            "filepath": None,
+            "start_time": None,
+            "end_time": None,
+            "pdf_report_exists": False,
+            "result": {
+                "uuid": job_uuid,
+                "detail": []
             }
         }
-    print(context)
-    return render(request, 'dashboard/result.html', context)
+    return render(request, "dashboard/result.html", context)
 
 
 @csrf_exempt
