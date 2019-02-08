@@ -27,7 +27,7 @@ def run_is_valid_check(cursor, status, layer_def):
     # Report items with invalid geometry.
     items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
     if items_message is not None:
-        status.aborted("Layer {:s} has invalid geometry in features with {:s}: {:s}."
+        status.failed("Layer {:s} has invalid geometry in features with {:s}: {:s}."
                        .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
         status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
