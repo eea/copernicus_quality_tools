@@ -24,13 +24,9 @@ class Command(BaseCommand):
         password = options['password']
         is_superuser = options['superuser']
 
-        print("username: {:s}".format(username))
-        print("password: {:s}".format(password))
-        print("superuser: {0}".format(is_superuser))
-
         # create the user
         if User.objects.filter(username=username).exists():
-            print("User not created. The user with username {:s} already exists.")
+            print("The user with username {:s} already exists.".format(username))
             return
 
         if is_superuser:

@@ -171,7 +171,7 @@ function delete_function(id, filename) {
                         $('#tbl-deliveries').bootstrapTable('refresh');
                         dialog.close();
                     },
-                    error: function(result)  { console.log("error deleting file!") ;  }
+                    error: function(result)  { q("error deleting file!") ;  }
                 })
             }
         }, {
@@ -236,33 +236,30 @@ function refresh_job_statuses() {
                     var row = hyperlink.parent().parent();
 
                     var index = row.attr("data-index");
-                    if (!index) {
-                        console.log(index);
-                        console.log(row.parent().html());
-                    }
-
                     var rowData = $("#tbl-deliveries").bootstrapTable('getData')[index];
 
                     // update QC status of the row.
-                    rowData.last_job_uuid = job_uuid;
-                    rowData.qc_status = data.job_status;
-                    rowData.last_job_status = data.job_status;
-                    rowData.percent = data.percent;
-                    rowData.is_submitted = data.is_submitted;
+                    if (rowData) {
+                        rowData.last_job_uuid = job_uuid;
+                        rowData.qc_status = data.job_status;
+                        rowData.last_job_status = data.job_status;
+                        rowData.percent = data.percent;
+                        rowData.is_submitted = data.is_submitted;
 
-                    // Update background colour of the status cell.
-                    var newCellStyle = statusCellStyle(rowData.qc_status, rowData, index);
-                    hyperlink.parent().toggleClass(newCellStyle.classes);
+                        // Update background colour of the status cell.
+                        var newCellStyle = statusCellStyle(rowData.qc_status, rowData, index);
+                        hyperlink.parent().toggleClass(newCellStyle.classes);
 
-                    // Redraw action buttons.
-                    var original_buttons = hyperlink.parent().parent().find(".btn-group");
-                    var new_buttons = actionsFormatter(null, rowData);
-                    original_buttons.replaceWith(new_buttons);
+                        // Redraw action buttons.
+                        var original_buttons = hyperlink.parent().parent().find(".btn-group");
+                        var new_buttons = actionsFormatter(null, rowData);
+                        original_buttons.replaceWith(new_buttons);
 
-                    // Update content of the status cell (status and percent).
-                    var new_status_cell = statusFormatter(rowData.qc_status, rowData);
-                    //hyperlink.text(new_status_cell.text());
-                    hyperlink.replaceWith(new_status_cell);
+                        // Update content of the status cell (status and percent).
+                        var new_status_cell = statusFormatter(rowData.qc_status, rowData);
+                        //hyperlink.text(new_status_cell.text());
+                        hyperlink.replaceWith(new_status_cell);
+                    }
                 }
             });
         }
@@ -273,5 +270,6 @@ $(document).ready(function(){
     $('[data-toggle="tooltip"]').tooltip();
 
     // start the timer for the deliveries. Check for updates every 5 seconds.
+    refresh_job_statuses();
     setInterval(function(){refresh_job_statuses();}, 5000);
 });
