@@ -457,7 +457,7 @@ class Test_run_is_valid_check(VectorCheckTestCase):
                             "'POLYGON((0 0, 2 0, 1 1, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))', 4326));")
         status = self.status_class()
         run_is_valid_check(self.cursor, status, self.layer_def)
-        self.assertEqual("aborted", status.status)
+        self.assertEqual("failed", status.status)
 
     def test_aborted(self):
         from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
@@ -465,7 +465,7 @@ class Test_run_is_valid_check(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText('POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', 4326));")
         status = self.status_class()
         run_is_valid_check(self.cursor, status, self.layer_def)
-        self.assertEqual("aborted", status.status)
+        self.assertEqual("failed", status.status)
 
 
 class TestV5(VectorCheckTestCase):
