@@ -1,4 +1,4 @@
-Django==2.0.10
+Django==2.0.11
 pytz==2018.4
 lxml
 requests
