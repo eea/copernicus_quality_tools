@@ -64,79 +64,31 @@ def compile_check_suite(product_ident, product_definition, optional_check_idents
     return check_suite, skipped_idents
 
 def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fid_name, output_dir):
-    connection = connection_manager.get_connection()
     (dsn, schema) = connection_manager.get_dsn_schema()
     conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
-    csv_filepath = output_dir.joinpath("{:s}.csv".format(error_table_name))
     shp_filepath = output_dir.joinpath("{:s}.shp".format(error_table_name))
     zip_filepath = output_dir.joinpath("{:s}.zip".format(error_table_name))
 
-    # Extract column names of the error table.
-    with closing(connection.cursor()) as cursor:
-        cursor.execute("SELECT * FROM {:s};".format(error_table_name))
-        column_names = [column.name for column in cursor.description]
-        column_names.sort()
-
-    # Prepare sql command for ogr2ogr.
-    if len(column_names) == 0:
-        raise QCException("Error table {:s} has no column.".format(error_table_name))
-    if len(column_names) == 1:
-        # Error table contains one column of feature fids.
-        ogr2ogr_sql = ("SELECT *"
-                       " FROM {src_table_name:s}"
-                       " WHERE {pg_fid_name:s} IN"
-                        " (SELECT {column_0:s}"
-                         " FROM {error_table_name:s})"
-                       " ORDER BY {pg_fid_name:s};")
-        ogr2ogr_sql = ogr2ogr_sql.format(src_table_name=src_table_name,
-                                         pg_fid_name=pg_fid_name,
-                                         column_0=column_names[0],
-                                         error_table_name=error_table_name)
-    elif len(column_names) == 2:
-        # Error table contains two columns representing pairs of feature fids.
-        ogr2ogr_sql = ("SELECT *"
-                       " FROM {src_table_name:s}"
-                       " WHERE {pg_fid_name:s} IN"
-                        " (SELECT {column_0:s}"
-                         " FROM {error_table_name:s} "
-                         " UNION"
-                         " SELECT {column_1:s} "
-                         " FROM {error_table_name:s})"
-                       " ORDER BY {pg_fid_name:s};")
-        ogr2ogr_sql = ogr2ogr_sql.format(src_table_name=src_table_name,
-                                         pg_fid_name=pg_fid_name,
-                                         column_0=column_names[0],
-                                         column_1=column_names[1],
-                                         error_table_name=error_table_name)
-    else:
-        raise QCException("Error table {:s} has unexpected columns: {:s}.".format(error_table_name,
-                                                                                  repr(column_names)))
-    # Export error table content into csv.
-    sql = "SELECT * FROM {:s} ORDER BY {:s};".format(error_table_name, ", ".join(column_names))
-    with closing(connection.cursor()) as cursor:
-        cursor.execute(sql)
-        with closing(open(str(csv_filepath), 'w')) as csv_file:
-            csv_writer = csv.writer(csv_file)
-            csv_writer.writerows(cursor.fetchall())
-
     # Export error features into shp.
+    sql_params = {"fid_name": pg_fid_name,
+                  "src_table": src_table_name,
+                  "error_table": error_table_name}
+    sql = ("SELECT *"
+           " FROM {src_table}"
+           " WHERE {fid_name} IN (SELECT {fid_name} FROM {error_table})"
+           " ORDER BY {fid_name};")
+    sql = sql.format(**sql_params)
     args = ["ogr2ogr",
             "-f", "ESRI Shapefile",
-            "-sql", ogr2ogr_sql,
+            "-sql", sql,
             str(shp_filepath),
             conn_string]
     run(args)
 
-    # Gather all files to be zipped.
+    # Zip the files.
     filepaths_to_zip = [f for f in output_dir.iterdir() if f.stem == error_table_name]
-
-    # Ensure csv and shp files are present.
-    if csv_filepath not in filepaths_to_zip:
-        raise QCException("Dumped csv file {:s} is missing.".format(csv_filepath))
     if shp_filepath not in filepaths_to_zip:
         raise QCException("Dumped shp file {:s} is missing.".format(shp_filepath))
-
-    # Zip the files.
     with ZipFile(str(zip_filepath), "w") as zf:
         for filepath in filepaths_to_zip:
             zf.write(str(filepath), filepath.name)

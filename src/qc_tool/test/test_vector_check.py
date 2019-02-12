@@ -1091,9 +1091,9 @@ class Test_v12_ua(VectorCheckTestCase):
 class Test_v13(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE test_layer_1 (fid integer, wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("CREATE TABLE test_layer_2 (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, wkb_geometry geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "test_layer_1",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"},
@@ -1104,31 +1104,30 @@ class Test_v13(VectorCheckTestCase):
 
     def test_non_overlapping(self):
         from qc_tool.wps.vector_check.v13 import run_check
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                      " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
-                                                      " (3, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
-                                                      " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
-        cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                      " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                           " (3, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
+                                                           " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_overlapping_fails(self):
         from qc_tool.wps.vector_check.v13 import run_check
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                      " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
-        cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                      " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
-                                                      " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
+                                                           " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        result = {"Layer test_layer_1 has overlapping pairs in features with row number: 1-5.",
-                  "Layer test_layer_2 has overlapping pairs in features with row number: 1-5, 1-6, 5-6."}
-        self.assertSetEqual(result, set(status.messages))
+        self.cursor.execute("SELECT fid FROM v13_test_layer_1_error ORDER BY fid;")
+        self.assertListEqual([(1,), (5,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM v13_test_layer_2_error ORDER BY fid;")
+        self.assertListEqual([(1,), (5,), (6,)], self.cursor.fetchall())
 
 
 class Test_v14(VectorCheckTestCase):

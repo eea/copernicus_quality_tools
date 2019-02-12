@@ -13,27 +13,20 @@ from qc_tool.common import FAILED_ITEMS_LIMIT
 def do_layers(params):
     return [params["layer_defs"][layer_alias] for layer_alias in params["layers"]]
 
-def shorten_failed_items_message(items, count):
-    if len(items) == 0:
-        return None
-    message = ", ".join(map(str, items))
-    if count > len(items):
-        message += " and {:d} others".format(count - len(items))
-    return message
-
 def get_failed_items_message(cursor, error_table_name, pg_fid_name, limit=FAILED_ITEMS_LIMIT):
+    # Get failed items.
     sql = "SELECT {0:s} FROM {1:s} ORDER BY {0:s};".format(pg_fid_name, error_table_name)
     cursor.execute(sql)
-    failed_items = [row[0] for row in cursor.fetchmany(limit)]
-    failed_items_message = shorten_failed_items_message(failed_items, cursor.rowcount)
-    return failed_items_message
+    items = [row[0] for row in cursor.fetchmany(limit)]
+    if len(items) == 0:
+        return None
 
-def get_failed_pairs_message(cursor, error_table_name, pg_fid_name, limit=FAILED_ITEMS_LIMIT):
-    sql = "SELECT a_{0:s}, b_{0:s} FROM {1:s} ORDER BY a_{0:s}, b_{0:s};".format(pg_fid_name, error_table_name)
-    cursor.execute(sql)
-    failed_pairs = ["{:s}-{:s}".format(str(row[0]), str(row[1])) for row in cursor.fetchmany(limit)]
-    failed_pairs_message = shorten_failed_items_message(failed_pairs, cursor.rowcount)
-    return failed_pairs_message
+    # Prepare and shorten the message.
+    message = ", ".join(map(str, items))
+    if cursor.rowcount > len(items):
+        message += " and {:d} others".format(cursor.rowcount - len(items))
+
+    return message
 
 def zip_shapefile(shp_filepath):
     # Gather all files to be zipped.
