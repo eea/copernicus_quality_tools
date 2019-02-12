@@ -102,9 +102,11 @@
                    </tbody>
                 </table>
                 <br>
-
-                <a href="/data/result/{{ result.uuid }}/">Show Detailed JSON Report..</a>
-                &nbsp;&nbsp;<a href="/data/wps_status/{{ result.uuid }}/">Show XML Report..</a>
+                {% if pdf_report_exists %}
+                    <a href="/data/result/{{ result.uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
+                {% endif %}
+                  <span>    </span><a href="/data/result/{{ result.uuid }}/">JSON Report</a>&nbsp;&nbsp;&nbsp;
+                &nbsp;&nbsp;<span>    </span><a href="/data/wps_status/{{ result.uuid }}/">XML Report</a>
 
             </div>
 

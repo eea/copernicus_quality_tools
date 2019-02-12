@@ -162,6 +162,11 @@ def compose_job_dir(job_uuid):
     job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
     return job_dir
 
+def compose_job_report_filepath(job_uuid):
+    job_dir = compose_job_dir(job_uuid)
+    job_report_filepath = job_dir.joinpath("report.pdf")
+    return job_report_filepath
+
 def compose_job_status_filepath(job_uuid):
     job_dir = compose_job_dir(job_uuid)
     job_status_filepath = job_dir.joinpath("status.json")
