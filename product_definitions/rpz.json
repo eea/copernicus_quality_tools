@@ -119,11 +119,14 @@
       }
     },
     {
-      "check_ident": "v14",
+      "check_ident": "v14_rpz",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "code_column_names": ["MAES_4"]
+        "code_column_name": "MAES_4",
+        "exception_comments": ["Braided river",
+                               "Different water levels",
+                               "Flooded area"]
       }
     },
     {

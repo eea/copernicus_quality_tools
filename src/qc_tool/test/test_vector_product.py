@@ -117,13 +117,13 @@ class Test_rpz(ProductTestCase):
                                    "v11_rpz": "ok",
                                    "v12": "ok",
                                    "v13": "ok",
-                                   "v14": "ok",
+                                   "v14_rpz": "ok",
                                    "v15": "skipped"}  # v15 is intentionally skipped.
         job_status = dispatch(self.job_uuid,
                               "user_name",
                               self.filepath,
                               "rpz",
-                              ["v5", "v6", "v8", "v10_unit", "v11_rpz", "v12", "v13", "v14"])
+                              ["v5", "v6", "v8", "v10_unit", "v11_rpz", "v12", "v13", "v14_rpz"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)

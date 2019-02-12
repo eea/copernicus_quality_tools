@@ -1131,7 +1131,7 @@ class Test_v13(VectorCheckTestCase):
         self.assertSetEqual(result, set(status.messages))
 
 
-class TestV14(VectorCheckTestCase):
+class Test_v14(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.v14 import run_check
@@ -1202,6 +1202,52 @@ class TestV14(VectorCheckTestCase):
         status = self.status_class()
         self.run_check(self.params, status)
         self.assertEqual("failed", status.status)
+
+
+class Test_v14_rpz(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz_layer",
+                                                   "pg_fid_name": "fid",
+                                                   "fid_display_name": "row number"}},
+                            "layers": ["rpz"],
+                            "code_column_name": "code",
+                            "exception_comments": ["Comment 1", "Comment 2"]})
+        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), ua char(1), comment varchar, wkb_geometry geometry(Polygon, 4326));")
+
+    def test(self):
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'U', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', 'U', NULL, ST_MakeEnvelope(1, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', NULL, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', NULL, NULL, ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', NULL, NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (6, 'C', NULL, NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
+
+        from qc_tool.wps.vector_check.v14_rpz import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.cursor.execute("SELECT fid FROM v14_rpz_layer_exception ORDER BY fid;")
+        self.assertListEqual([], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM v14_rpz_layer_error ORDER BY fid;")
+        self.assertListEqual([(4,), (5,)], self.cursor.fetchall())
+
+    def test_comments(self):
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', NULL, 'Comment 1', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', NULL, 'Comment 2', ST_MakeEnvelope(1, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', NULL, 'Comment 1', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', NULL, 'hu', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'U', 'Comment 1', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+
+        from qc_tool.wps.vector_check.v14_rpz import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT fid FROM v14_rpz_layer_exception ORDER BY fid;")
+        self.assertListEqual([(1,), (2,), (3,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM v14_rpz_layer_error ORDER BY fid;")
+        self.assertListEqual([], self.cursor.fetchall())
 
 
 class TestV15(VectorCheckTestCase):

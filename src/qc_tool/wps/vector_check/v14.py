@@ -5,29 +5,8 @@
 import re
 
 from qc_tool.wps.helper import do_layers
-from qc_tool.wps.helper import get_failed_pairs_message
+from qc_tool.wps.helper import get_failed_items_message
 from qc_tool.wps.registry import register_check_function
-
-
-def create_all_breaking_neighbcode(cursor, pg_fid_name, pg_layer_name, error_table_name, code_column_names, exclude_codes):
-    pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_column_name) for code_column_name in code_column_names)
-    exclude_clause = " AND ".join("ta.{0:s} NOT LIKE '{1:s}'".format(code_column_name, exclude_code)
-                                  for code_column_name in code_column_names
-                                  for exclude_code in exclude_codes)
-    if len(exclude_clause) > 0:
-        exclude_clause = " AND " + exclude_clause
-    sql = ("CREATE TABLE {0:s} AS"
-           "  SELECT ta.{1:s} a_{1:s}, tb.{1:s} b_{1:s}"
-           "  FROM {2:s} ta"
-           "    INNER JOIN {2:s} tb ON ta.{1:s} < tb.{1:s}"
-           "  WHERE"
-           "    {3:s}"
-           "    {4:s}"
-           "    AND ta.wkb_geometry && tb.wkb_geometry"
-           "    AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1;")
-    sql = sql.format(error_table_name, pg_fid_name, pg_layer_name, pair_clause, exclude_clause)
-    cursor.execute(sql)
-    return cursor.rowcount
 
 
 @register_check_function(__name__)
@@ -35,16 +14,46 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):
-        exclude_codes = params.get("exclude_codes", [])
-        error_table_name = "v14_{:s}_error".format(layer_def["pg_layer_name"])
-        error_count = create_all_breaking_neighbcode(cursor,
-                                                     layer_def["pg_fid_name"],
-                                                     layer_def["pg_layer_name"],
-                                                     error_table_name,
-                                                     params["code_column_names"],
-                                                     exclude_codes)
-        if error_count > 0:
-            failed_pairs_message = get_failed_pairs_message(cursor, error_table_name, layer_def["pg_fid_name"])
-            status.failed("Layer {:s} has neighbouring polygons with the same codes in features with {:s}: {:s}."
-                          .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], failed_pairs_message))
-            status.add_error_table(error_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+        # Prepare clause excluding features with specific codes.
+        exclude_clause = " AND ".join("{0:s} NOT LIKE '{1:s}'".format(code_column_name, exclude_code)
+                                      for code_column_name in params["code_column_names"]
+                                      for exclude_code in params.get("exclude_codes", []))
+        if len(exclude_clause) > 0:
+            exclude_clause = " WHERE " + exclude_clause
+
+        # Prepare clause for pairing features.
+        pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_column_name)
+                                   for code_column_name in params["code_column_names"])
+        if len(pair_clause) > 0:
+            pair_clause = " AND " + pair_clause
+
+        # Prepare parameters for sql query.
+        sql_params = {"fid_name": layer_def["pg_fid_name"],
+                      "layer_name": layer_def["pg_layer_name"],
+                      "error_table": "v14_{:s}_error".format(layer_def["pg_layer_name"]),
+                      "pair_clause": pair_clause,
+                      "exclude_clause": exclude_clause}
+
+        # Create table of error items.
+        sql = ("CREATE TABLE {error_table} AS"
+               " WITH"
+               "  layer AS ("
+               "   SELECT *"
+               "   FROM {layer_name}"
+               "   {exclude_clause})"
+               " SELECT DISTINCT ta.{fid_name} AS {fid_name}"
+               " FROM layer ta, layer tb"
+               " WHERE"
+               "  ta.{fid_name} <> tb.{fid_name}"
+               "  {pair_clause}"
+               "  AND ta.wkb_geometry && tb.wkb_geometry"
+               "  AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1;")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # Report error items.
+        items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
+        if items_message is not None:
+            status.failed("Layer {:s} has error features with {:s}: {:s}."
+                          .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+            status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])

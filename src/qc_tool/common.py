@@ -60,6 +60,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v12_ua": "Minimum mapping width (ua product).",
     "v13": "There are no overlapping polygons.",
     "v14": "No neighbouring polygons with the same code.",
+    "v14_rpz": "No neighbouring polygons with the same code, Riparian zones.",
     "v15": "Vector metadata is compliant with INSPIRE specifications.",
     "r_unzip": "Unzips the source file.",
     "r1": "File format is allowed.",
