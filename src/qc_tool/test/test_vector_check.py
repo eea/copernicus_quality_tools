@@ -477,11 +477,10 @@ class TestV5(VectorCheckTestCase):
         self.assertEqual(1, len(status.messages))
 
 
-class TestV6(VectorCheckTestCase):
+class Test_v6(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
-        self.params.update({"codes": {"CLC":['111','112'], "INTEGER_CODES":[1, 2, 3, 4]}})
 
     def test_string_codes(self):
         from qc_tool.wps.vector_check.v6 import run_check
@@ -495,7 +494,7 @@ class TestV6(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_18", "CLC"]]})
+                            "column_defs": [["code_18", ["111", "112"]]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -512,7 +511,7 @@ class TestV6(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", "INTEGER_CODES"]]})
+                            "column_defs": [["code_12", [1, 2, 3, 4]]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -529,7 +528,7 @@ class TestV6(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", "INTEGER_CODES"]]})
+                            "column_defs": [["code_12", [1, 2, 3, 4]]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -546,7 +545,7 @@ class TestV6(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", "CLC"], ["code_18", "CLC"]]})
+                            "column_defs": [["code_12", ["111", "112"]], ["code_18", ["111", "112"]]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -563,7 +562,7 @@ class TestV6(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", "CLC"], ["code_18", "CLC"]]})
+                            "column_defs": [["code_12", ["111", "112"]], ["code_18", ["111", "112"]]]})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)

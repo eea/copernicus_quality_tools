@@ -11,7 +11,6 @@ from pathlib import Path
 # FIXME: such normalization should be removed in python3.6.
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
 PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
-CHECK_DEFAULTS_FILEPATH = PRODUCT_DIR.joinpath("_check_defaults.json")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
 JOB_INPUT_DIRNAME = "input.d"
@@ -150,11 +149,6 @@ def prepare_empty_job_status(product_ident):
                       "attachment_filenames": None}
         status["checks"].append(check_item)
     return status
-
-def load_check_defaults():
-    check_defaults = CHECK_DEFAULTS_FILEPATH.read_text()
-    check_defaults = json.loads(check_defaults)
-    return check_defaults
 
 def compose_job_dir(job_uuid):
     job_subdir_tpl = "job_{:s}"

@@ -1,7 +1,5 @@
 {
   "description": "HRL Tree Cover Density (100m)",
-  "parameters": {
-  },
   "checks": [
     {
       "check_ident": "r_unzip",
@@ -11,14 +9,34 @@
       "check_ident": "r1",
       "required": true,
       "parameters": {
-        "formats": [".tif"]
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
       }
     },
     {
       "check_ident": "r2",
       "required": true,
       "parameters": {
-        "file_name_regex": "^tcd_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$"
+        "file_name_regex": "^tcd_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$",
+        "extensions": [".tif", ".tfw", ".xml|.tif.xml", ".tif.vat.dbf"],
+        "country_codes": ["al", "at",
+                          "ba", "be", "bg",
+                          "ch", "cy", "cz",
+                          "de", "dk",
+                          "ee", "es", "es_cn", "eu",
+                          "fi", "fr", "fr_glp", "fr_guf", "fr_mtq", "fr_myt", "fr_reu",
+                          "gr",
+                          "hr", "hu",
+                          "ie", "is", "it",
+                          "li", "lt", "lu", "lv",
+                          "me", "mk", "mt",
+                          "nl", "no",
+                          "pl", "pt", "pt_raa", "pt_ram", "pt_raa_ceg", "pt_raa_weg",
+                          "ro",
+                          "se", "si", "sk",
+                          "tr",
+                          "uk", "uk_ni", "uk_ge", "uk_je",
+                          "xk"]
       }
     },
     {

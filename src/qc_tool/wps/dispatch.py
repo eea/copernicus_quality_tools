@@ -20,10 +20,8 @@ from qc_tool.common import STATUS_RUNNING_LABEL
 from qc_tool.common import STATUS_SKIPPED_LABEL
 from qc_tool.common import STATUS_TIME_FORMAT
 from qc_tool.common import compose_job_status_filepath
-from qc_tool.common import load_check_defaults
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_empty_job_status
-from qc_tool.common import strip_prefix
 from qc_tool.wps.report import write_pdf_report
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
@@ -150,7 +148,6 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
             job_status_check_idx = {check["check_ident"]: check for check in job_status["checks"]}
 
             # Read configurations.
-            check_defaults = load_check_defaults()
             product_definition = load_product_definition(product_ident)
 
             check_suite, skipped_idents = compile_check_suite(product_ident, product_definition, optional_check_idents)
@@ -180,12 +177,6 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
 
                 # Prepare parameters.
                 check_params = {}
-                check_params.update(check_defaults["globals"])
-                short_check_ident = strip_prefix(check["check_ident"])
-                if short_check_ident in check_defaults["checks"]:
-                    check_params.update(check_defaults["checks"][short_check_ident])
-                if "parameters" in product_definition:
-                    check_params.update(product_definition["parameters"])
                 if "parameters" in check:
                     check_params.update(check["parameters"])
                 check_params.update(job_params)

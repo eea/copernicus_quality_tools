@@ -10,6 +10,7 @@ from qc_tool.wps.registry import register_check_function
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
+        # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "error_table": "v13_{:s}_error".format(layer_def["pg_layer_name"])}
