@@ -15,7 +15,8 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "error_table": "v_import2pg_{:s}_invalid".format(layer_def["pg_layer_name"])}
+                      "error_table": "v9_{:s}_invalid".format(layer_def["pg_layer_name"]),
+                      "detail_table": "v9_{:s}_detail".format(layer_def["pg_layer_name"])}
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
@@ -31,3 +32,17 @@ def run_check(params, status):
             status.failed("Layer {:s} has invalid geometry in features with {:s}: {:s}."
                           .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+
+            # Create table of descriptions of invalid geometries.
+            sql = ("CREATE TABLE {detail_table} AS"
+                   " SELECT"
+                   "  {fid_name},"
+                   "  (ST_IsValidDetail(wkb_geometry)).reason AS reason,"
+                   "  ST_AsText((ST_IsValidDetail(wkb_geometry)).location)"
+                   " FROM {layer_name}"
+                   " WHERE NOT ST_IsValid(wkb_geometry);")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+            # Report table of descriptions.
+            status.add_full_table(sql_params["detail_table"])
