@@ -82,6 +82,13 @@
       }
     },
     {
+      "check_ident": "v9",
+      "required": false,
+      "parameters": {
+        "layers": ["rpz"]
+      }
+    },
+    {
       "check_ident": "v10_unit",
       "required": false,
       "parameters": {

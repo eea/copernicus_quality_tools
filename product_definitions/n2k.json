@@ -90,6 +90,13 @@
       }
     },
     {
+      "check_ident": "v9",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
       "check_ident": "v10_unit",
       "required": false,
       "parameters": {

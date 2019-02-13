@@ -28,6 +28,7 @@ class Test_clc(ProductTestCase):
                                    "initial.v6": "ok",
                                    "change.v6": "ok",
                                    "v8": "ok",
+                                   "v9": "ok",
                                    "v10": "ok",
                                    "v11_clc_status": "ok",
                                    "v11_clc_change": "ok",
@@ -47,6 +48,7 @@ class Test_clc(ProductTestCase):
                                "initial.v6",
                                "change.v6",
                                "v8",
+                               "v9",
                                "v10",
                                "v11_clc_status",
                                "v11_clc_change",
@@ -85,6 +87,7 @@ class Test_n2k(ProductTestCase):
                                    "v5": "ok",
                                    "v6": "ok",
                                    "v8": "ok",
+                                   "v9": "ok",
                                    "v10_unit": "ok",
                                    "v11_n2k": "ok",
                                    "v12": "ok",
@@ -95,7 +98,7 @@ class Test_n2k(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "n2k",
-                              ["v5", "v6", "v8", "v10_unit", "v11_n2k", "v12", "v13", "v14"])
+                              ["v5", "v6", "v8", "v9", "v10_unit", "v11_n2k", "v12", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -113,6 +116,7 @@ class Test_rpz(ProductTestCase):
                                    "v5": "ok",
                                    "v6": "ok",
                                    "v8": "ok",
+                                   "v9": "ok",
                                    "v10_unit": "ok",
                                    "v11_rpz": "ok",
                                    "v12": "ok",
@@ -123,7 +127,7 @@ class Test_rpz(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "rpz",
-                              ["v5", "v6", "v8", "v10_unit", "v11_rpz", "v12", "v13", "v14_rpz"])
+                              ["v5", "v6", "v8", "v9", "v10_unit", "v11_rpz", "v12", "v13", "v14_rpz"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -141,6 +145,7 @@ class Test_ua_shp(ProductTestCase):
                                    "v5": "ok",
                                    "v6": "ok",
                                    "v8": "ok",
+                                   "v9": "ok",
                                    "v10": "ok",
                                    "v11_ua_status": "ok",
                                    "v12_ua": "ok",
@@ -152,7 +157,7 @@ class Test_ua_shp(ProductTestCase):
                               "user_name",
                               self.filepath,
                               "ua_2012_shp_wo_revised",
-                              ["v5", "v6", "v8", "v10", "v11_ua_status", "v12_ua", "v13", "v14"])
+                              ["v5", "v6", "v8", "v9", "v10", "v11_ua_status", "v12_ua", "v13", "v14"])
         check_statuses = dict((check_status["check_ident"], check_status["status"])
                               for check_status in job_status["checks"])
         self.assertDictEqual(expected_check_statuses, check_statuses)
@@ -175,6 +180,7 @@ class Test_ua_gdb(ProductTestCase):
                                    "revised.v6": "ok",
                                    "combined_change.v6": "ok",
                                    "v8": "ok",
+                                   "v9": "ok",
                                    "v10": "failed",  # FIXME replace KOBENHAVN boundary layer
                                    "reference.v11_ua_status": "ok",
                                    "revised.v11_ua_status": "ok",
@@ -194,6 +200,7 @@ class Test_ua_gdb(ProductTestCase):
                                "revised.v6",
                                "combined_change.v6",
                                "v8",
+                               "v9",
                                "v10",
                                "reference.v11_ua_status",
                                "revised.v11_ua_status",

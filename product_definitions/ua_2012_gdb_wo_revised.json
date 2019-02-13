@@ -75,6 +75,13 @@
       }
     },
     {
+      "check_ident": "v9",
+      "required": false,
+      "parameters": {
+        "layers": ["boundary", "reference"]
+      }
+    },
+    {
       "check_ident": "v10",
       "required": false,
       "parameters": {

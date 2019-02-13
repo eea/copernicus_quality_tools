@@ -434,40 +434,6 @@ class Test_v_import2pg(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
 
-class Test_run_is_valid_check(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
-        self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer (fid integer, wkb_geometry geometry(Polygon, 4326));")
-        self.cursor.execute("INSERT INTO test_layer VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.layer_def = {"pg_fid_name": "fid",
-                          "pg_layer_name": "test_layer",
-                          "fid_display_name": "row number"}
-
-    def test(self):
-        from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
-        status = self.status_class()
-        run_is_valid_check(self.cursor, status, self.layer_def)
-        self.assertEqual("ok", status.status)
-
-    def test_intersecting_ring_forming_hole(self):
-        from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
-        # ESRI shapefile allows this, OGC simple features does not. Requirement is to follow OGC specification.
-        self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText("
-                            "'POLYGON((0 0, 2 0, 1 1, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))', 4326));")
-        status = self.status_class()
-        run_is_valid_check(self.cursor, status, self.layer_def)
-        self.assertEqual("failed", status.status)
-
-    def test_aborted(self):
-        from qc_tool.wps.vector_check.v_import2pg import run_is_valid_check
-        # Insert self-intersecting polygon.
-        self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText('POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', 4326));")
-        status = self.status_class()
-        run_is_valid_check(self.cursor, status, self.layer_def)
-        self.assertEqual("failed", status.status)
-
-
 class TestV5(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
@@ -637,6 +603,40 @@ class TestV8(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"]})
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+
+
+class Test_v9(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.params.update({"layer_defs": {"test": {"pg_fid_name": "fid",
+                                                    "pg_layer_name": "test_layer",
+                                                    "fid_display_name": "row number"}},
+                            "layers": ["test"]})
+
+    def test(self):
+        from qc_tool.wps.vector_check.v9 import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_intersecting_ring_forming_hole_fails(self):
+        """ESRI shapefile allows this, OGC simple features does not. Requirement is to follow OGC specification."""
+        from qc_tool.wps.vector_check.v9 import run_check
+        self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText("
+                            "'POLYGON((0 0, 2 0, 1 1, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))', 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+
+    def test_self_intersecting_ring_fails(self):
+        from qc_tool.wps.vector_check.v9 import run_check
+        self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText('POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', 4326));")
+        status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
 

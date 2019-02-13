@@ -117,6 +117,13 @@
       }
     },
     {
+      "check_ident": "v9",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
+    },
+    {
       "check_ident": "v10",
       "required": false,
       "parameters": {

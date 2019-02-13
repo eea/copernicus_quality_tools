@@ -47,7 +47,7 @@ CHECK_FUNCTION_DESCRIPTIONS = {
     "v6": "Valid codes check.",
     "v7": "Non-probable changes.",
     "v8": "No multipart polygons.",
-    "v9": "(no description)",
+    "v9": "The geometries are valid.",
     "v10": "Completeness.",
     "v10_unit": "Completeness, multiple boundary units.",
     "v11_clc_change": "Minimum mapping unit check, Corine Land Cover change layer.",
