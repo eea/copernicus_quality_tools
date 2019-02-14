@@ -14,20 +14,34 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
         for column_name, allowed_codes in params["column_defs"]:
+
+            # Prepare clause excluding features with non-null value of specific column.
+            if "exclude_column_name" in params:
+                exclude_clause = " WHERE {:s} IS NULL".format(params["exclude_column_name"])
+            else:
+                exclude_clause = ""
+
             # Prepare parameters used in sql clauses.
             sql_params = {"fid_name": layer_def["pg_fid_name"],
                           "layer_name": layer_def["pg_layer_name"],
                           "column_name": column_name,
+                          "exclude_clause": exclude_clause,
                           "error_table": "v6_{:s}_{:s}_error".format(layer_def["pg_layer_name"], column_name)}
 
             # Create table of error items.
-            sql = ("CREATE TABLE {error_table} AS"
+            # Create table of error items.
+            sql = ("  CREATE TABLE {error_table} AS"
+                   "   WITH"
+                   "   layer AS ("
+                   "    SELECT *"
+                   "    FROM {layer_name}"
+                   "    {exclude_clause})"
                    "  SELECT {fid_name}"
-                   "  FROM {layer_name}"
-                   "  WHERE"
-                   "    {column_name} IS NULL"
-                   "    OR {column_name} NOT IN %s;")
+                   "  FROM layer"
+                   "  WHERE layer.{column_name} IS NULL"
+                   "   OR layer.{column_name} NOT IN %s")
             sql = sql.format(**sql_params)
+
             cursor.execute(sql, [tuple(allowed_codes)])
 
             # Report error items.

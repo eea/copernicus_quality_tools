@@ -568,6 +568,43 @@ class Test_v6(VectorCheckTestCase):
         self.assertEqual("failed", status.status)
         self.assertEqual(1, len(status.messages))
 
+    def test_exclude(self):
+        from qc_tool.wps.vector_check.v6 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE my_table (fid integer, "
+                       "code varchar, ua varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO my_table VALUES (1, 'a', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 'b', NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 'x', 'ua2012', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "my_table",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "column_defs": [["code", ["a", "b"]]],
+                            "exclude_column_name": "ua"})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_exclude_fail(self):
+        from qc_tool.wps.vector_check.v6 import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE my_table (fid integer, "
+                       "code varchar, ua varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO my_table VALUES (1, 'a', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 'x', NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 'x', 'ua2006', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "my_table",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "column_defs": [["code", ["a", "b"]]],
+                            "exclude_column_name": "ua"})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(1, len(status.messages))
+
 
 class TestV8(VectorCheckTestCase):
     def setUp(self):
