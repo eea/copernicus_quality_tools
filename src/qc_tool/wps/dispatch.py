@@ -86,7 +86,7 @@ def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fi
     # Zip the files.
     filepaths_to_zip = [f for f in output_dir.iterdir() if f.stem == error_table_name]
     if shp_filepath not in filepaths_to_zip:
-        raise QCException("Dumped shp file {:s} is missing.".format(shp_filepath))
+        raise QCException("Dumped shp file {:s} is missing.".format(str(shp_filepath)))
     with ZipFile(str(zip_filepath), "w") as zf:
         for filepath in filepaths_to_zip:
             zf.write(str(filepath), filepath.name)
@@ -117,7 +117,7 @@ def dump_full_table(connection_manager, table_name, output_dir):
 
     # Ensure shp files are present.
     if shp_filepath not in filepaths_to_zip:
-        raise QCException("Dumped shp file {:s} is missing.".format(shp_filepath))
+        raise QCException("Dumped shp file {:s} is missing.".format(str(shp_filepath)))
 
     # Zip the files.
     with ZipFile(str(zip_filepath), "w") as zf:

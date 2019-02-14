@@ -38,7 +38,7 @@ def run_check(params, status):
                    " SELECT"
                    "  {fid_name},"
                    "  (ST_IsValidDetail(wkb_geometry)).reason AS reason,"
-                   "  ST_AsText((ST_IsValidDetail(wkb_geometry)).location)"
+                   "  (ST_IsValidDetail(wkb_geometry)).location AS location"
                    " FROM {layer_name}"
                    " WHERE NOT ST_IsValid(wkb_geometry);")
             sql = sql.format(**sql_params)
