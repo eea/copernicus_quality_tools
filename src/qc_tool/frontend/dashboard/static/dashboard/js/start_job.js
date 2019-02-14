@@ -41,7 +41,7 @@ function display_product_info(product_ident) {
                 tbody += "<td>" + checks[i].check_ident + "</td>";
 
                 tbody += "<td>" + checks[i].description + "</td>";
-                tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + checks[i].check_ident + '" checked';
+                tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + i + '" checked';
                 if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
                     tbody += " disabled";
                 }
@@ -137,20 +137,18 @@ function run_checks() {
     var run_url = "/run_wps_execute";
 
     // retrieve the checkboxes
-    var selected_checks = [];
+    var unselected_checks = [];
     $ ('tbody tr').each(function() {
         var checkbox = $(this).find('input');
-        is_checked = checkbox.prop('checked');
-        is_disabled = checkbox.prop('disabled');
-        if (!is_disabled && is_checked) {
-            selected_checks.push(checkbox.val());
+        if (!checkbox.prop('checked')) {
+            unselected_checks.push(checkbox.val());
         }
     });
 
     var data = {
         "product_ident": $("#select_product").val(),
         "filepath": $("#current_username").val() + "/" + $("#preselected_file").val(),
-        "optional_check_idents": selected_checks.join(",")
+        "skip_steps": unselected_checks.join(",")
     };
 
     $.ajax({
