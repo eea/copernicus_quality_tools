@@ -21,14 +21,14 @@ from qc_tool.common import STATUS_SKIPPED_LABEL
 from qc_tool.common import STATUS_TIME_FORMAT
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import load_product_definition
-from qc_tool.common import prepare_empty_job_status
+from qc_tool.common import prepare_job_result
 from qc_tool.wps.report import write_pdf_report
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 from qc_tool.wps.registry import get_check_function
 
 
-def write_job_status(filepath, data):
+def write_job_result(filepath, data):
     # We write the status to pre file and then rename it in order to eliminate
     # race condition if somebody just reads the file.
     pre_filepath = filepath.with_name("{:s}.pre".format(filepath.name))
@@ -42,24 +42,6 @@ def make_signature(filepath):
         for buf in iter(partial(f.read, HASH_BUFFER_SIZE), b''):
             h.update(buf)
     return h.hexdigest()
-
-def compile_check_suite(product_ident, product_definition, optional_check_idents):
-    optional_check_idents = set(optional_check_idents)
-    defined_optional_check_idents = {check["check_ident"]
-                                     for check in product_definition["checks"] if not check["required"]}
-
-    # Ensure passed optional checks take part in product.
-    incorrect_check_idents = optional_check_idents - defined_optional_check_idents
-    if len(incorrect_check_idents) > 0:
-        raise QCException("Incorrect checks passed.", {"product_ident": product_ident,
-                                                       "incorrect_check_idents": incorrect_check_idents})
-
-    # Compile check suite.
-    skipped_idents = defined_optional_check_idents - optional_check_idents
-    check_suite = [check
-                   for check in product_definition["checks"]
-                   if check["required"] or check["check_ident"] in optional_check_idents]
-    return check_suite, skipped_idents
 
 def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fid_name, output_dir):
     (dsn, schema) = connection_manager.get_dsn_schema()
@@ -131,28 +113,20 @@ def dump_full_table(connection_manager, table_name, output_dir):
 
     return zip_filepath.name
 
-def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents, update_status_func=None):
+def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), update_status_func=None):
     with ExitStack() as exit_stack:
         # Prepare job directory structure.
-        status_filepath = compose_job_status_filepath(job_uuid)
-        job_status = prepare_empty_job_status(product_ident)
+        job_result_filepath = compose_job_status_filepath(job_uuid)
+        job_result = prepare_job_result(product_ident)
+        product_definition = load_product_definition(product_ident)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         try:
-            # Set up initial job status items.
-            job_status["user_name"] = user_name
-            job_status["job_start_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
-            job_status["filename"] = filepath.name
-            job_status["job_uuid"] = job_uuid
-            job_status["optional_check_idents"] = list(optional_check_idents)
-            job_status["hash"] = make_signature(filepath)
-            job_status_check_idx = {check["check_ident"]: check for check in job_status["checks"]}
-
-            # Read configurations.
-            product_definition = load_product_definition(product_ident)
-
-            check_suite, skipped_idents = compile_check_suite(product_ident, product_definition, optional_check_idents)
-            for skipped_ident in skipped_idents:
-                job_status_check_idx[skipped_ident]["status"] = STATUS_SKIPPED_LABEL
+            # Set up initial job result items.
+            job_result["user_name"] = user_name
+            job_result["job_start_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
+            job_result["filename"] = filepath.name
+            job_result["job_uuid"] = job_uuid
+            job_result["hash"] = make_signature(filepath)
 
             # Prepare initial job params.
             job_params = {}
@@ -161,37 +135,37 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
             job_params["output_dir"] = jobdir_manager.output_dir
             job_params["filepath"] = filepath
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
-
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
 
-            for check_nr, check in enumerate(check_suite):
+            for step_nr, step_result in enumerate(job_result["steps"]):
+
+                # Skip this step.
+                if step_nr in skip_steps:
+                    job_result["steps"][step_nr]["status"] = STATUS_SKIPPED_LABEL
+                    continue
 
                 # Update status.json.
-                job_status_check_idx[check["check_ident"]]["status"] = STATUS_RUNNING_LABEL
-                write_job_status(status_filepath, job_status)
+                step_result["status"] = STATUS_RUNNING_LABEL
+                write_job_result(job_result_filepath, job_result)
 
                 # Update status at wps.
                 if update_status_func is not None:
-                    percent_done = check_nr / len(check_suite) * 100
-                    update_status_func(check["check_ident"], percent_done)
+                    percent_done = step_nr / len(job_result["steps"]) * 100
+                    update_status_func(step_nr, percent_done)
 
                 # Prepare parameters.
-                check_params = {}
-                if "parameters" in check:
-                    check_params.update(check["parameters"])
-                check_params.update(job_params)
-                check_params["check_ident"] = check["check_ident"]
+                step_params = product_definition["checks"][step_nr].get("parameters", {})
+                step_params.update(job_params)
 
-                # Run the check.
+                # Run the step.
                 check_status = CheckStatus()
-                func = get_check_function(check["check_ident"])
-                func(check_params, check_status)
+                func = get_check_function(step_result["check_ident"])
+                func(step_params, check_status)
 
                 # Set the check result into the job status.
-                job_check_status = job_status_check_idx[check["check_ident"]]
-                job_check_status["status"] = check_status.status
-                job_check_status["messages"] = check_status.messages
-                job_check_status["attachment_filenames"] = check_status.attachment_filenames.copy()
+                step_result["status"] = check_status.status
+                step_result["messages"] = check_status.messages
+                step_result["attachment_filenames"] = check_status.attachment_filenames.copy()
 
                 # Export error tables to csv and zipped shapefile.
                 for (error_table_name, src_table_name, pg_fid_name) in check_status.error_table_infos:
@@ -200,17 +174,17 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
                                                            src_table_name,
                                                            pg_fid_name,
                                                            jobdir_manager.output_dir)
-                    job_check_status["attachment_filenames"].append(attachment_filename)
+                    step_result["attachment_filenames"].append(attachment_filename)
 
                 # Export full tables to zipped shapefile.
                 for table_name in check_status.full_table_names:
                     attachment_filename = dump_full_table(job_params["connection_manager"],
                                                           table_name,
                                                           jobdir_manager.output_dir)
-                    job_check_status["attachment_filenames"].append(attachment_filename)
+                    step_result["attachment_filenames"].append(attachment_filename)
 
                 # Update job status properties.
-                job_status.update(check_status.status_properties)
+                job_result.update(check_status.status_properties)
 
                 # Abort validation job.
                 if check_status.is_aborted():
@@ -224,12 +198,12 @@ def dispatch(job_uuid, user_name, filepath, product_ident, optional_check_idents
             # Update status.json finally and record exception if raised.
             (ex_type, ex_obj, tb_obj) = exc_info()
             if tb_obj is not None:
-                job_status["exception"] = format_exc()
-            job_status["job_finish_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
-            write_job_status(status_filepath, job_status)
-            write_pdf_report(status_filepath)
+                job_result["exception"] = format_exc()
+            job_result["job_finish_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
+            write_job_result(job_result_filepath, job_result)
+            write_pdf_report(job_result_filepath)
 
-    return job_status
+    return job_result
 
 
 class QCException(Exception):

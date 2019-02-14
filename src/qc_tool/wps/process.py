@@ -68,10 +68,10 @@ class RunChecks(Process):
                            data_type="string", min_occurs=1, max_occurs=1),
               LiteralInput("product_ident", "The identifier of the product denoting group of checks to be performed.",
                            data_type="string", min_occurs=1, max_occurs=1),
-              LiteralInput("optional_check_idents", "Comma separated identifiers of optional checks to be performed.",
-                           data_type="string", min_occurs=1, max_occurs=1),
+              LiteralInput("skip_steps", "Comma separated ordinal numbers of steps to be skipped.",
+                           data_type="string", min_occurs=0, max_occurs=1),
               LiteralInput("user_name", "The name of the user managing the delivery.",
-                           data_type="string", min_occurs=0, max_occurs=1)]
+                           data_type="string", min_occurs=1, max_occurs=1)]
     OUTPUTS = []
 
     def __init__(self):
@@ -91,21 +91,20 @@ class RunChecks(Process):
         filepath = Path(request.inputs["filepath"][0].data)
         filepath = CONFIG["incoming_dir"].joinpath(filepath)
         product_ident = request.inputs["product_ident"][0].data
-        optional_check_idents = []
-        if "optional_check_idents" in request.inputs:
-            optional_check_idents_data = request.inputs["optional_check_idents"][0].data
-            if optional_check_idents_data != "":
-                optional_check_idents = optional_check_idents_data.split(",")
+        skip_steps = []
+        if "skip_steps" in request.inputs:
+            skip_steps_data = request.inputs["skip_steps"][0].data
+            if skip_steps_data != "":
+                skip_steps = [int(skip_nr) for skip_nr in skip_steps_data.split(",")]
+        def update_wps_status(step_nr, percent_done):
+            message = "Running job step {:d}.".format(step_nr)
+            response.update_status(message, int(percent_done))
 
         # Call dispatch.
-        def update_wps_status(check_ident, percent_done):
-            message = "Running check {:s}.".format(check_ident)
-            response.update_status(message, int(percent_done))
         job_result = dispatch(str(self.uuid),
                               user_name,
                               filepath,
                               product_ident,
-                              optional_check_idents,
+                              skip_steps=skip_steps,
                               update_status_func=update_wps_status)
-
         return response

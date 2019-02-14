@@ -26,20 +26,20 @@ class TestCommon(TestCase):
         self.assertIn("clc_2012", product_descriptions)
         self.assertEqual("CORINE Land Cover 2012", product_descriptions["clc_2012"])
 
-    def test_prepare_empty_job_status(self):
-        from qc_tool.common import prepare_empty_job_status
-        status = prepare_empty_job_status("clc_2012")
-        self.assertEqual("clc_2012", status["product_ident"])
-        self.assertEqual("CORINE Land Cover 2012", status["description"])
-        self.assertLess(4, len(status["checks"]))
-        self.assertEqual("v2", status["checks"][2]["check_ident"])
-        self.assertEqual("File format is correct.", status["checks"][2]["description"])
-        self.assertTrue(status["checks"][1]["required"])
-        self.assertFalse(status["checks"][1]["system"])
-        self.assertIsNone(status["checks"][1]["status"])
-        self.assertIsNone(status["checks"][1]["messages"])
-        self.assertEqual("v_import2pg", status["checks"][7]["check_ident"])
-        self.assertTrue(status["checks"][7]["system"])
+    def test_prepare_job_result(self):
+        from qc_tool.common import prepare_job_result
+        job_result = prepare_job_result("clc_2012")
+        self.assertEqual("clc_2012", job_result["product_ident"])
+        self.assertEqual("CORINE Land Cover 2012", job_result["description"])
+        self.assertLess(4, len(job_result["steps"]))
+        self.assertEqual("v2", job_result["steps"][2]["check_ident"])
+        self.assertEqual("File format is correct.", job_result["steps"][2]["description"])
+        self.assertTrue(job_result["steps"][1]["required"])
+        self.assertFalse(job_result["steps"][1]["system"])
+        self.assertIsNone(job_result["steps"][1]["status"])
+        self.assertIsNone(job_result["steps"][1]["messages"])
+        self.assertEqual("v_import2pg", job_result["steps"][7]["check_ident"])
+        self.assertTrue(job_result["steps"][7]["system"])
 
 class TestCommonWithConfig(TestCase):
     def setUp(self):

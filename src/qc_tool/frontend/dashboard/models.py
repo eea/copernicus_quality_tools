@@ -5,7 +5,7 @@ from datetime import datetime
 from django.db import models
 from django.utils import timezone
 
-from qc_tool.common import prepare_empty_job_status
+from qc_tool.common import prepare_job_result
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import compose_job_status_filepath
 from qc_tool.frontend.dashboard import statuses
@@ -30,7 +30,7 @@ class Delivery(models.Model):
         self.last_job_status = statuses.JOB_RUNNING
         self.product_ident = product_ident
         self.product_description = find_product_description(product_ident)
-        self.empty_status_document = json.dumps(prepare_empty_job_status(product_ident))
+        self.empty_status_document = json.dumps(prepare_job_result(product_ident))
         self.save()
 
     def update_status(self, job_uuid=None):

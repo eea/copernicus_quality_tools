@@ -201,7 +201,7 @@ class Test_v1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
 
-class TestV1_ua_shp(VectorCheckTestCase):
+class Test_v1_ua_shp(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
@@ -1285,7 +1285,7 @@ class Test_v14_rpz(VectorCheckTestCase):
         self.assertListEqual([], self.cursor.fetchall())
 
 
-class TestV15(VectorCheckTestCase):
+class Test_v15(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.xml_dir = TEST_DATA_DIR.joinpath("metadata")

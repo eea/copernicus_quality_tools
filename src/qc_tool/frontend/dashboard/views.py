@@ -32,7 +32,7 @@ from qc_tool.common import compose_job_status_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_product_definition
-from qc_tool.common import prepare_empty_job_status
+from qc_tool.common import prepare_job_result
 
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import format_date_utc
@@ -364,7 +364,7 @@ def get_product_info(request, product_ident):
     :param product_ident: the name of the product type for example clc
     :return: product details with a list of checks and their type (system, required, optional)
     """
-    job_status = prepare_empty_job_status(product_ident)
+    job_status = prepare_job_result(product_ident)
     return JsonResponse({'job_status': job_status})
 
 

@@ -103,7 +103,7 @@ def get_product_descriptions():
         product_descriptions[product_ident] = product_description
     return product_descriptions
 
-def prepare_empty_job_status(product_ident):
+def prepare_job_result(product_ident):
     """
     Prepare status structure to be later filled by check results.
 
@@ -111,44 +111,46 @@ def prepare_empty_job_status(product_ident):
      "description: <product description>,
      "user_name": <>,
      "job_start_date": <>,
+     "job_finish_date": <>,
      "filename": <>,
      "hash": <>,
      "reference_year": <>,
      "job_uuid": <>,
      "exception": <>,
-     "checks": [{"check_ident": <full check ident>,
-                 "check_description": <>,
-                 "required": <>,
-                 "system": <>,
-                 "status": <>,
-                 "messages": <>,
-                 "attachment_filenames": <>}, ...]}
+     "steps": [{"check_ident": <full check ident>,
+                "check_description": <>,
+                "required": <>,
+                "system": <>,
+                "status": <>,
+                "messages": <>,
+                "attachment_filenames": <>}, ...]}
     """
     filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
     product_definition = filepath.read_text()
     product_definition = json.loads(product_definition)
-    status = {"product_ident": product_ident,
-              "description": product_definition["description"],
-              "user_name": None,
-              "job_start_date": None,
-              "job_finish_date": None,
-              "filename": None,
-              "hash": None,
-              "reference_year": None,
-              "job_uuid": None,
-              "exception": None,
-              "checks": []}
-    for check in product_definition["checks"]:
-        short_check_ident = strip_prefix(check["check_ident"])
-        check_item = {"check_ident": check["check_ident"],
-                      "description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
-                      "required": check["required"],
-                      "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
-                      "status": None,
-                      "messages": None,
-                      "attachment_filenames": None}
-        status["checks"].append(check_item)
-    return status
+    job_result = {"product_ident": product_ident,
+                  "description": product_definition["description"],
+                  "user_name": None,
+                  "job_start_date": None,
+                  "job_finish_date": None,
+                  "filename": None,
+                  "hash": None,
+                  "reference_year": None,
+                  "job_uuid": None,
+                  "exception": None,
+                  "steps": []}
+    for step_def in product_definition["checks"]:
+        short_check_ident = strip_prefix(step_def["check_ident"])
+        step_result = {"check_ident": step_def["check_ident"],
+                       "description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
+                       "layers": step_def.get("parameters", {}).get("layers", None),
+                       "required": step_def["required"],
+                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
+                       "status": None,
+                       "messages": None,
+                       "attachment_filenames": None}
+        job_result["steps"].append(step_result)
+    return job_result
 
 def compose_job_dir(job_uuid):
     job_subdir_tpl = "job_{:s}"
