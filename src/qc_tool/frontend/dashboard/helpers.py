@@ -13,7 +13,7 @@ from django.utils.dateparse import parse_datetime
 from lxml import etree
 
 from qc_tool.common import compose_job_dir
-from qc_tool.common import compose_job_status_filepath
+from qc_tool.common import compose_job_result_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import JOB_INPUT_DIRNAME
 from qc_tool.common import JOB_OUTPUT_DIRNAME
@@ -93,7 +93,7 @@ def guess_product_ident(delivery_filepath):
             return None
 
 
-def parse_status_document(document_content):
+def parse_wps_status_document(document_content):
     """
     Parses the status document from the WPS
     :param document_content: the content of the document. This is obtained
@@ -213,31 +213,30 @@ def parse_status_document(document_content):
     return doc
 
 def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
-    # Load job status.
-    status_filepath = compose_job_status_filepath(job_uuid)
-    status = status_filepath.read_text()
-    status = json.loads(status)
+    # Load job result.
+    job_result_filepath = compose_job_result_filepath(job_uuid)
+    job_result = job_result_filepath.read_text()
+    job_result = json.loads(job_result)
 
     # Prepare parameters.
     job_dir = compose_job_dir(job_uuid)
-    reference_year = status["reference_year"]
+    reference_year = job_result["reference_year"]
     if reference_year is None:
         reference_year = UNKNOWN_REFERENCE_YEAR_LABEL
-    uploaded_name = re.sub(".zip$", "", status["filename"])
+    uploaded_name = re.sub(".zip$", "", job_result["filename"])
 
     # Create submission directory for the job.
     submission_dirname = "{:s}-{:s}-{:s}.d".format(submission_date.strftime("%Y%m%d"),
                                                    uploaded_name,
                                                    job_uuid)
-    job_submission_dir = (submission_dir.joinpath(status["product_ident"])
+    job_submission_dir = (submission_dir.joinpath(job_result["product_ident"])
                                         .joinpath(reference_year)
                                         .joinpath(submission_dirname))
     job_submission_dir.mkdir(parents=True, exist_ok=False)
 
-    # Copy status.
-    src_filepath = job_dir.joinpath("status.json")
+    # Copy job result.
     dst_filepath = job_submission_dir.joinpath(src_filepath.name)
-    copyfile(str(src_filepath), str(dst_filepath))
+    copyfile(str(job_result_filepath), str(dst_filepath))
 
     # Copy output.d.
     src_filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME)

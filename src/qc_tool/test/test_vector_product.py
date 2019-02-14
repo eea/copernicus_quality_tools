@@ -6,7 +6,7 @@ from pathlib import Path
 
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.common import compose_attachment_filepath
-from qc_tool.common import compose_job_status_filepath
+from qc_tool.common import compose_job_result_filepath
 from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
 
@@ -47,7 +47,7 @@ class Test_clc(ProductTestCase):
 class Test_clc_status(ProductTestCase):
     def test_status_json(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        status_filepath = compose_job_status_filepath(self.job_uuid)
+        status_filepath = compose_job_result_filepath(self.job_uuid)
         job_result = dispatch(self.job_uuid, "user_name", filepath, "clc_2012", [])
         self.assertTrue(status_filepath.exists())
         job_result_from_file = status_filepath.read_text()

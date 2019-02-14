@@ -163,10 +163,10 @@ def compose_job_report_filepath(job_uuid):
     job_report_filepath = job_dir.joinpath("report.pdf")
     return job_report_filepath
 
-def compose_job_status_filepath(job_uuid):
+def compose_job_result_filepath(job_uuid):
     job_dir = compose_job_dir(job_uuid)
-    job_status_filepath = job_dir.joinpath("status.json")
-    return job_status_filepath
+    job_result_filepath = job_dir.joinpath("result.json")
+    return job_result_filepath
 
 def compose_wps_status_filepath(job_uuid):
     wps_status_filename = "{:s}.xml".format(str(job_uuid))

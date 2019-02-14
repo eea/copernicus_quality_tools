@@ -9,7 +9,7 @@ from qc_tool.wps.dispatch import dispatch
 class Test_Raster(ProductTestCase):
     def show_messages(self, job_result):
         """
-        Helper function to display messages of aborted, failed or skipped checks in
+        Helper function to display messages of aborted, failed or skipped steps in
         case of test failure.
         """
         msg = ""
@@ -26,20 +26,20 @@ class Test_Raster(ProductTestCase):
         self.raster_data_dir = TEST_DATA_DIR.joinpath("raster")
         self.username = "test_username"
 
-        # all checks are expected to finish with ok status by default.
+        # All steps are expected to finish with ok status by default.
         self.expected_step_statuses = {"r_unzip": "ok",
-                                        "r1": "ok",
-                                        "r2": "ok",
-                                        "r3": "ok",
-                                        "r4": "ok",
-                                        "r5": "ok",
-                                        "r6": "ok",
-                                        "r7": "ok",
-                                        "r8": "ok",
-                                        "r9": "ok",
-                                        "r10": "ok",
-                                        "r12": "ok",
-                                        "r13": "ok"}
+                                       "r1": "ok",
+                                       "r2": "ok",
+                                       "r3": "ok",
+                                       "r4": "ok",
+                                       "r5": "ok",
+                                       "r6": "ok",
+                                       "r7": "ok",
+                                       "r8": "ok",
+                                       "r9": "ok",
+                                       "r10": "ok",
+                                       "r12": "ok",
+                                       "r13": "ok"}
 
     # High resolution forest type (FTY) - 20m
     def test_fty_020m(self):

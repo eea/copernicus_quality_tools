@@ -28,7 +28,7 @@ from django.views.decorators.csrf import csrf_exempt
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_report_filepath
-from qc_tool.common import compose_job_status_filepath
+from qc_tool.common import compose_job_result_filepath
 from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_product_definition
@@ -37,7 +37,7 @@ from qc_tool.common import prepare_job_result
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import format_date_utc
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
-from qc_tool.frontend.dashboard.helpers import parse_status_document
+from qc_tool.frontend.dashboard.helpers import parse_wps_status_document
 from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.statuses import JOB_DELIVERY_NOT_FOUND
@@ -362,11 +362,10 @@ def get_product_info(request, product_ident):
     returns a table of details about the product
     :param request:
     :param product_ident: the name of the product type for example clc
-    :return: product details with a list of checks and their type (system, required, optional)
+    :return: product details with a list of job steps and their type (system, required, optional)
     """
-    job_status = prepare_job_result(product_ident)
-    return JsonResponse({'job_status': job_status})
-
+    job_result = prepare_job_result(product_ident)
+    return JsonResponse({'job_result': job_result})
 
 def get_product_config(request, product_ident):
     """
@@ -383,11 +382,11 @@ def get_wps_status_xml(request, job_uuid):
     wps_status = wps_status_filepath.read_text()
     return HttpResponse(wps_status, content_type="application/xml")
 
-def get_json_report(request, job_uuid):
-    job_status_filepath = compose_job_status_filepath(job_uuid)
-    job_status = job_status_filepath.read_text()
-    job_status = json.loads(job_status)
-    return JsonResponse(job_status, safe=False)
+def get_job_result(request, job_uuid):
+    job_result_filepath = compose_job_result_filepath(job_uuid)
+    job_result = job_result_filepath.read_text()
+    job_result = json.loads(job_result)
+    return JsonResponse(job_result, safe=False)
 
 def get_pdf_report(request, job_uuid):
     report_filepath = compose_job_report_filepath(job_uuid)
@@ -431,14 +430,13 @@ def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
     """
-    job_status_filepath = compose_job_status_filepath(job_uuid)
-
-    if job_status_filepath.exists():
-        job_status = job_status_filepath.read_text()
-        job_status = json.loads(job_status)
-        job_timestamp = job_status_filepath.stat().st_mtime
+    job_result_filepath = compose_job_result_filepath(job_uuid)
+    if job_result_filepath.exists():
+        job_result = job_result_filepath.read_text()
+        job_result = json.loads(job_result)
+        job_timestamp = job_result_filepath.stat().st_mtime
         job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
-        job_reference_year = job_status["reference_year"]
+        job_reference_year = job_result["reference_year"]
 
         # Check existence of pdf report
         pdf_report_filepath = compose_job_report_filepath(job_uuid)
@@ -448,22 +446,22 @@ def get_result(request, job_uuid):
             pdf_report_exists = False
 
         context = {
-            "product_ident": job_status["product_ident"],
-            "product_description": job_status["description"],
-            "filepath": job_status["filename"],
-            "start_time": job_status["job_start_date"],
+            "product_ident": job_result["product_ident"],
+            "product_description": job_result["description"],
+            "filepath": job_result["filename"],
+            "start_time": job_result["job_start_date"],
             "end_time": job_end_date,
             "reference_year": job_reference_year,
             "pdf_report_exists": pdf_report_exists,
             "result": {
                 "uuid": job_uuid,
-                "detail": job_status["checks"]
+                "detail": job_result["steps"]
             },
         }
 
         # special case of system error: show error information from the WPS xml document
-        wps_info = parse_status_document(compose_wps_status_filepath(job_uuid).read_text())
-        if wps_info["status"] == "error" or job_status["exception"] is not None:
+        wps_info = parse_wps_status_document(compose_wps_status_filepath(job_uuid).read_text())
+        if wps_info["status"] == "error" or job_result["exception"] is not None:
             for error_check_index, check in enumerate(context["result"]["detail"]):
                 if check["status"] == "running":
                     context["result"]["detail"][error_check_index]["status"] = "error"
@@ -473,7 +471,7 @@ def get_result(request, job_uuid):
         for check_index, check in enumerate(context["result"]["detail"]):
             if check["status"] == "running":
                 percentage_filename = "{:s}_percent.txt".format(check["check_ident"])
-                percentage_filepath = job_status_filepath.parent.joinpath("output.d", percentage_filename)
+                percentage_filepath = job_result_filepath.parent.joinpath("output.d", percentage_filename)
                 if percentage_filepath.exists():
                     percent = percentage_filepath.read_text()
                     context["result"]["detail"][check_index]["status"] = "running ({:s}%)".format(percent)

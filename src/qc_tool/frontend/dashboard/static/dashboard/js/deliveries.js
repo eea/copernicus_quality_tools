@@ -54,9 +54,9 @@ function actionsFormatter(value, row) {
 
     } else if (row.qc_status === "running" || row.is_submitted) {
         // job is running --> QC button disabled, Delete button disabled
-        var tooltip_message = "QC checks are currently running.";
+        var tooltip_message = "QC job is currently running.";
         if (row.is_submitted) {
-            tooltip_message = "Delivery has already been submitted to EEA.";
+            tooltip_message = "Delivery has been already submitted to EEA.";
         }
         btn_data += "<a class=\"btn btn-sm btn-success\" role=\"button\" disabled data-toggle=\"tooltip\"";
         btn_data += 'title="Cannot run quality controls for this delivery. ' + tooltip_message;
@@ -111,7 +111,7 @@ function statusFormatter(value, row, index) {
     }
 
     if (value == "failed") {
-        value = "checks failed";
+        value = "failed";
     }
 
     if (value == "accepted" || value == "running") {
@@ -125,7 +125,7 @@ function statusFormatter(value, row, index) {
         if (row["is_submitted"]) {
             value = "submitted";
         } else {
-            value = "checks passed";
+            value = "passed";
         }
     }
 

@@ -30,19 +30,19 @@ function toggle_select_buttons() {
 function display_product_info(product_ident) {
     var detail_url = "/data/product/" + product_ident + "/";
     $.getJSON(detail_url , function(obj) {
-        var checks = obj.job_status.checks
+        var steps = obj.job_result.steps
         $("#tbl_check_details > tbody").html("");
         $("#error_placeholder").html("");
         var tbody = ""
-        for (var i=0;i<checks.length;i++){
+        for (var i = 0; i < steps.length; i++) {
 
-            if(!checks[i].system) { // system checks are not shown
+            if (!steps[i].system) { // Steps with system check are not shown.
                 tbody += "<tr>";
-                tbody += "<td>" + checks[i].check_ident + "</td>";
+                tbody += "<td>" + steps[i].check_ident + "</td>";
 
-                tbody += "<td>" + checks[i].description + "</td>";
-                tbody += '<td><input name="selected_checks[]" type="checkbox" value="' + i + '" checked';
-                if (checks[i].required) { // Required checks have a disabled checkbox that cannot be unchecked.
+                tbody += "<td>" + steps[i].description + "</td>";
+                tbody += '<td><input name="selected_steps[]" type="checkbox" value="' + i + '" checked';
+                if (steps[i].required) { // Required steps have checkbox disabled.
                     tbody += " disabled";
                 }
                 tbody += "></td>";
@@ -137,18 +137,18 @@ function run_checks() {
     var run_url = "/run_wps_execute";
 
     // retrieve the checkboxes
-    var unselected_checks = [];
+    var unselected_steps = [];
     $ ('tbody tr').each(function() {
         var checkbox = $(this).find('input');
         if (!checkbox.prop('checked')) {
-            unselected_checks.push(checkbox.val());
+            unselected_steps.push(checkbox.val());
         }
     });
 
     var data = {
         "product_ident": $("#select_product").val(),
         "filepath": $("#current_username").val() + "/" + $("#preselected_file").val(),
-        "skip_steps": unselected_checks.join(",")
+        "skip_steps": unselected_steps.join(",")
     };
 
     $.ajax({
