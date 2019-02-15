@@ -2,7 +2,9 @@
 
 
 from unittest import expectedFailure
+from unittest import skipIf
 
+from qc_tool.common import CONFIG
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
 
@@ -1285,6 +1287,7 @@ class Test_v14_rpz(VectorCheckTestCase):
         self.assertListEqual([], self.cursor.fetchall())
 
 
+@skipIf(CONFIG["skip_inspire_check"], "INSPIRE check has been disabled.")
 class Test_v15(VectorCheckTestCase):
     def setUp(self):
         super().setUp()

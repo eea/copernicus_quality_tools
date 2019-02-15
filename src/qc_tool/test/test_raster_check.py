@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 
+from unittest import skipIf
+
+from qc_tool.common import CONFIG
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import RasterCheckTestCase
 
@@ -114,6 +117,7 @@ class TestR11(RasterCheckTestCase):
         self.assertIn("r11_raster_incorrect_lessmmu_error.zip", status.attachment_filenames)
 
 
+@skipIf(CONFIG["skip_inspire_check"], "INSPIRE check has been disabled.")
 class TestR12(RasterCheckTestCase):
     def setUp(self):
         super().setUp()
