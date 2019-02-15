@@ -139,9 +139,10 @@ def prepare_job_result(product_ident):
                   "job_uuid": None,
                   "exception": None,
                   "steps": []}
-    for step_def in product_definition["checks"]:
+    for step_nr, step_def in enumerate(product_definition["checks"], start=1):
         short_check_ident = strip_prefix(step_def["check_ident"])
-        step_result = {"check_ident": step_def["check_ident"],
+        step_result = {"step_nr": step_nr,
+                       "check_ident": step_def["check_ident"],
                        "description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
                        "layers": step_def.get("parameters", {}).get("layers", None),
                        "required": step_def["required"],

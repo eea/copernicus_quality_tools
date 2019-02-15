@@ -139,12 +139,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
 
-            for step_nr, step_result in enumerate(job_result["steps"]):
-
-                # Skip this step.
-                if step_nr in skip_steps:
-                    job_result["steps"][step_nr]["status"] = STATUS_SKIPPED_LABEL
-                    continue
+            for steps_done, (step_result, step_def) in enumerate(zip(job_result["steps"], product_definition["checks"])):
 
                 # Update status.json.
                 step_result["status"] = STATUS_RUNNING_LABEL
@@ -152,11 +147,17 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
 
                 # Update status at wps.
                 if update_status_func is not None:
-                    percent_done = step_nr / len(job_result["steps"]) * 100
-                    update_status_func(step_nr, percent_done)
+                    percent_done = steps_done / len(job_result["steps"]) * 100
+                    update_status_func(step_result["step_nr"], percent_done)
+
+                # Skip this step.
+                if step_result["step_nr"] in skip_steps:
+                    step_result["status"] = STATUS_SKIPPED_LABEL
+                    continue
 
                 # Prepare parameters.
-                step_params = product_definition["checks"][step_nr].get("parameters", {})
+                step_params = {}
+                step_params.update(step_def.get("parameters", {}))
                 step_params.update(job_params)
 
                 # Run the step.

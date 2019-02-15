@@ -109,36 +109,30 @@ function statusFormatter(value, row, index) {
         value += '<span class="text-danger"> FILE NOT FOUND</span>';
         return value;
     }
-
-    if (value == "failed") {
-        value = "failed";
+    if (!uuid) {
+        return 'Not checked';
     }
-
-    if (value == "accepted" || value == "running") {
+    if (value == "failed") {
+        // Do nothing.
+    } else if (value == "accepted" || value == "running") {
         if(row.percent == null) {
             value = "running (0 %)";
         } else {
             value = "running (" + row.percent + "% )";
         }
-    }
-    if (value == "ok") {
+    } else if (value == "ok") {
         if (row["is_submitted"]) {
             value = "submitted";
         } else {
             value = "passed";
         }
     }
-
-    if (uuid) {
-        return ['<a class="like" href="',
-                "/result/",
-                uuid,
-                '" title="Show results">',
-                value,
-                '</a>'].join('');
-    } else {
-        return 'Not checked';
-    }
+    return ['<a class="like" href="',
+            "/result/",
+            uuid,
+            '" title="Show results">',
+            value,
+            '</a>'].join('');
 }
 
 function statusCellStyle(value, row, index) {
