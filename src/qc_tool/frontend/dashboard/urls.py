@@ -13,7 +13,7 @@ urlpatterns = [
     path("delivery/submit/", views.submit_delivery_to_eea, name="delivery_submit"),
     path("delivery/refresh_status/<job_uuid>/", views.refresh_job_status, name="delivery_refresh_status"),
 
-    path("data/product/<product_ident>/", views.get_product_info, name="product_info_json"),
+    path("data/job_info/<product_ident>/", views.get_job_info, name="job_info_json"),
     path("data/product_definition/<product_ident>/", views.get_product_definition, name="product_definition_json"),
     path("data/product_list/", views.get_product_list, name="product_list_json"),
     path("data/result/<job_uuid>/", views.get_job_result, name="job_result_json"),

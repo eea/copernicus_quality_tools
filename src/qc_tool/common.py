@@ -89,6 +89,7 @@ def load_product_definition(product_ident):
     filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
     product_definition = filepath.read_text()
     product_definition = json.loads(product_definition)
+    product_definition["product_ident"] = product_ident
     return product_definition
 
 def get_product_descriptions():
@@ -103,9 +104,9 @@ def get_product_descriptions():
         product_descriptions[product_ident] = product_description
     return product_descriptions
 
-def prepare_job_result(product_ident):
+def prepare_job_result(product_definition):
     """
-    Prepare status structure to be later filled by check results.
+    Prepare job result structure.
 
     {"product_ident": <product ident>,
      "description: <product description>,
@@ -117,7 +118,8 @@ def prepare_job_result(product_ident):
      "reference_year": <>,
      "job_uuid": <>,
      "exception": <>,
-     "steps": [{"check_ident": <full check ident>,
+     "steps": [{"step_nr": <ordinal number of the step>
+                "check_ident": <full check ident>,
                 "check_description": <>,
                 "required": <>,
                 "system": <>,
@@ -125,10 +127,7 @@ def prepare_job_result(product_ident):
                 "messages": <>,
                 "attachment_filenames": <>}, ...]}
     """
-    filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
-    product_definition = filepath.read_text()
-    product_definition = json.loads(product_definition)
-    job_result = {"product_ident": product_ident,
+    job_result = {"product_ident": product_definition["product_ident"],
                   "description": product_definition["description"],
                   "user_name": None,
                   "job_start_date": None,

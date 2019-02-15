@@ -119,8 +119,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
         # Prepare job variables.
         job_result_filepath = compose_job_result_filepath(job_uuid)
         job_report_filepath = compose_job_report_filepath(job_uuid)
-        job_result = prepare_job_result(product_ident)
         product_definition = load_product_definition(product_ident)
+        job_result = prepare_job_result(product_definition)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         try:
             # Set up initial job result items.

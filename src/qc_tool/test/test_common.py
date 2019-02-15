@@ -27,8 +27,10 @@ class TestCommon(TestCase):
         self.assertEqual("CORINE Land Cover 2012", product_descriptions["clc_2012"])
 
     def test_prepare_job_result(self):
+        from qc_tool.common import load_product_definition
         from qc_tool.common import prepare_job_result
-        job_result = prepare_job_result("clc_2012")
+        product_definition = load_product_definition("clc_2012")
+        job_result = prepare_job_result(product_definition)
         self.assertEqual("clc_2012", job_result["product_ident"])
         self.assertEqual("CORINE Land Cover 2012", job_result["description"])
         self.assertLess(4, len(job_result["steps"]))

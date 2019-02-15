@@ -28,7 +28,7 @@ function toggle_select_buttons() {
 
 
 function display_product_info(product_ident) {
-    var detail_url = "/data/product/" + product_ident + "/";
+    var detail_url = "/data/job_info/" + product_ident + "/";
     $.getJSON(detail_url , function(obj) {
         var steps = obj.job_result.steps
         $("#tbl_check_details > tbody").html("");

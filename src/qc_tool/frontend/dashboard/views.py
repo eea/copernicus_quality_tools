@@ -357,14 +357,15 @@ def get_product_list(request):
     return JsonResponse({'product_list': product_list})
 
 @login_required
-def get_product_info(request, product_ident):
+def get_job_info(request, product_ident):
     """
     returns a table of details about the product
     :param request:
     :param product_ident: the name of the product type for example clc
     :return: product details with a list of job steps and their type (system, required, optional)
     """
-    job_result = prepare_job_result(product_ident)
+    product_definition = load_product_definition(product_ident)
+    job_result = prepare_job_result(product_definition)
     return JsonResponse({'job_result': job_result})
 
 def get_product_definition(request, product_ident):
