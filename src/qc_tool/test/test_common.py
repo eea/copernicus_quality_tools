@@ -11,14 +11,14 @@ class TestCommon(TestCase):
     def test_load_product_definition(self):
         from qc_tool.common import load_product_definition
         product_definition = load_product_definition("clc_2012")
-        self.assertIn("checks", product_definition)
-        self.assertLess(1, len(product_definition["checks"]))
+        self.assertIn("steps", product_definition)
+        self.assertLess(1, len(product_definition["steps"]))
         self.assertDictEqual({"check_ident": "v2",
                               "parameters": {"layers": ["reference", "initial", "change"],
                                              "formats": [".gdb"],
                                              "drivers": {'.gdb': 'OpenFileGDB'}},
                               "required": True},
-                             product_definition["checks"][2])
+                             product_definition["steps"][2])
 
     def test_get_product_descriptions(self):
         from qc_tool.common import get_product_descriptions

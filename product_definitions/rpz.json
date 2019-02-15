@@ -1,6 +1,6 @@
 {
   "description": "Riparian Zones",
-  "checks": [
+  "steps": [
     {
       "check_ident": "v_unzip",
       "required": true

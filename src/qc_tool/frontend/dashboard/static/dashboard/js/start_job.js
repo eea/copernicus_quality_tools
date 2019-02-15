@@ -57,9 +57,9 @@ function display_product_info(product_ident) {
             $("#tbl_check_details").show();
         }
 
-        // update product config link
+        // Update link to product definition.
         $("#product_link_placeholder").html(
-        '<a href="/data/product_config/' + product_ident + '/">Show Product Configuration</a>');
+        '<a href="/data/product_definition/' + product_ident + '/">Show Product Definition</a>');
 
         // enable Run QC button
         $("#btn_run").prop("disabled", false);
@@ -76,9 +76,9 @@ function display_product_info(product_ident) {
         $("#tbl_check_details > tbody").html("");
         var product_error_msg = 'Error in configuration of <strong>' + product_ident + '</strong> product!'
         $("#error_placeholder").html('<div class="alert alert-danger">' + product_error_msg + '</div>');
-        // update product config link
+        // Update link to product definition.
         $("#product_link_placeholder").html(
-        '<a href="/data/product_config/' + product_ident + '/">Show Product Configuration</a>');
+        '<a href="/data/product_definition/' + product_ident + '/">Show Product Definition</a>');
     });
 }
 

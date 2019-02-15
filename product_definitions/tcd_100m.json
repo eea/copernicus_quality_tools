@@ -1,6 +1,6 @@
 {
   "description": "HRL Tree Cover Density (100m)",
-  "checks": [
+  "steps": [
     {
       "check_ident": "r_unzip",
       "required": true

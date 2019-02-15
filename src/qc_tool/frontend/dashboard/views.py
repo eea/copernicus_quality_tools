@@ -367,12 +367,12 @@ def get_product_info(request, product_ident):
     job_result = prepare_job_result(product_ident)
     return JsonResponse({'job_result': job_result})
 
-def get_product_config(request, product_ident):
+def get_product_definition(request, product_ident):
     """
-    Shows the json product type configuration of the selected product.
+    Shows the json product definition.
     """
-    product_config = load_product_definition(product_ident)
-    return JsonResponse(product_config)
+    product_definition = load_product_definition(product_ident)
+    return JsonResponse(product_definition)
 
 def get_wps_status_xml(request, job_uuid):
     """

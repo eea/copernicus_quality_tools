@@ -1,6 +1,6 @@
 {
   "description": "Urban Atlas 2012, shapefile, all layers included.",
-  "checks": [
+  "steps": [
     {
       "check_ident": "v_unzip",
       "required": true

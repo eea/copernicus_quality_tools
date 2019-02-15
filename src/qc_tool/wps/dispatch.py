@@ -139,7 +139,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
 
-            for steps_done, (step_result, step_def) in enumerate(zip(job_result["steps"], product_definition["checks"])):
+            for steps_done, (step_result, step_def) in enumerate(zip(job_result["steps"], product_definition["steps"])):
 
                 # Update status.json.
                 step_result["status"] = STATUS_RUNNING_LABEL

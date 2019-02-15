@@ -1,6 +1,6 @@
 {
   "description": "CORINE Land Cover 2012",
-  "checks": [
+  "steps": [
     {
       "check_ident": "v_unzip",
       "required": true

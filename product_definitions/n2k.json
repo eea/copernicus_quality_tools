@@ -1,6 +1,6 @@
 {
   "description": "Natura 2000",
-  "checks": [
+  "steps": [
     {
       "check_ident": "v_unzip",
       "required": true

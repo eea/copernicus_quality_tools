@@ -1,6 +1,6 @@
 {
   "description": "HRL Grassland (100m)",
-  "checks": [
+  "steps": [
     {
       "check_ident": "r_unzip",
       "required": true

@@ -1,6 +1,6 @@
 {
   "description": "Urban Atlas 2012, geodatabase, without revised layer.",
-  "checks": [
+  "steps": [
     {
       "check_ident": "v_unzip",
       "required": true

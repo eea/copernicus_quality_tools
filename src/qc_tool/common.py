@@ -139,7 +139,7 @@ def prepare_job_result(product_ident):
                   "job_uuid": None,
                   "exception": None,
                   "steps": []}
-    for step_nr, step_def in enumerate(product_definition["checks"], start=1):
+    for step_nr, step_def in enumerate(product_definition["steps"], start=1):
         short_check_ident = strip_prefix(step_def["check_ident"])
         step_result = {"step_nr": step_nr,
                        "check_ident": step_def["check_ident"],

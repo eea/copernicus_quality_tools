@@ -1,6 +1,6 @@
 {
   "description": "HRL Degree of Imperviousness (20m)",
-  "checks": [
+  "steps": [
     {
       "check_ident": "r_unzip",
       "required": true

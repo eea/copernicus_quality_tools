@@ -50,8 +50,8 @@ def find_product_description(product_ident):
 
 def guess_product_ident(delivery_filepath):
     """
-    Tries to guess the product ident from the uploaded file name
-    This should use the file_name_regex in each product's configuration
+    Tries to guess the product ident from the uploaded file name.
+    This should use the file_name_regex in each product's definition.
     """
     is_20m_raster = False
     is_100m_raster = False
@@ -77,7 +77,7 @@ def guess_product_ident(delivery_filepath):
     elif fn.startswith("rpz"):
         return "rpz"
     elif re.match(r"[a-z]{2}[0-9]{3}l[0-9]_[a-z]+", fn):
-        logger.debug("delivery is likely to be urban atlas ...")
+        logger.debug("Delivery is likely to be urban atlas ...")
 
         # urban atlas product guessing from name
         logger.debug(delivery_filepath)
