@@ -57,7 +57,7 @@ class TestCommonWithConfig(TestCase):
         from qc_tool.common import compose_job_result_filepath
         job_result_filepath = compose_job_result_filepath("abc-DEF-123")
         job_result_filepath = str(job_result_filepath)
-        self.assertEqual("/mnt/qc_tool_volume/work/job_abcdef123/status.json", job_result_filepath)
+        self.assertEqual("/mnt/qc_tool_volume/work/job_abcdef123/result.json", job_result_filepath)
 
     def test_compose_wps_status_filepath(self):
         from qc_tool.common import compose_wps_status_filepath

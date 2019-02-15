@@ -19,6 +19,7 @@ from qc_tool.common import HASH_BUFFER_SIZE
 from qc_tool.common import STATUS_RUNNING_LABEL
 from qc_tool.common import STATUS_SKIPPED_LABEL
 from qc_tool.common import STATUS_TIME_FORMAT
+from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import compose_job_result_filepath
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_job_result
@@ -115,8 +116,9 @@ def dump_full_table(connection_manager, table_name, output_dir):
 
 def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), update_status_func=None):
     with ExitStack() as exit_stack:
-        # Prepare job directory structure.
+        # Prepare job variables.
         job_result_filepath = compose_job_result_filepath(job_uuid)
+        job_report_filepath = compose_job_report_filepath(job_uuid)
         job_result = prepare_job_result(product_ident)
         product_definition = load_product_definition(product_ident)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
@@ -201,7 +203,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 job_result["exception"] = format_exc()
             job_result["job_finish_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
             write_job_result(job_result_filepath, job_result)
-            write_pdf_report(job_result_filepath)
+            write_pdf_report(job_report_filepath, job_result)
 
     return job_result
 

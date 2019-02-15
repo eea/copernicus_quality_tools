@@ -19,15 +19,9 @@ def overall_status(job_result):
         return "Partial (some checks skipped)"
 
 
-def write_pdf_report(job_result_filepath, report_filepath=None):
-
-    job_result = json.loads(job_result_filepath.read_text())
-
-    if report_filepath is None:
-        report_filepath = Path(str(job_result_filepath).replace("status.json", "report.pdf"))
-
+def write_pdf_report(job_report_filepath, job_result):
     # set report page size to A4
-    doc = BaseDocTemplate(str(report_filepath), pagesize=A4)
+    doc = BaseDocTemplate(str(job_report_filepath), pagesize=A4)
 
     # Set custom styles
     styles = getSampleStyleSheet()
