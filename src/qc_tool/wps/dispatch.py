@@ -114,12 +114,24 @@ def dump_full_table(connection_manager, table_name, output_dir):
 
     return zip_filepath.name
 
+def validate_skip_steps(skip_steps, product_definition):
+    validated_skip_steps = set()
+    for skip_step in skip_steps:
+        if not (1 <= skip_step <= len(product_definition["steps"])):
+            raise QCException("Skip step {:d} is out of range.".format(skip_step))
+        if skip_step in validated_skip_steps:
+            raise QCException("Duplicit skip step {:d}.".format(skip_step))
+        if product_definition["steps"][skip_step - 1]["required"]:
+            raise QCException("Required step {:d} can not be skipped.".format(skip_step))
+        validated_skip_steps.add(skip_step)
+
 def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), update_status_func=None):
     with ExitStack() as exit_stack:
         # Prepare job variables.
+        product_definition = load_product_definition(product_ident)
+        validate_skip_steps(skip_steps, product_definition)
         job_result_filepath = compose_job_result_filepath(job_uuid)
         job_report_filepath = compose_job_report_filepath(job_uuid)
-        product_definition = load_product_definition(product_ident)
         job_result = prepare_job_result(product_definition)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         try:
@@ -139,7 +151,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
 
-            for steps_done, (step_result, step_def) in enumerate(zip(job_result["steps"], product_definition["steps"])):
+            for step_result, step_def in zip(job_result["steps"], product_definition["steps"]):
 
                 # Update status.json.
                 step_result["status"] = STATUS_RUNNING_LABEL
@@ -147,7 +159,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
 
                 # Update status at wps.
                 if update_status_func is not None:
-                    percent_done = steps_done / len(job_result["steps"]) * 100
+                    percent_done = (step_result["step_nr"] - 1) / len(job_result["steps"]) * 100
                     update_status_func(step_result["step_nr"], percent_done)
 
                 # Skip this step.
