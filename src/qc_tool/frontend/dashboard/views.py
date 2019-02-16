@@ -28,10 +28,10 @@ from django.views.decorators.csrf import csrf_exempt
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_report_filepath
-from qc_tool.common import compose_job_result_filepath
-from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
+from qc_tool.common import load_job_result
 from qc_tool.common import load_product_definition
+from qc_tool.common import load_wps_status
 from qc_tool.common import prepare_job_result
 
 from qc_tool.frontend.dashboard.helpers import find_product_description
@@ -379,14 +379,11 @@ def get_wps_status_xml(request, job_uuid):
     """
     Shows the WPS status xml document of the selected job.
     """
-    wps_status_filepath = compose_wps_status_filepath(job_uuid)
-    wps_status = wps_status_filepath.read_text()
+    wps_status = load_wps_status(job_uuid)
     return HttpResponse(wps_status, content_type="application/xml")
 
 def get_job_result(request, job_uuid):
-    job_result_filepath = compose_job_result_filepath(job_uuid)
-    job_result = job_result_filepath.read_text()
-    job_result = json.loads(job_result)
+    job_result = load_job_result(job_uuid)
     return JsonResponse(job_result, safe=False)
 
 def get_pdf_report(request, job_uuid):
@@ -431,10 +428,11 @@ def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
     """
-    job_result_filepath = compose_job_result_filepath(job_uuid)
-    if job_result_filepath.exists():
-        job_result = job_result_filepath.read_text()
-        job_result = json.loads(job_result)
+    try:
+        job_result = load_job_result(job_uuid)
+    except FileNotFoundError:
+        job_result = None
+    if job_result is not None:
         job_timestamp = job_result_filepath.stat().st_mtime
         job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
         job_reference_year = job_result["reference_year"]
@@ -461,7 +459,7 @@ def get_result(request, job_uuid):
         }
 
         # special case of system error: show error information from the WPS xml document
-        wps_info = parse_wps_status_document(compose_wps_status_filepath(job_uuid).read_text())
+        wps_info = parse_wps_status_document(load_wps_status(job_uuid))
         if wps_info["status"] == "error" or job_result["exception"] is not None:
             for error_check_index, check in enumerate(context["result"]["detail"]):
                 if check["status"] == "running":

@@ -13,15 +13,17 @@ from django.utils.dateparse import parse_datetime
 from lxml import etree
 
 from qc_tool.common import compose_job_dir
-from qc_tool.common import compose_job_result_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import JOB_INPUT_DIRNAME
 from qc_tool.common import JOB_OUTPUT_DIRNAME
+from qc_tool.common import load_job_result
 from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
 
 from qc_tool.frontend.dashboard import statuses
 
+
 logger = logging.getLogger(__name__)
+
 
 def format_date_utc(db_date):
     """
@@ -213,12 +215,8 @@ def parse_wps_status_document(document_content):
     return doc
 
 def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
-    # Load job result.
-    job_result_filepath = compose_job_result_filepath(job_uuid)
-    job_result = job_result_filepath.read_text()
-    job_result = json.loads(job_result)
-
     # Prepare parameters.
+    job_result = load_job_result(job_uuid)
     job_dir = compose_job_dir(job_uuid)
     reference_year = job_result["reference_year"]
     if reference_year is None:

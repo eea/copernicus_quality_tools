@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 
 from qc_tool.common import TEST_DATA_DIR
-from qc_tool.common import compose_attachment_filepath
-from qc_tool.common import compose_job_result_filepath
 from qc_tool.test.helper import ProductTestCase
 from qc_tool.wps.dispatch import dispatch
 
@@ -46,14 +44,12 @@ class Test_clc(ProductTestCase):
 
 class Test_clc_status(ProductTestCase):
     def test_status_json(self):
+        from qc_tool.common import load_job_result
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        status_filepath = compose_job_result_filepath(self.job_uuid)
         job_result = dispatch(self.job_uuid, "user_name", filepath, "clc_2012", [])
-        self.assertTrue(status_filepath.exists())
-        job_result_from_file = status_filepath.read_text()
-        job_result_from_file = json.loads(job_result_from_file)
+        job_result_from_file = load_job_result(self.job_uuid)
         self.assertEqual(job_result, job_result_from_file,
-                         "Job status returned by dispatch() must be the same as stored in status.json file.")
+                         "Job result returned by dispatch() must be the same as job result stored in json file.")
 
 
 class Test_n2k(ProductTestCase):

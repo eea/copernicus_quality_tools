@@ -5,10 +5,10 @@ from datetime import datetime
 from django.db import models
 from django.utils import timezone
 
+from qc_tool.common import load_job_result
 from qc_tool.common import load_product_definition
+from qc_tool.common import load_wps_status
 from qc_tool.common import prepare_job_result
-from qc_tool.common import compose_wps_status_filepath
-from qc_tool.common import compose_job_result_filepath
 from qc_tool.frontend.dashboard import statuses
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import parse_wps_status_document
@@ -42,8 +42,7 @@ class Delivery(models.Model):
             self.last_job_uuid = job_uuid
         # Updates the status using the status of the job uuid.
         # Get job info from status document (assuming document exists)
-        wps_status_filepath = compose_wps_status_filepath(self.last_job_uuid)
-        wps_status = wps_status_filepath.read_text()
+        wps_status = load_wps_status(self.last_job_uuid)
         wps_doc = parse_wps_status_document(wps_status)
 
         self.last_wps_status = wps_doc["status"]
@@ -51,11 +50,12 @@ class Delivery(models.Model):
 
         self.date_last_checked = wps_doc["end_time"]
 
-        job_result_filepath = compose_job_result_filepath(self.last_job_uuid)
-        if job_result_filepath.exists():
-            job_result = job_result_filepath.read_text()
-            job_result = json.loads(job_result)
-
+        try:
+            job_result = load_job_result(self.last_job_uuid)
+        except FileNotFoundError:
+            # Job is waiting in queue, so job result does not exist yet.
+            job_result = None
+        if job_result is not None:
             # Set progress percent (from wps doc)
             if self.last_wps_status == statuses.WPS_ACCEPTED:
                 self.last_job_percent = 0

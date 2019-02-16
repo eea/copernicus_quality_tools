@@ -4,8 +4,6 @@
 from pathlib import Path
 from unittest import TestCase
 
-from qc_tool.common import CONFIG
-
 
 class TestCommon(TestCase):
     def test_load_product_definition(self):
@@ -45,27 +43,34 @@ class TestCommon(TestCase):
 
 class TestCommonWithConfig(TestCase):
     def setUp(self):
+        from qc_tool.common import CONFIG
         from qc_tool.common import setup_config
         setup_config()
-        CONFIG["wps_output_dir"].mkdir(exist_ok=True, parents=True)
+        self.wps_output_dir = CONFIG["wps_output_dir"]
+        self.wps_output_dir.mkdir(exist_ok=True, parents=True)
+        self.work_dir = CONFIG["work_dir"]
+        self.work_dir.mkdir(exist_ok=True, parents=True)
 
     def test_compose_job_dir(self):
         from qc_tool.common import compose_job_dir
-        job_dir = compose_job_dir("abc-DEF-123")
-        job_dir = str(job_dir)
-        self.assertEqual("/mnt/qc_tool_volume/work/job_abcdef123", job_dir)
+        job_dir = compose_job_dir("job_uuid")
+        self.assertEqual(Path(self.work_dir, "job_job_uuid"), job_dir)
 
-    def test_compose_job_result_filepath(self):
-        from qc_tool.common import compose_job_result_filepath
-        job_result_filepath = compose_job_result_filepath("abc-DEF-123")
-        job_result_filepath = str(job_result_filepath)
-        self.assertEqual("/mnt/qc_tool_volume/work/job_abcdef123/result.json", job_result_filepath)
+    def test_store_load_job_result(self):
+        from qc_tool.common import compose_job_dir
+        from qc_tool.common import load_job_result
+        from qc_tool.common import store_job_result
+        job_uuid = "job_uuid_valu"
+        job_dir = compose_job_dir(job_uuid)
+        job_dir.mkdir(exist_ok=True)
+        store_job_result({"job_uuid": job_uuid})
+        self.assertDictEqual({"job_uuid": job_uuid}, load_job_result(job_uuid))
 
-    def test_compose_wps_status_filepath(self):
-        from qc_tool.common import compose_wps_status_filepath
-        wps_status_filepath = compose_wps_status_filepath("abc-DEF-123")
-        wps_status_filepath = str(wps_status_filepath)
-        self.assertEqual("/mnt/qc_tool_volume/wps/output/abc-DEF-123.xml", wps_status_filepath)
+    def test_wps_status(self):
+        from qc_tool.common import load_wps_status
+        wps_status_filepath = self.wps_output_dir.joinpath("wps_status.xml")
+        wps_status_filepath.write_text("wps status xml data")
+        self.assertEqual("wps status xml data", load_wps_status("wps_status"))
 
     def test_get_all_wps_uuids(self):
         from qc_tool.common import get_all_wps_uuids

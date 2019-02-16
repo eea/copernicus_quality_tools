@@ -20,22 +20,14 @@ from qc_tool.common import STATUS_RUNNING_LABEL
 from qc_tool.common import STATUS_SKIPPED_LABEL
 from qc_tool.common import STATUS_TIME_FORMAT
 from qc_tool.common import compose_job_report_filepath
-from qc_tool.common import compose_job_result_filepath
 from qc_tool.common import load_product_definition
 from qc_tool.common import prepare_job_result
-from qc_tool.wps.report import write_pdf_report
+from qc_tool.common import store_job_result
+from qc_tool.wps.report import generate_pdf_report
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
 from qc_tool.wps.registry import get_check_function
 
-
-def write_job_result(filepath, data):
-    # We write the status to pre file and then rename it in order to eliminate
-    # race condition if somebody just reads the file.
-    pre_filepath = filepath.with_name("{:s}.pre".format(filepath.name))
-    text = json.dumps(data)
-    pre_filepath.write_text(text)
-    pre_filepath.rename(filepath)
 
 def make_signature(filepath):
     h = hashlib.new(HASH_ALGORITHM)
@@ -130,16 +122,15 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
         # Prepare job variables.
         product_definition = load_product_definition(product_ident)
         validate_skip_steps(skip_steps, product_definition)
-        job_result_filepath = compose_job_result_filepath(job_uuid)
         job_report_filepath = compose_job_report_filepath(job_uuid)
         job_result = prepare_job_result(product_definition)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         try:
             # Set up initial job result items.
+            job_result["job_uuid"] = job_uuid
             job_result["user_name"] = user_name
             job_result["job_start_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
             job_result["filename"] = filepath.name
-            job_result["job_uuid"] = job_uuid
             job_result["hash"] = make_signature(filepath)
 
             # Prepare initial job params.
@@ -153,9 +144,9 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
 
             for step_result, step_def in zip(job_result["steps"], product_definition["steps"]):
 
-                # Update status.json.
+                # Update stored job result.
                 step_result["status"] = STATUS_RUNNING_LABEL
-                write_job_result(job_result_filepath, job_result)
+                store_job_result(job_result)
 
                 # Update status at wps.
                 if update_status_func is not None:
@@ -210,13 +201,13 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 job_params.update(check_status.params)
 
         finally:
-            # Update status.json finally and record exception if raised.
+            # Finalize the job.
             (ex_type, ex_obj, tb_obj) = exc_info()
             if tb_obj is not None:
                 job_result["exception"] = format_exc()
             job_result["job_finish_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
-            write_job_result(job_result_filepath, job_result)
-            write_pdf_report(job_report_filepath, job_result)
+            store_job_result(job_result)
+            generate_pdf_report(job_report_filepath, job_result)
 
     return job_result
 

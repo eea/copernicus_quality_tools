@@ -17,6 +17,9 @@ JOB_INPUT_DIRNAME = "input.d"
 JOB_OUTPUT_DIRNAME = "output.d"
 JOB_TMP_DIRNAME = "tmp.d"
 
+JOB_RESULT_FILENAME = "result.json"
+JOB_REPORT_FILENAME = "report.pdf"
+
 HASH_ALGORITHM = "sha256"
 HASH_BUFFER_SIZE = 1024 ** 2
 
@@ -154,24 +157,39 @@ def prepare_job_result(product_definition):
 
 def compose_job_dir(job_uuid):
     job_subdir_tpl = "job_{:s}"
-    job_uuid = str(job_uuid).lower().replace("-", "")
+    job_uuid = job_uuid.lower().replace("-", "")
     job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
     return job_dir
 
 def compose_job_report_filepath(job_uuid):
     job_dir = compose_job_dir(job_uuid)
-    job_report_filepath = job_dir.joinpath("report.pdf")
+    job_report_filepath = job_dir.joinpath(JOB_REPORT_FILENAME)
     return job_report_filepath
 
-def compose_job_result_filepath(job_uuid):
+def load_job_result(job_uuid):
     job_dir = compose_job_dir(job_uuid)
-    job_result_filepath = job_dir.joinpath("result.json")
-    return job_result_filepath
+    job_result_filepath = job_dir.joinpath(JOB_RESULT_FILENAME)
+    job_result = job_result_filepath.read_text()
+    job_result = json.loads(job_result)
+    return job_result
 
-def compose_wps_status_filepath(job_uuid):
+def store_job_result(job_result):
+    job_result_data = json.dumps(job_result)
+    job_dir = compose_job_dir(job_result["job_uuid"])
+    # The job result is repeatedly rewritten every job step.
+    # In order to eliminate distortion of job result just being read
+    # we write the new content into adjacent file which we
+    # then rename.
+    job_result_filepath = job_dir.joinpath(JOB_RESULT_FILENAME)
+    job_result_filepath_pre = job_dir.joinpath(JOB_RESULT_FILENAME + ".pre")
+    job_result_filepath_pre.write_text(job_result_data)
+    job_result_filepath_pre.rename(job_result_filepath)
+
+def load_wps_status(job_uuid):
     wps_status_filename = "{:s}.xml".format(str(job_uuid))
     wps_status_filepath = CONFIG["wps_output_dir"].joinpath(wps_status_filename)
-    return wps_status_filepath
+    wps_status = wps_status_filepath.read_text()
+    return wps_status
 
 def compose_attachment_filepath(job_uuid, filename):
     job_dir = compose_job_dir(job_uuid)

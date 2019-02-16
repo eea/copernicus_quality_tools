@@ -18,8 +18,7 @@ def overall_status(job_result):
     else:
         return "Partial (some checks skipped)"
 
-
-def write_pdf_report(job_report_filepath, job_result):
+def generate_pdf_report(job_report_filepath, job_result):
     # set report page size to A4
     doc = BaseDocTemplate(str(job_report_filepath), pagesize=A4)
 
