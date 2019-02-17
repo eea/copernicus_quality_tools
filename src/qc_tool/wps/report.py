@@ -1,24 +1,34 @@
+
+
 import json
-from contextlib import ExitStack
 from datetime import datetime
 from os.path import normpath
 from pathlib import Path
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Frame, Image, PageTemplate, Paragraph, BaseDocTemplate,Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import BaseDocTemplate
+from reportlab.platypus import Frame
+from reportlab.platypus import Image
+from reportlab.platypus import PageTemplate
+from reportlab.platypus import Paragraph
+from reportlab.platypus import Table
+from reportlab.platypus import TableStyle
+
+from qc_tool.common import compile_job_report
+from qc_tool.common import JOB_ERROR
+from qc_tool.common import JOB_FAILED
+from qc_tool.common import JOB_OK
+from qc_tool.common import JOB_PARTIAL
+from qc_tool.common import QCException
+from qc_tool.common import TIME_FORMAT
 
 
-def overall_status(job_result):
-    step_statuses = [step_result["status"] for step_result in job_result["steps"]]
-    if all(step_status == "ok" for step_status in step_statuses):
-        return "Checks Passed"
-    elif any(step_status in ["failed", "aborted"] for step_status in step_statuses):
-        return "Checks Failed"
-    else:
-        return "Partial (some checks skipped)"
+def generate_pdf_report(job_report_filepath, job_uuid):
+    job_report = compile_job_report(job_uuid=job_uuid)
 
-def generate_pdf_report(job_report_filepath, job_result):
     # set report page size to A4
     doc = BaseDocTemplate(str(job_report_filepath), pagesize=A4)
 
@@ -36,7 +46,7 @@ def generate_pdf_report(job_report_filepath, job_result):
         canvas.saveState()
         styles = getSampleStyleSheet()
         style_normal = styles["Normal"]
-        p = Paragraph("QC Tool Check Report - {:s}  ".format(job_result["filename"]), style_normal)
+        p = Paragraph("QC Tool Check Report - {:s}  ".format(job_report["filename"]), style_normal)
         w, h = p.wrap(doc.width, doc.bottomMargin)
         p.drawOn(canvas, doc.leftMargin, h)
         canvas.restoreState()
@@ -70,20 +80,24 @@ def generate_pdf_report(job_report_filepath, job_result):
         # Add summary table
         text.append(Paragraph("", styles["Heading1"]))
         text.append(Paragraph("Report summary", styles["Heading2"]))
-        status_file = ["File name", job_result["filename"]]
-        status_product = ["Product", job_result["product_ident"]]
-        display_date = datetime.strptime(job_result["job_finish_date"], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M:%S")
+        status_file = ["File name", job_report["filename"]]
+        status_product = ["Product", job_report["product_ident"]]
+        display_date = datetime.strptime(job_report["job_finish_date"], TIME_FORMAT).strftime("%Y-%m-%d %H:%M:%S")
         status_date = ["Checked on", display_date]
-        status_result = overall_status(job_result)
-        if status_result == "Checks Passed":
-            status_result_style = style_check_ok
-        elif status_result == "Checks Failed":
-            status_result_style = style_check_failed
+        job_status = job_report["status"]
+        if job_status is None:
+            job_status = JOB_ERROR
+        if job_status in (JOB_ERROR, JOB_FAILED):
+            job_status_style = style_check_failed
+        elif job_status == JOB_OK:
+            job_status_style = style_check_ok
+        elif job_status == JOB_PARTIAL:
+            job_status_style = style_check_partial
         else:
-            status_result_style = style_check_partial
+            raise QCException("Unknown job status {:s}.".format(repr(job_status)))
 
-        status_result = ["Overall result", Paragraph(status_result, status_result_style)]
-        summary_data = [status_file, status_product, status_date, status_result]
+        job_status = ["Job status", Paragraph(job_status, job_status_style)]
+        summary_data = [status_file, status_product, status_date, job_status]
         summary_table = Table(summary_data, hAlign="LEFT", colWidths=[90, None])
         summary_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
                                     ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
@@ -104,24 +118,24 @@ def generate_pdf_report(job_report_filepath, job_result):
         check_data = [check_table_header]
 
         # Detail table data. Text colour is displayed based on check status.
-        for step_result in job_result["steps"]:
-            step_status = step_result["status"]
+        for step_report in job_report["steps"]:
+            step_status = step_report["status"]
             if step_status is None:
-                step_status = "skipped"
+                step_status = "not run"
             if step_status == "ok":
-                display_ident = Paragraph(step_result["check_ident"], style_check_default)
-                display_description = Paragraph(step_result["description"], style_check_default)
+                display_ident = Paragraph(step_report["check_ident"], style_check_default)
+                display_description = Paragraph(step_report["description"], style_check_default)
                 display_status = Paragraph("<b>" + step_status + "</b>", style_check_ok)
             elif step_status in ["aborted", "failed", "error"]:
-                display_ident = Paragraph(step_result["check_ident"], style_check_failed)
+                display_ident = Paragraph(step_report["check_ident"], style_check_failed)
                 display_status = Paragraph(step_status, style_check_failed)
-                display_description = Paragraph(step_result["description"], style_check_failed)
+                display_description = Paragraph(step_report["description"], style_check_failed)
             else:
-                display_ident = Paragraph(step_result["check_ident"], style_check_default)
+                display_ident = Paragraph(step_report["check_ident"], style_check_default)
                 display_status = Paragraph(step_status, style_check_default)
-                display_description = Paragraph(step_result["description"], style_check_default)
+                display_description = Paragraph(step_report["description"], style_check_default)
 
-            messages = step_result.get("messages", [])
+            messages = step_report.get("messages", [])
             if messages is None:
                 messages = []
             display_messages = []

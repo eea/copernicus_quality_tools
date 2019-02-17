@@ -232,9 +232,11 @@ def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
                                         .joinpath(submission_dirname))
     job_submission_dir.mkdir(parents=True, exist_ok=False)
 
-    # Copy job result.
-    dst_filepath = job_submission_dir.joinpath(src_filepath.name)
-    copyfile(str(job_result_filepath), str(dst_filepath))
+    # Copy all files in job's root directory.
+    for src_filepath in job_dir.iterdir():
+        if src_filepath.is_file() and not src_filepath.is_symlink():
+            dst_filepath = job_submission_dir.joinpath(src_filepath.name)
+            copyfile(str(src_filepath), str(dst_filepath))
 
     # Copy output.d.
     src_filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME)

@@ -3,7 +3,7 @@
 
 from unittest import TestCase
 
-from qc_tool.wps.dispatch import QCException
+from qc_tool.common import QCException
 
 
 class TestValidateSkipSteps(TestCase):

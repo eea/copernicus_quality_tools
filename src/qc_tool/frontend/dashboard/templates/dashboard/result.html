@@ -103,9 +103,9 @@
                 </table>
                 <br>
                 {% if pdf_report_exists %}
-                    <a href="/data/result/{{ result.uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
+                    <a href="/data/report/{{ result.uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
                 {% endif %}
-                  <span>    </span><a href="/data/result/{{ result.uuid }}/">JSON Report</a>&nbsp;&nbsp;&nbsp;
+                  <span>    </span><a href="/data/report/{{ result.uuid }}/report.json">JSON Report</a>&nbsp;&nbsp;&nbsp;
                 &nbsp;&nbsp;<span>    </span><a href="/data/wps_status/{{ result.uuid }}/">XML Report</a>
 
             </div>

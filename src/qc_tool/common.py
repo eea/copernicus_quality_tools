@@ -3,15 +3,24 @@
 
 import json
 import re
+import time
 from os import environ
 from os.path import normpath
 from pathlib import Path
+from shutil import copyfile
 
 
 # FIXME: such normalization should be removed in python3.6.
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
 PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
+
+JOB_ERROR = "error"
+JOB_FAILED = "failed"
+JOB_OK = "ok"
+JOB_PARTIAL = "partial"
+
+JOB_EXPIRE_TIMEOUT = 43200
 
 JOB_INPUT_DIRNAME = "input.d"
 JOB_OUTPUT_DIRNAME = "output.d"
@@ -23,9 +32,8 @@ JOB_REPORT_FILENAME = "report.pdf"
 HASH_ALGORITHM = "sha256"
 HASH_BUFFER_SIZE = 1024 ** 2
 
-STATUS_RUNNING_LABEL = "running"
-STATUS_SKIPPED_LABEL = "skipped"
-STATUS_TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+JOB_STEP_SKIPPED = "skipped"
+TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
@@ -84,14 +92,18 @@ SYSTEM_CHECK_FUNCTIONS = ["r_unzip", "v_import2pg", "v_unzip"]
 CONFIG = None
 
 
+class QCException(Exception):
+    pass
+
+
 def strip_prefix(check_ident):
     check_ident = check_ident.split(".")[-1]
     return check_ident
 
 def load_product_definition(product_ident):
     filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
-    product_definition = filepath.read_text()
-    product_definition = json.loads(product_definition)
+    data = filepath.read_text()
+    product_definition = json.loads(data)
     product_definition["product_ident"] = product_ident
     return product_definition
 
@@ -107,64 +119,35 @@ def get_product_descriptions():
         product_descriptions[product_ident] = product_description
     return product_descriptions
 
-def prepare_job_result(product_definition):
-    """
-    Prepare job result structure.
-
-    {"product_ident": <product ident>,
-     "description: <product description>,
-     "user_name": <>,
-     "job_start_date": <>,
-     "job_finish_date": <>,
-     "filename": <>,
-     "hash": <>,
-     "reference_year": <>,
-     "job_uuid": <>,
-     "exception": <>,
-     "steps": [{"step_nr": <ordinal number of the step>
-                "check_ident": <full check ident>,
-                "check_description": <>,
-                "required": <>,
-                "system": <>,
-                "status": <>,
-                "messages": <>,
-                "attachment_filenames": <>}, ...]}
-    """
-    job_result = {"product_ident": product_definition["product_ident"],
-                  "description": product_definition["description"],
-                  "user_name": None,
-                  "job_start_date": None,
-                  "job_finish_date": None,
-                  "filename": None,
-                  "hash": None,
-                  "reference_year": None,
-                  "job_uuid": None,
-                  "exception": None,
-                  "steps": []}
-    for step_nr, step_def in enumerate(product_definition["steps"], start=1):
-        short_check_ident = strip_prefix(step_def["check_ident"])
-        step_result = {"step_nr": step_nr,
-                       "check_ident": step_def["check_ident"],
-                       "description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
-                       "layers": step_def.get("parameters", {}).get("layers", None),
-                       "required": step_def["required"],
-                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
-                       "status": None,
-                       "messages": None,
-                       "attachment_filenames": None}
-        job_result["steps"].append(step_result)
-    return job_result
-
 def compose_job_dir(job_uuid):
     job_subdir_tpl = "job_{:s}"
     job_uuid = job_uuid.lower().replace("-", "")
     job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
     return job_dir
 
+def copy_product_definition_to_job(job_uuid, product_ident):
+    src_filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
+    dst_filepath = compose_job_dir(job_uuid).joinpath(src_filepath.name)
+    copyfile(str(src_filepath), str(dst_filepath))
+
+def load_product_definition_from_job(job_uuid, product_ident):
+    filepath = compose_job_dir(job_uuid).joinpath("{:s}.json".format(product_ident))
+    data = filepath.read_text()
+    product_definition = json.loads(data)
+    product_definition["product_ident"] = product_ident
+    return product_definition
+
 def compose_job_report_filepath(job_uuid):
     job_dir = compose_job_dir(job_uuid)
     job_report_filepath = job_dir.joinpath(JOB_REPORT_FILENAME)
     return job_report_filepath
+
+def has_job_expired(job_uuid, timeout=JOB_EXPIRE_TIMEOUT):
+    job_dir = compose_job_dir(job_uuid)
+    job_result_filepath = job_dir.joinpath(JOB_RESULT_FILENAME)
+    job_timestamp = job_result_filepath.stat().st_mtime
+    now_timestamp = time.time()
+    return job_timestamp + timeout < now_timestamp
 
 def load_job_result(job_uuid):
     job_dir = compose_job_dir(job_uuid)
@@ -184,6 +167,55 @@ def store_job_result(job_result):
     job_result_filepath_pre = job_dir.joinpath(JOB_RESULT_FILENAME + ".pre")
     job_result_filepath_pre.write_text(job_result_data)
     job_result_filepath_pre.rename(job_result_filepath)
+
+def prepare_job_report(product_definition):
+    job_report = {"job_uuid": None,
+                  "status": None,
+                  "product_ident": product_definition["product_ident"],
+                  "description": product_definition["description"],
+                  "user_name": None,
+                  "job_start_date": None,
+                  "job_finish_date": None,
+                  "filename": None,
+                  "hash": None,
+                  "reference_year": None,
+                  "exception": None,
+                  "steps": []}
+    for step_nr, step_def in enumerate(product_definition["steps"], start=1):
+        short_check_ident = strip_prefix(step_def["check_ident"])
+        step_report = {"step_nr": step_nr,
+                       "check_ident": step_def["check_ident"],
+                       "description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
+                       "layers": step_def.get("parameters", {}).get("layers", None),
+                       "required": step_def["required"],
+                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
+                       "status": None,
+                       "messages": None,
+                       "attachment_filenames": None}
+        job_report["steps"].append(step_report)
+    return job_report
+
+def compile_job_report(job_uuid=None, product_ident=None):
+    job_result = None
+    if job_uuid is not None:
+        try:
+            job_result = load_job_result(job_uuid)
+        except FileNotFoundError:
+            pass
+    if job_result is None:
+        if product_ident is None:
+            raise QCException("Missing product_ident while there is no job result for job {:s}.".format(job_uuid))
+        product_definition = load_product_definition(product_ident)
+    else:
+        product_definition = load_product_definition_from_job(job_uuid, job_result["product_ident"])
+    job_report = prepare_job_report(product_definition)
+    if job_result is not None:
+        step_defs = job_report["steps"]
+        job_report.update(job_result)
+        job_report["steps"] = step_defs
+        for i, job_step in enumerate(job_result["steps"]):
+            job_report["steps"][i].update(job_step)
+    return job_report
 
 def load_wps_status(job_uuid):
     wps_status_filename = "{:s}.xml".format(str(job_uuid))

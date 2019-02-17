@@ -1,17 +1,22 @@
 # -*- coding: utf-8 -*-
+
+
 import json
 from datetime import datetime
 
 from django.db import models
 from django.utils import timezone
 
+import qc_tool.frontend.dashboard.statuses as statuses
+from qc_tool.common import compile_job_report
+from qc_tool.common import has_job_expired
 from qc_tool.common import load_job_result
-from qc_tool.common import load_product_definition
 from qc_tool.common import load_wps_status
-from qc_tool.common import prepare_job_result
-from qc_tool.frontend.dashboard import statuses
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import parse_wps_status_document
+
+
+
 
 class Delivery(models.Model):
     class Meta:
@@ -31,13 +36,11 @@ class Delivery(models.Model):
         self.last_job_status = statuses.JOB_RUNNING
         self.product_ident = product_ident
         self.product_description = find_product_description(product_ident)
-        product_definition = load_product_definition(product_ident)
-        job_result = prepare_job_result(product_definition)
+        job_result = compile_job_report(product_ident=product_ident)
         self.empty_status_document = json.dumps(job_result)
         self.save()
 
     def update_status(self, job_uuid=None):
-
         if job_uuid is not None:
             self.last_job_uuid = job_uuid
         # Updates the status using the status of the job uuid.
@@ -46,49 +49,28 @@ class Delivery(models.Model):
         wps_doc = parse_wps_status_document(wps_status)
 
         self.last_wps_status = wps_doc["status"]
-        self.last_job_status = self.last_wps_status
-
         self.date_last_checked = wps_doc["end_time"]
 
-        try:
+        # Determine job status with respect to wps status.
+        if self.last_wps_status == statuses.WPS_ACCEPTED:
+            self.last_job_percent = 0
+            self.last_job_status = statuses.JOB_WAITING
+        elif self.last_wps_status == statuses.WPS_STARTED:
+            self.last_job_percent = wps_doc["percent_complete"]
+            self.last_job_status = statuses.JOB_RUNNING
+        elif self.last_wps_status == statuses.WPS_FAILED:
+            self.last_job_percent = 100
+            self.last_job_status = statuses.JOB_ERROR
+        elif self.last_wps_status == statuses.WPS_SUCCEEDED:
             job_result = load_job_result(self.last_job_uuid)
-        except FileNotFoundError:
-            # Job is waiting in queue, so job result does not exist yet.
-            job_result = None
-        if job_result is not None:
-            # Set progress percent (from wps doc)
-            if self.last_wps_status == statuses.WPS_ACCEPTED:
-                self.last_job_percent = 0
-            elif self.last_wps_status == statuses.WPS_STARTED:
-                self.last_job_percent = wps_doc["percent_complete"]
-            elif self.last_wps_status in (statuses.WPS_SUCCEEDED, statuses.WPS_FAILED):
-                self.last_job_percent = 100
-            else:
-                self.last_job_percent = 0
+            self.last_job_status = job_result["status"]
+        else:
+            self.last_job_status = None
 
-            # Set status (from job status doc)
-            if (self.last_wps_status == statuses.WPS_FAILED
-                or job_result["exception"] is not None):
-                self.last_job_status = statuses.JOB_ERROR
-            elif self.last_wps_status in(statuses.WPS_ACCEPTED, statuses.WPS_STARTED):
-                self.last_job_status = statuses.JOB_RUNNING
-            elif any((step_result["status"] in ("failed", "aborted") for step_result in job_result["steps"])):
-                self.last_job_status = statuses.JOB_FAILED
-            elif any((step_result["status"] is None or step_result["status"] == "skipped" for step_result in job_result["steps"])):
-                self.last_job_status = statuses.JOB_PARTIAL
-            elif all((step_result["status"] == "ok" for step_result in job_result["steps"])):
-                self.last_job_status = statuses.JOB_OK
-            else:
-                self.last_job_status = None
-
-            # Check expired job
-            # expire_timeout_s = 86400
-            expire_timeout_s = 43200
-            if self.last_job_status == statuses.JOB_RUNNING:
-                job_timestamp = job_result_filepath.stat().st_mtime
-                job_last_updated = datetime.utcfromtimestamp(job_timestamp)
-                if (datetime.now() - job_last_updated).total_seconds() > expire_timeout_s:
-                    self.last_job_status = statuses.JOB_EXPIRED
+        # Check expired job.
+        if self.last_job_status == statuses.JOB_RUNNING:
+            if has_job_expired(self.last_job_uuid):
+                self.last_job_status = statuses.JOB_EXPIRED
 
         self.save()
 

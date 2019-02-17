@@ -13,15 +13,19 @@ from sys import exc_info
 from traceback import format_exc
 from zipfile import ZipFile
 
+from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import CONFIG
+from qc_tool.common import copy_product_definition_to_job
 from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import HASH_BUFFER_SIZE
-from qc_tool.common import STATUS_RUNNING_LABEL
-from qc_tool.common import STATUS_SKIPPED_LABEL
-from qc_tool.common import STATUS_TIME_FORMAT
-from qc_tool.common import compose_job_report_filepath
+from qc_tool.common import JOB_ERROR
+from qc_tool.common import JOB_FAILED
+from qc_tool.common import JOB_OK
+from qc_tool.common import JOB_PARTIAL
+from qc_tool.common import JOB_STEP_SKIPPED
 from qc_tool.common import load_product_definition
-from qc_tool.common import prepare_job_result
+from qc_tool.common import QCException
+from qc_tool.common import TIME_FORMAT
 from qc_tool.common import store_job_result
 from qc_tool.wps.report import generate_pdf_report
 from qc_tool.wps.manager import create_connection_manager
@@ -123,15 +127,24 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
         product_definition = load_product_definition(product_ident)
         validate_skip_steps(skip_steps, product_definition)
         job_report_filepath = compose_job_report_filepath(job_uuid)
-        job_result = prepare_job_result(product_definition)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         try:
+            # Make duplicate of product definition in job dir.
+            copy_product_definition_to_job(job_uuid, product_ident)
+
             # Set up initial job result items.
-            job_result["job_uuid"] = job_uuid
-            job_result["user_name"] = user_name
-            job_result["job_start_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
-            job_result["filename"] = filepath.name
+            job_result = {"job_uuid": job_uuid,
+                          "product_ident": product_ident,
+                          "user_name": user_name,
+                          "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
+                          "filename": filepath.name,
+                          "exception": None,
+                          "steps": []}
             job_result["hash"] = make_signature(filepath)
+
+            # Store initial job result.
+            # This way we announce that the job has started.
+            store_job_result(job_result)
 
             # Prepare initial job params.
             job_params = {}
@@ -142,30 +155,28 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
 
-            for step_result, step_def in zip(job_result["steps"], product_definition["steps"]):
+            for step_nr, step_def in enumerate(product_definition["steps"], start=1):
 
-                # Update stored job result.
-                step_result["status"] = STATUS_RUNNING_LABEL
-                store_job_result(job_result)
+                step_result = {"check_ident": step_def["check_ident"]}
 
                 # Update status at wps.
                 if update_status_func is not None:
-                    percent_done = (step_result["step_nr"] - 1) / len(job_result["steps"]) * 100
-                    update_status_func(step_result["step_nr"], percent_done)
+                    percent_done = (step_nr - 1) / len(job_result["steps"]) * 100
+                    update_status_func(step_nr, percent_done)
 
                 # Skip this step.
-                if step_result["step_nr"] in skip_steps:
-                    step_result["status"] = STATUS_SKIPPED_LABEL
+                if step_nr in skip_steps:
+                    step_result["status"] = JOB_STEP_SKIPPED
                     continue
 
-                # Prepare parameters.
+                # Prepare parameters for this step.
                 step_params = {}
                 step_params.update(step_def.get("parameters", {}))
                 step_params.update(job_params)
 
                 # Run the step.
                 check_status = CheckStatus()
-                func = get_check_function(step_result["check_ident"])
+                func = get_check_function(step_def["check_ident"])
                 func(step_params, check_status)
 
                 # Set the check result into the job status.
@@ -173,7 +184,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 step_result["messages"] = check_status.messages
                 step_result["attachment_filenames"] = check_status.attachment_filenames.copy()
 
-                # Export error tables to csv and zipped shapefile.
+                # Export error tables.
                 for (error_table_name, src_table_name, pg_fid_name) in check_status.error_table_infos:
                     attachment_filename = dump_error_table(job_params["connection_manager"],
                                                            error_table_name,
@@ -182,7 +193,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                                                            jobdir_manager.output_dir)
                     step_result["attachment_filenames"].append(attachment_filename)
 
-                # Export full tables to zipped shapefile.
+                # Export full tables.
                 for table_name in check_status.full_table_names:
                     attachment_filename = dump_full_table(job_params["connection_manager"],
                                                           table_name,
@@ -200,20 +211,31 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 job_params.update(check_status.status_properties)
                 job_params.update(check_status.params)
 
+                # Update stored job result.
+                job_result["steps"].append(step_result)
+                store_job_result(job_result)
+
         finally:
             # Finalize the job.
             (ex_type, ex_obj, tb_obj) = exc_info()
             if tb_obj is not None:
                 job_result["exception"] = format_exc()
-            job_result["job_finish_date"] = datetime.utcnow().strftime(STATUS_TIME_FORMAT)
+            job_result["job_finish_date"] = datetime.utcnow().strftime(TIME_FORMAT)
+            step_statuses = set(job_step["status"] for job_step in job_result["steps"])
+            if job_result["exception"] is not None:
+                job_result["status"] = JOB_ERROR
+            elif "aborted" in step_statuses:
+                job_result["status"] = JOB_FAILED
+            elif "failed" in step_statuses:
+                job_result["status"] = JOB_FAILED
+            elif JOB_STEP_SKIPPED in step_statuses:
+                job_result["status"] = JOB_PARTIAL
+            else:
+                job_result["status"] = JOB_OK
             store_job_result(job_result)
-            generate_pdf_report(job_report_filepath, job_result)
+            generate_pdf_report(job_report_filepath, job_uuid)
 
     return job_result
-
-
-class QCException(Exception):
-    pass
 
 
 class CheckStatus():

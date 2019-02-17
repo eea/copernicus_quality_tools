@@ -16,8 +16,8 @@ urlpatterns = [
     path("data/job_info/<product_ident>/", views.get_job_info, name="job_info_json"),
     path("data/product_definition/<product_ident>/", views.get_product_definition, name="product_definition_json"),
     path("data/product_list/", views.get_product_list, name="product_list_json"),
-    path("data/result/<job_uuid>/", views.get_job_result, name="job_result_json"),
-    path("data/result/<job_uuid>/report.pdf", views.get_pdf_report, name="pdf_report"),
+    path("data/report/<job_uuid>/report.json", views.get_job_report, name="job_report_json"),
+    path("data/report/<job_uuid>/report.pdf", views.get_pdf_report, name="job_report_pdf"),
     path("data/wps_status/<job_uuid>/", views.get_wps_status_xml, name="wps_status_xml"),
 
     path('upload/', views.file_upload, name='file_upload'),

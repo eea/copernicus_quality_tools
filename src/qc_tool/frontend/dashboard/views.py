@@ -26,13 +26,13 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from qc_tool.common import CONFIG
+from qc_tool.common import compile_job_report
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_job_result
 from qc_tool.common import load_product_definition
 from qc_tool.common import load_wps_status
-from qc_tool.common import prepare_job_result
 
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import format_date_utc
@@ -364,9 +364,8 @@ def get_job_info(request, product_ident):
     :param product_ident: the name of the product type for example clc
     :return: product details with a list of job steps and their type (system, required, optional)
     """
-    product_definition = load_product_definition(product_ident)
-    job_result = prepare_job_result(product_definition)
-    return JsonResponse({'job_result': job_result})
+    job_report = compile_job_report(product_ident=product_ident)
+    return JsonResponse({'job_result': job_report})
 
 def get_product_definition(request, product_ident):
     """
@@ -382,8 +381,8 @@ def get_wps_status_xml(request, job_uuid):
     wps_status = load_wps_status(job_uuid)
     return HttpResponse(wps_status, content_type="application/xml")
 
-def get_job_result(request, job_uuid):
-    job_result = load_job_result(job_uuid)
+def get_job_report(request, job_uuid):
+    job_result = compile_job_report(job_uuid)
     return JsonResponse(job_result, safe=False)
 
 def get_pdf_report(request, job_uuid):
@@ -430,12 +429,11 @@ def get_result(request, job_uuid):
     """
     try:
         job_result = load_job_result(job_uuid)
+        job_report = compile_job_report(job_uuid=job_uuid)
     except FileNotFoundError:
-        job_result = None
-    if job_result is not None:
-        job_timestamp = job_result_filepath.stat().st_mtime
-        job_end_date = datetime.utcfromtimestamp(job_timestamp).strftime('%Y-%m-%d %H:%M:%SZ')
-        job_reference_year = job_result["reference_year"]
+        job_report = None
+    if job_report is not None:
+        job_reference_year = job_report["reference_year"]
 
         # Check existence of pdf report
         pdf_report_filepath = compose_job_report_filepath(job_uuid)
@@ -445,37 +443,38 @@ def get_result(request, job_uuid):
             pdf_report_exists = False
 
         context = {
-            "product_ident": job_result["product_ident"],
-            "product_description": job_result["description"],
-            "filepath": job_result["filename"],
-            "start_time": job_result["job_start_date"],
-            "end_time": job_end_date,
+            "product_ident": job_report["product_ident"],
+            "product_description": job_report["description"],
+            "filepath": job_report["filename"],
+            "start_time": job_report["job_start_date"],
+            "end_time": job_report["job_finish_date"],
             "reference_year": job_reference_year,
             "pdf_report_exists": pdf_report_exists,
             "result": {
                 "uuid": job_uuid,
-                "detail": job_result["steps"]
+                "detail": job_report["steps"]
             },
         }
 
-        # special case of system error: show error information from the WPS xml document
+        # Special case of system error: show error information from the WPS xml document.
+        # Set the error label at first step having status still None.
         wps_info = parse_wps_status_document(load_wps_status(job_uuid))
-        if wps_info["status"] == "error" or job_result["exception"] is not None:
+        if wps_info["status"] == "error" or job_report["exception"] is not None:
             for error_check_index, check in enumerate(context["result"]["detail"]):
-                if check["status"] == "running":
+                if check["status"] is None:
                     context["result"]["detail"][error_check_index]["status"] = "error"
                     break
 
-        # inject partial check percentage.
+        # Inject partial check percentage.
+        # Try to find file containing percent done at first step having status still None.
         for check_index, check in enumerate(context["result"]["detail"]):
-            if check["status"] == "running":
+            if check["status"] is None:
                 percentage_filename = "{:s}_percent.txt".format(check["check_ident"])
                 percentage_filepath = job_result_filepath.parent.joinpath("output.d", percentage_filename)
                 if percentage_filepath.exists():
                     percent = percentage_filepath.read_text()
                     context["result"]["detail"][check_index]["status"] = "running ({:s}%)".format(percent)
-
-
+                break
 
     else:
         context = {
