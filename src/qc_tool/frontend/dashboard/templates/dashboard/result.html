@@ -21,7 +21,7 @@
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
                     <li role="presentation" class="active">
-                        <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Result of QC Job: {{ result.uuid }}</a>
+                        <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Result of QC Job: {{ job_uuid }}</a>
                     </li>
                 </ul>
 
@@ -32,23 +32,23 @@
                     <div class="panel panel-default"><div class="panel-body">
                     <dl class="row">
                       <dt class="col-sm-2">Product</dt>
-                      <dd class="col-sm-10">{{product_description}}</dd>
+                      <dd class="col-sm-10">{{description}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Reference Year</dt>
                       <dd class="col-sm-10">{{reference_year}}</dd>
                     </dl>
                     <dl class="row">
-                      <dt class="col-sm-2">File Path</dt>
-                      <dd class="col-sm-10">{{filepath}}</dd>
+                      <dt class="col-sm-2">File</dt>
+                      <dd class="col-sm-10">{{filename}}</dd>
                     </dl>
                     <dl class="row">
-                      <dt class="col-sm-2">Start Date/Time</dt>
-                      <dd class="col-sm-10">{{start_time}}</dd>
+                      <dt class="col-sm-2">Started</dt>
+                      <dd class="col-sm-10">{{job_start_date}}</dd>
                     </dl>
                     <dl class="row">
-                      <dt class="col-sm-2">End Date/Time</dt>
-                      <dd class="col-sm-10">{{end_time}}</dd>
+                      <dt class="col-sm-2">Finished</dt>
+                      <dd class="col-sm-10">{{job_finish_date}}</dd>
                     </dl>
                 </div></div>
 
@@ -64,49 +64,49 @@
                     </tr>
                     </thead>
                    <tbody>
-                        {% for detail in result.detail %}
+                        {% for step in steps %}
                         <tr>
-                            {% if detail.status == "ok" %}
-                            <td class="success">{{detail.check_ident}}</td>
-                            <td class="success">{{detail.description}}</td>
-                            <td class="success">{{detail.status}}</td>
+                            {% if step.status == "ok" %}
+                            <td class="success">{{step.check_ident}}</td>
+                            <td class="success">{{step.description}}</td>
+                            <td class="success">{{step.status}}</td>
                             <td class="success">
-                                {% for attachment_filename in detail.attachment_filenames %}
-                                <a href="/attachment/{{ result.uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
+                                {% for attachment_filename in step.attachment_filenames %}
+                                <a href="/attachment/{{ job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
                                 {% endfor %}</td>
-                            <td class="success"><ul>{% for msg in detail.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
-                            {% elif detail.status == "skipped" or detail.status == "running" %}
-                            <td>{{detail.check_ident}}</td>
-                            <td>{{detail.description}}</td>
-                            <td>{{detail.status}}</td>
+                            <td class="success"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
+                            {% elif step.status == "skipped" or step.status == "running" %}
+                            <td>{{step.check_ident}}</td>
+                            <td>{{step.description}}</td>
+                            <td>{{step.status}}</td>
                             <td></td>
                             <td></td>
-                            {% elif detail.status == None %}
-                            <td>{{detail.check_ident}}</td>
-                            <td>{{detail.description}}</td>
+                            {% elif step.status == None %}
+                            <td>{{step.check_ident}}</td>
+                            <td>{{step.description}}</td>
                             <td></td>
                             <td></td>
                             <td></td>
                             {% else %}
-                            <td class="danger">{{detail.check_ident}}</td>
-                            <td class="danger">{{detail.description}}</td>
-                            <td class="danger">{{detail.status}}</td>
+                            <td class="danger">{{step.check_ident}}</td>
+                            <td class="danger">{{step.description}}</td>
+                            <td class="danger">{{step.status}}</td>
                             <td class="danger">
-                                {% for attachment_filename in detail.attachment_filenames %}
-                                <a href="/attachment/{{ result.uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
+                                {% for attachment_filename in step.attachment_filenames %}
+                                <a href="/attachment/{{ job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
                                 {% endfor %}</td>
-                            <td class="danger"><ul>{% for msg in detail.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
+                            <td class="danger"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
                             {% endif %}
                         </tr>
                         {% endfor %}
                    </tbody>
                 </table>
                 <br>
-                {% if pdf_report_exists %}
-                    <a href="/data/report/{{ result.uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
+                {% if job_finish_date %}
+                    <a href="/data/report/{{ job_uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
                 {% endif %}
-                  <span>    </span><a href="/data/report/{{ result.uuid }}/report.json">JSON Report</a>&nbsp;&nbsp;&nbsp;
-                &nbsp;&nbsp;<span>    </span><a href="/data/wps_status/{{ result.uuid }}/">XML Report</a>
+                  <span>    </span><a href="/data/report/{{ job_uuid }}/{{ product_ident }}/report.json">JSON Report</a>&nbsp;&nbsp;&nbsp;
+                &nbsp;&nbsp;<span>    </span><a href="/data/wps_status/{{ job_uuid }}/">XML Report</a>
 
             </div>
 

@@ -15,6 +15,7 @@ QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
 PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
+
 JOB_ERROR = "error"
 JOB_FAILED = "failed"
 JOB_OK = "ok"

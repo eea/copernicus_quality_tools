@@ -16,8 +16,6 @@ from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import parse_wps_status_document
 
 
-
-
 class Delivery(models.Model):
     class Meta:
         app_label = "dashboard"
@@ -40,7 +38,7 @@ class Delivery(models.Model):
         self.empty_status_document = json.dumps(job_result)
         self.save()
 
-    def update_status(self, job_uuid=None):
+    def update_job_status(self, job_uuid=None):
         if job_uuid is not None:
             self.last_job_uuid = job_uuid
         # Updates the status using the status of the job uuid.
@@ -76,11 +74,11 @@ class Delivery(models.Model):
 
         is_submitted = self.date_submitted is not None
 
-        # return JsonResponse()
-        return {"is_submitted": is_submitted,
-                "job_status": self.last_job_status,
-                "wps_doc_status": self.last_wps_status,
-                "percent": self.last_job_percent}
+    def submit(self):
+        self.date_submitted = timezone.now()
+
+    def is_submitted(self):
+        return self.date_submitted is not None
 
     filename = models.CharField(max_length=500)
     filepath = models.CharField(max_length=500)

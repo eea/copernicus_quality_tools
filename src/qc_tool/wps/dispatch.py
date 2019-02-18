@@ -161,7 +161,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
 
                 # Update status at wps.
                 if update_status_func is not None:
-                    percent_done = (step_nr - 1) / len(job_result["steps"]) * 100
+                    percent_done = (step_nr - 1) / len(product_definition["steps"]) * 100
                     update_status_func(step_nr, percent_done)
 
                 # Skip this step.
@@ -230,6 +230,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 job_result["status"] = JOB_FAILED
             elif JOB_STEP_SKIPPED in step_statuses:
                 job_result["status"] = JOB_PARTIAL
+            elif "cancelled" in step_statuses:
+                job_result["status"] = JOB_FAILED
             else:
                 job_result["status"] = JOB_OK
             store_job_result(job_result)

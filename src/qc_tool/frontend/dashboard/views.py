@@ -30,7 +30,6 @@ from qc_tool.common import compile_job_report
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import get_product_descriptions
-from qc_tool.common import load_job_result
 from qc_tool.common import load_product_definition
 from qc_tool.common import load_wps_status
 
@@ -98,7 +97,6 @@ def get_deliveries_json(request):
         else:
             actual_qc_status = JOB_DELIVERY_NOT_FOUND
 
-        delivery_is_submitted = d.date_submitted is not None
         delivery_info = {"id": d.id,
                      "filename": d.filename,
                      "filepath": d.filepath,
@@ -114,7 +112,7 @@ def get_deliveries_json(request):
                      "qc_status": actual_qc_status,
                      "last_wps_status": d.last_wps_status,
                      "percent": d.last_job_percent,
-                     "is_submitted": delivery_is_submitted,
+                     "is_submitted": d.is_submitted(),
                      "submission_enabled": settings.SUBMISSION_ENABLED}
 
         ui_deliveries.append(delivery_info)
@@ -326,6 +324,7 @@ def submit_delivery_to_eea(request):
         logger.debug("delivery_submit_eea id=" + str(file_id))
 
         d = Delivery.objects.get(id=file_id)
+        d.submit()
         d.date_submitted = timezone.now()
         d.save()
 
@@ -356,6 +355,13 @@ def get_product_list(request):
     product_list = sorted(product_list, key=lambda x: x['description'])
     return JsonResponse({'product_list': product_list})
 
+def get_product_definition(request, product_ident):
+    """
+    Shows the json product definition.
+    """
+    product_definition = load_product_definition(product_ident)
+    return JsonResponse(product_definition)
+
 @login_required
 def get_job_info(request, product_ident):
     """
@@ -367,23 +373,17 @@ def get_job_info(request, product_ident):
     job_report = compile_job_report(product_ident=product_ident)
     return JsonResponse({'job_result': job_report})
 
-def get_product_definition(request, product_ident):
-    """
-    Shows the json product definition.
-    """
-    product_definition = load_product_definition(product_ident)
-    return JsonResponse(product_definition)
-
-def get_wps_status_xml(request, job_uuid):
-    """
-    Shows the WPS status xml document of the selected job.
-    """
-    wps_status = load_wps_status(job_uuid)
-    return HttpResponse(wps_status, content_type="application/xml")
-
-def get_job_report(request, job_uuid):
-    job_result = compile_job_report(job_uuid)
+def get_job_report(request, job_uuid, product_ident):
+    job_result = compile_job_report(job_uuid=job_uuid, product_ident=product_ident)
     return JsonResponse(job_result, safe=False)
+
+@login_required
+def get_result(request, job_uuid, product_ident):
+    """
+    Shows the result page with detailed results of the selected job.
+    """
+    job_report = compile_job_report(job_uuid=job_uuid, product_ident=product_ident)
+    return render(request, "dashboard/result.html", job_report)
 
 def get_pdf_report(request, job_uuid):
     report_filepath = compose_job_report_filepath(job_uuid)
@@ -392,6 +392,12 @@ def get_pdf_report(request, job_uuid):
     except FileNotFoundError:
         raise Http404()
 
+def get_wps_status_xml(request, job_uuid):
+    """
+    Shows the WPS status xml document of the selected job.
+    """
+    wps_status = load_wps_status(job_uuid)
+    return HttpResponse(wps_status, content_type="application/xml")
 
 @login_required
 def get_attachment(request, job_uuid, attachment_filename):
@@ -409,10 +415,15 @@ def get_attachment(request, job_uuid, attachment_filename):
     return response
 
 @login_required
-def refresh_job_status(request, job_uuid):
+def update_job_status(request, job_uuid):
     try:
         delivery = Delivery.objects.get(last_job_uuid=job_uuid)
-        status = delivery.update_status()
+        delivery.update_job_status()
+        status = {"product_ident": delivery.product_ident,
+                  "is_submitted": delivery.is_submitted(),
+                  "job_status": delivery.last_job_status,
+                  "wps_doc_status": delivery.last_wps_status,
+                  "percent": delivery.last_job_percent}
         if not Path(delivery.filepath).joinpath(delivery.filename).exists():
             status = JOB_DELIVERY_NOT_FOUND
         return JsonResponse(status)
@@ -420,77 +431,6 @@ def refresh_job_status(request, job_uuid):
         return JsonResponse({"job_status": None, "wps_doc_status": None, "percent": None})
     except MultipleObjectsReturned:
         return JsonResponse({"job_status": None, "wps_doc_status": None, "percent": None})
-
-
-@login_required
-def get_result(request, job_uuid):
-    """
-    Shows the result page with detailed results of the selected job.
-    """
-    try:
-        job_result = load_job_result(job_uuid)
-        job_report = compile_job_report(job_uuid=job_uuid)
-    except FileNotFoundError:
-        job_report = None
-    if job_report is not None:
-        job_reference_year = job_report["reference_year"]
-
-        # Check existence of pdf report
-        pdf_report_filepath = compose_job_report_filepath(job_uuid)
-        if pdf_report_filepath.is_file():
-            pdf_report_exists = True
-        else:
-            pdf_report_exists = False
-
-        context = {
-            "product_ident": job_report["product_ident"],
-            "product_description": job_report["description"],
-            "filepath": job_report["filename"],
-            "start_time": job_report["job_start_date"],
-            "end_time": job_report["job_finish_date"],
-            "reference_year": job_reference_year,
-            "pdf_report_exists": pdf_report_exists,
-            "result": {
-                "uuid": job_uuid,
-                "detail": job_report["steps"]
-            },
-        }
-
-        # Special case of system error: show error information from the WPS xml document.
-        # Set the error label at first step having status still None.
-        wps_info = parse_wps_status_document(load_wps_status(job_uuid))
-        if wps_info["status"] == "error" or job_report["exception"] is not None:
-            for error_check_index, check in enumerate(context["result"]["detail"]):
-                if check["status"] is None:
-                    context["result"]["detail"][error_check_index]["status"] = "error"
-                    break
-
-        # Inject partial check percentage.
-        # Try to find file containing percent done at first step having status still None.
-        for check_index, check in enumerate(context["result"]["detail"]):
-            if check["status"] is None:
-                percentage_filename = "{:s}_percent.txt".format(check["check_ident"])
-                percentage_filepath = job_result_filepath.parent.joinpath("output.d", percentage_filename)
-                if percentage_filepath.exists():
-                    percent = percentage_filepath.read_text()
-                    context["result"]["detail"][check_index]["status"] = "running ({:s}%)".format(percent)
-                break
-
-    else:
-        context = {
-            "product_ident": None,
-            "product_description": None,
-            "filepath": None,
-            "start_time": None,
-            "end_time": None,
-            "pdf_report_exists": False,
-            "result": {
-                "uuid": job_uuid,
-                "detail": []
-            }
-        }
-    return render(request, "dashboard/result.html", context)
-
 
 @csrf_exempt
 def run_wps_execute(request):
@@ -539,7 +479,7 @@ def run_wps_execute(request):
             file_name = file_path.name
             d = Delivery.objects.get(user=request.user, filename=file_name)
             d.init_status(product_ident)
-            d.update_status(job_uuid)
+            d.update_job_status(job_uuid)
             logger.debug("Delivery {:d}: job status created with job_uuid={:s}.".format(d.id, str(job_uuid)))
 
             # The WPS process has been started asynchronously.

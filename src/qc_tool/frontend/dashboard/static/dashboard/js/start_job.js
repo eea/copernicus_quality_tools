@@ -59,7 +59,7 @@ function display_product_info(product_ident) {
 
         // Update link to product definition.
         $("#product_link_placeholder").html(
-        '<a href="/data/product_definition/' + product_ident + '/">Show Product Definition</a>');
+        '<a href="/data/product_definition/' + product_ident + '/">Product Definition</a>');
 
         // enable Run QC button
         $("#btn_run").prop("disabled", false);

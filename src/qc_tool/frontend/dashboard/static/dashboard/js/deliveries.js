@@ -106,7 +106,7 @@ function statusFormatter(value, row, index) {
 
     if (value == "file_not_found") {
         value = '<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"> </span>';
-        value += '<span class="text-danger"> FILE NOT FOUND</span>';
+        value += '<span class="text-danger">FILE NOT FOUND</span>';
         return value;
     }
     if (!uuid) {
@@ -128,8 +128,7 @@ function statusFormatter(value, row, index) {
         }
     }
     return ['<a class="like" href="',
-            "/result/",
-            uuid,
+            "/result/", uuid, "/", row.product_ident,
             '" title="Show results">',
             value,
             '</a>'].join('');
@@ -210,10 +209,10 @@ function submit_eea_function(id, filename) {
         });
 }
 
-function refresh_job_statuses() {
+function update_job_statuses() {
     // find deliveries with 'running' status
     $("a").each(function() {
-        if($(this).text().startsWith("running")) {
+        if($(this).text().startsWith("running") || $(this).text().startsWith("waiting")) {
             var hyperlink = $(this);
 
             // extract job_uuid from the hyperlink
@@ -222,8 +221,8 @@ function refresh_job_statuses() {
 
             $.ajax({
                 type:"get",
-                url:"/delivery/refresh_status/" + job_uuid + "/",
-                datatype:"html",
+                url:"/delivery/update_job_status/" + job_uuid + "/",
+                datatype:"json",
                 success:function(data)
                 {
                     // get row index
@@ -239,6 +238,7 @@ function refresh_job_statuses() {
                         rowData.last_job_status = data.job_status;
                         rowData.percent = data.percent;
                         rowData.is_submitted = data.is_submitted;
+			rowData.product_ident = data.product_ident;
 
                         // Update background colour of the status cell.
                         var newCellStyle = statusCellStyle(rowData.qc_status, rowData, index);
@@ -264,6 +264,6 @@ $(document).ready(function(){
     $('[data-toggle="tooltip"]').tooltip();
 
     // start the timer for the deliveries. Check for updates every 5 seconds.
-    refresh_job_statuses();
-    setInterval(function(){refresh_job_statuses();}, 5000);
+    update_job_statuses();
+    setInterval(function(){update_job_statuses();}, 5000);
 });
