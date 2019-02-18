@@ -101,9 +101,6 @@ function submittedFormatter(value, row, index) {
 }
 
 function statusFormatter(value, row, index) {
-
-    var uuid = row["last_job_uuid"];
-
     if (value == "file_not_found") {
         value = '<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"> </span>';
         value += '<span class="text-danger">FILE NOT FOUND</span>';
@@ -127,6 +124,7 @@ function statusFormatter(value, row, index) {
             value = "passed";
         }
     }
+
     return ['<a class="like" href="',
             "/result/", uuid, "/", row.product_ident,
             '" title="Show results">',
@@ -215,9 +213,10 @@ function update_job_statuses() {
         if($(this).text().startsWith("running") || $(this).text().startsWith("waiting")) {
             var hyperlink = $(this);
 
-            // extract job_uuid from the hyperlink
+            // extract job_uuid from the hyperlink /result/<job_uuid>/<product_ident>/
             var url_parts = hyperlink.attr("href").split("/");
-            var job_uuid = url_parts[url_parts.length - 1];
+            var product_ident = url_parts[url_parts.length - 1];
+            var job_uuid = url_parts[url_parts.length - 2];
 
             $.ajax({
                 type:"get",
@@ -238,7 +237,7 @@ function update_job_statuses() {
                         rowData.last_job_status = data.job_status;
                         rowData.percent = data.percent;
                         rowData.is_submitted = data.is_submitted;
-			rowData.product_ident = data.product_ident;
+			            rowData.product_ident = data.product_ident;
 
                         // Update background colour of the status cell.
                         var newCellStyle = statusCellStyle(rowData.qc_status, rowData, index);

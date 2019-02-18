@@ -46,10 +46,11 @@ function display_product_info(product_ident) {
                     tbody += " disabled";
                 }
                 tbody += "></td>";
+                tbody += "</tr>";
             }
-            tbody += "</tr>";
         }
 
+        // add html content to the table with checkboxes.
         $("#tbl_check_details > tbody").html(tbody);
 
         //show table if hidden
@@ -67,7 +68,6 @@ function display_product_info(product_ident) {
         //listen to checkbox events
         toggle_select_buttons();
         $(":checkbox").change(function() {
-            console.log("checkbox change");
             toggle_select_buttons();
         })
     })
@@ -136,12 +136,19 @@ function run_checks() {
     // WPS execute must be called via server-side proxy to bypass CORS restriction.
     var run_url = "/run_wps_execute";
 
-    // retrieve the checkboxes
+    // retrieve the checkboxes from tbl_check_details table.
     var unselected_steps = [];
-    $ ('tbody tr').each(function() {
-        var checkbox = $(this).find('input');
-        if (!checkbox.prop('checked')) {
-            unselected_steps.push(checkbox.val());
+    $ ("#tbl_check_details tbody tr").each(function() {
+
+        // search for unchecked checkbox in the table row
+        var checkbox = $(this).find('input:checkbox');
+
+        if (checkbox.length == 0) {
+            console.log("could not find any checkboxes in the current row.");
+        } else {
+            if (!checkbox.prop('checked')) {
+                unselected_steps.push(checkbox.val());
+            }
         }
     });
 
@@ -167,7 +174,6 @@ function run_checks() {
                         label: "OK",
                         cssClass: "btn-default",
                         action: function(dialog) {
-                            console.log(result);
                             // If the user click OK, then redirect to jobs page for now.
                             $(location).attr("href","/");
                         }

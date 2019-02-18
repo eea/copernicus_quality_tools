@@ -90,7 +90,6 @@ def get_deliveries_json(request):
     ui_deliveries = []
 
     for d in db_deliveries:
-
         # For each delivery, check if an associated ZIP file actually exists in the file system.
         if Path(d.filepath).joinpath(d.filename).exists():
             actual_qc_status = d.last_job_status
