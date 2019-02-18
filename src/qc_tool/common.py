@@ -210,7 +210,11 @@ def compile_job_report(job_uuid=None, product_ident=None):
     else:
         product_definition = load_product_definition_from_job(job_uuid, job_result["product_ident"])
     job_report = prepare_job_report(product_definition)
-    if job_result is not None:
+    if job_result is None:
+        # WPS status already exists, however job result does not yet.
+        if job_uuid is not None:
+            job_report["job_uuid"] = job_uuid
+    else:
         step_defs = job_report["steps"]
         job_report.update(job_result)
         job_report["steps"] = step_defs
