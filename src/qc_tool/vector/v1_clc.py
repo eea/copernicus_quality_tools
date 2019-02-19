@@ -6,7 +6,7 @@ import re
 
 from qc_tool.wps.helper import LayerDefsBuilder
 from qc_tool.wps.registry import register_check_function
-from qc_tool.wps.vector_check.dump_gdbtable import get_fc_path
+from qc_tool.vector.dump_gdbtable import get_fc_path
 
 
 @register_check_function(__name__)
