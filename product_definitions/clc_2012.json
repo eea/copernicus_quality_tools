@@ -44,7 +44,7 @@
       }
     },
     {
-      "check_ident": "reference.v3",
+      "check_ident": "v3",
       "required": true,
       "parameters": {
         "layers": ["reference"],
@@ -57,7 +57,7 @@
       }
     },
     {
-      "check_ident": "initial.v3",
+      "check_ident": "v3",
       "required": true,
       "parameters": {
         "layers": ["initial"],
@@ -70,7 +70,7 @@
       }
     },
     {
-      "check_ident": "change.v3",
+      "check_ident": "v3",
       "required": true,
       "parameters": {
         "layers": ["change"],
@@ -105,7 +105,7 @@
       }
     },
     {
-      "check_ident": "reference.v6",
+      "check_ident": "v6",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -118,7 +118,7 @@
       }
     },
     {
-      "check_ident": "initial.v6",
+      "check_ident": "v6",
       "required": false,
       "parameters": {
         "layers": ["initial"],
@@ -131,7 +131,7 @@
       }
     },
     {
-      "check_ident": "change.v6",
+      "check_ident": "v6",
       "required": false,
       "parameters": {
         "layers": ["change"],
@@ -206,7 +206,7 @@
       }
     },
     {
-      "check_ident": "reference.v14",
+      "check_ident": "v14",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -214,7 +214,7 @@
       }
     },
     {
-      "check_ident": "initial.v14",
+      "check_ident": "v14",
       "required": false,
       "parameters": {
         "layers": ["initial"],
@@ -222,7 +222,7 @@
       }
     },
     {
-      "check_ident": "change.v14",
+      "check_ident": "v14",
       "required": false,
       "parameters": {
         "layers": ["change"],

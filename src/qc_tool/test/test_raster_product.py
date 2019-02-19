@@ -27,19 +27,7 @@ class Test_Raster(ProductTestCase):
         self.username = "test_username"
 
         # All steps are expected to finish with ok status by default.
-        self.expected_step_statuses = {"r_unzip": "ok",
-                                       "r1": "ok",
-                                       "r2": "ok",
-                                       "r3": "ok",
-                                       "r4": "ok",
-                                       "r5": "ok",
-                                       "r6": "ok",
-                                       "r7": "ok",
-                                       "r8": "ok",
-                                       "r9": "ok",
-                                       "r10": "ok",
-                                       "r12": "ok",
-                                       "r13": "ok"}
+        self.expected_step_statuses = ["ok"] * 14
 
     # High resolution forest type (FTY) - 20m
     def test_fty_020m(self):
@@ -48,18 +36,16 @@ class Test_Raster(ProductTestCase):
         # fty_020m has extra check r11 (raster MMU)
         self.expected_step_statuses["r11"] = "ok"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution forest type (FTY) - 100m
     def test_fty_100m(self):
         product_ident = "fty_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "fty_2015_100m_mt_03035_d02_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution grassland (GRA) - 20m
     def test_gra_020m(self):
@@ -70,72 +56,64 @@ class Test_Raster(ProductTestCase):
         # gra_020m has mismatching attributes
         self.expected_step_statuses["r3"] = "failed"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution grassland (GRA) - 100m
     def test_gra_100m(self):
         product_ident = "gra_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "GRA_2015_100m_mt_03035_V1_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution imperviousness change (IMC) - 20m
     def test_imc_020m(self):
         product_ident = "imc_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMC_1215_020m_mt_03035_d02_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution imperviousness change (IMC) - 100m
     def test_imc_100m(self):
         product_ident = "imc_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMC_1215_100m_mt_03035_d02_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution imperviousness density (IMD) - 20m
     def test_imd_020m(self):
         product_ident = "imd_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMD_2015_020m_mt_03035_d04_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution imperviousness density (IMD) - 100m
     def test_imd_100m(self):
         product_ident = "imd_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "IMD_2015_100m_mt_03035_d02_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution tree cover density (TCD) - 20m
     def test_tcd_020m(self):
         product_ident = "tcd_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "TCD_2015_020m_mt_03035_d04_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution tree cover density (TCD) - 100m
     def test_tcd_100m(self):
         product_ident = "tcd_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "TCD_2015_100m_mt_03035_d03_clip.zip")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
 
     # High resolution water and wetness (WAW) - 20m
     def test_waw_020m(self):
@@ -144,9 +122,8 @@ class Test_Raster(ProductTestCase):
         # completeness check is cancelled due to unavailable raster mask.
         self.expected_step_statuses["r10"] = "cancelled"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses)
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses)
 
     # High resolution water and wetness (WAW) - 100m
     def test_waw_100m(self):
@@ -155,6 +132,5 @@ class Test_Raster(ProductTestCase):
         # completeness check is cancelled due to unavailable raster mask.
         self.expected_step_statuses["r10"] = "cancelled"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
-        step_statuses = dict((step_result["check_ident"], step_result["status"])
-                             for step_result in job_result["steps"])
-        self.assertDictEqual(self.expected_step_statuses, step_statuses)
+        step_statuses = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(self.expected_step_statuses, step_statuses)

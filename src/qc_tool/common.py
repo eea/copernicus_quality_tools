@@ -97,10 +97,6 @@ class QCException(Exception):
     pass
 
 
-def strip_prefix(check_ident):
-    check_ident = check_ident.split(".")[-1]
-    return check_ident
-
 def load_product_definition(product_ident):
     filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
     data = filepath.read_text()
@@ -183,13 +179,12 @@ def prepare_job_report(product_definition):
                   "exception": None,
                   "steps": []}
     for step_nr, step_def in enumerate(product_definition["steps"], start=1):
-        short_check_ident = strip_prefix(step_def["check_ident"])
         step_report = {"step_nr": step_nr,
                        "check_ident": step_def["check_ident"],
-                       "description": CHECK_FUNCTION_DESCRIPTIONS[short_check_ident],
+                       "description": CHECK_FUNCTION_DESCRIPTIONS[step_def["check_ident"]],
                        "layers": step_def.get("parameters", {}).get("layers", None),
                        "required": step_def["required"],
-                       "system": short_check_ident in SYSTEM_CHECK_FUNCTIONS,
+                       "system": step_def["check_ident"] in SYSTEM_CHECK_FUNCTIONS,
                        "status": None,
                        "messages": None,
                        "attachment_filenames": None}

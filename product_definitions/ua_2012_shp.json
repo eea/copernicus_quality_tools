@@ -27,7 +27,7 @@
       }
     },
     {
-      "check_ident": "reference.v3",
+      "check_ident": "v3",
       "required": true,
       "parameters": {
         "layers": ["reference"],
@@ -43,7 +43,7 @@
       }
     },
     {
-      "check_ident": "revised.v3",
+      "check_ident": "v3",
       "required": true,
       "parameters": {
         "layers": ["revised"],
@@ -58,7 +58,7 @@
       }
     },
     {
-      "check_ident": "combined_change.v3",
+      "check_ident": "v3",
       "required": true,
       "parameters": {
         "layers": ["combined", "change"],
@@ -97,7 +97,7 @@
       }
     },
     {
-      "check_ident": "reference.v6",
+      "check_ident": "v6",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -113,7 +113,7 @@
       }
     },
     {
-      "check_ident": "revised.v6",
+      "check_ident": "v6",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -129,7 +129,7 @@
       }
     },
     {
-      "check_ident": "combined_change.v6",
+      "check_ident": "v6",
       "required": false,
       "parameters": {
         "layers": ["combined", "change"],
@@ -175,7 +175,7 @@
       }
     },
     {
-      "check_ident": "reference.v11_ua_status",
+      "check_ident": "v11_ua_status",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -184,7 +184,7 @@
       }
     },
     {
-      "check_ident": "revised.v11_ua_status",
+      "check_ident": "v11_ua_status",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -193,7 +193,7 @@
       }
     },
     {
-      "check_ident": "change.v11_ua_change",
+      "check_ident": "v11_ua_change",
       "required": false,
       "parameters": {
         "layers": ["change"],
@@ -203,7 +203,7 @@
       }
     },
     {
-      "check_ident": "reference.v12_ua",
+      "check_ident": "v12_ua",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -212,7 +212,7 @@
       }
     },
     {
-      "check_ident": "revised.v12_ua",
+      "check_ident": "v12_ua",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -228,7 +228,7 @@
       }
     },
     {
-      "check_ident": "reference.v14",
+      "check_ident": "v14",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -237,7 +237,7 @@
       }
     },
     {
-      "check_ident": "revised.v14",
+      "check_ident": "v14",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -246,7 +246,7 @@
       }
     },
     {
-      "check_ident": "combined_change.v14",
+      "check_ident": "v14",
       "required": false,
       "parameters": {
         "layers": ["combined", "change"],

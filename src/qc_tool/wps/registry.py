@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
 
 
-from qc_tool.common import strip_prefix
-
-
 check_function_registry = {}
 
 def register_check_function(ident):
-    # If name is supplied with dots, take the last part.
-    ident = ident.split(".")[-1]
-
     # Check if the function has already been registered.
     if ident in check_function_registry:
         raise Exception("An attempt to reregister function with ident='%s'.".format(ident))
@@ -22,7 +16,6 @@ def register_check_function(ident):
     return register
 
 def get_check_function(check_ident):
-    check_ident = strip_prefix(check_ident)
     func = check_function_registry[check_ident]
     return func
 

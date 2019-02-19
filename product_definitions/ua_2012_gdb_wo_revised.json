@@ -25,7 +25,7 @@
       }
     },
     {
-      "check_ident": "reference.v3",
+      "check_ident": "v3",
       "required": true,
       "parameters": {
         "layers": ["reference"],
