@@ -34,8 +34,6 @@ class Delivery(models.Model):
         self.last_job_status = statuses.JOB_RUNNING
         self.product_ident = product_ident
         self.product_description = find_product_description(product_ident)
-        job_result = compile_job_report(product_ident=product_ident)
-        self.empty_status_document = json.dumps(job_result)
         self.save()
 
     def update_job_status(self, job_uuid=None):
@@ -92,20 +90,4 @@ class Delivery(models.Model):
     last_job_uuid = models.CharField(max_length=32)
     last_job_status = models.CharField(max_length=64)
     last_job_percent = models.IntegerField(null=True)
-    empty_status_document = models.TextField()
-    user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
-
-
-class Job(models.Model):
-    class Meta:
-        app_label = "dashboard"
-    job_uuid = models.CharField(max_length=32)
-    product_ident = models.CharField(max_length=64, null=True)
-    start = models.DateTimeField(blank=True, null=True)
-    end = models.DateTimeField(blank=True, null=True)
-    wps_status = models.CharField(max_length=64)
-    status = models.CharField(max_length=64)
-    status_document_path = models.CharField(max_length=500)
-    filename = models.CharField(blank=True, null=True, max_length=500)
-    filepath = models.CharField(blank=True, null=True, max_length=500)
     user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
