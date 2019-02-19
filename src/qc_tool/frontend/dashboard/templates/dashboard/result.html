@@ -56,6 +56,7 @@
                 <table id="tbl-results" class="table" data-toggle="table" data-search-align="right" data-show-refresh="false" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
                     <thead>
                     <tr>
+                        <th data-field="step_nr" data-sortable="false">Step</th>
                         <th data-field="check_ident" data-sortable="false">Check</th>
                         <th data-field="check_description" data-sortable="false">Description</th>
                         <th data-field="check_result" data-sortable="false">Status</th>
@@ -67,6 +68,7 @@
                         {% for step in steps %}
                         <tr>
                             {% if step.status == "ok" %}
+                            <td class="success">{{step.step_nr}}</td>
                             <td class="success">{{step.check_ident}}</td>
                             <td class="success">{{step.description}}</td>
                             <td class="success">{{step.status}}</td>
@@ -76,18 +78,21 @@
                                 {% endfor %}</td>
                             <td class="success"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
                             {% elif step.status == "skipped" or step.status == "running" %}
+                            <td>{{step.step_nr}}</td>
                             <td>{{step.check_ident}}</td>
                             <td>{{step.description}}</td>
                             <td>{{step.status}}</td>
                             <td></td>
                             <td></td>
                             {% elif step.status == None %}
+                            <td>{{step.step_nr}}</td>
                             <td>{{step.check_ident}}</td>
                             <td>{{step.description}}</td>
                             <td></td>
                             <td></td>
                             <td></td>
                             {% else %}
+                            <td class="danger">{{step.step_nr}}</td>
                             <td class="danger">{{step.check_ident}}</td>
                             <td class="danger">{{step.description}}</td>
                             <td class="danger">{{step.status}}</td>

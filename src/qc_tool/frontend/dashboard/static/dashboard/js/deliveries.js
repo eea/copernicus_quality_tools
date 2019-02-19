@@ -1,3 +1,4 @@
+// Populate content of deliveries table from /data/delivery/list/ URL.
 $('#tbl-deliveries').bootstrapTable({
     cache: false,
     striped: true,
@@ -52,7 +53,7 @@ function actionsFormatter(value, row) {
         btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
         btn_data += 'Delete</button>';
 
-    } else if (row.qc_status === "running" || row.is_submitted) {
+    } else if (row.qc_status === "waiting" || row.qc_status === "running" || row.is_submitted) {
         // job is running --> QC button disabled, Delete button disabled
         var tooltip_message = "QC job is currently running.";
         if (row.is_submitted) {
@@ -106,12 +107,16 @@ function statusFormatter(value, row, index) {
         value += '<span class="text-danger">FILE NOT FOUND</span>';
         return value;
     }
-    if (!uuid) {
+    if (!row.last_job_uuid) {
         return 'Not checked';
     }
     if (value == "failed") {
         // Do nothing.
-    } else if (value == "accepted" || value == "running") {
+    } else if (value == "waiting") {
+        // Do nothing.
+    } else if (value == "partial") {
+       // Do nothing.
+    } else if (value == "running") {
         if(row.percent == null) {
             value = "running (0 %)";
         } else {
@@ -126,7 +131,7 @@ function statusFormatter(value, row, index) {
     }
 
     return ['<a class="like" href="',
-            "/result/", uuid, "/", row.product_ident,
+            "/result/", row.last_job_uuid, "/", row.product_ident,
             '" title="Show results">',
             value,
             '</a>'].join('');
@@ -175,94 +180,84 @@ function delete_function(id, filename) {
 
 function submit_eea_function(id, filename) {
     console.log("clicked submit to EEA!");
-        var dlg_ok = BootstrapDialog.show({
-            title: "Are you sure you want to submit the delivery to EEA?",
-            message: "Delivery file name: " + filename,
-            buttons: [{
-                label: "Yes",
-                cssClass: "btn-default",
-                action: function(dialog) {
-                    console.log("Submit to EEA confirmed by the user.");
+    var dlg_ok = BootstrapDialog.show({
+        title: "Are you sure you want to submit the delivery to EEA?",
+        message: "Delivery file name: " + filename,
+        buttons: [{
+            label: "Yes",
+            cssClass: "btn-default",
+            action: function(dialog) {
+                console.log("Submit to EEA confirmed by the user.");
 
-                    data = {"id": id, "filename": filename};
-                    dialog.setMessage("Submitting to EEA...");
-                    $.ajax({
-                        type: "POST",
-                        url: "/delivery/submit/",
-                        data: data,
-                        dataType: "json",
-                        success: function(result) {
-                            console.log("file marked successfully for submission to EEA!") ;
-                            $('#tbl-deliveries').bootstrapTable('refresh');
-                            dialog.close();
-                        },
-                        error: function(result)  { console.log("error submitting file to EEA!") ;  }
-                    })
-                }
-            }, {
-                label: "No",
-                cssClass: "btn-default",
-                action: function(dialog) {dialog.close();}
-            }]
-        });
+                data = {"id": id, "filename": filename};
+                dialog.setMessage("Submitting to EEA...");
+                $.ajax({
+                    type: "POST",
+                    url: "/delivery/submit/",
+                    data: data,
+                    dataType: "json",
+                    success: function(result) {
+                        console.log("file marked successfully for submission to EEA!") ;
+                        $('#tbl-deliveries').bootstrapTable('refresh');
+                        dialog.close();
+                    },
+                    error: function(result)  { console.log("error submitting file to EEA!") ;  }
+                })
+            }
+        }, {
+            label: "No",
+            cssClass: "btn-default",
+            action: function(dialog) {dialog.close();}
+        }]
+    });
 }
 
 function update_job_statuses() {
-    // find deliveries with 'running' status
-    $("a").each(function() {
-        if($(this).text().startsWith("running") || $(this).text().startsWith("waiting")) {
-            var hyperlink = $(this);
+    // Refreshes rows in the deliveries table with 'running' or 'waiting' status.
 
-            // extract job_uuid from the hyperlink /result/<job_uuid>/<product_ident>/
-            var url_parts = hyperlink.attr("href").split("/");
-            var product_ident = url_parts[url_parts.length - 1];
-            var job_uuid = url_parts[url_parts.length - 2];
+    // deliveries: data for all deliveries visible in the ui table
+    var deliveries = $("#tbl-deliveries").bootstrapTable("getData");
+    for(var i=0, len=deliveries.length; i < len; i++) {
+        if(deliveries[i].qc_status === "waiting" || deliveries[i].qc_status === "running") {
+            var last_job_uuid = deliveries[i].last_job_uuid;
+            var product_ident = deliveries[i].product_ident;
+            var delivery_status_url = "/delivery/update_job_status/" + last_job_uuid + "/";
 
+            // sends a request to the server and asks for new status of running or waiting job.
             $.ajax({
-                type:"get",
-                url:"/delivery/update_job_status/" + job_uuid + "/",
+                type: "get",
+                url: delivery_status_url,
                 datatype:"json",
-                success:function(data)
+                success:function(new_status)
                 {
-                    // get row index
-                    var row = hyperlink.parent().parent();
+                    // if server sends a response: auto-refresh the correct row in the UI.
+                    // the UI row is matched using job_uuid.
+                    var deliveries_to_update = $("#tbl-deliveries").bootstrapTable("getData");
+                    for(var new_index=0, new_len=deliveries_to_update.length; new_index < new_len; new_index++) {
+                        if (deliveries_to_update[new_index].last_job_uuid === new_status.job_uuid) {
+                            // a matching row is found in the UI -> tell BootstrapTable to refresh it.
+                            console.log("refreshing table row in UI with job uuid: " + new_status.job_uuid);
+                            var new_row = deliveries_to_update[new_index];
+                            new_row.last_wps_status = new_status.wps_status;
+                            new_row.last_job_status = new_status.job_status;
+                            new_row.qc_status = new_status.job_status;
+                            new_row.percent = new_status.percent;
 
-                    var index = row.attr("data-index");
-                    var rowData = $("#tbl-deliveries").bootstrapTable('getData')[index];
-
-                    // update QC status of the row.
-                    if (rowData) {
-                        rowData.last_job_uuid = job_uuid;
-                        rowData.qc_status = data.job_status;
-                        rowData.last_job_status = data.job_status;
-                        rowData.percent = data.percent;
-                        rowData.is_submitted = data.is_submitted;
-			            rowData.product_ident = data.product_ident;
-
-                        // Update background colour of the status cell.
-                        var newCellStyle = statusCellStyle(rowData.qc_status, rowData, index);
-                        hyperlink.parent().toggleClass(newCellStyle.classes);
-
-                        // Redraw action buttons.
-                        var original_buttons = hyperlink.parent().parent().find(".btn-group");
-                        var new_buttons = actionsFormatter(null, rowData);
-                        original_buttons.replaceWith(new_buttons);
-
-                        // Update content of the status cell (status and percent).
-                        var new_status_cell = statusFormatter(rowData.qc_status, rowData);
-                        //hyperlink.text(new_status_cell.text());
-                        hyperlink.replaceWith(new_status_cell);
+                            $("#tbl-deliveries").bootstrapTable("updateRow", {index: new_index, row: new_row});
+                        }
                     }
                 }
             });
         }
-    });
+    }
 }
 
-$(document).ready(function(){
+$(document).ready(function() {
+
+    // Set defult tooltip in each table row.
     $('[data-toggle="tooltip"]').tooltip();
 
-    // start the timer for the deliveries. Check for updates every 5 seconds.
+    // Start the timer to auto-refresh status of running jobs. Check for updates every 5 seconds.
     update_job_statuses();
     setInterval(function(){update_job_statuses();}, 5000);
 });

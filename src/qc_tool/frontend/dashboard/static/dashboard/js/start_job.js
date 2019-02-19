@@ -38,8 +38,8 @@ function display_product_info(product_ident) {
 
             if (!steps[i].system) { // Steps with system check are not shown.
                 tbody += "<tr>";
+                tbody += "<td>" + steps[i].step_nr + "</td>";
                 tbody += "<td>" + steps[i].check_ident + "</td>";
-
                 tbody += "<td>" + steps[i].description + "</td>";
                 tbody += '<td><input name="selected_steps[]" type="checkbox" value="' + steps[i].step_nr + '" checked';
                 if (steps[i].required) { // Required steps have checkbox disabled.
@@ -104,7 +104,7 @@ $(document).ready(function() {
     });
 
     $('#select_product').change(function() {
-        //populate product type info based on selected product ident.
+        //populate product info based on selected product ident.
         display_product_info(this.value);
     });
 });

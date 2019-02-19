@@ -70,9 +70,9 @@ class Delivery(models.Model):
             if has_job_expired(self.last_job_uuid):
                 self.last_job_status = statuses.JOB_EXPIRED
 
+        # Write changes to database.
         self.save()
 
-        is_submitted = self.date_submitted is not None
 
     def submit(self):
         self.date_submitted = timezone.now()

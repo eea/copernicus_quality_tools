@@ -96,6 +96,7 @@ def get_deliveries_json(request):
         else:
             actual_qc_status = JOB_DELIVERY_NOT_FOUND
 
+        # add some extra information to displayed delivery.
         delivery_info = {"id": d.id,
                      "filename": d.filename,
                      "filepath": d.filepath,
@@ -421,15 +422,16 @@ def update_job_status(request, job_uuid):
         status = {"product_ident": delivery.product_ident,
                   "is_submitted": delivery.is_submitted(),
                   "job_status": delivery.last_job_status,
-                  "wps_doc_status": delivery.last_wps_status,
-                  "percent": delivery.last_job_percent}
+                  "wps_status": delivery.last_wps_status,
+                  "percent": delivery.last_job_percent,
+                  "job_uuid": delivery.last_job_uuid}
         if not Path(delivery.filepath).joinpath(delivery.filename).exists():
             status = JOB_DELIVERY_NOT_FOUND
         return JsonResponse(status)
     except ObjectDoesNotExist:
-        return JsonResponse({"job_status": None, "wps_doc_status": None, "percent": None})
+        return JsonResponse({"job_status": None, "wps_status": None, "percent": None})
     except MultipleObjectsReturned:
-        return JsonResponse({"job_status": None, "wps_doc_status": None, "percent": None})
+        return JsonResponse({"job_status": None, "wps_status": None, "percent": None})
 
 @csrf_exempt
 def run_wps_execute(request):
