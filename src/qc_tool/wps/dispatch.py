@@ -167,6 +167,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 # Skip this step.
                 if step_nr in skip_steps:
                     step_result["status"] = JOB_STEP_SKIPPED
+                    store_job_result(job_result)
                     continue
 
                 # Prepare parameters for this step.
@@ -203,10 +204,6 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 # Update job status properties.
                 job_result.update(check_status.status_properties)
 
-                # Abort validation job.
-                if check_status.is_aborted():
-                    break
-
                 # Update job params.
                 job_params.update(check_status.status_properties)
                 job_params.update(check_status.params)
@@ -214,6 +211,10 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 # Update stored job result.
                 job_result["steps"].append(step_result)
                 store_job_result(job_result)
+
+                # Abort validation job.
+                if check_status.is_aborted():
+                    break
 
         finally:
             # Finalize the job.
