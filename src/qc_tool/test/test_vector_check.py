@@ -15,7 +15,7 @@ class TestUnzip(VectorCheckTestCase):
         self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
 
     def test_shp(self):
-        from qc_tool.wps.vector_check.v_unzip import run_check
+        from qc_tool.vector.v_unzip import run_check
         self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         status = self.status_class()
         run_check(self.params, status)
@@ -33,7 +33,7 @@ class TestUnzip(VectorCheckTestCase):
                       "Unzipped directory should contain a file EE003L0_NARVA_UA2012.shp.")
 
     def test_gdb(self):
-        from qc_tool.wps.vector_check.v_unzip import run_check
+        from qc_tool.vector.v_unzip import run_check
         self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
         status = self.status_class()
         run_check(self.params, status)
@@ -44,7 +44,7 @@ class TestUnzip(VectorCheckTestCase):
         self.assertIn("DK001L2_KOBENHAVN_clip.gdb", unzipped_subdir_names)
 
     def test_invalid_file(self):
-        from qc_tool.wps.vector_check.v_unzip import run_check
+        from qc_tool.vector.v_unzip import run_check
         self.params["filepath"] = TEST_DATA_DIR.joinpath("non_existent_zip_file.zip")
         status = self.status_class()
         run_check(self.params, status)
@@ -54,7 +54,7 @@ class TestUnzip(VectorCheckTestCase):
 class Test_v1_rpz(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        from qc_tool.vector.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip"),
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
@@ -63,7 +63,7 @@ class Test_v1_rpz(VectorCheckTestCase):
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_rpz import run_check
+        from qc_tool.vector.v1_rpz import run_check
         self.params.update({"filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}.shp$",
                             "areacodes": ["007"]})
         status = self.status_class()
@@ -79,7 +79,7 @@ class Test_v1_rpz(VectorCheckTestCase):
 class Test_v1_n2k(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        from qc_tool.vector.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip"),
                             "n2k_layer_regex": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$",
@@ -89,7 +89,7 @@ class Test_v1_n2k(VectorCheckTestCase):
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_n2k import run_check
+        from qc_tool.vector.v1_n2k import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -100,7 +100,7 @@ class Test_v1_n2k(VectorCheckTestCase):
         self.assertEqual("boundary_n2k", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
     def test_bad_layer_name_aborts(self):
-        from qc_tool.wps.vector_check.v1_n2k import run_check
+        from qc_tool.vector.v1_n2k import run_check
 
         # Rename layer to bad one.
         src_gdb_filepath = self.params["unzip_dir"].joinpath("n2k_du001z_lclu_v99_20170108", "n2k_du001z_lclu_v99_20190108.shp")
@@ -125,7 +125,7 @@ class Test_v1_clc(VectorCheckTestCase):
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_clc import run_check
+        from qc_tool.vector.v1_clc import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -141,7 +141,7 @@ class Test_v1_clc(VectorCheckTestCase):
         self.assertEqual("boundary_clc_mt", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
     def test_mismatched_regex_aborts(self):
-        from qc_tool.wps.vector_check.v1_clc import run_check
+        from qc_tool.vector.v1_clc import run_check
         self.params["initial_layer_regex"] = "^{country_code:s}/xxx_{country_code:s}$"
         status = self.status_class()
         run_check(self.params, status)
@@ -151,7 +151,7 @@ class Test_v1_clc(VectorCheckTestCase):
 class Test_v1_ua_gdb(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        from qc_tool.vector.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")})
         status = self.status_class()
@@ -166,7 +166,7 @@ class Test_v1_ua_gdb(VectorCheckTestCase):
                             "change_layer_regex": "_change_2006_2012$"})
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_ua_gdb import run_check
+        from qc_tool.vector.v1_ua_gdb import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -184,7 +184,7 @@ class Test_v1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["change"]["src_layer_name"])
 
     def test_bad_gdb_filename_aborts(self):
-        from qc_tool.wps.vector_check.v1_ua_gdb import run_check
+        from qc_tool.vector.v1_ua_gdb import run_check
 
         # Rename gdb filename to bad one.
         src_gdb_filepath = self.params["unzip_dir"].joinpath("DK001L2_KOBENHAVN_clip.gdb")
@@ -196,7 +196,7 @@ class Test_v1_ua_gdb(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
     def test_missing_layer_aborts(self):
-        from qc_tool.wps.vector_check.v1_ua_gdb import run_check
+        from qc_tool.vector.v1_ua_gdb import run_check
         self.params["boundary_layer_regex"] = "non-existing-layer-name"
         status = self.status_class()
         run_check(self.params, status)
@@ -206,7 +206,7 @@ class Test_v1_ua_gdb(VectorCheckTestCase):
 class Test_v1_ua_shp(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        from qc_tool.vector.v_unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")})
         status = self.status_class()
@@ -217,7 +217,7 @@ class Test_v1_ua_shp(VectorCheckTestCase):
                             "boundary_layer_regex": "^boundary2012_"})
 
     def test(self):
-        from qc_tool.wps.vector_check.v1_ua_shp import run_check
+        from qc_tool.vector.v1_ua_shp import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -232,8 +232,8 @@ class Test_v1_ua_shp(VectorCheckTestCase):
 class TestV2(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
-        from qc_tool.wps.vector_check.v1_rpz import run_check as layer_check
+        from qc_tool.vector.v_unzip import run_check as unzip_check
+        from qc_tool.vector.v1_rpz import run_check as layer_check
 
         rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
         self.params.update({"boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
@@ -255,13 +255,13 @@ class TestV2(VectorCheckTestCase):
         self.params["layers"] = ["rpz"]
 
     def test(self):
-        from qc_tool.wps.vector_check.v2 import run_check
+        from qc_tool.vector.v2 import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_incorrect_format_aborts(self):
-        from qc_tool.wps.vector_check.v2 import run_check
+        from qc_tool.vector.v2 import run_check
         status = self.status_class()
         self.params["formats"] = [".gdb"]
         run_check(self.params, status)
@@ -283,13 +283,13 @@ class TestV3(VectorCheckTestCase):
                                            "shape_area": "real"}})
 
     def test(self):
-        from qc_tool.wps.vector_check.v3 import run_check
+        from qc_tool.vector.v3 import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_missing_attribute_aborts(self):
-        from qc_tool.wps.vector_check.v3 import run_check
+        from qc_tool.vector.v3 import run_check
         self.params["attributes"]["missing_attribute"] = "string"
         status = self.status_class()
         run_check(self.params, status)
@@ -310,13 +310,13 @@ class Test_v4_clc(VectorCheckTestCase):
                             "layers": ["layer_0", "layer_1"]})
 
     def test(self):
-        from qc_tool.wps.vector_check.v4_clc import run_check
+        from qc_tool.vector.v4_clc import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_missing_boundary_cancelled(self):
-        from qc_tool.wps.vector_check.v4_clc import run_check
+        from qc_tool.vector.v4_clc import run_check
         del self.params["layer_defs"]["boundary"]
         status = self.status_class()
         run_check(self.params, status)
@@ -335,13 +335,13 @@ class TestV4_gdb(VectorCheckTestCase):
                             "epsg": [23033]})
 
     def test(self):
-        from qc_tool.wps.vector_check.v4 import run_check
+        from qc_tool.vector.v4 import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_mismatched_epsg_aborts(self):
-        from qc_tool.wps.vector_check.v4 import run_check
+        from qc_tool.vector.v4 import run_check
         self.params["epsg"] = [7777]
         status = self.status_class()
         run_check(self.params, status)
@@ -351,7 +351,7 @@ class TestV4_gdb(VectorCheckTestCase):
 class Test_v4_shp(VectorCheckTestCase):
     def test(self):
         # Unzip the datasource.
-        from qc_tool.wps.vector_check.v_unzip import run_check as unzip_check
+        from qc_tool.vector.v_unzip import run_check as unzip_check
         zip_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": zip_filepath})
@@ -360,7 +360,7 @@ class Test_v4_shp(VectorCheckTestCase):
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
         # Run the check.
-        from qc_tool.wps.vector_check.v4 import run_check
+        from qc_tool.vector.v4 import run_check
         shp_dir = self.params["unzip_dir"].joinpath("EE003L0_NARVA", "Shapefiles")
         reference_path = shp_dir.joinpath("EE003L0_NARVA_UA2012.shp")
         boundary_path = shp_dir.joinpath("Boundary2012_EE003L0_NARVA.shp")
@@ -378,7 +378,7 @@ class Test_v4_shp(VectorCheckTestCase):
 
 class Test_v4_auto_identify_epsg(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v4 import run_check
+        from qc_tool.vector.v4 import run_check
         boundary_path = TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO_boundary", "ES031L1_LUGO_UA2012_Boundary.shp")
         self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
                                                         "src_layer_name": boundary_path.stem}},
@@ -392,7 +392,7 @@ class Test_v4_auto_identify_epsg(VectorCheckTestCase):
 
 class Test_v_import2pg(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v_import2pg import run_check
+        from qc_tool.vector.v_import2pg import run_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
                                                        "src_layer_name": "clc06_mt"},
@@ -415,7 +415,7 @@ class Test_v_import2pg(VectorCheckTestCase):
         self.assertLess(0, cur.rowcount, "Table of the layer_1 should have at least one row.")
 
     def test_bad_file_aborts(self):
-        from qc_tool.wps.vector_check.v_import2pg import run_check
+        from qc_tool.vector.v_import2pg import run_check
         bad_filepath = TEST_DATA_DIR.joinpath("raster", "checks", "r11", "test_raster1.tif")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": bad_filepath,
                                                        "src_layer_name": "irrelevant_layer"}},
@@ -426,7 +426,7 @@ class Test_v_import2pg(VectorCheckTestCase):
 
     def test_precision(self):
         """ogr2ogr parameter PRECISION=NO should supress numeric field overflow error."""
-        from qc_tool.wps.vector_check.v_import2pg import run_check
+        from qc_tool.vector.v_import2pg import run_check
         shp_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO_boundary", "ES031L1_LUGO_UA2012_Boundary.shp")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": shp_filepath,
                                                        "src_layer_name": "ES031L1_LUGO_UA2012_Boundary"}},
@@ -442,7 +442,7 @@ class TestV5(VectorCheckTestCase):
         self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
 
     def test(self):
-        from qc_tool.wps.vector_check.v5 import run_check
+        from qc_tool.vector.v5 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mytable (fid integer, "
                        "unique_1 varchar, unique_2 integer, wkb_geometry geometry(Polygon, 4326));")
@@ -460,7 +460,7 @@ class TestV5(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
     def test_fail(self):
-        from qc_tool.wps.vector_check.v5 import run_check
+        from qc_tool.vector.v5 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mytable (fid integer, "
                        "ident varchar, wkb_geometry geometry(Polygon, 4326));")
@@ -485,7 +485,7 @@ class Test_v6(VectorCheckTestCase):
         self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
 
     def test_string_codes(self):
-        from qc_tool.wps.vector_check.v6 import run_check
+        from qc_tool.vector.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE xxx18_zz (fid integer, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
@@ -502,7 +502,7 @@ class Test_v6(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
     def test_integer_codes(self):
-        from qc_tool.wps.vector_check.v6 import run_check
+        from qc_tool.vector.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE xxx12_zz (fid integer, "
                        "code_12 integer, wkb_geometry geometry(Polygon, 4326));")
@@ -519,7 +519,7 @@ class Test_v6(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
     def test_integer_codes_fail(self):
-        from qc_tool.wps.vector_check.v6 import run_check
+        from qc_tool.vector.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE xxx12_zz (fid integer, "
                        "code_12 integer, wkb_geometry geometry(Polygon, 4326));")
@@ -536,7 +536,7 @@ class Test_v6(VectorCheckTestCase):
         self.assertEqual("failed", status.status)
 
     def test_change_fail(self):
-        from qc_tool.wps.vector_check.v6 import run_check
+        from qc_tool.vector.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
@@ -555,7 +555,7 @@ class Test_v6(VectorCheckTestCase):
 
     def test_null(self):
         """v6 should fail if code column has NULL values."""
-        from qc_tool.wps.vector_check.v6 import run_check
+        from qc_tool.vector.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
                        "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
@@ -571,7 +571,7 @@ class Test_v6(VectorCheckTestCase):
         self.assertEqual(1, len(status.messages))
 
     def test_exclude(self):
-        from qc_tool.wps.vector_check.v6 import run_check
+        from qc_tool.vector.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE my_table (fid integer, "
                        "code varchar, ua varchar, wkb_geometry geometry(Polygon, 4326));")
@@ -589,7 +589,7 @@ class Test_v6(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
     def test_exclude_fail(self):
-        from qc_tool.wps.vector_check.v6 import run_check
+        from qc_tool.vector.v6 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE my_table (fid integer, "
                        "code varchar, ua varchar, wkb_geometry geometry(Polygon, 4326));")
@@ -614,7 +614,7 @@ class TestV8(VectorCheckTestCase):
         self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
 
     def test(self):
-        from qc_tool.wps.vector_check.v8 import run_check
+        from qc_tool.vector.v8 import run_check
         status = self.status_class()
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mytable (fid integer, "
@@ -630,7 +630,7 @@ class TestV8(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
     def test_fail(self):
-        from qc_tool.wps.vector_check.v8 import run_check
+        from qc_tool.vector.v8 import run_check
         status = self.status_class()
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mytable (fid integer, wkb_geometry geometry(Multipolygon, 4326));")
@@ -657,14 +657,14 @@ class Test_v9(VectorCheckTestCase):
                             "layers": ["test"]})
 
     def test(self):
-        from qc_tool.wps.vector_check.v9 import run_check
+        from qc_tool.vector.v9 import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_intersecting_ring_forming_hole_fails(self):
         """ESRI shapefile allows this, OGC simple features does not. Requirement is to follow OGC specification."""
-        from qc_tool.wps.vector_check.v9 import run_check
+        from qc_tool.vector.v9 import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText("
                             "'POLYGON((0 0, 2 0, 1 1, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))', 4326));")
         status = self.status_class()
@@ -672,7 +672,7 @@ class Test_v9(VectorCheckTestCase):
         self.assertEqual("failed", status.status)
 
     def test_self_intersecting_ring_fails(self):
-        from qc_tool.wps.vector_check.v9 import run_check
+        from qc_tool.vector.v9 import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText('POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', 4326));")
         status = self.status_class()
         run_check(self.params, status)
@@ -692,7 +692,7 @@ class Test_v10(VectorCheckTestCase):
                             "layers": ["reference"]})
 
     def test(self):
-        from qc_tool.wps.vector_check.v10 import run_check
+        from qc_tool.vector.v10 import run_check
         self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(2, 2, 4, 5, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(4, 2, 5, 5, 4326));")
@@ -703,7 +703,7 @@ class Test_v10(VectorCheckTestCase):
         self.assertEqual(0, self.cursor.rowcount)
 
     def test_fail(self):
-        from qc_tool.wps.vector_check.v10 import run_check
+        from qc_tool.vector.v10 import run_check
         self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
@@ -729,7 +729,7 @@ class Test_v10_unit(VectorCheckTestCase):
                             "boundary_unit_column_name": "unit"})
 
     def test(self):
-        from qc_tool.wps.vector_check.v10_unit import run_check
+        from qc_tool.vector.v10_unit import run_check
         self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(2, 2, 4, 5, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(4, 2, 5, 5, 4326));")
@@ -741,7 +741,7 @@ class Test_v10_unit(VectorCheckTestCase):
         self.assertEqual(0, self.cursor.rowcount)
 
     def test_fail(self):
-        from qc_tool.wps.vector_check.v10_unit import run_check
+        from qc_tool.vector.v10_unit import run_check
         self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(2, 2, 5, 5, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
@@ -752,7 +752,7 @@ class Test_v10_unit(VectorCheckTestCase):
         self.assertEqual(1, self.cursor.rowcount)
 
     def test_warning(self):
-        from qc_tool.wps.vector_check.v10_unit import run_check
+        from qc_tool.vector.v10_unit import run_check
         self.cursor.execute("INSERT INTO reference VALUES ('D', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
@@ -764,7 +764,7 @@ class Test_v10_unit(VectorCheckTestCase):
 
 class Test_v11_clc_status(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v11_clc_status import run_check
+        from qc_tool.vector.v11_clc_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE reference (fid integer, shape_area real, wkb_geometry geometry(Polygon, 4326));")
 
@@ -793,7 +793,7 @@ class Test_v11_clc_status(VectorCheckTestCase):
 
 class Test_v11_clc_change(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v11_clc_change import run_check
+        from qc_tool.vector.v11_clc_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
 
         # Artificial margin.
@@ -843,7 +843,7 @@ class Test_v11_clc_change(VectorCheckTestCase):
 
 class Test_v11_ua_status(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v11_ua_status import run_check
+        from qc_tool.vector.v11_ua_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE reference (fid integer, shape_area real, code char(5), wkb_geometry geometry(Polygon, 4326));")
 
@@ -911,7 +911,7 @@ class Test_v11_ua_status(VectorCheckTestCase):
 
 class Test_v11_ua_change(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v11_ua_change import run_check
+        from qc_tool.vector.v11_ua_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(5), code2 char(5), wkb_geometry geometry(Polygon, 4326));")
 
@@ -965,7 +965,7 @@ class Test_v11_ua_change(VectorCheckTestCase):
 
 class Test_v11_n2k(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v11_n2k import run_check
+        from qc_tool.vector.v11_n2k import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, wkb_geometry geometry(Polygon, 4326));")
 
@@ -1061,7 +1061,7 @@ class Test_v11_rpz(VectorCheckTestCase):
                             "exception_comments": ["comment1"]})
 
     def test(self):
-        from qc_tool.wps.vector_check.v11_rpz import run_check
+        from qc_tool.vector.v11_rpz import run_check
         run_check(self.params, self.status_class())
         self.cursor.execute("SELECT fid FROM v11_rpz_general ORDER BY fid;")
         self.assertListEqual([(0,), (1,)], self.cursor.fetchall())
@@ -1071,7 +1071,7 @@ class Test_v11_rpz(VectorCheckTestCase):
         self.assertListEqual([(11,), (13,), (21,), (23,), (24,), (25,), (31,), (33,), (34,), (35,), (41,)], self.cursor.fetchall())
 
     def test_empty_codes(self):
-        from qc_tool.wps.vector_check.v11_rpz import run_check
+        from qc_tool.vector.v11_rpz import run_check
         self.params.update({"urban_feature_codes": [],
                             "linear_feature_codes": [],
                             "exception_comments": []})
@@ -1080,7 +1080,7 @@ class Test_v11_rpz(VectorCheckTestCase):
 
 class Test_v12(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v12 import run_check
+        from qc_tool.vector.v12 import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(10, 10, 13, 11, 4326));")
@@ -1102,7 +1102,7 @@ class Test_v12(VectorCheckTestCase):
 
 class Test_v12_ua(VectorCheckTestCase):
     def test(self):
-        from qc_tool.wps.vector_check.v12_ua import run_check
+        from qc_tool.vector.v12_ua import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, code char(5), wkb_geometry geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, '12', ST_MakeEnvelope(10, 10, 13, 11, 4326));")
@@ -1141,7 +1141,7 @@ class Test_v13(VectorCheckTestCase):
                             "layers": ["layer_1", "layer_2"]})
 
     def test_non_overlapping(self):
-        from qc_tool.wps.vector_check.v13 import run_check
+        from qc_tool.vector.v13 import run_check
         self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                            " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                            " (3, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
@@ -1153,7 +1153,7 @@ class Test_v13(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
 
     def test_overlapping_fails(self):
-        from qc_tool.wps.vector_check.v13 import run_check
+        from qc_tool.vector.v13 import run_check
         self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                            " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
         self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
@@ -1171,7 +1171,7 @@ class Test_v13(VectorCheckTestCase):
 class Test_v14(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.wps.vector_check.v14 import run_check
+        from qc_tool.vector.v14 import run_check
         self.run_check = run_check
         self.cursor = self.params["connection_manager"].get_connection().cursor()
         self.cursor.execute("CREATE TABLE test_layer ("
@@ -1261,7 +1261,7 @@ class Test_v14_rpz(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', NULL, NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
         self.cursor.execute("INSERT INTO rpz_layer VALUES (6, 'C', NULL, NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
 
-        from qc_tool.wps.vector_check.v14_rpz import run_check
+        from qc_tool.vector.v14_rpz import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -1277,7 +1277,7 @@ class Test_v14_rpz(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', NULL, 'hu', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
         self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'U', 'Comment 1', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
 
-        from qc_tool.wps.vector_check.v14_rpz import run_check
+        from qc_tool.vector.v14_rpz import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -1298,21 +1298,21 @@ class Test_v15(VectorCheckTestCase):
 
 
     def test(self):
-        from qc_tool.wps.vector_check.v15 import run_check
+        from qc_tool.vector.v15 import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire-good.shp")}}
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_missing_xml_fail(self):
-        from qc_tool.wps.vector_check.v15 import run_check
+        from qc_tool.vector.v15 import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire-missing-metadata.gdb")}}
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
 
     def test_fail(self):
-        from qc_tool.wps.vector_check.v15 import run_check
+        from qc_tool.vector.v15 import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire-bad.shp")}}
         status = self.status_class()
         run_check(self.params, status)
