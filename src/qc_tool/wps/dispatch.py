@@ -167,6 +167,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 # Skip this step.
                 if step_nr in skip_steps:
                     step_result["status"] = JOB_STEP_SKIPPED
+                    job_result["steps"].append(step_result)
                     store_job_result(job_result)
                     continue
 
