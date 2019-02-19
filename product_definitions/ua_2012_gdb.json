@@ -2,11 +2,11 @@
   "description": "Urban Atlas 2012, geodatabase, all layers included.",
   "steps": [
     {
-      "check_ident": "v_unzip",
+      "check_ident": "qc_tool.vector.unzip",
       "required": true
     },
     {
-      "check_ident": "v1_ua_gdb",
+      "check_ident": "qc_tool.vector.naming_ua_gdb",
       "required": true,
       "parameters": {
         "reference_year": "2012",
@@ -19,7 +19,7 @@
       }
     },
     {
-      "check_ident": "v2",
+      "check_ident": "qc_tool.vector.format",
       "required": true,
       "parameters": {
         "layers": ["reference", "boundary", "combined", "revised", "change"],
@@ -28,7 +28,7 @@
       }
     },
     {
-      "check_ident": "v3",
+      "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
         "layers": ["reference"],
@@ -44,7 +44,7 @@
       }
     },
     {
-      "check_ident": "v3",
+      "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
         "layers": ["revised"],
@@ -59,7 +59,7 @@
       }
     },
     {
-      "check_ident": "v3",
+      "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
         "layers": ["combined", "change"],
@@ -77,7 +77,7 @@
       }
     },
     {
-      "check_ident": "v4",
+      "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
         "layers": ["reference", "boundary", "combined", "revised", "change"],
@@ -85,11 +85,11 @@
       }
     },
     {
-      "check_ident": "v_import2pg",
+      "check_ident": "qc_tool.vector.import2pg",
       "required": true
     },
     {
-      "check_ident": "v5",
+      "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
         "layers": ["reference", "combined", "change"],
@@ -97,7 +97,7 @@
       }
     },
     {
-      "check_ident": "v6",
+      "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -113,7 +113,7 @@
       }
     },
     {
-      "check_ident": "v6",
+      "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -129,7 +129,7 @@
       }
     },
     {
-      "check_ident": "v6",
+      "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
         "layers": ["combined", "change"],
@@ -154,28 +154,28 @@
       }
     },
     {
-      "check_ident": "v8",
+      "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
         "layers": ["reference", "combined", "revised", "change"]
       }
     },
     {
-      "check_ident": "v9",
+      "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
         "layers": ["boundary", "reference", "combined", "revised", "change"]
       }
     },
     {
-      "check_ident": "v10",
+      "check_ident": "qc_tool.vector.gap",
       "required": false,
       "parameters": {
         "layers": ["reference", "combined", "revised"]
       }
     },
     {
-      "check_ident": "v11_ua_status",
+      "check_ident": "qc_tool.vector.mmu_ua_status",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -184,7 +184,7 @@
       }
     },
     {
-      "check_ident": "v11_ua_status",
+      "check_ident": "qc_tool.vector.mmu_ua_status",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -193,7 +193,7 @@
       }
     },
     {
-      "check_ident": "v11_ua_change",
+      "check_ident": "qc_tool.vector.mmu_ua_change",
       "required": false,
       "parameters": {
         "layers": ["change"],
@@ -203,7 +203,7 @@
       }
     },
     {
-      "check_ident": "v12_ua",
+      "check_ident": "qc_tool.vector.mmw_ua",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -212,7 +212,7 @@
       }
     },
     {
-      "check_ident": "v12_ua",
+      "check_ident": "qc_tool.vector.mmw_ua",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -221,14 +221,14 @@
       }
     },
     {
-      "check_ident": "v13",
+      "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
         "layers": ["reference", "combined", "revised", "change"]
       }
     },
     {
-      "check_ident": "v14",
+      "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
         "layers": ["reference"],
@@ -237,7 +237,7 @@
       }
     },
     {
-      "check_ident": "v14",
+      "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
         "layers": ["revised"],
@@ -246,7 +246,7 @@
       }
     },
     {
-      "check_ident": "v14",
+      "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
         "layers": ["combined", "change"],
@@ -255,7 +255,7 @@
       }
     },
     {
-      "check_ident": "v15",
+      "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
         "layers": ["reference", "combined", "revised", "change", "boundary"]

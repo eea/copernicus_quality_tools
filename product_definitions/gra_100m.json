@@ -2,11 +2,11 @@
   "description": "HRL Grassland (100m)",
   "steps": [
     {
-      "check_ident": "r_unzip",
+      "check_ident": "qc_tool.raster.unzip",
       "required": true
     },
     {
-      "check_ident": "r1",
+      "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
         "formats": [".tif"],
@@ -14,7 +14,7 @@
       }
     },
     {
-      "check_ident": "r2",
+      "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
         "file_name_regex": "^gra_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$",
@@ -40,66 +40,66 @@
       }
     },
     {
-      "check_ident": "r3",
+      "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
         "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)"]
       }
     },
     {
-      "check_ident": "r4",
+      "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
         "epsg": [3035]
       }
     },
     {
-      "check_ident": "r5",
+      "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
         "pixelsize": 100
       }
     },
     {
-      "check_ident": "r6",
+      "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
       }
     },
     {
-      "check_ident": "r7",
+      "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
         "datatype": "byte"
       }
     },
     {
-      "check_ident": "r8",
+      "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
         "compression": ["LZW", "PackBits"]
       }
     },
     {
-      "check_ident": "r9",
+      "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
         "validcodes": [0, 1, 2, 254, 255]
       }
     },
      {
-      "check_ident": "r10",
+      "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
         "outside_area_code": 255
       }
     },
     {
-      "check_ident": "r12",
+      "check_ident": "qc_tool.raster.inspire",
       "required": false
     },
     {
-      "check_ident": "r13",
+      "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
         "colours": {

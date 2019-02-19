@@ -2,11 +2,11 @@
   "description": "HRL Tree cover density (20m)",
   "steps": [
     {
-      "check_ident": "r_unzip",
+      "check_ident": "qc_tool.raster.unzip",
       "required": true
     },
     {
-      "check_ident": "r1",
+      "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
         "formats": [".tif"],
@@ -14,7 +14,7 @@
       }
     },
     {
-      "check_ident": "r2",
+      "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
         "file_name_regex": "^tcd_(?P<reference_year>[0-9]{4})_020m_(?P<country_code>.+)_[0-9]{5}.*.tif$",
@@ -40,66 +40,66 @@
       }
     },
     {
-      "check_ident": "r3",
+      "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
         "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)", "(class_name|classnames)"]
       }
     },
     {
-      "check_ident": "r4",
+      "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
         "epsg": [3035]
       }
     },
     {
-      "check_ident": "r5",
+      "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
         "pixelsize": 20
       }
     },
     {
-      "check_ident": "r6",
+      "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
       }
     },
     {
-      "check_ident": "r7",
+      "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
         "datatype": "byte"
       }
     },
     {
-      "check_ident": "r8",
+      "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
         "compression": ["LZW", "PackBits"]
       }
     },
     {
-      "check_ident": "r9",
+      "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
           "validcodes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 254, 255]
       }
     },
     {
-      "check_ident": "r10",
+      "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
         "outside_area_code": 255
       }
     },
     {
-      "check_ident": "r12",
+      "check_ident": "qc_tool.raster.inspire",
       "required": false
     },
     {
-      "check_ident": "r13",
+      "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
         "colours": {

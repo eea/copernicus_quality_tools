@@ -27,14 +27,14 @@ class Test_Raster(ProductTestCase):
         self.username = "test_username"
 
         # All steps are expected to finish with ok status by default.
-        self.expected_step_statuses = ["ok"] * 14
+        self.expected_step_statuses = ["ok"] * 13
 
     # High resolution forest type (FTY) - 20m
     def test_fty_020m(self):
         product_ident = "fty_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "FTY_2015_020m_mt_03035_d04_clip.zip")
         # fty_020m has extra check r11 (raster MMU)
-        self.expected_step_statuses["r11"] = "ok"
+        self.expected_step_statuses.append("ok")
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
@@ -52,9 +52,9 @@ class Test_Raster(ProductTestCase):
         product_ident = "gra_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "GRA_2015_020m_mt_03035_V1_clip.zip")
         # gra_020m has extra check r11 (raster MMU)
-        self.expected_step_statuses["r11"] = "ok"
+        self.expected_step_statuses.append("ok")
         # gra_020m has mismatching attributes
-        self.expected_step_statuses["r3"] = "failed"
+        self.expected_step_statuses[3] = "failed"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(self.expected_step_statuses, step_statuses, self.show_messages(job_result))
@@ -120,7 +120,7 @@ class Test_Raster(ProductTestCase):
         product_ident = "waw_020m"
         filepath = self.raster_data_dir.joinpath(product_ident, "WAW_2015_020m_mt_03035_d06_clip.zip")
         # completeness check is cancelled due to unavailable raster mask.
-        self.expected_step_statuses["r10"] = "cancelled"
+        self.expected_step_statuses[10] = "cancelled"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(self.expected_step_statuses, step_statuses)
@@ -130,7 +130,7 @@ class Test_Raster(ProductTestCase):
         product_ident = "waw_100m"
         filepath = self.raster_data_dir.joinpath(product_ident, "WAW_2015_100m_mt_03035_d02_clip.zip")
         # completeness check is cancelled due to unavailable raster mask.
-        self.expected_step_statuses["r10"] = "cancelled"
+        self.expected_step_statuses[10] = "cancelled"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(self.expected_step_statuses, step_statuses)

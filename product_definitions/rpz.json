@@ -2,11 +2,11 @@
   "description": "Riparian Zones",
   "steps": [
     {
-      "check_ident": "v_unzip",
+      "check_ident": "qc_tool.vector.unzip",
       "required": true
     },
     {
-      "check_ident": "v1_rpz",
+      "check_ident": "qc_tool.vector.naming_rpz",
       "required": true,
       "parameters": {
         "areacodes": ["001", "002", "003", "004", "005", "006", "007", "008", "009",
@@ -18,7 +18,7 @@
       }
     },
     {
-      "check_ident": "v2",
+      "check_ident": "qc_tool.vector.format",
       "required": true,
       "parameters": {
         "layers": ["rpz"],
@@ -27,7 +27,7 @@
       }
     },
     {
-      "check_ident": "v3",
+      "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
         "layers": ["rpz"],
@@ -44,7 +44,7 @@
       }
     },
     {
-      "check_ident": "v4",
+      "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
         "layers": ["rpz"],
@@ -53,11 +53,11 @@
       }
     },
     {
-      "check_ident": "v_import2pg",
+      "check_ident": "qc_tool.vector.import2pg",
       "required": true
     },
     {
-      "check_ident": "v5",
+      "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
@@ -65,7 +65,7 @@
       }
     },
     {
-      "check_ident": "v6",
+      "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
@@ -109,21 +109,21 @@
       }
     },
     {
-      "check_ident": "v8",
+      "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
         "layers": ["rpz"]
       }
     },
     {
-      "check_ident": "v9",
+      "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
         "layers": ["rpz"]
       }
     },
     {
-      "check_ident": "v10_unit",
+      "check_ident": "qc_tool.vector.gap_unit",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
@@ -131,7 +131,7 @@
       }
     },
     {
-      "check_ident": "v11_rpz",
+      "check_ident": "qc_tool.vector.mmu_rpz",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
@@ -145,7 +145,7 @@
       }
     },
     {
-      "check_ident": "v12",
+      "check_ident": "qc_tool.vector.mmw",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
@@ -153,14 +153,14 @@
       }
     },
     {
-      "check_ident": "v13",
+      "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
         "layers": ["rpz"]
       }
     },
     {
-      "check_ident": "v14_rpz",
+      "check_ident": "qc_tool.vector.neighbour_rpz",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
@@ -171,7 +171,7 @@
       }
     },
     {
-      "check_ident": "v15",
+      "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
         "layers": ["rpz"]

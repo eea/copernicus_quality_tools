@@ -11,7 +11,7 @@ class TestCommon(TestCase):
         product_definition = load_product_definition("clc_2012")
         self.assertIn("steps", product_definition)
         self.assertLess(1, len(product_definition["steps"]))
-        self.assertDictEqual({"check_ident": "v2",
+        self.assertDictEqual({"check_ident": "qc_tool.vector.format",
                               "parameters": {"layers": ["reference", "initial", "change"],
                                              "formats": [".gdb"],
                                              "drivers": {'.gdb': 'OpenFileGDB'}},
@@ -32,13 +32,13 @@ class TestCommon(TestCase):
         self.assertEqual("clc_2012", job_result["product_ident"])
         self.assertEqual("CORINE Land Cover 2012", job_result["description"])
         self.assertLess(4, len(job_result["steps"]))
-        self.assertEqual("v2", job_result["steps"][2]["check_ident"])
+        self.assertEqual("qc_tool.vector.format", job_result["steps"][2]["check_ident"])
         self.assertEqual("File format is correct.", job_result["steps"][2]["description"])
         self.assertTrue(job_result["steps"][1]["required"])
         self.assertFalse(job_result["steps"][1]["system"])
         self.assertIsNone(job_result["steps"][1]["status"])
         self.assertIsNone(job_result["steps"][1]["messages"])
-        self.assertEqual("v_import2pg", job_result["steps"][7]["check_ident"])
+        self.assertEqual("qc_tool.vector.import2pg", job_result["steps"][7]["check_ident"])
         self.assertTrue(job_result["steps"][7]["system"])
 
 class TestCommonWithConfig(TestCase):
