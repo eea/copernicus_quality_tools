@@ -404,7 +404,8 @@ def run_check(params, status):
 
     # lessMMU patches belonging to one of exclude_values classes are reported in the exception shapefile.
     if len(regions_lessMMU_except) > 0:
-        exceptions_shp_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_lessmmu_exception.shp")
+        errors_shp_filename = "s{:02d}_{:s}_lessmmu_exception.shp".format(params["step_nr"], params["filepath"].stem)
+        exceptions_shp_filepath = params["output_dir"].joinpath(errors_shp_filename)
         export_shapefile(regions_lessMMU_except, ds, exceptions_shp_filepath)
         error_zip_filename = zip_shapefile(exceptions_shp_filepath)
         status.add_attachment(error_zip_filename)
@@ -413,7 +414,8 @@ def run_check(params, status):
 
     # lessMMU patches not belonging to exclude_values are reported in the error shapefile.
     if len(regions_lessMMU) > 0:
-        errors_shp_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_lessmmu_error.shp")
+        errors_shp_filename = "s{:02d}_{:s}_lessmmu_error.shp".format(params["step_nr"], params["filepath"].stem)
+        errors_shp_filepath = params["output_dir"].joinpath(errors_shp_filename)
         export_shapefile(regions_lessMMU, ds, errors_shp_filepath)
         error_zip_filename = zip_shapefile(errors_shp_filepath)
         status.add_attachment(error_zip_filename)

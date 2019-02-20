@@ -137,7 +137,8 @@ def run_check(params, status):
 
     # creating an OUTPUT dataset for writing error raster cells
     src_stem = params["filepath"].stem
-    error_raster_filepath = params["output_dir"].joinpath(src_stem + "_completeness_error.tif")
+    error_raster_filename = "s{:02d}_{:s}_completeness_error.tif".format(params["step_nr"], src_stem)
+    error_raster_filepath = params["output_dir"].joinpath(error_raster_filename)
     driver = gdal.GetDriverByName('GTiff')
     x_pixels = int(round(ds.RasterXSize))
     y_pixels = int(round(ds.RasterYSize))

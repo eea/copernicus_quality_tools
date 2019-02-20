@@ -23,7 +23,7 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"layer_name": layer_def["pg_layer_name"],
                       "boundary_name": params["layer_defs"]["boundary"]["pg_layer_name"],
-                      "error_table": "v10_{:s}_error".format(layer_def["pg_layer_name"])}
+                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"

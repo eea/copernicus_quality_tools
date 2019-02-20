@@ -32,7 +32,7 @@ def run_check(params, status):
         # Prepare parameters for sql query.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "error_table": "v14_{:s}_error".format(layer_def["pg_layer_name"]),
+                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "pair_clause": pair_clause,
                       "exclude_clause": exclude_clause}
 

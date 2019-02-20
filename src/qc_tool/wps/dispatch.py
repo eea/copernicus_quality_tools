@@ -172,6 +172,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
                 step_params = {}
                 step_params.update(step_def.get("parameters", {}))
                 step_params.update(job_params)
+                step_params["step_nr"] = step_nr
 
                 # Run the step.
                 check_status = CheckStatus()

@@ -16,8 +16,8 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "error_table": "v9_{:s}_invalid".format(layer_def["pg_layer_name"]),
-                      "detail_table": "v9_{:s}_detail".format(layer_def["pg_layer_name"])}
+                      "error_table": "s{:02d}_{:s}_invalid".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "detail_table": "s{:02d}_{:s}_detail".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"

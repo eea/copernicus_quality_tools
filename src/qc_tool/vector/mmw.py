@@ -19,7 +19,7 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "warning_table": "v12_{:s}_warning".format(layer_def["pg_layer_name"])}
+                      "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"

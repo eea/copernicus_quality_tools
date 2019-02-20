@@ -14,7 +14,7 @@ def run_check(params, status):
 
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
-        error_table_name = "v8_{:s}_error".format(layer_def["pg_layer_name"])
+        error_table_name = "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])
         sql = SQL.format(error_table_name, layer_def["pg_fid_name"], layer_def["pg_layer_name"])
         cursor.execute(sql)
         if cursor.rowcount > 0:

@@ -20,9 +20,9 @@ def run_check(params, status):
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "code_column_name": params["code_column_name"],
-                      "general_table": "v14_{:s}_general".format(layer_def["pg_layer_name"]),
-                      "exception_table": "v14_{:s}_exception".format(layer_def["pg_layer_name"]),
-                      "error_table": "v14_{:s}_error".format(layer_def["pg_layer_name"])}
+                      "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of general items.
         sql = ("CREATE TABLE {general_table} AS"

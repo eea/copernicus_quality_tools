@@ -28,7 +28,7 @@ def get_failed_items_message(cursor, error_table_name, pg_fid_name, limit=FAILED
 
 class LayerDefsBuilder():
     """
-    Helper class for v1 checks doing regex lookup for layers.
+    Helper class for naming checks doing regex lookup for layers.
     """
     def __init__(self, status):
         self.status = status

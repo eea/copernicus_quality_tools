@@ -28,7 +28,7 @@ def run_check(params, status):
                           "layer_name": layer_def["pg_layer_name"],
                           "column_name": column_name,
                           "exclude_clause": exclude_clause,
-                          "error_table": "v6_{:s}_{:s}_error".format(layer_def["pg_layer_name"], column_name)}
+                          "error_table": "s{:02d}_{:s}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"], column_name)}
 
             # Create table of error items.
             # Create table of error items.

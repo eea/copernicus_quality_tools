@@ -454,7 +454,8 @@ class Test_unique(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "unique_keys": ["unique_1", "unique_2"]})
+                            "unique_keys": ["unique_1", "unique_2"],
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -472,7 +473,8 @@ class Test_unique(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "unique_keys": ["ident"]})
+                            "unique_keys": ["ident"],
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -496,7 +498,8 @@ class Test_enum(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_18", ["111", "112"]]]})
+                            "column_defs": [["code_18", ["111", "112"]]],
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -513,7 +516,8 @@ class Test_enum(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", [1, 2, 3, 4]]]})
+                            "column_defs": [["code_12", [1, 2, 3, 4]]],
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -530,7 +534,8 @@ class Test_enum(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", [1, 2, 3, 4]]]})
+                            "column_defs": [["code_12", [1, 2, 3, 4]]],
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -547,7 +552,8 @@ class Test_enum(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", ["111", "112"]], ["code_18", ["111", "112"]]]})
+                            "column_defs": [["code_12", ["111", "112"]], ["code_18", ["111", "112"]]],
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -564,7 +570,8 @@ class Test_enum(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "column_defs": [["code_12", ["111", "112"]], ["code_18", ["111", "112"]]]})
+                            "column_defs": [["code_12", ["111", "112"]], ["code_18", ["111", "112"]]],
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -583,7 +590,8 @@ class Test_enum(VectorCheckTestCase):
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "column_defs": [["code", ["a", "b"]]],
-                            "exclude_column_name": "ua"})
+                            "exclude_column_name": "ua",
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -601,7 +609,8 @@ class Test_enum(VectorCheckTestCase):
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "column_defs": [["code", ["a", "b"]]],
-                            "exclude_column_name": "ua"})
+                            "exclude_column_name": "ua",
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -625,7 +634,8 @@ class Test_singlepart(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
-                            "layers": ["layer_0"]})
+                            "layers": ["layer_0"],
+                            "step_nr": 1})
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
@@ -640,7 +650,8 @@ class Test_singlepart(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
-                            "layers": ["layer_0"]})
+                            "layers": ["layer_0"],
+                            "step_nr": 1})
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
 
@@ -654,7 +665,8 @@ class Test_geometry(VectorCheckTestCase):
         self.params.update({"layer_defs": {"test": {"pg_fid_name": "fid",
                                                     "pg_layer_name": "test_layer",
                                                     "fid_display_name": "row number"}},
-                            "layers": ["test"]})
+                            "layers": ["test"],
+                            "step_nr": 1})
 
     def test(self):
         from qc_tool.vector.geometry import run_check
@@ -689,7 +701,8 @@ class Test_gap(VectorCheckTestCase):
         self.cursor.execute("CREATE TABLE reference (wkb_geometry geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
                                            "boundary": {"pg_layer_name": "boundary"}},
-                            "layers": ["reference"]})
+                            "layers": ["reference"],
+                            "step_nr": 1})
 
     def test(self):
         from qc_tool.vector.gap import run_check
@@ -699,7 +712,7 @@ class Test_gap(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.cursor.execute("SELECT * FROM s01_reference_error;")
         self.assertEqual(0, self.cursor.rowcount)
 
     def test_fail(self):
@@ -708,7 +721,7 @@ class Test_gap(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.cursor.execute("SELECT * FROM s01_reference_error;")
         self.assertEqual(1, self.cursor.rowcount)
 
 
@@ -726,7 +739,8 @@ class Test_gap_unit(VectorCheckTestCase):
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
-                            "boundary_unit_column_name": "unit"})
+                            "boundary_unit_column_name": "unit",
+                            "step_nr": 1})
 
     def test(self):
         from qc_tool.vector.gap_unit import run_check
@@ -737,7 +751,7 @@ class Test_gap_unit(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.cursor.execute("SELECT * FROM s01_reference_error;")
         self.assertEqual(0, self.cursor.rowcount)
 
     def test_fail(self):
@@ -748,7 +762,7 @@ class Test_gap_unit(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT * FROM v10_reference_error;")
+        self.cursor.execute("SELECT * FROM s01_reference_error;")
         self.assertEqual(1, self.cursor.rowcount)
 
     def test_warning(self):
@@ -758,7 +772,7 @@ class Test_gap_unit(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM v10_reference_warning;")
+        self.cursor.execute("SELECT * FROM s01_reference_warning;")
         self.assertEqual(2, self.cursor.rowcount)
 
 
@@ -781,13 +795,14 @@ class Test_mmu_clc_status(VectorCheckTestCase):
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
-                            "area_m2": 250000})
+                            "area_m2": 250000,
+                            "step_nr": 1})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_reference_general ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_reference_exception ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_reference_exception ORDER BY fid;")
         self.assertListEqual([(20,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_reference_error ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
         self.assertListEqual([(30,)], cursor.fetchall())
 
 
@@ -831,13 +846,14 @@ class Test_mmu_clc_change(VectorCheckTestCase):
                             "area_column_name": "shape_area",
                             "area_m2": 50000,
                             "initial_code_column_name": "code1",
-                            "final_code_column_name": "code2"})
+                            "final_code_column_name": "code2",
+                            "step_nr": 1})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT * FROM v11_change_general ORDER BY fid;")
+        cursor.execute("SELECT * FROM s01_change_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,)], cursor.fetchall())
-        cursor.execute("SELECT * FROM v11_change_exception ORDER BY fid;")
+        cursor.execute("SELECT * FROM s01_change_exception ORDER BY fid;")
         self.assertListEqual([(20,), (22,), (23,), (25,), (26,)], cursor.fetchall())
-        cursor.execute("SELECT * FROM v11_change_error ORDER BY fid;")
+        cursor.execute("SELECT * FROM s01_change_error ORDER BY fid;")
         self.assertListEqual([(30,), (32,), (33,)], cursor.fetchall())
 
 
@@ -897,15 +913,16 @@ class Test_mmu_ua_status(VectorCheckTestCase):
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
-                            "code_column_name": "code"})
+                            "code_column_name": "code",
+                            "step_nr": 1})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_reference_general ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,), (18,), (20,), (22,), (24,), (26,), (28,), (30,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_reference_exception ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_reference_exception ORDER BY fid;")
         self.assertListEqual([(40,), (42,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_reference_warning ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_reference_warning ORDER BY fid;")
         self.assertListEqual([(50,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_reference_error ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
         self.assertListEqual([(60,), (62,), (64,), (66,), (68,), (70,), (72,), (74,), (76,), (78,), (80,), (82,)], cursor.fetchall())
 
 
@@ -953,13 +970,14 @@ class Test_mmu_ua_change(VectorCheckTestCase):
                             "layers": ["change"],
                             "area_column_name": "shape_area",
                             "initial_code_column_name": "code1",
-                            "final_code_column_name": "code2"})
+                            "final_code_column_name": "code2",
+                            "step_nr": 1})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_change_general ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_change_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,), (18,), (20,), (22,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_change_exception ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_change_exception ORDER BY fid;")
         self.assertListEqual([(30,), (32,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_change_error ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_change_error ORDER BY fid;")
         self.assertListEqual([(40,), (42,), (44,), (46,), (48,), (50,), (52,), (54,), (56,), (58,), (60,), (62,)], cursor.fetchall())
 
 
@@ -999,13 +1017,14 @@ class Test_mmu_n2k(VectorCheckTestCase):
                             "area_column_name": "area_ha",
                             "area_ha": 0.5,
                             "initial_code_column_name": "code",
-                            "final_code_column_name": "code"})
+                            "final_code_column_name": "code",
+                            "step_nr": 1})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM v11_n2k_general ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_n2k_general ORDER BY fid;")
         self.assertListEqual([(0,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_n2k_exception ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_n2k_exception ORDER BY fid;")
         self.assertListEqual([(10,), (20,), (21,), (22,), (23,), (24,), (30,), (40,), (41,), (42,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v11_n2k_error ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_n2k_error ORDER BY fid;")
         self.assertListEqual([(11,), (25,)], cursor.fetchall())
 
 
@@ -1058,16 +1077,17 @@ class Test_mmu_rpz(VectorCheckTestCase):
                             "code_column_name": "code",
                             "urban_feature_codes": [1111, 1112],
                             "linear_feature_codes": [1210, 1220],
-                            "exception_comments": ["comment1"]})
+                            "exception_comments": ["comment1"],
+                            "step_nr": 1})
 
     def test(self):
         from qc_tool.vector.mmu_rpz import run_check
         run_check(self.params, self.status_class())
-        self.cursor.execute("SELECT fid FROM v11_rpz_general ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_rpz_general ORDER BY fid;")
         self.assertListEqual([(0,), (1,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT fid FROM v11_rpz_exception ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_rpz_exception ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (20,), (22,), (30,), (32,), (40,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT fid FROM v11_rpz_error ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_rpz_error ORDER BY fid;")
         self.assertListEqual([(11,), (13,), (21,), (23,), (24,), (25,), (31,), (33,), (34,), (35,), (41,)], self.cursor.fetchall())
 
     def test_empty_codes(self):
@@ -1092,11 +1112,12 @@ class Test_mmw(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mmw"],
-                            "mmw": 1.0})
+                            "mmw": 1.0,
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        cursor.execute("SELECT fid FROM v12_mmw_warning ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_mmw_warning ORDER BY fid;")
         self.assertListEqual([(1,), (3,)], cursor.fetchall())
 
 
@@ -1116,13 +1137,14 @@ class Test_mmw_ua(VectorCheckTestCase):
                                                    "fid_display_name": "row number"}},
                             "layers": ["mmw"],
                             "code_column_name": "code",
-                            "mmw": 1.0})
+                            "mmw": 1.0,
+                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        cursor.execute("SELECT fid FROM v12_mmw_exception ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_mmw_exception ORDER BY fid;")
         self.assertListEqual([(4,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM v12_mmw_warning ORDER BY fid;")
+        cursor.execute("SELECT fid FROM s01_mmw_warning ORDER BY fid;")
         self.assertListEqual([(1,), (3,)], cursor.fetchall())
 
 
@@ -1138,7 +1160,8 @@ class Test_overlap(VectorCheckTestCase):
                                            "layer_2": {"pg_layer_name": "test_layer_2",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
-                            "layers": ["layer_1", "layer_2"]})
+                            "layers": ["layer_1", "layer_2"],
+                            "step_nr": 1})
 
     def test_non_overlapping(self):
         from qc_tool.vector.overlap import run_check
@@ -1162,9 +1185,9 @@ class Test_overlap(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT fid FROM v13_test_layer_1_error ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_test_layer_1_error ORDER BY fid;")
         self.assertListEqual([(1,), (5,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT fid FROM v13_test_layer_2_error ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_test_layer_2_error ORDER BY fid;")
         self.assertListEqual([(1,), (5,), (6,)], self.cursor.fetchall())
 
 
@@ -1183,7 +1206,8 @@ class Test_neighbour(VectorCheckTestCase):
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "code_column_names": ["attr_1", "attr_2"]})
+                            "code_column_names": ["attr_1", "attr_2"],
+                            "step_nr": 1})
 
     def test_disjoint(self):
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
@@ -1250,7 +1274,8 @@ class Test_neighbour_rpz(VectorCheckTestCase):
                                                    "fid_display_name": "row number"}},
                             "layers": ["rpz"],
                             "code_column_name": "code",
-                            "exception_comments": ["Comment 1", "Comment 2"]})
+                            "exception_comments": ["Comment 1", "Comment 2"],
+                            "step_nr": 1})
         self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), ua char(1), comment varchar, wkb_geometry geometry(Polygon, 4326));")
 
     def test(self):
@@ -1265,9 +1290,9 @@ class Test_neighbour_rpz(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT fid FROM v14_rpz_layer_exception ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_rpz_layer_exception ORDER BY fid;")
         self.assertListEqual([], self.cursor.fetchall())
-        self.cursor.execute("SELECT fid FROM v14_rpz_layer_error ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_rpz_layer_error ORDER BY fid;")
         self.assertListEqual([(4,), (5,)], self.cursor.fetchall())
 
     def test_comments(self):
@@ -1281,9 +1306,9 @@ class Test_neighbour_rpz(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT fid FROM v14_rpz_layer_exception ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_rpz_layer_exception ORDER BY fid;")
         self.assertListEqual([(1,), (2,), (3,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT fid FROM v14_rpz_layer_error ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_rpz_layer_error ORDER BY fid;")
         self.assertListEqual([], self.cursor.fetchall())
 
 

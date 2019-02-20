@@ -87,7 +87,8 @@ def run_check(params, status):
                           .format(METADATA_SERVICE_HOST, xml_filepath.name))
 
             # save the attachment to output directory.
-            metadata_report_filepath = params["output_dir"].joinpath(params["filepath"].stem + "_metadata_error.json")
+            metadata_report_filename = "s{:02d}_{:s}_metadata_error.json".format(params["step_nr"], params["filepath"].stem)
+            metadata_report_filepath = params["output_dir"].joinpath(metadata_report_filename)
             metadata_report_filepath.write_text(json.dumps(json_data, indent=4, sort_keys=True))
             status.add_attachment(metadata_report_filepath.name)
             return

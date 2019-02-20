@@ -16,7 +16,7 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
         for unique_key in params["unique_keys"]:
-            error_table_name = "v5_{:s}_{:s}_error".format(layer_def["pg_layer_name"], unique_key)
+            error_table_name = "s{:02d}_{:s}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"], unique_key)
             sql = SQL.format(error_table_name,
                              layer_def["pg_fid_name"],
                              unique_key,
