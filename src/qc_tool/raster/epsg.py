@@ -6,6 +6,10 @@ from osgeo import gdal
 from osgeo import osr
 
 
+DESCRIPTION = "Raster uses specific EPSG code."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     dataset = gdal.Open(str(params["filepath"]))
 

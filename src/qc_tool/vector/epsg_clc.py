@@ -8,6 +8,10 @@ from osgeo import osr
 from qc_tool.wps.helper import do_layers
 
 
+DESCRIPTION = "EPSG codes of the layers match EPSG code of the boundary layer."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     for layer_def in do_layers(params):
         ds = ogr.Open(str(layer_def["src_filepath"]))

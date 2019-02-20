@@ -5,6 +5,10 @@
 from qc_tool.wps.helper import LayerDefsBuilder
 
 
+DESCRIPTION = "Naming is in accord with specification, Urban Atlas shapefiles."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     # Fix reference year.
     status.set_status_property("reference_year", params["reference_year"])

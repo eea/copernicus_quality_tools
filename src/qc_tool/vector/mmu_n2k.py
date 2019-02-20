@@ -9,6 +9,9 @@ from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 
 
+DESCRIPTION = "Minimum mapping unit, Natura 2000."
+IS_SYSTEM = False
+
 CLUSTER_TABLE_NAME = "n2k_complex_change"
 
 

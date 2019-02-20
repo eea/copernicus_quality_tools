@@ -11,6 +11,10 @@ from osgeo import osr
 from qc_tool.wps.helper import zip_shapefile
 
 
+DESCRIPTION = "There is no gap in the AOI."
+IS_SYSTEM = False
+
+
 def write_percent(percent_filepath, percent):
     percent_filepath.write_text(str(percent))
 

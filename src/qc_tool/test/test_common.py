@@ -33,7 +33,7 @@ class TestCommon(TestCase):
         self.assertEqual("CORINE Land Cover 2012", job_result["description"])
         self.assertLess(4, len(job_result["steps"]))
         self.assertEqual("qc_tool.vector.format", job_result["steps"][2]["check_ident"])
-        self.assertEqual("File format is correct.", job_result["steps"][2]["description"])
+        self.assertEqual("Delivery content uses specific file format.", job_result["steps"][2]["description"])
         self.assertTrue(job_result["steps"][1]["required"])
         self.assertFalse(job_result["steps"][1]["system"])
         self.assertIsNone(job_result["steps"][1]["status"])

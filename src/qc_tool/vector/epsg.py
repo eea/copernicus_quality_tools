@@ -8,6 +8,10 @@ from osgeo import osr
 from qc_tool.wps.helper import do_layers
 
 
+DESCRIPTION = "Layers use specific EPSG codes."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     for layer_def in do_layers(params):
         ds = ogr.Open(str(layer_def["src_filepath"]))

@@ -9,6 +9,9 @@ from osgeo import ogr
 from qc_tool.wps.helper import do_layers
 
 
+DESCRIPTION = "Attribute table is composed of prescribed attributes."
+IS_SYSTEM = False
+
 OGR_TYPES = {ogr.OFTBinary: "binary",
              ogr.OFTDate: "date",
              ogr.OFTDateTime: "datetime",

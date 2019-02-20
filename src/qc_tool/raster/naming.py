@@ -5,6 +5,10 @@
 import re
 
 
+DESCRIPTION = "Naming is in accord with specification."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     # Check file name.
     filename = params["filepath"].name.lower()

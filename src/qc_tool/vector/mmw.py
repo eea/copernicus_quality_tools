@@ -8,6 +8,10 @@ from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 
 
+DESCRIPTION = "Minimum mapping width."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 

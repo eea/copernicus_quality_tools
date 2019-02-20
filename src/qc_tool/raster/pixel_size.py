@@ -5,6 +5,10 @@
 from osgeo import gdal
 
 
+DESCRIPTION = "Pixel has specific size."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
 
     ds_open = gdal.Open(str(params["filepath"]))

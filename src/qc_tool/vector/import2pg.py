@@ -10,6 +10,10 @@ from osgeo.gdalconst import OF_READONLY
 from qc_tool.wps.helper import do_layers
 
 
+DESCRIPTION = "The layers can be imported into PostGIS database."
+IS_SYSTEM = True
+
+
 def run_check(params, status):
     dsn, schema =  params["connection_manager"].get_dsn_schema()
 

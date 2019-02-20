@@ -9,6 +9,10 @@ from urllib.error import URLError
 from xml.etree import ElementTree
 
 
+DESCRIPTION = "Metadata are in accord with INSPIRE specification."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
 
     # check existence of xml metadata file .xml or .tif.xml

@@ -5,6 +5,10 @@
 import re
 
 
+DESCRIPTION = "Naming is in accord with specification, Riparian Zones."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     # Find all shapefiles.
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*")

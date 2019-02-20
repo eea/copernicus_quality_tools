@@ -6,6 +6,9 @@ from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 
 
+DESCRIPTION = "Features have unique values in specific attributes."
+IS_SYSTEM = False
+
 SQL = ("CREATE TABLE {0:s} AS (SELECT {1:s} FROM {3:s} WHERE {2:s} IN ("
        "SELECT {2:s} FROM {3:s} GROUP BY {2:s} HAVING count({2:s}) > 1));")
 

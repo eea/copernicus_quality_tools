@@ -5,6 +5,10 @@
 from osgeo import gdal
 
 
+DESCRIPTION = "Raster uses specific compression formats."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     # enable gdal to use exceptions
     gdal.UseExceptions()

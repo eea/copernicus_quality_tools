@@ -6,6 +6,10 @@ import os
 from zipfile import ZipFile
 
 
+DESCRIPTION = "Delivery file can be unzipped."
+IS_SYSTEM = True
+
+
 def run_check(params, status):
     zip_filepath = params["filepath"]
     extract_dir = params["tmp_dir"].joinpath("r_unzip.d")

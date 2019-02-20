@@ -3,9 +3,13 @@
 
 
 import time
-
 from pathlib import Path
+
 from osgeo import gdal
+
+
+DESCRIPTION = "Color table is in accord with specification."
+IS_SYSTEM = False
 
 
 def run_check(params, status):

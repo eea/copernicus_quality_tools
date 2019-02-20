@@ -5,6 +5,10 @@
 import re
 
 
+DESCRIPTION = "Naming is in accord with specification, Natura 2000."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     # Find the shp file.
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*") if path.is_file() and path.suffix.lower() == ".shp"]

@@ -6,6 +6,9 @@ from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 
 
+DESCRIPTION = "All geometries are singlepart."
+IS_SYSTEM = False
+
 SQL = "CREATE TABLE {:s} AS SELECT {:s} FROM {:s} WHERE ST_NumGeometries(wkb_geometry) > 1;"
 
 

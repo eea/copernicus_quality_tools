@@ -5,6 +5,10 @@
 from osgeo import gdal
 
 
+DESCRIPTION = "Delivery content uses specific file format."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
 
     # file extension check

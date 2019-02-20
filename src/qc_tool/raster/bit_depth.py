@@ -5,6 +5,10 @@
 from osgeo import gdal
 
 
+DESCRIPTION = "Raster datatype is of specific bit depth."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     # read the datatype parameter
     expected_datatype = params["datatype"]

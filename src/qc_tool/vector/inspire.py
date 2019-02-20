@@ -11,6 +11,10 @@ from xml.etree import ElementTree
 from qc_tool.wps.helper import do_layers
 
 
+DESCRIPTION = "Metadata are in accord with INSPIRE specification."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
 
     # Find all .xml files to check. There is one .xml file per .gdb or .shp

@@ -7,6 +7,10 @@ from osgeo import ogr
 from qc_tool.wps.helper import do_layers
 
 
+DESCRIPTION = "Delivery content uses specific file format."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
     # enable ogr to use exceptions
     ogr.UseExceptions()

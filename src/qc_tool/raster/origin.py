@@ -5,6 +5,10 @@
 from osgeo import gdal
 
 
+DESCRIPTION = "Bounding box upper left corner is positioned on grid."
+IS_SYSTEM = False
+
+
 def run_check(params, status):
 
     ds = gdal.Open(str(params["filepath"]))

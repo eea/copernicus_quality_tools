@@ -4,6 +4,7 @@
 import json
 import re
 import time
+from importlib import import_module
 from os import environ
 from os.path import normpath
 from pathlib import Path
@@ -41,56 +42,6 @@ PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 FAILED_ITEMS_LIMIT = 10
 
 UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
-
-CHECK_FUNCTION_DESCRIPTIONS = {
-    "qc_tool.vector.unzip": "Unzips the delivery file.",
-    "qc_tool.vector.import2pg": "Import layers into PostGIS database.",
-    "qc_tool.vector.naming_clc": "Naming is in accord with specification (clc product).",
-    "qc_tool.vector.naming_n2k": "Naming is in accord with specification (n2k product).",
-    "qc_tool.vector.naming_rpz": "Naming is in accord with specification (rpz product).",
-    "qc_tool.vector.naming_ua_gdb": "Naming is in accord with specification, geodatabase delivery.",
-    "qc_tool.vector.naming_ua_shp": "Naming is in accord with specification, shapefile delivery.",
-    "qc_tool.vector.format": "File format is correct.",
-    "qc_tool.vector.attribute": "Attribute table contains prescribed attributes.",
-    "qc_tool.vector.epsg": "EPSG code of the layer is in the list of allowed codes.",
-    "qc_tool.vector.epsg_clc": "EPSG code of the layer match EPSG code of the boundary layer.",
-    "qc_tool.vector.unique": "Unique identifier check.",
-    "qc_tool.vector.enum": "Valid codes check.",
-    "qc_tool.vector.non_probable_changes": "Non-probable changes.",
-    "qc_tool.vector.singlepart": "No multipart polygons.",
-    "qc_tool.vector.geometry": "The geometries are valid.",
-    "qc_tool.vector.gap": "Completeness.",
-    "qc_tool.vector.gap_unit": "Completeness, multiple boundary units.",
-    "qc_tool.vector.mmu_clc_change": "Minimum mapping unit check, Corine Land Cover change layer.",
-    "qc_tool.vector.mmu_clc_status": "Minimum mapping unit check, Corine Land Cover status layer.",
-    "qc_tool.vector.mmu_n2k": "Minimum mapping unit check, Natura 2000.",
-    "qc_tool.vector.mmu_rpz": "Minimum mapping unit check, Riparian zones.",
-    "qc_tool.vector.mmu_ua_change": "Minimum mapping unit check, Urban Atlas change layer.",
-    "qc_tool.vector.mmu_ua_status": "Minimum mapping unit check, Urban Atlas status layer.",
-    "qc_tool.vector.mmw": "Minimum mapping width.",
-    "qc_tool.vector.mmw_ua": "Minimum mapping width (ua product).",
-    "qc_tool.vector.overlap": "There are no overlapping polygons.",
-    "qc_tool.vector.neighbour": "No neighbouring polygons with the same code.",
-    "qc_tool.vector.neighbour_rpz": "No neighbouring polygons with the same code, Riparian zones.",
-    "qc_tool.vector.inspire": "Vector metadata is compliant with INSPIRE specifications.",
-    "qc_tool.raster.unzip": "Unzips the source file.",
-    "qc_tool.raster.format": "File format is allowed.",
-    "qc_tool.raster.naming": "File names match file naming conventions.",
-    "qc_tool.raster.attribute": "Attribute table contains specified attributes.",
-    "qc_tool.raster.epsg": "EPSG code of the raster file is in the list of allowed codes.",
-    "qc_tool.raster.pixel_size": "Pixel size must be equal to given value.",
-    "qc_tool.raster.origin": "Raster origin check.",
-    "qc_tool.raster.bit_depth": "Raster has specified bit depth data type.",
-    "qc_tool.raster.compress": "Compression type check.",
-    "qc_tool.raster.value": "Pixel values check.",
-    "qc_tool.raster.gap": "Raster completeness check.",
-    "qc_tool.raster.mmu": "Minimum mapping unit check.",
-    "qc_tool.raster.inspire": "Raster metadata is compliant with INSPIRE specifications.",
-    "qc_tool.raster.color": "Colors in the color table match product specification."}
-
-SYSTEM_CHECK_FUNCTIONS = ["qc_tool.raster.unzip",
-                          "qc_tool.vector.import2pg",
-                          "qc_tool.vector.unzip"]
 
 CONFIG = None
 
@@ -167,6 +118,16 @@ def store_job_result(job_result):
     job_result_filepath_pre.write_text(job_result_data)
     job_result_filepath_pre.rename(job_result_filepath)
 
+def get_check_description(check_ident):
+    module = import_module(check_ident)
+    description = module.DESCRIPTION
+    return description
+
+def is_system_check(check_ident):
+    module = import_module(check_ident)
+    is_system = module.IS_SYSTEM
+    return is_system
+
 def prepare_job_report(product_definition):
     job_report = {"job_uuid": None,
                   "status": None,
@@ -183,10 +144,10 @@ def prepare_job_report(product_definition):
     for step_nr, step_def in enumerate(product_definition["steps"], start=1):
         step_report = {"step_nr": step_nr,
                        "check_ident": step_def["check_ident"],
-                       "description": CHECK_FUNCTION_DESCRIPTIONS[step_def["check_ident"]],
+                       "description": get_check_description(step_def["check_ident"]),
                        "layers": step_def.get("parameters", {}).get("layers", None),
                        "required": step_def["required"],
-                       "system": step_def["check_ident"] in SYSTEM_CHECK_FUNCTIONS,
+                       "system": is_system_check(step_def["check_ident"]),
                        "status": None,
                        "messages": None,
                        "attachment_filenames": None}

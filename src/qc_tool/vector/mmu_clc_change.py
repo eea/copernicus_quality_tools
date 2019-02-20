@@ -9,6 +9,9 @@ from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
 
 
+DESCRIPTION = "Minimum mapping unit, Corine Land Cover change layer."
+IS_SYSTEM = False
+
 CLUSTER_TABLE_NAME = "clc_complex_change"
 
 
