@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 
+from contextlib import ExitStack
 from pathlib import Path
 from unittest import TestCase
+from uuid import uuid4
+
+from qc_tool.wps.manager import create_jobdir_manager
 
 
 class TestCommon(TestCase):
@@ -40,6 +44,57 @@ class TestCommon(TestCase):
         self.assertIsNone(job_result["steps"][1]["messages"])
         self.assertEqual("qc_tool.vector.import2pg", job_result["steps"][7]["check_ident"])
         self.assertTrue(job_result["steps"][7]["system"])
+
+
+class TestProductDirs(TestCase):
+    def setUp(self):
+        super().setUp()
+        from qc_tool.common import CONFIG
+        self.orig_product_dirs = CONFIG["product_dirs"]
+        job_uuid = str(uuid4())
+        with ExitStack() as stack:
+            self.jobdir_manager = stack.enter_context(create_jobdir_manager(job_uuid))
+            self.addCleanup(stack.pop_all().close)
+
+        self.product_dir_1 = self.jobdir_manager.tmp_dir.joinpath("products_1")
+        self.product_dir_1.mkdir()
+        self.product_dir_1.joinpath("p1.json").write_text('{"description": "p1desc"}')
+        self.product_dir_1.joinpath("pX.json").write_text('{"description": "pXdesc from 1"}')
+
+        self.product_dir_2 = self.jobdir_manager.tmp_dir.joinpath("products_2")
+        self.product_dir_2.mkdir()
+        self.product_dir_2.joinpath("p2.json").write_text('{"description": "p2desc"}')
+        self.product_dir_2.joinpath("pX.json").write_text('{"description": "pXdesc from 2"}')
+
+    def tearDown(self):
+        from qc_tool.common import CONFIG
+        CONFIG["product_dirs"] = self.orig_product_dirs
+        super().tearDown()
+
+    def test_locate_product_definition(self):
+        from qc_tool.common import CONFIG
+        from qc_tool.common import locate_product_definition
+
+        CONFIG["product_dirs"] = [self.product_dir_1, self.product_dir_2]
+        self.assertEqual(self.product_dir_1.joinpath("p1.json"), locate_product_definition("p1"))
+        self.assertEqual(self.product_dir_2.joinpath("p2.json"), locate_product_definition("p2"))
+        self.assertEqual(self.product_dir_1.joinpath("pX.json"), locate_product_definition("pX"))
+
+        CONFIG["product_dirs"] = [self.product_dir_2, self.product_dir_1]
+        self.assertEqual(self.product_dir_1.joinpath("p1.json"), locate_product_definition("p1"))
+        self.assertEqual(self.product_dir_2.joinpath("p2.json"), locate_product_definition("p2"))
+        self.assertEqual(self.product_dir_2.joinpath("pX.json"), locate_product_definition("pX"))
+
+    def test_get_product_descriptions(self):
+        from qc_tool.common import CONFIG
+        from qc_tool.common import get_product_descriptions
+
+        CONFIG["product_dirs"] = [self.product_dir_1, self.product_dir_2]
+        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "pX": "pXdesc from 1"}, get_product_descriptions())
+
+        CONFIG["product_dirs"] = [self.product_dir_2, self.product_dir_1]
+        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "pX": "pXdesc from 2"}, get_product_descriptions())
+
 
 class TestCommonWithConfig(TestCase):
     def setUp(self):

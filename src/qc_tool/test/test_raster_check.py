@@ -127,7 +127,8 @@ class Test_inspire(RasterCheckTestCase):
     def setUp(self):
         super().setUp()
         self.xml_dir = TEST_DATA_DIR.joinpath("metadata")
-        self.params.update({"output_dir": self.jobdir_manager.output_dir})
+        self.params.update({"output_dir": self.jobdir_manager.output_dir,
+                            "step_nr": 1})
 
     def test(self):
         from qc_tool.raster.inspire import run_check

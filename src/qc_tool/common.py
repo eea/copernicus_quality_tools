@@ -13,7 +13,7 @@ from shutil import copyfile
 
 # FIXME: such normalization should be removed in python3.6.
 QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
-PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
+QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
 
@@ -50,23 +50,32 @@ class QCException(Exception):
     pass
 
 
+def locate_product_definition(product_ident):
+    for product_dir in CONFIG["product_dirs"]:
+        filepath = product_dir.joinpath("{:s}.json".format(product_ident))
+        if filepath.is_file():
+            return filepath
+    raise QCException("Product definition {:s} has not been found.".format(product_ident))
+
 def load_product_definition(product_ident):
-    filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
+    filepath = locate_product_definition(product_ident)
     data = filepath.read_text()
     product_definition = json.loads(data)
     product_definition["product_ident"] = product_ident
     return product_definition
 
 def get_product_descriptions():
-    filepaths = [path for path in PRODUCT_DIR.iterdir()
-                 if PRODUCT_FILENAME_REGEX.match(path.name) is not None]
     product_descriptions = {}
-    for filepath in filepaths:
-        product_ident = filepath.stem
-        product_definition = filepath.read_text()
-        product_definition = json.loads(product_definition)
-        product_description = product_definition["description"]
-        product_descriptions[product_ident] = product_description
+    # We iterate the dirs in reverse order.
+    # In case of identical product ident, the earlier product overrides the later one.
+    for product_dir in reversed(CONFIG["product_dirs"]):
+        for filepath in product_dir.iterdir():
+            if PRODUCT_FILENAME_REGEX.match(filepath.name) is not None:
+                product_ident = filepath.stem
+                product_definition = filepath.read_text()
+                product_definition = json.loads(product_definition)
+                product_description = product_definition["description"]
+                product_descriptions[product_ident] = product_description
     return product_descriptions
 
 def compose_job_dir(job_uuid):
@@ -76,7 +85,7 @@ def compose_job_dir(job_uuid):
     return job_dir
 
 def copy_product_definition_to_job(job_uuid, product_ident):
-    src_filepath = PRODUCT_DIR.joinpath("{:s}.json".format(product_ident))
+    src_filepath = locate_product_definition(product_ident)
     dst_filepath = compose_job_dir(job_uuid).joinpath(src_filepath.name)
     copyfile(str(src_filepath), str(dst_filepath))
 
@@ -202,6 +211,7 @@ def get_all_wps_uuids():
 def setup_config():
     """
     Environment variables consumed by wps:
+    * PRODUCT_DIRS;
     * BOUNDARY_DIR;
     * INCOMING_DIR;
     * WPS_DIR;
@@ -218,6 +228,7 @@ def setup_config():
     * LEAVE_JOBDIR;
 
     Environment variables consumed by frontend:
+    * PRODUCT_DIRS;
     * INCOMING_DIR;
     * SUBMISSION_DIR;
     * FRONTEND_DB_PATH;
@@ -236,6 +247,13 @@ def setup_config():
         config["submission_dir"] = Path(config["submission_dir"])
 
     # Parameters common to both frontend and wps.
+    if "PRODUCT_DIRS" in environ:
+        _product_dirs = environ.get("PRODUCT_DIRS")
+        _product_dirs = _product_dirs.split(":")
+        _product_dirs = [Path(d) for d in _product_dirs]
+        config["product_dirs"] = _product_dirs
+    else:
+        config["product_dirs"] = [QC_TOOL_PRODUCT_DIR]
     config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundaries"))
     config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
     config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_tool_volume/wps"))
