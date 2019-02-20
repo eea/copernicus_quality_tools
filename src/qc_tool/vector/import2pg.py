@@ -4,17 +4,17 @@
 
 from subprocess import run
 
-from osgeo import ogr
-from osgeo.gdalconst import OF_READONLY
-
-from qc_tool.vector.helper import do_layers
-
 
 DESCRIPTION = "The layers can be imported into PostGIS database."
 IS_SYSTEM = True
 
 
 def run_check(params, status):
+    from osgeo import ogr
+    from osgeo.gdalconst import OF_READONLY
+
+    from qc_tool.vector.helper import do_layers
+
     dsn, schema =  params["connection_manager"].get_dsn_schema()
 
     # Import all layers found in layer_defs.

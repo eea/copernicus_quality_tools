@@ -2,17 +2,16 @@
 # -*- coding: utf-8 -*-
 
 
-from osgeo import ogr
-from osgeo import osr
-
-from qc_tool.vector.helper import do_layers
-
-
 DESCRIPTION = "Layers use specific EPSG codes."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.ogr as ogr
+    import osgeo.osr as osr
+
+    from qc_tool.vector.helper import do_layers
+
     for layer_def in do_layers(params):
         ds = ogr.Open(str(layer_def["src_filepath"]))
         layer = ds.GetLayerByName(layer_def["src_layer_name"])

@@ -2,14 +2,12 @@
 # -*- coding: utf-8 -*-
 
 
-from osgeo import gdal
-
-
 DESCRIPTION = "Pixel has specific size."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.gdal as gdal
 
     ds_open = gdal.Open(str(params["filepath"]))
 

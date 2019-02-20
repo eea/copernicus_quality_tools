@@ -4,15 +4,15 @@
 
 import re
 
-from qc_tool.vector.helper import do_layers
-from qc_tool.vector.helper import get_failed_items_message
-
 
 DESCRIPTION = "There is no gap in the AOI."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    from qc_tool.vector.helper import do_layers
+    from qc_tool.vector.helper import get_failed_items_message
+
     cursor = params["connection_manager"].get_connection().cursor()
 
     if "boundary" not in params["layer_defs"]:

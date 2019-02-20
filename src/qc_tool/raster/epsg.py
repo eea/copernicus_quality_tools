@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 
 
-from osgeo import gdal
-from osgeo import osr
-
-
 DESCRIPTION = "Raster uses specific EPSG code."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.gdal as gdal
+    import osgeo.osr as osr
+
     dataset = gdal.Open(str(params["filepath"]))
 
     srs = osr.SpatialReference(dataset.GetProjection())

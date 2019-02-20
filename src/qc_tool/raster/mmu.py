@@ -1,11 +1,4 @@
 import math
-import numpy
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
-from skimage import measure
-
-from qc_tool.raster.helper import zip_shapefile
 
 
 DESCRIPTION = "Minimum mapping unit."
@@ -42,6 +35,8 @@ def reclassify_values(arr, groups):
     :param groups: list of lists, for example [[1, 2], [253, 254, 255]]
     :return: a new reclassified array.
     """
+    import numpy
+
     arr_copy = numpy.copy(arr)
     for group in groups:
         new_value = group[0]
@@ -91,6 +86,9 @@ def export_shapefile(regions, raster_ds, shp_filepath):
     :param raster_ds: original raster dataset
     :param shp_filepath: exported shapefile
     """
+    import osgeo.ogr as ogr
+    import osgeo.osr as osr
+
     if len(regions) > 0:
 
         (upper_left_x, x_size, x_rotation, upper_left_y, y_rotation, y_size) = raster_ds.GetGeoTransform()
@@ -130,6 +128,10 @@ def export_shapefile(regions, raster_ds, shp_filepath):
         shapeData.Destroy()
 
 def run_check(params, status):
+    import osgeo.gdal as gdal
+    import skimage.measure as measure
+
+    from qc_tool.raster.helper import zip_shapefile
 
     # set this to true for reporting partial progress to a _progress.txt file.
     report_progress = True

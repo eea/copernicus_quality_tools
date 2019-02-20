@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-from osgeo import gdal
-
-
 DESCRIPTION = "Pixels have specific values."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.gdal as gdal
+
     ds = gdal.Open(str(params["filepath"]))
 
     # get dictionary of pixel 'codes-counts'

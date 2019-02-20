@@ -2,14 +2,12 @@
 # -*- coding: utf-8 -*-
 
 
-from osgeo import gdal
-
-
 DESCRIPTION = "Delivery content uses specific file format."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.gdal as gdal
 
     # file extension check
     ds_extension = params["filepath"].suffix

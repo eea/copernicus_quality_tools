@@ -4,16 +4,16 @@
 
 import re
 
-from osgeo import ogr
-
-from qc_tool.vector.helper import LayerDefsBuilder
-
 
 DESCRIPTION = "Naming is in accord with specification, Urban Atlas geodatabase."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.ogr as ogr
+
+    from qc_tool.vector.helper import LayerDefsBuilder
+
     # Fix reference year.
     status.set_status_property("reference_year", params["reference_year"])
 

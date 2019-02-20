@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-from qc_tool.vector.helper import do_layers
-from qc_tool.vector.helper import get_failed_items_message
-
-
 DESCRIPTION = "All geometries are singlepart."
 IS_SYSTEM = False
 
@@ -13,6 +9,9 @@ SQL = "CREATE TABLE {:s} AS SELECT {:s} FROM {:s} WHERE ST_NumGeometries(wkb_geo
 
 
 def run_check(params, status):
+    from qc_tool.vector.helper import do_layers
+    from qc_tool.vector.helper import get_failed_items_message
+
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
         error_table_name = "v8_{:s}_error".format(layer_def["pg_layer_name"])

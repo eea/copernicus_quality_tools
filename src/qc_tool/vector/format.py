@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 
 
-from osgeo import ogr
-
-from qc_tool.vector.helper import do_layers
-
-
 DESCRIPTION = "Delivery content uses specific file format."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.ogr as ogr
+
+    from qc_tool.vector.helper import do_layers
+
     # enable ogr to use exceptions
     ogr.UseExceptions()
 

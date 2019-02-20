@@ -4,14 +4,14 @@
 
 import re
 
-from osgeo import ogr
-
 
 DESCRIPTION = "Attribute table is composed of prescribed attributes."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.ogr as ogr
+
     # check for .vat.dbf file existence
     dbf_filename = "{:s}.vat.dbf".format(params["filepath"].name)
     dbf_filepath = params["filepath"].with_name(dbf_filename)

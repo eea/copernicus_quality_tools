@@ -4,37 +4,37 @@
 
 import re
 
-from osgeo import ogr
-
-from qc_tool.vector.helper import do_layers
-
 
 DESCRIPTION = "Attribute table is composed of prescribed attributes."
 IS_SYSTEM = False
 
-OGR_TYPES = {ogr.OFTBinary: "binary",
-             ogr.OFTDate: "date",
-             ogr.OFTDateTime: "datetime",
-             ogr.OFTInteger: "integer",
-             ogr.OFTInteger64: "integer64",
-             ogr.OFTInteger64List: "list-of-integer64",
-             ogr.OFTIntegerList: "list-of-integer",
-             ogr.OFTReal: "real",
-             ogr.OFTRealList: "list-of-real",
-             ogr.OFTString: "string",
-             ogr.OFTStringList: "list-of-string",
-             ogr.OFTTime: "time",
-             ogr.OFTWideString: "wide-string",
-             ogr.OFTWideStringList: "list-of-wide-string"}
-
-ALLOWED_TYPES = {ogr.OFTInteger: "integer",
-                 ogr.OFTInteger64: "integer",
-                 ogr.OFTReal: "real",
-                 ogr.OFTString: "string",
-                 ogr.OFTWideString: "string"}
-
 
 def run_check(params, status):
+    import osgeo.ogr as ogr
+
+    from qc_tool.vector.helper import do_layers
+
+    OGR_TYPES = {ogr.OFTBinary: "binary",
+                 ogr.OFTDate: "date",
+                 ogr.OFTDateTime: "datetime",
+                 ogr.OFTInteger: "integer",
+                 ogr.OFTInteger64: "integer64",
+                 ogr.OFTInteger64List: "list-of-integer64",
+                 ogr.OFTIntegerList: "list-of-integer",
+                 ogr.OFTReal: "real",
+                 ogr.OFTRealList: "list-of-real",
+                 ogr.OFTString: "string",
+                 ogr.OFTStringList: "list-of-string",
+                 ogr.OFTTime: "time",
+                 ogr.OFTWideString: "wide-string",
+                 ogr.OFTWideStringList: "list-of-wide-string"}
+
+    ALLOWED_TYPES = {ogr.OFTInteger: "integer",
+                     ogr.OFTInteger64: "integer",
+                     ogr.OFTReal: "real",
+                     ogr.OFTString: "string",
+                     ogr.OFTWideString: "string"}
+
     for layer_def in do_layers(params):
         ds = ogr.Open(str(layer_def["src_filepath"]))
         layer = ds.GetLayerByName(layer_def["src_layer_name"])

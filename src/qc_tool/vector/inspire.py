@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 import json
 import socket
 from urllib import request
@@ -8,14 +9,13 @@ from urllib.error import HTTPError
 from urllib.error import URLError
 from xml.etree import ElementTree
 
-from qc_tool.vector.helper import do_layers
-
 
 DESCRIPTION = "Metadata are in accord with INSPIRE specification."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    from qc_tool.vector.helper import do_layers
 
     # Find all .xml files to check. There is one .xml file per .gdb or .shp
     layer_src_filepaths = set([layer_def["src_filepath"] for layer_def in do_layers(params)])

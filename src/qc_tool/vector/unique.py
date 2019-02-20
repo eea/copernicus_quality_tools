@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-from qc_tool.vector.helper import do_layers
-from qc_tool.vector.helper import get_failed_items_message
-
-
 DESCRIPTION = "Features have unique values in specific attributes."
 IS_SYSTEM = False
 
@@ -14,6 +10,9 @@ SQL = ("CREATE TABLE {0:s} AS (SELECT {1:s} FROM {3:s} WHERE {2:s} IN ("
 
 
 def run_check(params, status):
+    from qc_tool.vector.helper import do_layers
+    from qc_tool.vector.helper import get_failed_items_message
+
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
         for unique_key in params["unique_keys"]:

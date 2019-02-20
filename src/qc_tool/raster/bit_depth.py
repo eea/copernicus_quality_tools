@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-from osgeo import gdal
-
-
 DESCRIPTION = "Raster datatype is of specific bit depth."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.gdal as gdal
+
     # read the datatype parameter
     expected_datatype = params["datatype"]
 

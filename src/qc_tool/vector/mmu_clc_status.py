@@ -4,15 +4,15 @@
 
 import re
 
-from qc_tool.vector.helper import do_layers
-from qc_tool.vector.helper import get_failed_items_message
-
 
 DESCRIPTION = "Minimum mapping unit, Corine Land Cover status layer."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
+    from qc_tool.vector.helper import do_layers
+    from qc_tool.vector.helper import get_failed_items_message
+
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):

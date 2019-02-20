@@ -3,12 +3,6 @@
 
 
 from pathlib import Path
-import numpy
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
-
-from qc_tool.raster.helper import zip_shapefile
 
 
 DESCRIPTION = "There is no gap in the AOI."
@@ -22,8 +16,13 @@ def write_progress(progress_filepath, message):
     with open(str(progress_filepath), "a") as f:
         f.write(message + "\n")
 
-
 def run_check(params, status):
+    import numpy
+    import osgeo.gdal as gdal
+    import osgeo.ogr as ogr
+    import osgeo.osr as osr
+
+    from qc_tool.raster.helper import zip_shapefile
 
     # set this to true for writing partial progress to a text file.
     report_progress = True
