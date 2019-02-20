@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 
 
-from qc_tool.wps.helper import do_layers
-from qc_tool.wps.helper import get_failed_items_message
+from qc_tool.vector.helper import do_layers
+from qc_tool.vector.helper import get_failed_items_message
 
 
 DESCRIPTION = "There is no couple of overlapping polygons."

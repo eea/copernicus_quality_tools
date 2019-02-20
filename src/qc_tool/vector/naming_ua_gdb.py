@@ -6,7 +6,7 @@ import re
 
 from osgeo import ogr
 
-from qc_tool.wps.helper import LayerDefsBuilder
+from qc_tool.vector.helper import LayerDefsBuilder
 
 
 DESCRIPTION = "Naming is in accord with specification, Urban Atlas geodatabase."

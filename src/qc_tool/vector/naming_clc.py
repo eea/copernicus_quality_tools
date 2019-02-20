@@ -4,7 +4,7 @@
 
 import re
 
-from qc_tool.wps.helper import LayerDefsBuilder
+from qc_tool.vector.helper import LayerDefsBuilder
 from qc_tool.vector.dump_gdbtable import get_fc_path
 
 

@@ -7,7 +7,7 @@ from subprocess import run
 from osgeo import ogr
 from osgeo.gdalconst import OF_READONLY
 
-from qc_tool.wps.helper import do_layers
+from qc_tool.vector.helper import do_layers
 
 
 DESCRIPTION = "The layers can be imported into PostGIS database."

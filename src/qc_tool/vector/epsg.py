@@ -5,7 +5,7 @@
 from osgeo import ogr
 from osgeo import osr
 
-from qc_tool.wps.helper import do_layers
+from qc_tool.vector.helper import do_layers
 
 
 DESCRIPTION = "Layers use specific EPSG codes."

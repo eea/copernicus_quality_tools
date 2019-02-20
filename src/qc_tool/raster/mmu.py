@@ -5,7 +5,7 @@ from osgeo import ogr
 from osgeo import osr
 from skimage import measure
 
-from qc_tool.wps.helper import zip_shapefile
+from qc_tool.raster.helper import zip_shapefile
 
 
 DESCRIPTION = "Minimum mapping unit."

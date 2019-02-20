@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from urllib.error import URLError
 from xml.etree import ElementTree
 
-from qc_tool.wps.helper import do_layers
+from qc_tool.vector.helper import do_layers
 
 
 DESCRIPTION = "Metadata are in accord with INSPIRE specification."

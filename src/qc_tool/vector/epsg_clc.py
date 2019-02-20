@@ -5,7 +5,7 @@
 from osgeo import ogr
 from osgeo import osr
 
-from qc_tool.wps.helper import do_layers
+from qc_tool.vector.helper import do_layers
 
 
 DESCRIPTION = "EPSG codes of the layers match EPSG code of the boundary layer."

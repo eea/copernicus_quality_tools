@@ -6,7 +6,7 @@ import re
 
 from osgeo import ogr
 
-from qc_tool.wps.helper import do_layers
+from qc_tool.vector.helper import do_layers
 
 
 DESCRIPTION = "Attribute table is composed of prescribed attributes."
