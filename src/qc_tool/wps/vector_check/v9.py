@@ -38,8 +38,8 @@ def run_check(params, status):
                    " SELECT"
                    "  {fid_name},"
                    "  (ST_IsValidDetail(wkb_geometry)).reason AS reason,"
-                   "  (ST_IsValidDetail(wkb_geometry)).location AS location"
-                   " FROM {layer_name}"
+                   "  ST_SetSRID((ST_IsValidDetail(wkb_geometry)).location, ST_SRID(wkb_geometry)) AS location"
+                   "  FROM {layer_name}"
                    " WHERE NOT ST_IsValid(wkb_geometry);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
