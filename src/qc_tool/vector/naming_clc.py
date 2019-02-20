@@ -5,11 +5,9 @@
 import re
 
 from qc_tool.wps.helper import LayerDefsBuilder
-from qc_tool.wps.registry import register_check_function
 from qc_tool.vector.dump_gdbtable import get_fc_path
 
 
-@register_check_function(__name__)
 def run_check(params, status):
     # Fix reference year.
     status.set_status_property("reference_year", params["reference_year"])

@@ -13,7 +13,6 @@ import pywps
 from qc_tool.common import CONFIG
 from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
-from qc_tool.wps.registry import load_all_check_functions
 
 
 app = flask.Flask(__name__)
@@ -48,8 +47,6 @@ def run_server():
     wps_log_dir = CONFIG["wps_dir"].joinpath("log")
     wps_log_dir.mkdir(exist_ok=True, parents=True)
     wps_config.set("logging", "file", str(wps_log_dir.joinpath("pywps.log")))
-
-    load_all_check_functions()
 
     processes = [CopSleep(), RunChecks()]
     config_filepaths = [str(Path(__file__).with_name("pywps.cfg"))]

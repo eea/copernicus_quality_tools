@@ -8,8 +8,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from qc_tool.wps.registry import register_check_function
 from qc_tool.wps.helper import zip_shapefile
+
 
 def write_percent(percent_filepath, percent):
     percent_filepath.write_text(str(percent))
@@ -18,7 +18,7 @@ def write_progress(progress_filepath, message):
     with open(str(progress_filepath), "a") as f:
         f.write(message + "\n")
 
-@register_check_function(__name__)
+
 def run_check(params, status):
 
     # set this to true for writing partial progress to a text file.

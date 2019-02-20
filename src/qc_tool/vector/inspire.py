@@ -9,10 +9,8 @@ from urllib.error import URLError
 from xml.etree import ElementTree
 
 from qc_tool.wps.helper import do_layers
-from qc_tool.wps.registry import register_check_function
 
 
-@register_check_function(__name__)
 def run_check(params, status):
 
     # Find all .xml files to check. There is one .xml file per .gdb or .shp

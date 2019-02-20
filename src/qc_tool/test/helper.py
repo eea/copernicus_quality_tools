@@ -10,13 +10,11 @@ from qc_tool.common import TEST_DATA_DIR
 from qc_tool.wps.dispatch import CheckStatus
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
-from qc_tool.wps.registry import load_all_check_functions
 
 
 class ProductTestCase(TestCase):
     def setUp(self):
         super().setUp()
-        load_all_check_functions()
         self.job_uuid = str(uuid4())
 
         # Set up boundary dir to testing sources.

@@ -6,7 +6,7 @@ from osgeo import osr
 from skimage import measure
 
 from qc_tool.wps.helper import zip_shapefile
-from qc_tool.wps.registry import register_check_function
+
 
 def write_percent(percent_filepath, percent):
     percent_filepath.write_text(str(percent))
@@ -14,7 +14,6 @@ def write_percent(percent_filepath, percent):
 def write_progress(progress_filepath, message):
     with open(str(progress_filepath), "a") as f:
         f.write(message + "\n")
-
 
 def convert_area_to_pixels(raster_ds, area_m2):
     """
@@ -29,7 +28,6 @@ def convert_area_to_pixels(raster_ds, area_m2):
     one_pixel_m2 = abs(x_res * y_res)
     area_pixels = math.ceil(area_m2 / one_pixel_m2)
     return area_pixels
-
 
 def reclassify_values(arr, groups):
     """
@@ -47,7 +45,6 @@ def reclassify_values(arr, groups):
             if value != new_value:
                 arr_copy[arr == value] = new_value
     return arr_copy
-
 
 def patch_touches_cell_with_value(coordinates, tile, neighbour_values):
     """
@@ -82,7 +79,6 @@ def patch_touches_cell_with_value(coordinates, tile, neighbour_values):
             if tile[coor[0], c_right] in neighbour_values:
                 return True
     return False
-
 
 def export_shapefile(regions, raster_ds, shp_filepath):
     """
@@ -129,8 +125,6 @@ def export_shapefile(regions, raster_ds, shp_filepath):
             i += 1
         shapeData.Destroy()
 
-
-@register_check_function(__name__)
 def run_check(params, status):
 
     # set this to true for reporting partial progress to a _progress.txt file.

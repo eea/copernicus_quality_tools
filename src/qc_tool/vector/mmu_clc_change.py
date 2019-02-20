@@ -7,13 +7,11 @@ import re
 from qc_tool.wps.helper import ComplexChangeCollector
 from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
-from qc_tool.wps.registry import register_check_function
 
 
 CLUSTER_TABLE_NAME = "clc_complex_change"
 
 
-@register_check_function(__name__)
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 

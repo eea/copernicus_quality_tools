@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
 
-import csv
 import hashlib
-import json
-from contextlib import closing
 from contextlib import ExitStack
 from datetime import datetime
 from functools import partial
+from importlib import import_module
 from subprocess import run
 from sys import exc_info
 from traceback import format_exc
@@ -30,7 +28,6 @@ from qc_tool.common import store_job_result
 from qc_tool.wps.report import generate_pdf_report
 from qc_tool.wps.manager import create_connection_manager
 from qc_tool.wps.manager import create_jobdir_manager
-from qc_tool.wps.registry import get_check_function
 
 
 def make_signature(filepath):
@@ -178,8 +175,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
 
                 # Run the step.
                 check_status = CheckStatus()
-                func = get_check_function(step_def["check_ident"])
-                func(step_params, check_status)
+                check_module = import_module(step_def["check_ident"])
+                check_module.run_check(step_params, check_status)
 
                 # Set the check result into the job status.
                 step_result["status"] = check_status.status

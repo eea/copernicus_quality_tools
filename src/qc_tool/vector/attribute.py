@@ -7,7 +7,6 @@ import re
 from osgeo import ogr
 
 from qc_tool.wps.helper import do_layers
-from qc_tool.wps.registry import register_check_function
 
 
 OGR_TYPES = {ogr.OFTBinary: "binary",
@@ -32,8 +31,6 @@ ALLOWED_TYPES = {ogr.OFTInteger: "integer",
                  ogr.OFTWideString: "string"}
 
 
-
-@register_check_function(__name__)
 def run_check(params, status):
     for layer_def in do_layers(params):
         ds = ogr.Open(str(layer_def["src_filepath"]))

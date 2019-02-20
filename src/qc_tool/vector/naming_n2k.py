@@ -4,10 +4,7 @@
 
 import re
 
-from qc_tool.wps.registry import register_check_function
 
-
-@register_check_function(__name__)
 def run_check(params, status):
     # Find the shp file.
     shp_filepaths = [path for path in params["unzip_dir"].glob("**/*") if path.is_file() and path.suffix.lower() == ".shp"]

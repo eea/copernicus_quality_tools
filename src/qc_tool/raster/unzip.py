@@ -5,10 +5,7 @@
 import os
 from zipfile import ZipFile
 
-from qc_tool.wps.registry import register_check_function
 
-
-@register_check_function(__name__)
 def run_check(params, status):
     zip_filepath = params["filepath"]
     extract_dir = params["tmp_dir"].joinpath("r_unzip.d")

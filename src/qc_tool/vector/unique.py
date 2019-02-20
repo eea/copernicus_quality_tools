@@ -4,12 +4,12 @@
 
 from qc_tool.wps.helper import do_layers
 from qc_tool.wps.helper import get_failed_items_message
-from qc_tool.wps.registry import register_check_function
+
 
 SQL = ("CREATE TABLE {0:s} AS (SELECT {1:s} FROM {3:s} WHERE {2:s} IN ("
        "SELECT {2:s} FROM {3:s} GROUP BY {2:s} HAVING count({2:s}) > 1));")
 
-@register_check_function(__name__)
+
 def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
