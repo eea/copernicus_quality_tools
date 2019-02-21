@@ -26,40 +26,40 @@ def run_check(params, status):
 
     # read-in the actual color table into a dictionary
     color_table_count = ct.GetCount()
-    actual_colours = {}
+    actual_colors = {}
     for i in range( 0, color_table_count):
         entry = ct.GetColorEntry(i)
         if not entry:
             continue
         # converting a GDAL ColorEntry (r,g,b,a) tuple to a [r,g,b] list
-        actual_colours[str(i)] = list(entry[0:3])
+        actual_colors[str(i)] = list(entry[0:3])
 
     # compare expected color table with the actual color table
     missing_codes = []
-    incorrect_colours = []
-    expected_colours = params["colours"]
-    for code, colour in expected_colours.items():
-        if code not in  actual_colours:
+    incorrect_colors = []
+    expected_colors = params["colors"]
+    for code, color in expected_colors.items():
+        if code not in  actual_colors:
             missing_codes.append(code)
-        elif expected_colours[code] != actual_colours[code]:
-            incorrect_colours.append({"class":code,
-                                      "expected": expected_colours[code],
-                                      "actual": actual_colours[code]})
+        elif expected_colors[code] != actual_colors[code]:
+            incorrect_colors.append({"class":code,
+                                      "expected": expected_colors[code],
+                                      "actual": actual_colors[code]})
 
-    # report raster values with missing entries in the colour table
+    # report raster values with missing entries in the color table
     if len(missing_codes) > 0:
-        status.failed("The raster colour table embedded in {:s} does not have entries for raster values {:s}."
+        status.failed("The raster color table embedded in {:s} does not have entries for raster values {:s}."
                       .format(geotiff_name, ", ".join(missing_codes)))
         return
 
-    # report color mismatches between expected and actual colour table
-    if len(incorrect_colours) > 0:
-        colour_reports = []
-        for c in incorrect_colours:
-            colour_reports.append("value:{0}, expected RGB:{1}, actual RGB:{2}"
+    # report color mismatches between expected and actual color table
+    if len(incorrect_colors) > 0:
+        color_reports = []
+        for c in incorrect_colors:
+            color_reports.append("value:{0}, expected RGB:{1}, actual RGB:{2}"
                                   .format(c["class"], c["expected"], c["actual"]))
-        status.failed("The raster colour table has some incorrect colours. {:s}"
-                      .format("; ".join(colour_reports)))
+        status.failed("The raster color table has some incorrect colors. {:s}"
+                      .format("; ".join(color_reports)))
         return
 
     # Check existence of a .tif.clr or .clr file.
@@ -78,52 +78,52 @@ def run_check(params, status):
         clr_filepath = clr_filepath2
         clr_filename = clr_filename2
     else:
-        status.failed("The expected colour table text file {:s} or {:s} is missing.".format(clr_filename1, clr_filename2))
+        status.failed("The expected color table text file {:s} or {:s} is missing.".format(clr_filename1, clr_filename2))
         return
 
     # read-in the actual tif.clr color table into a dictionary
     lines = clr_filepath.read_text().splitlines()
-    actual_colours = {}
+    actual_colors = {}
     for line in lines:
         line = line.strip()
         if line == "":
             continue
         items = line.split(" ")
         if len(items) != 4:
-            status.failed("The colour table text file {:s} is in incorrect format.".format(clr_filename))
+            status.failed("The color table text file {:s} is in incorrect format.".format(clr_filename))
             return
         index = items[0]
         try:
             rgb = [int(items[1]), int(items[2]), int(items[3])]
         except ValueError as ex:
-            status.failed("The colour table {:s} is in incorrect format.".format(clr_filename))
+            status.failed("The color table {:s} is in incorrect format.".format(clr_filename))
             return
-        actual_colours[index] = rgb
+        actual_colors[index] = rgb
 
-    # Check colours in .tif.clr file
+    # Check colors in .tif.clr file
     missing_codes = []
-    incorrect_colours = []
-    expected_colours = params["colours"]
-    for code, colour in expected_colours.items():
-        if code not in actual_colours:
+    incorrect_colors = []
+    expected_colors = params["colors"]
+    for code, color in expected_colors.items():
+        if code not in actual_colors:
             missing_codes.append(code)
-        elif expected_colours[code] != actual_colours[code]:
-            incorrect_colours.append({"class": code,
-                                      "expected": expected_colours[code],
-                                      "actual": actual_colours[code]})
+        elif expected_colors[code] != actual_colors[code]:
+            incorrect_colors.append({"class": code,
+                                      "expected": expected_colors[code],
+                                      "actual": actual_colors[code]})
 
-    # report raster values with missing entries in the colour table
+    # report raster values with missing entries in the color table
     if len(missing_codes) > 0:
-        status.failed("The raster colour table text file {:s} does not have entries for raster values {:s}."
+        status.failed("The raster color table text file {:s} does not have entries for raster values {:s}."
                       .format(clr_filename, ", ".join(missing_codes)))
         return
 
-    # report color mismatches between expected and actual colour table
-    if len(incorrect_colours) > 0:
-        colour_reports = []
-        for c in incorrect_colours:
-            colour_reports.append(
+    # report color mismatches between expected and actual color table
+    if len(incorrect_colors) > 0:
+        color_reports = []
+        for c in incorrect_colors:
+            color_reports.append(
                 "value:{0}, expected RGB:{1}, actual RGB:{2}".format(c["class"], c["expected"], c["actual"]))
-        status.failed("The raster colour text file {:s} has some incorrect colours. {:s}"
-                      .format(clr_filename, "; ".join(colour_reports)))
+        status.failed("The raster color text file {:s} has some incorrect colors. {:s}"
+                      .format(clr_filename, "; ".join(color_reports)))
         return

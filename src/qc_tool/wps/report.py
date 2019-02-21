@@ -117,7 +117,7 @@ def generate_pdf_report(job_report_filepath, job_uuid):
                               Paragraph("<b>MESSAGES</b>", style_normal)]
         check_data = [check_table_header]
 
-        # Detail table data. Text colour is displayed based on check status.
+        # Detail table data. Text color is displayed based on check status.
         for step_report in job_report["steps"]:
             step_status = step_report["status"]
             if step_status is None:

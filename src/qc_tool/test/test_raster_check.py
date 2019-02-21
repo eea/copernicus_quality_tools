@@ -157,11 +157,11 @@ class Test_color(RasterCheckTestCase):
     def test(self):
         from qc_tool.raster.color import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "mmu", "mmu_raster_correct.tif"),
-                  "colours": {"0": [240, 240, 240],
-                              "1": [70, 158, 74],
-                              "2": [28, 92, 36],
-                              "254": [153, 153, 153],
-                              "255": [0, 0, 0]}}
+                  "colors": {"0": [240, 240, 240],
+                             "1": [70, 158, 74],
+                             "2": [28, 92, 36],
+                             "254": [153, 153, 153],
+                             "255": [0, 0, 0]}}
         status = self.status_class()
         run_check(params, status)
         self.assertEqual("ok", status.status, "Color raster check with correct colors should pass.")
@@ -169,11 +169,11 @@ class Test_color(RasterCheckTestCase):
     def test_fail(self):
         from qc_tool.raster.color import run_check
         params = {"filepath": TEST_DATA_DIR.joinpath("raster", "checks", "mmu", "mmu_raster_correct.tif"),
-                  "colours": {"0": [240, 240, 240],
-                              "1": [70, 158, 74],
-                              "2": [28, 92, 36],
-                              "254": [153, 153, 153],
-                              "255": [0, 0, 99]}}
+                  "colors": {"0": [240, 240, 240],
+                             "1": [70, 158, 74],
+                             "2": [28, 92, 36],
+                             "254": [153, 153, 153],
+                             "255": [0, 0, 99]}}
         status = self.status_class()
         run_check(params, status)
         self.assertEqual("failed", status.status, "Color raster check with incorrect colors should fail.")

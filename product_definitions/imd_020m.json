@@ -102,7 +102,7 @@
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "colours": {
+        "colors": {
           "0": [240,240,240],
           "1": [255,237,195],
           "2": [253,232,190],
