@@ -36,7 +36,6 @@ from qc_tool.common import load_wps_status
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import format_date_utc
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
-from qc_tool.frontend.dashboard.helpers import parse_wps_status_document
 from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.statuses import JOB_DELIVERY_NOT_FOUND
@@ -107,10 +106,7 @@ def get_deliveries_json(request):
                      "username": request.user.username,
                      "product_description": d.product_description,
                      "last_job_uuid": d.last_job_uuid,
-                     "date_last_checked": d.date_last_checked,
-                     "last_job_status": d.last_job_status,
                      "qc_status": actual_qc_status,
-                     "last_wps_status": d.last_wps_status,
                      "percent": d.last_job_percent,
                      "is_submitted": d.is_submitted(),
                      "submission_enabled": settings.SUBMISSION_ENABLED}
@@ -415,23 +411,16 @@ def get_attachment(request, job_uuid, attachment_filename):
     return response
 
 @login_required
-def update_job_status(request, job_uuid):
-    try:
-        delivery = Delivery.objects.get(last_job_uuid=job_uuid)
-        delivery.update_job_status()
-        status = {"product_ident": delivery.product_ident,
-                  "is_submitted": delivery.is_submitted(),
-                  "job_status": delivery.last_job_status,
-                  "wps_status": delivery.last_wps_status,
-                  "percent": delivery.last_job_percent,
-                  "job_uuid": delivery.last_job_uuid}
-        if not Path(delivery.filepath).joinpath(delivery.filename).exists():
-            status = JOB_DELIVERY_NOT_FOUND
-        return JsonResponse(status)
-    except ObjectDoesNotExist:
-        return JsonResponse({"job_status": None, "wps_status": None, "percent": None})
-    except MultipleObjectsReturned:
-        return JsonResponse({"job_status": None, "wps_status": None, "percent": None})
+def update_job(request, delivery_id):
+    delivery = Delivery.objects.get(id=delivery_id)
+    delivery.update_job()
+    status = {"is_submitted": delivery.is_submitted(),
+              "job_status": delivery.last_job_status,
+              "percent": delivery.last_job_percent,
+              "job_uuid": delivery.last_job_uuid}
+    if not Path(delivery.filepath).joinpath(delivery.filename).exists():
+        status = JOB_DELIVERY_NOT_FOUND
+    return JsonResponse(status)
 
 @csrf_exempt
 def run_wps_execute(request):
@@ -479,8 +468,7 @@ def run_wps_execute(request):
             file_path = Path(settings.MEDIA_ROOT).joinpath(filepath)
             file_name = file_path.name
             d = Delivery.objects.get(user=request.user, filename=file_name)
-            d.init_status(product_ident)
-            d.update_job_status(job_uuid)
+            d.init_job(product_ident, job_uuid)
             logger.debug("Delivery {:d}: job status created with job_uuid={:s}.".format(d.id, str(job_uuid)))
 
             # The WPS process has been started asynchronously.

@@ -219,9 +219,7 @@ function update_job_statuses() {
     var deliveries = $("#tbl-deliveries").bootstrapTable("getData");
     for(var i=0, len=deliveries.length; i < len; i++) {
         if(deliveries[i].qc_status === "waiting" || deliveries[i].qc_status === "running") {
-            var last_job_uuid = deliveries[i].last_job_uuid;
-            var product_ident = deliveries[i].product_ident;
-            var delivery_status_url = "/delivery/update_job_status/" + last_job_uuid + "/";
+            var delivery_status_url = "/delivery/update_job/" + deliveries[i].id + "/";
 
             // sends a request to the server and asks for new status of running or waiting job.
             $.ajax({
@@ -238,8 +236,7 @@ function update_job_statuses() {
                             // a matching row is found in the UI -> tell BootstrapTable to refresh it.
                             console.log("refreshing table row in UI with job uuid: " + new_status.job_uuid);
                             var new_row = deliveries_to_update[new_index];
-                            new_row.last_wps_status = new_status.wps_status;
-                            new_row.last_job_status = new_status.job_status;
+                            new_row.is_submitted = new_status.is_submitted;
                             new_row.qc_status = new_status.job_status;
                             new_row.percent = new_status.percent;
 
