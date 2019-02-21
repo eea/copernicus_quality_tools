@@ -39,6 +39,7 @@ class Delivery(models.Model):
         # Updates the status using the status of the job uuid.
         wps_status = load_wps_status(self.last_job_uuid)
         wps_status = parse_wps_status_document(wps_status)
+        wps_percent = wps_status["percent_complete"]
         wps_status = wps_status["status"]
 
         # Determine job status with respect to wps status.
@@ -46,7 +47,7 @@ class Delivery(models.Model):
             self.last_job_percent = 0
             self.last_job_status = statuses.JOB_WAITING
         elif wps_status == statuses.WPS_STARTED:
-            self.last_job_percent = wps_doc["percent_complete"]
+            self.last_job_percent = wps_percent
             self.last_job_status = statuses.JOB_RUNNING
         elif wps_status == statuses.WPS_FAILED:
             self.last_job_percent = 100
@@ -77,9 +78,7 @@ class Delivery(models.Model):
     filepath = models.CharField(max_length=500)
     size_bytes = models.IntegerField()
     date_uploaded = models.DateTimeField(default=timezone.now)
-    date_last_checked = models.DateTimeField(null=True)
     date_submitted = models.DateTimeField(blank=True, null=True)
-    last_wps_status = models.CharField(max_length=64)
     product_ident = models.CharField(max_length=64, default=None, blank=True, null=True)
     product_description = models.CharField(max_length=500, default=None, blank=True, null=True)
     last_job_uuid = models.CharField(max_length=32, default=None, blank=True, null=True)
