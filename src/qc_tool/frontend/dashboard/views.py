@@ -15,9 +15,10 @@ from zipfile import ZipFile
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied, ObjectDoesNotExist
 from django.core.files.storage import FileSystemStorage
+
+from django.forms.models import model_to_dict
 
 from django.http import FileResponse, HttpResponse, JsonResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -34,11 +35,9 @@ from qc_tool.common import load_product_definition
 from qc_tool.common import load_wps_status
 
 from qc_tool.frontend.dashboard.helpers import find_product_description
-from qc_tool.frontend.dashboard.helpers import format_date_utc
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.models import Delivery
-from qc_tool.frontend.dashboard.statuses import JOB_DELIVERY_NOT_FOUND
 
 
 logger = logging.getLogger(__name__)
@@ -84,35 +83,8 @@ def get_deliveries_json(request):
     :param request:
     :return: list of deliveries in JSON format
     """
-
     db_deliveries = Delivery.objects.filter(user_id=request.user.id)
-    ui_deliveries = []
-
-    for d in db_deliveries:
-        # For each delivery, check if an associated ZIP file actually exists in the file system.
-        if Path(d.filepath).joinpath(d.filename).exists():
-            actual_qc_status = d.last_job_status
-        else:
-            actual_qc_status = JOB_DELIVERY_NOT_FOUND
-
-        # add some extra information to displayed delivery.
-        delivery_info = {"id": d.id,
-                     "filename": d.filename,
-                     "filepath": d.filepath,
-                     "date_uploaded": format_date_utc(d.date_uploaded),
-                     "date_submitted": format_date_utc(d.date_submitted),
-                     "size_bytes": d.size_bytes,
-                     "product_ident": d.product_ident,
-                     "username": request.user.username,
-                     "product_description": d.product_description,
-                     "last_job_uuid": d.last_job_uuid,
-                     "qc_status": actual_qc_status,
-                     "percent": d.last_job_percent,
-                     "is_submitted": d.is_submitted(),
-                     "submission_enabled": settings.SUBMISSION_ENABLED}
-
-        ui_deliveries.append(delivery_info)
-    return JsonResponse(ui_deliveries, safe=False)
+    return JsonResponse(list(db_deliveries.values()), safe=False)
 
 
 @login_required
@@ -414,13 +386,7 @@ def get_attachment(request, job_uuid, attachment_filename):
 def update_job(request, delivery_id):
     delivery = Delivery.objects.get(id=delivery_id)
     delivery.update_job()
-    status = {"is_submitted": delivery.is_submitted(),
-              "job_status": delivery.last_job_status,
-              "percent": delivery.last_job_percent,
-              "job_uuid": delivery.last_job_uuid}
-    if not Path(delivery.filepath).joinpath(delivery.filename).exists():
-        status = JOB_DELIVERY_NOT_FOUND
-    return JsonResponse(status)
+    return JsonResponse(model_to_dict(delivery))
 
 @csrf_exempt
 def run_wps_execute(request):

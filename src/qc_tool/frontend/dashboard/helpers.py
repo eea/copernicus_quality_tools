@@ -25,18 +25,6 @@ from qc_tool.frontend.dashboard import statuses
 logger = logging.getLogger(__name__)
 
 
-def format_date_utc(db_date):
-    """
-    Formats a DateTime or Timezone object to UTC
-    :param db_date:
-    :return:
-    """
-    if db_date is None:
-        return None
-    else:
-        return db_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-
-
 def find_product_description(product_ident):
     """
     given a product ident, retrieve the product description.
