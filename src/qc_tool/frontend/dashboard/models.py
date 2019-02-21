@@ -34,6 +34,7 @@ class Delivery(models.Model):
         self.last_job_status = statuses.JOB_RUNNING
         self.product_ident = product_ident
         self.product_description = find_product_description(product_ident)
+        self.save()
 
     def update_job(self):
         # Updates the status using the status of the job uuid.
