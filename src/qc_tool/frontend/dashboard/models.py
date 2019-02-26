@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 
 
-import json
-from datetime import datetime
 from pathlib import Path
 
 from django.db import models
 from django.utils import timezone
 
-import qc_tool.frontend.dashboard.statuses as statuses
-from qc_tool.common import compile_job_report
-from qc_tool.common import has_job_expired
-from qc_tool.common import load_job_result
-from qc_tool.common import load_wps_status
+from qc_tool.common import check_running_job
+from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.dashboard.helpers import find_product_description
-from qc_tool.frontend.dashboard.helpers import parse_wps_status_document
 
 
 class Delivery(models.Model):
@@ -31,45 +25,21 @@ class Delivery(models.Model):
     def init_job(self, product_ident, job_uuid):
         self.last_job_uuid = job_uuid
         self.last_job_percent = 0
-        self.last_job_status = statuses.JOB_RUNNING
+        self.last_job_status = JOB_RUNNING
         self.product_ident = product_ident
         self.product_description = find_product_description(product_ident)
         self.save()
 
     def update_job(self):
-        # Updates the status using the status of the job uuid.
-        wps_status = load_wps_status(self.last_job_uuid)
-        wps_status = parse_wps_status_document(wps_status)
-        wps_percent = wps_status["percent_complete"]
-        wps_status = wps_status["status"]
-
-        # Determine job status with respect to wps status.
-        if wps_status == statuses.WPS_ACCEPTED:
-            self.last_job_percent = 0
-            self.last_job_status = statuses.JOB_WAITING
-        elif wps_status == statuses.WPS_STARTED:
-            self.last_job_percent = wps_percent
-            self.last_job_status = statuses.JOB_RUNNING
-        elif wps_status == statuses.WPS_FAILED:
-            self.last_job_percent = 100
-            self.last_job_status = statuses.JOB_ERROR
-        elif wps_status == statuses.WPS_SUCCEEDED:
-            job_result = load_job_result(self.last_job_uuid)
-            self.last_job_status = job_result["status"]
-        else:
-            self.last_job_status = None
-
-        # Check expired job.
-        if self.last_job_status == statuses.JOB_RUNNING:
-            if has_job_expired(self.last_job_uuid):
-                self.last_job_status = statuses.JOB_EXPIRED
-
-        # Write changes to database.
+        (job_status, other) = check_running_job(self.last_job_uuid)
+        self.last_job_status = job_status
+        if job_status == JOB_RUNNING:
+            self.last_job_percent = other
         self.save()
-
 
     def submit(self):
         self.date_submitted = timezone.now()
+        self.save()
 
     def is_submitted(self):
         return self.date_submitted is not None

@@ -121,18 +121,7 @@ class TestCommonWithConfig(TestCase):
         store_job_result({"job_uuid": job_uuid})
         self.assertDictEqual({"job_uuid": job_uuid}, load_job_result(job_uuid))
 
-    def test_wps_status(self):
-        from qc_tool.common import load_wps_status
+    def test_compose_wps_status_filepath(self):
+        from qc_tool.common import compose_wps_status_filepath
         wps_status_filepath = self.wps_output_dir.joinpath("wps_status.xml")
-        wps_status_filepath.write_text("wps status xml data")
-        self.assertEqual("wps status xml data", load_wps_status("wps_status"))
-
-    def test_get_all_wps_uuids(self):
-        from qc_tool.common import get_all_wps_uuids
-        ok_filepath = Path("/mnt/qc_tool_volume/wps/output/6ec51f46-0714-4644-9723-9a0cdbf9e52d.xml")
-        ok_filepath.write_text("")
-        wrong_filepath = Path("/mnt/qc_tool_volume/wps/output/XXc51f46-0714-4644-9723-9a0cdbf9e52d.xml")
-        wrong_filepath.write_text("")
-        wps_uuids = get_all_wps_uuids()
-        self.assertListEqual(["6ec51f46-0714-4644-9723-9a0cdbf9e52d"],
-                             wps_uuids)
+        self.assertEqual(wps_status_filepath, compose_wps_status_filepath("wps_status"))

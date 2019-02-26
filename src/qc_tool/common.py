@@ -4,6 +4,7 @@
 import json
 import re
 import time
+import xml.etree.ElementTree as ET
 from importlib import import_module
 from os import environ
 from os.path import normpath
@@ -11,16 +12,23 @@ from pathlib import Path
 from shutil import copyfile
 
 
-# FIXME: such normalization should be removed in python3.6.
-QC_TOOL_HOME = Path(normpath(str(Path(__file__).joinpath("../../.."))))
+QC_TOOL_HOME = Path(__file__).parents[2]
 QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
+WPS_ACCEPTED = 1
+WPS_STARTED = 2
+WPS_SUCCEEDED = 3
+WPS_FAILED = 4
+WPS_EXCEPTION = 5
 
-JOB_ERROR = "error"
-JOB_FAILED = "failed"
+JOB_WAITING = "waiting"
+JOB_RUNNING = "running"
 JOB_OK = "ok"
 JOB_PARTIAL = "partial"
+JOB_FAILED = "failed"
+JOB_ERROR = "error"
+JOB_EXPIRED = "expired"
 
 JOB_EXPIRE_TIMEOUT = 43200
 
@@ -101,13 +109,6 @@ def compose_job_report_filepath(job_uuid):
     job_report_filepath = job_dir.joinpath(JOB_REPORT_FILENAME)
     return job_report_filepath
 
-def has_job_expired(job_uuid, timeout=JOB_EXPIRE_TIMEOUT):
-    job_dir = compose_job_dir(job_uuid)
-    job_result_filepath = job_dir.joinpath(JOB_RESULT_FILENAME)
-    job_timestamp = job_result_filepath.stat().st_mtime
-    now_timestamp = time.time()
-    return job_timestamp + timeout < now_timestamp
-
 def load_job_result(job_uuid):
     job_dir = compose_job_dir(job_uuid)
     job_result_filepath = job_dir.joinpath(JOB_RESULT_FILENAME)
@@ -164,49 +165,104 @@ def prepare_job_report(product_definition):
     return job_report
 
 def compile_job_report(job_uuid=None, product_ident=None):
-    job_result = None
-    if job_uuid is not None:
+    if job_uuid is None:
+        # There is no job, so return job blueprint.
+        product_definition = load_product_definition(product_ident)
+        job_report = prepare_job_report(product_definition)
+    else:
+        # The job exists already.
+        job_result = None
         try:
             job_result = load_job_result(job_uuid)
         except FileNotFoundError:
             pass
-    if job_result is None:
-        if product_ident is None:
-            raise QCException("Missing product_ident while there is no job result for job {:s}.".format(job_uuid))
-        product_definition = load_product_definition(product_ident)
-    else:
-        product_definition = load_product_definition_from_job(job_uuid, job_result["product_ident"])
-    job_report = prepare_job_report(product_definition)
-    if job_result is None:
-        # WPS status already exists, however job result does not yet.
-        if job_uuid is not None:
+        if job_result is None:
+            # The job has no result document yet, so return job blueprint.
+            if product_ident is None:
+                raise QCException("Missing product_ident while there is no job result for job {:s}.".format(job_uuid))
+            product_definition = load_product_definition(product_ident)
+            job_report = prepare_job_report(product_definition)
             job_report["job_uuid"] = job_uuid
-    else:
-        step_defs = job_report["steps"]
-        job_report.update(job_result)
-        job_report["steps"] = step_defs
-        for i, job_step in enumerate(job_result["steps"]):
-            job_report["steps"][i].update(job_step)
+        else:
+            # The job has result document already, so return the result.
+            product_definition = load_product_definition_from_job(job_uuid, job_result["product_ident"])
+            job_report = prepare_job_report(product_definition)
+            step_defs = job_report["steps"]
+            job_report.update(job_result)
+            job_report["steps"] = step_defs
+            for i, job_step in enumerate(job_result["steps"]):
+                job_report["steps"][i].update(job_step)
+
+        # Set overall job status if not known yet.
+        if job_report["status"] is None:
+            (job_status, other) = check_running_job(job_uuid)
+            job_report["status"] = job_status
+            if job_status == JOB_ERROR:
+                job_report["exception"] = other
+
     return job_report
 
-def load_wps_status(job_uuid):
-    wps_status_filename = "{:s}.xml".format(str(job_uuid))
-    wps_status_filepath = CONFIG["wps_output_dir"].joinpath(wps_status_filename)
-    wps_status = wps_status_filepath.read_text()
-    return wps_status
+def compose_wps_status_filepath(job_uuid):
+    wps_filename = "{:s}.xml".format(str(job_uuid))
+    wps_filepath = CONFIG["wps_output_dir"].joinpath(wps_filename)
+    return wps_filepath
+
+def parse_wps_status_document(content):
+    ns = {'wps': 'http://www.opengis.net/wps/1.0.0', 'ows': 'http://www.opengis.net/ows/1.1'}
+    root = ET.fromstring(content)
+    if root.tag == "{{{:s}}}ExceptionReport".format(ns["ows"]):
+        exc_el = root.find(".//ows:Exception", namespaces=ns)
+        exc_code = exc_el.get("exceptionCode")
+        exc_message = exc_el.find("ows:ExceptionText", namespaces=ns).text
+        error_message = "{:s}: {:s}".format(exc_code, exc_message)
+        return (WPS_EXCEPTION, error_message)
+    if root.tag == "{{{:s}}}ExecuteResponse".format(ns["wps"]):
+        if root.find(".//wps:ProcessAccepted", namespaces=ns) is not None:
+            return (WPS_ACCEPTED, None)
+        started_el = root.find(".//wps:ProcessStarted", namespaces=ns)
+        if started_el is not None:
+            percent = started_el.get("percentCompleted")
+            percent = int(percent)
+            return (WPS_STARTED, percent)
+        if root.find(".//wps:ProcessSucceeded", namespaces=ns) is not None:
+            return (WPS_SUCCEEDED, None)
+        failed_el = root.find(".//wps:ProcessFailed", namespaces=ns)
+        if failed_el is not None:
+            error_message = None
+            failed_text_el = failed_el.find(".//ows:ExceptionText", namespaces=ns)
+            if failed_text_el is not None:
+                error_message = failed_text_el.text
+            return (WPS_FAILED, error_message)
+    raise QCException("Unexpected structure of wps status document.")
+
+def check_running_job(job_uuid, timeout=JOB_EXPIRE_TIMEOUT):
+    wps_filepath = compose_wps_status_filepath(job_uuid)
+    wps_content = wps_filepath.read_text()
+    (wps_status, wps_other) = parse_wps_status_document(wps_content)
+    if wps_status == WPS_ACCEPTED:
+        return (JOB_WAITING, None)
+    if wps_status == WPS_STARTED:
+        wps_timestamp = wps_filepath.stat().st_mtime
+        now_timestamp = time.time()
+        if wps_timestamp + timeout < now_timestamp:
+            return (JOB_EXPIRED, None)
+        else:
+            return (JOB_RUNNING, wps_other)
+    if wps_status == WPS_SUCCEEDED:
+        try:
+            job_result = load_job_result(job_uuid)
+        except FileNotFoundError:
+            raise QCException("The job has finished without any job result.")
+        return (job_result["status"], None)
+    if wps_status == WPS_FAILED:
+        return (JOB_ERROR, wps_other)
+    if wps_status == WPS_EXCEPTION:
+        return (JOB_ERROR, wps_other)
 
 def compose_attachment_filepath(job_uuid, filename):
     job_dir = compose_job_dir(job_uuid)
     filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME).joinpath(filename)
     return filepath
-
-def get_all_wps_uuids():
-    status_document_regex = re.compile(r"[a-z0-9-]{36}\.xml")
-    wps_output_dir = CONFIG["wps_output_dir"]
-    wps_uuids = [path.stem
-                 for path in wps_output_dir.iterdir()
-                 if status_document_regex.match(path.name) is not None]
-    return wps_uuids
 
 def setup_config():
     """

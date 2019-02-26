@@ -30,9 +30,9 @@ from qc_tool.common import CONFIG
 from qc_tool.common import compile_job_report
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_report_filepath
+from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
-from qc_tool.common import load_product_definition
-from qc_tool.common import load_wps_status
+from qc_tool.common import locate_product_definition
 
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
@@ -327,8 +327,11 @@ def get_product_definition(request, product_ident):
     """
     Shows the json product definition.
     """
-    product_definition = load_product_definition(product_ident)
-    return JsonResponse(product_definition)
+    filepath = locate_product_definition(product_ident)
+    try:
+        return FileResponse(open(str(filepath), "rb"), content_type="application/json")
+    except FileNotFoundError:
+        raise Http404()
 
 @login_required
 def get_job_info(request, product_ident):
@@ -354,9 +357,9 @@ def get_result(request, job_uuid, product_ident):
     return render(request, "dashboard/result.html", job_report)
 
 def get_pdf_report(request, job_uuid):
-    report_filepath = compose_job_report_filepath(job_uuid)
+    filepath = compose_job_report_filepath(job_uuid)
     try:
-        return FileResponse(open(str(report_filepath), "rb"), content_type='application/pdf')
+        return FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
     except FileNotFoundError:
         raise Http404()
 
@@ -364,8 +367,11 @@ def get_wps_status_xml(request, job_uuid):
     """
     Shows the WPS status xml document of the selected job.
     """
-    wps_status = load_wps_status(job_uuid)
-    return HttpResponse(wps_status, content_type="application/xml")
+    filepath = compose_wps_status_filepath(job_uuid)
+    try:
+        return FileResponse(open(str(filepath), "rb"), content_type="application/xml")
+    except FileNotFoundError:
+        raise Http404()
 
 @login_required
 def get_attachment(request, job_uuid, attachment_filename):

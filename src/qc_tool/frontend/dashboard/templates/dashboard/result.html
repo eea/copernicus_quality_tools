@@ -50,6 +50,10 @@
                       <dt class="col-sm-2">Finished</dt>
                       <dd class="col-sm-10">{{job_finish_date}}</dd>
                     </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">Status</dt>
+                      <dd class="col-sm-10">{{status}}</dd>
+                    </dl>
                 </div></div>
 
 
@@ -111,7 +115,7 @@
                     <a href="/data/report/{{ job_uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
                 {% endif %}
                   <span>    </span><a href="/data/report/{{ job_uuid }}/{{ product_ident }}/report.json">JSON Report</a>&nbsp;&nbsp;&nbsp;
-                &nbsp;&nbsp;<span>    </span><a href="/data/wps_status/{{ job_uuid }}/">XML Report</a>
+                &nbsp;&nbsp;<span>    </span><a href="/data/wps_status/{{ job_uuid }}/">WPS status</a>
 
             </div>
 
