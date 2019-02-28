@@ -252,7 +252,7 @@ def check_running_job(job_uuid, timeout=JOB_EXPIRE_TIMEOUT):
         try:
             job_result = load_job_result(job_uuid)
         except FileNotFoundError:
-            raise QCException("The job has finished without any job result.")
+            raise QCException("The job {:s} has finished without any job result.".format(job_uuid))
         return (job_result["status"], None)
     if wps_status == WPS_FAILED:
         return (JOB_ERROR, wps_other)
