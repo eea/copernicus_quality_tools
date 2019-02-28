@@ -11,7 +11,7 @@ Service qc_tool_frontend
 ------------------------
 
   * PRODUCT_DIRS, informs the frontend server where to look for product definition files; there may be multiple paths separated by colon;
-  * BOUNDARY_DIR, instructs the frontend server where it should store boundary vectors and masks;
+  * BOUNDARY_DIR, instructs the frontend server where it should store boundary package;
   * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
   * WPS_DIR, informs the frontend server where it should look for wps status files;
   * WORK_DIR, informs the frontend server where it should look for job output files;
@@ -26,13 +26,16 @@ Service qc_tool_wps
 -------------------
 
   * PRODUCT_DIRS, informs the job where to look for product definition files; there may be multiple paths separated by colon;
-  * BOUNDARY_DIR, informs the check function where to look for boundary vectors and masks;
+  * BOUNDARY_DIR, informs the check function where to look for boundary package;
   * INCOMING_DIR, informs the job where it should look for uploaded files;
   * WPS_DIR, instructs the wps server where it should store its operational files;
   * WORK_DIR, instructs the running jobs where it should store its operational files;
   * WPS_PORT, instructs the wps server what port is should start listening for connections;
   * WPS_URL, informs the wps server of its own url;
   * WPS_OUTPUT_URL, informs the wps server of the url pointing to area of status documents;
+  * WPS_PARALLEL_PROCESSES, instructs the wps server of maximum wps processes that can run in parallel;
+  * WPS_QUEUE_LENGTH, instructs the wps server of maximum wps processes that may be put in queue;
+  * WPS_DBLOG_URL, instructs the wps server (SQLAlchemy driver) where to store wps requests and queue;
   * PG_HOST, informs the jobs about the host name/ip address on which the postgresql server is running;
   * PG_PORT, informs the job about the tcp port on which the postgresql server is listening for connections;
   * PG_USER, informs the job which user name it should use when connecting to postgresql server;

@@ -42,6 +42,9 @@ services:
       - WPS_PORT=5000
       - WPS_URL=http://qc_tool_wps:5000/wps
       - WPS_OUTPUT_URL=http://qc_tool_wps:5000/output
+      - WPS_PARALLEL_PROCESSES=1
+      - WPS_QUEUE_LENGTH=50
+      - WPS_DBLOG_URL=sqlite:////var/dblog.sqlite3
       - PG_HOST=qc_tool_postgis
       - PG_PORT=5432
       - PG_USER=qc_job

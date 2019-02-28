@@ -323,6 +323,11 @@ def setup_config():
     config["wps_url"] = environ.get("WPS_URL", "http://localhost:{:d}/wps".format(config["wps_port"]))
     config["wps_output_url"] = environ.get("WPS_OUTPUT_URL", "http://localhost:{:d}/output".format(config["wps_port"]))
 
+    # WPS parameters.
+    config["wps_parallel_processes"] = int(environ.get("WPS_PARALLEL_PROCESSES", 1))
+    config["wps_queue_length"] = int(environ.get("WPS_QUEUE_LENGTH", 50))
+    config["wps_dblog_url"] = environ.get("WPS_DBLOG_URL", "sqlite:////var/dblog.sqlite3")
+
     # Access to postgis.
     config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")
     config["pg_port"] = int(environ.get("PG_PORT", 5432))

@@ -33,8 +33,11 @@ def run_server():
     global service
 
     wps_config = pywps.configuration.CONFIG
+    wps_config.set("server", "maxprocesses", str(CONFIG["wps_queue_length"]))
+    wps_config.set("server", "parallelprocesses", str(CONFIG["wps_parallel_processes"]))
     wps_config.set("server", "url", CONFIG["wps_url"])
     wps_config.set("server", "outputurl", CONFIG["wps_output_url"])
+    wps_config.set("logging", "database", CONFIG["wps_dblog_url"])
 
     wps_output_dir = CONFIG["wps_output_dir"]
     wps_output_dir.mkdir(exist_ok=True, parents=True)
