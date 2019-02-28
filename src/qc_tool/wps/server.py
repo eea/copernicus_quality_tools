@@ -32,6 +32,10 @@ def hello():
 def wps():
     return service
 
+@app.route("/output/<path:filepath>", methods=["GET"])
+def get_output_file(filepath):
+    return flask.send_from_directory(str(CONFIG["wps_output_dir"]), filepath)
+
 
 def run_server():
     import socket
