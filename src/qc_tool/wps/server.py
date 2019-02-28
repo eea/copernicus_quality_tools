@@ -15,6 +15,10 @@ from qc_tool.wps.process import CopSleep
 from qc_tool.wps.process import RunChecks
 
 
+WPS_LISTEN_IP = "0.0.0.0"
+WPS_LISTEN_PORT = 5000
+
+
 app = flask.Flask(__name__)
 
 service = None
@@ -30,13 +34,18 @@ def wps():
 
 
 def run_server():
+    import socket
+
     global service
 
     wps_config = pywps.configuration.CONFIG
+
+    wps_hostname = socket.gethostname()
+    wps_ip_addr = socket.gethostbyname(wps_hostname)
+    wps_config.set("server", "url", "http://{:s}:{:d}/wps".format(wps_hostname, WPS_LISTEN_PORT))
+    wps_config.set("server", "outputurl", "http://{:s}:{:d}/output".format(wps_ip_addr, WPS_LISTEN_PORT))
     wps_config.set("server", "maxprocesses", str(CONFIG["wps_queue_length"]))
     wps_config.set("server", "parallelprocesses", str(CONFIG["wps_parallel_processes"]))
-    wps_config.set("server", "url", CONFIG["wps_url"])
-    wps_config.set("server", "outputurl", CONFIG["wps_output_url"])
     wps_config.set("logging", "database", CONFIG["wps_dblog_url"])
 
     wps_output_dir = CONFIG["wps_output_dir"]
@@ -59,7 +68,7 @@ def run_server():
     # Moreover, the service fails immediately while the path to log file
     # specified in config file does not even exist yet.
     service = pywps.Service(processes, [])
-    app.run(threaded=True, host="0.0.0.0", port=CONFIG["wps_port"])
+    app.run(threaded=True, host=WPS_LISTEN_IP, port=WPS_LISTEN_PORT)
 
 
 if __name__ == "__main__":

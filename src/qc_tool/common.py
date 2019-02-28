@@ -266,15 +266,25 @@ def compose_attachment_filepath(job_uuid, filename):
 
 def setup_config():
     """
+    Environment variables consumed by frontend:
+    * PRODUCT_DIRS;
+    * BOUNDARY_DIR;
+    * INCOMING_DIR;
+    * WPS_DIR;
+    * WORK_DIR;
+    * SUBMISSION_DIR;
+    * FRONTEND_DB_PATH;
+    * WPS_URL;
+
     Environment variables consumed by wps:
     * PRODUCT_DIRS;
     * BOUNDARY_DIR;
     * INCOMING_DIR;
     * WPS_DIR;
     * WORK_DIR,
-    * WPS_PORT;
-    * WPS_URL;
-    * WPS_OUTPUT_URL;
+    * WPS_PARALLEL_PROCESSES;
+    * WPS_QUEUE_LENGTH;
+    * WPS_DBLOG_URL;
     * PG_HOST;
     * PG_PORT;
     * PG_USER;
@@ -282,27 +292,11 @@ def setup_config():
     * LEAVE_SCHEMA;
     * JOBDIR_EXIST_OK;
     * LEAVE_JOBDIR;
-
-    Environment variables consumed by frontend:
-    * PRODUCT_DIRS;
-    * INCOMING_DIR;
-    * SUBMISSION_DIR;
-    * FRONTEND_DB_PATH;
-    * WPS_DIR;
-    * WORK_DIR;
-    * WPS_URL;
     """
     config = {}
 
-    # Parameters consumed by frontend.
-    config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/var/lib/qc_tool/frontend.sqlite3"))
-    config["submission_dir"] = environ.get("SUBMISSION_DIR", "")
-    if config["submission_dir"] == "":
-        config["submission_dir"] = None
-    else:
-        config["submission_dir"] = Path(config["submission_dir"])
-
     # Parameters common to both frontend and wps.
+
     if "PRODUCT_DIRS" in environ:
         _product_dirs = environ.get("PRODUCT_DIRS")
         _product_dirs = _product_dirs.split(":")
@@ -316,25 +310,30 @@ def setup_config():
     config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_volume/work"))
     config["wps_output_dir"] = config["wps_dir"].joinpath("output")
 
-    # Wps server port to listen on.
-    config["wps_port"] = int(environ.get("WPS_PORT", 5000))
+    # Parameters consumed by frontend.
 
-    # Access to wps service.
-    config["wps_url"] = environ.get("WPS_URL", "http://localhost:{:d}/wps".format(config["wps_port"]))
-    config["wps_output_url"] = environ.get("WPS_OUTPUT_URL", "http://localhost:{:d}/output".format(config["wps_port"]))
+    config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/var/lib/qc_tool/frontend.sqlite3"))
+    config["submission_dir"] = environ.get("SUBMISSION_DIR", "")
+    if config["submission_dir"] == "":
+        config["submission_dir"] = None
+    else:
+        config["submission_dir"] = Path(config["submission_dir"])
+    config["wps_url"] = environ.get("WPS_URL", "http://qc_tool_wps:5000/wps")
 
-    # WPS parameters.
+    # Parameters consumed by wps.
+
+    ## WPS parameters.
     config["wps_parallel_processes"] = int(environ.get("WPS_PARALLEL_PROCESSES", 1))
     config["wps_queue_length"] = int(environ.get("WPS_QUEUE_LENGTH", 50))
     config["wps_dblog_url"] = environ.get("WPS_DBLOG_URL", "sqlite:////var/dblog.sqlite3")
 
-    # Access to postgis.
+    ## Access to postgis.
     config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")
     config["pg_port"] = int(environ.get("PG_PORT", 5432))
     config["pg_user"] = environ.get("PG_USER", "qc_job")
     config["pg_database"] = environ.get("PG_DATABASE", "qc_tool_db")
 
-    # Debugging parameters.
+    ## Debugging parameters.
     config["leave_schema"] = environ.get("LEAVE_SCHEMA", "no") == "yes"
     config["jobdir_exist_ok"] = environ.get("JOBDIR_EXIST_OK", "no") == "yes"
     config["leave_jobdir"] = environ.get("LEAVE_JOBDIR", "no") == "yes"

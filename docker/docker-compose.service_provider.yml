@@ -2,8 +2,6 @@ version: '3'
 
 services:
   qc_tool_frontend:
-    depends_on:
-      - qc_tool_wps
     build:
       context: .
       dockerfile: Dockerfile.frontend
@@ -16,18 +14,16 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - WPS_DIR=/mnt/qc_tool_volume/wps
       - WORK_DIR=/mnt/qc_tool_volume/work
+      - SUBMISSION_DIR=
       - FRONTEND_PORT=8000
-      - FRONTEND_DB_PATH=/var/lib/qc_tool/frontend.sqlite3
+      - FRONTEND_DB_PATH=/mnt/qc_tool_volume/frontend.sqlite3
       - WPS_URL=http://qc_tool_wps:5000/wps
     networks:
       - qc_tool_network
     volumes:
       - qc_tool_volume:/mnt/qc_tool_volume
-      - qc_tool_frontend:/var/lib/qc_tool
 
   qc_tool_wps:
-    depends_on:
-      - qc_tool_postgis
     build:
       context: .
       dockerfile: Dockerfile.wps
@@ -38,9 +34,6 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - WPS_DIR=/mnt/qc_tool_volume/wps
       - WORK_DIR=/mnt/qc_tool_volume/work
-      - WPS_PORT=5000
-      - WPS_URL=http://qc_tool_wps:5000/wps
-      - WPS_OUTPUT_URL=http://qc_tool_wps:5000/output
       - WPS_PARALLEL_PROCESSES=1
       - WPS_QUEUE_LENGTH=50
       - WPS_DBLOG_URL=sqlite:////var/dblog.sqlite3
@@ -65,8 +58,6 @@ services:
       - qc_tool_network
 
 volumes:
-  qc_tool_frontend:
-    driver: local
   qc_tool_volume:
     driver: local
 

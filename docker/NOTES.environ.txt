@@ -10,16 +10,17 @@ There is no path related to host viewpoint.
 Service qc_tool_frontend
 ------------------------
 
+
   * PRODUCT_DIRS, informs the frontend server where to look for product definition files; there may be multiple paths separated by colon;
   * BOUNDARY_DIR, instructs the frontend server where it should store boundary package;
   * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
   * WPS_DIR, informs the frontend server where it should look for wps status files;
   * WORK_DIR, informs the frontend server where it should look for job output files;
+  * SUBMISSION_DIR, if set instructs the frontend server where to put submissions, if not set or empty the feature is disabled;
   * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
   * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
       the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
-  * SUBMISSION_DIR, if set instructs the frontend server where to put submissions, if not set or empty the feature is disabled;
-  * WPS_URL, informs the frontend server of the url where the wps server can be reached;
+  * WPS_URL, informs the frontend server of the url where the wps service can be reached;
 
 
 Service qc_tool_wps
@@ -30,9 +31,6 @@ Service qc_tool_wps
   * INCOMING_DIR, informs the job where it should look for uploaded files;
   * WPS_DIR, instructs the wps server where it should store its operational files;
   * WORK_DIR, instructs the running jobs where it should store its operational files;
-  * WPS_PORT, instructs the wps server what port is should start listening for connections;
-  * WPS_URL, informs the wps server of its own url;
-  * WPS_OUTPUT_URL, informs the wps server of the url pointing to area of status documents;
   * WPS_PARALLEL_PROCESSES, instructs the wps server of maximum wps processes that can run in parallel;
   * WPS_QUEUE_LENGTH, instructs the wps server of maximum wps processes that may be put in queue;
   * WPS_DBLOG_URL, instructs the wps server (SQLAlchemy driver) where to store wps requests and queue;
@@ -40,10 +38,15 @@ Service qc_tool_wps
   * PG_PORT, informs the job about the tcp port on which the postgresql server is listening for connections;
   * PG_USER, informs the job which user name it should use when connecting to postgresql server;
   * PG_DATABASE, informs the job which database name it should use when connecting to postgresql server;
+
+
+Debugging parameters
+--------------------
+
   * LEAVE_SCHEMA, if "yes" then job schema will not be dropped;
   * JOBDIR_EXIST_OK, if "yes" then job will not raise an error when the job's working directory already exists;
   * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed;
-  * SKIP_INSPIRE_CHECK, if "yes" then connecting to Inspire geoportal for metadata checks will be skipped;
+  * SKIP_INSPIRE_CHECK, if "yes" then connecting to Inspire geoportal for metadata checks will be skipped; applies to tests only;
 
 
 NOTE! As stated above PRODUCT_PATH, BOUNDARY_DIR, INCOMING_DIR, WPS_DIR and WORK_DIR must be reachable by both services!
