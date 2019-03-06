@@ -145,6 +145,9 @@ SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
 # The WPS server url.
 WPS_URL = CONFIG["wps_url"]
 
+# Logo display setting.
+SHOW_LOGO = CONFIG["show_logo"]
+
 
 LOGGING = {
     'version': 1,

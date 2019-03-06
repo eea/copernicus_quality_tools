@@ -275,6 +275,7 @@ def setup_config():
     * SUBMISSION_DIR;
     * FRONTEND_DB_PATH;
     * WPS_URL;
+    * SHOW_LOGO;
 
     Environment variables consumed by wps:
     * PRODUCT_DIRS;
@@ -292,6 +293,7 @@ def setup_config():
     * LEAVE_SCHEMA;
     * JOBDIR_EXIST_OK;
     * LEAVE_JOBDIR;
+    * SHOW_LOGO;
     """
     config = {}
 
@@ -339,6 +341,9 @@ def setup_config():
     config["leave_jobdir"] = environ.get("LEAVE_JOBDIR", "no") == "yes"
 
     config["skip_inspire_check"] = environ.get("SKIP_INSPIRE_CHECK", "no") == "yes"
+
+    # Logo customization.
+    config["show_logo"] = environ.get("SHOW_LOGO", "yes") == "yes"
 
     return config
 

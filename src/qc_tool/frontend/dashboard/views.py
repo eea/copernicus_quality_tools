@@ -47,7 +47,8 @@ def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
     """
-    return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED})
+    return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
+                                                         "show_logo": settings.SHOW_LOGO})
 
 
 @login_required
@@ -69,7 +70,8 @@ def start_job(request, delivery_id):
 
     context = {"filename": delivery.filename,
                "product_ident": delivery.product_ident,
-               "product_list": product_list}
+               "product_list": product_list,
+               "show_logo": settings.SHOW_LOGO}
     return render(request, "dashboard/start_job.html", context)
 
 

@@ -33,8 +33,12 @@
                                 <span class="icon-bar"></span>
                                 <span class="icon-bar"></span>
                             </button>
-                            <a class="navbar-brand" href="/"><img src="{{ STATIC_URL }}dashboard/img/logo_eea_big.png" style="height:40px;margin-top:-10px;float:left" /><span style="overflow: hidden;">&nbsp;&nbsp;Copernicus QC Tool
-                            </span></a>
+                            {% if show_logo %}
+                            <a class="navbar-brand" href="/"><img src="{{ STATIC_URL }}dashboard/img/logo_eea_big.png" style="height:40px;margin-top:-10px;float:left" />
+                                <span style="overflow: hidden;">&nbsp;&nbsp;Copernicus QC Tool</span></a>
+                            {% else %}
+                            <a class="navbar-brand" href="/"><span>&nbsp;&nbsp;QC Tool</span></a>
+                            {% endif %}
                         </div>
                         <div class="navbar-collapse collapse">
                             <ul class="nav navbar-nav navbar-right">

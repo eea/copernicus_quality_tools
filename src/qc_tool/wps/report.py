@@ -24,6 +24,7 @@ from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_PARTIAL
 from qc_tool.common import QCException
 from qc_tool.common import TIME_FORMAT
+from qc_tool.common import CONFIG
 
 
 def generate_pdf_report(job_report_filepath, job_uuid):
@@ -64,15 +65,16 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         open(str(report_logo_dirpath.joinpath("eea_full_logo_resized.png")), "rb") as eea_f, \
         open(str(report_logo_dirpath.joinpath("land_monitoring_logo_resized.png")), "rb") as land_f:
 
-        copernicus_image = Image(copernicus_f, width=123, height=53)
-        eea_image = Image(eea_f, width=178, height=38)
-        land_image = Image(land_f, width=124, height=57)
-        image_data = [[copernicus_image, land_image, eea_image]]
-        image_table=Table(image_data, hAlign="CENTER", colWidths=[130, 150, 200], rowHeights=60)
-        image_table_style = TableStyle([("VALIGN", (0, 0), (-1,-1), "CENTER")])
-        image_table.setStyle(image_table_style)
-        text.append(image_table)
-        text.append(Paragraph("", style_normal))
+        if CONFIG["show_logo"]:
+            copernicus_image = Image(copernicus_f, width=123, height=53)
+            eea_image = Image(eea_f, width=178, height=38)
+            land_image = Image(land_f, width=124, height=57)
+            image_data = [[copernicus_image, land_image, eea_image]]
+            image_table=Table(image_data, hAlign="CENTER", colWidths=[130, 150, 200], rowHeights=60)
+            image_table_style = TableStyle([("VALIGN", (0, 0), (-1,-1), "CENTER")])
+            image_table.setStyle(image_table_style)
+            text.append(image_table)
+            text.append(Paragraph("", style_normal))
 
         # Add main heading
         text.append(Paragraph("QC tool check report", styles["Heading1"]))

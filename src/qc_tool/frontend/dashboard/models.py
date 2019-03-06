@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 from qc_tool.common import check_running_job
+from qc_tool.common import compile_job_report
 from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.dashboard.helpers import find_product_description
 
@@ -32,7 +33,8 @@ class Delivery(models.Model):
 
     def update_job(self):
         (job_status, other) = check_running_job(self.last_job_uuid)
-        self.last_job_status = job_status
+        job_report = compile_job_report(self.last_job_uuid, self.product_ident)
+        self.last_job_status = job_report["status"]
         if job_status == JOB_RUNNING:
             self.last_job_percent = other
         self.save()

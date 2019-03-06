@@ -21,6 +21,7 @@ Service qc_tool_frontend
   * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
       the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
   * WPS_URL, informs the frontend server of the url where the wps service can be reached;
+  * SHOW_LOGO, informs the frontend server to show the Copernicus logo;
 
 
 Service qc_tool_wps
@@ -38,6 +39,7 @@ Service qc_tool_wps
   * PG_PORT, informs the job about the tcp port on which the postgresql server is listening for connections;
   * PG_USER, informs the job which user name it should use when connecting to postgresql server;
   * PG_DATABASE, informs the job which database name it should use when connecting to postgresql server;
+  * SHOW_LOGO, informs the pdf report to show the Copernicus logo;
 
 
 Debugging parameters
