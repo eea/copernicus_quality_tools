@@ -222,9 +222,9 @@ function update_job_statuses() {
                     // the UI row is matched using job_uuid.
                     var deliveries_to_update = $("#tbl-deliveries").bootstrapTable("getData");
                     for(var new_index=0, new_len=deliveries_to_update.length; new_index < new_len; new_index++) {
-                        if (deliveries_to_update[new_index].last_job_uuid === updated_delivery.last_job_uuid) {
+                        if (deliveries_to_update[new_index].id === updated_delivery.id) {
                             // a matching row is found in the UI -> tell BootstrapTable to refresh it.
-                            console.log("refreshing table row in UI with job uuid: " + updated_delivery.last_job_uuid);
+                            console.log("refreshing table row in UI with id: " + updated_delivery.id);
 
                             $("#tbl-deliveries").bootstrapTable("updateRow", {index: new_index, row: updated_delivery});
                         }
