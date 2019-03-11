@@ -134,7 +134,7 @@ function run_checks() {
     $('#modal-spinner').modal('show');
 
     // WPS execute must be called via server-side proxy to bypass CORS restriction.
-    var run_url = "/run_wps_execute";
+    var run_url = "/run_job";
 
     // retrieve the checkboxes from tbl_check_details table.
     var unselected_steps = [];
@@ -153,8 +153,8 @@ function run_checks() {
     });
 
     var data = {
+        "delivery_id": $("#delivery_id").val(),
         "product_ident": $("#select_product").val(),
-        "filepath": $("#current_username").val() + "/" + $("#preselected_file").val(),
         "skip_steps": unselected_steps.join(",")
     };
 
@@ -165,38 +165,24 @@ function run_checks() {
         dataType: "json",
         success: function(result) {
             $("#modal-spinner").modal("hide");
-
-            if (result.status=="OK") {
-                var dlg_ok = BootstrapDialog.show({
-                    title: "QC Job successfully started",
-                    message: result.message,
-                    buttons: [{
-                        label: "OK",
-                        cssClass: "btn-default",
-                        action: function(dialog) {
-                            // If the user click OK, then redirect to jobs page for now.
-                            $(location).attr("href","/");
-                        }
-                    }]
-                });
-
-            } else {
-                var dlg_err = BootstrapDialog.show({
-                    title: "Error",
-                    message: result.message,
-                    buttons: [{
-                        label: "OK",
-                        cssClass: "btn-default",
-                        action: function(dialog) {dialog.close();}
-                    }]
-                });
-            }
+            var dlg_ok = BootstrapDialog.show({
+                title: "QC Job successfully started",
+                message: result.message,
+                buttons: [{
+                    label: "OK",
+                    cssClass: "btn-default",
+                    action: function(dialog) {
+                        // If the user click OK, then redirect to jobs page for now.
+                        $(location).attr("href","/");
+                    }
+                }]
+            });
         },
         error: function(result) {
             $("#modal-spinner").modal("hide");
             var dlg_err = BootstrapDialog.show({
                 title: "Error",
-                message: "WPS server probably does not respond. Please try later.",
+                message: "Error running job. Please try later.",
                 buttons: [{
                     label: "OK",
                     cssClass: "btn-default",

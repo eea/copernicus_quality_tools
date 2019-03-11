@@ -97,7 +97,7 @@ function statusFormatter(value, row, index) {
         value += '<span class="text-danger">FILE NOT FOUND</span>';
         return value;
     }
-    if (!row.last_job_uuid) {
+    if (!row.last_job_status) {
         return 'Not checked';
     }
     if (value == "failed") {

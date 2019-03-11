@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from requests import get as requests_get
 from requests.exceptions import RequestException
+from uuid import uuid4
 from xml.etree import ElementTree
 from zipfile import ZipFile
 
@@ -26,6 +27,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+import qc_tool.frontend.dashboard.models as models
 from qc_tool.common import CONFIG
 from qc_tool.common import compile_job_report
 from qc_tool.common import compose_attachment_filepath
@@ -37,7 +39,6 @@ from qc_tool.common import locate_product_definition
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
-from qc_tool.frontend.dashboard.models import Delivery
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def start_job(request, delivery_id):
     Displays a page for starting a new QA job
     :param delivery_id: The ID of the delivery ZIP file.
     """
-    delivery = get_object_or_404(Delivery, pk=delivery_id)
+    delivery = get_object_or_404(models.Delivery, pk=delivery_id)
 
     product_infos = get_product_descriptions()
     product_list = [{"product_ident": product_ident, "product_description": product_name}
@@ -68,7 +69,8 @@ def start_job(request, delivery_id):
     if delivery.date_submitted is not None:
         raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
 
-    context = {"filename": delivery.filename,
+    context = {"delivery_id": delivery.id,
+               "filename": delivery.filename,
                "product_ident": delivery.product_ident,
                "product_list": product_list,
                "show_logo": settings.SHOW_LOGO}
@@ -85,7 +87,7 @@ def get_deliveries_json(request):
     :param request:
     :return: list of deliveries in JSON format
     """
-    db_deliveries = Delivery.objects.filter(user_id=request.user.id)
+    db_deliveries = models.Delivery.objects.filter(user_id=request.user.id)
     return JsonResponse(list(db_deliveries.values()), safe=False)
 
 
@@ -108,7 +110,7 @@ def file_upload(request):
             logger.info("Processing uploaded ZIP file: {:s}".format(myfile.name))
 
             # Show error if a ZIP delivery with the same name uploaded by the same user already exists in the DB.
-            existing_deliveries = Delivery.objects.filter(filename=myfile, user=request.user)
+            existing_deliveries = models.Delivery.objects.filter(filename=myfile, user=request.user)
             if existing_deliveries.count() > 0:
                 logger.info("Upload rejected: file {:s} already exists for user {:s}".format(myfile.name,
                                                                                              request.user.username))
@@ -137,7 +139,7 @@ def file_upload(request):
             product_description = find_product_description(product_ident)
 
             # Save delivery metadata into the database.
-            d = Delivery()
+            d = models.Delivery()
             d.filename = saved_filename
             d.filepath = user_upload_path
             d.size_bytes = dst_filepath.stat().st_size
@@ -277,7 +279,7 @@ def delivery_delete(request):
 
         logger.debug("delivery_delete id=" + str(file_id))
 
-        f = Delivery.objects.get(id=file_id)
+        f = models.Delivery.objects.get(id=file_id)
         file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(f.filename)
         if file_path.exists():
             file_path.unlink()
@@ -293,7 +295,7 @@ def submit_delivery_to_eea(request):
 
         logger.debug("delivery_submit_eea id=" + str(file_id))
 
-        d = Delivery.objects.get(id=file_id)
+        d = models.Delivery.objects.get(id=file_id)
         d.submit()
         d.date_submitted = timezone.now()
         d.save()
@@ -392,75 +394,37 @@ def get_attachment(request, job_uuid, attachment_filename):
 
 @login_required
 def update_job(request, delivery_id):
-    delivery = Delivery.objects.get(id=delivery_id)
+    delivery = models.Delivery.objects.get(id=delivery_id)
     delivery.update_job()
     return JsonResponse(model_to_dict(delivery))
 
 @csrf_exempt
-def run_wps_execute(request):
-    """
-    Called from the UI - forwards the call to WPS and runs the process
-    """
-    try:
-        product_ident = request.POST.get("product_ident")
-        filepath = request.POST.get("filepath")
-        skip_steps = request.POST.get("skip_steps")
+def run_job(request):
+    delivery_id = request.POST.get("delivery_id")
+    product_ident = request.POST.get("product_ident")
+    skip_steps = request.POST.get("skip_steps")
+    if skip_steps == "":
+        skip_steps = None
 
-        # The WPS Execute request is formatted using HTTP GET
-        wps_data_inputs = ["user_name={:s}".format(request.user.username),
-                           "filepath={:s}".format(filepath),
-                           "product_ident={:s}".format(product_ident),
-                           "skip_steps={:s}".format(skip_steps)]
+    # Update delivery status in the frontend database.
+    d = models.Delivery.objects.get(id=delivery_id)
+    d.init_job(product_ident, skip_steps)
+    logger.debug("Delivery {:d}: job has been submitted.")
 
-        wps_params = ["service=WPS",
-                      "version=1.0.0",
-                      "request=Execute",
-                      "identifier=run_checks",
-                      "storeExecuteResponse=true",
-                      "status=true",
-                      "lineage=true",
-                      "DataInputs={:s}".format(";".join(wps_data_inputs))]
+    result = {"status": "OK"}
+    js = json.dumps(result)
+    return HttpResponse(js, content_type="application/json")
 
-        wps_url = settings.WPS_URL + "?" + "&".join(wps_params)
+def pull_job(request):
+    job_uuid = str(uuid4())
+    delivery = models.pull_job(job_uuid)
+    if delivery is None:
+        response = None
+    else:
+        response = {"job_uuid": job_uuid,
+                    "username": delivery.user.username,
+                    "product_ident": delivery.product_ident,
+                    "filename": delivery.filename,
+                    "skip_steps": delivery.skip_steps}
+    return HttpResponse(json.dumps(response), content_type="application/json")
 
-        # Receive a response from the WPS.
-        logger.info("Calling WPS: {:s}".format(wps_url))
-        r = requests_get(wps_url)
-
-        # The WPS server should return a XML response.
-        tree = ElementTree.fromstring(r.text)
-
-        # wait for the response and get the uuid
-        if "statusLocation" in tree.attrib:
-
-            # Job UUID is parsed from the status location in the WPS response.
-            # <wps:response statusLocation="http://<wps_host>/status/<JOB_UUID>.xml">
-            status_location_url = str(tree.attrib["statusLocation"])
-            job_uuid = (status_location_url.split("/")[-1]).split(".")[0]
-
-            # Update delivery status in the frontend database.
-            file_path = Path(settings.MEDIA_ROOT).joinpath(filepath)
-            file_name = file_path.name
-            d = Delivery.objects.get(user=request.user, filename=file_name)
-            d.init_job(product_ident, job_uuid)
-            logger.debug("Delivery {:d}: job status created with job_uuid={:s}.".format(d.id, str(job_uuid)))
-
-            # The WPS process has been started asynchronously.
-            result = {"status": "OK",
-                      "message": "QC job has started and it is running in the background. <br>"
-                                 "<i>job uuid: " + job_uuid + "</i>",
-                      "job_uuid": job_uuid,
-                      "wps_url": wps_url}
-            js = json.dumps(result)
-            return HttpResponse(js, content_type='application/json')
-        else:
-
-            # If the WPS response does not have statusLocation then there is a WPS error.
-            error_response = {"status": "ERR", "message": "There was an error starting the job. Exception: %s" % r.text}
-            js = json.dumps(error_response)
-            return HttpResponse(js, content_type='application/json')
-
-    except RequestException as e:  # catch exception in case of wps server not responding
-        error_response = {"status": "ERR", "message": "WPS server probably does not respond. Error details: %s" % (e)}
-        js = json.dumps(error_response)
-        return HttpResponse(js, content_type='application/json')

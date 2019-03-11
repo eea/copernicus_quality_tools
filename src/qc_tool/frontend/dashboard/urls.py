@@ -26,7 +26,8 @@ urlpatterns = [
     path('boundaries/', views.boundaries, name='boundaries'),
     path('boundaries_upload/', views.boundaries_upload, name='boundaries_upload'),
 
-    path("run_wps_execute", views.run_wps_execute, name="run_wps_execute"),
+    path("run_job", views.run_job, name="run_job"),
+    path("pull_job", views.pull_job, name="pull_job"),
 
     path("start_job/<int:delivery_id>/", views.start_job, name="start_job"),
     path("result/<job_uuid>/<product_ident>", views.get_result, name="show_result"),
