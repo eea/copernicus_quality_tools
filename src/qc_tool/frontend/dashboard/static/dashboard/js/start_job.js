@@ -100,7 +100,7 @@ $(document).ready(function() {
     // When user clicks the "Launch QA session" button.
     $('#check_form').submit(function(event){
         event.preventDefault();
-        run_checks();
+        run_job();
     });
 
     $('#select_product').change(function() {
@@ -129,7 +129,7 @@ function select_all() {
 }
 
 
-function run_checks() {
+function run_job() {
 
     $('#modal-spinner').modal('show');
 
@@ -166,7 +166,7 @@ function run_checks() {
         success: function(result) {
             $("#modal-spinner").modal("hide");
             var dlg_ok = BootstrapDialog.show({
-                title: "QC Job successfully started",
+                title: "QC Job has been added to queue.",
                 message: result.message,
                 buttons: [{
                     label: "OK",

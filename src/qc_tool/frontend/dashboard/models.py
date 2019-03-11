@@ -18,14 +18,23 @@ def pull_job(job_uuid):
     UPDATE deliveries SET last_job_uuid=%s WHERE last_job_uuid IS NULL LIMIT 1
     :return:
     """
-    deliveries = Delivery.objects.exclude(product_ident__isnull=True).filter(last_job_uuid__isnull=True)
 
-    if len(deliveries) > 0:
-        d = deliveries.first()
-        d.last_job_uuid = job_uuid
-        d.last_job_status = JOB_RUNNING
-        d.save()
-        return d
+    # [:1] tells Django to add a " LIMIT 1" clause to the database query.
+    deliveries = Delivery.objects.filter(product_ident__isnull=False, last_job_uuid__isnull=True)[:1]
+
+    if len(deliveries) == 1:
+        d = deliveries.get()
+
+        # Safeguard against race condition. only return a non-null result if a row was updated in the database.
+        affected_rowcount = Delivery.objects.filter(last_job_uuid__isnull=True, id=d.id).update(
+            last_job_uuid=job_uuid, last_job_status=JOB_RUNNING)
+
+        if affected_rowcount == 1:
+            # The job is available.
+            return d
+        else:
+            # The job has already been taken by another worker.
+            return None
     else:
         return None
 

@@ -409,9 +409,10 @@ def run_job(request):
     # Update delivery status in the frontend database.
     d = models.Delivery.objects.get(id=delivery_id)
     d.init_job(product_ident, skip_steps)
-    logger.debug("Delivery {:d}: job has been submitted.")
+    logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
 
-    result = {"status": "OK"}
+    result = {"status": "OK",
+              "message": "QC Job is waiting for execution (product: {:s}).".format(product_ident)}
     js = json.dumps(result)
     return HttpResponse(js, content_type="application/json")
 
