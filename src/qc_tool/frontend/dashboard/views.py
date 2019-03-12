@@ -32,7 +32,6 @@ from qc_tool.common import CONFIG
 from qc_tool.common import compile_job_report
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_report_filepath
-from qc_tool.common import compose_wps_status_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 
@@ -145,7 +144,6 @@ def file_upload(request):
             d.size_bytes = dst_filepath.stat().st_size
             d.product_ident = product_ident
             d.product_description = product_description
-            d.wps_status = None
             d.job_status = "Not checked"
             d.user = request.user
             d.save()
@@ -364,16 +362,6 @@ def get_pdf_report(request, job_uuid):
     filepath = compose_job_report_filepath(job_uuid)
     try:
         return FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
-    except FileNotFoundError:
-        raise Http404()
-
-def get_wps_status_xml(request, job_uuid):
-    """
-    Shows the WPS status xml document of the selected job.
-    """
-    filepath = compose_wps_status_filepath(job_uuid)
-    try:
-        return FileResponse(open(str(filepath), "rb"), content_type="application/xml")
     except FileNotFoundError:
         raise Http404()
 

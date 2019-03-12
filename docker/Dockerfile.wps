@@ -23,23 +23,9 @@ RUN apt-get -y update \
 # Install geo environment.
 RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy
 
-# Install SqLite for administrative purposes.
-# SqLite is used by PyWps for storing request log and queue handling.
-RUN apt-get -y install sqlite3
-
-# Install scikit-image & reportlab & flask & pywps.
-RUN apt-get -y install gcc python3-dev libproj-dev python3-lxml \
-    && pip3 install --upgrade setuptools \
-    && pip3 install scikit-image \
-    && pip3 install reportlab \
-    && pip3 install Flask \
-    && env PROJ_DIR=/usr pip3 install pyproj \
-    && cd /usr/local/src \
-    && pip3 install -e git+https://github.com/geopython/pywps.git@4.2.1#egg=pywps-dev
+# Install scikit-image and reportlab.
+RUN pip3 install scikit-image reportlab
 
 # Install qc tool.
 RUN cd /usr/local/src \
     && git clone https://github.com/eea/copernicus_quality_tools
-
-# Run wps application.
-CMD python3 -m qc_tool.wps.server

@@ -118,7 +118,7 @@ def validate_skip_steps(skip_steps, product_definition):
             raise QCException("Required step {:d} can not be skipped.".format(skip_step))
         validated_skip_steps.add(skip_step)
 
-def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), update_status_func=None):
+def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
     with ExitStack() as exit_stack:
         # Prepare job variables.
         product_definition = load_product_definition(product_ident)
@@ -155,11 +155,6 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), u
             for step_nr, step_def in enumerate(product_definition["steps"], start=1):
 
                 step_result = {"check_ident": step_def["check_ident"]}
-
-                # Update status at wps.
-                if update_status_func is not None:
-                    percent_done = (step_nr - 1) / len(product_definition["steps"]) * 100
-                    update_status_func(step_nr, percent_done)
 
                 # Skip this step.
                 if step_nr in skip_steps:

@@ -101,8 +101,6 @@ class TestCommonWithConfig(TestCase):
         from qc_tool.common import CONFIG
         from qc_tool.common import setup_config
         setup_config()
-        self.wps_output_dir = CONFIG["wps_output_dir"]
-        self.wps_output_dir.mkdir(exist_ok=True, parents=True)
         self.work_dir = CONFIG["work_dir"]
         self.work_dir.mkdir(exist_ok=True, parents=True)
 
@@ -120,8 +118,3 @@ class TestCommonWithConfig(TestCase):
         job_dir.mkdir(exist_ok=True)
         store_job_result({"job_uuid": job_uuid})
         self.assertDictEqual({"job_uuid": job_uuid}, load_job_result(job_uuid))
-
-    def test_compose_wps_status_filepath(self):
-        from qc_tool.common import compose_wps_status_filepath
-        wps_status_filepath = self.wps_output_dir.joinpath("wps_status.xml")
-        self.assertEqual(wps_status_filepath, compose_wps_status_filepath("wps_status"))

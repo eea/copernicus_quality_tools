@@ -14,13 +14,11 @@ Service qc_tool_frontend
   * PRODUCT_DIRS, informs the frontend server where to look for product definition files; there may be multiple paths separated by colon;
   * BOUNDARY_DIR, instructs the frontend server where it should store boundary package;
   * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
-  * WPS_DIR, informs the frontend server where it should look for wps status files;
   * WORK_DIR, informs the frontend server where it should look for job output files;
   * SUBMISSION_DIR, if set instructs the frontend server where to put submissions, if not set or empty the feature is disabled;
   * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
   * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
       the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
-  * WPS_URL, informs the frontend server of the url where the wps service can be reached;
   * SHOW_LOGO, informs the frontend server to show the Copernicus logo;
 
 
@@ -30,11 +28,7 @@ Service qc_tool_wps
   * PRODUCT_DIRS, informs the job where to look for product definition files; there may be multiple paths separated by colon;
   * BOUNDARY_DIR, informs the check function where to look for boundary package;
   * INCOMING_DIR, informs the job where it should look for uploaded files;
-  * WPS_DIR, instructs the wps server where it should store its operational files;
   * WORK_DIR, instructs the running jobs where it should store its operational files;
-  * WPS_PARALLEL_PROCESSES, instructs the wps server of maximum wps processes that can run in parallel;
-  * WPS_QUEUE_LENGTH, instructs the wps server of maximum wps processes that may be put in queue;
-  * WPS_DBLOG_URL, instructs the wps server (SQLAlchemy driver) where to store wps requests and queue;
   * PG_HOST, informs the jobs about the host name/ip address on which the postgresql server is running;
   * PG_PORT, informs the job about the tcp port on which the postgresql server is listening for connections;
   * PG_USER, informs the job which user name it should use when connecting to postgresql server;
@@ -51,4 +45,4 @@ Debugging parameters
   * SKIP_INSPIRE_CHECK, if "yes" then connecting to Inspire geoportal for metadata checks will be skipped; applies to tests only;
 
 
-NOTE! As stated above PRODUCT_PATH, BOUNDARY_DIR, INCOMING_DIR, WPS_DIR and WORK_DIR must be reachable by both services!
+NOTE! As stated above PRODUCT_PATH, BOUNDARY_DIR, INCOMING_DIR and WORK_DIR must be reachable by both services!

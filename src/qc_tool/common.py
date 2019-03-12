@@ -16,12 +16,6 @@ QC_TOOL_HOME = Path(__file__).parents[2]
 QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
-WPS_ACCEPTED = 1
-WPS_STARTED = 2
-WPS_SUCCEEDED = 3
-WPS_FAILED = 4
-WPS_EXCEPTION = 5
-
 JOB_WAITING = "waiting"
 JOB_RUNNING = "running"
 JOB_OK = "ok"
@@ -192,72 +186,7 @@ def compile_job_report(job_uuid=None, product_ident=None):
             job_report["steps"] = step_defs
             for i, job_step in enumerate(job_result["steps"]):
                 job_report["steps"][i].update(job_step)
-
-        # Set overall job status if not known yet.
-        if job_report["status"] is None:
-            (job_status, other) = check_running_job(job_uuid)
-            job_report["status"] = job_status
-            if job_status == JOB_ERROR:
-                job_report["exception"] = other
-
     return job_report
-
-def compose_wps_status_filepath(job_uuid):
-    wps_filename = "{:s}.xml".format(str(job_uuid))
-    wps_filepath = CONFIG["wps_output_dir"].joinpath(wps_filename)
-    return wps_filepath
-
-def parse_wps_status_document(content):
-    ns = {'wps': 'http://www.opengis.net/wps/1.0.0', 'ows': 'http://www.opengis.net/ows/1.1'}
-    root = ET.fromstring(content)
-    if root.tag == "{{{:s}}}ExceptionReport".format(ns["ows"]):
-        exc_el = root.find(".//ows:Exception", namespaces=ns)
-        exc_code = exc_el.get("exceptionCode")
-        exc_message = exc_el.find("ows:ExceptionText", namespaces=ns).text
-        error_message = "{:s}: {:s}".format(exc_code, exc_message)
-        return (WPS_EXCEPTION, error_message)
-    if root.tag == "{{{:s}}}ExecuteResponse".format(ns["wps"]):
-        if root.find(".//wps:ProcessAccepted", namespaces=ns) is not None:
-            return (WPS_ACCEPTED, None)
-        started_el = root.find(".//wps:ProcessStarted", namespaces=ns)
-        if started_el is not None:
-            percent = started_el.get("percentCompleted")
-            percent = int(percent)
-            return (WPS_STARTED, percent)
-        if root.find(".//wps:ProcessSucceeded", namespaces=ns) is not None:
-            return (WPS_SUCCEEDED, None)
-        failed_el = root.find(".//wps:ProcessFailed", namespaces=ns)
-        if failed_el is not None:
-            error_message = None
-            failed_text_el = failed_el.find(".//ows:ExceptionText", namespaces=ns)
-            if failed_text_el is not None:
-                error_message = failed_text_el.text
-            return (WPS_FAILED, error_message)
-    raise QCException("Unexpected structure of wps status document.")
-
-def check_running_job(job_uuid, timeout=JOB_EXPIRE_TIMEOUT):
-    wps_filepath = compose_wps_status_filepath(job_uuid)
-    wps_content = wps_filepath.read_text()
-    (wps_status, wps_other) = parse_wps_status_document(wps_content)
-    if wps_status == WPS_ACCEPTED:
-        return (JOB_WAITING, None)
-    if wps_status == WPS_STARTED:
-        wps_timestamp = wps_filepath.stat().st_mtime
-        now_timestamp = time.time()
-        if wps_timestamp + timeout < now_timestamp:
-            return (JOB_EXPIRED, None)
-        else:
-            return (JOB_RUNNING, wps_other)
-    if wps_status == WPS_SUCCEEDED:
-        try:
-            job_result = load_job_result(job_uuid)
-        except FileNotFoundError:
-            raise QCException("The job {:s} has finished without any job result.".format(job_uuid))
-        return (job_result["status"], None)
-    if wps_status == WPS_FAILED:
-        return (JOB_ERROR, wps_other)
-    if wps_status == WPS_EXCEPTION:
-        return (JOB_ERROR, wps_other)
 
 def compose_attachment_filepath(job_uuid, filename):
     job_dir = compose_job_dir(job_uuid)
@@ -270,22 +199,16 @@ def setup_config():
     * PRODUCT_DIRS;
     * BOUNDARY_DIR;
     * INCOMING_DIR;
-    * WPS_DIR;
     * WORK_DIR;
     * SUBMISSION_DIR;
     * FRONTEND_DB_PATH;
-    * WPS_URL;
     * SHOW_LOGO;
 
     Environment variables consumed by wps:
     * PRODUCT_DIRS;
     * BOUNDARY_DIR;
     * INCOMING_DIR;
-    * WPS_DIR;
     * WORK_DIR,
-    * WPS_PARALLEL_PROCESSES;
-    * WPS_QUEUE_LENGTH;
-    * WPS_DBLOG_URL;
     * PG_HOST;
     * PG_PORT;
     * PG_USER;
@@ -308,9 +231,7 @@ def setup_config():
         config["product_dirs"] = [QC_TOOL_PRODUCT_DIR]
     config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundaries"))
     config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
-    config["wps_dir"] = Path(environ.get("WPS_DIR", "/mnt/qc_tool_volume/wps"))
     config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_volume/work"))
-    config["wps_output_dir"] = config["wps_dir"].joinpath("output")
 
     # Parameters consumed by frontend.
 
@@ -320,14 +241,8 @@ def setup_config():
         config["submission_dir"] = None
     else:
         config["submission_dir"] = Path(config["submission_dir"])
-    config["wps_url"] = environ.get("WPS_URL", "http://qc_tool_wps:5000/wps")
 
     # Parameters consumed by wps.
-
-    ## WPS parameters.
-    config["wps_parallel_processes"] = int(environ.get("WPS_PARALLEL_PROCESSES", 1))
-    config["wps_queue_length"] = int(environ.get("WPS_QUEUE_LENGTH", 50))
-    config["wps_dblog_url"] = environ.get("WPS_DBLOG_URL", "sqlite:////var/dblog.sqlite3")
 
     ## Access to postgis.
     config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")

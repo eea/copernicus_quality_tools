@@ -134,16 +134,14 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-# Media or user-uploaded files
-# the directory with files for checking. This must be readable both by the Frontend and by the WPS
+# Media or user-uploaded files.
+# The directory contains uploaded deliveries.
+# Such directory must be accessible by Frontend container and all Worker containers.
 MEDIA_ROOT = str(CONFIG["incoming_dir"])
 MEDIA_URL = '/media/'
 
 # Submission feature setting.
 SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
-
-# The WPS server url.
-WPS_URL = CONFIG["wps_url"]
 
 # Logo display setting.
 SHOW_LOGO = CONFIG["show_logo"]

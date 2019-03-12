@@ -3,11 +3,9 @@
 
 from pathlib import Path
 
-from django.db import models
+import django.db.models as models
 from django.utils import timezone
 
-from qc_tool.common import check_running_job
-from qc_tool.common import compile_job_report
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.frontend.dashboard.helpers import find_product_description

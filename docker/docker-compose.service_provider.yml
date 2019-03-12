@@ -12,12 +12,10 @@ services:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
-      - WPS_DIR=/mnt/qc_tool_volume/wps
       - WORK_DIR=/mnt/qc_tool_volume/work
       - SUBMISSION_DIR=
       - FRONTEND_PORT=8000
       - FRONTEND_DB_PATH=/mnt/qc_tool_volume/frontend.sqlite3
-      - WPS_URL=http://qc_tool_wps:5000/wps
     networks:
       - qc_tool_network
     volumes:
@@ -32,11 +30,7 @@ services:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
-      - WPS_DIR=/mnt/qc_tool_volume/wps
       - WORK_DIR=/mnt/qc_tool_volume/work
-      - WPS_PARALLEL_PROCESSES=1
-      - WPS_QUEUE_LENGTH=50
-      - WPS_DBLOG_URL=sqlite:////var/dblog.sqlite3
       - PG_HOST=qc_tool_postgis
       - PG_PORT=5432
       - PG_USER=qc_job

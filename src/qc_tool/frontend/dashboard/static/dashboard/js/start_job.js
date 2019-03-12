@@ -133,9 +133,6 @@ function run_job() {
 
     $('#modal-spinner').modal('show');
 
-    // WPS execute must be called via server-side proxy to bypass CORS restriction.
-    var run_url = "/run_job";
-
     // retrieve the checkboxes from tbl_check_details table.
     var unselected_steps = [];
     $ ("#tbl_check_details tbody tr").each(function() {
@@ -160,7 +157,7 @@ function run_job() {
 
     $.ajax({
         type: "POST",
-        url: run_url,
+        url: "/run_job",
         data: data,
         dataType: "json",
         success: function(result) {
