@@ -31,6 +31,7 @@ def pull_job(job_uuid):
 
         if affected_rowcount == 1:
             # The job is available.
+            d = Delivery.objects.get(id=d.id)
             return d
         else:
             # The job has already been taken by another worker.
