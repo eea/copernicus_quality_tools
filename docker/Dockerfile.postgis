@@ -1,7 +1,7 @@
 FROM ubuntu:xenial
 
 LABEL author=gisat.cz
-LABEL description="QC tool environment, image for postgresql & postgis component."
+LABEL description="QC tool environment, postgis service."
 
 # Add repositories and upgrade the system.
 RUN apt-get -y update \

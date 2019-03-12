@@ -1,10 +1,9 @@
-# Dockerfile for building environment for COP15m WPS checking processes.
-# Currently, it utilizes flask as wsgi server.
+# Dockerfile for building environment for checking processes.
 
 FROM ubuntu:xenial
 
 LABEL author=gisat.cz
-LABEL description="QC tool environment."
+LABEL description="QC tool environment, worker service."
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 

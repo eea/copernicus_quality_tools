@@ -204,7 +204,7 @@ def setup_config():
     * FRONTEND_DB_PATH;
     * SHOW_LOGO;
 
-    Environment variables consumed by wps:
+    Environment variables consumed by worker:
     * PRODUCT_DIRS;
     * BOUNDARY_DIR;
     * INCOMING_DIR;
@@ -220,7 +220,7 @@ def setup_config():
     """
     config = {}
 
-    # Parameters common to both frontend and wps.
+    # Parameters common to frontend and worker.
 
     if "PRODUCT_DIRS" in environ:
         _product_dirs = environ.get("PRODUCT_DIRS")
@@ -242,7 +242,7 @@ def setup_config():
     else:
         config["submission_dir"] = Path(config["submission_dir"])
 
-    # Parameters consumed by wps.
+    # Parameters consumed by worker.
 
     ## Access to postgis.
     config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")

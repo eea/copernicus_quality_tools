@@ -5,7 +5,7 @@ The product definition files are cloned from the GitHub master branch every time
 Local edits to a product definition file do not have any effect on the product definition file used by the QC tool.
 
 If you want to use a custom product definition .json file in the QC tool, you will need to adjust your *docker-compose yml* file to use a bind mount.
-Open **docker-compose.service_provider.yml** in a text editor and change the **volumes** sections of **qc_tool_frontend** and **qc_tool_wps**:
+Open **docker-compose.service_provider.yml** in a text editor and change the **volumes** sections of **qc_tool_frontend** and **qc_tool_worker**:
 
 In **qc_tool_frontend** change:
 <pre>
@@ -21,7 +21,7 @@ volumes:
       - ../../copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 </pre>
 
-In **qc_tool_wps** change:
+In **qc_tool_worker** change:
 <pre>
 volumes:
       - qc_tool_volume:/mnt/qc_tool_volume

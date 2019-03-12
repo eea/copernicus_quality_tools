@@ -25,9 +25,9 @@ from qc_tool.common import load_product_definition
 from qc_tool.common import QCException
 from qc_tool.common import TIME_FORMAT
 from qc_tool.common import store_job_result
-from qc_tool.wps.report import generate_pdf_report
-from qc_tool.wps.manager import create_connection_manager
-from qc_tool.wps.manager import create_jobdir_manager
+from qc_tool.worker.report import generate_pdf_report
+from qc_tool.worker.manager import create_connection_manager
+from qc_tool.worker.manager import create_jobdir_manager
 
 
 def make_signature(filepath):

@@ -7,9 +7,9 @@ from uuid import uuid4
 
 from qc_tool.common import CONFIG
 from qc_tool.common import TEST_DATA_DIR
-from qc_tool.wps.dispatch import CheckStatus
-from qc_tool.wps.manager import create_connection_manager
-from qc_tool.wps.manager import create_jobdir_manager
+from qc_tool.worker.dispatch import CheckStatus
+from qc_tool.worker.manager import create_connection_manager
+from qc_tool.worker.manager import create_jobdir_manager
 
 
 class ProductTestCase(TestCase):

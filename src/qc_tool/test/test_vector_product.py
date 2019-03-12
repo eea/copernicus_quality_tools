@@ -6,7 +6,7 @@ from pathlib import Path
 
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import ProductTestCase
-from qc_tool.wps.dispatch import dispatch
+from qc_tool.worker.dispatch import dispatch
 
 
 class Test_clc(ProductTestCase):

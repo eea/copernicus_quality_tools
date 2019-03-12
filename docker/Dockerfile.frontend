@@ -1,10 +1,10 @@
-# Dockerfile for building environment for COP15m WPS checking processes.
-# Currently, it utilizes django for the frontend
+# Dockerfile for building web console.
+# It utilizes django.
 
 FROM ubuntu:xenial
 
 LABEL author=gisat.cz
-LABEL description="QC tool environment, frontend application."
+LABEL description="QC tool environment, frontend service."
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import TestCase
 from uuid import uuid4
 
-from qc_tool.wps.manager import create_jobdir_manager
+from qc_tool.worker.manager import create_jobdir_manager
 
 
 class TestCommon(TestCase):

@@ -25,11 +25,11 @@ services:
       - qc_tool_work:/mnt/qc_tool_work
       - qc_tool_frontend:/mnt/qc_tool_frontend
 
-  qc_tool_wps:
+  qc_tool_worker:
     build:
       context: .
-      dockerfile: Dockerfile.wps
-    image: qc_tool_wps
+      dockerfile: Dockerfile.worker
+    image: qc_tool_worker
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries

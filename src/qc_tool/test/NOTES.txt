@@ -4,7 +4,7 @@ How to run tests for check functions
 Build docker images:
 
 docker build --file=Dockerfile.postgis --tag=qc_tool_postgis .
-docker build --file=Dockerfile.wps --tag=qc_tool_wps .
+docker build --file=Dockerfile.worker --tag=qc_tool_worker .
 
 Run postgis container:
 
@@ -14,20 +14,20 @@ Setup MY_QC_TOOL_HOME to your development source files, eg.
 
 MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools
 
-Switch to other terminal and run tests at qc_tool_wps image:
+Switch to other terminal and run tests at qc_tool_worker image:
 
 docker run --rm \
   --interactive --tty \
-  --name=qc_tool_wps \
+  --name=qc_tool_worker \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_wps python3 -m unittest discover qc_tool.test
+  qc_tool_worker python3 -m unittest discover qc_tool.test
 
 If you want to run tests from specific module only, then remove discover param, eg.
 
 docker run --rm \
   --interactive --tty \
-  --name=qc_tool_wps \
+  --name=qc_tool_worker \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_wps python3 -m unittest qc_tool.test.test_vector_check.TestV13
+  qc_tool_worker python3 -m unittest qc_tool.test.test_vector_check.TestV13
