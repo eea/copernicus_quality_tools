@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  qc_tool_frontend:
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
@@ -25,7 +25,7 @@ services:
       - /home/jiri/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
-  qc_tool_worker:
+  worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
@@ -34,7 +34,7 @@ services:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
-      - PULL_JOB_URL=http://qc_tool_frontend:8000/pull_job
+      - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work
       - PG_HOST=qc_tool_postgis
       - PG_PORT=5432
@@ -52,7 +52,7 @@ services:
       - /home/jiri/qc_tool/qc_tool_work:/mnt/qc_tool_work
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
-  qc_tool_postgis:
+  postgis:
     build:
       context: .
       dockerfile: Dockerfile.postgis
