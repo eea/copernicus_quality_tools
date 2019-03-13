@@ -1,19 +1,17 @@
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, postgis service."
 
 # Add repositories and upgrade the system.
 RUN apt-get -y update \
-    && apt-get -y install wget software-properties-common \
-    && add-apt-repository -y ppa:ubuntugis/ppa \
-    && add-apt-repository "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" \
-    && wget --quiet --output-document=- https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-    && apt-get -y update \
     && apt-get -y upgrade
 
 # Install postgresql & postgis.
-RUN apt-get -y install postgresql-10-postgis-2.4
+# During install tzdata package needs timezone already setup.
+ENV TZ=UTC
+RUN ln -s /usr/share/zoneinfo/UTC /etc/localtime \
+    && apt-get -y install postgresql-10-postgis-2.4
 
 USER postgres
 

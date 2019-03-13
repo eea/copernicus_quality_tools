@@ -1,7 +1,7 @@
 # Dockerfile for building web console.
 # It utilizes django.
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, frontend service."
@@ -12,17 +12,19 @@ ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 RUN apt-get -y update \
     && apt-get -y upgrade \
     && apt-get -y install python3-pip \
-    && pip3 install --upgrade pip \
-    && apt-get -y install git
+    && apt-get -y install wget unzip
 
 # Install qc tool, frontend application.
 RUN cd /usr/local/src \
-    && git clone https://github.com/eea/copernicus_quality_tools \
+    && wget https://github.com/eea/copernicus_quality_tools/archive/master.zip \
+    && unzip ./master.zip \
+    && rm ./master.zip \
+    && mv ./copernicus_quality_tools-master ./copernicus_quality_tools \
     && cd copernicus_quality_tools/src/qc_tool/frontend \
-    && pip3 install -r ./requirements.txt && mkdir /var/lib/qc_tool
+    && pip3 install -r ./requirements.txt \
+    && mkdir /var/lib/qc_tool
 
 # Run frontend application.
-
 CMD cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
     && python3 -m qc_tool.frontend.manage migrate \
     && python3 -m qc_tool.frontend.manage create_default_user --username admin --password admin --superuser \

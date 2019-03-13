@@ -1,23 +1,17 @@
 # Dockerfile for building environment for checking processes.
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 
-# Add repositories.
-RUN apt-get -y update \
-    && apt-get -y install software-properties-common \
-    && add-apt-repository -y ppa:ubuntugis/ppa
-
 # Upgrade the base system.
 RUN apt-get -y update \
     && apt-get -y upgrade \
     && apt-get -y install python3-pip \
-    && pip3 install --upgrade pip \
-    && apt-get -y install git
+    && apt-get -y install wget unzip
 
 # Install geo environment.
 RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy
@@ -25,6 +19,15 @@ RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy
 # Install scikit-image and reportlab.
 RUN pip3 install scikit-image reportlab
 
+# Install bottle.
+RUN pip3 install bottle
+
 # Install qc tool.
 RUN cd /usr/local/src \
-    && git clone https://github.com/eea/copernicus_quality_tools
+    && wget https://github.com/eea/copernicus_quality_tools/archive/master.zip \
+    && unzip ./master.zip \
+    && rm ./master.zip \
+    && mv ./copernicus_quality_tools-master ./copernicus_quality_tools
+
+# Run the scheduler.
+CMD python3 -m qc_tool.worker.scheduler

@@ -208,6 +208,7 @@ def setup_config():
     * PRODUCT_DIRS;
     * BOUNDARY_DIR;
     * INCOMING_DIR;
+    * PULL_JOB_URL;
     * WORK_DIR,
     * PG_HOST;
     * PG_PORT;
@@ -243,6 +244,7 @@ def setup_config():
         config["submission_dir"] = Path(config["submission_dir"])
 
     # Parameters consumed by worker.
+    config["pull_job_url"] = environ.get("PULL_JOB_URL", "http://qc_tool_frontend:8000/pull_job")
 
     ## Access to postgis.
     config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")
