@@ -104,7 +104,7 @@ class Scheduler():
                 log.info("Got a new job {:s}.".format(repr(job_args)))
 
                 # Run the new job.
-                job_controller = JobController(job_table, job_args)
+                job_controller = JobController(job_args)
                 job_controller.start()
             sleep(self.query_interval)
 

@@ -36,7 +36,7 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work
-      - PG_HOST=qc_tool_postgis
+      - PG_HOST=postgis
       - PG_PORT=5432
       - PG_USER=qc_job
       - PG_DATABASE=qc_tool_db
