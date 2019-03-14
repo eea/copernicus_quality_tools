@@ -1,46 +1,44 @@
 # -*- coding: utf-8 -*-
 
+
 import logging
-import json
 import sys
 import shutil
 import traceback
-
-from datetime import datetime
 from pathlib import Path
-from requests import get as requests_get
-from requests.exceptions import RequestException
 from uuid import uuid4
-from xml.etree import ElementTree
 from zipfile import ZipFile
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import MultipleObjectsReturned, PermissionDenied, ObjectDoesNotExist
+from django.core.exceptions import PermissionDenied
 from django.core.files.storage import FileSystemStorage
-
 from django.forms.models import model_to_dict
-
-from django.http import FileResponse, HttpResponse, JsonResponse, Http404
+from django.http import FileResponse
+from django.http import Http404
+from django.http import HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 import qc_tool.frontend.dashboard.models as models
+from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
-from qc_tool.common import compile_job_report
 from qc_tool.common import compose_attachment_filepath
+from qc_tool.common import compile_job_report
 from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
-
+from qc_tool.common import WORKER_PORT
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
 
 
 logger = logging.getLogger(__name__)
+
 
 @login_required
 def deliveries(request):
@@ -383,7 +381,9 @@ def get_attachment(request, job_uuid, attachment_filename):
 @login_required
 def update_job(request, delivery_id):
     delivery = models.Delivery.objects.get(id=delivery_id)
-    delivery.update_job()
+    job_status = check_running_job(delivery.last_job_uuid, delivery.worker_url)
+    if job_status is not None:
+        delivery.update_job(job_status)
     return JsonResponse(model_to_dict(delivery))
 
 @csrf_exempt
@@ -401,12 +401,12 @@ def run_job(request):
 
     result = {"status": "OK",
               "message": "QC Job is waiting for execution (product: {:s}).".format(product_ident)}
-    js = json.dumps(result)
-    return HttpResponse(js, content_type="application/json")
+    return JsonResponse(result)
 
 def pull_job(request):
     job_uuid = str(uuid4())
-    delivery = models.pull_job(job_uuid)
+    worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], WORKER_PORT)
+    delivery = models.pull_job(job_uuid, worker_url)
     if delivery is None:
         response = None
     else:
@@ -415,5 +415,5 @@ def pull_job(request):
                     "product_ident": delivery.product_ident,
                     "filename": delivery.filename,
                     "skip_steps": delivery.skip_steps}
-    return HttpResponse(json.dumps(response), content_type="application/json")
+    return JsonResponse(response, safe=False)
 

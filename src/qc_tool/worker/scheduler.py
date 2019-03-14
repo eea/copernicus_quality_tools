@@ -112,7 +112,7 @@ class Scheduler():
             while job_table.free_slots > 0:
                 # Query a new job.
                 log.debug("Querying a new job...")
-                query_time = datetime.now()
+                query_time = datetime.utcnow()
                 job_args = self.pull_job()
                 if job_args is None:
                     log.debug("Got no new job.")

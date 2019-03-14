@@ -11,7 +11,7 @@ from qc_tool.common import JOB_WAITING
 from qc_tool.frontend.dashboard.helpers import find_product_description
 
 
-def pull_job(job_uuid):
+def pull_job(job_uuid, worker_url):
     """
     UPDATE deliveries SET last_job_uuid=%s WHERE last_job_uuid IS NULL LIMIT 1
     :return:
@@ -24,8 +24,8 @@ def pull_job(job_uuid):
         d = deliveries.get()
 
         # Safeguard against race condition. only return a non-null result if a row was updated in the database.
-        affected_rowcount = Delivery.objects.filter(last_job_status=JOB_WAITING, id=d.id).update(
-            last_job_uuid=job_uuid, last_job_status=JOB_RUNNING)
+        affected_rowcount = (Delivery.objects.filter(last_job_status=JOB_WAITING, id=d.id)
+                                             .update(last_job_uuid=job_uuid, last_job_status=JOB_RUNNING, worker_url=worker_url))
 
         if affected_rowcount == 1:
             # The job is available.
@@ -57,9 +57,9 @@ class Delivery(models.Model):
         self.skip_steps = skip_steps
         self.save()
 
-    def update_job(self):
-        # FIXME: temporarily does nothing
-        pass
+    def update_job(self, job_status):
+        self.last_job_status = job_status
+        self.save()
 
     def submit(self):
         self.date_submitted = timezone.now()
@@ -80,3 +80,4 @@ class Delivery(models.Model):
     last_job_uuid = models.CharField(max_length=32, default=None, blank=True, null=True)
     last_job_status = models.CharField(max_length=64, default=None, blank=True, null=True)
     last_job_percent = models.IntegerField(default=None, blank=True, null=True)
+    worker_url = models.CharField(max_length=500, default=None, blank=True, null=True)

@@ -10,6 +10,9 @@ from os import environ
 from os.path import normpath
 from pathlib import Path
 from shutil import copyfile
+from urllib.error import URLError
+from urllib.parse import urljoin
+from urllib.request import urlopen
 
 
 QC_TOOL_HOME = Path(__file__).parents[2]
@@ -190,6 +193,34 @@ def compile_job_report(job_uuid=None, product_ident=None):
             for i, job_step in enumerate(job_result["steps"]):
                 job_report["steps"][i].update(job_step)
     return job_report
+
+def check_running_job(job_uuid, worker_url):
+    job_status = None
+    worker_info = None
+    url = urljoin(worker_url, "/jobs/{:s}.json".format(job_uuid))
+    try:
+        with urlopen(url) as resp:
+            if resp.status != 200:
+                # Bad request.
+                # FIXME: inform logger about such awkward situation.
+                return JOB_ERROR
+            worker_info = json.loads(resp.read())
+    except URLError as ex:
+        # Cannot connect to worker, maybe the job had already finished and then the worker was shutdown.
+        # FIXME: make notice to log.
+        pass
+    if worker_info is None:
+        # The job has already finished so load status from job result.
+        try:
+            job_result = load_job_result(job_uuid)
+            job_status = job_result.get("status", JOB_ERROR)
+            if job_status is None:
+                job_status = JOB_ERROR
+        except FileNotFoundError:
+            # If the job has already finished there must be correct job result orelse there is some error.
+            # FIXME: inform logger.
+            return JOB_ERROR
+    return job_status
 
 def compose_attachment_filepath(job_uuid, filename):
     job_dir = compose_job_dir(job_uuid)
