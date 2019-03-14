@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from subprocess import Popen
 from time import sleep
+from threading import Event
 from threading import Thread
 from traceback import format_exc
 from urllib.request import Request
@@ -25,20 +26,17 @@ QUERY_INTERVAL = 10
 log = logging.getLogger(__name__)
 
 
-@bottle.route("/info")
-def info():
-    """Returns the job table."""
-    return str(job_table.get_table_info())
+@bottle.route("/jobs.txt")
+def get_jobs():
+    """Gets the whole job table."""
+    return str(job_table.get_table())
 
-@bottle.route("/info")
-def info():
-    """Returns the job table."""
-    return str(job_table.get_table_info())
+@bottle.route("/jobs/<job_uuid>.txt")
+def get_job(job_uuid):
+    """Gets the job info.
 
-@bottle.route("/job/<job_uuid>")
-def job(job_uuid):
-    """Tells if the job is being run, i.e. is in job table."""
-    return str(job_table.get_job_info(job_uuid))
+    This function may be used also for checking the job is still running."""
+    return str(job_table.get_job(job_uuid))
 
 
 class JobTable():
@@ -50,22 +48,19 @@ class JobTable():
     def free_slots(self):
         return self.max_slots - len(self.job_items)
 
-    def get_table_info(self):
-        info = [(job_uuid, job_start_time) for job_uuid, job_start_time in self.job_items.items()]
+    def get_table(self):
+        info = self.job_items
         return info
 
-    def get_job_info(self, job_uuid):
-        job_info = self.job_items.get(job_uuid, None)
-        return str(job_info)
+    def get_job(self, job_uuid):
+        info = self.job_items.get(job_uuid, None)
+        return info
 
-    def add(self, job_uuid):
-        self.job_items[job_uuid] = datetime.now()
+    def put(self, job_uuid):
+        self.job_items[job_uuid] = datetime.utcnow()
 
     def rm(self, job_uuid):
         del self.job_items[job_uuid]
-
-    def is_running(self, job_uuid):
-        return job_uuid in self.job_items
 
 job_table = JobTable()
 
@@ -114,16 +109,20 @@ class JobController():
         self.job_args = job_args
 
     def start(self):
-        t = Thread(target=self.run)
+        put_event = Event()
+        t = Thread(target=self.run, args=(put_event,))
         t.start()
-        # FIXME:
-        # Let the controller thread add the job item to job table.
-        # However, it should be ensured that this thread continues only after the job item is really added to the table.
-        job_table.add(self.job_args["job_uuid"])
+
+        # We need to wait until the controller thread acknowledges the job has been put into job table.
+        # Otherwise the scheduler may pull a new job even if all slots have already been spent.
+        put_event.wait()
+
         log.info("Started controller for job {:s}.".format(self.job_args["job_uuid"]))
     
-    def run(self):
+    def run(self, put_event):
         try:
+            job_table.put(self.job_args["job_uuid"])
+            put_event.set()
             args = ["python3",
                     "-m", "qc_tool.worker.cmd",
                     "--job-uuid", self.job_args["job_uuid"],
