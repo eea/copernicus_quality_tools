@@ -17,7 +17,7 @@ from reportlab.platypus import Paragraph
 from reportlab.platypus import Table
 from reportlab.platypus import TableStyle
 
-from qc_tool.common import compile_job_report
+from qc_tool.common import compile_job_report_data
 from qc_tool.common import JOB_ERROR
 from qc_tool.common import JOB_FAILED
 from qc_tool.common import JOB_OK
@@ -28,7 +28,7 @@ from qc_tool.common import CONFIG
 
 
 def generate_pdf_report(job_report_filepath, job_uuid):
-    job_report = compile_job_report(job_uuid=job_uuid)
+    job_report = compile_job_report_data(job_uuid)
 
     # set report page size to A4
     doc = BaseDocTemplate(str(job_report_filepath), pagesize=A4)

@@ -6,7 +6,6 @@ import sys
 import shutil
 import traceback
 from pathlib import Path
-from uuid import uuid4
 from zipfile import ZipFile
 
 from django.conf import settings
@@ -28,7 +27,8 @@ from qc_tool.common import auth_worker
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_attachment_filepath
-from qc_tool.common import compile_job_report
+from qc_tool.common import compile_job_form_data
+from qc_tool.common import compile_job_report_data
 from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
@@ -342,19 +342,21 @@ def get_job_info(request, product_ident):
     :param product_ident: the name of the product type for example clc
     :return: product details with a list of job steps and their type (system, required, optional)
     """
-    job_report = compile_job_report(product_ident=product_ident)
+    job_report = compile_job_form_data(product_ident)
     return JsonResponse({'job_result': job_report})
 
-def get_job_report(request, job_uuid, product_ident):
-    job_result = compile_job_report(job_uuid=job_uuid, product_ident=product_ident)
+def get_job_report(request, job_uuid):
+    delivery = models.Delivery.objects.get(last_job_uuid=job_uuid)
+    job_result = compile_job_report_data(job_uuid, delivery.product_ident)
     return JsonResponse(job_result, safe=False)
 
 @login_required
-def get_result(request, job_uuid, product_ident):
+def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
     """
-    job_report = compile_job_report(job_uuid=job_uuid, product_ident=product_ident)
+    delivery = models.Delivery.objects.get(last_job_uuid=job_uuid)
+    job_report = compile_job_report_data(job_uuid, delivery.product_ident)
     return render(request, "dashboard/result.html", job_report)
 
 def get_pdf_report(request, job_uuid):
@@ -397,7 +399,7 @@ def run_job(request):
 
     # Update delivery status in the frontend database.
     d = models.Delivery.objects.get(id=delivery_id)
-    d.init_job(product_ident, skip_steps)
+    d.create_job(product_ident, skip_steps)
     logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
 
     result = {"status": "OK",
@@ -411,13 +413,12 @@ def pull_job(request):
             return HttpResponse(status=401)
     except:
         return HttpResponse(status=400)
-    job_uuid = str(uuid4())
     worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], WORKER_PORT)
-    delivery = models.pull_job(job_uuid, worker_url)
+    delivery = models.pull_job(worker_url)
     if delivery is None:
         response = None
     else:
-        response = {"job_uuid": job_uuid,
+        response = {"job_uuid": delivery.last_job_uuid,
                     "username": delivery.user.username,
                     "product_ident": delivery.product_ident,
                     "filename": delivery.filename,

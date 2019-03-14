@@ -39,8 +39,8 @@ function dateFormatter(value, row) {
 
 
 function actionsFormatter(value, row) {
-    // for example /start_job/1234/
-    var start_job_url = '/start_job/' + row.id + '/';
+    // for example /start_job/1234
+    var start_job_url = '/start_job/' + row.id;
     var btn_data = '<div class="btn-group">';
 
     if (row.last_job_status === "waiting" || row.last_job_status === "running" || row.date_submitted) {
@@ -100,31 +100,14 @@ function statusFormatter(value, row, index) {
     if (!row.last_job_status) {
         return 'Not checked';
     }
-    if (value == "failed") {
-        // Do nothing.
-    } else if (value == "waiting") {
-        // Do nothing.
-    } else if (value == "partial") {
-       // Do nothing.
-    } else if (value == "running") {
-        if(row.last_job_percent == null) {
-            value = "running (0 %)";
-        } else {
-            value = "running (" + row.last_job_percent + "% )";
-        }
-    } else if (value == "ok") {
+    if (value == "ok") {
         if (row["is_submitted"]) {
             value = "submitted";
         } else {
             value = "passed";
         }
     }
-
-    return ['<a class="like" href="',
-            "/result/", row.last_job_uuid, "/", row.product_ident,
-            '" title="Show results">',
-            value,
-            '</a>'].join('');
+    return ['<a class="like" href="/result/', row.last_job_uuid, '" title="Show results">', value, '</a>'].join('');
 }
 
 function statusCellStyle(value, row, index) {

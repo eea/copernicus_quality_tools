@@ -156,7 +156,7 @@ def is_system_check(check_ident):
     is_system = module.IS_SYSTEM
     return is_system
 
-def prepare_job_report(product_definition):
+def prepare_job_blueprint(product_definition):
     job_report = {"job_uuid": None,
                   "status": None,
                   "product_ident": product_definition["product_ident"],
@@ -182,34 +182,34 @@ def prepare_job_report(product_definition):
         job_report["steps"].append(step_report)
     return job_report
 
-def compile_job_report(job_uuid=None, product_ident=None):
-    if job_uuid is None:
-        # There is no job, so return job blueprint.
+def compile_job_form_data(product_ident):
+    # There is no job, so return job blueprint.
+    product_definition = load_product_definition(product_ident)
+    job_form = prepare_job_blueprint(product_definition)
+    return job_form
+
+def compile_job_report_data(job_uuid, product_ident=None):
+    job_result = None
+    try:
+        job_result = load_job_result(job_uuid)
+    except FileNotFoundError:
+        pass
+    if job_result is None:
+        if product_ident is None:
+            raise QCException("Can not make report while both job_result and product_ident are unknown.")
+        # Job result does not exist yet so prepare the blueprint.
         product_definition = load_product_definition(product_ident)
-        job_report = prepare_job_report(product_definition)
+        job_report = prepare_job_blueprint(product_definition)
+        job_report["job_uuid"] = job_uuid
     else:
-        # The job exists already.
-        job_result = None
-        try:
-            job_result = load_job_result(job_uuid)
-        except FileNotFoundError:
-            pass
-        if job_result is None:
-            # The job has no result document yet, so return job blueprint.
-            if product_ident is None:
-                raise QCException("Missing product_ident while there is no job result for job {:s}.".format(job_uuid))
-            product_definition = load_product_definition(product_ident)
-            job_report = prepare_job_report(product_definition)
-            job_report["job_uuid"] = job_uuid
-        else:
-            # The job has result document already, so return the result.
-            product_definition = load_product_definition_from_job(job_uuid, job_result["product_ident"])
-            job_report = prepare_job_report(product_definition)
-            step_defs = job_report["steps"]
-            job_report.update(job_result)
-            job_report["steps"] = step_defs
-            for i, job_step in enumerate(job_result["steps"]):
-                job_report["steps"][i].update(job_step)
+        # The job has result document already, so compile the result.
+        product_definition = load_product_definition_from_job(job_uuid, job_result["product_ident"])
+        job_report = prepare_job_blueprint(product_definition)
+        step_defs = job_report["steps"]
+        job_report.update(job_result)
+        job_report["steps"] = step_defs
+        for i, job_step in enumerate(job_result["steps"]):
+            job_report["steps"][i].update(job_step)
     return job_report
 
 def check_running_job(job_uuid, worker_url):

@@ -16,7 +16,7 @@ urlpatterns = [
     path("data/job_info/<product_ident>/", views.get_job_info, name="job_info_json"),
     path("data/product_definition/<product_ident>/", views.get_product_definition, name="product_definition_json"),
     path("data/product_list/", views.get_product_list, name="product_list_json"),
-    path("data/report/<job_uuid>/<product_ident>/report.json", views.get_job_report, name="job_report_json"),
+    path("data/report/<job_uuid>/report.json", views.get_job_report, name="job_report_json"),
     path("data/report/<job_uuid>/report.pdf", views.get_pdf_report, name="job_report_pdf"),
 
     path('upload/', views.file_upload, name='file_upload'),
@@ -28,8 +28,8 @@ urlpatterns = [
     path("run_job", views.run_job, name="run_job"),
     path("pull_job", views.pull_job, name="pull_job"),
 
-    path("start_job/<int:delivery_id>/", views.start_job, name="start_job"),
-    path("result/<job_uuid>/<product_ident>", views.get_result, name="show_result"),
+    path("start_job/<int:delivery_id>", views.start_job, name="start_job"),
+    path("result/<job_uuid>", views.get_result, name="show_result"),
     path("attachment/<job_uuid>/<attachment_filename>/", views.get_attachment, name="get_attachment")
 ]
 

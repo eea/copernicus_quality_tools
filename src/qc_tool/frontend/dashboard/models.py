@@ -2,6 +2,7 @@
 
 
 from pathlib import Path
+from uuid import uuid4
 
 import django.db.models as models
 from django.utils import timezone
@@ -11,7 +12,7 @@ from qc_tool.common import JOB_WAITING
 from qc_tool.frontend.dashboard.helpers import find_product_description
 
 
-def pull_job(job_uuid, worker_url):
+def pull_job(worker_url):
     """
     UPDATE deliveries SET last_job_uuid=%s WHERE last_job_uuid IS NULL LIMIT 1
     :return:
@@ -25,7 +26,7 @@ def pull_job(job_uuid, worker_url):
 
         # Safeguard against race condition. only return a non-null result if a row was updated in the database.
         affected_rowcount = (Delivery.objects.filter(last_job_status=JOB_WAITING, id=d.id)
-                                             .update(last_job_uuid=job_uuid, last_job_status=JOB_RUNNING, worker_url=worker_url))
+                                             .update(last_job_status=JOB_RUNNING, worker_url=worker_url))
 
         if affected_rowcount == 1:
             # The job is available.
@@ -48,8 +49,8 @@ class Delivery(models.Model):
         # file will be uploaded to MEDIA_ROOT/<username>/<filename>
         return str(Path(instance.user.username, filename))
 
-    def init_job(self, product_ident, skip_steps):
-        self.last_job_uuid = None
+    def create_job(self, product_ident, skip_steps):
+        self.last_job_uuid = str(uuid4())
         self.last_job_percent = 0
         self.last_job_status = JOB_WAITING
         self.product_ident = product_ident
