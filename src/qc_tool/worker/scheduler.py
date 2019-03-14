@@ -9,6 +9,9 @@ from time import sleep
 from threading import Event
 from threading import Thread
 from traceback import format_exc
+from urllib.parse import urlencode
+from urllib.parse import urlsplit
+from urllib.parse import urlunsplit
 from urllib.request import Request
 from urllib.request import urlopen
 from uuid import uuid4
@@ -16,6 +19,7 @@ from uuid import uuid4
 import bottle
 
 from qc_tool.common import CONFIG
+from qc_tool.common import get_worker_token
 from qc_tool.common import WORKER_PORT
 from qc_tool.common import WORKER_ADDR
 
@@ -94,7 +98,14 @@ class Scheduler():
     def pull_job(self):
         job_args = None
         try:
-            data = urlopen(Request(self.query_url)).read().strip()
+            # Get worker token and inject it into url.
+            token = get_worker_token()
+            url = list(urlsplit(self.query_url))
+            url[3] = urlencode({"token": token})
+            url = urlunsplit(url)
+
+            # Pull job from frontend.
+            data = urlopen(Request(url)).read().strip()
             log.debug("Pulled job, data={:s}".format(repr(data)))
             job_args = json.loads(data)
         except:

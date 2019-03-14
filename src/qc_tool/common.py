@@ -13,6 +13,7 @@ from shutil import copyfile
 from urllib.error import URLError
 from urllib.parse import urljoin
 from urllib.request import urlopen
+from uuid import uuid4
 
 
 QC_TOOL_HOME = Path(__file__).parents[2]
@@ -21,6 +22,7 @@ TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
 WORKER_PORT = 8000
 WORKER_ADDR = "0.0.0.0"
+WORKER_TOKEN_FILENAME = "worker.token"
 
 JOB_WAITING = "waiting"
 JOB_RUNNING = "running"
@@ -57,6 +59,22 @@ CONFIG = None
 class QCException(Exception):
     pass
 
+
+def create_worker_token():
+    path = CONFIG["work_dir"].joinpath(WORKER_TOKEN_FILENAME)
+    if not path.exists():
+        path.write_text(str(uuid4()))
+
+def get_worker_token():
+    path = CONFIG["work_dir"].joinpath(WORKER_TOKEN_FILENAME)
+    if not path.exists():
+        create_worker_token()
+    stored_token = path.read_text()
+    return stored_token
+
+def auth_worker(token):
+    stored_token = get_worker_token()
+    return token == stored_token
 
 def locate_product_definition(product_ident):
     for product_dir in CONFIG["product_dirs"]:

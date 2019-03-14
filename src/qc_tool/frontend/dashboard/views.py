@@ -24,6 +24,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 import qc_tool.frontend.dashboard.models as models
+from qc_tool.common import auth_worker
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_attachment_filepath
@@ -404,6 +405,12 @@ def run_job(request):
     return JsonResponse(result)
 
 def pull_job(request):
+    try:
+        token = request.GET.get("token")
+        if not auth_worker(token):
+            return HttpResponse(status=401)
+    except:
+        return HttpResponse(status=400)
     job_uuid = str(uuid4())
     worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], WORKER_PORT)
     delivery = models.pull_job(job_uuid, worker_url)
@@ -416,4 +423,3 @@ def pull_job(request):
                     "filename": delivery.filename,
                     "skip_steps": delivery.skip_steps}
     return JsonResponse(response, safe=False)
-
