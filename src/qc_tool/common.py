@@ -16,6 +16,9 @@ QC_TOOL_HOME = Path(__file__).parents[2]
 QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
+WORKER_PORT = 8000
+WORKER_ADDR = "0.0.0.0"
+
 JOB_WAITING = "waiting"
 JOB_RUNNING = "running"
 JOB_OK = "ok"

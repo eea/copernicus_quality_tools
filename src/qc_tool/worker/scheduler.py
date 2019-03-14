@@ -16,51 +16,72 @@ from uuid import uuid4
 import bottle
 
 from qc_tool.common import CONFIG
+from qc_tool.common import WORKER_PORT
+from qc_tool.common import WORKER_ADDR
 
 
-SERVER_PORT = 8000
-SERVER_ADDR = "0.0.0.0"
 QUERY_INTERVAL = 10
 
 
 log = logging.getLogger(__name__)
 
 
-@bottle.route("/jobs.txt")
-def get_jobs():
+@bottle.get("/table.json")
+def get_table():
     """Gets the whole job table."""
-    return str(job_table.get_table())
+    bottle.response.content_type = "application/json"
+    return json.dumps(job_table.get_table_json())
 
-@bottle.route("/jobs/<job_uuid>.txt")
+@bottle.get("/jobs/<job_uuid>.json")
 def get_job(job_uuid):
     """Gets the job info.
 
-    This function may be used also for checking the job is still running."""
-    return str(job_table.get_job(job_uuid))
+    This function may be used for checking the job is still running."""
+    bottle.response.content_type = "application/json"
+    return json.dumps(job_table.get_job_json(job_uuid))
+
+@bottle.get("/max_slots.json")
+def get_max_slots():
+    bottle.response.content_type = "application/json"
+    return json.dumps(job_table.max_slots)
+
+@bottle.put("/max_slots")
+def set_max_slots():
+    max_slots = bottle.request.json
+    if not isinstance(max_slots, int):
+        bottle.abort(400, "Argument must be an integer.")
+    job_table.max_slots = max_slots
+    return
 
 
 class JobTable():
     def __init__(self, max_slots=1):
-        self.job_items = {}
+        self._job_table = {}
         self.max_slots = max_slots
 
     @property
     def free_slots(self):
-        return self.max_slots - len(self.job_items)
+        return self.max_slots - len(self._job_table)
 
-    def get_table(self):
-        info = self.job_items
+    def get_table_json(self):
+        info = []
+        for job_uuid, created in self._job_table.items():
+            info.append({"uuid": job_uuid, "created": created.isoformat()})
         return info
 
-    def get_job(self, job_uuid):
-        info = self.job_items.get(job_uuid, None)
+    def get_job_json(self, job_uuid):
+        created = self._job_table.get(job_uuid, None)
+        if created is None:
+            info = None
+        else:
+            info = {"uuid": job_uuid, "created": created.isoformat()}
         return info
 
     def put(self, job_uuid):
-        self.job_items[job_uuid] = datetime.utcnow()
+        self._job_table[job_uuid] = datetime.utcnow()
 
     def rm(self, job_uuid):
-        del self.job_items[job_uuid]
+        del self._job_table[job_uuid]
 
 job_table = JobTable()
 
@@ -153,7 +174,7 @@ def main():
     scheduler.start()
 
     # Run the web.
-    bottle.run(host=SERVER_ADDR, port=SERVER_PORT)
+    bottle.run(host=WORKER_ADDR, port=WORKER_PORT)
 
 
 if __name__ == "__main__":
