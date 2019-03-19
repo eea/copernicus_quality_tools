@@ -25,10 +25,11 @@ urlpatterns = [
     path('boundaries/', views.boundaries, name='boundaries'),
     path('boundaries_upload/', views.boundaries_upload, name='boundaries_upload'),
 
-    path("run_job", views.run_job, name="run_job"),
+    path("create_job", views.create_job, name="create_job"),
     path("pull_job", views.pull_job, name="pull_job"),
 
-    path("start_job/<int:delivery_id>", views.start_job, name="start_job"),
+    # path("setup_job/<int:delivery_id>", views.setup_job, name="setup_job"),
+    path("setup_job", views.setup_job, name="setup_job"),
     path("result/<job_uuid>", views.get_result, name="show_result"),
     path("attachment/<job_uuid>/<attachment_filename>/", views.get_attachment, name="get_attachment")
 ]

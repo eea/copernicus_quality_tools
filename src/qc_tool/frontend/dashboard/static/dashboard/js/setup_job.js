@@ -100,7 +100,7 @@ $(document).ready(function() {
     // When user clicks the "Launch QA session" button.
     $('#check_form').submit(function(event){
         event.preventDefault();
-        run_job();
+        create_job();
     });
 
     $('#select_product').change(function() {
@@ -129,7 +129,7 @@ function select_all() {
 }
 
 
-function run_job() {
+function create_job() {
 
     $('#modal-spinner').modal('show');
 
@@ -150,20 +150,24 @@ function run_job() {
     });
 
     var data = {
-        "delivery_id": $("#delivery_id").val(),
+        "delivery_ids": $("#delivery_ids").val(),
         "product_ident": $("#select_product").val(),
         "skip_steps": unselected_steps.join(",")
     };
 
     $.ajax({
         type: "POST",
-        url: "/run_job",
+        url: "/create_job",
         data: data,
         dataType: "json",
         success: function(result) {
             $("#modal-spinner").modal("hide");
+            var msg_title = "QC Job has been added to queue.";
+            if (result.num_created > 1) {
+                msg_title = result.num_created + " QC jobs have been added to queue.";
+            }
             var dlg_ok = BootstrapDialog.show({
-                title: "QC Job has been added to queue.",
+                title: msg_title,
                 message: result.message,
                 buttons: [{
                     label: "OK",

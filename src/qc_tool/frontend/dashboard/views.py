@@ -16,6 +16,7 @@ from django.forms.models import model_to_dict
 from django.http import FileResponse
 from django.http import Http404
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
@@ -26,6 +27,7 @@ import qc_tool.frontend.dashboard.models as models
 from qc_tool.common import auth_worker
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
+from qc_tool.common import JOB_RUNNING
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
@@ -51,28 +53,97 @@ def deliveries(request):
 
 
 @login_required
-def start_job(request, delivery_id):
+def setup_job(request):
     """
     Displays a page for starting a new QA job
     :param delivery_id: The ID of the delivery ZIP file.
     """
-    delivery = get_object_or_404(models.Delivery, pk=delivery_id)
+
+    delivery_ids = request.GET.get("deliveries", "").split(",")
+
+    if len(delivery_ids) == 0:
+        raise Http404("No delivery IDs have been specified.")
+
+    # input validation
+    for delivery_id in delivery_ids:
+        try:
+            int(delivery_id)
+        except ValueError:
+            return HttpResponseBadRequest("Deliveries parameter must be comma-separated ID's.")
 
     product_infos = get_product_descriptions()
     product_list = [{"product_ident": product_ident, "product_description": product_name}
                     for product_ident, product_name in product_infos.items()]
     product_list = sorted(product_list, key=lambda x: x["product_description"])
 
-    # Starting a job for a submitted delivery is not permitted.
-    if delivery.date_submitted is not None:
-        raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
+    deliveries = []
+    for delivery_id in delivery_ids:
+        delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    context = {"delivery_id": delivery.id,
-               "filename": delivery.filename,
-               "product_ident": delivery.product_ident,
+        # Starting a job for a submitted delivery is not permitted.
+        if delivery.date_submitted is not None:
+            raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
+
+        # Starting a job for another user's delivery is not permitted.
+        if delivery.user != request.user:
+            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+        deliveries.append(delivery)
+
+    # pass in product ident (only for the single delivery case)
+    if len(deliveries) == 1:
+        product_ident = deliveries[0].product_ident
+    else:
+        product_ident = None
+
+    context = {"deliveries": deliveries,
+               "product_ident": product_ident,
                "product_list": product_list,
                "show_logo": settings.SHOW_LOGO}
-    return render(request, "dashboard/start_job.html", context)
+    return render(request, "dashboard/setup_job.html", context)
+
+
+    if len(delivery_ids) == 1:
+
+        delivery_id = int(delivery_ids[0])
+
+        delivery = get_object_or_404(models.Delivery, pk=delivery_id)
+
+        product_infos = get_product_descriptions()
+        product_list = [{"product_ident": product_ident, "product_description": product_name}
+                        for product_ident, product_name in product_infos.items()]
+        product_list = sorted(product_list, key=lambda x: x["product_description"])
+
+        # Starting a job for a submitted delivery is not permitted.
+        if delivery.date_submitted is not None:
+            raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
+
+        context = {"deliveries": [delivery],
+                   "product_ident": delivery.product_ident,
+                   "product_list": product_list,
+                   "show_logo": settings.SHOW_LOGO}
+        return render(request, "dashboard/setup_job.html", context)
+
+    else:
+        product_infos = get_product_descriptions()
+        product_list = [{"product_ident": product_ident, "product_description": product_name}
+                        for product_ident, product_name in product_infos.items()]
+        product_list = sorted(product_list, key=lambda x: x["product_description"])
+        product_ident = None
+
+        deliveries = []
+        for delivery_id in delivery_ids:
+            delivery = get_object_or_404(models.Delivery, pk=delivery_id)
+            deliveries.append(delivery)
+
+            # Starting a job for a submitted delivery is not permitted.
+            if delivery.date_submitted is not None:
+                raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
+
+        context = {"deliveries": deliveries,
+                   "product_ident": None,
+                   "product_list": product_list,
+                   "show_logo": settings.SHOW_LOGO}
+        return render(request, "dashboard/setup_job.html", context)
 
 
 @login_required
@@ -384,26 +455,35 @@ def get_attachment(request, job_uuid, attachment_filename):
 @login_required
 def update_job(request, delivery_id):
     delivery = models.Delivery.objects.get(id=delivery_id)
-    job_status = check_running_job(delivery.last_job_uuid, delivery.worker_url)
-    if job_status is not None:
-        delivery.update_job(job_status)
+    if delivery.last_job_status == JOB_RUNNING:
+        job_status = check_running_job(delivery.last_job_uuid, delivery.worker_url)
+        if job_status is not None:
+            delivery.update_job(job_status)
     return JsonResponse(model_to_dict(delivery))
 
 @csrf_exempt
-def run_job(request):
-    delivery_id = request.POST.get("delivery_id")
-    product_ident = request.POST.get("product_ident")
-    skip_steps = request.POST.get("skip_steps")
-    if skip_steps == "":
-        skip_steps = None
+def create_job(request):
+    delivery_ids = request.POST.get("delivery_ids").split(",")
+    num_created = 0
 
-    # Update delivery status in the frontend database.
-    d = models.Delivery.objects.get(id=delivery_id)
-    d.create_job(product_ident, skip_steps)
-    logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
+    for delivery_id in delivery_ids:
+        product_ident = request.POST.get("product_ident")
+        skip_steps = request.POST.get("skip_steps")
+        if skip_steps == "":
+            skip_steps = None
 
-    result = {"status": "OK",
-              "message": "QC Job is waiting for execution (product: {:s}).".format(product_ident)}
+        # Update delivery status in the frontend database.
+        d = models.Delivery.objects.get(id=int(delivery_id))
+        d.create_job(product_ident, skip_steps)
+        num_created += 1
+        logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
+
+    if num_created == 1:
+        msg = "QC Job has been set up for execution (product: {:s}).".format(product_ident)
+    else:
+        msg = "{:d} QC Jobs have been set up for execution (product: {:s}).".format(num_created, product_ident)
+
+    result = {"num_created": num_created, "status": "OK", "message": msg}
     return JsonResponse(result)
 
 def pull_job(request):

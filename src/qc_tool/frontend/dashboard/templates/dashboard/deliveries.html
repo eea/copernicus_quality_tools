@@ -32,13 +32,18 @@
                     <div role="tabpanel" class="tab-pane active" id="recent">
                         <div id="runs-toolbar-1">
                             <a href="{% url 'file_upload' %}" class="btn btn-success" role="button">
-                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                <span class="glyphicon glyphicon-upload" aria-hidden="true"></span>
                                 Upload ZIP File(s)
                             </a>
+                            <span>&nbsp;&nbsp;</span>
+                            <button id="btn-qc-multi" onclick="" class="btn btn-success mr-10" disabled>
+                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                QC all selected</button>
                         </div>
-                        <table id="tbl-deliveries" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="client">
+                        <table id="tbl-deliveries" class="table" data-checkbox-header="true" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
+                                <th data-checkbox="true"></th>
                                 <th data-field="id" data-sortable="true">ID</th>
                                 <th data-field="filename" data-sortable="true">Name</th>
                                 <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
@@ -81,9 +86,6 @@
                     </div>
                 </div>
             </div>
-
-
-
         </div>
     </div>
 
@@ -93,6 +95,11 @@
 
 {% block js %}
     {{ block.super }}
+    {% if submission_enabled %}
+    <script type="text/javascript">var SUBMISSION_ENABLED = true;</script>
+    {% else %}
+    <script type="text/javascript">var SUBMISSION_ENABLED = false;</script>
+    {% endif %}
     <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
     <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
     <script src="{% static 'dashboard/js/deliveries.js' %}"></script>

@@ -39,8 +39,7 @@ function dateFormatter(value, row) {
 
 
 function actionsFormatter(value, row) {
-    // for example /start_job/1234
-    var start_job_url = '/start_job/' + row.id;
+    // for example /setup_job/1234
     var btn_data = '<div class="btn-group">';
 
     if (row.last_job_status === "waiting" || row.last_job_status === "running" || row.date_submitted) {
@@ -51,20 +50,20 @@ function actionsFormatter(value, row) {
         }
         btn_data += "<a class=\"btn btn-sm btn-success\" role=\"button\" disabled data-toggle=\"tooltip\"";
         btn_data += 'title="Cannot run quality controls for this delivery. ' + tooltip_message;
-        btn_data += '" href="' + start_job_url + '" ' + '>QC</a>';
+        btn_data += '">QC</a>';
         btn_data += ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ';
         btn_data += 'title="Cannot delete this delivery. ' + tooltip_message + '" disabled>Delete</button>';
     } else {
         // job is not running and delivery is not submitted --> QC button is enabled
         btn_data += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
-        btn_data += 'title="Run quality controls for this delivery." href="' + start_job_url + '" ' + '>QC</a>';
+        btn_data += 'title="Run quality controls for this delivery." href="/setup_job/' + row.id + '" >QC</a>';
         btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
         btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
         btn_data += 'Delete</button>';
     }
 
     // "Submit to EEA" button visibility is controlled by the SUBMISSION_ENABLED setting.
-    if (row.submission_enabled) {
+    if (SUBMISSION_ENABLED) {
         if (row.date_submitted) {
             btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
             btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';
@@ -222,6 +221,50 @@ $(document).ready(function() {
 
     // Set defult tooltip in each table row.
     $('[data-toggle="tooltip"]').tooltip();
+
+    // Enable or disable 'QC all selected' button based on selected rows
+    var toggle_select_button = function() {
+        var numChecked = $("#tbl-deliveries").bootstrapTable("getSelections").length;
+        if (numChecked === 0) {
+            $("#btn-qc-multi").text("QC all selected");
+            $("#btn-qc-multi").prop("disabled", true);
+        } else {
+            $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
+            $("#btn-qc-multi").prop("disabled", false);
+        }
+    }
+
+    // check one row
+    $('#tbl-deliveries').on('check.bs.table', function (e, row) {
+        toggle_select_button();
+    });
+
+    // check all rows
+    $('#tbl-deliveries').on('check-all.bs.table', function () {
+        toggle_select_button();
+    });
+
+    // uncheck one row
+    $('#tbl-deliveries').on('uncheck.bs.table', function (e, row) {
+        toggle_select_button();
+    });
+
+    // uncheck all rows
+    $('#tbl-deliveries').on('uncheck-all.bs.table', function () {
+        toggle_select_button();
+    });
+
+    // "QC all selected" button is clicked
+    $('#btn-qc-multi').on('click', function() {
+        console.log("QC all selected button clicked!");
+        if ($("#tbl-deliveries").bootstrapTable("getSelections").length === 0) {
+            alert("Please select at least one delivery.");
+        }
+        var selected_delivery_ids = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+            return row.id
+        });
+        $(location).attr("href","/setup_job?deliveries=" + selected_delivery_ids.join(","));
+    })
 
     // Start the timer to auto-refresh status of running jobs. Check for updates every 5 seconds.
     update_job_statuses();

@@ -62,6 +62,8 @@ class QCException(Exception):
 
 def create_worker_token():
     path = CONFIG["work_dir"].joinpath(WORKER_TOKEN_FILENAME)
+    Path(CONFIG["work_dir"]).mkdir(parents=True, exist_ok=True)
+
     if not path.exists():
         path.write_text(str(uuid4()))
 

@@ -22,10 +22,17 @@
                     <div class="panel panel-primary">
                         <div class="panel-heading">
                             <div class="panel-title">
+                                Setup new QC job
                                 {% if product_ident %}
-                                Setup new QC job for product <strong>{{product_ident}}</strong> (delivery: <strong>{{filename}}</strong>)
+                                &nbsp; for product <strong>{{product_ident}}</strong>
+                                {% endif %}
+
+                                {% if deliveries|length > 1 %}
+                                    <strong> ({{deliveries|length}} deliveries)</strong>
                                 {% else %}
-                                Setup new QC job for delivery: <strong>{{filename}}</strong>
+                                    {% for delivery in deliveries %}
+                                        (delivery: <strong>{{delivery.filename}}</strong>)
+                                    {% endfor %}
                                 {% endif %}
                             </div>
                         </div>
@@ -35,7 +42,16 @@
                                 <fieldset></fieldset>
 
                                 <div class="form-group">
-                                    <label>Selected delivery file: {{filename}}</label>
+                                    {% if deliveries|length > 1 %}
+                                    <label>Selected delivery files:</label>
+                                    {% else %}
+                                    <label>Selected delivery file:</label>
+                                    {% endif %}
+
+                                    {% for delivery in deliveries %}
+                                    {{delivery.filename}}
+                                    {% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
                                 </div>
 
                                 <div class="row">
@@ -45,7 +61,8 @@
                                             <span>  - </span>
                                             <input id="preselected_product" type="hidden" value="{{ product_ident }}">
                                             <input id="preselected_file" type="hidden" value="{{ filename }}">
-                                            <input id="delivery_id" type="hidden" value="{{ delivery_id }}">
+                                            <input id="delivery_ids" type="hidden"
+                                                   value="{% for d in deliveries %}{{d.id}}{% if not forloop.last %},{% endif %}{% endfor %}">
                                             <input id="current_username" type="hidden" value="{{ user.get_username }}">
                                             <select id="select_product" name="select_product" class="form-control" required
                                             data-error-msg="Please select a product.">
@@ -112,5 +129,5 @@
     <script src="{% static 'dashboard/js/jquery.validate.min.js' %}" type="text/javascript"></script>
     <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
     <script src="{% static 'dashboard/js/spin.min.js' %}" type="text/javascript"></script>
-    <script src="{% static 'dashboard/js/start_job.js' %}" type="text/javascript"></script>
+    <script src="{% static 'dashboard/js/setup_job.js' %}" type="text/javascript"></script>
 {% endblock js %}
