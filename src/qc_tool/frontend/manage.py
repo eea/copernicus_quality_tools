@@ -4,9 +4,6 @@ import sys
 
 
 def main():
-    from qc_tool.common import create_worker_token
-    create_worker_token()
-
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qc_tool.frontend.settings")
     try:
         from django.core.management import execute_from_command_line

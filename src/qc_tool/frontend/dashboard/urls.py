@@ -36,3 +36,7 @@ urlpatterns = [
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 urlpatterns += staticfiles_urlpatterns()
+
+# On initial startup: create token for worker authentication.
+from qc_tool.common import create_worker_token
+create_worker_token()
