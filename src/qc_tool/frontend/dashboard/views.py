@@ -102,50 +102,6 @@ def setup_job(request):
     return render(request, "dashboard/setup_job.html", context)
 
 
-    if len(delivery_ids) == 1:
-
-        delivery_id = int(delivery_ids[0])
-
-        delivery = get_object_or_404(models.Delivery, pk=delivery_id)
-
-        product_infos = get_product_descriptions()
-        product_list = [{"product_ident": product_ident, "product_description": product_name}
-                        for product_ident, product_name in product_infos.items()]
-        product_list = sorted(product_list, key=lambda x: x["product_description"])
-
-        # Starting a job for a submitted delivery is not permitted.
-        if delivery.date_submitted is not None:
-            raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
-
-        context = {"deliveries": [delivery],
-                   "product_ident": delivery.product_ident,
-                   "product_list": product_list,
-                   "show_logo": settings.SHOW_LOGO}
-        return render(request, "dashboard/setup_job.html", context)
-
-    else:
-        product_infos = get_product_descriptions()
-        product_list = [{"product_ident": product_ident, "product_description": product_name}
-                        for product_ident, product_name in product_infos.items()]
-        product_list = sorted(product_list, key=lambda x: x["product_description"])
-        product_ident = None
-
-        deliveries = []
-        for delivery_id in delivery_ids:
-            delivery = get_object_or_404(models.Delivery, pk=delivery_id)
-            deliveries.append(delivery)
-
-            # Starting a job for a submitted delivery is not permitted.
-            if delivery.date_submitted is not None:
-                raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
-
-        context = {"deliveries": deliveries,
-                   "product_ident": None,
-                   "product_list": product_list,
-                   "show_logo": settings.SHOW_LOGO}
-        return render(request, "dashboard/setup_job.html", context)
-
-
 @login_required
 def get_deliveries_json(request):
     """
@@ -214,7 +170,6 @@ def file_upload(request):
             d.size_bytes = dst_filepath.stat().st_size
             d.product_ident = product_ident
             d.product_description = product_description
-            d.job_status = "Not checked"
             d.user = request.user
             d.save()
             logger.debug("file info object saved successfully to database.")
@@ -342,17 +297,64 @@ def delivery_delete(request):
     Deletes a delivery from the database and deleted the associated ZIP file from the filesystem.
     """
     if request.method == "POST":
-        file_id = request.POST.get("id")
-        filename = request.POST.get("filename")
+        delivery_ids = request.POST.get("ids")
 
-        logger.debug("delivery_delete id=" + str(file_id))
+        logger.debug("delivery_delete ids={:s}".format(delivery_ids))
 
-        f = models.Delivery.objects.get(id=file_id)
-        file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(f.filename)
-        if file_path.exists():
-            file_path.unlink()
-        f.delete()
-        return JsonResponse({"status":"ok", "message": "File {0} deleted successfully.".format(filename)})
+        delivery_ids = request.POST.get("ids").split(",")
+        num_deleted = 0
+
+        # Job status validation.
+        for delivery_id in delivery_ids:
+            try:
+                int(delivery_id)
+            except ValueError:
+                return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
+
+            # Existence validation.
+            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
+
+            # User validation.
+            if request.user.id != d.user.id:
+                return PermissionDenied("User {:s} is not authorized to delete delivery {:d}"
+                                        .format(request.user.username, d.id))
+
+            # Job status validation.
+            if d.last_job_status == JOB_RUNNING:
+                return JsonResponse({"status": "error",
+                                     "message": "delivery {:s} cannot be deleted. QC job is currently running."
+                                                .format(d.filename)})
+
+        deleted_filenames = []
+        for delivery_id in delivery_ids:
+
+            # Input validation.
+            try:
+                int(delivery_id)
+            except ValueError:
+                return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
+
+            # Existence validation.
+            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
+
+            # User validation.
+            if request.user.id != d.user.id:
+                return PermissionDenied("User {:s} is not authorized to delete delivery {:d}"
+                                        .format(request.user.username, d.id))
+
+            # Job status validation.
+            if d.last_job_status == JOB_RUNNING:
+                return JsonResponse({"status": "error",
+                                     "message": "delivery {:s} cannot be deleted. QC job is currently running."
+                                                .format(d.filename)})
+
+            file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+            if file_path.exists():
+                file_path.unlink()
+            d.delete()
+            deleted_filenames.append(file_path.name)
+        return JsonResponse({"status":"ok", "message": "{:d} deliveries deleted successfully."
+                            .format(len(deleted_filenames))})
 
 
 @csrf_exempt
@@ -376,8 +378,6 @@ def submit_delivery_to_eea(request):
             d.save()
             logger.error("ERROR submitting delivery to EEA. file {:s}. exception {:s}".format(filename, str(e)))
             raise IOError(e)
-            #return JsonResponse({"status": "error",
-            #                     "message": "ERROR submitting file {:s} to EEA. {:s}".format(filename, str(e))})
 
         return JsonResponse({"status":"ok",
                              "message": "File {0} successfully submitted to EEA.".format(filename)})
@@ -471,6 +471,12 @@ def create_job(request):
         skip_steps = request.POST.get("skip_steps")
         if skip_steps == "":
             skip_steps = None
+
+        # Input validation.
+        try:
+            int(delivery_id)
+        except ValueError:
+            return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
 
         # Update delivery status in the frontend database.
         d = models.Delivery.objects.get(id=int(delivery_id))

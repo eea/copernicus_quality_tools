@@ -56,7 +56,7 @@ function actionsFormatter(value, row) {
     } else {
         // job is not running and delivery is not submitted --> QC button is enabled
         btn_data += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
-        btn_data += 'title="Run quality controls for this delivery." href="/setup_job/' + row.id + '" >QC</a>';
+        btn_data += 'title="Run quality controls for this delivery." href="/setup_job?deliveries=' + row.id + '" >QC</a>';
         btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
         btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
         btn_data += 'Delete</button>';
@@ -120,27 +120,83 @@ function statusCellStyle(value, row, index) {
     return {};
 }
 
-function delete_function(id, filename) {
+
+// Enable or disable 'QC all selected' button based on selected rows
+function toggle_select_button() {
+    var numChecked = $("#tbl-deliveries").bootstrapTable("getSelections").length;
+    if (numChecked === 0) {
+        $("#btn-qc-multi").text("QC all selected");
+        $("#btn-qc-multi").prop("disabled", true);
+        $("#btn-delete-multi").text("Delete all selected");
+        $("#btn-delete-multi").prop("disabled", true);
+    } else {
+        $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
+        $("#btn-qc-multi").prop("disabled", false);
+        $("#btn-delete-multi").text("Delete all selected (" + numChecked + ")");
+        $("#btn-delete-multi").prop("disabled", false);
+    }
+}
+
+
+function delete_function(delivery_ids, filenames) {
+    var msg_title = "Are you sure you want to delete the delivery ZIP file?";
+
+    // number of deliveries to delete
+    console.log(delivery_ids);
+    console.log(filenames);
+    var num_deliveries = delivery_ids.toString().split(",").length;
+
+    if (num_deliveries > 1) {
+        msg_title = "Are you sure you want to delete " + num_deliveries + " delivery ZIP files?";
+    }
+    if (num_deliveries > 10) {
+        msg_filenames = filenames.split(",").slice(0, 10).join("<br>") + "<br> ...and " + (num_deliveries - 10) + " others.";
+    } else if (num_deliveries > 0) {
+        msg_filenames = filenames.split(",").slice(0, 10).join("<br>");
+    }
     var dlg_ok = BootstrapDialog.show({
         type: BootstrapDialog.TYPE_DANGER,
-        title: "Are you sure you want to delete the delivery ZIP file?",
-        message: filename,
+        title: msg_title,
+        message: msg_filenames, //filenames.replace(/,/g, "<br>"), //replaces all commas by newline.
         buttons: [{
             label: "Yes",
             cssClass: "btn-default",
             action: function(dialog) {
-                data = {"id": id, "filename": filename};
+                data = {"ids": delivery_ids};
                 $.ajax({
                     type: "POST",
                     url: "/delivery/delete/",
                     data: data,
                     dataType: "json",
                     success: function(result) {
+                        if (result.status === "error") {
+                            var dlg_err = BootstrapDialog.show({
+                                type: BootstrapDialog.TYPE_WARNING,
+                                title: "Cannot delete deliveries.",
+                                message: "Error deleting deliveries. " + result.message,
+                                buttons: [{
+                                    label: "OK",
+                                    cssClass: "btn-default",
+                                    action: function(dialog) {dialog.close();}
+                                }]
+                            });
+                        }
                         $('#tbl-deliveries').bootstrapTable('refresh');
                         dialog.close();
                     },
-                    error: function(result)  { q("error deleting file!") ;  }
-                })
+                    error: function(result)  {
+                         var dlg_err = BootstrapDialog.show({
+                            type: BootstrapDialog.TYPE_WARNING,
+                            title: "Error",
+                            message: "Error deleting deliveries.",
+                            buttons: [{
+                                label: "OK",
+                                cssClass: "btn-default",
+                                action: function(dialog) {dialog.close();}
+                            }]
+                        });
+                    }
+                });
             }
         }, {
             label: "No",
@@ -222,18 +278,6 @@ $(document).ready(function() {
     // Set defult tooltip in each table row.
     $('[data-toggle="tooltip"]').tooltip();
 
-    // Enable or disable 'QC all selected' button based on selected rows
-    var toggle_select_button = function() {
-        var numChecked = $("#tbl-deliveries").bootstrapTable("getSelections").length;
-        if (numChecked === 0) {
-            $("#btn-qc-multi").text("QC all selected");
-            $("#btn-qc-multi").prop("disabled", true);
-        } else {
-            $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
-            $("#btn-qc-multi").prop("disabled", false);
-        }
-    }
-
     // check one row
     $('#tbl-deliveries').on('check.bs.table', function (e, row) {
         toggle_select_button();
@@ -254,6 +298,10 @@ $(document).ready(function() {
         toggle_select_button();
     });
 
+    $('#tbl-deliveries').on('load-success.bs.table', function () {
+        toggle_select_button();
+    });
+
     // "QC all selected" button is clicked
     $('#btn-qc-multi').on('click', function() {
         console.log("QC all selected button clicked!");
@@ -266,7 +314,25 @@ $(document).ready(function() {
         $(location).attr("href","/setup_job?deliveries=" + selected_delivery_ids.join(","));
     })
 
+    // "Delete all selected" button is clicked
+    $('#btn-delete-multi').on('click', function() {
+        console.log("Delete all selected button clicked!");
+        if ($("#tbl-deliveries").bootstrapTable("getSelections").length === 0) {
+            alert("Please select at least one delivery.");
+            toggle_select_button();
+            return;
+        }
+        var selected_delivery_ids = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+            return row.id
+        });
+        var selected_delivery_filenames = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+            return row.filename
+        });
+        delete_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
+    })
+
     // Start the timer to auto-refresh status of running jobs. Check for updates every 5 seconds.
+    toggle_select_button();
     update_job_statuses();
     setInterval(function(){update_job_statuses();}, 5000);
 });
