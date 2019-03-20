@@ -12,22 +12,15 @@ IS_SYSTEM = True
 
 def run_check(params, status):
     zip_filepath = params["filepath"]
-    extract_dir = params["tmp_dir"].joinpath("r_unzip.d")
-    extract_dir.mkdir()
+    unzip_dir = params["tmp_dir"].joinpath("r_unzip.d")
+    unzip_dir.mkdir()
     
     # Unzip the source zip file.
     try:
         with ZipFile(str(zip_filepath)) as zip_file:
-            zip_file.extractall(path=str(extract_dir))
+            zip_file.extractall(path=str(unzip_dir))
     except Exception as ex:
         status.aborted("Error unzipping file {:s}.".format(zip_filepath.filename))
         return
 
-    # Find tif file.
-    tif_filepaths = [path for path in list(extract_dir.glob("**/*")) if path.name.lower().endswith(".tif")]
-    if len(tif_filepaths) != 1 or not tif_filepaths[0].is_file():
-        status.aborted("There must be exactly one .tif file in the zip file. Found {:d} .tif files."
-                       .format(len(tif_filepaths)))
-        return
-
-    status.add_params({"filepath": tif_filepaths[0]})
+    status.add_params({"unzip_dir": unzip_dir})

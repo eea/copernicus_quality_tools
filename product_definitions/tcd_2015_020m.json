@@ -1,25 +1,19 @@
 {
-  "description": "HRL Tree Cover Density (100m)",
+  "description": "HRL Tree cover density 2015 (20m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
       "required": true
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "file_name_regex": "^tcd_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$",
+        "layer_names": {
+          "tcd_020m": "^tcd_(?P<reference_year>[0-9]{4})_020m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"
+        },
         "extensions": [".tif", ".tfw", ".xml|.tif.xml", ".tif.vat.dbf"],
-        "country_codes": ["al", "at",
+        "aoi_codes": ["al", "at",
                           "ba", "be", "bg",
                           "ch", "cy", "cz",
                           "de", "dk",
@@ -40,9 +34,19 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.format",
+      "required": true,
+      "parameters": {
+        "layers": ["tcd_020m"],
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
+        "layers": ["tcd_020m"],
         "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)", "(class_name|classnames)"]
       }
     },
@@ -50,6 +54,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
+        "layers": ["tcd_020m"],
         "epsg": [3035]
       }
     },
@@ -57,19 +62,22 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "pixelsize": 100
+        "layers": ["tcd_020m"],
+        "pixelsize": 20
       }
     },
     {
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
+        "layers": ["tcd_020m"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
+        "layers": ["tcd_020m"],
         "datatype": "byte"
       }
     },
@@ -77,31 +85,41 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "compression": ["LZW", "PackBits"]
+        "layers": ["tcd_020m"],
+        "compression": ["LZW"]
       }
     },
     {
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "validcodes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 254, 255]
-      }
-    },
-     {
-      "check_ident": "qc_tool.raster.gap",
-      "required": false,
-       "parameters": {
-        "outside_area_code": 255
+        "layers": ["tcd_020m"],
+        "validcodes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                       11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                       21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                       31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                       41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+                       51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+                       61, 62, 63, 64, 65, 66, 67, 68, 69, 70,
+                       71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
+                       81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+                       91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
+                       254, 255]
       }
     },
     {
-      "check_ident": "qc_tool.raster.inspire",
-      "required": false
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["tcd_020m"],
+        "outside_area_code": 255
+      }
     },
     {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
+        "layers": ["tcd_020m"],
         "colors": {
           "0": [240, 240, 240],
           "1": [186, 255, 172],
@@ -207,6 +225,13 @@
           "254": [153, 153, 153],
           "255": [0, 0, 0]
         }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["tcd_020m"]
       }
     }
   ]

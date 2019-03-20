@@ -1,25 +1,20 @@
 {
-  "description": "HRL Forest Type (100m)",
+  "description": "HRL Forest Type 2015 (100m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
       "required": true
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
+        "layer_names": {
+          "fty_100m": "^fty_(?P<reference_year>[0-9]{4})_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"
+        },
         "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$",
         "extensions": [".tif", ".tfw", ".xml|.tif.xml", ".tif.vat.dbf"],
-        "country_codes": ["al", "at",
+        "aoi_codes": ["al", "at",
                           "ba", "be", "bg",
                           "ch", "cy", "cz",
                           "de", "dk",
@@ -40,9 +35,19 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.format",
+      "required": true,
+      "parameters": {
+        "layers": ["fty_100m"],
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"],
         "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
       }
     },
@@ -50,6 +55,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"],
         "epsg": [3035]
       }
     },
@@ -57,6 +63,7 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"],
         "pixelsize": 100
       }
     },
@@ -64,12 +71,14 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"],
         "datatype": "byte"
       }
     },
@@ -77,13 +86,15 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "compression": ["LZW", "PackBits"]
+        "layers": ["fty_100m"],
+        "compression": ["LZW"]
       }
     },
     {
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"],
         "validcodes": [0, 1, 2, 3, 254, 255]
       }
     },
@@ -91,17 +102,15 @@
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"],
         "outside_area_code": 255
       }
-    },
-    {
-      "check_ident": "qc_tool.raster.inspire",
-      "required": false
     },
     {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
+        "layers": ["fty_100m"],
         "colors": {
           "0":[240, 240, 240],
           "1":[70, 158, 74],
@@ -110,6 +119,13 @@
           "254":[153, 153, 153],
           "255":[0, 0, 0]
         }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["fty_100m"]
       }
     }
   ]

@@ -10,35 +10,27 @@ def run_check(params, status):
     import osgeo.gdal as gdal
     import osgeo.osr as osr
 
-    dataset = gdal.Open(str(params["filepath"]))
+    from qc_tool.raster.helper import do_raster_layers
 
-    srs = osr.SpatialReference(dataset.GetProjection())
-    if srs is None or srs.IsProjected() == 0:
-        status.failed("The raster file has no projected coordinate system associated.")
-        return
+    for layer_def in do_raster_layers(params):
+        ds = gdal.Open(str(layer_def["src_filepath"]))
 
-    # Search EPSG authority code
-    authority_name = srs.GetAuthorityName(None)
-    authority_code = srs.GetAuthorityCode(None)
+        srs = osr.SpatialReference(ds.GetProjection())
+        if srs is None or srs.IsProjected() == 0:
+            status.failed("The raster {:s} has no projected coordinate system associated."
+                          .format(layer_def["src_layer_name"]))
+            continue
 
-    if authority_name == "EPSG" and authority_code is not None:
-        # compare EPSG code using the root-level EPSG authority
-        if authority_code not in map(str, params["epsg"]):
-            status.aborted("Raster has illegal EPSG code {:s}.".format(str(authority_code)))
-            return
-    else:
-        # If the EPSG code is not detected, try to compare if the actual and expected SRS instances represent
-        # the same spatial reference system.
-        srs_match = False
-        allowed_codes = params["epsg"]
-        for allowed_code in allowed_codes:
-            expected_srs = osr.SpatialReference()
-            expected_srs.ImportFromEPSG(allowed_code)
-            if srs.IsSame(expected_srs):
-                srs_match = True
-                break
+        # Search EPSG authority code
+        srs.AutoIdentifyEPSG()
+        authority_name = srs.GetAuthorityName(None)
+        authority_code = srs.GetAuthorityCode(None)
 
-        if not srs_match:
-            allowed_codes_msg = ", ".join(map(str, params["epsg"]))
-            status.aborted("The SRS of the raster is not in the list of allowed spatial reference systems. "
-                           "detected SRS: {:s}, list of allowed SRS's: {:s} ".format(srs.ExportToWkt(), allowed_codes_msg))
+        if authority_name == "EPSG" and authority_code is not None:
+            # compare EPSG code using the root-level EPSG authority
+            if authority_code not in map(str, params["epsg"]):
+                status.aborted("Layer {:s} has illegal EPSG code {:s}."
+                               .format(layer_def["src_layer_name"], str(authority_code)))
+        else:
+            status.aborted("Layer {:s} does not have an epsg code, srs: {:s}."
+                           .format(layer_def["src_layer_name"], srs.ExportToWkt()))

@@ -1,25 +1,19 @@
 {
-  "description": "HRL Forest Type (20m)",
+  "description": "HRL Grassland 2015 (100m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
       "required": true
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "file_name_regex": "^fty_(?P<reference_year>[0-9]{4})_020m_(?P<country_code>.+)_[0-9]{5}.*.tif$",
+        "layer_names": {
+          "gra_100m": "^gra_(?P<reference_year>[0-9]{4})_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"
+        },
         "extensions": [".tif", ".tfw", ".xml|.tif.xml", ".tif.vat.dbf"],
-        "country_codes": ["al", "at",
+        "aoi_codes": ["al", "at",
                           "ba", "be", "bg",
                           "ch", "cy", "cz",
                           "de", "dk",
@@ -40,16 +34,27 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.format",
+      "required": true,
+      "parameters": {
+        "layers": ["gra_100m"],
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
+        "layers": ["gra_100m"],
+        "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)"]
       }
     },
     {
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
+        "layers": ["gra_100m"],
         "epsg": [3035]
       }
     },
@@ -57,19 +62,22 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "pixelsize": 20
+        "layers": ["gra_100m"],
+        "pixelsize": 100
       }
     },
     {
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
+        "layers": ["gra_100m"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
+        "layers": ["gra_100m"],
         "datatype": "byte"
       }
     },
@@ -77,51 +85,44 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "compression": ["LZW", "PackBits"]
+        "layers": ["gra_100m"],
+        "compression": ["LZW"]
       }
     },
     {
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
+        "layers": ["gra_100m"],
         "validcodes": [0, 1, 2, 254, 255]
       }
     },
-    {
+     {
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
-        "mask": "default",
+        "layers": ["gra_100m"],
         "outside_area_code": 255
       }
-    },
-    {
-      "check_ident": "qc_tool.raster.mmu",
-      "required": false,
-      "parameters": {
-        "area_pixels": 13,
-        "groupcodes": [[1, 2]],
-        "value_exception_codes": [254, 255],
-        "neighbour_exception_codes": [254, 255],
-        "nodata_value": 255
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.inspire",
-      "required": false,
-      "parameters": {}
     },
     {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
+        "layers": ["gra_100m"],
         "colors": {
           "0":[240, 240, 240],
-          "1":[70, 158, 74],
-          "2":[28, 92, 36],
+          "1":[163, 199, 56],
           "254":[153, 153, 153],
           "255":[0, 0, 0]
         }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["gra_100m"]
       }
     }
   ]

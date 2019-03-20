@@ -8,18 +8,18 @@ IS_SYSTEM = False
 
 def run_check(params, status):
     import osgeo.gdal as gdal
+    from qc_tool.raster.helper import do_raster_layers
 
-    # read the datatype parameter
     expected_datatype = params["datatype"]
 
-    # open the file
-    ds = gdal.Open(str(params["filepath"]))
+    for layer_def in do_raster_layers(params):
+        ds = gdal.Open(str(layer_def["src_filepath"]))
 
-    # get the DataType of the band ("Byte" means 8-bit depth)
-    band = ds.GetRasterBand(1)
-    actual_datatype = gdal.GetDataTypeName(band.DataType)
+        # Get the DataType of the band ("Byte" means 8-bit depth).
+        band = ds.GetRasterBand(1)
+        actual_datatype = gdal.GetDataTypeName(band.DataType)
 
-    # compare actual data type to expected data expected_type
-    if str(actual_datatype).lower() != str(expected_datatype).lower():
-        status.failed("The raster data type '{:s}' does not match the expected data type '{:s}'."
-                      .format(actual_datatype, expected_datatype))
+        # Compare actual data type to expected data type.
+        if str(actual_datatype).lower() != str(expected_datatype).lower():
+            status.failed("Layer {:s}: The raster data type '{:s}' does not match the expected data type '{:s}'."
+                          .format(layer_def["src_layer_name"], actual_datatype, expected_datatype))

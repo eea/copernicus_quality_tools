@@ -1,0 +1,72 @@
+{
+  "description": "General raster product",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "layer_names": {"general": "^.*.tif$"},
+        "extensions": [".tif"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.format",
+      "required": true,
+      "parameters": {
+        "layers": ["general"],
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.attribute",
+      "required": false,
+      "parameters": {
+        "layers": ["general"],
+        "attribute_regexes": ["value", "count", "(km2|area_km2)"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": ["general"],
+        "epsg": [3035]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": ["general"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": ["general"],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": ["general"],
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["general"]
+      }
+    }
+  ]
+}

@@ -44,7 +44,8 @@ class LayerDefsBuilder():
             self.tpl_params[k] = v
 
     def extract_layer_def(self, regex, layer_alias):
-        regex = regex.format(**self.tpl_params)
+        if self.tpl_params:
+            regex = regex.format(**self.tpl_params)
         regex = re.compile(regex, re.IGNORECASE)
         matched_infos = [info for info in self.layer_infos if regex.search(info["src_layer_name"])]
         if len(matched_infos) == 0:

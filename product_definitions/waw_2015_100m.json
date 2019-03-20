@@ -1,48 +1,52 @@
 {
-  "description": "HRL Water and Wetness (100m)",
+  "description": "HRL Water and Wetness 2015 (100m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
       "required": true
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "file_name_regex": "^waw_(?P<reference_year>[0-9]{4})_100m_(?P<country_code>.+)_[0-9]{5}.*.tif$",
+        "layer_names": {
+          "waw_100m": "^waw_(?P<reference_year>[0-9]{4})_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"
+        },
         "extensions": [".tif", ".tfw", ".xml|.tif.xml", ".tif.vat.dbf"],
-        "country_codes": ["al", "at",
-                          "ba", "be", "bg",
-                          "ch", "cy", "cz",
-                          "de", "dk",
-                          "ee", "es", "es_cn", "eu",
-                          "fi", "fr", "fr_glp", "fr_guf", "fr_mtq", "fr_myt", "fr_reu",
-                          "gr",
-                          "hr", "hu",
-                          "ie", "is", "it",
-                          "li", "lt", "lu", "lv",
-                          "me", "mk", "mt",
-                          "nl", "no",
-                          "pl", "pt", "pt_raa", "pt_ram", "pt_raa_ceg", "pt_raa_weg",
-                          "ro",
-                          "se", "si", "sk",
-                          "tr",
-                          "uk", "uk_ni", "uk_ge", "uk_je",
-                          "xk"]
+        "aoi_codes": ["al", "at",
+                      "ba", "be", "bg",
+                      "ch", "cy", "cz",
+                      "de", "dk",
+                      "ee", "es", "es_cn", "eu",
+                      "fi", "fr", "fr_glp", "fr_guf", "fr_mtq", "fr_myt", "fr_reu",
+                      "gr",
+                      "hr", "hu",
+                      "ie", "is", "it",
+                      "li", "lt", "lu", "lv",
+                      "me", "mk", "mt",
+                      "nl", "no",
+                      "pl", "pt", "pt_raa", "pt_ram", "pt_raa_ceg", "pt_raa_weg",
+                      "ro",
+                      "se", "si", "sk",
+                      "tr",
+                      "uk", "uk_ni", "uk_ge", "uk_je",
+                      "xk"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.format",
+      "required": true,
+      "parameters": {
+        "layers": ["waw_100m"],
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
       }
     },
     {
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"],
         "attribute_regexes": ["value", "count", "(km2|area_km2)", "(perc|area_perc)"]
       }
     },
@@ -50,6 +54,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"],
         "epsg": [3035]
       }
     },
@@ -57,6 +62,7 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"],
         "pixelsize": 100
       }
     },
@@ -64,12 +70,14 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"],
         "datatype": "byte"
       }
     },
@@ -77,6 +85,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"],
         "compression": ["LZW", "PackBits"]
       }
     },
@@ -84,6 +93,7 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"],
         "validcodes": [0, 1, 2, 3, 4, 254, 255]
       }
     },
@@ -91,18 +101,16 @@
       "check_ident": "qc_tool.raster.gap",
       "required": false,
        "parameters": {
+         "layers": ["waw_100m"],
          "outside_area_code": 255,
          "mask": "waw"
        }
     },
     {
-      "check_ident": "qc_tool.raster.inspire",
-      "required": false
-    },
-    {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
+        "layers": ["waw_100m"],
         "colors": {
           "0":[240, 240, 240],
           "1":[0, 0, 255],
@@ -112,6 +120,13 @@
           "254":[153, 153, 153],
           "255":[0, 0, 0]
         }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["waw_100m"]
       }
     }
   ]
