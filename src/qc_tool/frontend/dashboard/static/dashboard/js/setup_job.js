@@ -40,6 +40,11 @@ function display_product_info(product_ident) {
                 tbody += "<tr>";
                 tbody += "<td>" + steps[i].step_nr + "</td>";
                 tbody += "<td>" + steps[i].check_ident + "</td>";
+                if (steps[i].layers) {
+                    tbody += "<td>" + steps[i].layers.join(", ") + "</td>";
+                } else {
+                    tbody += "<td></td>";
+                }
                 tbody += "<td>" + steps[i].description + "</td>";
                 tbody += '<td><input name="selected_steps[]" type="checkbox" value="' + steps[i].step_nr + '" checked';
                 if (steps[i].required) { // Required steps have checkbox disabled.
