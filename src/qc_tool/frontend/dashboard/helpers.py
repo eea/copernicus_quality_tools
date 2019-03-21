@@ -34,47 +34,15 @@ def find_product_description(product_ident):
 
 def guess_product_ident(delivery_filepath):
     """
-    Tries to guess the product ident from the uploaded file name.
-    This should use the file_name_regex in each product's definition.
+    Tries to guess the product ident from the uploaded zip file name.
     """
-    is_20m_raster = False
-    is_100m_raster = False
-    prod_abbrev = "abc"
-
     fn = delivery_filepath.name.lower()
-    if len(fn) > 3:
-        prod_abbrev = fn[0:3]
 
-    if "_020m" in fn:
-        is_20m_raster = True
-    if "_100m" in fn:
-        is_100m_raster = True
-
-    if prod_abbrev in ("fty", "gra", "waw", "imc", "imd", "tcd"):
-        if is_20m_raster:
-            return prod_abbrev + "_020m"
-        if is_100m_raster:
-            return prod_abbrev + "_100m"
-
-    elif fn.startswith("clc2012"):
-        return "clc_2012"
-    elif fn.startswith("rpz"):
-        return "rpz"
-    elif re.match(r"[a-z]{2}[0-9]{3}l[0-9]_[a-z]+", fn):
-        logger.debug("Delivery is likely to be urban atlas ...")
-
-        # urban atlas product guessing from name
-        logger.debug(delivery_filepath)
-        if delivery_filepath.exists():
-            with ZipFile(str(delivery_filepath), 'r') as myzip:
-                namelist = myzip.namelist()
-                for name in namelist:
-                    logger.debug(name)
-                    if name.endswith(".shp") and "ua2012" in name.lower():
-                        return "ua_2012_shp_wo_revised"
-                    elif ".gdb" in name:
-                        return "ua_2012_gdb"
-            return None
+    product_descriptions = get_product_descriptions()
+    for product_ident, product_description in product_descriptions.items():
+        if product_ident in fn:
+            return product_ident
+    return None
 
 
 def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
