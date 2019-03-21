@@ -5,7 +5,7 @@
 import re
 
 
-DESCRIPTION = "Naming is in accord with specification, Urban Atlas geodatabase."
+DESCRIPTION = "Naming is in accord with specification."
 IS_SYSTEM = False
 
 
@@ -31,6 +31,11 @@ def run_check(params, status):
     gdb_layer_infos = []
     if ".gdb" in params["formats"]:
         gdb_layer_infos = find_gdb_layers(params["unzip_dir"], status)
+
+    # Check if delivery contains any vector layers.
+    if len(shp_layer_infos) + len(gdb_layer_infos) == 0:
+        status.aborted("No vector layers were found in the delivery.")
+        return
 
     # Check number of geodatabases.
     gdb_filepaths = set([layer_info["src_filepath"] for layer_info in gdb_layer_infos])
