@@ -26,6 +26,111 @@ def get_failed_items_message(cursor, error_table_name, pg_fid_name, limit=FAILED
     return message
 
 
+def find_shp_layers(unzip_dir, status):
+    """
+    Finds all .shp layers anywhere in the directory hierarchy under unzip_dir.
+    """
+    from osgeo import ogr
+
+    shp_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".shp"]
+
+    shp_layer_infos = []
+    for shp_filepath in shp_filepaths:
+        try:
+            ds = ogr.Open(str(shp_filepath))
+        except:
+            status.aborted("Can not open shapefile {:s}".format(shp_filepath.name))
+            continue
+        if ds is None:
+            status.aborted("Can not open shapefile {:s}".format(shp_filepath.name))
+            continue
+        shp_layer = ds.GetLayer()
+        if shp_layer is None:
+            status.aborted("Shapefile {:s} does not contain any layer.".format(shp_filepath.name))
+            continue
+        shp_layer_infos.append({"src_filepath": shp_filepath, "src_layer_name": shp_layer.GetName()})
+    return shp_layer_infos
+
+
+def find_gdb_layers(unzip_dir, status):
+    from osgeo import ogr
+
+    # Find gdb folder.
+    gdb_dirs = [path for path in unzip_dir.glob("**") if path.suffix.lower() == ".gdb"]
+    gdb_layer_infos = []
+
+    for gdb_dir in gdb_dirs:
+        # Open geodatabase.
+        ds = ogr.Open(str(gdb_dir))
+        if ds is None:
+            status.aborted("Can not open geodatabase {:s}.".format(gdb_dir.name))
+            return
+
+        for layer_index in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(layer_index)
+            layer_name = layer.GetName()
+            gdb_layer_infos.append({"src_layer_name": layer_name, "src_filepath": gdb_dir})
+        ds = None
+    return gdb_layer_infos
+
+
+def check_gdb_filename(gdb_filepath, gdb_filename_regex, aoi_code, status):
+    mobj = re.compile(gdb_filename_regex, re.IGNORECASE).search(gdb_filepath.name)
+    if mobj is None:
+        status.aborted("Geodatabase filename {:s} is not in accord with specification: '{:s}'."
+                       .format(gdb_filepath.name, gdb_filename_regex))
+        return
+
+    if "?<P>aoi_code" in gdb_filename_regex and aoi_code is not None:
+        try:
+            detected_aoi_code = mobj.group("aoi_code")
+        except IndexError:
+            status.aborted("Geodatabase filename {:s} does not contain AOI code.".format(gdb_filepath.name))
+            return
+
+        if detected_aoi_code != aoi_code:
+            status.aborted("Geodatabase filename AOI code '{:s}' does not match AOI code of the layers: '{:s}'"
+                           .format(detected_aoi_code, aoi_code))
+            return
+
+
+# Extract AOI code and compare it to pre-defined list.
+def extract_aoi_code(layer_defs, layer_regexes, expected_aoi_codes, status):
+    layer_aoi_codes = []
+    for layer_alias, layer_def in layer_defs.items():
+        layer_name = layer_def["src_layer_name"]
+        layer_regex = layer_regexes[layer_alias]
+        mobj = re.match(layer_regex, layer_name.lower())
+        if mobj is None:
+            status.aborted("Layer {:s} has illegal name: {:s}.".format(layer_alias, layer_name))
+            continue
+        try:
+            aoi_code = mobj.group("aoi_code")
+        except IndexError:
+            status.aborted("Layer {:s} does not contain AOI code.".format(layer_name))
+            continue
+        layer_aoi_codes.append(aoi_code)
+
+        # Compare detected AOI code to pre-defined list.
+        if aoi_code not in expected_aoi_codes:
+            status.aborted("Layer {:s} has illegal AOI code {:s}.".format(layer_name, aoi_code))
+            continue
+
+    # Check that AOI code could be detected.
+    if len(set(layer_aoi_codes)) == 0:
+        status.aborted("AOI code could not be detected from any layer name.")
+        return
+
+    # If there are multiple layers, check that all layers have the same AOI code.
+    if len(set(layer_aoi_codes)) > 1:
+        status.aborted("Layers do not have the same AOI code. Detected AOI codes: {:s}"
+                       .format(",".join(list(layer_aoi_codes))))
+
+    # Set aoi_code as a global parameter.
+    return aoi_code
+
+
 class LayerDefsBuilder():
     """
     Helper class for naming checks doing regex lookup for layers.

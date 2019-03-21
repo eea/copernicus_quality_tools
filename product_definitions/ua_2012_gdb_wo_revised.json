@@ -6,13 +6,17 @@
       "required": true
     },
     {
-      "check_ident": "qc_tool.vector.naming_ua_gdb",
+      "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
         "reference_year": "2012",
+        "formats": [".gdb"],
+        "num_geodatabases": 1,
         "gdb_filename_regex": "^[a-z0-9]{7}_.*$",
-        "reference_layer_regex": "_ua2012$",
-        "boundary_layer_regex": "^boundary2012_"
+        "layer_names": {
+          "reference": "_ua2012$",
+          "boundary": "^boundary2012_"
+        }
       }
     },
     {

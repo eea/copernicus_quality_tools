@@ -1,15 +1,20 @@
 {
-  "description": "Natura 2000",
+  "description": "Natura 2000, LCLU 2012",
   "steps": [
     {
       "check_ident": "qc_tool.vector.unzip",
       "required": true
     },
     {
-      "check_ident": "qc_tool.vector.naming_n2k",
+      "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
-        "n2k_layer_regex": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"
+        "reference_year": "2012",
+        "formats": [".shp"],
+        "layer_names": {
+          "n2k": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"
+        },
+        "boundary_source": "boundary_n2k.shp"
       }
     },
     {

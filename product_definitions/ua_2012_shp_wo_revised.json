@@ -6,12 +6,15 @@
       "required": true
     },
     {
-      "check_ident": "qc_tool.vector.naming_ua_shp",
+      "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "reference_layer_regex": "_ua2012$",
-        "boundary_layer_regex": "^boundary2012_"
+        "formats": [".shp"],
+        "layer_names": {
+          "reference": "_ua2012$",
+          "boundary": "^boundary2012_"
+        }
       }
     },
     {

@@ -63,9 +63,11 @@ class Test_naming_rpz(VectorCheckTestCase):
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
     def test(self):
-        from qc_tool.vector.naming_rpz import run_check
-        self.params.update({"filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}.shp$",
-                            "areacodes": ["007"]})
+        from qc_tool.vector.naming import run_check
+        self.params.update({"layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}$"},
+                            "formats": [".shp"],
+                            "aoi_codes": ["007"],
+                            "boundary_source": "boundary_rpz.shp"})
         status = self.status_class()
         run_check(self.params, status)
 
@@ -82,14 +84,16 @@ class Test_naming_n2k(VectorCheckTestCase):
         from qc_tool.vector.unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip"),
-                            "n2k_layer_regex": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$",
+                            "formats": [".shp"],
+                            "layer_names": {"n2k": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"},
+                            "boundary_source": "boundary_n2k.shp",
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
 
     def test(self):
-        from qc_tool.vector.naming_n2k import run_check
+        from qc_tool.vector.naming import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -100,7 +104,7 @@ class Test_naming_n2k(VectorCheckTestCase):
         self.assertEqual("boundary_n2k", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
     def test_bad_layer_name_aborts(self):
-        from qc_tool.vector.naming_n2k import run_check
+        from qc_tool.vector.naming import run_check
 
         # Rename layer to bad one.
         src_gdb_filepath = self.params["unzip_dir"].joinpath("n2k_du001z_lclu_v99_20170108", "n2k_du001z_lclu_v99_20190108.shp")
@@ -116,16 +120,20 @@ class Test_naming_clc(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.params.update({"unzip_dir": TEST_DATA_DIR.joinpath("vector", "clc"),
-                            "country_codes": ["cz", "sk", "mt"],
+                            "aoi_codes": ["cz", "sk", "mt"],
                             "reference_year": "2012",
-                            "gdb_filename_regex": "^clc2012_(?P<country_code>.+).gdb$",
-                            "reference_layer_regex": "^{country_code:s}/clc12_{country_code:s}$",
-                            "initial_layer_regex": "^{country_code:s}/clc06_{country_code:s}$",
-                            "change_layer_regex": "^{country_code:s}/cha12_{country_code:s}$",
+                            "formats": [".gdb"],
+                            "gdb_filename_regex": "^clc2012_(?P<aoi_code>.+).gdb$",
+                            "layer_names": {
+                                "reference": "^clc12_(?P<aoi_code>.+)$",
+                                "initial": "^clc06_(?P<aoi_code>.+)$",
+                                "change": "^cha12_(?P<aoi_code>.+)$",
+                            },
+                            "boundary_source": "clc/boundary_clc_{aoi_code}.shp",
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
 
     def test(self):
-        from qc_tool.vector.naming_clc import run_check
+        from qc_tool.vector.naming import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -141,8 +149,8 @@ class Test_naming_clc(VectorCheckTestCase):
         self.assertEqual("boundary_clc_mt", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
     def test_mismatched_regex_aborts(self):
-        from qc_tool.vector.naming_clc import run_check
-        self.params["initial_layer_regex"] = "^{country_code:s}/xxx_{country_code:s}$"
+        from qc_tool.vector.naming import run_check
+        self.params["layer_names"]["initial"] = "^{country_code:s}/xxx_{country_code:s}$"
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
@@ -158,15 +166,19 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
         self.params.update({"reference_year": "2012",
+                            "formats": [".gdb"],
                             "gdb_filename_regex": "^[a-z0-9]{7}_.*$",
-                            "reference_layer_regex": "_ua2012$",
-                            "boundary_layer_regex": "^boundary2012_",
-                            "revised_layer_regex": "_ua2006_revised$",
-                            "combined_layer_regex": "_ua2006_2012$",
-                            "change_layer_regex": "_change_2006_2012$"})
+                            "layer_names": {
+                                "reference": "_ua2012$",
+                                "boundary": "^boundary2012_",
+                                "revised": "_ua2006_revised$",
+                                "combined": "_ua2006_2012$",
+                                "change": "_change_2006_2012$"}
+                            })
+
 
     def test(self):
-        from qc_tool.vector.naming_ua_gdb import run_check
+        from qc_tool.vector.naming import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -184,7 +196,7 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["change"]["src_layer_name"])
 
     def test_bad_gdb_filename_aborts(self):
-        from qc_tool.vector.naming_ua_gdb import run_check
+        from qc_tool.vector.naming import run_check
 
         # Rename gdb filename to bad one.
         src_gdb_filepath = self.params["unzip_dir"].joinpath("DK001L2_KOBENHAVN_clip.gdb")
@@ -196,8 +208,8 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
     def test_missing_layer_aborts(self):
-        from qc_tool.vector.naming_ua_gdb import run_check
-        self.params["boundary_layer_regex"] = "non-existing-layer-name"
+        from qc_tool.vector.naming import run_check
+        self.params["layer_names"]["boundary"] = "non-existing-layer-name"
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
@@ -213,11 +225,12 @@ class Test_naming_ua_shp(VectorCheckTestCase):
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
         self.params.update({"reference_year": "2012",
-                            "reference_layer_regex": "_ua2012$",
-                            "boundary_layer_regex": "^boundary2012_"})
+                            "formats": [".shp"],
+                            "layer_names": {"reference": "_ua2012$",
+                                            "boundary": "^boundary2012_"}})
 
     def test(self):
-        from qc_tool.vector.naming_ua_shp import run_check
+        from qc_tool.vector.naming import run_check
         status = self.status_class()
         run_check(self.params, status)
 
@@ -233,7 +246,7 @@ class Test_format(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.vector.unzip import run_check as unzip_check
-        from qc_tool.vector.naming_rpz import run_check as layer_check
+        from qc_tool.vector.naming import run_check as layer_check
 
         rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
         self.params.update({"boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
@@ -241,8 +254,8 @@ class Test_format(VectorCheckTestCase):
                             "filepath": rpz_filepath,
                             "formats": [".gdb", ".shp"],
                             "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"},
-                            "filename_regex": "^rpz_du(?P<areacode>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}.shp$",
-                            "areacodes": ["007"]})
+                            "layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}$"},
+                            "aoi_codes": ["007"]})
 
         status = self.status_class()
         unzip_check(self.params, status)

@@ -11,6 +11,7 @@ IS_SYSTEM = False
 
 def run_check(params, status):
     from qc_tool.vector.helper import LayerDefsBuilder
+    from qc_tool.vector.helper import extract_aoi_code
 
     # Find tif files.
     tif_filepaths = [path for path in list(params["unzip_dir"].glob("**/*"))
@@ -33,38 +34,10 @@ def run_check(params, status):
     builder.check_excessive_layers()
     status.add_params({"raster_layer_defs": builder.layer_defs})
 
-    # Extract AOI code and compare it to pre-defined list.
     if "aoi_codes" in params and len(params["aoi_codes"]) > 0:
-        layer_aoi_codes = []
-        for layer_alias, layer_def in builder.layer_defs.items():
-            layer_name = layer_def["src_layer_name"]
-            layer_regex = params["layer_names"][layer_alias]
-            mobj = re.match(layer_regex, layer_name.lower())
-            if mobj is None:
-                status.aborted("Layer {:s} has illegal name: {:s}.".format(layer_alias, layer_name))
-                continue
-            try:
-                aoi_code = mobj.group("aoi_code")
-            except IndexError:
-                status.aborted("Layer {:s} does not contain AOI code.".format(layer_name))
-                continue
-            layer_aoi_codes.append(aoi_code)
-            if aoi_code not in params["aoi_codes"]:
-                status.aborted("Layer {:s} has illegal AOI code {:s}.".format(layer_name, aoi_code))
-                continue
-
-        # Check that AOI code could be detected.
-        if len(set(layer_aoi_codes)) == 0:
-            status.aborted("AOI code could not be detected from any layer name.")
-            return
-
-        # If there are multiple layers, check that all layers have the same AOI code.
-        if len(set(layer_aoi_codes)) > 1:
-            status.aborted("Layers do not have the same AOI code. Detected AOI codes: {:s}"
-                           .format(",".join(list(layer_aoi_codes))))
-
-        # Set aoi_code as a global parameter.
-        status.add_params({"aoi_code": layer_aoi_codes[0]})
+        # Extract AOI code and compare it to pre-defined list.
+        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status)
+        status.add_params({"aoi_code": aoi_code})
 
     # Extract reference year (might not be needed).
     if "extract_reference_year" in params and params["extract_reference_year"] == True:

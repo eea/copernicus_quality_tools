@@ -6,15 +6,18 @@
       "required": true
     },
     {
-      "check_ident": "qc_tool.vector.naming_ua_shp",
+      "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "reference_layer_regex": "_ua2012$",
-        "boundary_layer_regex": "^boundary2012_",
-        "revised_layer_regex": "_ua2006_revised$",
-        "combined_layer_regex": "_ua2006_2012$",
-        "change_layer_regex": "_change_2006_2012$"
+        "formats": [".shp"],
+        "layers_names": {
+          "reference": "_ua2012$",
+          "boundary": "^boundary2012_",
+          "revised": "_ua2006_revised$",
+          "combined": "_ua2006_2012$",
+          "change": "_change_2006_2012$"
+        }
       }
     },
     {
