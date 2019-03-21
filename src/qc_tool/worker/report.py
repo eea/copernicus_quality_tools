@@ -83,7 +83,7 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         text.append(Paragraph("", styles["Heading1"]))
         text.append(Paragraph("Report summary", styles["Heading2"]))
         status_file = ["File name", job_report["filename"]]
-        status_product = ["Product", job_report["product_ident"]]
+        status_product = ["Product", job_report["description"]]
         display_date = datetime.strptime(job_report["job_finish_date"], TIME_FORMAT).strftime("%Y-%m-%d %H:%M:%S")
         status_date = ["Checked on", display_date]
         job_status = job_report["status"]
