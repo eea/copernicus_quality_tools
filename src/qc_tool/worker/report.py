@@ -114,7 +114,7 @@ def generate_pdf_report(job_report_filepath, job_uuid):
 
         # Detail table header row
         check_table_header = [Paragraph("<b>CHECK</b>", style_normal),
-                              Paragraph("<b>DESCRIPTION</b>", style_normal),
+                              Paragraph("<b>LAYERS</b>", style_normal),
                               Paragraph("<b>STATUS</b>", style_normal),
                               Paragraph("<b>MESSAGES</b>", style_normal)]
         check_data = [check_table_header]
@@ -122,20 +122,32 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         # Detail table data. Text color is displayed based on check status.
         for step_report in job_report["steps"]:
             step_status = step_report["status"]
+            step_layers = step_report["layers"]
+            step_ident = step_report["check_ident"]
+
+            if step_ident.startswith("qc_tool."):
+                step_ident = ".".join(step_ident.split(".")[1:])
+
+            if step_layers is None:
+                step_layers = []
+
             if step_status is None:
                 step_status = "not run"
             if step_status == "ok":
-                display_ident = Paragraph(step_report["check_ident"], style_check_default)
-                display_description = Paragraph(step_report["description"], style_check_default)
+                display_ident = [Paragraph("<i>" + step_ident + "</i>", style_check_default),
+                                 Paragraph(step_report["description"], style_check_default)]
+                display_layers = [Paragraph(step_layer, style_check_default) for step_layer in step_layers]
                 display_status = Paragraph("<b>" + step_status + "</b>", style_check_ok)
             elif step_status in ["aborted", "failed", "error"]:
-                display_ident = Paragraph(step_report["check_ident"], style_check_failed)
+                display_ident = [Paragraph("<i>" + step_ident + "</i>", style_check_failed),
+                                 Paragraph(step_report["description"], style_check_failed)]
+                display_layers = [Paragraph(step_layer, style_check_failed) for step_layer in step_layers]
                 display_status = Paragraph(step_status, style_check_failed)
-                display_description = Paragraph(step_report["description"], style_check_failed)
             else:
-                display_ident = Paragraph(step_report["check_ident"], style_check_default)
+                display_ident = [Paragraph("<i>" + step_ident + "</i>", style_check_default),
+                                 Paragraph(step_report["description"], style_check_default)]
+                display_layers = [Paragraph(step_layer, style_check_default) for step_layer in step_layers]
                 display_status = Paragraph(step_status, style_check_default)
-                display_description = Paragraph(step_report["description"], style_check_default)
 
             messages = step_report.get("messages", [])
             if messages is None:
@@ -145,13 +157,13 @@ def generate_pdf_report(job_report_filepath, job_uuid):
                 display_messages.append(Paragraph(message, style_body))
 
             check_info = [display_ident,
-                          display_description,
+                          display_layers,
                           display_status,
                           display_messages
                           ]
             check_data.append(check_info)
 
-        detail_table=Table(check_data, hAlign="LEFT", colWidths=[90, None, 60, None])
+        detail_table=Table(check_data, hAlign="LEFT", colWidths=[None, 60, 60, None])
         detail_table_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
                                          ("BOX", (0, 0), (-1, -1), 0.25, colors.black),
                                          ("VALIGN", (0, 0), (-1,-1), "TOP")])

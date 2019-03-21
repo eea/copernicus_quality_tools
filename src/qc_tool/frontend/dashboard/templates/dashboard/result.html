@@ -62,7 +62,6 @@
                     <tr>
                         <th data-field="step_nr" data-sortable="false">Step</th>
                         <th data-field="check_ident" data-sortable="false">Check</th>
-                        <th data-field="check_description" data-sortable="false">Description</th>
                         <th data-field="layers" data-sortable="false">Layers</th>
                         <th data-field="check_result" data-sortable="false">Status</th>
                         <th data-field="check_attachments" data-sortable="false">Attachments</th>
@@ -74,9 +73,11 @@
                         <tr>
                             {% if step.status == "ok" %}
                             <td class="success">{{step.step_nr}}</td>
-                            <td class="success">{{step.check_ident}}</td>
-                            <td class="success">{{step.description}}</td>
-                            <td class="success">{{step.layers|join:", "|default_if_none:""}}</td>
+                            <td class="success">
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td class="success">{{step.layers|join:", <br>"|default_if_none:""}}</td>
                             <td class="success">{{step.status}}</td>
                             <td class="success">
                                 {% for attachment_filename in step.attachment_filenames %}
@@ -85,25 +86,31 @@
                             <td class="success"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
                             {% elif step.status == "skipped" or step.status == "running" %}
                             <td>{{step.step_nr}}</td>
-                            <td>{{step.check_ident}}</td>
-                            <td>{{step.description}}</td>
-                            <td>{{step.layers|join:", "|default_if_none:""}}</td>
+                            <td>
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td>{{step.layers|join:", <br>"|default_if_none:""}}</td>
                             <td>{{step.status}}</td>
                             <td></td>
                             <td></td>
                             {% elif step.status == None %}
                             <td>{{step.step_nr}}</td>
-                            <td>{{step.check_ident}}</td>
-                            <td>{{step.description}}</td>
-                            <td>{{step.layers|join:", "|default_if_none:""}}</td>
+                            <td>
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td>{{step.layers|join:", <br>"|default_if_none:""}}</td>
                             <td></td>
                             <td></td>
                             <td></td>
                             {% else %}
                             <td class="danger">{{step.step_nr}}</td>
-                            <td class="danger">{{step.check_ident}}</td>
-                            <td class="danger">{{step.description}}</td>
-                            <td class="danger">{{step.layers|join:", "|default_if_none:""}}</td>
+                            <td class="danger">
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td class="danger">{{step.layers|join:", <br>"|default_if_none:""}}</td>
                             <td class="danger">{{step.status}}</td>
                             <td class="danger">
                                 {% for attachment_filename in step.attachment_filenames %}

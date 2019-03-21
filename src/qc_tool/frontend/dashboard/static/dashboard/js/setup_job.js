@@ -36,16 +36,20 @@ function display_product_info(product_ident) {
         var tbody = ""
         for (var i = 0; i < steps.length; i++) {
 
+            var check_ident = steps[i].check_ident;
+            if (check_ident.startsWith("qc_tool.")) {
+                check_ident = check_ident.substring(8);
+            }
             if (!steps[i].system) { // Steps with system check are not shown.
                 tbody += "<tr>";
                 tbody += "<td>" + steps[i].step_nr + "</td>";
-                tbody += "<td>" + steps[i].check_ident + "</td>";
+                tbody += "<td>" + check_ident + "</td>";
+                tbody += "<td>" + steps[i].description + "</td>";
                 if (steps[i].layers) {
                     tbody += "<td>" + steps[i].layers.join(", ") + "</td>";
                 } else {
                     tbody += "<td></td>";
                 }
-                tbody += "<td>" + steps[i].description + "</td>";
                 tbody += '<td><input name="selected_steps[]" type="checkbox" value="' + steps[i].step_nr + '" checked';
                 if (steps[i].required) { // Required steps have checkbox disabled.
                     tbody += " disabled";

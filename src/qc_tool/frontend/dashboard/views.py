@@ -428,6 +428,10 @@ def get_result(request, job_uuid):
     """
     delivery = models.Delivery.objects.get(last_job_uuid=job_uuid)
     job_report = compile_job_report_data(job_uuid, delivery.product_ident)
+    # strip initial qc_tool. from check idents
+    for step in job_report["steps"]:
+        if step["check_ident"].startswith("qc_tool."):
+            step["check_ident"] = ".".join(step["check_ident"].split(".")[1:])
     return render(request, "dashboard/result.html", job_report)
 
 def get_pdf_report(request, job_uuid):
