@@ -8,7 +8,10 @@ from qc_tool.common import FAILED_ITEMS_LIMIT
 
 
 def do_layers(params):
-    return [params["layer_defs"][layer_alias] for layer_alias in params["layers"]]
+    if "layers" in params:
+        return [params["layer_defs"][layer_alias] for layer_alias in params["layers"]]
+    else:
+        return params["layer_defs"].values()
 
 def get_failed_items_message(cursor, error_table_name, pg_fid_name, limit=FAILED_ITEMS_LIMIT):
     # Get failed items.
@@ -147,6 +150,14 @@ class LayerDefsBuilder():
     def set_tpl_params(self, **kwargs):
         for k, v in kwargs.items():
             self.tpl_params[k] = v
+
+    def extract_all_layers(self):
+        layer_index = 0
+        for info in self.layer_infos:
+            layer_index += 1
+            layer_alias = "layer_{:d}".format(layer_index)
+            self.layer_defs[layer_alias] = info
+
 
     def extract_layer_def(self, regex, layer_alias):
         if self.tpl_params:

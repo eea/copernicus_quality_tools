@@ -11,7 +11,7 @@
       "parameters": {
         "reference_year": "2012",
         "formats": [".shp"],
-        "layers_names": {
+        "layer_names": {
           "reference": "_ua2012$",
           "boundary": "^boundary2012_",
           "revised": "_ua2006_revised$",

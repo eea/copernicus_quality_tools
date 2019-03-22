@@ -59,6 +59,12 @@ def run_check(params, status):
         for gdb_layer_info in gdb_layer_infos:
             builder.add_layer_info(gdb_layer_info["src_filepath"], gdb_layer_info["src_layer_name"])
 
+    # If no layer_names parameter is specified then pass on all vector layers to other checks.
+    if "layer_names" not in params:
+        builder.extract_all_layers()
+        status.add_params({"layer_defs": builder.layer_defs})
+        return
+
     # Build layer defs for all layers.
     for layer_alias, layer_regex in params["layer_names"].items():
         builder.extract_layer_def(layer_regex, layer_alias)
