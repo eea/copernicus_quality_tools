@@ -47,6 +47,7 @@ def guess_product_ident(delivery_filepath):
 
 def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     # Prepare parameters.
+    job_uuid = str(job_uuid)
     job_result = load_job_result(job_uuid)
     job_dir = compose_job_dir(job_uuid)
     reference_year = job_result["reference_year"]

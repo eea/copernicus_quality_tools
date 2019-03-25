@@ -1,48 +1,33 @@
 
 // Populate content of deliveries table from /data/delivery/list/ URL.
-    $('#tbl-history').bootstrapTable({
-        cache: false,
-        striped: true,
-        search: true,
-        pagination: true,
-        showColumns: true,
-        sortName: 'name',
-        sortOrder: 'desc',
-        url: "/data/job_history/" + delivery_id + "/",
-        pageSize: 20,
-        pageList: [20, 50, 100, 500],
-        formatNoMatches: function () {
-            return 'No job history available.';
-        }
-    });
-
-function fileSizeFormatter(value, row) {
-
-    function formatBytes(bytes,decimals) {
-       if(bytes == null) return null;
-       if(bytes == 0) return '0 Bytes';
-       var k = 1024,
-           dm = decimals || 2,
-           sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
-           i = Math.floor(Math.log(bytes) / Math.log(k));
-       return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+$('#tbl-history').bootstrapTable({
+    cache: false,
+    striped: true,
+    search: true,
+    pagination: true,
+    showColumns: true,
+    sortName: 'name',
+    sortOrder: 'desc',
+    url: "/data/job_history/" + delivery_id + "/",
+    pageSize: 20,
+    pageList: [20, 50, 100, 500],
+    formatNoMatches: function () {
+        return 'No job history available.';
     }
-    return formatBytes(value, 2)
-}
+});
 
 function dateFormatter(value, row) {
    if (value) {
-        return moment(value).format('YYYY-MM-DD HH:mm:ss');
+        return moment.utc(value).local().format('YYYY-MM-DD HH:mm:ss');
    } else {
         return null;
    }
 }
 
-
 function delete_job_function(job_uuids) {
     var msg_title = "Are you sure you want to delete the job history?";
 
-    // number of deliveries to delete
+    // number of jobs to delete
     console.log(job_uuids);
     var num_jobs = job_uuids.toString().split(",").length;
 
@@ -72,7 +57,7 @@ function delete_job_function(job_uuids) {
                         if (result.status === "error") {
                             var dlg_err = BootstrapDialog.show({
                                 type: BootstrapDialog.TYPE_WARNING,
-                                title: "Cannot delete deliveries.",
+                                title: "Cannot delete jobs.",
                                 message: "Error deleting job history. " + result.message,
                                 buttons: [{
                                     label: "OK",
@@ -107,35 +92,8 @@ function delete_job_function(job_uuids) {
 }
 
 
-function submittedFormatter(value, row, index) {
-    if (!value) {
-        return "No";
-    } else {
-        return "Yes";
-    }
-}
-
 function statusFormatter(value, row, index) {
-    if (value == "file_not_found") {
-        value = '<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"> </span>';
-        value += '<span class="text-danger">FILE NOT FOUND</span>';
-        return value;
-    }
-    if (!value) {
-        return 'Not checked';
-    }
     return ['<a class="like" href="/result/', row.job_uuid, '" title="Show results">', value, '</a>'].join('');
-}
-
-function statusCellStyle(value, row, index) {
-
-    if (value == "ok") {
-        return { classes: "success"}
-    }
-    if (value == "failed" || value == "error" || value == "expired") {
-        return { classes: "danger" }
-    }
-    return {};
 }
 
 

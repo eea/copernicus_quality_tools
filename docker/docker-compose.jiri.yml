@@ -13,6 +13,7 @@ services:
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - WORK_DIR=/mnt/qc_tool_work
+      - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
       - FRONTEND_PORT=8000
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
       - SHOW_LOGO=yes

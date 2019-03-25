@@ -189,26 +189,18 @@ def file_upload(request):
             logger.debug(product_ident)
             product_description = find_product_description(product_ident)
 
-            # Search for existing delivery to be updated with newly uploaded file.
-            try:
-                # If there is a deleted delivery in the database, update it and set is_deleted to False.
-                d = models.Delivery.objects.get(user=request.user, filename=saved_filename, is_deleted=True)
-                d.size_bytes = dst_filepath.stat().st_size
-                d.date_uploaded = timezone.now()
-                d.is_deleted = False
-                d.save()
-            except ObjectDoesNotExist:
-                # Otherwise, create a new delivery in the database.
-                d = models.Delivery()
-                d.filename = saved_filename
-                d.filepath = user_upload_path
-                d.size_bytes = dst_filepath.stat().st_size
-                d.product_ident = product_ident
-                d.product_description = product_description
-                d.date_uploaded = timezone.now()
-                d.user = request.user
-                d.save()
-                logger.debug("Delivery object saved successfully to database.")
+            # Create a new delivery in the database.
+            d = models.Delivery()
+            d.filename = saved_filename
+            d.filepath = user_upload_path
+            d.size_bytes = dst_filepath.stat().st_size
+            d.product_ident = product_ident
+            d.product_description = product_description
+            d.date_uploaded = timezone.now()
+            d.user = request.user
+            d.is_deleted = False
+            d.save()
+            logger.debug("Delivery object saved successfully to database.")
 
             data = {'is_valid': True,
                     'name': myfile.name,
@@ -390,6 +382,9 @@ def delivery_delete(request):
             file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
             if file_path.exists():
                 file_path.unlink()
+
+            # The associated row is not deleted from the database table but its attribute is_deleted is set to True
+            # This is done in order to preserve the job history.
             d.is_deleted = True
             d.save()
             deleted_filenames.append(file_path.name)
@@ -438,28 +433,45 @@ def job_delete(request):
 @csrf_exempt
 def submit_delivery_to_eea(request):
     if request.method == "POST":
-        file_id = request.POST.get("id")
+        delivery_id = request.POST.get("id")
         filename = request.POST.get("filename")
 
-        logger.debug("delivery_submit_eea id=" + str(file_id))
-
-        d = models.Delivery.objects.get(id=file_id)
-        d.submit()
-        d.date_submitted = timezone.now()
-        d.save()
+        # Check if delivery with given ID exists.
+        try:
+            d = models.Delivery.objects.get(id=delivery_id)
+        except ObjectDoesNotExist:
+            response = JsonResponse({"status": "error",
+                                     "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
+            response.status_code = 404
+            return response
 
         try:
+            logger.debug("delivery_submit_eea id=" + str(delivery_id))
+
             zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
-            last_job = d.get_last_job()
-            submit_job(last_job.job_uuid, zip_filepath, CONFIG["submission_dir"], d.date_submitted)
+
+            job = d.get_submittable_job()
+            if job is None:
+                message = "Delivery {:s} cannot be submitted to EEA. Status is not OK.)".format(d.filename)
+                response = JsonResponse({"status": "error", "message": message})
+                response.status_code = 400
+                return response
+            submission_date = timezone.now()
+            submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date)
+            d.submit()
+            d.submission_date = submission_date
+            d.save()
         except BaseException as e:
             d.date_submitted = None
             d.save()
-            logger.error("ERROR submitting delivery to EEA. file {:s}. exception {:s}".format(filename, str(e)))
-            raise IOError(e)
+            error_message = "ERROR submitting delivery to EEA. file {:s}. exception {:s}".format(filename, str(e))
+            logger.error(error_message)
+            response = JsonResponse({"status": "error", "message": error_message})
+            response.status_code = 500
+            return response
 
         return JsonResponse({"status":"ok",
-                             "message": "File {0} successfully submitted to EEA.".format(filename)})
+                             "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
 
 @login_required
 def get_product_list(request):
@@ -505,9 +517,14 @@ def get_job_history_json(request, delivery_id):
     Shows the history of all jobs for a specific delivery in .json format.
     """
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+
     if delivery.user != request.user:
         raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
-    jobs = models.Job.objects.filter(delivery=delivery).order_by("-date_created")
+
+    # find all jobs with same filename and user as this delivery
+    jobs = models.Job.objects.filter(delivery__filename=delivery.filename)\
+        .filter(delivery__user=request.user)\
+        .order_by("-date_created")
     for job in jobs:
         if job.job_status == JOB_RUNNING:
             job_status = check_running_job(str(job.job_uuid), job.worker_url)
@@ -573,9 +590,6 @@ def update_job(request, job_uuid):
             if job_status is not None:
                 job.update_status(job_status)
 
-    response_dict = model_to_dict(job.delivery)
-    response_dict["last_job_uuid"] = job.job_uuid
-    response_dict["last_job_status"] = job.job_status
     return JsonResponse({"id": job.delivery.id, "last_job_uuid": job.job_uuid, "last_job_status": job.job_status})
 
 @csrf_exempt

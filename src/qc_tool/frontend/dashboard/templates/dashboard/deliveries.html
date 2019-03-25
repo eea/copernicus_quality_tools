@@ -49,7 +49,7 @@
                         <table id="tbl-deliveries" class="table" data-checkbox-header="true" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="true" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
-                                <th data-checkbox="true"></th>
+                                <th data-checkbox="true" data-formatter="checkboxFormatter"></th>
                                 <th data-field="id" data-sortable="true">ID</th>
                                 <th data-field="filename" data-sortable="true">Name</th>
                                 <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
@@ -59,13 +59,11 @@
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
                                 <th data-field="last_job_status" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
-                                <th data-field="is_submitted" data-visible="false" data-sortable="false"data-formatter="submittedFormatter">Submitted</th>
                                 {% if submission_enabled %}
                                 <th data-field="date_submitted" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
                                 {% endif %}
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
                                 <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>
-
                             </tr>
                             </thead>
                            <tbody>

@@ -31,9 +31,22 @@ function fileSizeFormatter(value, row) {
 
 function dateFormatter(value, row) {
    if (value) {
-        return moment(value).format('YYYY-MM-DD HH:mm:ss');
+        return moment.utc(value).local().format('YYYY-MM-DD HH:mm:ss');
    } else {
         return null;
+   }
+}
+
+function checkboxFormatter(value, row) {
+   if (row.date_submitted !== null) {
+        return {
+            disabled:true,
+            checked: false
+        };
+   } else {
+        return {
+            disabled: false
+        };
    }
 }
 
@@ -82,14 +95,6 @@ function actionsFormatter(value, row) {
     return btn_data;
 }
 
-function submittedFormatter(value, row, index) {
-    if (!value) {
-        return "No";
-    } else {
-        return "Yes";
-    }
-}
-
 function statusFormatter(value, row, index) {
     if (value == "file_not_found") {
         value = '<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"> </span>';
@@ -100,7 +105,7 @@ function statusFormatter(value, row, index) {
         return 'Not checked';
     }
     if (value == "ok") {
-        if (row["is_submitted"]) {
+        if (row["date_submitted"] !== null) {
             value = "submitted";
         } else {
             value = "passed";
@@ -225,11 +230,38 @@ function submit_eea_function(id, filename) {
                     data: data,
                     dataType: "json",
                     success: function(result) {
-                        console.log("file marked successfully for submission to EEA!") ;
-                        $('#tbl-deliveries').bootstrapTable('refresh');
-                        dialog.close();
+                        console.log("file marked successfully for submission to EEA!");
+                        var dlg_success = BootstrapDialog.show({
+                            title: "Delivery successfully submitted",
+                            message: result.message,
+                            buttons: [{
+                                label: "OK",
+                                cssClass: "btn-default",
+                                action: function(success_dialog) {success_dialog.close();}
+                            }]
+                       });
+                       $('#tbl-deliveries').bootstrapTable('refresh');
+                       dialog.close();
                     },
-                    error: function(result)  { console.log("error submitting file to EEA!") ;  }
+                    error: function(result)  {
+                      console.log("error in submit to EEA.");
+                      console.log(result.responseJSON);
+                      var error_message = "Unspecified error.";
+                      if (result.hasOwnProperty("responseJSON")) {
+                        error_message = result.responseJSON.message;
+                      }
+                      var dlg_err = BootstrapDialog.show({
+                            type: BootstrapDialog.TYPE_WARNING,
+                            title: "Error submitting delivery to EEA",
+                            message: error_message,
+                            buttons: [{
+                                label: "OK",
+                                cssClass: "btn-default",
+                                action: function(error_dialog) {error_dialog.close();}
+                            }]
+                       });
+                       dialog.close();
+                    }
                 })
             }
         }, {

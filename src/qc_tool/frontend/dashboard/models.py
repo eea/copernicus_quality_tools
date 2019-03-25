@@ -7,6 +7,7 @@ from uuid import uuid4
 import django.db.models as models
 from django.utils import timezone
 
+from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.frontend.dashboard.helpers import find_product_description
@@ -68,13 +69,13 @@ class Delivery(models.Model):
         self.product_description = job.product_description
         self.save()
 
-    #def update_job(self, job_status):
-    #    self.last_job_status = job_status
-    #    self.save()
-        #last_job = self.jobs.filter()
 
-    def get_last_job(self):
-        return self.jobs.latest("date_created")
+    def get_submittable_job(self):
+        jobs_to_submit = Job.objects.filter(delivery__id=self.id).filter(job_status=JOB_OK).order_by("-date_created")[:1]
+        if len(jobs_to_submit) == 0:
+            return None
+        else:
+            return jobs_to_submit[0]
 
     def submit(self):
         self.date_submitted = timezone.now()
