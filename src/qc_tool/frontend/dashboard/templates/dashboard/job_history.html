@@ -1,0 +1,99 @@
+{% extends "dashboard/base.html" %}
+{% load staticfiles %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
+{% endblock css %}
+
+{% block content %}
+
+    <div class="container-fluid main" style="padding-top: 70px;">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="{% url 'deliveries' %}">{% if show_logo %}Copernicus {% endif %}QC Tool</a></li>
+              <li class="active">QC Job history</li>
+            </ol>
+
+            <div class="main">
+
+                <!-- Nav tabs -->
+                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Job History</a></li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane active" id="recent">
+
+                        <div class="panel panel-default"><div class="panel-body">
+                            <dl class="row">
+                              <dt class="col-sm-2">Product</dt>
+                              <dd class="col-sm-10">{{delivery.product_description}}</dd>
+                            </dl>
+                            <dl class="row">
+                              <dt class="col-sm-2">Delivery File</dt>
+                              <dd class="col-sm-10">{{delivery.filename}}</dd>
+                            </dl>
+                        </div></div>
+
+
+                        <div id="runs-toolbar-1">
+                            <button id="btn-delete-multi" onclick="" class="btn btn-danger mr-10" disabled>
+                                <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
+                                Delete all selected
+                            </button>
+                        </div>
+                        <table id="tbl-history" class="table" data-checkbox-header="true" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-show-export="true" data-pagination="true" data-side-pagination="client">
+                            <thead>
+                            <tr>
+                                <th data-checkbox="true"></th>
+                                <th data-field="job_uuid" data-sortable="true">UUID</th>
+                                <th data-field="skip_steps" data-sortable="true">Skipped Steps</th>
+                                <th data-field="date_created" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Created</th>
+                                <th data-field="date_started" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Started</th>
+                                <th data-field="date_finished" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Finished</th>
+                                <th data-field="job_status" data-visible="true" data-sortable="true" data-formatter="statusFormatter">QC Status</th>
+
+                            </tr>
+                            </thead>
+                           <tbody>
+                           </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            ...
+                        </div>
+                        <div class="modal-body">
+                            ...
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <a class="btn btn-danger btn-ok">Delete</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <br><br><br><br>
+
+{% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+    <script type="text/javascript">var delivery_id = {{delivery.id}};</script>
+    <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
+    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
+    <script src="{% static 'dashboard/js/job_history.js' %}"></script>
+{% endblock js %}

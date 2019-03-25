@@ -32,28 +32,31 @@
                     <div class="panel panel-default"><div class="panel-body">
                     <dl class="row">
                       <dt class="col-sm-2">Product</dt>
-                      <dd class="col-sm-10">{{description}}</dd>
+                      <dd class="col-sm-10">{{job_report.description}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Reference Year</dt>
-                      <dd class="col-sm-10">{{reference_year}}</dd>
+                      <dd class="col-sm-10">{{job_report.reference_year}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">File</dt>
-                      <dd class="col-sm-10">{{filename}}</dd>
+                      <dd class="col-sm-10">{{job_report.filename}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Started</dt>
-                      <dd class="col-sm-10">{{job_start_date}}</dd>
+                      <dd class="col-sm-10">{{job_report.job_start_date}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Finished</dt>
-                      <dd class="col-sm-10">{{job_finish_date}}</dd>
+                      <dd class="col-sm-10">{{job_report.job_finish_date}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Status</dt>
-                      <dd class="col-sm-10">{{status}}</dd>
+                      <dd class="col-sm-10">{{job_report.status}}</dd>
                     </dl>
+                    {% ifequal job_report.status "error" %}
+                    <div class="alert alert-danger">SYSTEM ERROR: {{job_report.exception}}</div>
+                    {% endifequal %}
                 </div></div>
 
 
@@ -69,7 +72,7 @@
                     </tr>
                     </thead>
                    <tbody>
-                        {% for step in steps %}
+                        {% for step in job_report.steps %}
                         <tr>
                             {% if step.status == "ok" %}
                             <td class="success">{{step.step_nr}}</td>
@@ -114,7 +117,7 @@
                             <td class="danger">{{step.status}}</td>
                             <td class="danger">
                                 {% for attachment_filename in step.attachment_filenames %}
-                                <a href="/attachment/{{ job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
+                                <a href="/attachment/{{ job_report.job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
                                 {% endfor %}</td>
                             <td class="danger"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
                             {% endif %}
@@ -123,17 +126,19 @@
                    </tbody>
                 </table>
                 <br>
-                {% if job_finish_date %}
-                    <a href="/data/report/{{ job_uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
+                {% if job_report.job_finish_date %}
+                    <a href="/data/report/{{ job_report.job_uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
                 {% endif %}
-                  <span>    </span><a href="/data/report/{{ job_uuid }}/report.json">JSON Report</a>
+                  <span>    </span><a href="/data/report/{{ job_report.job_uuid }}/report.json">JSON Report</a>
+                  <span>&nbsp;&nbsp;&nbsp;</span>
+                        <a href="/job_history/{{ delivery_id }}/">QC job history ...</a>
 
             </div>
 
         </div>
     </div>
 
-    <br><br><br><br>
+    </div>
 
 {% endblock content %}
 

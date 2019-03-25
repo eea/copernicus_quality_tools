@@ -247,7 +247,7 @@ function update_job_statuses() {
     var deliveries = $("#tbl-deliveries").bootstrapTable("getData");
     for(var i=0, len=deliveries.length; i < len; i++) {
         if(deliveries[i].last_job_status === "waiting" || deliveries[i].last_job_status === "running") {
-            var delivery_status_url = "/delivery/update_job/" + deliveries[i].id + "/";
+            var delivery_status_url = "/job/update/" + deliveries[i].last_job_uuid + "/";
 
             // sends a request to the server and asks for new status of running or waiting job.
             $.ajax({
@@ -329,7 +329,7 @@ $(document).ready(function() {
             return row.filename
         });
         delete_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
-    })
+    });
 
     // Start the timer to auto-refresh status of running jobs. Check for updates every 5 seconds.
     toggle_select_button();

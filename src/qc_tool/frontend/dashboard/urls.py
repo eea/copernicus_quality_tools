@@ -7,11 +7,11 @@ urlpatterns = [
 
     path("", views.deliveries, name="deliveries"),
 
-    re_path("data/delivery/list/", views.get_deliveries_json, name="deliveries_json"),
+    path("data/delivery/list/", views.get_deliveries_json, name="deliveries_json"),
+    path("data/job_history/<delivery_id>/", views.get_job_history_json, name="job_history_json"),
 
     path("delivery/delete/", views.delivery_delete, name="delivery_delete"),
     path("delivery/submit/", views.submit_delivery_to_eea, name="delivery_submit"),
-    path("delivery/update_job/<delivery_id>/", views.update_job, name="delivery_update_job"),
 
     path("data/job_info/<product_ident>/", views.get_job_info, name="job_info_json"),
     path("data/product_definition/<product_ident>/", views.get_product_definition, name="product_definition_json"),
@@ -20,6 +20,10 @@ urlpatterns = [
     path("data/report/<job_uuid>/report.pdf", views.get_pdf_report, name="job_report_pdf"),
 
     path('upload/', views.file_upload, name='file_upload'),
+
+    path('job_history/<delivery_id>/', views.job_history_page, name='job_history'),
+    path("job/delete/", views.job_delete, name="job_delete"),
+    path("job/update/<job_uuid>/", views.update_job, name="update_job"),
 
     path("data/boundaries/<boundary_type>/", views.get_boundaries_json, name="boundaries_json"),
     path('boundaries/', views.boundaries, name='boundaries'),

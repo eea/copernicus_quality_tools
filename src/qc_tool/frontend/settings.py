@@ -73,6 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.tz',
                 'django.template.context_processors.request',
                 'django.template.context_processors.static',
+                'qc_tool.frontend.dashboard.context_processors.show_logo'
             ],
         },
     },
@@ -125,7 +126,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)

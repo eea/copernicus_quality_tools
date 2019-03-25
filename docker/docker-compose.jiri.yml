@@ -15,7 +15,7 @@ services:
       - WORK_DIR=/mnt/qc_tool_work
       - FRONTEND_PORT=8000
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
-      - SHOW_LOGO=no
+      - SHOW_LOGO=yes
     networks:
       - qc_tool_network
     volumes:

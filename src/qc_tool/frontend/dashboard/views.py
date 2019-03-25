@@ -10,8 +10,10 @@ from zipfile import ZipFile
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import FileSystemStorage
+from django.db import connection
 from django.forms.models import model_to_dict
 from django.http import FileResponse
 from django.http import Http404
@@ -41,6 +43,8 @@ from qc_tool.frontend.dashboard.helpers import submit_job
 
 
 logger = logging.getLogger(__name__)
+
+CHECK_RUNNING_JOB_DELAY = 10
 
 
 @login_required
@@ -112,8 +116,30 @@ def get_deliveries_json(request):
     :param request:
     :return: list of deliveries in JSON format
     """
-    db_deliveries = models.Delivery.objects.filter(user_id=request.user.id)
-    return JsonResponse(list(db_deliveries.values()), safe=False)
+    with connection.cursor() as cursor:
+        sql = """
+        SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
+        d.product_ident, d.product_description, d.date_submitted,
+        j.job_uuid AS last_job_uuid,
+        j.date_created, j.date_started, j.job_status as last_job_status
+        FROM dashboard_delivery d
+        LEFT JOIN dashboard_job j
+        ON j.job_uuid = (
+          SELECT job_uuid FROM dashboard_job j
+          WHERE j.delivery_id = d.id
+          ORDER BY j.date_created DESC LIMIT 1)
+        INNER JOIN auth_user u
+        ON d.user_id = u.id
+        WHERE d.user_id = %s AND d.is_deleted != 1
+          """
+        cursor.execute(sql, (request.user.id,))
+        header = [i[0] for i in cursor.description]
+        rows = cursor.fetchall()
+        data = []
+        for row in rows:
+            data.append(dict(zip(header, row)))
+
+        return JsonResponse(data, safe=False)
 
 
 @login_required
@@ -135,7 +161,7 @@ def file_upload(request):
             logger.info("Processing uploaded ZIP file: {:s}".format(myfile.name))
 
             # Show error if a ZIP delivery with the same name uploaded by the same user already exists in the DB.
-            existing_deliveries = models.Delivery.objects.filter(filename=myfile, user=request.user)
+            existing_deliveries = models.Delivery.objects.filter(filename=myfile, user=request.user).exclude(is_deleted=True)
             if existing_deliveries.count() > 0:
                 logger.info("Upload rejected: file {:s} already exists for user {:s}".format(myfile.name,
                                                                                              request.user.username))
@@ -163,16 +189,26 @@ def file_upload(request):
             logger.debug(product_ident)
             product_description = find_product_description(product_ident)
 
-            # Save delivery metadata into the database.
-            d = models.Delivery()
-            d.filename = saved_filename
-            d.filepath = user_upload_path
-            d.size_bytes = dst_filepath.stat().st_size
-            d.product_ident = product_ident
-            d.product_description = product_description
-            d.user = request.user
-            d.save()
-            logger.debug("file info object saved successfully to database.")
+            # Search for existing delivery to be updated with newly uploaded file.
+            try:
+                # If there is a deleted delivery in the database, update it and set is_deleted to False.
+                d = models.Delivery.objects.get(user=request.user, filename=saved_filename, is_deleted=True)
+                d.size_bytes = dst_filepath.stat().st_size
+                d.date_uploaded = timezone.now()
+                d.is_deleted = False
+                d.save()
+            except ObjectDoesNotExist:
+                # Otherwise, create a new delivery in the database.
+                d = models.Delivery()
+                d.filename = saved_filename
+                d.filepath = user_upload_path
+                d.size_bytes = dst_filepath.stat().st_size
+                d.product_ident = product_ident
+                d.product_description = product_description
+                d.date_uploaded = timezone.now()
+                d.user = request.user
+                d.save()
+                logger.debug("Delivery object saved successfully to database.")
 
             data = {'is_valid': True,
                     'name': myfile.name,
@@ -320,10 +356,12 @@ def delivery_delete(request):
                                         .format(request.user.username, d.id))
 
             # Job status validation.
-            if d.last_job_status == JOB_RUNNING:
-                return JsonResponse({"status": "error",
-                                     "message": "delivery {:s} cannot be deleted. QC job is currently running."
-                                                .format(d.filename)})
+            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
+            if len(running_jobs) > 0:
+                if d.last_job_status == JOB_RUNNING:
+                    return JsonResponse({"status": "error",
+                                         "message": "delivery {:s} cannot be deleted. QC job is currently running."
+                                                    .format(d.filename)})
 
         deleted_filenames = []
         for delivery_id in delivery_ids:
@@ -342,8 +380,9 @@ def delivery_delete(request):
                 return PermissionDenied("User {:s} is not authorized to delete delivery {:d}"
                                         .format(request.user.username, d.id))
 
-            # Job status validation.
-            if d.last_job_status == JOB_RUNNING:
+            # Job status validation - cannot delete delivery with running job associated.
+            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
+            if len(running_jobs) > 0:
                 return JsonResponse({"status": "error",
                                      "message": "delivery {:s} cannot be deleted. QC job is currently running."
                                                 .format(d.filename)})
@@ -351,10 +390,49 @@ def delivery_delete(request):
             file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
             if file_path.exists():
                 file_path.unlink()
-            d.delete()
+            d.is_deleted = True
+            d.save()
             deleted_filenames.append(file_path.name)
         return JsonResponse({"status":"ok", "message": "{:d} deliveries deleted successfully."
                             .format(len(deleted_filenames))})
+
+
+@csrf_exempt
+def job_delete(request):
+    """
+    Deletes a job from the database and deleted the associated files from the filesystem.
+    """
+    if request.method == "POST":
+        uuids = request.POST.get("uuids")
+
+        logger.debug("job_delete uuids={:s}".format(uuids))
+
+        job_uuids = uuids.split(",")
+        num_deleted = 0
+
+        # Job status validation.
+        for job_uuid in job_uuids:
+
+            # Existence validation.
+            job = get_object_or_404(models.Job, pk=str(job_uuid))
+
+            # User validation.
+            if request.user.id != job.delivery.user.id:
+                return PermissionDenied("User {:s} is not authorized to delete job {:s}"
+                                        .format(request.user.username, job_uuid))
+
+            # Job status validation.
+            running_jobs = models.Job.objects.filter(job_uuid=str(job_uuid)).filter(job_status=JOB_RUNNING)
+            if len(running_jobs) > 0:
+                return JsonResponse({"status": "error",
+                                     "message": "Job {:s} cannot be deleted. QC job is currently running."
+                                                .format(job_uuid)})
+        deleted_jobs = []
+        for job_uuid in job_uuids:
+            models.Job.objects.filter(job_uuid=str(job_uuid)).delete()
+            deleted_jobs.append(job_uuid)
+        return JsonResponse({"status":"ok", "message": "{:d} jobs deleted successfully."
+                            .format(len(deleted_jobs))})
 
 
 @csrf_exempt
@@ -372,7 +450,8 @@ def submit_delivery_to_eea(request):
 
         try:
             zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
-            submit_job(d.last_job_uuid, zip_filepath, CONFIG["submission_dir"], d.date_submitted)
+            last_job = d.get_last_job()
+            submit_job(last_job.job_uuid, zip_filepath, CONFIG["submission_dir"], d.date_submitted)
         except BaseException as e:
             d.date_submitted = None
             d.save()
@@ -417,22 +496,49 @@ def get_job_info(request, product_ident):
     return JsonResponse({'job_result': job_report})
 
 def get_job_report(request, job_uuid):
-    delivery = models.Delivery.objects.get(last_job_uuid=job_uuid)
-    job_result = compile_job_report_data(job_uuid, delivery.product_ident)
+    job = models.Job.objects.get(job_uuid=job_uuid)
+    job_result = compile_job_report_data(job_uuid, job.product_ident)
     return JsonResponse(job_result, safe=False)
 
+def get_job_history_json(request, delivery_id):
+    """
+    Shows the history of all jobs for a specific delivery in .json format.
+    """
+    delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+    if delivery.user != request.user:
+        raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+    jobs = models.Job.objects.filter(delivery=delivery).order_by("-date_created")
+    for job in jobs:
+        if job.job_status == JOB_RUNNING:
+            job_status = check_running_job(str(job.job_uuid), job.worker_url)
+            if job_status is not None:
+                job.update_status(job_status)
+    return JsonResponse(list(jobs.values()), safe=False)
+
+def job_history_page(request, delivery_id):
+    """
+    Shows the history of all jobs for a specific delivery in .json format.
+    """
+    delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+    if delivery.user != request.user:
+        raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+    return render(request, 'dashboard/job_history.html', {"delivery": delivery,
+                                                          "show_logo": settings.SHOW_LOGO})
 @login_required
 def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
     """
-    delivery = models.Delivery.objects.get(last_job_uuid=job_uuid)
-    job_report = compile_job_report_data(job_uuid, delivery.product_ident)
+    job = models.Job.objects.get(job_uuid=job_uuid)
+    delivery = job.delivery
+    job_report = compile_job_report_data(job_uuid, job.product_ident)
     # strip initial qc_tool. from check idents
     for step in job_report["steps"]:
         if step["check_ident"].startswith("qc_tool."):
             step["check_ident"] = ".".join(step["check_ident"].split(".")[1:])
-    return render(request, "dashboard/result.html", job_report)
+    return render(request, "dashboard/result.html", {"job_report":job_report,
+                                                     "delivery_id": delivery.id,
+                                                     "show_logo": settings.SHOW_LOGO})
 
 def get_pdf_report(request, job_uuid):
     filepath = compose_job_report_filepath(job_uuid)
@@ -457,25 +563,32 @@ def get_attachment(request, job_uuid, attachment_filename):
     return response
 
 @login_required
-def update_job(request, delivery_id):
-    delivery = models.Delivery.objects.get(id=delivery_id)
-    if delivery.last_job_status == JOB_RUNNING:
-        job_status = check_running_job(delivery.last_job_uuid, delivery.worker_url)
-        if job_status is not None:
-            delivery.update_job(job_status)
-    return JsonResponse(model_to_dict(delivery))
+def update_job(request, job_uuid):
+    job = models.Job.objects.get(job_uuid=job_uuid)
+
+    if job.job_status == JOB_RUNNING:
+        time_running = (timezone.now() - job.date_started).total_seconds()
+        if time_running > CHECK_RUNNING_JOB_DELAY:
+            job_status = check_running_job(str(job.job_uuid), job.worker_url)
+            if job_status is not None:
+                job.update_status(job_status)
+
+    response_dict = model_to_dict(job.delivery)
+    response_dict["last_job_uuid"] = job.job_uuid
+    response_dict["last_job_status"] = job.job_status
+    return JsonResponse({"id": job.delivery.id, "last_job_uuid": job.job_uuid, "last_job_status": job.job_status})
 
 @csrf_exempt
 def create_job(request):
     delivery_ids = request.POST.get("delivery_ids").split(",")
+    product_ident = request.POST.get("product_ident")
+    skip_steps = request.POST.get("skip_steps")
+    if skip_steps == "":
+        skip_steps = None
+
     num_created = 0
 
     for delivery_id in delivery_ids:
-        product_ident = request.POST.get("product_ident")
-        skip_steps = request.POST.get("skip_steps")
-        if skip_steps == "":
-            skip_steps = None
-
         # Input validation.
         try:
             int(delivery_id)
@@ -504,13 +617,13 @@ def pull_job(request):
     except:
         return HttpResponse(status=400)
     worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], WORKER_PORT)
-    delivery = models.pull_job(worker_url)
-    if delivery is None:
+    job = models.pull_job(worker_url)
+    if job is None:
         response = None
     else:
-        response = {"job_uuid": delivery.last_job_uuid,
-                    "username": delivery.user.username,
-                    "product_ident": delivery.product_ident,
-                    "filename": delivery.filename,
-                    "skip_steps": delivery.skip_steps}
+        response = {"job_uuid": job.job_uuid,
+                    "product_ident": job.product_ident,
+                    "username": job.delivery.user.username,
+                    "filename": job.delivery.filename,
+                    "skip_steps": job.skip_steps}
     return JsonResponse(response, safe=False)
