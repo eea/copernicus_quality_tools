@@ -1,0 +1,244 @@
+{
+  "description": "CORINE Land Cover 2018",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "formats": [".gdb"],
+        "layer_names": {
+          "reference": "clc18_(?P<aoi_code>.+)$",
+          "initial": "^clc12_(?P<aoi_code>.+)$",
+          "change": "^cha18_(?P<aoi_code>.+)$"
+        },
+        "gdb_filename_regex": "^clc2018_(?P<aoi_code>.+).gdb$",
+        "aoi_codes": ["al", "at",
+                      "ba", "be", "bg",
+                      "ch", "cy", "cz",
+                      "de", "dk",
+                      "ee", "es", "es_cn", "eu",
+                      "fi", "fr", "fr_glp", "fr_guf", "fr_mtq", "fr_myt", "fr_reu",
+                      "gr",
+                      "hr", "hu",
+                      "ie", "is", "it",
+                      "li", "lt", "lu", "lv",
+                      "me", "mk", "mt",
+                      "nl", "no",
+                      "pl", "pt", "pt_raa", "pt_ram", "pt_raa_ceg", "pt_raa_weg",
+                      "ro",
+                      "se", "si", "sk",
+                      "tr",
+                      "uk", "uk_ni", "uk_ge", "uk_je",
+                      "xk"],
+        "boundary_source": "clc/boundary_clc_{aoi_code}.shp"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.format",
+      "required": true,
+      "parameters": {
+        "layers": ["reference", "initial", "change"],
+        "formats": [".gdb"],
+        "drivers": {".gdb": "OpenFileGDB"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["reference"],
+        "attributes": {"id": "string",
+                       "remark": "string",
+                       "area_ha": "real",
+                       "shape_area": "real",
+                       "shape_length": "real",
+                       "code_18": "string"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["initial"],
+        "attributes": {"id": "string",
+                       "remark": "string",
+                       "area_ha": "real",
+                       "shape_area": "real",
+                       "shape_length": "real",
+                       "code_12": "string"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["change"],
+        "attributes": {"id": "string",
+                       "remark": "string",
+                       "area_ha": "real",
+                       "shape_area": "real",
+                       "shape_length": "real",
+                       "change": "string",
+                       "code_12": "string",
+                       "code_18": "string",
+                       "chtype": "string"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg_clc",
+      "required": true,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"],
+        "unique_keys": ["id"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "column_defs": [["code_18", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
+                                     "211", "212", "213", "221", "222", "223", "231", "241", "242", "243", "244",
+                                     "311", "312", "313", "321", "322", "323", "324", "331", "332", "333", "334", "335",
+                                     "411", "412", "421", "422", "423",
+                                     "511", "512", "521", "522", "523",
+                                     "999"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["initial"],
+        "column_defs": [["code_12", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
+                                     "211", "212", "213", "221", "222", "223", "231", "241", "242", "243", "244",
+                                     "311", "312", "313", "321", "322", "323", "324", "331", "332", "333", "334", "335",
+                                     "411", "412", "421", "422", "423",
+                                     "511", "512", "521", "522", "523",
+                                     "999"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "column_defs": [["code_18", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
+                                     "211", "212", "213", "221", "222", "223", "231", "241", "242", "243", "244",
+                                     "311", "312", "313", "321", "322", "323", "324", "331", "332", "333", "334", "335",
+                                     "411", "412", "421", "422", "423",
+                                     "511", "512", "521", "522", "523",
+                                     "999"]],
+                        ["code_12", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
+                                     "211", "212", "213", "221", "222", "223", "231", "241", "242", "243", "244",
+                                     "311", "312", "313", "321", "322", "323", "324", "331", "332", "333", "334", "335",
+                                     "411", "412", "421", "422", "423",
+                                     "511", "512", "521", "522", "523",
+                                     "999"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_clc_status",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial"],
+        "area_m2": 250000,
+        "area_column_name": "shape_area"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_clc_change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "area_m2": 50000,
+        "area_column_name": "shape_area",
+        "initial_code_column_name": "code_12",
+        "final_code_column_name": "code_18"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"],
+        "mmw": 100.0
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "code_column_names": ["code_18"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["initial"],
+        "code_column_names": ["code_12"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "code_column_names": ["code_12", "code_18"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
+    }
+  ]
+}

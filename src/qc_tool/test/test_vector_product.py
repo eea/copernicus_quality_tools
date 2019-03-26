@@ -14,7 +14,7 @@ class Test_clc(ProductTestCase):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
 
         expected_step_results = ["ok"] * 23
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "clc_2012")
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "clc2012")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
@@ -23,7 +23,7 @@ class Test_clc_status(ProductTestCase):
     def test_status_json(self):
         from qc_tool.common import load_job_result
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "clc_2012", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "clc2012", [])
         job_result_from_file = load_job_result(self.job_uuid)
         self.assertEqual(job_result, job_result_from_file,
                          "Job result returned by dispatch() must be the same as job result stored in json file.")
