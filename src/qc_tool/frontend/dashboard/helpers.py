@@ -50,7 +50,7 @@ def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     job_uuid = str(job_uuid)
     job_result = load_job_result(job_uuid)
     job_dir = compose_job_dir(job_uuid)
-    reference_year = job_result["reference_year"]
+    reference_year = job_result.get("reference_year", None)
     if reference_year is None:
         reference_year = UNKNOWN_REFERENCE_YEAR_LABEL
     uploaded_name = re.sub(".zip$", "", job_result["filename"])
