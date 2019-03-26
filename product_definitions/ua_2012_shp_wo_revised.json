@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas 2012, shapefile, without revised layer.",
+  "description": "Urban Atlas 2012, shapefile, without change layer.",
   "steps": [
     {
       "check_ident": "qc_tool.vector.unzip",
@@ -12,16 +12,17 @@
         "reference_year": "2012",
         "formats": [".shp"],
         "layer_names": {
-          "reference": "_ua2012$",
-          "boundary": "^boundary2012_"
-        }
+          "reference": "_ua2012$"
+        },
+        "excessive_layers_allowed": true,
+        "boundary_source": "boundary_ua2012.shp"
       }
     },
     {
       "check_ident": "qc_tool.vector.format",
       "required": true,
       "parameters": {
-        "layers": ["reference", "boundary"],
+        "layers": ["reference"],
         "formats": [".shp"],
         "drivers": {".shp": "ESRI Shapefile"}
       }
@@ -90,14 +91,15 @@
       "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
-        "layers": ["boundary", "reference"]
+        "layers": ["reference"]
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap",
+      "check_ident": "qc_tool.vector.gap_unit",
       "required": false,
       "parameters": {
-        "layers": ["reference"]
+        "layers": ["reference"],
+        "boundary_unit_column_name": "fua_or_cit"
       }
     },
     {

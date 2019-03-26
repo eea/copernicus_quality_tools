@@ -20,15 +20,28 @@ def run_check(params, status):
     # Import all layers found in layer_defs.
     for layer_def in params["layer_defs"].values():
         layer_name = layer_def["src_layer_name"]
-        pc = run(["ogr2ogr",
-                  "-overwrite",
-                  "-f", "PostgreSQL",
-                  "-lco", "SCHEMA={:s}".format(schema),
-                  "-lco", "PRECISION=NO",
-                  "-nlt", "MULTIPOLYGON",
-                  "PG:{:s}".format(dsn),
-                  str(layer_def["src_filepath"]),
-                  layer_name])
+
+        if "detected_epsg" in params:
+            pc = run(["ogr2ogr",
+                      "-overwrite",
+                      "-f", "PostgreSQL",
+                      "-lco", "SCHEMA={:s}".format(schema),
+                      "-lco", "PRECISION=NO",
+                      "-nlt", "MULTIPOLYGON",
+                      "-a_srs", "EPSG:{:d}".format(params["detected_epsg"]),
+                      "PG:{:s}".format(dsn),
+                      str(layer_def["src_filepath"]),
+                      layer_name])
+        else:
+            pc = run(["ogr2ogr",
+                      "-overwrite",
+                      "-f", "PostgreSQL",
+                      "-lco", "SCHEMA={:s}".format(schema),
+                      "-lco", "PRECISION=NO",
+                      "-nlt", "MULTIPOLYGON",
+                      "PG:{:s}".format(dsn),
+                      str(layer_def["src_filepath"]),
+                      layer_name])
         if pc.returncode != 0:
             status.aborted("Failed to import layer {:s} into PostGIS.".format(layer_name))
         else:

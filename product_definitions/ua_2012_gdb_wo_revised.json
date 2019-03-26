@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas 2012, geodatabase, without revised layer.",
+  "description": "Urban Atlas 2012, geodatabase, without change layer.",
   "steps": [
     {
       "check_ident": "qc_tool.vector.unzip",
@@ -14,16 +14,16 @@
         "num_geodatabases": 1,
         "gdb_filename_regex": "^[a-z0-9]{7}_.*$",
         "layer_names": {
-          "reference": "_ua2012$",
-          "boundary": "^boundary2012_"
-        }
+          "reference": "_ua2012$"
+        },
+        "excessive_layers_allowed": true
       }
     },
     {
       "check_ident": "qc_tool.vector.format",
       "required": true,
       "parameters": {
-        "layers": ["reference", "boundary"],
+        "layers": ["reference"],
         "formats": [".gdb"],
         "drivers": {".gdb": "OpenFileGDB"}
       }
@@ -91,14 +91,15 @@
       "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
-        "layers": ["boundary", "reference"]
+        "layers": ["reference"]
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap",
+      "check_ident": "qc_tool.vector.gap_unit",
       "required": false,
       "parameters": {
-        "layers": ["reference"]
+        "layers": ["reference"],
+        "boundary_unit_column_name": "fua_or_cit"
       }
     },
     {

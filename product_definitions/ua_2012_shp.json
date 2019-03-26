@@ -13,18 +13,18 @@
         "formats": [".shp"],
         "layer_names": {
           "reference": "_ua2012$",
-          "boundary": "^boundary2012_",
-          "revised": "_ua2006_revised$",
           "combined": "_ua2006_2012$",
           "change": "_change_2006_2012$"
-        }
+        },
+        "excessive_layers_allowed": true,
+        "boundary_source": "boundary_ua2012.shp"
       }
     },
     {
       "check_ident": "qc_tool.vector.format",
       "required": true,
       "parameters": {
-        "layers": ["reference", "boundary", "combined", "revised", "change"],
+        "layers": ["reference", "combined", "change"],
         "formats": [".shp"],
         "drivers": {".shp": "ESRI Shapefile"}
       }
@@ -49,21 +49,6 @@
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
-        "layers": ["revised"],
-        "attributes": {"country": "string",
-                       "cities": "string",
-                       "fua_or_cit": "string",
-                       "prod_date": "string",
-                       "perimeter": "real",
-                       "area": "real",
-                       "code2006": "string",
-                       "item2006": "string"}
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.attribute",
-      "required": true,
-      "parameters": {
         "layers": ["combined", "change"],
         "attributes": {"country": "string",
                        "cities": "string",
@@ -82,7 +67,7 @@
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
-        "layers": ["reference", "boundary", "combined", "revised", "change"],
+        "layers": ["reference", "boundary", "combined", "change"],
         "epsg": [3035],
         "auto_identify_epsg": true
       }
@@ -119,22 +104,6 @@
       "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
-        "layers": ["revised"],
-        "column_defs": [["code2006", ["11100", "11210", "11220", "11230", "11240", "11300",
-                                      "12100", "12210", "12220", "12230", "12300", "12400",
-                                      "13100", "13300", "13400",
-                                      "14100", "14200",
-                                      "20000",
-                                      "30000",
-                                      "40000",
-                                      "50000",
-                                      "91000", "92000"]]]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.enum",
-      "required": false,
-      "parameters": {
         "layers": ["combined", "change"],
         "column_defs": [["code2006", ["11100", "11210", "11220", "11230", "11240", "11300",
                                       "12100", "12210", "12220", "12230", "12300", "12400",
@@ -160,14 +129,15 @@
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
-        "layers": ["reference", "combined", "revised", "change"]
+        "layers": ["reference", "combined", "change"]
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap",
+      "check_ident": "qc_tool.vector.gap_unit",
       "required": false,
       "parameters": {
-        "layers": ["reference", "combined", "revised"]
+        "layers": ["reference"],
+        "boundary_unit_column_name": "fua_or_cit"
       }
     },
     {
@@ -177,15 +147,6 @@
         "layers": ["reference"],
         "area_column_name": "shape_area",
         "code_column_name": "code2012"
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.mmu_ua_status",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"],
-        "area_column_name": "shape_area",
-        "code_column_name": "code2006"
       }
     },
     {
@@ -208,19 +169,10 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmw_ua",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"],
-        "code_column_name": "code2006",
-        "mmw": 10.0
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["reference", "combined", "revised", "change"]
+        "layers": ["reference", "combined", "change"]
       }
     },
     {
@@ -229,15 +181,6 @@
       "parameters": {
         "layers": ["reference"],
         "code_column_names": ["code2012"],
-        "exclude_codes": ["122%"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.neighbour",
-      "required": false,
-      "parameters": {
-        "layers": ["revised"],
-        "code_column_names": ["code2006"],
         "exclude_codes": ["122%"]
       }
     },
@@ -254,7 +197,7 @@
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
-        "layers": ["reference", "combined", "revised", "change", "boundary"]
+        "layers": ["reference"]
       }
     }
   ]

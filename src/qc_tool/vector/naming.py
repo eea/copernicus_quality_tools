@@ -34,7 +34,7 @@ def run_check(params, status):
 
     # Check if delivery contains any vector layers.
     if len(shp_layer_infos) + len(gdb_layer_infos) == 0:
-        status.aborted("No vector layers were found in the delivery.")
+        status.aborted("No {:s} vector layers were found in the delivery.".format(" or ".join(params["formats"])))
         return
 
     # Check number of geodatabases.
@@ -70,7 +70,9 @@ def run_check(params, status):
         builder.extract_layer_def(layer_regex, layer_alias)
 
     # Check excessive layers.
-    builder.check_excessive_layers()
+    excessive_layers_allowed = params.get("excessive_layers_allowed", False)
+    if not excessive_layers_allowed:
+        builder.check_excessive_layers()
 
     # Extract AOI code and compare it to pre-defined list.
     aoi_code = None

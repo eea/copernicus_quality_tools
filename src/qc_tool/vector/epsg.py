@@ -20,6 +20,7 @@ def run_check(params, status):
             status.aborted("Layer {:s} has missing spatial reference system.".format(layer_def["src_layer_name"]))
         else:
             # Get epsg code from authority clause.
+            srs.AutoIdentifyEPSG()
             authority_name = srs.GetAuthorityName(None)
             authority_code = srs.GetAuthorityCode(None)
             if authority_name == "EPSG":
@@ -31,6 +32,8 @@ def run_check(params, status):
                 else:
                     if authority_code not in params["epsg"]:
                         status.aborted("Layer {:s} has illegal epsg code {:d}.".format(layer_def["src_layer_name"], authority_code))
+                    else:
+                        status.add_params({"detected_epsg": authority_code})
             elif params.get("auto_identify_epsg", False):
                 # Parameter auto_identify_epsg can be used for less-strict checking of .prj files.
                 # There is a built-in function in GDAL 2.3 with matching logic.
@@ -40,6 +43,7 @@ def run_check(params, status):
                     expected_srs.ImportFromEPSG(allowed_epsg)
                     if srs.IsSame(expected_srs):
                         is_detected = True
+                        status.add_params({"detected_epsg": allowed_epsg})
                         break
                 if not is_detected:
                     status.aborted("Layer {:s} does not have an epsg code and the epsg code can not be detected, srs: {:s}."
