@@ -5,7 +5,7 @@
 import re
 
 
-DESCRIPTION = "Minimum mapping unit, Corine Land Cover status layer."
+DESCRIPTION = "Minimum mapping unit."
 IS_SYSTEM = False
 
 
