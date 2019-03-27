@@ -25,5 +25,5 @@ def run_check(params, status):
             return
 
         if x_size != params["pixelsize"]:
-            status.failed("Layer {:s} has raster pixel size {:d} m, {:d} m is allowed."
+            status.failed("Layer {:s} has raster pixel size {:f} m, {:f} m is allowed."
                           .format(layer_def["src_layer_name"], x_size, params["pixelsize"]))

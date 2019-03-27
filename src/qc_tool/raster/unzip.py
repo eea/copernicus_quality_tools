@@ -20,7 +20,7 @@ def run_check(params, status):
         with ZipFile(str(zip_filepath)) as zip_file:
             zip_file.extractall(path=str(unzip_dir))
     except Exception as ex:
-        status.aborted("Error unzipping file {:s}.".format(zip_filepath.filename))
+        status.aborted("Error unzipping file {:s}.".format(zip_filepath.name))
         return
 
     status.add_params({"unzip_dir": unzip_dir})
