@@ -1,0 +1,206 @@
+{
+  "description": "HRL Small Woody Features, vector + 5m raster",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "layer_names":{"swf_raster": "^swf_2015_005m_[a-z_]+_3035_(?P<aoi_code>[0-9]{3})_[a-z]+.tif$"},
+        "extensions": [".tif"],
+        "aoi_codes": ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010",
+                      "011", "012", "013", "014", "015", "016", "017", "018", "019", "020",
+                      "021", "022", "023", "024", "025", "026", "027", "028", "029", "030",
+                      "123"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.format",
+      "required": true,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "auto_identify_epsg": true,
+        "epsg": 3035
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "pixelsize": 5
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "validcodes": [0, 1, 2, 3, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.color",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "colors": {
+          "0":[240, 240, 240],
+          "1":[215, 245, 0],
+          "3":[240, 200, 0],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2015",
+        "formats": [".gdb", ".shp"],
+        "layer_names": {
+          "swf_vec": "swf_2015_005m_[a-z_]+_3035_(?P<aoi_code>[0-9]{3})_[a-z]+$"
+        },
+        "aoi_codes": ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010",
+                      "011", "012", "013", "014", "015", "016", "017", "018", "019", "020",
+                      "021", "022", "023", "024", "025", "026", "027", "028", "029", "030",
+                      "123"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.format",
+      "required": true,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "formats": [".gdb", ".shp"],
+        "drivers": {".gdb": "OpenFileGDB", ".shp": "ESRI Shapefile"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "attributes": {"code": "string",
+                       "area": "real",
+                       "class_name": "string"}
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "epsg": 3035,
+        "auto_identify_epsg": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "column_defs": [["code", ["1", "2", "3"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_status",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "code_column_name": "code",
+        "area_by_code": [["1", 0], ["2", 200], ["3", 0]],
+        "area_column_name": "area",
+        "margin_exceptions": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "mmw": 30.0
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "code_column_names": ["code"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"]
+      }
+    }
+  ]
+}
