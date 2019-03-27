@@ -175,12 +175,25 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmu_clc_status",
+      "check_ident": "qc_tool.vector.mmu_status",
       "required": false,
       "parameters": {
-        "layers": ["reference", "initial"],
-        "area_m2": 250000,
-        "area_column_name": "shape_area"
+        "layers": ["reference"],
+        "code_column_name": "code_12",
+        "area_by_code": [["%", 250000]],
+        "area_column_name": "shape_area",
+        "margin_exceptions": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_status",
+      "required": false,
+      "parameters": {
+        "layers": ["initial"],
+        "code_column_name": "code_06",
+        "area_by_code": [["%", 250000]],
+        "area_column_name": "shape_area",
+        "margin_exceptions": true
       }
     },
     {

@@ -6,14 +6,6 @@
       "required": true
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
@@ -38,6 +30,15 @@
                           "tr",
                           "uk", "uk_ni", "uk_ge", "uk_je",
                           "xk"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.format",
+      "required": true,
+      "parameters": {
+        "layers": ["forest_type"],
+        "formats": [".tif"],
+        "drivers": {".tif": "GTiff"}
       }
     },
     {
