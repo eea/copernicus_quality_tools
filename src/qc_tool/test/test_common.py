@@ -12,7 +12,7 @@ from qc_tool.worker.manager import create_jobdir_manager
 class TestCommon(TestCase):
     def test_load_product_definition(self):
         from qc_tool.common import load_product_definition
-        product_definition = load_product_definition("clc_2012")
+        product_definition = load_product_definition("clc2012")
         self.assertIn("steps", product_definition)
         self.assertLess(1, len(product_definition["steps"]))
         self.assertDictEqual({"check_ident": "qc_tool.vector.format",
@@ -25,15 +25,15 @@ class TestCommon(TestCase):
     def test_get_product_descriptions(self):
         from qc_tool.common import get_product_descriptions
         product_descriptions = get_product_descriptions()
-        self.assertIn("clc_2012", product_descriptions)
-        self.assertEqual("CORINE Land Cover 2012", product_descriptions["clc_2012"])
+        self.assertIn("clc2012", product_descriptions)
+        self.assertEqual("CORINE Land Cover 2012", product_descriptions["clc2012"])
 
     def test_prepare_job_blueprint(self):
         from qc_tool.common import load_product_definition
         from qc_tool.common import prepare_job_blueprint
-        product_definition = load_product_definition("clc_2012")
+        product_definition = load_product_definition("clc2012")
         job_result = prepare_job_blueprint(product_definition)
-        self.assertEqual("clc_2012", job_result["product_ident"])
+        self.assertEqual("clc2012", job_result["product_ident"])
         self.assertEqual("CORINE Land Cover 2012", job_result["description"])
         self.assertLess(4, len(job_result["steps"]))
         self.assertEqual("qc_tool.vector.format", job_result["steps"][2]["check_ident"])

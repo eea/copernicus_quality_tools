@@ -226,8 +226,7 @@ class Test_naming_ua_shp(VectorCheckTestCase):
         self.params["unzip_dir"] = status.params["unzip_dir"]
         self.params.update({"reference_year": "2012",
                             "formats": [".shp"],
-                            "layer_names": {"reference": "_ua2012$",
-                                            "boundary": "^boundary2012_"}})
+                            "layer_names": {"reference": "_ua2012$"}})
 
     def test(self):
         from qc_tool.vector.naming import run_check
@@ -235,11 +234,9 @@ class Test_naming_ua_shp(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual(2, len(status.params["layer_defs"]))
+        self.assertEqual(1, len(status.params["layer_defs"]))
         self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
-        self.assertEqual("Boundary2012_EE003L0_NARVA.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
-        self.assertEqual("Boundary2012_EE003L0_NARVA", status.params["layer_defs"]["boundary"]["src_layer_name"])
 
 
 class Test_format(VectorCheckTestCase):
@@ -345,7 +342,7 @@ class Test_epsg_gdb(VectorCheckTestCase):
                                            "layer_1": {"src_filepath": gdb_dir,
                                                        "src_layer_name": "clc12_mt"}},
                             "layers": ["layer_0", "layer_1"],
-                            "epsg": [23033]})
+                            "epsg": 23033})
 
     def test(self):
         from qc_tool.vector.epsg import run_check
@@ -355,7 +352,7 @@ class Test_epsg_gdb(VectorCheckTestCase):
 
     def test_mismatched_epsg_aborts(self):
         from qc_tool.vector.epsg import run_check
-        self.params["epsg"] = [7777]
+        self.params["epsg"] = 7777
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
@@ -376,13 +373,10 @@ class Test_epsg_shp(VectorCheckTestCase):
         from qc_tool.vector.epsg import run_check
         shp_dir = self.params["unzip_dir"].joinpath("EE003L0_NARVA", "Shapefiles")
         reference_path = shp_dir.joinpath("EE003L0_NARVA_UA2012.shp")
-        boundary_path = shp_dir.joinpath("Boundary2012_EE003L0_NARVA.shp")
-        self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
-                                                        "src_layer_name": boundary_path.stem},
-                                           "reference": {"src_filepath": reference_path,
+        self.params.update({"layer_defs": {"reference": {"src_filepath": reference_path,
                                                          "src_layer_name": reference_path.stem}},
-                            "layers": ["boundary", "reference"],
-                            "epsg": [3035],
+                            "layers": ["reference"],
+                            "epsg": 3035,
                             "auto_identify_epsg": True})
         status = self.status_class()
         run_check(self.params, status)
@@ -396,7 +390,7 @@ class Test_epsg_auto_identify_epsg(VectorCheckTestCase):
         self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
                                                         "src_layer_name": boundary_path.stem}},
                             "layers": ["boundary"],
-                            "epsg": [3035],
+                            "epsg": 3035,
                             "auto_identify_epsg": True})
         status = self.status_class()
         run_check(self.params, status)
@@ -789,26 +783,28 @@ class Test_gap_unit(VectorCheckTestCase):
         self.assertEqual(2, self.cursor.rowcount)
 
 
-class Test_mmu_clc_status(VectorCheckTestCase):
+class Test_mmu_status(VectorCheckTestCase):
     def test(self):
-        from qc_tool.vector.mmu_clc_status import run_check
+        from qc_tool.vector.mmu_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE reference (fid integer, shape_area real, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, code_12 varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO reference VALUES (10, 250001, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (12, 250000, ST_MakeEnvelope(12, 0, 13, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (10, 'code1', 250001, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (12, 'code2', 250000, ST_MakeEnvelope(12, 0, 13, 2, 4326));")
         # Exception feature being at the boundary.
-        cursor.execute("INSERT INTO reference VALUES (20, 249999, ST_MakeEnvelope(20, 0, 21, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (20, 'code3', 249999, ST_MakeEnvelope(20, 0, 21, 2, 4326));")
         # Error feature.
-        cursor.execute("INSERT INTO reference VALUES (30, 249999, ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (30, 'code3', 249999, ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
 
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
-                            "area_m2": 250000,
+                            "code_column_name": "code_12",
+                            "area_by_code": [["%", 250000]],
+                            "margin_exceptions": True,
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
@@ -817,6 +813,43 @@ class Test_mmu_clc_status(VectorCheckTestCase):
         self.assertListEqual([(20,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
         self.assertListEqual([(30,)], cursor.fetchall())
+
+    def test_multiple_classes(self):
+        from qc_tool.vector.mmu_status import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
+
+        # General features, class 1.
+        cursor.execute("INSERT INTO reference VALUES (10, 'code1', 250001, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (12, 'code1', 250000, ST_MakeEnvelope(12, 0, 13, 2, 4326));")
+
+        # General features, class 2.
+        cursor.execute("INSERT INTO reference VALUES (14, 'code2', 500001, ST_MakeEnvelope(14, 1, 15, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (16, 'code2', 500000, ST_MakeEnvelope(16, 0, 17, 2, 4326));")
+
+        # Exception feature being at the boundary.
+        cursor.execute("INSERT INTO reference VALUES (20, 'code1', 249999, ST_MakeEnvelope(20, 0, 21, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (21, 'code2', 499999, ST_MakeEnvelope(21, 0, 22, 2, 4326));")
+        # Error feature.
+        cursor.execute("INSERT INTO reference VALUES (30, 'code1', 249999, ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (31, 'code2', 499999, ST_MakeEnvelope(14.1, 1.1, 14.9, 1.9, 4326));")
+
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
+                                                         "pg_fid_name": "fid",
+                                                         "fid_display_name": "row number"}},
+                            "layers": ["reference"],
+                            "area_column_name": "shape_area",
+                            "code_column_name": "code",
+                            "area_by_code": [["code1", 250000], ["code2", 500000]],
+                            "margin_exceptions": True,
+                            "step_nr": 1})
+        run_check(self.params, self.status_class())
+        cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
+        self.assertListEqual([(10,), (12,), (14,), (16,)], cursor.fetchall())
+        cursor.execute("SELECT fid FROM s01_reference_exception ORDER BY fid;")
+        self.assertListEqual([(20,), (21,)], cursor.fetchall())
+        cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
+        self.assertListEqual([(30,), (31,)], cursor.fetchall())
 
 
 class Test_mmu_clc_change(VectorCheckTestCase):
