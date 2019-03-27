@@ -190,16 +190,20 @@ function delete_function(delivery_ids, filenames) {
                         dialog.close();
                     },
                     error: function(result)  {
-                         var dlg_err = BootstrapDialog.show({
-                            type: BootstrapDialog.TYPE_WARNING,
-                            title: "Error",
-                            message: "Error deleting deliveries.",
-                            buttons: [{
-                                label: "OK",
-                                cssClass: "btn-default",
-                                action: function(dialog) {dialog.close();}
-                            }]
-                        });
+                        var error_message = "Unspecified error.";
+                            if (result.hasOwnProperty("responseJSON")) {
+                                error_message = result.responseJSON.message;
+                            }
+                            var dlg_err = BootstrapDialog.show({
+                                type: BootstrapDialog.TYPE_WARNING,
+                                title: "Error",
+                                message: error_message,
+                                buttons: [{
+                                    label: "OK",
+                                    cssClass: "btn-default",
+                                    action: function(dialog) {dialog.close();}
+                                }]
+                            });
                     }
                 });
             }

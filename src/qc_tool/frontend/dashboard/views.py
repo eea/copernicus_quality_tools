@@ -330,55 +330,61 @@ def delivery_delete(request):
         logger.debug("delivery_delete ids={:s}".format(delivery_ids))
 
         delivery_ids = request.POST.get("ids").split(",")
-        num_deleted = 0
 
         # Job status validation.
-        for delivery_id in delivery_ids:
-            try:
-                int(delivery_id)
-            except ValueError:
-                return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
-
-            # Existence validation.
-            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
-
-            # User validation.
-            if request.user.id != d.user.id:
-                return PermissionDenied("User {:s} is not authorized to delete delivery {:d}"
-                                        .format(request.user.username, d.id))
-
-            # Job status validation.
-            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
-            if len(running_jobs) > 0:
-                if d.last_job_status == JOB_RUNNING:
-                    return JsonResponse({"status": "error",
-                                         "message": "delivery {:s} cannot be deleted. QC job is currently running."
-                                                    .format(d.filename)})
-
-        deleted_filenames = []
         for delivery_id in delivery_ids:
 
             # Input validation.
             try:
                 int(delivery_id)
             except ValueError:
-                return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
+                error_message = "delivery id {0} must be a valid integer id.".format(delivery_id)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 400
+                return response
 
             # Existence validation.
             d = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
             # User validation.
             if request.user.id != d.user.id:
-                return PermissionDenied("User {:s} is not authorized to delete delivery {:d}"
-                                        .format(request.user.username, d.id))
+                error_message = "User {:s} is not authorized to delete delivery {:d}"
+                error_message = error_message.format(request.user.username, d.filename)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 403
+                return response
 
-            # Job status validation - cannot delete delivery with running job associated.
+            # Job status validation.
             running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
             if len(running_jobs) > 0:
-                return JsonResponse({"status": "error",
-                                     "message": "delivery {:s} cannot be deleted. QC job is currently running."
-                                                .format(d.filename)})
+                error_message = "delivery {:s} cannot be deleted. QC job is currently running.".format(d.filename)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 400
+                return response
 
+        deleted_filenames = []
+        for delivery_id in delivery_ids:
+
+            # Existence validation again.
+            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
+
+            # User validation again.
+            if request.user.id != d.user.id:
+                error_message = "User {:s} is not authorized to delete delivery {:d}"
+                error_message = error_message.format(request.user.username, d.filename)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 403
+                return response
+
+            # Job status validation.
+            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
+            if len(running_jobs) > 0:
+                error_message = "delivery {:s} cannot be deleted. QC job is currently running.".format(d.filename)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 400
+                return response
+
+            # Deleting delivery .zip file on the file system.
             file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
             if file_path.exists():
                 file_path.unlink()
