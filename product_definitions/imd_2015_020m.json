@@ -56,7 +56,7 @@
       "required": false,
       "parameters": {
         "layers": ["imd_020m"],
-        "epsg": [3035]
+        "epsg": 3035
       }
     },
     {

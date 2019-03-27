@@ -17,8 +17,7 @@ def run_check(params, status):
 
         srs = osr.SpatialReference(ds.GetProjection())
         if srs is None or srs.IsProjected() == 0:
-            status.failed("The raster {:s} has no projected coordinate system associated."
-                          .format(layer_def["src_layer_name"]))
+            status.failed("The raster {:s} has SRS missing.".format(layer_def["src_layer_name"]))
             continue
 
         # Search EPSG authority code
@@ -27,10 +26,14 @@ def run_check(params, status):
         authority_code = srs.GetAuthorityCode(None)
 
         if authority_name == "EPSG" and authority_code is not None:
-            # compare EPSG code using the root-level EPSG authority
-            if authority_code not in map(str, params["epsg"]):
-                status.aborted("Layer {:s} has illegal EPSG code {:s}."
-                               .format(layer_def["src_layer_name"], str(authority_code)))
+            try:
+                authority_code = int(authority_code)
+            except ValueError:
+                status.aborted("The raster {:s} has non integer epsg code {:s}".format(layer_def["src_layer_name"], authority_code))
+            else:
+                if authority_code != params["epsg"]:
+                    status.aborted("The raster {:s} has illegal EPSG code {:d}."
+                                   .format(layer_def["src_layer_name"], authority_code))
         else:
-            status.aborted("Layer {:s} does not have an epsg code, srs: {:s}."
+            status.aborted("The raster {:s} has epsg code missing, srs: {:s}."
                            .format(layer_def["src_layer_name"], srs.ExportToWkt()))

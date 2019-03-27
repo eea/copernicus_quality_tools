@@ -24,7 +24,7 @@
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
-        "epsg": [3035],
+        "epsg": 3035,
         "auto_identify_epsg": true
       }
     },

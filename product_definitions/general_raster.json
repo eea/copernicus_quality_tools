@@ -35,7 +35,7 @@
       "required": false,
       "parameters": {
         "layers": ["general"],
-        "epsg": [3035]
+        "epsg": 3035
       }
     },
     {

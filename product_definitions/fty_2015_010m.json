@@ -53,7 +53,7 @@
       "required": false,
       "parameters": {
         "layers": ["forest_type"],
-        "epsg": [3035]
+        "epsg": 3035
       }
     },
     {

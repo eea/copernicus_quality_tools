@@ -55,7 +55,7 @@
       "required": false,
       "parameters": {
         "layers": ["gra_020m"],
-        "epsg": [3035]
+        "epsg": 3035
       }
     },
     {

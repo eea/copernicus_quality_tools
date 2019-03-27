@@ -30,7 +30,7 @@ def run_check(params, status):
                 except ValueError:
                     status.aborted("Layer {:s} has non integer epsg code {:s}".format(layer_def["src_layer_name"], authority_code))
                 else:
-                    if authority_code not in params["epsg"]:
+                    if authority_code != params["epsg"]:
                         status.aborted("Layer {:s} has illegal epsg code {:d}.".format(layer_def["src_layer_name"], authority_code))
                     else:
                         status.add_params({"detected_epsg": authority_code})
@@ -50,5 +50,5 @@ def run_check(params, status):
                                    .format(layer_def["src_layer_name"], srs.ExportToWkt()))
             else:
                 # the setting is strict and no epsg code has been found in the srs of the layer.
-                status.aborted("Layer {:s} does not have an epsg code, srs: {:s}."
+                status.aborted("Layer {:s} has epsg code missing, srs: {:s}."
                                .format(layer_def["src_layer_name"], srs.ExportToWkt()))
