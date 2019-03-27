@@ -21,7 +21,7 @@
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
                     <li role="presentation" class="active">
-                        <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Result of QC Job: {{ job_uuid }}</a>
+                        <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Result of QC Job: {{ job_report.job_uuid }}</a>
                     </li>
                 </ul>
 
@@ -84,7 +84,7 @@
                             <td class="success">{{step.status}}</td>
                             <td class="success">
                                 {% for attachment_filename in step.attachment_filenames %}
-                                <a href="/attachment/{{ job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
+                                <a href="/attachment/{{ job_report.job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
                                 {% endfor %}</td>
                             <td class="success"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
                             {% elif step.status == "skipped" or step.status == "running" %}
