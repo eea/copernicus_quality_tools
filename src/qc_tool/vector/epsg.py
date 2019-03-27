@@ -38,14 +38,12 @@ def run_check(params, status):
                 # Parameter auto_identify_epsg can be used for less-strict checking of .prj files.
                 # There is a built-in function in GDAL 2.3 with matching logic.
                 is_detected = False
-                for allowed_epsg in params["epsg"]:
-                    expected_srs = osr.SpatialReference()
-                    expected_srs.ImportFromEPSG(allowed_epsg)
-                    if srs.IsSame(expected_srs):
-                        is_detected = True
-                        status.add_params({"detected_epsg": allowed_epsg})
-                        break
-                if not is_detected:
+                expected_srs = osr.SpatialReference()
+                expected_srs.ImportFromEPSG(params["epsg"])
+                if srs.IsSame(expected_srs):
+                    # The auto-detected epsg is made available for other checks.
+                    status.add_params({"detected_epsg": params["epsg"]})
+                else:
                     status.aborted("Layer {:s} does not have an epsg code and the epsg code can not be detected, srs: {:s}."
                                    .format(layer_def["src_layer_name"], srs.ExportToWkt()))
             else:
