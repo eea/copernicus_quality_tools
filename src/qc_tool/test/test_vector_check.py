@@ -783,9 +783,9 @@ class Test_gap_unit(VectorCheckTestCase):
         self.assertEqual(2, self.cursor.rowcount)
 
 
-class Test_mmu_status(VectorCheckTestCase):
+class Test_mmu_clc_status(VectorCheckTestCase):
     def test(self):
-        from qc_tool.vector.mmu_status import run_check
+        from qc_tool.vector.mmu_clc_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE reference (fid integer, code_12 varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
 
@@ -803,8 +803,7 @@ class Test_mmu_status(VectorCheckTestCase):
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
                             "code_column_name": "code_12",
-                            "area_by_code": [["%", 250000]],
-                            "margin_exceptions": True,
+                            "area_m2": 250000,
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
@@ -814,8 +813,9 @@ class Test_mmu_status(VectorCheckTestCase):
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
         self.assertListEqual([(30,)], cursor.fetchall())
 
-    def test_multiple_classes(self):
-        from qc_tool.vector.mmu_status import run_check
+class Test_mmu(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.mmu import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
 
@@ -827,11 +827,10 @@ class Test_mmu_status(VectorCheckTestCase):
         cursor.execute("INSERT INTO reference VALUES (14, 'code2', 500001, ST_MakeEnvelope(14, 1, 15, 2, 4326));")
         cursor.execute("INSERT INTO reference VALUES (16, 'code2', 500000, ST_MakeEnvelope(16, 0, 17, 2, 4326));")
 
-        # Exception feature being at the boundary.
-        cursor.execute("INSERT INTO reference VALUES (20, 'code1', 249999, ST_MakeEnvelope(20, 0, 21, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (21, 'code2', 499999, ST_MakeEnvelope(21, 0, 22, 2, 4326));")
-        # Error feature.
+        # Excluded feature.
         cursor.execute("INSERT INTO reference VALUES (30, 'code1', 249999, ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
+
+        # Error feature.
         cursor.execute("INSERT INTO reference VALUES (31, 'code2', 499999, ST_MakeEnvelope(14.1, 1.1, 14.9, 1.9, 4326));")
 
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
@@ -840,16 +839,13 @@ class Test_mmu_status(VectorCheckTestCase):
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
                             "code_column_name": "code",
-                            "area_by_code": [["code1", 250000], ["code2", 500000]],
+                            "area_m2": 500000,
+                            "exclude_codes": ["code1"],
                             "margin_exceptions": True,
                             "step_nr": 1})
         run_check(self.params, self.status_class())
-        cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
-        self.assertListEqual([(10,), (12,), (14,), (16,)], cursor.fetchall())
-        cursor.execute("SELECT fid FROM s01_reference_exception ORDER BY fid;")
-        self.assertListEqual([(20,), (21,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
-        self.assertListEqual([(30,), (31,)], cursor.fetchall())
+        self.assertListEqual([(31,)], cursor.fetchall())
 
 
 class Test_mmu_clc_change(VectorCheckTestCase):
