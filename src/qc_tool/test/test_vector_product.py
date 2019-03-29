@@ -51,7 +51,7 @@ class Test_ua_shp(ProductTestCase):
     def test(self):
         self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         expected_step_results = ["ok"] * 16
-        job_result = dispatch(self.job_uuid, "user_name", self.filepath, "ua_2012_shp_wo_revised")
+        job_result = dispatch(self.job_uuid, "user_name", self.filepath, "ua_2012_shp_wo_change")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 

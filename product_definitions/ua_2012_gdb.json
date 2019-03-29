@@ -69,7 +69,7 @@
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
-        "layers": ["reference", "boundary", "combined", "change"],
+        "layers": ["reference", "combined", "change"],
         "epsg": 3035,
         "auto_identify_epsg": true
       }
