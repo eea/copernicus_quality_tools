@@ -180,7 +180,7 @@
       "parameters": {
         "layers": ["reference"],
         "code_column_name": "code_18",
-        "area_by_code": [["%", 250000]],
+        "area_m2": 250000,
         "area_column_name": "shape_area",
         "margin_exceptions": true
       }
