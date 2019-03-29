@@ -22,6 +22,9 @@ RUN pip3 install scikit-image reportlab
 # Install bottle.
 RUN pip3 install bottle
 
+# Update version info.
+COPY qc_tool_version.txt /usr/local/src
+
 # Install qc tool.
 RUN cd /usr/local/src \
     && wget https://github.com/eea/copernicus_quality_tools/archive/master.zip \
