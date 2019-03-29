@@ -25,48 +25,48 @@ def run_check(params, status):
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of general items.
+        # All features inside Urban Atlas Core Region.
         sql = ("CREATE TABLE {general_table} AS"
-               " WITH"
-               "  inside_ua AS ("
-               "   SELECT * FROM {layer_name} WHERE ua IS NOT NULL),"
-               "  outside_ua AS ("
-               "   SELECT * FROM {layer_name} WHERE ua IS NULL),"
-               "  same_neighbour AS ("
-               "   SELECT DISTINCT ta.{fid_name} AS {fid_name}"
-               "   FROM outside_ua AS ta, outside_ua AS tb"
-               "   WHERE"
-               "    ta.{fid_name} <> tb.{fid_name}"
-               "    AND ta.{code_column_name} = tb.{code_column_name}"
-               "    AND ta.wkb_geometry && tb.wkb_geometry"
-               "    AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1)"
-               # All features inside Urban Atlas Core Region.
                " SELECT {fid_name}"
-               " FROM inside_ua"
-               # All features outside Urban Atlas Core Region not having neighbour with the same code.
-               " UNION"
+               " FROM {layer_name} WHERE ua IS NOT NULL;")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # All features outside Urban Atlas Core Region not having neighbour with the same code.
+        sql = ("INSERT INTO {general_table}"
                " SELECT {fid_name}"
-               " FROM outside_ua"
-               " WHERE {fid_name} NOT IN (SELECT {fid_name} FROM same_neighbour);")
+               " FROM {layer_name}"
+               " WHERE"
+               "  ua IS NULL"
+               "  AND {fid_name} NOT IN"
+               "   (SELECT DISTINCT ta.{fid_name} AS {fid_name}"
+               "    FROM {layer_name} AS ta, {layer_name} AS tb"
+               "    WHERE"
+               "     ta.ua IS NULL"
+               "     AND tb.ua IS NULL"
+               "     AND ta.{fid_name} <> tb.{fid_name}"
+               "     AND ta.{code_column_name} = tb.{code_column_name}"
+               "     AND ta.wkb_geometry && tb.wkb_geometry"
+               "     AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1"
+               "   );")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Create table of exception items.
         sql = ("CREATE TABLE {exception_table} AS"
-               " WITH"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
                " SELECT {fid_name}"
-               " FROM layer")
+               " FROM {layer_name}"
+               " WHERE"
+               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})")
         if len(params["exception_comments"]) > 0:
-            sql += (" WHERE comment IN %(exception_comments)s")
+            sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
+            sql += " AND comment IN %(exception_comments)s"
         else:
-            sql += (" WHERE FALSE")
+            sql_execute_params = {}
+            sql += " AND FALSE"
         sql += ";"
         sql = sql.format(**sql_params)
-        cursor.execute(sql, {"exception_comments": tuple(params["exception_comments"])})
+        cursor.execute(sql, sql_execute_params)
 
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])

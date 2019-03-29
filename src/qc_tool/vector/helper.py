@@ -231,23 +231,24 @@ class ComplexChangeCollector():
         # added in the previous cycle.
         while True:
             cycle_nr += 1
-            sql = ("WITH"
-                   " last_members AS ("
-                   "  SELECT *"
-                   "  FROM {layer_name}"
-                   "  WHERE {fid_name} IN ("
-                   "   SELECT fid"
-                   "   FROM {cluster_table}"
-                   "   WHERE cluster_id = {cluster_id} AND cycle_nr = {cycle_nr} - 1)),"
-                   " other AS ("
-                   "  SELECT *"
-                   "  FROM {layer_name}"
-                   "  WHERE {fid_name} NOT IN (SELECT fid FROM {cluster_table})) "
-                   "INSERT INTO {cluster_table}"
+            sql = ("INSERT INTO {cluster_table}"
                    " SELECT DISTINCT {cluster_id}, {cycle_nr}, other.{fid_name}"
-                   " FROM last_members, other"
+                   " FROM"
+                   "  (SELECT *"
+                   "   FROM {layer_name}"
+                   "   WHERE {fid_name} IN"
+                   "    (SELECT fid"
+                   "     FROM {cluster_table}"
+                   "     WHERE cluster_id = {cluster_id} AND cycle_nr = {cycle_nr} - 1)"
+                   "  ) AS last_members,"
+                   "  (SELECT *"
+                   "   FROM {layer_name}"
+                   "   WHERE {fid_name} NOT IN"
+                   "    (SELECT fid FROM {cluster_table})"
+                   "  ) AS other"
                    " WHERE"
                    "  last_members.{code_column_name} = other.{code_column_name}"
+                   "  AND last_members.wkb_geometry && other.wkb_geometry"
                    "  AND ST_Dimension(ST_Intersection(last_members.wkb_geometry, other.wkb_geometry)) >= 1;")
             sql = sql.format(**self.sql_params, cluster_id=fid, cycle_nr=cycle_nr)
             self.cursor.execute(sql)

@@ -29,20 +29,25 @@ def run_check(params, status):
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
-               " WITH"
-               "  boundary_union AS (SELECT {boundary_unit_column_name}, ST_Union(wkb_geometry) AS geom"
-               "                     FROM {boundary_name}"
-               "                     WHERE {boundary_unit_column_name} IN (SELECT {boundary_unit_column_name}"
-               "                                                           FROM {layer_name})"
-               "                     GROUP BY {boundary_unit_column_name}),"
-               "  layer_union AS (SELECT {boundary_unit_column_name}, ST_Union(wkb_geometry) AS geom"
-               "                  FROM {layer_name}"
-               "                  GROUP BY {boundary_unit_column_name})"
                " SELECT"
-               "  layer_union.{boundary_unit_column_name},"
+               "  layer_union.{boundary_unit_column_name} AS {boundary_unit_column_name},"
                "  (ST_Dump(ST_Difference(boundary_union.geom, layer_union.geom))).geom AS geom"
-               " FROM layer_union"
-               " INNER JOIN boundary_union USING ({boundary_unit_column_name});")
+               " FROM"
+               "  (SELECT"
+               "    {boundary_unit_column_name},"
+               "    ST_Union(wkb_geometry) AS geom"
+               "   FROM {layer_name}"
+               "   GROUP BY {boundary_unit_column_name}"
+               "  ) AS layer_union"
+               " INNER JOIN"
+               "  (SELECT"
+               "    {boundary_unit_column_name},"
+               "    ST_Union(wkb_geometry) AS geom"
+               "   FROM {boundary_name}"
+               "   WHERE {boundary_unit_column_name} IN (SELECT {boundary_unit_column_name} FROM {layer_name})"
+               "   GROUP BY {boundary_unit_column_name}"
+               "  ) AS boundary_union"
+               " USING ({boundary_unit_column_name});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -53,9 +58,12 @@ def run_check(params, status):
 
         # Find warning features.
         sql = ("CREATE TABLE {warning_table} AS"
-               " SELECT layer.{boundary_unit_column_name}, layer.wkb_geometry"
+               " SELECT"
+               "  layer.{boundary_unit_column_name},"
+               "  layer.wkb_geometry"
                " FROM {layer_name} AS layer"
-               " WHERE layer.{boundary_unit_column_name} IS NULL"
+               " WHERE"
+               "  layer.{boundary_unit_column_name} IS NULL"
                "  OR layer.{boundary_unit_column_name} NOT IN (SELECT {boundary_unit_column_name} FROM {boundary_name});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)

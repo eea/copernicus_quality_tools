@@ -38,54 +38,60 @@ def run_check(params, status):
         cursor.execute(sql)
 
         # Create table of exception items.
-        sql_execute_params = {}
+        # Marginal features.
         sql = ("CREATE TABLE {exception_table} AS"
-               " WITH"
-               "  margin AS ("
-               "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    ua IS NULL),"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
-               # Marginal features.
                " SELECT layer.{fid_name}"
-               " FROM layer, margin"
+               " FROM"
+               "  {layer_name} AS layer,"
+               "  (SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom FROM {layer_name} WHERE ua IS NULL) AS margin"
                " WHERE"
                "  layer.{area_column_name} >= 0.2"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1")
+               "  AND layer.wkb_geometry && margin.geom"
+               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
         # Urban features.
         if len(params["urban_feature_codes"]) > 0:
-            sql_execute_params["urban_codes"] = tuple(params["urban_feature_codes"])
-            sql += (" UNION"
-                    " SELECT {fid_name}"
-                    " FROM layer"
-                    " WHERE"
-                    "  {area_column_name} >= 0.25"
-                    "  AND {code_column_name} IN %(urban_codes)s")
+            sql_execute_params = {"urban_feature_codes": tuple(params["urban_feature_codes"])}
+            sql = ("INSERT INTO {exception_table}"
+                   " SELECT {fid_name}"
+                   " FROM {layer_name}"
+                   " WHERE"
+                   "  {area_column_name} >= 0.25"
+                   "  AND {code_column_name} IN %(urban_feature_codes)s"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql, sql_execute_params)
+
         # Linear features.
         if len(params["linear_feature_codes"]) > 0:
-            sql_execute_params["linear_codes"] = tuple(params["linear_feature_codes"])
-            sql += (" UNION"
-                    " SELECT {fid_name}"
-                    " FROM layer"
-                    " WHERE"
-                    "  {area_column_name} >= 0.1"
-                    "  AND {code_column_name} IN %(linear_codes)s")
+            sql_execute_params = {"linear_feature_codes": tuple(params["linear_feature_codes"])}
+            sql = ("INSERT INTO {exception_table}"
+                   " SELECT {fid_name}"
+                   " FROM {layer_name}"
+                   " WHERE"
+                   "  {area_column_name} >= 0.1"
+                   "  AND {code_column_name} IN %(linear_feature_codes)s"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql, sql_execute_params)
+
         # Features with specific comments.
         if len(params["exception_comments"]) > 0:
-            sql_execute_params["exception_comments"] = tuple(params["exception_comments"])
-            sql += (" UNION"
-                    " SELECT {fid_name}"
-                    " FROM layer"
-                    " WHERE"
-                    "  comment IN %(exception_comments)s")
-        sql += ";"
-        sql = sql.format(**sql_params)
-        cursor.execute(sql, sql_execute_params)
+            sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
+            sql = ("INSERT INTO {exception_table}"
+                   " SELECT {fid_name}"
+                   " FROM {layer_name}"
+                   " WHERE"
+                   "  comment IN %(exception_comments)s"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql, sql_execute_params)
 
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])

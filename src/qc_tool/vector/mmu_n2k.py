@@ -39,43 +39,45 @@ def run_check(params, status):
         cursor.execute(sql)
 
         # Create table of exception items.
+        # Linear features.
         sql = ("CREATE TABLE {exception_table} AS"
-               " WITH"
-               "  margin AS ("
-               "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
-               "   FROM {layer_name}),"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})),"
-               "  randr AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {code_column_name}::text SIMILAR TO '(121|122)%')"
-               # Marginal features.
+               " SELECT {fid_name}"
+               " FROM {layer_name}"
+               " WHERE"
+               "  {area_column_name} >= 0.1"
+               "  AND {code_column_name}::text SIMILAR TO '(121|122|911|912)%'"
+               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # Marginal features.
+        sql = ("INSERT INTO {exception_table}"
                " SELECT layer.{fid_name}"
-               " FROM layer, margin"
+               " FROM"
+               "  {layer_name} AS layer,"
+               "  (SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom FROM {layer_name}) AS margin"
                " WHERE"
                "  layer.{area_column_name} >= 0.1"
                "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1"
-               # Linear features.
-               " UNION"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # Urban features touching road or railway.
+        sql = ("INSERT INTO {exception_table}"
                " SELECT layer.{fid_name}"
-               " FROM layer"
-               " WHERE"
-               "  layer.{area_column_name} >= 0.1"
-               "  AND layer.{code_column_name}::text SIMILAR TO '(121|122|911|912)%'"
-               # Urban features touching road or railway.
-               " UNION"
-               " SELECT layer.{fid_name}"
-               " FROM layer, randr"
+               " FROM"
+               "  {layer_name} AS layer,"
+               "  (SELECT * FROM {layer_name} WHERE {code_column_name}::text SIMILAR TO '(121|122)%') AS randr"
                " WHERE"
                "  layer.{area_column_name} >= 0.25"
                "  AND layer.{code_column_name}::text LIKE '1%'"
                "  AND layer.{code_column_name}::text NOT SIMILAR TO '(10|121|122)%'"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, randr.wkb_geometry)) >= 1;")
+               "  AND layer.wkb_geometry && randr.wkb_geometry"
+               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, randr.wkb_geometry)) >= 1"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

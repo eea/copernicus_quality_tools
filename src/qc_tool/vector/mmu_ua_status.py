@@ -39,29 +39,32 @@ def run_check(params, status):
         cursor.execute(sql)
 
         # Create table of exception items.
+        # Items touching boundary.
         sql = ("CREATE TABLE {exception_table} AS"
-               " WITH"
-               "  boundary AS ("
-               "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
-               "   FROM {layer_name}),"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
-               # Items touching boundary.
                " SELECT layer.{fid_name}"
-               " FROM layer, boundary"
+               " FROM"
+               "  {layer_name} AS layer,"
+               "  (SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom FROM {layer_name}) AS boundary"
                " WHERE"
                "  {area_column_name} >= 100"
+               "  AND layer.wkb_geometry && boundary.geom"
                "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1"
-               # Items touching cloud.
-               " UNION"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # Items touching cloud.
+        sql = ("INSERT INTO {exception_table}"
                " SELECT layer.{fid_name}"
-               " FROM layer, {layer_name} cloud"
+               " FROM"
+               "  {layer_name} AS layer,"
+               "  {layer_name} AS cloud"
                " WHERE"
                "  (layer.{code_column_name} NOT LIKE '9%' AND cloud.{code_column_name} LIKE '9%')"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, cloud.wkb_geometry)) >= 1;")
+               "  AND layer.wkb_geometry && cloud.wkb_geometry"
+               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, cloud.wkb_geometry)) >= 1"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -74,19 +77,17 @@ def run_check(params, status):
 
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"
-               " WITH"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "    AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table}))"
                " SELECT DISTINCT layer.{fid_name}"
-               " FROM layer, {layer_name} road"
+               " FROM"
+               "  {layer_name} AS layer,"
+               "  {layer_name} AS road"
                " WHERE"
                "  layer.{area_column_name} >= 500"
                "  AND (layer.{code_column_name} NOT LIKE '122%' AND road.{code_column_name} LIKE '122%')"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, road.wkb_geometry)) >= 1;")
+               "  AND layer.wkb_geometry && road.wkb_geometry"
+               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, road.wkb_geometry)) >= 1"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
             

@@ -38,13 +38,10 @@ def run_check(params, status):
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
-               " WITH"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   {exclude_clause})"
-               " SELECT DISTINCT ta.{fid_name} AS {fid_name}"
-               " FROM layer ta, layer tb"
+               " SELECT DISTINCT ta.{fid_name}"
+               " FROM"
+               "  (SELECT * FROM {layer_name} {exclude_clause}) AS ta,"
+               "  (SELECT * FROM {layer_name} {exclude_clause}) AS tb"
                " WHERE"
                "  ta.{fid_name} <> tb.{fid_name}"
                "  {pair_clause}"

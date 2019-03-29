@@ -42,21 +42,15 @@ def run_check(params, status):
         cursor.execute(sql)
 
         # Create table of exception items.
+        # Marginal features.
         sql = ("CREATE TABLE {exception_table} AS"
-               " WITH"
-               "  margin AS ("
-               "   SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom"
-               "   FROM {margin_layer_name}),"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
-               # Marginal features.
                " SELECT layer.{fid_name}"
-               " FROM layer, margin"
+               " FROM"
+               "  {layer_name} AS layer,"
+               "  (SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom FROM {margin_layer_name}) AS margin"
                " WHERE"
-               "  ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1;")
+               "  ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1"
+               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

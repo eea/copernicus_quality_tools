@@ -19,7 +19,7 @@ def run_check(params, status):
 
             # Prepare clause excluding features with non-null value of specific column.
             if "exclude_column_name" in params:
-                exclude_clause = " WHERE {:s} IS NULL".format(params["exclude_column_name"])
+                exclude_clause = "AND {:s} IS NULL".format(params["exclude_column_name"])
             else:
                 exclude_clause = ""
 
@@ -31,19 +31,14 @@ def run_check(params, status):
                           "error_table": "s{:02d}_{:s}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"], column_name)}
 
             # Create table of error items.
-            # Create table of error items.
-            sql = ("  CREATE TABLE {error_table} AS"
-                   "   WITH"
-                   "   layer AS ("
-                   "    SELECT *"
-                   "    FROM {layer_name}"
-                   "    {exclude_clause})"
-                   "  SELECT {fid_name}"
-                   "  FROM layer"
-                   "  WHERE layer.{column_name} IS NULL"
-                   "   OR layer.{column_name} NOT IN %s")
+            sql = ("CREATE TABLE {error_table} AS"
+                   " SELECT {fid_name}"
+                   " FROM {layer_name}"
+                   " WHERE"
+                   "  ({column_name} IS NULL"
+                   "   OR {column_name} NOT IN %s)"
+                   "  {exclude_clause};")
             sql = sql.format(**sql_params)
-
             cursor.execute(sql, [tuple(allowed_codes)])
 
             # Report error items.

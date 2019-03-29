@@ -38,17 +38,12 @@ def run_check(params, status):
 
         # Create table of exception items.
         sql = ("CREATE TABLE {exception_table} AS"
-               " WITH"
-               "  layer AS ("
-               "   SELECT *"
-               "   FROM {layer_name}"
-               "   WHERE"
-               "    {fid_name} NOT IN (SELECT {fid_name} FROM {general_table}))"
                " SELECT {fid_name}"
-               " FROM layer"
+               " FROM {layer_name}"
                " WHERE"
-               "  {initial_code_column_name} LIKE '122%'"
-               "  OR {final_code_column_name} LIKE '122%';")
+               "  ({initial_code_column_name} LIKE '122%'"
+               "   OR {final_code_column_name} LIKE '122%')"
+               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
