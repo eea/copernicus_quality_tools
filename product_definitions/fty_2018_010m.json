@@ -9,7 +9,8 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"forest_type": "^fty_(?P<reference_year>2018)_010m_"},
+        "layer_names":{"forest_type": "^fty_(?P<reference_year>2018)_010m_"}
+	  }
     },
     {
       "check_ident": "qc_tool.raster.format",
