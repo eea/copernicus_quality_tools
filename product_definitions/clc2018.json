@@ -179,17 +179,6 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_column_name": "code_18",
-        "area_m2": 250000,
-        "area_column_name": "shape_area",
-        "margin_exceptions": true
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.mmu_clc_status",
-      "required": false,
-      "parameters": {
-        "layers": ["reference"],
         "area_m2": 250000,
         "area_column_name": "shape_area"
       }
@@ -226,7 +215,21 @@
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["reference", "initial", "change"]
+        "layers": ["reference"]
+      }
+    },
+	{
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["initial"]
+      }
+    },
+	{
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["change"]
       }
     },
     {
