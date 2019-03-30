@@ -45,6 +45,11 @@ sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up -
 
 (6) For initial signing in use user name `guest` and password `guest`.
 
+(7) To upgrade to a new release, run:
+```
+sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app pull
+```
+This will instruct docker to re-download the latest QC tool release images from docker hub repository.
 
 # For developers
 
