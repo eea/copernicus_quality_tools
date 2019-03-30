@@ -2,10 +2,7 @@ version: '3'
 
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    image: qc_tool_frontend
+    image: qctool/frontend:latest
     ports:
       - 8000:8000
     environment:
@@ -26,10 +23,7 @@ services:
       - qc_tool_frontend:/mnt/qc_tool_frontend
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
-    image: qc_tool_worker
+    image: qctool/worker:latest
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
@@ -51,10 +45,7 @@ services:
       - qc_tool_work:/mnt/qc_tool_work
 
   postgis:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgis
-    image: qc_tool_postgis
+    image: qctool/postgis:latest
     networks:
       - qc_tool_network
 
