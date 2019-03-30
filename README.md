@@ -5,6 +5,11 @@ The application is composed of:
 * Worker Service;
 * Postgis database engine;
 
+# Documentation
+
+Documentation of the QC tool, and specification of supported QA checks is available at https://github.com/eea/copernicus_quality_tools/wiki
+
+
 # Prerequisities
 
 * docker version 1.13 or higher, see https://docs.docker.com/install/linux/docker-ce/ubuntu/;
@@ -40,9 +45,6 @@ sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up
 
 (6) For initial signing in use user name `guest` and password `guest`.
 
-# Documentation
-
-Documentation of the QC tool, and specification of supported QA checks is available at https://github.com/eea/copernicus_quality_tools/wiki
 
 # For developers
 
