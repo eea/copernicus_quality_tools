@@ -38,10 +38,10 @@ cd copernicus_quality_tools/docker
 (4) Run the application
 
 ```
-sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up
+sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up --scale worker=4
 ```
 
-(5) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000.
+(5) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000. 
 
 (6) For initial signing in use user name `guest` and password `guest`.
 
