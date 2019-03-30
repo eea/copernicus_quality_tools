@@ -58,6 +58,10 @@ The initial database structure is made during docker build.
 The `service_provider` and `eea` configurations use named volumes for persisting such database.
 You are free to copy the database to other persistent location, however you must ensure setting up FRONTEND_DB_PATH properly.
 
+# Demo installation
+
+A demonstration website is running at: http://qc-tool-demo.tk/ Default login is user: guest, password: guest.
+
 # Product definitions
 
 QA check configurations for Copernicus products are defined in the [product_definitions](product_definitions) directory. Each product definition .json file contains a list of parametrized checks. For QC tool setup with editable product definitions, see instructions in [docker/README.product_definitions](docker/README.product_definitions.md).
