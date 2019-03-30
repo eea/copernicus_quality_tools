@@ -40,6 +40,9 @@ sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up
 
 (6) For initial signing in use user name `guest` and password `guest`.
 
+# Documentation
+
+Documentation of the QC tool, and specification of supported QA checks is available at https://github.com/eea/copernicus_quality_tools/wiki
 
 # For developers
 
