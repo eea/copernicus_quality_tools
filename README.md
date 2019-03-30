@@ -2,8 +2,8 @@
 
 The application is composed of:
 * Front-end user interface, alias web console;
-* Worker Service (WPS);
-* Postgis database;
+* Worker Service;
+* Postgis database engine;
 
 # Prerequisities
 
