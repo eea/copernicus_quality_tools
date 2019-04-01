@@ -1,5 +1,5 @@
 {
-  "description": "HRL Imperviousness Change 2012 - 2015 (100m)",
+  "description": "HRL Imperviousness Change 2015-2018 (100m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
@@ -10,27 +10,9 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "imc_100m": "^imc_(?P<reference_year>[0-9]{4})_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"
+          "imc_100m": "^imc_(?P<reference_year>2018)_100m_"
         },
-        "extensions": [".tif", ".tfw"],
-        "aoi_codes": ["al", "at",
-                          "ba", "be", "bg",
-                          "ch", "cy", "cz",
-                          "de", "dk",
-                          "ee", "es", "es_cn", "eu",
-                          "fi", "fr", "fr_glp", "fr_guf", "fr_mtq", "fr_myt", "fr_reu",
-                          "gr",
-                          "hr", "hu",
-                          "ie", "is", "it",
-                          "li", "lt", "lu", "lv",
-                          "me", "mk", "mt",
-                          "nl", "no",
-                          "pl", "pt", "pt_raa", "pt_ram", "pt_raa_ceg", "pt_raa_weg",
-                          "ro",
-                          "se", "si", "sk",
-                          "tr",
-                          "uk", "uk_ni", "uk_ge", "uk_je",
-                          "xk"]
+        "extensions": [".tif", ".tfw"]
       }
     },
     {
