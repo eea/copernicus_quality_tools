@@ -35,17 +35,22 @@ cd copernicus_quality_tools/docker
 
 (3) Create a copy of `docker-compose.service_provider.yml` and adjust the copy in accord with your environment.  For example see `docker-compose.igor.yml`.  The environment variables are described in [docker/NOTES.environ.txt](docker/NOTES.environ.txt).  There is also `docker-compose.eea.yml` prepared targeting eea infrastructure with submission feature enabled.
 
-(4) Run the application
+(4) Download the latest QC tool docker images from Docker Hub
+```
+sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app pull
+```
+
+(5) Run the application
 
 ```
 sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up --scale worker=4
 ```
 
-(5) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000. 
+(6) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000. 
 
-(6) For initial signing in use user name `guest` and password `guest`.
+(7) For initial signing in use user name `guest` and password `guest`.
 
-(7) To upgrade to a new release, run:
+(8) To upgrade to a new release, run:
 ```
 sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app pull
 ```
