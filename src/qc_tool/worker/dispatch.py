@@ -2,6 +2,7 @@
 
 
 import hashlib
+import logging
 from contextlib import ExitStack
 from datetime import datetime
 from functools import partial
@@ -28,6 +29,9 @@ from qc_tool.common import store_job_result
 from qc_tool.worker.report import generate_pdf_report
 from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
+
+
+log = logging.getLogger(__name__)
 
 
 def make_signature(filepath):
@@ -205,6 +209,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
                 # Update stored job result.
                 job_result["steps"].append(step_result)
                 store_job_result(job_result)
+                log.info("Result of the job step {:d}:{:s} has been stored.".format(step_nr, step_def["check_ident"]))
 
                 # Abort validation job.
                 if check_status.is_aborted():
@@ -214,6 +219,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
             # Finalize the job.
             (ex_type, ex_obj, tb_obj) = exc_info()
             if tb_obj is not None:
+                log.exception("Job has been interrupted by an exception.")
                 job_result["exception"] = format_exc()
             job_result["job_finish_date"] = datetime.utcnow().strftime(TIME_FORMAT)
             step_statuses = set(job_step["status"] for job_step in job_result["steps"])
@@ -230,7 +236,9 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
             else:
                 job_result["status"] = JOB_OK
             store_job_result(job_result)
+            log.info("Job result has been completed.")
             generate_pdf_report(job_report_filepath, job_uuid)
+            log.info("Job report has been generated.")
 
     return job_result
 

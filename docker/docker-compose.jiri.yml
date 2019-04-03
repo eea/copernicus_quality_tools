@@ -42,7 +42,6 @@ services:
       - PG_USER=qc_job
       - PG_DATABASE=qc_tool_db
       - LEAVE_SCHEMA=no
-      - JOBDIR_EXIST_OK=no
       - LEAVE_JOBDIR=no
       - SHOW_LOGO=no
     networks:

@@ -24,9 +24,7 @@ def create_connection_manager(job_uuid):
 
 def create_jobdir_manager(job_uuid):
     job_dir = compose_job_dir(job_uuid)
-    jobdir_manager = JobdirManager(job_dir,
-                                   CONFIG["jobdir_exist_ok"],
-                                   CONFIG["leave_jobdir"])
+    jobdir_manager = JobdirManager(job_dir, CONFIG["leave_jobdir"])
     return jobdir_manager
 
 
@@ -102,9 +100,8 @@ class ConnectionManager():
 
 
 class JobdirManager():
-    def __init__(self, job_dir, exist_ok=False, leave_dir=False):
+    def __init__(self, job_dir, leave_dir=False):
         self.job_dir = job_dir
-        self.exist_ok = exist_ok
         self.leave_dir = leave_dir
         self.tmp_dir = None
         self.output_dir = None
@@ -117,14 +114,12 @@ class JobdirManager():
         self.remove_tmp_dir()
 
     def create_dirs(self):
-        self.job_dir.mkdir(parents=True, exist_ok=self.exist_ok)
-
         tmp_dir = self.job_dir.joinpath(JOB_TMP_DIRNAME)
-        tmp_dir.mkdir(parents=True, exist_ok=self.exist_ok)
+        tmp_dir.mkdir(parents=True)
         self.tmp_dir = tmp_dir
 
         output_dir = self.job_dir.joinpath(JOB_OUTPUT_DIRNAME)
-        output_dir.mkdir(parents=True, exist_ok=self.exist_ok)
+        output_dir.mkdir(parents=True)
         self.output_dir = output_dir
 
     def remove_tmp_dir(self):

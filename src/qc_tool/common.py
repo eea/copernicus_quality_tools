@@ -112,6 +112,11 @@ def compose_job_dir(job_uuid):
     job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
     return job_dir
 
+def create_job_dir(job_uuid):
+    job_dir = compose_job_dir(job_uuid)
+    job_dir.mkdir(parents=True)
+    return job_dir
+
 def copy_product_definition_to_job(job_uuid, product_ident):
     src_filepath = locate_product_definition(product_ident)
     dst_filepath = compose_job_dir(job_uuid).joinpath(src_filepath.name)
@@ -269,7 +274,6 @@ def setup_config():
     * PG_USER;
     * PG_DATABASE;
     * LEAVE_SCHEMA;
-    * JOBDIR_EXIST_OK;
     * LEAVE_JOBDIR;
     * SHOW_LOGO;
     """
@@ -308,7 +312,6 @@ def setup_config():
 
     ## Debugging parameters.
     config["leave_schema"] = environ.get("LEAVE_SCHEMA", "no") == "yes"
-    config["jobdir_exist_ok"] = environ.get("JOBDIR_EXIST_OK", "no") == "yes"
     config["leave_jobdir"] = environ.get("LEAVE_JOBDIR", "no") == "yes"
 
     config["skip_inspire_check"] = environ.get("SKIP_INSPIRE_CHECK", "no") == "yes"

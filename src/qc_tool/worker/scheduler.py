@@ -4,6 +4,7 @@
 import json
 import logging
 from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 from subprocess import Popen
 from time import sleep
 from threading import Event
@@ -106,15 +107,14 @@ class Scheduler():
 
             # Pull job from frontend.
             data = urlopen(Request(url)).read().strip()
-            log.debug("Pulled job, data={:s}".format(repr(data)))
+            log.debug("Pulled job data: {:s}".format(repr(data)))
             job_args = json.loads(data)
         except:
             log.debug(format_exc())
         return job_args
 
     def start(self):
-        log.debug("Starting scheduler...")
-        t = Thread(target=self.run, daemon=True)
+        t = Thread(target=self.run, name="scheduler", daemon=True)
         t.start()
         log.info("Scheduler has started.")
 
@@ -142,16 +142,16 @@ class JobController():
 
     def start(self):
         put_event = Event()
-        t = Thread(target=self.run, args=(put_event,))
+        name = self.job_args["job_uuid"].lower().replace("-", "")
+        t = Thread(target=self.run, name=name, args=(put_event,))
         t.start()
 
         # We need to wait until the controller thread acknowledges the job has been put into job table.
         # Otherwise the scheduler may pull a new job even if all slots have already been spent.
         put_event.wait()
 
-        log.info("Started controller for job {:s}.".format(self.job_args["job_uuid"]))
-    
     def run(self, put_event):
+        log.info("Controller for the job {:s} has been started.".format(self.job_args["job_uuid"]))
         try:
             job_table.put(self.job_args["job_uuid"])
             put_event.set()
@@ -163,28 +163,36 @@ class JobController():
                 args += ["--skip-steps", self.job_args["skip_steps"]]
             args += [self.job_args["username"],
                      self.job_args["filename"]]
-            log.debug(repr(args))
+            log.debug("Starting job with args: {:s}.".format(repr(args)))
             process = Popen(args=args)
-            log.debug("Started job uuid={:s}, pid={:d}.".format(self.job_args["job_uuid"], process.pid))
+            log.info("Started job with pid={:d}.".format(process.pid))
             process.wait()
+            log.info("Job has exited with code {:d}.".format(process.returncode))
         except:
             log.error(format_exc())
         finally:
             job_table.rm(self.job_args["job_uuid"])
-            log.info("Closing controller for job {:s}.".format(self.job_args["job_uuid"]))
+            log.info("Closing controller.")
 
             
 def main():
     # Set up logging.
-    log.setLevel(logging.DEBUG)
-    log.addHandler(logging.StreamHandler())
+    CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
+    handler = TimedRotatingFileHandler(CONFIG["work_dir"].joinpath("scheduler"), when="D", backupCount=14)
+    handler.setFormatter(logging.Formatter(fmt="{asctime} {levelname} {threadName} {filename}:{lineno} {message}", style="{"))
+    root_log = logging.getLogger()
+    root_log.addHandler(handler)
+    root_log.setLevel(logging.DEBUG)
+    log.info("Logging of the scheduler has been initialized.")
 
     # Run the scheduler.
     scheduler = Scheduler(CONFIG["pull_job_url"])
     bottle.default_app().scheduler = scheduler
+    log.debug("Starting scheduler...")
     scheduler.start()
 
     # Run the web.
+    log.debug("Starting web server...")
     bottle.run(host=WORKER_ADDR, port=WORKER_PORT)
 
 

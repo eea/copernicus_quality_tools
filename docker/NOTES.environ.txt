@@ -41,7 +41,6 @@ Debugging parameters
 --------------------
 
   * LEAVE_SCHEMA, if "yes" then job schema will not be dropped;
-  * JOBDIR_EXIST_OK, if "yes" then job will not raise an error when the job's working directory already exists;
   * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed;
   * SKIP_INSPIRE_CHECK, if "yes" then connecting to Inspire geoportal for metadata checks will be skipped; applies to tests only;
 

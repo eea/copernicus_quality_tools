@@ -16,6 +16,7 @@ class ProductTestCase(TestCase):
     def setUp(self):
         super().setUp()
         self.job_uuid = str(uuid4())
+        create_job_dir(job_uuid)
 
         # Set up boundary dir to testing sources.
         CONFIG["boundary_dir"] = TEST_DATA_DIR.joinpath("boundaries")
@@ -29,6 +30,7 @@ class RasterCheckTestCase(TestCase):
         super().setUp()
         self.status_class = CheckStatus
         job_uuid = str(uuid4())
+        create_job_dir(job_uuid)
         self.params = {}
         with ExitStack() as stack:
             self.jobdir_manager = stack.enter_context(create_jobdir_manager(job_uuid))
@@ -41,6 +43,7 @@ class VectorCheckTestCase(TestCase):
         super().setUp()
         self.status_class = CheckStatus
         job_uuid = str(uuid4())
+        create_job_dir(job_uuid)
         self.params = {}
         with ExitStack() as stack:
              self.params["connection_manager"] = stack.enter_context(create_connection_manager(job_uuid))

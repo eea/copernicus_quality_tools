@@ -3,9 +3,11 @@
 
 import logging
 from argparse import ArgumentParser
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 from qc_tool.common import CONFIG
+from qc_tool.common import create_job_dir
 from qc_tool.worker.dispatch import dispatch
 
 
@@ -13,10 +15,6 @@ log = logging.getLogger(__name__)
 
 
 def main():
-    # Set up logging.
-    log.setLevel(logging.DEBUG)
-    log.addHandler(logging.StreamHandler())
-
     # Parse command line arguments.
     parser = ArgumentParser()
     parser.add_argument("--job-uuid",
@@ -47,8 +45,7 @@ def main():
                         action="store",
                         nargs=1)
     pargs = parser.parse_args()
-
-    # Run the job steps.
+    job_uuid = pargs.job_uuid[0]
     username = pargs.username[0]
     filename = pargs.filename[0]
     filepath = CONFIG["incoming_dir"].joinpath(username, filename)
@@ -56,7 +53,21 @@ def main():
         skip_steps = tuple()
     else:
         skip_steps = tuple(int(i) for i in pargs.skip_steps[0].split(","))
-    dispatch(pargs.job_uuid[0], username, filepath, pargs.product_ident[0], skip_steps)
+
+    # Create job dir.
+    job_dir = create_job_dir(job_uuid)
+
+    # Set up logging.
+    # Every job has its own log located in its job dir.
+    handler = TimedRotatingFileHandler(job_dir.joinpath("log"), when="D", backupCount=14)
+    handler.setFormatter(logging.Formatter(fmt="{asctime} {name}:{levelname} {pathname}:{lineno} {message}", style="{"))
+    root_log = logging.getLogger()
+    root_log.addHandler(handler)
+    root_log.setLevel(logging.DEBUG)
+    log.info("Logging of the job {:s} has been started.".format(job_uuid))
+
+    # Run the checks.
+    dispatch(job_uuid, username, filepath, pargs.product_ident[0], skip_steps)
 
 
 if __name__ == "__main__":
