@@ -76,7 +76,6 @@ class Test_naming(RasterCheckTestCase):
         status = self.status_class()
         run_check(params, status)
         self.assertEqual("failed", status.status)
-        self.assertIn("There are excessive layers: mmu_raster_correct.tif, mmu_raster_incorrect.tif.", status.messages)
 
     def test_incorrect_aoi_code(self):
         from qc_tool.raster.naming import run_check

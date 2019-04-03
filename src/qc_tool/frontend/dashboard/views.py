@@ -573,17 +573,7 @@ def get_pdf_report(request, job_uuid):
 @login_required
 def get_attachment(request, job_uuid, attachment_filename):
     attachment_filepath = compose_attachment_filepath(job_uuid, attachment_filename)
-    if attachment_filepath.suffix == ".csv":
-        content = attachment_filepath.read_text()
-        response = HttpResponse(content, content_type="text/csv")
-    elif attachment_filepath.suffix == ".json":
-        content = attachment_filepath.read_text()
-        response = HttpResponse(content, content_type="application/json")
-    else:
-        response = HttpResponse(open(str(attachment_filepath), "rb"), content_type="application/zip")
-
-    response['Content-Disposition'] = 'attachment; filename="{:s}"'.format(attachment_filepath.name)
-    return response
+    return FileResponse(open(str(attachment_filepath), "rb"), as_attachment=True)
 
 @login_required
 def update_job(request, job_uuid):

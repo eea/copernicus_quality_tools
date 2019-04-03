@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas 2012, shapefile, without change layer.",
+  "description": "Urban Atlas 2012, geodatabase, without change layer.",
   "steps": [
     {
       "check_ident": "qc_tool.vector.unzip",
@@ -10,12 +10,13 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "formats": [".shp"],
+        "formats": [".gdb"],
+        "num_geodatabases": 1,
+        "gdb_filename_regex": "^[a-z0-9]{7}_.*$",
         "layer_names": {
           "reference": "_ua2012$"
         },
-        "excessive_layers_allowed": true,
-        "boundary_source": "boundary_ua2012.shp"
+        "excessive_layers_allowed": true
       }
     },
     {
@@ -23,8 +24,8 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "formats": [".shp"],
-        "drivers": {".shp": "ESRI Shapefile"}
+        "formats": [".gdb"],
+        "drivers": {".gdb": "OpenFileGDB"}
       }
     },
     {
@@ -36,7 +37,7 @@
                        "cities": "string",
                        "fua_or_cit": "string",
                        "prod_date": "string",
-                       "shape_leng": "real",
+                       "shape_length": "real",
                        "shape_area": "real",
                        "code2012": "string",
                        "item2012": "string",
@@ -47,9 +48,8 @@
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
-        "layers": ["reference", "boundary"],
-        "epsg": 3035,
-        "auto_identify_epsg": true
+        "layers": ["reference"],
+        "epsg": 3035
       }
     },
     {

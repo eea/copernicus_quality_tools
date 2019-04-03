@@ -15,6 +15,7 @@ RUN apt-get -y update \
     && apt-get -y install wget unzip
 
 # Install qc tool, frontend application.
+COPY qc_tool_version.txt /usr/local/src
 RUN cd /usr/local/src \
     && wget https://github.com/eea/copernicus_quality_tools/archive/master.zip \
     && unzip ./master.zip \
