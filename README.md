@@ -2,8 +2,13 @@
 
 The application is composed of:
 * Front-end user interface, alias web console;
-* Web Processing Service (WPS);
-* Postgis database;
+* Worker Service;
+* Postgis database engine;
+
+# Documentation
+
+Documentation of the QC tool, and specification of supported QA checks is available at https://github.com/eea/copernicus_quality_tools/wiki
+
 
 # Prerequisities
 
@@ -30,16 +35,26 @@ cd copernicus_quality_tools/docker
 
 (3) Create a copy of `docker-compose.service_provider.yml` and adjust the copy in accord with your environment.  For example see `docker-compose.igor.yml`.  The environment variables are described in [docker/NOTES.environ.txt](docker/NOTES.environ.txt).  There is also `docker-compose.eea.yml` prepared targeting eea infrastructure with submission feature enabled.
 
-(4) Run the application
+(4) Download the latest QC tool docker images from Docker Hub
+```
+sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app pull
+```
+
+(5) Run the application
 
 ```
-sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up
+sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up --scale worker=4
 ```
 
-(5) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000.
+(6) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000. 
 
-(6) For initial signing in use user name `guest` and password `guest`.
+(7) For initial signing in use user name `guest` and password `guest`.
 
+(8) To upgrade to a new release, run:
+```
+sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app pull
+```
+This will instruct docker to re-download the latest QC tool release images from docker hub repository.
 
 # For developers
 
@@ -54,6 +69,10 @@ The qc_tool_frontend service uses sqlite database originally located at `/var/li
 The initial database structure is made during docker build.
 The `service_provider` and `eea` configurations use named volumes for persisting such database.
 You are free to copy the database to other persistent location, however you must ensure setting up FRONTEND_DB_PATH properly.
+
+# Demo installation
+
+A demonstration website is running at: http://qc-tool-demo.tk/ Default login is user: guest, password: guest.
 
 # Product definitions
 
