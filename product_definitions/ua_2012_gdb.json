@@ -138,7 +138,7 @@
       "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
-        "layers": ["boundary", "reference", "combined"]
+        "layers": ["reference", "combined"]
       }
     },
     {
