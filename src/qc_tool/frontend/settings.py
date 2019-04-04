@@ -147,40 +147,44 @@ SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
 # Logo display setting.
 SHOW_LOGO = CONFIG["show_logo"]
 
-
+CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-            'verbose': {
-                'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
-                'datefmt' : "%d/%b/%Y %H:%M:%S"
-            },
-            'simple': {
-                'format': '%(levelname)s %(message)s'
-            },
+        'verbose': {
+            'format' : '%(asctime)s %(name)s:%(levelname)s %(pathname)s:%(lineno)s %(message)s',
+            'datefmt' : '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '%(message)s',
+        },
     },
     'handlers': {
         'console': {
+            'level': 'ERROR',
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': '/tmp/django.log',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'formatter': 'verbose',
+            'filename': CONFIG["work_dir"].joinpath("frontend.log"),
+            'when': 'D',
+            'backupCount': 14,
         },
+    },
+    'root': {
+        'handlers': ["console", "file"],
+        'level': 'NOTSET',
     },
     'loggers': {
         'django': {
-            'handlers':['console'],
-            'propagate': True,
             'level':'INFO',
         },
-        'qc_tool.frontend': {
-            'handlers':['console'],
-            'propagate': False,
+        'qc_tool': {
             'level':'DEBUG',
         },
-
     }
 }

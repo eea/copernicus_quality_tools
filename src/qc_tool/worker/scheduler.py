@@ -5,6 +5,7 @@ import json
 import logging
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
+from socket import gethostname
 from subprocess import Popen
 from time import sleep
 from threading import Event
@@ -128,7 +129,7 @@ class Scheduler():
                 if job_args is None:
                     log.debug("Got no new job.")
                     break
-                log.info("Got a new job {:s}.".format(repr(job_args)))
+                log.info("Got a new job: {:s}.".format(repr(job_args)))
 
                 # Run the new job.
                 job_controller = JobController(job_args)
@@ -163,27 +164,34 @@ class JobController():
                 args += ["--skip-steps", self.job_args["skip_steps"]]
             args += [self.job_args["username"],
                      self.job_args["filename"]]
-            log.debug("Starting job with args: {:s}.".format(repr(args)))
+            log.debug("Launching a new job: {:s}.".format(repr(args)))
             process = Popen(args=args)
             log.info("Started job with pid={:d}.".format(process.pid))
             process.wait()
-            log.info("Job has exited with code {:d}.".format(process.returncode))
+            log.info("Job has exited with code={:d}.".format(process.returncode))
         except:
             log.error(format_exc())
         finally:
             job_table.rm(self.job_args["job_uuid"])
             log.info("Closing controller.")
 
-            
-def main():
-    # Set up logging.
-    CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
-    handler = TimedRotatingFileHandler(CONFIG["work_dir"].joinpath("scheduler"), when="D", backupCount=14)
-    handler.setFormatter(logging.Formatter(fmt="{asctime} {levelname} {threadName} {filename}:{lineno} {message}", style="{"))
+def init_logging():
+    log_dir = CONFIG["work_dir"]
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_filepath = log_dir.joinpath("scheduler.{:s}.log".format(gethostname()))
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter(fmt="{message}", style="{"))
+    console_handler.setLevel(logging.ERROR)
+    file_handler = TimedRotatingFileHandler(log_filepath, when="D", backupCount=14)
+    file_handler.setFormatter(logging.Formatter(fmt="{asctime} {levelname} {threadName} {filename}:{lineno} {message}", style="{"))
+    file_handler.setLevel(logging.DEBUG)
     root_log = logging.getLogger()
-    root_log.addHandler(handler)
-    root_log.setLevel(logging.DEBUG)
-    log.info("Logging of the scheduler has been initialized.")
+    root_log.addHandler(console_handler)
+    root_log.addHandler(file_handler)
+    log.info("Logging of the scheduler has been started.")
+
+def main():
+    init_logging()
 
     # Run the scheduler.
     scheduler = Scheduler(CONFIG["pull_job_url"])

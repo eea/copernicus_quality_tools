@@ -59,7 +59,7 @@ def main():
 
     # Set up logging.
     # Every job has its own log located in its job dir.
-    handler = TimedRotatingFileHandler(job_dir.joinpath("log"), when="D", backupCount=14)
+    handler = TimedRotatingFileHandler(job_dir.joinpath("job.log"), when="D", backupCount=14)
     handler.setFormatter(logging.Formatter(fmt="{asctime} {name}:{levelname} {pathname}:{lineno} {message}", style="{"))
     root_log = logging.getLogger()
     root_log.addHandler(handler)

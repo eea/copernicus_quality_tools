@@ -131,7 +131,7 @@ def get_deliveries_json(request):
         INNER JOIN auth_user u
         ON d.user_id = u.id
         WHERE d.user_id = %s AND d.is_deleted != 1
-          """
+        """
         cursor.execute(sql, (request.user.id,))
         header = [i[0] for i in cursor.description]
         rows = cursor.fetchall()
