@@ -169,15 +169,14 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmw",
+      "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["swf_vec"],
-        "mmw": 30.0
+        "layers": ["swf_vec"]
       }
     },
     {
-      "check_ident": "qc_tool.vector.overlap",
+      "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
         "layers": ["swf_vec"]
