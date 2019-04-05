@@ -179,7 +179,8 @@
       "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
-        "layers": ["swf_vec"]
+        "layers": ["swf_vec"],
+        "code_column_names": ["code"]
       }
     },
     {
