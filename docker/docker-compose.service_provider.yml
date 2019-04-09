@@ -2,7 +2,7 @@ version: '3'
 
 services:
   frontend:
-    image: qctool/frontend:release-v1.2.2
+    image: qctool/frontend:1.2.6
     ports:
       - 8000:8000
     environment:
@@ -19,7 +19,7 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: qctool/worker:release-v1.2.2
+    image: qctool/worker:1.2.6
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
@@ -38,7 +38,7 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   postgis:
-    image: qctool/postgis:release-v1.2.2
+    image: qctool/postgis:1.2.6
     networks:
       - qc_tool_network
 
