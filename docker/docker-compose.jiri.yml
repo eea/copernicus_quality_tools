@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - VERSION=1.2.3
+        - VERSION=1.2.5
 
     image: qc_tool_frontend
     ports:
