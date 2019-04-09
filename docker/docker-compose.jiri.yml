@@ -5,6 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        - VERSION=1.2.3
+
     image: qc_tool_frontend
     ports:
       - 8000:8000

@@ -6,7 +6,10 @@ FROM ubuntu:bionic
 LABEL author=gisat.cz
 LABEL description="QC tool environment, frontend service."
 
+ARG VERSION
+
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
+ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
 # Upgrade the base system.
 RUN apt-get -y update \
@@ -17,19 +20,16 @@ RUN apt-get -y update \
 # Install qc tool, frontend application.
 COPY qc_tool_version.txt /usr/local/src
 RUN cd /usr/local/src \
-    && wget https://github.com/eea/copernicus_quality_tools/archive/master.zip \
-    && unzip ./master.zip \
-    && rm ./master.zip \
-    && mv ./copernicus_quality_tools-master ./copernicus_quality_tools \
+    && wget https://github.com/eea/copernicus_quality_tools/archive/${VERSION}.zip \
+    && unzip ./${VERSION}.zip \
+    && rm ./${VERSION}.zip \
+    && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
+    && echo ${VERSION} >./copernicus_quality_tools/VERSION \
     && cd copernicus_quality_tools/src/qc_tool/frontend \
     && pip3 install -r ./requirements.txt \
     && mkdir /var/lib/qc_tool
 
 # Run frontend application.
-CMD cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
-    && python3 -m qc_tool.frontend.manage migrate \
-    && python3 -m qc_tool.frontend.manage create_default_user --username admin --password admin --superuser \
-    && python3 -m qc_tool.frontend.manage create_default_user --username guest --password guest \
-    && python3 -m qc_tool.frontend.manage create_default_user --username guest2 --password guest2 \
-    && python3 -m qc_tool.frontend.manage create_default_user --username guest3 --password guest3 \
-    && python3 -m qc_tool.frontend.manage runserver 0.0.0.0:${FRONTEND_PORT:-8000}
+COPY ./run_frontend.sh /
+RUN chmod +x /run_frontend.sh
+CMD /run_frontend.sh
