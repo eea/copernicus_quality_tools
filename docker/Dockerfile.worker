@@ -5,7 +5,10 @@ FROM ubuntu:bionic
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
 
+ARG VERSION
+
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
+ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
 # Upgrade the base system.
 RUN apt-get -y update \
@@ -27,10 +30,11 @@ COPY qc_tool_version.txt /usr/local/src
 
 # Install qc tool.
 RUN cd /usr/local/src \
-    && wget https://github.com/eea/copernicus_quality_tools/archive/master.zip \
-    && unzip ./master.zip \
-    && rm ./master.zip \
-    && mv ./copernicus_quality_tools-master ./copernicus_quality_tools
+    && wget https://github.com/eea/copernicus_quality_tools/archive/${VERSION}.zip \
+    && unzip ./${VERSION}.zip \
+    && rm ./${VERSION}.zip \
+    && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
+    && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
 # Run the scheduler.
 CMD python3 -m qc_tool.worker.scheduler

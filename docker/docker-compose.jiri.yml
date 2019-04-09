@@ -33,6 +33,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
+      args:
+        - VERSION=1.2.5
+
     image: qc_tool_worker
     environment:
       - PRODUCT_DIRS
