@@ -2,10 +2,7 @@ version: '3'
 
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    image: qc_tool_frontend
+    image: qctool/frontend:1.2.7
     ports:
       - 8000:8000
     environment:
@@ -25,10 +22,7 @@ services:
       - ../../copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
-    image: qc_tool_worker
+    image: qctool/worker:1.2.7
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
@@ -49,10 +43,7 @@ services:
       - ../../copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   postgis:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgis
-    image: qc_tool_postgis
+    image: qctool/postgis:1.2.7
     networks:
       - qc_tool_network
 

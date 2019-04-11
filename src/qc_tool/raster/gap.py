@@ -58,11 +58,11 @@ def run_check(params, status):
         mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
 
         if not mask_file.exists():
-            status.cancelled("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
+            status.info("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
             return
         mask_ds = gdal.Open(str(mask_file))
         if mask_ds is None:
-            status.cancelled("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
+            status.info("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
             return
         mask_band = mask_ds.GetRasterBand(1)
         nodata_value_mask = mask_band.GetNoDataValue()
@@ -83,24 +83,24 @@ def run_check(params, status):
             extent_message = extent_message.format(layer_def["src_layer_name"], mask_ident)
             extent_message += "raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
             extent_message += "boundary mask extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
-            status.failed(extent_message)
+            status.info(extent_message)
             continue
 
         # Check if raster resolution and boundary mask resolution matches.
         if ds_xres != mask_xres or ds_yres != mask_yres:
-            status.failed("Resolution of the raster [{:f}, {:f}] does not match "
+            status.info("Resolution of the raster [{:f}, {:f}] does not match "
                           "the resolution [{:f}, {:f}] of the boundary mask {:s}.tif."
                           .format(ds_xres, ds_yres, mask_xres, mask_yres, mask_ident))
             continue
 
         # Check if origin of mask is aligned with origin of raster
         if abs(ds_ulx - mask_ulx) % ds_xres > 0:
-            status.failed("X coordinates of the raster are not exactly aligned with x coordinates of boundary mask."
+            status.info("X coordinates of the raster are not exactly aligned with x coordinates of boundary mask."
                           "Raster origin: {:f}, Mask origin: {:f}".format(ds_ulx, mask_ulx))
             continue
 
         if abs(ds_uly - mask_uly) % ds_yres > 0:
-            status.failed("Y coordinates of the raster are not exactly aligned with Y coordinates of boundary mask."
+            status.info("Y coordinates of the raster are not exactly aligned with Y coordinates of boundary mask."
                           "Raster origin: {:f}, Mask origin: {:f}".format(ds_uly, mask_uly))
             continue
 
@@ -135,23 +135,23 @@ def run_check(params, status):
             write_progress(progress_filepath,
                            "n_block_cols: {:d} last_block_height: {:d}".format(n_block_cols, last_block_height))
 
-        # creating an OUTPUT dataset for writing error raster cells
+        # creating an OUTPUT dataset for writing warning raster cells
         src_stem = layer_def["src_filepath"].stem
-        error_raster_filename = "s{:02d}_{:s}_gap_error.tif".format(params["step_nr"], src_stem)
-        error_raster_filepath = params["output_dir"].joinpath(error_raster_filename)
+        warning_raster_filename = "s{:02d}_{:s}_gap_warning.tif".format(params["step_nr"], src_stem)
+        warning_raster_filepath = params["output_dir"].joinpath(warning_raster_filename)
         driver = gdal.GetDriverByName('GTiff')
         x_pixels = int(round(ds.RasterXSize))
         y_pixels = int(round(ds.RasterYSize))
-        error_ds = driver.Create(str(error_raster_filepath), x_pixels, y_pixels, 1, gdal.GDT_Byte, ['COMPRESS=LZW'])
-        error_ds.SetGeoTransform((ds_ulx, ds_xres, 0, ds_uly, 0, ds_yres))
+        warning_raster_ds = driver.Create(str(warning_raster_filepath), x_pixels, y_pixels, 1, gdal.GDT_Byte, ['COMPRESS=LZW'])
+        warning_raster_ds.SetGeoTransform((ds_ulx, ds_xres, 0, ds_uly, 0, ds_yres))
 
         # set output projection
-        error_sr = osr.SpatialReference()
-        error_sr.ImportFromWkt(ds.GetProjectionRef())
-        error_ds.SetProjection(error_sr.ExportToWkt())
+        warning_sr = osr.SpatialReference()
+        warning_sr.ImportFromWkt(ds.GetProjectionRef())
+        warning_raster_ds.SetProjection(warning_sr.ExportToWkt())
 
-        error_band = error_ds.GetRasterBand(1)
-        error_band.SetNoDataValue(0)
+        warning_band = warning_raster_ds.GetRasterBand(1)
+        warning_band.SetNoDataValue(0)
 
         # processing of mask is done in tiles (for better performance)
         nodata_count_total = 0
@@ -192,13 +192,13 @@ def run_check(params, status):
                 nodata_count = int(numpy.sum(arr_nodata))
 
                 if nodata_count > 0:
-                    # write detected NoData pixels [subtracted < 0] to a the error raster.
+                    # write detected NoData pixels [subtracted < 0] to a the warning raster.
                     if report_progress:
                         msg = "row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count)
                         write_progress(progress_filepath, msg)
 
                     nodata_pixels = arr_nodata.astype('byte')
-                    error_band.WriteArray(nodata_pixels, ds_xoff, ds_yoff)
+                    warning_band.WriteArray(nodata_pixels, ds_xoff, ds_yoff)
 
                 nodata_count_total += nodata_count
 
@@ -210,31 +210,33 @@ def run_check(params, status):
         ds_mask = None
 
         if nodata_count_total == 0:
-            # check is OK, no NoData pixels were detected inside mapped area.
-            # clean up the empty error raster file.
-            error_ds.FlushCache()
-            error_ds = None
-            error_raster_filepath.unlink()
+            # check is OK, no gap pixels were detected inside mapped area.
+            # clean up the empty warning raster file.
+            warning_raster_ds.FlushCache()
+            warning_raster_ds = None
+            warning_raster_filepath.unlink()
             continue
 
         else:
-            # export the nodata_error raster to a shapefile using gdal_polygonize.
-            error_shp_filepath = Path(str(error_raster_filepath).replace(".tif", ".shp"))
-            error_layername = error_shp_filepath.stem
+            # export the nodata_warning raster to a shapefile using gdal_polygonize.
+            warning_shp_filepath = Path(str(warning_raster_filepath).replace(".tif", ".shp"))
+            warning_layername = warning_shp_filepath.stem
             drv = ogr.GetDriverByName("ESRI Shapefile")
-            error_shp_ds = drv.CreateDataSource(str(error_shp_filepath))
-            error_shp_srs = osr.SpatialReference()
-            error_shp_srs.ImportFromWkt(error_ds.GetProjectionRef())
-            dst_layer = error_shp_ds.CreateLayer(error_layername, srs=error_shp_srs)
-            gdal.Polygonize(error_band, error_band, dst_layer, -1, [], callback=None)
-            error_shp_ds.FlushCache()
-            error_shp_ds = None
+            warning_shp_ds = drv.CreateDataSource(str(warning_shp_filepath))
+            warning_shp_srs = osr.SpatialReference()
+            warning_shp_srs.ImportFromWkt(warning_raster_ds.GetProjectionRef())
+            dst_layer = warning_shp_ds.CreateLayer(warning_layername, srs=warning_shp_srs)
+            gdal.Polygonize(warning_band, warning_band, dst_layer, -1, [], callback=None)
+            warning_shp_ds.FlushCache()
+            warning_shp_ds = None
 
-            error_filename = zip_shapefile(error_shp_filepath)
-            status.add_attachment(error_filename)
+            # write warning raster to GeoTiff file.
+            warning_raster_ds.FlushCache()
+            warning_raster_ds = None
 
-            error_ds.FlushCache()
-            error_ds = None
-            status.failed("Layer {:s} has {:d} gap pixels in the mapped area."
+            warning_filename = zip_shapefile(warning_shp_filepath)
+            status.add_attachment(warning_filename)
+
+            status.info("Layer {:s} has {:d} gap pixels in the mapped area."
                           .format(layer_def["src_layer_name"], nodata_count_total))
 

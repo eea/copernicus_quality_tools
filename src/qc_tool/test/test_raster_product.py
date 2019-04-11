@@ -119,8 +119,6 @@ class Test_Raster(ProductTestCase):
     def test_waw_2015_020m(self):
         product_ident = "waw_2015_020m"
         filepath = self.raster_data_dir.joinpath("waw_020m", "WAW_2015_020m_mt_03035_d06_clip.zip")
-        # completeness check is cancelled due to unavailable raster mask.
-        self.expected_step_statuses[10] = "cancelled"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(self.expected_step_statuses, step_statuses)
@@ -129,8 +127,6 @@ class Test_Raster(ProductTestCase):
     def test_waw_2015_100m(self):
         product_ident = "waw_2015_100m"
         filepath = self.raster_data_dir.joinpath("waw_100m", "WAW_2015_100m_mt_03035_d02_clip.zip")
-        # completeness check is cancelled due to unavailable raster mask.
-        self.expected_step_statuses[10] = "cancelled"
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(self.expected_step_statuses, step_statuses)

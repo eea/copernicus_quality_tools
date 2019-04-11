@@ -8,7 +8,7 @@ docker build --file=Dockerfile.worker --tag=qc_tool_worker .
 
 Run postgis container:
 
-docker run --rm --publish 5432:5432 --name=qc_tool_postgis --tty --interactive qc_tool_postgis
+docker run --rm --publish 5432:5432 --name=qc_tool_postgis --tty --interactive eeacms/copernicus-qctool-postgis
 
 Setup MY_QC_TOOL_HOME to your development source files, eg.
 
@@ -21,7 +21,7 @@ docker run --rm \
   --name=qc_tool_worker \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_worker python3 -m unittest discover qc_tool.test
+  eeacms/copernicus-qctool-worker python3 -m unittest discover qc_tool.test
 
 If you want to run tests from specific module only, then remove discover param, eg.
 
@@ -30,4 +30,4 @@ docker run --rm \
   --name=qc_tool_worker \
   --link=qc_tool_postgis \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  qc_tool_worker python3 -m unittest qc_tool.test.test_vector_check.Test_overlap
+  eeacms/copernicus-qctool-worker python3 -m unittest qc_tool.test.test_vector_check.Test_overlap

@@ -719,16 +719,17 @@ class Test_gap(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_error;")
+        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
         self.assertEqual(0, self.cursor.rowcount)
 
-    def test_fail(self):
+    def test_gap_warning(self):
         from qc_tool.vector.gap import run_check
         self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_error;")
+        self.assertEqual("ok", status.status)
+        self.assertIn("gap", status.messages[0])
+        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
         self.assertEqual(1, self.cursor.rowcount)
 
 
@@ -758,28 +759,29 @@ class Test_gap_unit(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_error;")
+        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
         self.assertEqual(0, self.cursor.rowcount)
 
-    def test_fail(self):
+    def test_gap_warning(self):
         from qc_tool.vector.gap_unit import run_check
         self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(2, 2, 5, 5, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_error;")
+        self.assertEqual("ok", status.status)
+        self.assertIn("gap", status.messages[0])
+        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
         self.assertEqual(1, self.cursor.rowcount)
 
-    def test_warning(self):
+    def test_unit_warning(self):
         from qc_tool.vector.gap_unit import run_check
         self.cursor.execute("INSERT INTO reference VALUES ('D', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_warning;")
+        self.cursor.execute("SELECT * FROM s01_reference_unit_warning;")
         self.assertEqual(2, self.cursor.rowcount)
 
 

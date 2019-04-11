@@ -75,6 +75,9 @@ target/
 # pyenv
 .python-version
 
+# tif aux files
+*.tif.aux.xml
+
 # celery beat schedule file
 celerybeat-schedule
 

@@ -16,7 +16,7 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     if "boundary" not in params["layer_defs"]:
-        status.cancelled("Check cancelled due to boundary not being available.")
+        status.info("Check cancelled due to boundary not being available.")
         return
 
     for layer_def in do_layers(params):
@@ -24,11 +24,11 @@ def run_check(params, status):
         sql_params = {"layer_name": layer_def["pg_layer_name"],
                       "boundary_name": params["layer_defs"]["boundary"]["pg_layer_name"],
                       "boundary_unit_column_name": params["boundary_unit_column_name"],
-                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
+                      "gap_warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "unit_warning_table": "s{:02d}_{:s}_unit_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
+        sql = ("CREATE TABLE {gap_warning_table} AS"
                " SELECT"
                "  layer_union.{boundary_unit_column_name} AS {boundary_unit_column_name},"
                "  (ST_Dump(ST_Difference(boundary_union.geom, layer_union.geom))).geom AS geom"
@@ -53,11 +53,11 @@ def run_check(params, status):
 
         # Report error items.
         if cursor.rowcount > 0:
-            status.failed("Layer {:s} has {:d} gap(s).".format(layer_def["pg_layer_name"], cursor.rowcount))
-            status.add_full_table(sql_params["error_table"])
+            status.info("Layer {:s} has {:d} gap(s).".format(layer_def["pg_layer_name"], cursor.rowcount))
+            status.add_full_table(sql_params["gap_warning_table"])
 
         # Find warning features.
-        sql = ("CREATE TABLE {warning_table} AS"
+        sql = ("CREATE TABLE {unit_warning_table} AS"
                " SELECT"
                "  layer.{boundary_unit_column_name},"
                "  layer.wkb_geometry"
@@ -72,4 +72,4 @@ def run_check(params, status):
         if cursor.rowcount > 0:
             status.info("Layer {:s} has {:d} feature(s) of unknown boundary unit."
                         .format(layer_def["pg_layer_name"], cursor.rowcount))
-            status.add_full_table(sql_params["warning_table"])
+            status.add_full_table(sql_params["unit_warning_table"])

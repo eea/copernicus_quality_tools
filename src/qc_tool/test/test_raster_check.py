@@ -156,9 +156,9 @@ class Test_gap(RasterCheckTestCase):
                             "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("cancelled", status.status, "Gap raster check should cancel when boundary file cannot be found.")
+        self.assertIn("cancelled", status.messages[0])
 
-    def test_fail(self):
+    def test_gaps_found(self):
         from qc_tool.raster.gap import run_check
         self.params.update({"layers": ["layer_2"],
                             "aoi_code": "testaoi",
@@ -170,9 +170,8 @@ class Test_gap(RasterCheckTestCase):
                             "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status, "Gap raster check should fail "
-                                                  "if the raster has NoData values in the AOI.")
-        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_error.zip", status.attachment_filenames)
+        self.assertIn("has 1237 gap pixels", status.messages[0])
+        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.zip", status.attachment_filenames)
         self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
 
 

@@ -16,17 +16,17 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     if "boundary" not in params["layer_defs"]:
-        status.cancelled("Check cancelled due to boundary not being available.")
+        status.info("Check cancelled due to boundary not being available.")
         return
 
     for layer_def in do_layers(params):
         # Prepare parameters used in sql clauses.
         sql_params = {"layer_name": layer_def["pg_layer_name"],
                       "boundary_name": params["layer_defs"]["boundary"]["pg_layer_name"],
-                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
+                      "warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
+        sql = ("CREATE TABLE {warning_table} AS"
                " SELECT"
                "  (ST_Dump(ST_Difference(boundary_union.geom, layer_union.geom))).geom AS geom"
                " FROM"
@@ -37,5 +37,5 @@ def run_check(params, status):
 
         # Report error items.
         if cursor.rowcount > 0:
-            status.failed("Layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
-            status.add_full_table(sql_params["error_table"])
+            status.info("Layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
+            status.add_full_table(sql_params["warning_table"])

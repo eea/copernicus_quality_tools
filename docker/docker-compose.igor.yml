@@ -5,7 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    image: qc_tool_frontend
+      args:
+        - VERSION=master
+    image: eeacms/copernicus-qctool-frontend:latest
     ports:
       - 8000:8000
     environment:
@@ -28,7 +30,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    image: qc_tool_worker
+      args:
+        - VERSION=master
+    image: eeacms/copernicus-qctool-worker:latest
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
@@ -53,7 +57,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.postgis
-    image: qc_tool_postgis
+      args:
+        - VERSION=master
+    image: eeacms/copernicus-qctool-postgis:latest
     networks:
       - qc_tool_network
 
