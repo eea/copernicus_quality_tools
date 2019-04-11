@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - VERSION=1.2.6
+        - VERSION=1.2.7
 
     image: eeacms/copernicus-qctool-frontend:latest
     ports:
@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker
       args:
-        - VERSION=1.2.6
+        - VERSION=1.2.7
 
     image: eeacms/copernicus-qctool-worker:latest
     environment:
@@ -63,7 +63,7 @@ services:
       context: .
       dockerfile: Dockerfile.postgis
       args:
-        - VERSION=1.2.6
+        - VERSION=1.2.7
     image: eeacms/copernicus-qctool-postgis:latest
     networks:
       - qc_tool_network
