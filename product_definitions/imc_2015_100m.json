@@ -1,5 +1,5 @@
 {
-  "description": "HRL Imperviousness Change 2012-2015 (100m)",
+  "description": "HRL Imperviousness Change 2012 - 2015 (100m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
