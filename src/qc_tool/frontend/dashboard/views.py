@@ -130,9 +130,17 @@ def get_deliveries_json(request):
           ORDER BY j.date_created DESC LIMIT 1)
         INNER JOIN auth_user u
         ON d.user_id = u.id
-        WHERE d.user_id = %s AND d.is_deleted != 1
+        WHERE d.is_deleted != 1
         """
-        cursor.execute(sql, (request.user.id,))
+
+        if request.user.is_superuser:
+            # Superusers see all deliveries.
+            sql += " ORDER BY d.id DESC"
+            cursor.execute(sql)
+        else:
+            # Regular users only see their own deliveries.
+            sql += " AND d.user_id = %s ORDER BY d.id DESC"
+            cursor.execute(sql, (request.user.id,))
         header = [i[0] for i in cursor.description]
         rows = cursor.fetchall()
         data = []
@@ -524,13 +532,20 @@ def get_job_history_json(request, delivery_id):
     """
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    if delivery.user != request.user:
-        raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+    if not request.user.is_superuser:
+        if delivery.user != request.user:
+            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
 
-    # find all jobs with same filename and user as this delivery
-    jobs = models.Job.objects.filter(delivery__filename=delivery.filename)\
-        .filter(delivery__user=request.user)\
-        .order_by("-date_created")
+    # find all jobs with same filename
+    if request.user.is_superuser:
+        # superuser can see all jobs.
+        jobs = models.Job.objects.filter(delivery__filename=delivery.filename) \
+            .order_by("-date_created")
+    else:
+        # regular user can only see their own jobs.
+        jobs = models.Job.objects.filter(delivery__filename=delivery.filename)\
+            .filter(delivery__user=request.user)\
+            .order_by("-date_created")
     for job in jobs:
         if job.job_status == JOB_RUNNING:
             job_status = check_running_job(str(job.job_uuid), job.worker_url)
@@ -543,8 +558,9 @@ def job_history_page(request, delivery_id):
     Shows the history of all jobs for a specific delivery in .json format.
     """
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
-    if delivery.user != request.user:
-        raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+    if not request.user.is_superuser:
+        if delivery.user != request.user:
+            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
     return render(request, 'dashboard/job_history.html', {"delivery": delivery,
                                                           "show_logo": settings.SHOW_LOGO})
 @login_required

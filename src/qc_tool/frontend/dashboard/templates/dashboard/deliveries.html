@@ -21,10 +21,9 @@
 
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">My Deliveries</a></li>
-                    <!--
-                    <li role="presentation"><a id="tab_templates" href="#servers" aria-controls="messages" role="tab" data-toggle="tab">New Check Job</a></li>
-                    -->
+                    <li role="presentation" class="active">
+                        <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">
+                            {% if user.is_superuser %}All Deliveries{% else %}My Deliveries{% endif %}</a></li>
                 </ul>
 
                 <!-- Tab panes -->
@@ -57,7 +56,11 @@
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
                                 <th data-field="product_description" data-sortable="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
+                                {% if user.is_superuser %}
+                                <th data-field="username" data-visible="true" data-sortable="true" >User</th>
+                                {% else %}
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
+                                {% endif %}
                                 <th data-field="last_job_status" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
                                 {% if submission_enabled %}
                                 <th data-field="date_submitted" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
