@@ -24,10 +24,10 @@ def run_check(params, status):
         authority_name = srs.GetAuthorityName(None)
         authority_code = srs.GetAuthorityCode(None)
         if authority_name != "EPSG":
-            status.aborted("Layer {:s} has missing EPSG authority.".format(layer_def["src_layer_name"]))
+            status.failed("Layer {:s} has missing EPSG authority.".format(layer_def["src_layer_name"]))
             return
         if authority_code is None:
-            status.aborted("Layer {:s} has missing EPSG code.".format(layer_def["src_layer_name"]))
+            status.failed("Layer {:s} has missing EPSG code.".format(layer_def["src_layer_name"]))
             return
 
         # Compare EPSG code against boundary EPSG code.

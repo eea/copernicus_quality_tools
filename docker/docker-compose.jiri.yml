@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - VERSION=1.2.7
+        - VERSION=1.2.8
 
     image: eeacms/copernicus-qctool-frontend:latest
     ports:
