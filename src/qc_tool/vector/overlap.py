@@ -18,10 +18,10 @@ def run_check(params, status):
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
-               "  SELECT DISTINCT ta.{fid_name} AS {fid_name}"
+               "  SELECT DISTINCT unnest(ARRAY[ta.{fid_name}, tb.{fid_name}]) AS {fid_name}"
                "  FROM {layer_name} ta, {layer_name} tb"
                "  WHERE"
-               "    ta.{fid_name} <> tb.{fid_name}"
+               "    ta.{fid_name} < tb.{fid_name}"
                "    AND ta.wkb_geometry && tb.wkb_geometry"
                "    AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, 'T********');")
         sql = sql.format(**sql_params)

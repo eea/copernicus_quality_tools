@@ -38,12 +38,12 @@ def run_check(params, status):
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
-               " SELECT DISTINCT ta.{fid_name}"
+               " SELECT DISTINCT unnest(ARRAY[ta.{fid_name}, tb.{fid_name}]) AS {fid_name}"
                " FROM"
                "  (SELECT * FROM {layer_name} {exclude_clause}) AS ta,"
                "  (SELECT * FROM {layer_name} {exclude_clause}) AS tb"
                " WHERE"
-               "  ta.{fid_name} <> tb.{fid_name}"
+               "  ta.{fid_name} < tb.{fid_name}"
                "  {pair_clause}"
                "  AND ta.wkb_geometry && tb.wkb_geometry"
                "  AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1;")
