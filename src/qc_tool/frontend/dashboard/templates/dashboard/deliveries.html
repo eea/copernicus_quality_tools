@@ -65,6 +65,9 @@
                                 {% if submission_enabled %}
                                 <th data-field="date_submitted" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
                                 {% endif %}
+                                {% if user.is_superuser %}
+                                <th data-field="is_deleted" data-visible="true" data-sortable="true" >Deleted</th>
+                                {% endif %}
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
                                 <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>
                             </tr>

@@ -119,7 +119,7 @@ def get_deliveries_json(request):
     with connection.cursor() as cursor:
         sql = """
         SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
-        d.product_ident, d.product_description, d.date_submitted,
+        d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
         j.job_uuid AS last_job_uuid,
         j.date_created, j.date_started, j.job_status as last_job_status
         FROM dashboard_delivery d
@@ -130,7 +130,6 @@ def get_deliveries_json(request):
           ORDER BY j.date_created DESC LIMIT 1)
         INNER JOIN auth_user u
         ON d.user_id = u.id
-        WHERE d.is_deleted != 1
         """
 
         if request.user.is_superuser:
@@ -139,7 +138,7 @@ def get_deliveries_json(request):
             cursor.execute(sql)
         else:
             # Regular users only see their own deliveries.
-            sql += " AND d.user_id = %s ORDER BY d.id DESC"
+            sql += "WHERE d.is_deleted != 1 AND d.user_id = %s ORDER BY d.id DESC"
             cursor.execute(sql, (request.user.id,))
         header = [i[0] for i in cursor.description]
         rows = cursor.fetchall()
