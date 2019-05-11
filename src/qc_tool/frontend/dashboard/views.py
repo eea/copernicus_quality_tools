@@ -575,13 +575,33 @@ def get_result(request, job_uuid):
         if step["check_ident"].startswith("qc_tool."):
             step["check_ident"] = ".".join(step["check_ident"].split(".")[1:])
     return render(request, "dashboard/result.html", {"job_report":job_report,
-                                                     "delivery_id": delivery.id,
+                                                     "delivery": delivery,
                                                      "show_logo": settings.SHOW_LOGO})
 
 def get_pdf_report(request, job_uuid):
     filepath = compose_job_report_filepath(job_uuid)
     try:
         return FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
+    except FileNotFoundError:
+        raise Http404()
+
+@login_required
+def download_delivery_file(request, delivery_id):
+    delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+
+    # Authorization check
+    if not request.user.is_superuser:
+        if delivery.user != request.user:
+            raise PermissionDenied("You are not authorized to view uploaded file for delivery id={:d}."
+                                   .format(int(delivery_id)))
+    # File existence check.
+    if delivery.is_deleted:
+        raise Http404("Uploaded file for delivery id={:d} has been deleted by the user.".format(int(delivery_id)))
+
+    # Downloading the delivery Zip file.
+    try:
+        delivery_filepath = Path(settings.MEDIA_ROOT).joinpath(delivery.user.username, delivery.filename)
+        return FileResponse(open(str(delivery_filepath), "rb"), content_type="application/zip", as_attachment=True)
     except FileNotFoundError:
         raise Http404()
 

@@ -38,9 +38,21 @@
                       <dt class="col-sm-2">Reference Year</dt>
                       <dd class="col-sm-10">{{job_report.reference_year}}</dd>
                     </dl>
+                    {% if user.is_superuser %}
+                    <dl class="row">
+                      <dt class="col-sm-2">User</dt>
+                      <dd class="col-sm-10">{{delivery.user.username}}</dd>
+                    </dl>
+                    {% endif %}
                     <dl class="row">
                       <dt class="col-sm-2">File</dt>
-                      <dd class="col-sm-10">{{job_report.filename}}</dd>
+                        <dd class="col-sm-10">
+                            {% if delivery.is_deleted %}
+                            {{job_report.filename}} (File has been deleted)
+                            {% else %}
+                            <a href="{% url 'download_delivery_file' delivery.id %}">{{job_report.filename}}</a>
+                            {% endif %}
+                        </dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Started</dt>
@@ -131,7 +143,7 @@
                 {% endif %}
                   <span>    </span><a href="/data/report/{{ job_report.job_uuid }}/report.json">JSON Report</a>
                   <span>&nbsp;&nbsp;&nbsp;</span>
-                        <a href="/job_history/{{ delivery_id }}/">QC job history ...</a>
+                        <a href="/job_history/{{ delivery.id }}/">QC job history ...</a>
 
             </div>
 
