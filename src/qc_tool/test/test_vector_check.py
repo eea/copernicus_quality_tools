@@ -784,6 +784,39 @@ class Test_gap_unit(VectorCheckTestCase):
         self.cursor.execute("SELECT * FROM s01_reference_unit_warning;")
         self.assertEqual(2, self.cursor.rowcount)
 
+class Test_max_area(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.max_area import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
+
+        # General features, class 1.
+        cursor.execute("INSERT INTO reference VALUES (10, 'code1', 500000, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (12, 'code1', 600000, ST_MakeEnvelope(12, 0, 13, 2, 4326));")
+
+        # General features, class 2.
+        cursor.execute("INSERT INTO reference VALUES (14, 'code2', 499999, ST_MakeEnvelope(14, 1, 15, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (16, 'code2', 500000, ST_MakeEnvelope(16, 0, 17, 2, 4326));")
+
+        # Excluded feature.
+        cursor.execute("INSERT INTO reference VALUES (30, 'code1', 500001, ST_MakeEnvelope(10.1, 1.1, 10.9, 1.9, 4326));")
+
+        # Error feature.
+        cursor.execute("INSERT INTO reference VALUES (31, 'code2', 500001, ST_MakeEnvelope(14.1, 1.1, 14.9, 1.9, 4326));")
+
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
+                                                         "pg_fid_name": "fid",
+                                                         "fid_display_name": "row number"}},
+                            "layers": ["reference"],
+                            "area_column_name": "shape_area",
+                            "code_column_name": "code",
+                            "area_m2": 500000,
+                            "exclude_codes": ["code1"],
+                            "margin_exceptions": True,
+                            "step_nr": 1})
+        run_check(self.params, self.status_class())
+        cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
+        self.assertListEqual([(31,)], cursor.fetchall())
 
 class Test_mmu_clc_status(VectorCheckTestCase):
     def test(self):
