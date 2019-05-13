@@ -164,8 +164,18 @@
         "code_column_name": "code",
         "exclude_codes": ["1", "3"],
         "area_m2": 200,
-        "area_column_name": "area",
-        "margin_exceptions": false
+        "area_column_name": "area"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.max_area",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "code_column_name": "code",
+        "exclude_codes": ["1", "3"],
+        "area_m2": 5000,
+        "area_column_name": "area"
       }
     },
     {
@@ -181,6 +191,18 @@
       "parameters": {
         "layers": ["swf_vec"],
         "code_column_names": ["code"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.layer_area",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster", "swf_vec"],
+        "vector_layer": "swf_vec",
+        "vector_code_column_name": "code",
+        "vector_codes": ["1", "2", "3"],
+        "raster_layer": "swf_raster",
+        "raster_codes": [1, 3]
       }
     },
     {

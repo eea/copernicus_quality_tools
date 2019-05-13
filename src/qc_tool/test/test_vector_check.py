@@ -4,6 +4,10 @@
 from unittest import expectedFailure
 from unittest import skipIf
 
+from osgeo import gdal
+from osgeo import osr
+import numpy as np
+
 from qc_tool.common import CONFIG
 from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import VectorCheckTestCase
@@ -1387,6 +1391,93 @@ class Test_neighbour_rpz(VectorCheckTestCase):
         self.assertListEqual([(1,), (2,), (3,)], self.cursor.fetchall())
         self.cursor.execute("SELECT fid FROM s01_rpz_layer_error ORDER BY fid;")
         self.assertListEqual([], self.cursor.fetchall())
+
+
+class Test_layer_area(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
+        self.params["output_dir"] = self.params["jobdir_manager"].output_dir
+
+        # Create an example raster layer with sum area = 250 m2
+        raster_src_filepath = self.params["tmp_dir"].joinpath("test_raster.tif")
+        self.params["raster_layer_defs"] = {"raster_1": {"src_filepath": str(raster_src_filepath),
+                                             "src_layer_name": "raster_1"}}
+        array = np.array([[3, 3, 3, 3],
+                          [1, 1, 1, 1],
+                          [1, 1, 0, 0],
+                          [0, 0, 0, 0]])
+        cols = array.shape[1]
+        rows = array.shape[0]
+        originX = 0
+        originY = 0
+        pixelWidth = 5
+        pixelHeight = 5
+
+        driver = gdal.GetDriverByName('GTiff')
+        outRaster = driver.Create(str(raster_src_filepath), cols, rows, 1, gdal.GDT_Byte)
+        outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+        outband = outRaster.GetRasterBand(1)
+        outband.WriteArray(array)
+        outRasterSRS = osr.SpatialReference()
+        outRasterSRS.ImportFromEPSG(3035)
+        outRaster.SetProjection(outRasterSRS.ExportToWkt())
+        outband.FlushCache()
+
+        # Create an example vector layer.
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.params.update({"layer_defs": {"vector_1": {"pg_layer_name": "vector_1",
+                                                        "pg_fid_name": "fid",
+                                                        "fid_display_name": "row number"}},
+                            "vector_layer": "vector_1",
+                            "raster_layer_defs": {"raster_1": {"src_filepath": str(raster_src_filepath),
+                                                               "src_layer_name": "raster_1"}},
+                            "raster_layer": "raster_1",
+                            "vector_code_column_name": "code",
+                            "vector_codes": ["A", "B"],
+                            "raster_codes": [1, 3],
+                            "step_nr": 1})
+        self.cursor.execute("CREATE TABLE vector_1 (fid integer, code varchar, wkb_geometry geometry(Polygon, 3035));")
+
+
+    def test(self):
+        from qc_tool.vector.layer_area import run_check
+        # 20 x 10 m polygon (area 200 m2)
+        self.cursor.execute("INSERT INTO vector_1 VALUES (1, 'A', ST_MakeEnvelope(0, 10, 20, 20, 3035));")
+
+        # 10 x 5 m polygon (area 50 m2)
+        self.cursor.execute("INSERT INTO vector_1 VALUES (1, 'B', ST_MakeEnvelope(0, 5, 10, 10, 3035));")
+
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_fail(self):
+        from qc_tool.vector.layer_area import run_check
+        # 20 x 10 m polygon (area 200 m2);
+        self.cursor.execute("INSERT INTO vector_1 VALUES (1, 'A', ST_MakeEnvelope(0, 10, 20, 20, 3035));")
+
+        # 5 x 5 m polygon (area 25 m2);
+        self.cursor.execute("INSERT INTO vector_1 VALUES (1, 'A', ST_MakeEnvelope(0, 5, 5, 10, 3035));")
+
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+
+    def test_warning(self):
+        from qc_tool.vector.layer_area import run_check
+        # 20 x 10 m polygon (area 200 m2);
+        self.cursor.execute("INSERT INTO vector_1 VALUES (1, 'A', ST_MakeEnvelope(0, 10, 20, 20, 3035));")
+
+        # 5 x 9.98 m polygon (area 49.9 m2);
+        self.cursor.execute("INSERT INTO vector_1 VALUES (1, 'A', ST_MakeEnvelope(0, 5, 10, 9.98, 3035));")
+
+        status = self.status_class()
+        run_check(self.params, status)
+        # We expect ok status and one warning message.
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, len(status.messages))
 
 
 @skipIf(CONFIG["skip_inspire_check"], "INSPIRE check has been disabled.")
