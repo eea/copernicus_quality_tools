@@ -257,6 +257,17 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "initial_code_column_name": "code_12",
+        "final_code_column_name": "code_18",
+        "chtype_column_name": "chtype",
+        "chtype_exception_value": "T"
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {

@@ -1393,6 +1393,66 @@ class Test_neighbour_rpz(VectorCheckTestCase):
         self.assertListEqual([], self.cursor.fetchall())
 
 
+class Test_change(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params.update({"output_dir": self.params["jobdir_manager"].output_dir})
+
+    def test(self):
+        from qc_tool.vector.change import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mytable (fid integer, "
+                       "code_1 varchar, code_2 varchar, chtype varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mytable (fid, code_1, code_2, chtype, wkb_geometry) VALUES "
+                       " (1, 'a', 'b', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 'a', 'c', 'T', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 'a', 'a', 'T', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "initial_code_column_name": "code_1",
+                            "final_code_column_name": "code_2",
+                            "chtype_column_name": "chtype",
+                            "chtype_exception_value": "T",
+                            "step_nr": 1})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, len(status.messages))
+        cursor.execute("SELECT * FROM s01_mytable_exception ORDER BY fid;")
+        self.assertListEqual([(3,)], cursor.fetchall())
+
+    def test_fail(self):
+        from qc_tool.vector.change import run_check
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mytable (fid integer, "
+                       "code_1 varchar, code_2 varchar, chtype varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mytable (fid, code_1, code_2, chtype, wkb_geometry) VALUES "
+                       " (1, 'a', 'b', 'R', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       " (2, 'a', 'a', 'R', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                       " (3, 'a', 'a', 'T', ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
+                       " (4, 'a', 'a', NULL, ST_MakeEnvelope(4, 2, 5, 3, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "initial_code_column_name": "code_1",
+                            "final_code_column_name": "code_2",
+                            "chtype_column_name": "chtype",
+                            "chtype_exception_value": "T",
+                            "step_nr": 1})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(2, len(status.messages))
+        cursor.execute("SELECT * FROM s01_mytable_exception ORDER BY fid;")
+        self.assertListEqual([(3,)], cursor.fetchall())
+        cursor.execute("SELECT * FROM s01_mytable_error ORDER BY fid;")
+        self.assertListEqual([(2,), (4,)], cursor.fetchall())
+
+
+
 class Test_layer_area(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
