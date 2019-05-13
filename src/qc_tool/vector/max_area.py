@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "Maximum mapping unit."
 IS_SYSTEM = False
 

@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "Minimum mapping unit, Corine Land Cover change layer."
 IS_SYSTEM = False
 

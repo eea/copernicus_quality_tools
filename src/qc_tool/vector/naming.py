@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "Naming is in accord with specification."
 IS_SYSTEM = False
 

@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "There is no couple of neighbouring polygons having the same code, Riparian zones."
 IS_SYSTEM = False
 
