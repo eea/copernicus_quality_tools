@@ -28,6 +28,7 @@ RUN cd /usr/local/src \
     && cd copernicus_quality_tools/src/qc_tool/frontend \
     && pip3 install -r ./requirements.txt \
     && mkdir /var/lib/qc_tool
+EXPOSE 8000
 
 # Run frontend application.
 COPY ./run_frontend.sh /

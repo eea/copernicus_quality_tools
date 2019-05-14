@@ -11,7 +11,6 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - WORK_DIR=/mnt/qc_tool_volume/work
       - SUBMISSION_DIR=/mnt/qc_tool_volume/submission
-      - FRONTEND_PORT=8000
       - FRONTEND_DB_PATH=/var/lib/qc_tool/frontend.sqlite3
     networks:
       - qc_tool_network

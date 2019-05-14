@@ -12,4 +12,4 @@ python3 -m qc_tool.frontend.manage create_default_user --username guest2 --passw
 python3 -m qc_tool.frontend.manage create_default_user --username guest3 --password guest3
 
 # Start Django development server.
-python3 -m qc_tool.frontend.manage runserver 0.0.0.0:${FRONTEND_PORT:-8000}
+python3 -m qc_tool.frontend.manage runserver 0.0.0.0:8000

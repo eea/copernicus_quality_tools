@@ -15,7 +15,6 @@ Service qc_tool_frontend
   * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
   * WORK_DIR, informs the frontend server where it should look for job output files;
   * SUBMISSION_DIR, if set instructs the frontend server where to put submissions, if not set or empty the feature is disabled;
-  * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
   * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
       the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
   * SHOW_LOGO, informs the frontend server to put the Copernicus logo at web pages;
