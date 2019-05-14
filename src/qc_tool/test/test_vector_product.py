@@ -13,7 +13,7 @@ class Test_clc(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
 
-        expected_step_results = ["ok"] * 24
+        expected_step_results = ["ok"] * 25
         job_result = dispatch(self.job_uuid, "user_name", filepath, "clc2012")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)

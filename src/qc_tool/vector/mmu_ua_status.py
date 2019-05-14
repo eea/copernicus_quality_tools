@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "Minimum mapping unit, Urban Atlas status layer."
 IS_SYSTEM = False
 

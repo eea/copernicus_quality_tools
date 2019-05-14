@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "Minimum mapping width, Urban Atlas."
 IS_SYSTEM = False
 

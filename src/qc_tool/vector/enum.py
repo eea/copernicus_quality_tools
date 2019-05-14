@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "Features use specific codes in specific attributes."
 IS_SYSTEM = False
 

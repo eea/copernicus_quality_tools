@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-DESCRIPTION = "Minimum mapping unit."
+DESCRIPTION = "Maximum mapping unit."
 IS_SYSTEM = False
 
 
@@ -25,7 +25,7 @@ def run_check(params, status):
         sql = ("CREATE TABLE {error_table} AS"
                " SELECT {fid_name}"
                " FROM {exclude_clause}"
-               " WHERE {area_column_name} < {area_m2};")
+               " WHERE {area_column_name} > {area_m2};")
 
         # Add exclude clause to error table query.
         exclude_codes = params.get("exclude_codes", [])

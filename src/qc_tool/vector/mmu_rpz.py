@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "Minimum mapping unit, Riparian zones."
 IS_SYSTEM = False
 

@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
-
-
 DESCRIPTION = "There is no gap in the set of AOIs."
 IS_SYSTEM = False
 
