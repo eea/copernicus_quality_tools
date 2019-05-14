@@ -1,33 +1,34 @@
 How to run tests for check functions
 ------------------------------------
 
-Build docker images:
+Build docker image:
 
-docker build --file=Dockerfile.postgis --tag=qc_tool_postgis .
 docker build --file=Dockerfile.worker --tag=qc_tool_worker .
 
-Run postgis container:
+Run container with postgis service:
 
-docker run --rm --publish 5432:5432 --name=qc_tool_postgis --tty --interactive eeacms/copernicus-qctool-postgis
+docker run --rm \
+ --interactive --tty \
+ --publish 5432:5432 \
+ --name=qc_tool_postgis \
+ --user=postgres \
+ eeacms/copernicus-qctool-worker \
+ /usr/lib/postgresql/10/bin/postgres -D /var/lib/postgresql/10/main -c config_file=/etc/postgresql/10/main/postgresql.conf
 
-Setup MY_QC_TOOL_HOME to your development source files, eg.
+Switch to other terminal.
 
-MY_QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools
+Setup QC_TOOL_HOME to your development source files, eg.
 
-Switch to other terminal and run tests at qc_tool_worker image:
+QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools
+
+Run tests:
 
 docker run --rm \
   --interactive --tty \
-  --name=qc_tool_worker \
+  --name=qc_tool_test \
   --link=qc_tool_postgis \
+  --env=PG_HOST=qc_tool_postgis \
+  --env=SKIP_INSPIRE_CHECK=yes \
   --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  eeacms/copernicus-qctool-worker python3 -m unittest discover qc_tool.test
-
-If you want to run tests from specific module only, then remove discover param, eg.
-
-docker run --rm \
-  --interactive --tty \
-  --name=qc_tool_worker \
-  --link=qc_tool_postgis \
-  --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  eeacms/copernicus-qctool-worker python3 -m unittest qc_tool.test.test_vector_check.Test_overlap
+  eeacms/copernicus-qctool-worker \
+  python3 -m unittest qc_tool.test.test_vector_check

@@ -2,7 +2,7 @@ version: '3'
 
 services:
   frontend:
-    image: eeacms/copernicus-qctool-frontend:1.2.8
+    image: eeacms/copernicus-qctool-frontend
     ports:
       - 8000:8000
     environment:
@@ -19,28 +19,17 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:1.2.8
+    image: eeacms/copernicus-qctool-worker
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_volume/work
-      - PG_HOST=postgis
-      - PG_PORT=5432
-      - PG_USER=qc_job
-      - PG_DATABASE=qc_tool_db
-      - LEAVE_SCHEMA=no
-      - LEAVE_JOBDIR=no
     networks:
       - qc_tool_network
     volumes:
       - qc_tool_volume:/mnt/qc_tool_volume
-
-  postgis:
-    image: eeacms/copernicus-qctool-postgis:1.2.8
-    networks:
-      - qc_tool_network
 
 volumes:
   qc_tool_volume:

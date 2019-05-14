@@ -11,8 +11,9 @@ ARG VERSION
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
-# Upgrade the base system.
-RUN apt-get -y update \
+# Build the initial environment.
+RUN echo "$VERSION" >/etc/qc_tool_version.txt \
+    && apt-get -y update \
     && apt-get -y upgrade \
     && apt-get -y install python3-pip \
     && apt-get -y install wget unzip
@@ -24,7 +25,6 @@ RUN cd /usr/local/src \
     && unzip ./${VERSION}.zip \
     && rm ./${VERSION}.zip \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
-    && echo ${VERSION} >./copernicus_quality_tools/VERSION \
     && cd copernicus_quality_tools/src/qc_tool/frontend \
     && pip3 install -r ./requirements.txt \
     && mkdir /var/lib/qc_tool

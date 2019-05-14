@@ -1,5 +1,3 @@
-# Dockerfile for building environment for checking processes.
-
 FROM ubuntu:bionic
 
 LABEL author=gisat.cz
@@ -10,23 +8,41 @@ ARG VERSION
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
-# Upgrade the base system.
-RUN apt-get -y update \
+# Build the initial environment.
+RUN echo "$VERSION" >/etc/qc_tool_version.txt \
+    && apt-get -y update \
     && apt-get -y upgrade \
     && apt-get -y install python3-pip \
     && apt-get -y install wget unzip
 
-# Install geo environment.
-RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy
+# Install environment.
+RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy \
+    && pip3 install scikit-image reportlab \
+    && pip3 install bottle \
+    && pip3 install supervisor
 
-# Install scikit-image and reportlab.
-RUN pip3 install scikit-image reportlab
+# Expose the port of supervisor.
+EXPOSE 9001
 
-# Install bottle.
-RUN pip3 install bottle
+# Install postgresql & postgis.
+# During install tzdata package needs timezone having been set already.
+ENV TZ=UTC
+RUN ln -s /usr/share/zoneinfo/UTC /etc/localtime \
+    && apt-get -y install postgresql-10-postgis-2.4
 
-# Update version info.
-COPY qc_tool_version.txt /usr/local/src
+# Configure the qc tool database.
+#
+# We insert qc_job/trust clause just *before* 127.0.0.1/md5 clause in pg_hba.conf,
+# so that qc_job is thus allowed to connect to qc_tool_db without password even
+# when connecting to 127.0.0.1.
+USER postgres
+COPY ./init_qc_tool_db.sql /usr/local/src
+RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/10/main/pg_hba.conf \
+    && echo "listen_addresses='*'" >>/etc/postgresql/10/main/postgresql.conf \
+    && /etc/init.d/postgresql start \
+    && psql --file=/usr/local/src/init_qc_tool_db.sql \
+    && /etc/init.d/postgresql stop
+USER root
 
 # Install qc tool.
 RUN cd /usr/local/src \
@@ -36,5 +52,7 @@ RUN cd /usr/local/src \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
-# Run the scheduler.
-CMD python3 -m qc_tool.worker.scheduler
+# Expose the port of job scheduler.
+EXPOSE 8000
+
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]

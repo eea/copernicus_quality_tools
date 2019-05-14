@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - VERSION=1.2.8
+        - VERSION
 
     image: eeacms/copernicus-qctool-frontend:latest
     ports:
@@ -19,7 +19,6 @@ services:
       - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
       - FRONTEND_PORT=8000
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
-      - SHOW_LOGO=yes
     networks:
       - qc_tool_network
     volumes:
@@ -34,7 +33,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker
       args:
-        - VERSION=1.2.7
+        - VERSION
 
     image: eeacms/copernicus-qctool-worker:latest
     environment:
@@ -43,13 +42,6 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work
-      - PG_HOST=postgis
-      - PG_PORT=5432
-      - PG_USER=qc_job
-      - PG_DATABASE=qc_tool_db
-      - LEAVE_SCHEMA=no
-      - LEAVE_JOBDIR=no
-      - SHOW_LOGO=no
     networks:
       - qc_tool_network
     volumes:
@@ -57,16 +49,6 @@ services:
       - /home/jiri/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
       - /home/jiri/qc_tool/qc_tool_work:/mnt/qc_tool_work
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-
-  postgis:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgis
-      args:
-        - VERSION=1.2.7
-    image: eeacms/copernicus-qctool-postgis:latest
-    networks:
-      - qc_tool_network
 
 networks:
   qc_tool_network:

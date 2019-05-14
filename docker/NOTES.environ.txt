@@ -10,7 +10,6 @@ There is no path related to host viewpoint.
 Service qc_tool_frontend
 ------------------------
 
-
   * PRODUCT_DIRS, informs the frontend server where to look for product definition files; there may be multiple paths separated by colon;
   * BOUNDARY_DIR, instructs the frontend server where it should store boundary package;
   * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
@@ -19,7 +18,7 @@ Service qc_tool_frontend
   * FRONTEND_PORT, instructs the frontend server what port it should start listening for connections; this port is also published so that it can be reached from outside the container;
   * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
       the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
-  * SHOW_LOGO, informs the frontend server to show the Copernicus logo;
+  * SHOW_LOGO, informs the frontend server to put the Copernicus logo at web pages;
 
 
 Service qc_tool_worker
@@ -34,7 +33,7 @@ Service qc_tool_worker
   * PG_PORT, informs the job about the tcp port on which the postgresql server is listening for connections;
   * PG_USER, informs the job which user name it should use when connecting to postgresql server;
   * PG_DATABASE, informs the job which database name it should use when connecting to postgresql server;
-  * SHOW_LOGO, informs the pdf report to show the Copernicus logo;
+  * SHOW_LOGO, informs the worker to put Copernicus logo in pdf report;
 
 
 Debugging parameters

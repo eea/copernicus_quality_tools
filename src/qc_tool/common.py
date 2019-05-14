@@ -305,7 +305,7 @@ def setup_config():
     config["pull_job_url"] = environ.get("PULL_JOB_URL", "http://qc_tool_frontend:8000/pull_job")
 
     ## Access to postgis.
-    config["pg_host"] = environ.get("PG_HOST", "qc_tool_postgis")
+    config["pg_host"] = environ.get("PG_HOST", "127.0.0.1")
     config["pg_port"] = int(environ.get("PG_PORT", 5432))
     config["pg_user"] = environ.get("PG_USER", "qc_job")
     config["pg_database"] = environ.get("PG_DATABASE", "qc_tool_db")

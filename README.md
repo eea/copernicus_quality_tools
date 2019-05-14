@@ -3,7 +3,6 @@
 The application is composed of:
 * Front-end user interface, alias web console;
 * Worker Service;
-* Postgis database engine;
 
 # Documentation
 
