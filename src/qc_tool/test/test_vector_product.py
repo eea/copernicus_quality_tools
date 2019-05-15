@@ -12,7 +12,6 @@ from qc_tool.worker.dispatch import dispatch
 class Test_clc(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-
         expected_step_results = ["ok"] * 25
         job_result = dispatch(self.job_uuid, "user_name", filepath, "clc2012")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
@@ -60,7 +59,7 @@ class Test_ua_gdb(ProductTestCase):
     def test(self):
         self.maxDiff = None
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
-        expected_step_results = ["ok"] * 20
+        expected_step_results = ["ok"] * 21
         job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_2012_gdb")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)

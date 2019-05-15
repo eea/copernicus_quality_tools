@@ -154,6 +154,16 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "initial_code_column_name": "code_06",
+        "final_code_column_name": "code_12",
+        "chtype_column_name": "chtype"
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
@@ -240,16 +250,6 @@
       "parameters": {
         "layers": ["change"],
         "code_column_names": ["code_06", "code_12"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.change",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "initial_code_column_name": "code_06",
-        "final_code_column_name": "code_12",
-        "chtype_column_name": "chtype"
       }
     },
     {

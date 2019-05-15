@@ -128,6 +128,15 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "initial_code_column_name": "code2006",
+        "final_code_column_name": "code2012"
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
