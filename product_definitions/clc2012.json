@@ -249,8 +249,7 @@
         "layers": ["change"],
         "initial_code_column_name": "code_06",
         "final_code_column_name": "code_12",
-        "chtype_column_name": "chtype",
-        "chtype_exception_value": "T"
+        "chtype_column_name": "chtype"
       }
     },
     {

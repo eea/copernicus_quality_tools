@@ -151,8 +151,7 @@ class Test_Raster(ProductTestCase):
     def test_general_raster(self):
         product_ident = "general_raster"
         filepath = self.raster_data_dir.joinpath("general_raster", "general_raster.zip")
-
-        self.expected_step_statuses = ["ok"] * 9
+        expected_step_statuses = ["ok"] * 9
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
-        self.assertListEqual(self.expected_step_statuses, step_statuses)
+        self.assertListEqual(expected_step_statuses, step_statuses)

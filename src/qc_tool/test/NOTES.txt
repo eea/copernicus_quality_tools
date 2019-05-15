@@ -21,7 +21,7 @@ Setup QC_TOOL_HOME to your development source files, eg.
 
 QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools
 
-Run tests:
+Run all tests:
 
 docker run --rm \
   --interactive --tty \
@@ -29,6 +29,18 @@ docker run --rm \
   --link=qc_tool_postgis \
   --env=PG_HOST=qc_tool_postgis \
   --env=SKIP_INSPIRE_CHECK=yes \
-  --volume=$MY_QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
+  --volume=$QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
+  eeacms/copernicus-qctool-worker \
+  python3 -m unittest discover qc_tool.test
+
+Run specific tests:
+
+docker run --rm \
+  --interactive --tty \
+  --name=qc_tool_test \
+  --link=qc_tool_postgis \
+  --env=PG_HOST=qc_tool_postgis \
+  --env=SKIP_INSPIRE_CHECK=yes \
+  --volume=$QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
   eeacms/copernicus-qctool-worker \
   python3 -m unittest qc_tool.test.test_vector_check
