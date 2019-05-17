@@ -21,6 +21,9 @@ RUN apt-get -y install gdal-bin python3-psycopg2 python3-gdal python3-numpy \
     && pip3 install bottle \
     && pip3 install supervisor
 
+# Copy supervisor config file.
+COPY ./supervisord.conf /etc
+
 # Expose the port of supervisor.
 EXPOSE 9001
 
