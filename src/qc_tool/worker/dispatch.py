@@ -10,7 +10,6 @@ from importlib import import_module
 from subprocess import run
 from sys import exc_info
 from traceback import format_exc
-from zipfile import ZipFile
 
 from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import CONFIG
