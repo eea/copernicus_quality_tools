@@ -43,8 +43,8 @@ def run_check(params, status):
                "     AND tb.ua IS NULL"
                "     AND ta.{fid_name} < tb.{fid_name}"
                "     AND ta.{code_column_name} = tb.{code_column_name}"
-               "     AND ta.wkb_geometry && tb.wkb_geometry"
-               "     AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1"
+               "     AND ta.geom && tb.geom"
+               "     AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1"
                "   );")
         sql = sql.format(**sql_params)
         cursor.execute(sql)

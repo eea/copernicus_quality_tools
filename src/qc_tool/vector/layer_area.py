@@ -35,7 +35,7 @@ def run_check(params, status):
                   "code_column_name": params["vector_code_column_name"]}
 
     # Create area sum query.
-    sql = ("SELECT SUM(ST_Area(wkb_geometry)) FROM {layer_name}"
+    sql = ("SELECT SUM(ST_Area(geom)) FROM {layer_name}"
            " WHERE {code_column_name} = ANY(%s)")
 
     sql = sql.format(**sql_params)

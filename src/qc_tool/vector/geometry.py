@@ -23,7 +23,7 @@ def run_check(params, status):
         sql = ("CREATE TABLE {error_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
-               " WHERE NOT ST_IsValid(wkb_geometry);")
+               " WHERE NOT ST_IsValid(geom);")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -38,10 +38,10 @@ def run_check(params, status):
             sql = ("CREATE TABLE {detail_table} AS"
                    " SELECT"
                    "  {fid_name},"
-                   "  (ST_IsValidDetail(wkb_geometry)).reason AS reason,"
-                   "  ST_SetSRID((ST_IsValidDetail(wkb_geometry)).location, ST_SRID(wkb_geometry)) AS location"
+                   "  (ST_IsValidDetail(geom)).reason AS reason,"
+                   "  ST_SetSRID((ST_IsValidDetail(geom)).location, ST_SRID(geom)) AS location"
                    "  FROM {layer_name}"
-                   " WHERE NOT ST_IsValid(wkb_geometry);")
+                   " WHERE NOT ST_IsValid(geom);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 

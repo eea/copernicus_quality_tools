@@ -26,7 +26,7 @@ def run_check(params, status):
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  ST_NumGeometries(ST_Buffer(wkb_geometry, %s)) = 1;")
+               "  ST_NumGeometries(ST_Buffer(geom, %s)) = 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, [-params["mmw"]])
 

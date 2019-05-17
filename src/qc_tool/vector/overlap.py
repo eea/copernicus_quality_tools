@@ -22,8 +22,8 @@ def run_check(params, status):
                "  FROM {layer_name} ta, {layer_name} tb"
                "  WHERE"
                "    ta.{fid_name} < tb.{fid_name}"
-               "    AND ta.wkb_geometry && tb.wkb_geometry"
-               "    AND ST_Relate(ta.wkb_geometry, tb.wkb_geometry, 'T********');")
+               "    AND ta.geom && tb.geom"
+               "    AND ST_Relate(ta.geom, tb.geom, 'T********');")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

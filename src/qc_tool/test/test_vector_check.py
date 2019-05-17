@@ -455,9 +455,8 @@ class Test_unique(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.unique import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, "
-                       "unique_1 varchar, unique_2 integer, wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO mytable (fid, unique_1, unique_2, wkb_geometry) VALUES "
+        cursor.execute("CREATE TABLE mytable (fid integer, unique_1 varchar, unique_2 integer, geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mytable (fid, unique_1, unique_2, geom) VALUES "
                        " (1, 'a', 33, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                        " (2, 'b', 34, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 'c', 35, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -474,9 +473,8 @@ class Test_unique(VectorCheckTestCase):
     def test_fail(self):
         from qc_tool.vector.unique import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, "
-                       "ident varchar, wkb_geometry geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO mytable (fid, ident, wkb_geometry) VALUES "
+        cursor.execute("CREATE TABLE mytable (fid integer, ident varchar, geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mytable (fid, ident, geom) VALUES "
                        " (1, 'a', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                        " (2, 'b', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 'b', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -500,8 +498,7 @@ class Test_enum(VectorCheckTestCase):
     def test_string_codes(self):
         from qc_tool.vector.enum import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE xxx18_zz (fid integer, "
-                       "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE xxx18_zz (fid integer, code_18 varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO xxx18_zz VALUES (1, '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, '111', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -518,8 +515,7 @@ class Test_enum(VectorCheckTestCase):
     def test_integer_codes(self):
         from qc_tool.vector.enum import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE xxx12_zz (fid integer, "
-                       "code_12 integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE xxx12_zz (fid integer, code_12 integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO xxx12_zz VALUES (1, 2, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                        " (2, 3, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 4, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -536,8 +532,7 @@ class Test_enum(VectorCheckTestCase):
     def test_integer_codes_fail(self):
         from qc_tool.vector.enum import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE xxx12_zz (fid integer, "
-                       "code_12 integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE xxx12_zz (fid integer, code_12 integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO xxx12_zz VALUES (1, 2, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                        " (2, 9999, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 9999, ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -554,8 +549,7 @@ class Test_enum(VectorCheckTestCase):
     def test_change_fail(self):
         from qc_tool.vector.enum import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
-                       "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, code_18 varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', '112', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                   " (2, 'xxx', 'xxx', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                   " (3, 'xxx', '111', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -574,8 +568,7 @@ class Test_enum(VectorCheckTestCase):
         """Enum check should fail if code column has NULL values."""
         from qc_tool.vector.enum import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, "
-                       "code_18 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE cha18_xx (fid integer, code_12 varchar, code_18 varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO cha18_xx VALUES (1, '111', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "cha18_xx",
                                                        "pg_fid_name": "fid",
@@ -591,8 +584,7 @@ class Test_enum(VectorCheckTestCase):
     def test_exclude(self):
         from qc_tool.vector.enum import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE my_table (fid integer, "
-                       "code varchar, ua varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE my_table (fid integer, code varchar, ua varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO my_table VALUES (1, 'a', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                        " (2, 'b', NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 'x', 'ua2012', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -610,8 +602,7 @@ class Test_enum(VectorCheckTestCase):
     def test_exclude_fail(self):
         from qc_tool.vector.enum import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE my_table (fid integer, "
-                       "code varchar, ua varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE my_table (fid integer, code varchar, ua varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO my_table VALUES (1, 'a', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                        " (2, 'x', NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                        " (3, 'x', 'ua2006', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -637,8 +628,7 @@ class Test_singlepart(VectorCheckTestCase):
         from qc_tool.vector.singlepart import run_check
         status = self.status_class()
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, "
-                       "wkb_geometry geometry(Multipolygon, 4326));")
+        cursor.execute("CREATE TABLE mytable (fid integer, geom geometry(Multipolygon, 4326));")
         cursor.execute("INSERT INTO mytable "
                        "VALUES (1, ST_Multi(ST_MakeEnvelope(0, 0, 1, 1, 4326))),"
                        "       (3, ST_Multi(ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
@@ -654,7 +644,7 @@ class Test_singlepart(VectorCheckTestCase):
         from qc_tool.vector.singlepart import run_check
         status = self.status_class()
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, wkb_geometry geometry(Multipolygon, 4326));")
+        cursor.execute("CREATE TABLE mytable (fid integer, geom geometry(Multipolygon, 4326));")
         cursor.execute("INSERT INTO mytable "
                        "VALUES (1, ST_Union(ST_MakeEnvelope(0, 0, 1, 1, 4326), "
                        "                    ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
@@ -671,7 +661,7 @@ class Test_geometry(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, geom geometry(Polygon, 4326));")
         self.cursor.execute("INSERT INTO test_layer VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.params.update({"layer_defs": {"test": {"pg_fid_name": "fid",
                                                     "pg_layer_name": "test_layer",
@@ -706,10 +696,10 @@ class Test_gap(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE boundary (wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE boundary (geom geometry(Polygon, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES (ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
-        self.cursor.execute("CREATE TABLE reference (wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE reference (geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
@@ -741,13 +731,13 @@ class Test_gap_unit(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE boundary (unit CHAR(1), wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE boundary (unit CHAR(1), geom geometry(Polygon, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('A', ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
         self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(8, 8, 9, 9, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('C', ST_MakeEnvelope(10, 10, 11, 11, 4326));")
-        self.cursor.execute("CREATE TABLE reference (unit CHAR(1), wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE reference (unit CHAR(1), geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
@@ -792,7 +782,7 @@ class Test_max_area(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.max_area import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, geom geometry(Polygon, 4326));")
 
         # General features, class 1.
         cursor.execute("INSERT INTO reference VALUES (10, 'code1', 500000, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
@@ -826,7 +816,7 @@ class Test_mmu_clc_status(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_clc_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE reference (fid integer, code_12 varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, code_12 varchar, shape_area real, geom geometry(Polygon, 4326));")
 
         # General features.
         cursor.execute("INSERT INTO reference VALUES (10, 'code1', 250001, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
@@ -856,7 +846,7 @@ class Test_mmu(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, geom geometry(Polygon, 4326));")
 
         # General features, class 1.
         cursor.execute("INSERT INTO reference VALUES (10, 'code1', 250001, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
@@ -893,11 +883,11 @@ class Test_mmu_clc_change(VectorCheckTestCase):
         cursor = self.params["connection_manager"].get_connection().cursor()
 
         # Artificial margin.
-        cursor.execute("CREATE TABLE margin (wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE margin (geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO margin VALUES (ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
         # Add layer to be checked.
-        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(1), code2 char(1), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(1), code2 char(1), geom geometry(Polygon, 4326));")
 
         # General features.
         cursor.execute("INSERT INTO change VALUES (10, 50001, 'X', 'X', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
@@ -942,7 +932,7 @@ class Test_mmu_ua_status(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_ua_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE reference (fid integer, shape_area real, code char(5), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, shape_area real, code char(5), geom geometry(Polygon, 4326));")
 
         # General features.
         cursor.execute("INSERT INTO reference VALUES (10, 1, '122', ST_MakeEnvelope(10, 1, 11, 8, 4326));")
@@ -1011,7 +1001,7 @@ class Test_mmu_ua_change(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_ua_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(5), code2 char(5), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(5), code2 char(5), geom geometry(Polygon, 4326));")
 
         # General features.
         cursor.execute("INSERT INTO change VALUES (10, 1001, 'X', '1', ST_MakeEnvelope(10, 1, 11, 2, 4326));")
@@ -1066,7 +1056,7 @@ class Test_mmu_n2k(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_n2k import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, geom geometry(Polygon, 4326));")
 
         # Artificial margin as a general feature.
         cursor.execute("INSERT INTO n2k VALUES (0, 0.5, 10, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
@@ -1113,7 +1103,7 @@ class Test_mmu_rpz(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE rpz (fid integer, area_ha real, code integer, ua char(1), comment varchar(40), wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE rpz (fid integer, area_ha real, code integer, ua char(1), comment varchar(40), geom geometry(Polygon, 4326));")
 
         # Artificial margin as a general feature.
         self.cursor.execute("INSERT INTO rpz VALUES (0, 0.5, 10, NULL, NULL, ST_MakeEnvelope(-1, -1, 50, 50, 4326));")
@@ -1183,7 +1173,7 @@ class Test_mmw(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmw import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mmw (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(10, 10, 13, 11, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (2, ST_MakeEnvelope(20, 20, 23, 23, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (3, ST_Difference(ST_MakeEnvelope(30, 30, 39, 39, 4326),"
@@ -1206,7 +1196,7 @@ class Test_mmw_ua(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmw_ua import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mmw (fid integer, code char(5), wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE mmw (fid integer, code char(5), geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, '12', ST_MakeEnvelope(10, 10, 13, 11, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (2, '12', ST_MakeEnvelope(20, 20, 23, 23, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (3, '12', ST_Difference(ST_MakeEnvelope(30, 30, 39, 39, 4326),"
@@ -1233,8 +1223,8 @@ class Test_overlap(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, wkb_geometry geometry(Polygon, 4326));")
-        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "test_layer_1",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"},
@@ -1278,11 +1268,7 @@ class Test_neighbour(VectorCheckTestCase):
         from qc_tool.vector.neighbour import run_check
         self.run_check = run_check
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer ("
-                            "  fid integer,"
-                            "  attr_1 char(1),"
-                            "  attr_2 char(1),"
-                            "  wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, attr_1 char(1), attr_2 char(1), geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
@@ -1352,12 +1338,7 @@ class Test_neighbour_technical(VectorCheckTestCase):
         from qc_tool.vector.neighbour import run_check
         self.run_check = run_check
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer ("
-                            " fid integer,"
-                            " attr_1 char(1),"
-                            " attr_2 char(1),"
-                            " chtype char(1),"
-                            " wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, attr_1 char(1), attr_2 char(1), chtype char(1), geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
@@ -1412,7 +1393,7 @@ class Test_neighbour_rpz(VectorCheckTestCase):
                             "code_column_name": "code",
                             "exception_comments": ["Comment 1", "Comment 2"],
                             "step_nr": 1})
-        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), ua char(1), comment varchar, wkb_geometry geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), ua char(1), comment varchar, geom geometry(Polygon, 4326));")
 
     def test(self):
         self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'U', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
@@ -1462,7 +1443,7 @@ class Test_change(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mytable VALUES (1, 'a', 'b', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                  " (2, 'a', 'c', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                  " (3, 'a', 'c', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
@@ -1478,7 +1459,7 @@ class Test_change(VectorCheckTestCase):
     def test_fail(self):
         from qc_tool.vector.change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mytable VALUES (1, 'a', 'b', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                  " (2, 'a', 'a', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
         status = self.status_class()
@@ -1507,7 +1488,7 @@ class Test_change_technical(VectorCheckTestCase):
     def test_technical(self):
         from qc_tool.vector.change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, chtype varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, chtype varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mytable VALUES (1, 'a', 'b', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                  " (2, 'a', 'c', 'R', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                  " (3, 'a', 'a', 'T', ST_MakeEnvelope(3, 1, 4, 2, 4326));")
@@ -1521,7 +1502,7 @@ class Test_change_technical(VectorCheckTestCase):
     def test_chtype_fail(self):
         from qc_tool.vector.change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, chtype varchar, wkb_geometry geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE mytable (fid integer, code_1 varchar, code_2 varchar, chtype varchar, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mytable VALUES (1, 'a', 'b', 'R', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                  " (2, 'a', 'a', 'R', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                  " (3, 'a', 'a', 'T', ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
@@ -1581,8 +1562,7 @@ class Test_layer_area(VectorCheckTestCase):
                             "vector_codes": ["A", "B"],
                             "raster_codes": [1, 3],
                             "step_nr": 1})
-        self.cursor.execute("CREATE TABLE vector_1 (fid integer, code varchar, wkb_geometry geometry(Polygon, 3035));")
-
+        self.cursor.execute("CREATE TABLE vector_1 (fid integer, code varchar, geom geometry(Polygon, 3035));")
 
     def test(self):
         from qc_tool.vector.layer_area import run_check

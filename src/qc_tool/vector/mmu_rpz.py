@@ -40,11 +40,11 @@ def run_check(params, status):
                " SELECT layer.{fid_name}"
                " FROM"
                "  {layer_name} AS layer,"
-               "  (SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom FROM {layer_name} WHERE ua IS NULL) AS margin"
+               "  (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {layer_name} WHERE ua IS NULL) AS margin"
                " WHERE"
                "  layer.{area_column_name} >= 0.2"
-               "  AND layer.wkb_geometry && margin.geom"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, margin.geom)) >= 1"
+               "  AND layer.geom && margin.geom"
+               "  AND ST_Dimension(ST_Intersection(layer.geom, margin.geom)) >= 1"
                "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)

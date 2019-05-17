@@ -27,8 +27,8 @@ def run_check(params, status):
                " SELECT"
                "  (ST_Dump(ST_Difference(boundary_union.geom, layer_union.geom))).geom AS geom"
                " FROM"
-               "  (SELECT ST_Union(wkb_geometry) AS geom FROM {layer_name}) AS layer_union,"
-               "  (SELECT ST_Union(wkb_geometry) AS geom FROM {boundary_name}) AS boundary_union;")
+               "  (SELECT ST_Union(geom) AS geom FROM {layer_name}) AS layer_union,"
+               "  (SELECT ST_Union(geom) AS geom FROM {boundary_name}) AS boundary_union;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

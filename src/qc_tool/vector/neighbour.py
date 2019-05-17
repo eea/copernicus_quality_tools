@@ -53,8 +53,8 @@ def run_check(params, status):
                " WHERE"
                "  ta.{fid_name} < tb.{fid_name}"
                "  {pair_clause}"
-               "  AND ta.wkb_geometry && tb.wkb_geometry"
-               "  AND ST_Dimension(ST_Intersection(ta.wkb_geometry, tb.wkb_geometry)) >= 1;")
+               "  AND ta.geom && tb.geom"
+               "  AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

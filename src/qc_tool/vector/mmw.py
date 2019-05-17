@@ -22,7 +22,7 @@ def run_check(params, status):
         sql = ("CREATE TABLE {warning_table} AS"
                " SELECT {layer_name}.{fid_name}"
                " FROM {layer_name}"
-               " WHERE ST_NumGeometries(ST_Buffer(wkb_geometry, %s)) <> 1;")
+               " WHERE ST_NumGeometries(ST_Buffer(geom, %s)) <> 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, [-params["mmw"]])
 

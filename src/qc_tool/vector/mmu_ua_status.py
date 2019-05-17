@@ -41,11 +41,11 @@ def run_check(params, status):
                " SELECT layer.{fid_name}"
                " FROM"
                "  {layer_name} AS layer,"
-               "  (SELECT ST_Boundary(ST_Union(wkb_geometry)) AS geom FROM {layer_name}) AS boundary"
+               "  (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {layer_name}) AS boundary"
                " WHERE"
                "  {area_column_name} >= 100"
-               "  AND layer.wkb_geometry && boundary.geom"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, boundary.geom)) >= 1"
+               "  AND layer.geom && boundary.geom"
+               "  AND ST_Dimension(ST_Intersection(layer.geom, boundary.geom)) >= 1"
                "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
@@ -58,8 +58,8 @@ def run_check(params, status):
                "  {layer_name} AS cloud"
                " WHERE"
                "  (layer.{code_column_name} NOT LIKE '9%' AND cloud.{code_column_name} LIKE '9%')"
-               "  AND layer.wkb_geometry && cloud.wkb_geometry"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, cloud.wkb_geometry)) >= 1"
+               "  AND layer.geom && cloud.geom"
+               "  AND ST_Dimension(ST_Intersection(layer.geom, cloud.geom)) >= 1"
                "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
                "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
         sql = sql.format(**sql_params)
@@ -81,8 +81,8 @@ def run_check(params, status):
                " WHERE"
                "  layer.{area_column_name} >= 500"
                "  AND (layer.{code_column_name} NOT LIKE '122%' AND road.{code_column_name} LIKE '122%')"
-               "  AND layer.wkb_geometry && road.wkb_geometry"
-               "  AND ST_Dimension(ST_Intersection(layer.wkb_geometry, road.wkb_geometry)) >= 1"
+               "  AND layer.geom && road.geom"
+               "  AND ST_Dimension(ST_Intersection(layer.geom, road.geom)) >= 1"
                "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
                "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
         sql = sql.format(**sql_params)

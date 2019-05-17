@@ -248,8 +248,8 @@ class ComplexChangeCollector():
                    "  ) AS other"
                    " WHERE"
                    "  last_members.{code_column_name} = other.{code_column_name}"
-                   "  AND last_members.wkb_geometry && other.wkb_geometry"
-                   "  AND ST_Dimension(ST_Intersection(last_members.wkb_geometry, other.wkb_geometry)) >= 1;")
+                   "  AND last_members.geom && other.geom"
+                   "  AND ST_Dimension(ST_Intersection(last_members.geom, other.geom)) >= 1;")
             sql = sql.format(**self.sql_params, cluster_id=fid, cycle_nr=cycle_nr)
             self.cursor.execute(sql)
             if self.cursor.rowcount <= 0:
