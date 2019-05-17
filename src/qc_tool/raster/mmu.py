@@ -79,12 +79,12 @@ def patch_touches_cell_with_value(coordinates, tile, neighbour_values):
                 return True
     return False
 
-def export_shapefile(regions, raster_ds, shp_filepath):
+def export(regions, raster_ds, gpkg_filepath):
     """
-    Exports a list of lessMMU region dictionaries to a point shapefile
+    Exports a list of lessMMU region dictionaries to geopackage.
     :param regions: list of dicts with {"coords", "area", "value"}
     :param raster_ds: original raster dataset
-    :param shp_filepath: exported shapefile
+    :param gpkg_filepath: filepath the vector datasource is to be exported to
     """
     import osgeo.ogr as ogr
     import osgeo.osr as osr
@@ -96,8 +96,8 @@ def export_shapefile(regions, raster_ds, shp_filepath):
         srs = osr.SpatialReference()
         srs.ImportFromWkt(raster_ds.GetProjection())
 
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        shapeData = driver.CreateDataSource(str(shp_filepath))
+        driver = ogr.GetDriverByName("GPKG")
+        shapeData = driver.CreateDataSource(str(gpkg_filepath))
 
         layer = shapeData.CreateLayer('ogr_pts', srs, ogr.wkbPoint)
         areaField = ogr.FieldDefn("area_px", ogr.OFTInteger)
@@ -131,7 +131,6 @@ def run_check(params, status):
     import osgeo.gdal as gdal
     import skimage.measure as measure
 
-    from qc_tool.raster.helper import zip_shapefile
     from qc_tool.raster.helper import do_raster_layers
 
     # set this to true for reporting partial progress to a _progress.txt file.
@@ -388,6 +387,7 @@ def run_check(params, status):
                                         "area": r_buf.area, "value": val,
                                         "coords": absolute_coords}
 
+
                         if val in exclude_values:
                             regions_lessMMU_except.append(lessMMU_info)
                         elif patch_touches_cell_with_value(r_buf.coords, tile_buffered, neighbour_exclude_values):
@@ -405,25 +405,23 @@ def run_check(params, status):
                     msg += " found {:d} edge areas < MMU in tile {:d}, {:d}".format(num_edge_patches, tileRow, tileCol)
                     write_progress(progress_filepath, msg)
 
-        # FINAL REPORT is saved to a point Shapefile.
-        # The shapefile contains one sample point from each lessMMU patch.
+        # Export errors and exceptions to geopackage.
+        # The geopackage contains one sample point from each lessMMU patch.
 
-        # lessMMU patches belonging to one of exclude_values classes are reported in the exception shapefile.
+        ## lessMMU patches belonging to one of exclude_values classes are reported as exceptions.
         if len(regions_lessMMU_except) > 0:
-            errors_shp_filename = "s{:02d}_{:s}_lessmmu_exception.shp".format(params["step_nr"], layer_def["src_filepath"].stem)
-            exceptions_shp_filepath = params["output_dir"].joinpath(errors_shp_filename)
-            export_shapefile(regions_lessMMU_except, ds, exceptions_shp_filepath)
-            error_zip_filename = zip_shapefile(exceptions_shp_filepath)
-            status.add_attachment(error_zip_filename)
+            gpkg_filename = "s{:02d}_{:s}_lessmmu_exception.gpkg".format(params["step_nr"], layer_def["src_filepath"].stem)
+            gpkg_filepath = params["output_dir"].joinpath(gpkg_filename)
+            export(regions_lessMMU_except, ds, gpkg_filepath)
+            status.add_attachment(gpkg_filename)
             status.info("The data source has {:d} exceptional objects under MMU limit of {:d} pixels."
                         .format(len(regions_lessMMU_except), params["area_pixels"]))
 
-        # lessMMU patches not belonging to exclude_values are reported in the error shapefile.
+        ## lessMMU patches not belonging to exclude_values are reported as errors.
         if len(regions_lessMMU) > 0:
-            errors_shp_filename = "s{:02d}_{:s}_lessmmu_error.shp".format(params["step_nr"], layer_def["src_filepath"].stem)
-            errors_shp_filepath = params["output_dir"].joinpath(errors_shp_filename)
-            export_shapefile(regions_lessMMU, ds, errors_shp_filepath)
-            error_zip_filename = zip_shapefile(errors_shp_filepath)
-            status.add_attachment(error_zip_filename)
+            gpkg_filename = "s{:02d}_{:s}_lessmmu_error.gpkg".format(params["step_nr"], layer_def["src_filepath"].stem)
+            gpkg_filepath = params["output_dir"].joinpath(gpkg_filename)
+            export(regions_lessMMU, ds, gpkg_filepath)
+            status.add_attachment(gpkg_filename)
             status.failed("The data source has {:d} error objects under MMU limit of {:d} pixels."
                           .format(len(regions_lessMMU), params["area_pixels"]))

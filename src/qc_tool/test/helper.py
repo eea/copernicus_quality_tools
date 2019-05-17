@@ -49,6 +49,5 @@ class VectorCheckTestCase(TestCase):
         with ExitStack() as stack:
              self.params["connection_manager"] = stack.enter_context(create_connection_manager(job_uuid))
              self.params["jobdir_manager"] = stack.enter_context(create_jobdir_manager(job_uuid))
-
              self.params["skip_inspire_check"] = True
              self.addCleanup(stack.pop_all().close)

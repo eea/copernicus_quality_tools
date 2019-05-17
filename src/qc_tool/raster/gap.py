@@ -22,7 +22,6 @@ def run_check(params, status):
     import osgeo.ogr as ogr
     import osgeo.osr as osr
 
-    from qc_tool.raster.helper import zip_shapefile
     from qc_tool.raster.helper import do_raster_layers
 
     # Set the block size for reading raster in tiles. Reason: whole raster does not fit into memory.
@@ -218,25 +217,22 @@ def run_check(params, status):
             continue
 
         else:
-            # export the nodata_warning raster to a shapefile using gdal_polygonize.
-            warning_shp_filepath = Path(str(warning_raster_filepath).replace(".tif", ".shp"))
-            warning_layername = warning_shp_filepath.stem
-            drv = ogr.GetDriverByName("ESRI Shapefile")
-            warning_shp_ds = drv.CreateDataSource(str(warning_shp_filepath))
-            warning_shp_srs = osr.SpatialReference()
-            warning_shp_srs.ImportFromWkt(warning_raster_ds.GetProjectionRef())
-            dst_layer = warning_shp_ds.CreateLayer(warning_layername, srs=warning_shp_srs)
-            gdal.Polygonize(warning_band, warning_band, dst_layer, -1, [], callback=None)
-            warning_shp_ds.FlushCache()
-            warning_shp_ds = None
+            # Vectorize the warning raster and export it to geopackage.
+            warning_dsrc_filepath = Path(str(warning_raster_filepath).replace(".tif", ".gpkg"))
+            warning_layername = warning_dsrc_filepath.stem
+            drv = ogr.GetDriverByName("GPKG")
+            warning_dsrc = drv.CreateDataSource(str(warning_dsrc_filepath))
+            warning_srs = osr.SpatialReference()
+            warning_srs.ImportFromWkt(warning_raster_ds.GetProjectionRef())
+            warning_layer = warning_dsrc.CreateLayer(warning_layername, srs=warning_srs)
+            gdal.Polygonize(warning_band, warning_band, warning_layer, -1, [], callback=None)
+            warning_dsrc.FlushCache()
+            warning_dsrc = None
+            status.add_attachment(warning_dsrc_filepath.name)
+            status.info("Layer {:s} has {:d} gap pixels in the mapped area."
+                        .format(layer_def["src_layer_name"], nodata_count_total))
 
-            # write warning raster to GeoTiff file.
+            # Flush warning raster.
             warning_raster_ds.FlushCache()
             warning_raster_ds = None
-
-            warning_filename = zip_shapefile(warning_shp_filepath)
-            status.add_attachment(warning_filename)
-
-            status.info("Layer {:s} has {:d} gap pixels in the mapped area."
-                          .format(layer_def["src_layer_name"], nodata_count_total))
-
+            status.add_attachment(warning_raster_filepath.name)

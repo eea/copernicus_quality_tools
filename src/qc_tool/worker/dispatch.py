@@ -44,10 +44,9 @@ def make_signature(filepath):
 def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fid_name, output_dir):
     (dsn, schema) = connection_manager.get_dsn_schema()
     conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
-    shp_filepath = output_dir.joinpath("{:s}.shp".format(error_table_name))
-    zip_filepath = output_dir.joinpath("{:s}.zip".format(error_table_name))
+    gpkg_filepath = output_dir.joinpath("{:s}.gpkg".format(src_table_name))
 
-    # Export error features into shp.
+    # Export error features into geopackage.
     sql_params = {"fid_name": pg_fid_name,
                   "src_table": src_table_name,
                   "error_table": error_table_name}
@@ -57,59 +56,29 @@ def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fi
            " ORDER BY {fid_name};")
     sql = sql.format(**sql_params)
     args = ["ogr2ogr",
-            "-f", "ESRI Shapefile",
+            "-f", "GPKG",
             "-sql", sql,
-            str(shp_filepath),
+            "-nln", src_table_name,
+            str(gpkg_filepath),
             conn_string]
     run(args)
-
-    # Zip the files.
-    filepaths_to_zip = [f for f in output_dir.iterdir() if f.stem == error_table_name]
-    if shp_filepath not in filepaths_to_zip:
-        raise QCException("Dumped shp file {:s} is missing.".format(str(shp_filepath)))
-    with ZipFile(str(zip_filepath), "w") as zf:
-        for filepath in filepaths_to_zip:
-            zf.write(str(filepath), filepath.name)
-
-    # Remove zipped files.
-    for filepath in filepaths_to_zip:
-        filepath.unlink()
-
-    return zip_filepath.name
+    return gpkg_filepath.name
 
 def dump_full_table(connection_manager, table_name, output_dir):
     connection = connection_manager.get_connection()
     (dsn, schema) = connection_manager.get_dsn_schema()
     conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
-    shp_filepath = output_dir.joinpath("{:s}.shp".format(table_name))
-    zip_filepath = output_dir.joinpath("{:s}.zip".format(table_name))
+    gpkg_filepath = output_dir.joinpath("{:s}.gpkg".format(table_name))
 
-    # Export geom features into shp.
+    # Export features into geopackage.
     args = ["ogr2ogr",
-            "-f", "ESRI Shapefile",
-            str(shp_filepath),
+            "-f", "GPKG",
+            "-nln", table_name,
+            str(gpkg_filepath),
             conn_string,
             table_name]
     run(args)
-
-    # Gather all files to be zipped.
-    filepaths_to_zip = [f for f in output_dir.iterdir() if f.stem == table_name]
-
-    # Ensure shp files are present.
-    if shp_filepath not in filepaths_to_zip:
-        raise QCException("Dumped shp file {:s} is missing.".format(str(shp_filepath)))
-
-    # Zip the files.
-    with ZipFile(str(zip_filepath), "w") as zf:
-        for filepath in filepaths_to_zip:
-            zf.write(str(filepath), filepath.name)
-
-    # Remove zipped files.
-    for filepath in filepaths_to_zip:
-        if filepath.is_file():
-            filepath.unlink()
-
-    return zip_filepath.name
+    return gpkg_filepath.name
 
 def validate_skip_steps(skip_steps, product_definition):
     validated_skip_steps = set()

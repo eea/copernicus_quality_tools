@@ -171,7 +171,7 @@ class Test_gap(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertIn("has 1237 gap pixels", status.messages[0])
-        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.zip", status.attachment_filenames)
+        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.gpkg", status.attachment_filenames)
         self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
 
 
@@ -211,7 +211,7 @@ class Test_mmu(RasterCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("failed", status.status, "MMU raster check should fail for raster with patches < 13 pixels.")
         self.assertIn("1", status.messages[0], "There should be 1 object with MMU error.")
-        self.assertIn("s01_mmu_raster_incorrect_lessmmu_error.zip", status.attachment_filenames)
+        self.assertIn("s01_mmu_raster_incorrect_lessmmu_error.gpkg", status.attachment_filenames)
 
 
 @skipIf(CONFIG["skip_inspire_check"], "INSPIRE check has been disabled.")
