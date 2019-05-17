@@ -49,10 +49,6 @@ class Delivery(models.Model):
     def __str__(self):
         return "User: {:s} | File: {:s}".format(self.user.username, self.filename)
 
-    def user_directory_path(instance, filename):
-        # file will be uploaded to MEDIA_ROOT/<username>/<filename>
-        return str(Path(instance.user.username, filename))
-
     def create_job(self, product_ident, skip_steps):
 
         job = Job()
