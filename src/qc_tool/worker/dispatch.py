@@ -107,7 +107,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
                           "user_name": user_name,
                           "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
                           "filename": filepath.name,
-                          "exception": None,
+                          "error_message": None,
                           "steps": []}
             job_result["hash"] = make_signature(filepath)
 
@@ -188,10 +188,10 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
             (ex_type, ex_obj, tb_obj) = exc_info()
             if tb_obj is not None:
                 log.exception("Job has been interrupted by an exception.")
-                job_result["exception"] = format_exc()
+                job_result["error_message"] = format_exc()
             job_result["job_finish_date"] = datetime.utcnow().strftime(TIME_FORMAT)
             step_statuses = set(job_step["status"] for job_step in job_result["steps"])
-            if job_result["exception"] is not None:
+            if job_result["error_message"] is not None:
                 job_result["status"] = JOB_ERROR
             elif "aborted" in step_statuses:
                 job_result["status"] = JOB_FAILED

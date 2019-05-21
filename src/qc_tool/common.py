@@ -174,7 +174,7 @@ def prepare_job_blueprint(product_definition):
                   "filename": None,
                   "hash": None,
                   "reference_year": None,
-                  "exception": None,
+                  "error_message": None,
                   "steps": []}
     for step_nr, step_def in enumerate(product_definition["steps"], start=1):
         step_report = {"step_nr": step_nr,

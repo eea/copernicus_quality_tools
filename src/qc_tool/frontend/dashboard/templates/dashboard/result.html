@@ -67,7 +67,7 @@
                       <dd class="col-sm-10">{{job_report.status}}</dd>
                     </dl>
                     {% ifequal job_report.status "error" %}
-                    <div class="alert alert-danger">SYSTEM ERROR: {{job_report.exception}}</div>
+                    <div class="alert alert-danger">SYSTEM ERROR: {{job_report.error_message}}</div>
                     {% endifequal %}
                 </div></div>
 
