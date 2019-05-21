@@ -154,13 +154,26 @@ def store_job_result(job_result):
     job_result_filepath_pre.rename(job_result_filepath)
 
 def get_check_description(check_ident):
-    module = import_module(check_ident)
-    description = module.DESCRIPTION
+    """Returns short description of the check.
+
+    The qc tool does not take care of historical stages.
+    If the check module is missing it is considered that the module has been removed intentionally.
+    In such case the description simply states the fact.
+    The module may be removed for example due to becoming obsolete.
+    """
+    try:
+        module = import_module(check_ident)
+        description = module.DESCRIPTION
+    except ModuleNotFoundError:
+        description = "Check {:s} does not exist.".format(repr(check_ident))
     return description
 
 def is_system_check(check_ident):
-    module = import_module(check_ident)
-    is_system = module.IS_SYSTEM
+    try:
+        module = import_module(check_ident)
+        is_system = module.IS_SYSTEM
+    except ModuleNotFoundError:
+        is_system = False
     return is_system
 
 def prepare_job_blueprint(product_definition):
