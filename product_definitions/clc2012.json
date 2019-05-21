@@ -39,15 +39,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.format",
-      "required": true,
-      "parameters": {
-        "layers": ["reference", "initial", "change"],
-        "formats": [".gdb"],
-        "drivers": {".gdb": "OpenFileGDB"}
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {

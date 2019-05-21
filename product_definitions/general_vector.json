@@ -13,14 +13,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.format",
-      "required": true,
-      "parameters": {
-        "formats": [".gdb", ".shp"],
-        "drivers": {".shp": "ESRI Shapefile", ".gdb": "OpenFileGDB"}
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {

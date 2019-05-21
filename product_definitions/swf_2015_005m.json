@@ -103,15 +103,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.format",
-      "required": true,
-      "parameters": {
-        "layers": ["swf_vec"],
-        "formats": [".gdb", ".shp"],
-        "drivers": {".gdb": "OpenFileGDB", ".shp": "ESRI Shapefile"}
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {

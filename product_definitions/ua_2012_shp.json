@@ -21,15 +21,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.format",
-      "required": true,
-      "parameters": {
-        "layers": ["reference", "combined", "change"],
-        "formats": [".shp"],
-        "drivers": {".shp": "ESRI Shapefile"}
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
