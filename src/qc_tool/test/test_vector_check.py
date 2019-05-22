@@ -243,45 +243,6 @@ class Test_naming_ua_shp(VectorCheckTestCase):
         self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
 
 
-class Test_format(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
-        from qc_tool.vector.unzip import run_check as unzip_check
-        from qc_tool.vector.naming import run_check as layer_check
-
-        rpz_filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
-        self.params.update({"boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
-                            "tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": rpz_filepath,
-                            "formats": [".gdb", ".shp"],
-                            "drivers": {".shp": "ESRI Shapefile",".gdb": "OpenFileGDB"},
-                            "layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}$"},
-                            "aoi_codes": ["007"]})
-
-        status = self.status_class()
-        unzip_check(self.params, status)
-        self.params["unzip_dir"] = status.params["unzip_dir"]
-
-        status = self.status_class()
-        layer_check(self.params, status)
-
-        self.params["layer_defs"] = status.params["layer_defs"]
-        self.params["layers"] = ["rpz"]
-
-    def test(self):
-        from qc_tool.vector.format import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("ok", status.status)
-
-    def test_incorrect_format_aborts(self):
-        from qc_tool.vector.format import run_check
-        status = self.status_class()
-        self.params["formats"] = [".gdb"]
-        run_check(self.params, status)
-        self.assertEqual("aborted", status.status)
-
-
 class Test_attribute(VectorCheckTestCase):
     def setUp(self):
         super().setUp()

@@ -15,12 +15,9 @@ class TestCommon(TestCase):
         product_definition = load_product_definition("clc2012")
         self.assertIn("steps", product_definition)
         self.assertLess(1, len(product_definition["steps"]))
-        self.assertDictEqual({"check_ident": "qc_tool.vector.format",
-                              "parameters": {"layers": ["reference", "initial", "change"],
-                                             "formats": [".gdb"],
-                                             "drivers": {'.gdb': 'OpenFileGDB'}},
+        self.assertDictEqual({"check_ident": "qc_tool.vector.import2pg",
                               "required": True},
-                             product_definition["steps"][2])
+                             product_definition["steps"][6])
 
     def test_get_product_descriptions(self):
         from qc_tool.common import get_product_descriptions
@@ -35,15 +32,14 @@ class TestCommon(TestCase):
         job_result = prepare_job_blueprint(product_definition)
         self.assertEqual("clc2012", job_result["product_ident"])
         self.assertEqual("CORINE Land Cover 2012", job_result["description"])
-        self.assertLess(4, len(job_result["steps"]))
-        self.assertEqual("qc_tool.vector.format", job_result["steps"][2]["check_ident"])
-        self.assertEqual("Delivery content uses specific file format.", job_result["steps"][2]["description"])
+        self.assertEqual("qc_tool.vector.attribute", job_result["steps"][2]["check_ident"])
+        self.assertEqual("Attribute table is composed of prescribed attributes.", job_result["steps"][2]["description"])
         self.assertTrue(job_result["steps"][1]["required"])
         self.assertFalse(job_result["steps"][1]["system"])
         self.assertIsNone(job_result["steps"][1]["status"])
         self.assertIsNone(job_result["steps"][1]["messages"])
-        self.assertEqual("qc_tool.vector.import2pg", job_result["steps"][7]["check_ident"])
-        self.assertTrue(job_result["steps"][7]["system"])
+        self.assertEqual("qc_tool.vector.import2pg", job_result["steps"][6]["check_ident"])
+        self.assertTrue(job_result["steps"][6]["system"])
 
 
 class TestProductDirs(TestCase):
