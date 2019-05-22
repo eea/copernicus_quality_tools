@@ -49,14 +49,14 @@ class Test_dump_error_table(VectorCheckTestCase):
 
         # Export into geopackage.
         filename = dump_error_table(self.params["connection_manager"], "error_table", "pg_table", "fid", output_dir)
-        filepath = output_dir.joinpath("pg_table.gpkg")
+        filepath = output_dir.joinpath("error_table.gpkg")
         self.assertEqual(filepath.name, filename)
         self.assertTrue(filepath.is_file())
 
         # Validate the exported geopackage.
         dsrc = ogr.Open(str(filepath), GA_ReadOnly)
         self.assertEqual(1, dsrc.GetLayerCount())
-        self.assertEqual("pg_table", dsrc.GetLayerByIndex(0).GetName())
+        self.assertEqual("error_table", dsrc.GetLayerByIndex(0).GetName())
         self.assertEqual(2, dsrc.GetLayerByIndex(0).GetFeatureCount())
         self.assertEqual("EPSG", dsrc.GetLayerByIndex(0).GetSpatialRef().GetAuthorityName(None))
         self.assertEqual("3035", dsrc.GetLayerByIndex(0).GetSpatialRef().GetAuthorityCode(None))

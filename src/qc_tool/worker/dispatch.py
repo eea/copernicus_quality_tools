@@ -43,7 +43,7 @@ def make_signature(filepath):
 def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fid_name, output_dir):
     (dsn, schema) = connection_manager.get_dsn_schema()
     conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
-    gpkg_filepath = output_dir.joinpath("{:s}.gpkg".format(src_table_name))
+    gpkg_filepath = output_dir.joinpath("{:s}.gpkg".format(error_table_name))
 
     # Export error features into geopackage.
     sql_params = {"fid_name": pg_fid_name,
@@ -57,7 +57,7 @@ def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fi
     args = ["ogr2ogr",
             "-f", "GPKG",
             "-sql", sql,
-            "-nln", src_table_name,
+            "-nln", error_table_name,
             str(gpkg_filepath),
             conn_string]
     run(args)
