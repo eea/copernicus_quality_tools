@@ -580,6 +580,29 @@ class Test_enum(VectorCheckTestCase):
         self.assertEqual(1, len(status.messages))
 
 
+class Test_non_probable(VectorCheckTestCase):
+    def test(self):
+        super().setUp()
+        from qc_tool.vector.non_probable import run_check
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.params.update({"layer_defs": {"change": {"pg_fid_name": "fid",
+                                                      "pg_layer_name": "change_layer",
+                                                      "fid_display_name": "row_number"}},
+                            "layers": ["change"],
+                            "initial_code_column_name": "code1",
+                            "final_code_column_name": "code2",
+                            "step_nr": 1})
+        self.params.update({"changes": [["1", ["3", "4"]],
+                                        ["2", ["4"]]]})
+        self.cursor.execute("CREATE TABLE change_layer (fid integer, code1 char(1), code2 char(1));")
+        self.cursor.execute("INSERT INTO change_layer VALUES (1, '1', '2'), (2, '1', '3'), (3, '1', '4'), (4, '2', '3'), (5, '2', '4');")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT fid FROM s01_change_layer_warning ORDER BY fid;")
+        self.assertListEqual([(2,), (3,), (5,)], self.cursor.fetchall())
+
+
 class Test_singlepart(VectorCheckTestCase):
     def setUp(self):
         super().setUp()

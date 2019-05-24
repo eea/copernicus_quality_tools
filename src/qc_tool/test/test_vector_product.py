@@ -59,7 +59,7 @@ class Test_ua_gdb(ProductTestCase):
     def test(self):
         self.maxDiff = None
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
-        expected_step_results = ["ok"] * 20
+        expected_step_results = ["ok"] * 21
         job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_2012_gdb")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
