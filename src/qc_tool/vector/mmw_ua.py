@@ -26,9 +26,9 @@ def run_check(params, status):
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  ST_NumGeometries(ST_Buffer(geom, %s)) = 1;")
+               "  ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) = 1;")
         sql = sql.format(**sql_params)
-        cursor.execute(sql, [-params["mmw"]])
+        cursor.execute(sql, {"buffer": -params["mmw"] / 2})
 
         # Create table of exception items.
         sql = ("CREATE TABLE {exception_table} AS"

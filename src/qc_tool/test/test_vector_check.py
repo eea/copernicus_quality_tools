@@ -1158,10 +1158,11 @@ class Test_mmw(VectorCheckTestCase):
         from qc_tool.vector.mmw import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(10, 10, 13, 11, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (2, ST_MakeEnvelope(20, 20, 23, 23, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (3, ST_Difference(ST_MakeEnvelope(30, 30, 39, 39, 4326),"
-                                                               " ST_MakeEnvelope(33, 30, 36, 38, 4326)));")
+        cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(10, 0, 13, 0.999, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (2, ST_MakeEnvelope(20, 0, 23, 1, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (3, ST_MakeEnvelope(30, 0, 33, 1.001, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (4, ST_Difference(ST_MakeEnvelope(40, 0, 49, 9, 4326),"
+                                                               " ST_MakeEnvelope(43, 0, 46, 8, 4326)));")
 
         self.params.update({"layer_defs": {"mmw": {"pg_layer_name": "mmw",
                                                    "pg_fid_name": "fid",
@@ -1173,7 +1174,7 @@ class Test_mmw(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         cursor.execute("SELECT fid FROM s01_mmw_warning ORDER BY fid;")
-        self.assertListEqual([(1,), (3,)], cursor.fetchall())
+        self.assertListEqual([(1,), (2,), (4,)], cursor.fetchall())
 
 
 class Test_mmw_ua(VectorCheckTestCase):
@@ -1181,11 +1182,12 @@ class Test_mmw_ua(VectorCheckTestCase):
         from qc_tool.vector.mmw_ua import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, code char(5), geom geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (1, '12', ST_MakeEnvelope(10, 10, 13, 11, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (2, '12', ST_MakeEnvelope(20, 20, 23, 23, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (3, '12', ST_Difference(ST_MakeEnvelope(30, 30, 39, 39, 4326),"
-                                                                     " ST_MakeEnvelope(33, 30, 36, 38, 4326)));")
-        cursor.execute("INSERT INTO mmw VALUES (4, '122', ST_MakeEnvelope(40, 40, 43, 41, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (1, '12', ST_MakeEnvelope(10, 0, 13, 0.999, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (2, '12', ST_MakeEnvelope(20, 0, 23, 1, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (3, '12', ST_MakeEnvelope(30, 0, 33, 1.001, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (4, '12', ST_Difference(ST_MakeEnvelope(40, 0, 49, 9, 4326),"
+                                                                     " ST_MakeEnvelope(43, 0, 46, 8, 4326)));")
+        cursor.execute("INSERT INTO mmw VALUES (5, '122', ST_MakeEnvelope(50, 0, 53, 1, 4326));")
 
         self.params.update({"layer_defs": {"mmw": {"pg_layer_name": "mmw",
                                                    "pg_fid_name": "fid",
@@ -1198,9 +1200,9 @@ class Test_mmw_ua(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         cursor.execute("SELECT fid FROM s01_mmw_exception ORDER BY fid;")
-        self.assertListEqual([(4,)], cursor.fetchall())
+        self.assertListEqual([(5,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_mmw_warning ORDER BY fid;")
-        self.assertListEqual([(1,), (3,)], cursor.fetchall())
+        self.assertListEqual([(1,), (2,), (4,)], cursor.fetchall())
 
 
 class Test_overlap(VectorCheckTestCase):

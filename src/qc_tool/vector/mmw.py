@@ -22,9 +22,9 @@ def run_check(params, status):
         sql = ("CREATE TABLE {warning_table} AS"
                " SELECT {layer_name}.{fid_name}"
                " FROM {layer_name}"
-               " WHERE ST_NumGeometries(ST_Buffer(geom, %s)) <> 1;")
+               " WHERE ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) <> 1;")
         sql = sql.format(**sql_params)
-        cursor.execute(sql, [-params["mmw"]])
+        cursor.execute(sql, {"buffer": -params["mmw"] / 2})
 
         # Report warning features.
         items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
