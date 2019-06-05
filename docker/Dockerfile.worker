@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:disco
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
@@ -31,7 +31,7 @@ EXPOSE 9001
 # During install tzdata package needs timezone having been set already.
 ENV TZ=UTC
 RUN ln -s /usr/share/zoneinfo/UTC /etc/localtime \
-    && apt-get -y install postgresql-10-postgis-2.4
+    && apt-get -y install postgresql-11-postgis-2.5
 
 # Configure the qc tool database.
 #
@@ -40,8 +40,8 @@ RUN ln -s /usr/share/zoneinfo/UTC /etc/localtime \
 # when connecting to 127.0.0.1.
 USER postgres
 COPY ./init_qc_tool_db.sql /usr/local/src
-RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/10/main/pg_hba.conf \
-    && echo "listen_addresses='*'" >>/etc/postgresql/10/main/postgresql.conf \
+RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/11/main/pg_hba.conf \
+    && echo "listen_addresses='*'" >>/etc/postgresql/11/main/postgresql.conf \
     && /etc/init.d/postgresql start \
     && psql --file=/usr/local/src/init_qc_tool_db.sql \
     && /etc/init.d/postgresql stop
@@ -49,8 +49,8 @@ USER root
 
 # Install qc tool.
 RUN cd /usr/local/src \
-    && wget https://github.com/eea/copernicus_quality_tools/archive/${VERSION}.zip \
-    && unzip ./${VERSION}.zip \
+    && wget --no-verbose https://github.com/eea/copernicus_quality_tools/archive/${VERSION}.zip \
+    && unzip -q ./${VERSION}.zip \
     && rm ./${VERSION}.zip \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION

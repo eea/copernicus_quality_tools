@@ -10,6 +10,7 @@ ALTER SCHEMA public OWNER TO qc_job;
 
 CREATE EXTENSION postgis;
 CREATE EXTENSION postgis_topology;
+CREATE EXTENSION postgis_sfcgal;
 
 GRANT USAGE ON SCHEMA topology to qc_job;
 GRANT ALL ON ALL tables IN SCHEMA topology to qc_job;
