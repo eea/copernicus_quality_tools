@@ -9,7 +9,6 @@ IS_SYSTEM = False
 def run_check(params, status):
     from qc_tool.vector.helper import do_layers
     from qc_tool.vector.helper import get_failed_items_message
-    from qc_tool.vector.helper import PATCHY_CODE
 
     cursor = params["connection_manager"].get_connection().cursor()
 
