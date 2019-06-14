@@ -1278,6 +1278,32 @@ class Test_mxmw(VectorCheckTestCase):
         self.assertListEqual([(3,)], cursor.fetchall())
 
 
+class Test_mml(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.mml import run_check
+        self.params.update({"layer_defs": {"mml": {"pg_layer_name": "mml",
+                                                   "pg_fid_name": "fid",
+                                                   "fid_display_name": "row number"}},
+                            "layers": ["mml"],
+                            "mml": 10.,
+                            "code_column_name": "code",
+                            "linear_code": "1",
+                            "step_nr": 1})
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mml (fid integer, code char(1), geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mml VALUES (1, NULL, ST_MakeEnvelope(0, 0, 5, 1, 4326));")
+        cursor.execute("INSERT INTO mml VALUES (2, '1', ST_MakeEnvelope(0, 0, 5, 1, 4326));")
+        cursor.execute("INSERT INTO mml VALUES (3, '1', ST_MakeEnvelope(0, 0, 10.999, 1, 4326));")
+        cursor.execute("INSERT INTO mml VALUES (4, '1', ST_MakeEnvelope(0, 0, 11, 1, 4326));")
+        cursor.execute("INSERT INTO mml VALUES (5, '1', ST_MakeEnvelope(0, 0, 12, 1, 4326));")
+        cursor.execute("INSERT INTO mml VALUES (6, '2', ST_MakeEnvelope(0, 0, 5, 1, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        cursor.execute("SELECT fid FROM s01_mml_warning ORDER BY fid;")
+        self.assertListEqual([(2,), (3,)], cursor.fetchall())
+
+
 class Test_overlap(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
