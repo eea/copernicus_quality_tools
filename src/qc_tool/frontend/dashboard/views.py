@@ -133,8 +133,9 @@ def get_deliveries_json(request):
         """
 
         if request.user.is_superuser:
-            # Superusers see all deliveries.
-            sql += " ORDER BY d.id DESC"
+            # Superusers see deliveries of all other users.
+            # Deleted delivery records are not shown , see #106579.
+            sql += "WHERE d.is_deleted != 1 ORDER BY d.id DESC"
             cursor.execute(sql)
         else:
             # Regular users only see their own deliveries.
