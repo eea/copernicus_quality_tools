@@ -680,11 +680,11 @@ class Test_compactness(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.compactness import run_check
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test (fid integer, code integer, area real, geom geometry(Polygon, 4326));")
-        self.cursor.execute("INSERT INTO test VALUES (1, 1, 1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                   " (2, 1, 1.1, ST_MakeEnvelope(0, 0, 1, 1.1, 4326)),"
-                                                   " (3, 2, 1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                   " (4, 2, 1.1, ST_MakeEnvelope(0, 0, 1, 1.1, 4326)),"
+        self.cursor.execute("CREATE TABLE test (fid integer, code char(1), area real, geom geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO test VALUES (1, '1', 1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                   " (2, '1', 1.1, ST_MakeEnvelope(0, 0, 1, 1.1, 4326)),"
+                                                   " (3, '2', 1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                   " (4, '2', 1.1, ST_MakeEnvelope(0, 0, 1, 1.1, 4326)),"
                                                    " (5, NULL, 1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                    " (6, NULL, 1.1, ST_MakeEnvelope(0, 0, 1, 1.1, 4326));")
         self.params.update({"layer_defs": {"test": {"pg_layer_name": "test",
@@ -1181,27 +1181,45 @@ class Test_mmu_rpz(VectorCheckTestCase):
 
 
 class Test_mmw(VectorCheckTestCase):
-    def test(self):
-        from qc_tool.vector.mmw import run_check
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(10, 0, 13, 0.999, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (2, ST_MakeEnvelope(20, 0, 23, 1, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (3, ST_MakeEnvelope(30, 0, 33, 1.001, 4326));")
-        cursor.execute("INSERT INTO mmw VALUES (4, ST_Difference(ST_MakeEnvelope(40, 0, 49, 9, 4326),"
-                                                               " ST_MakeEnvelope(43, 0, 46, 8, 4326)));")
-
+    def setUp(self):
+        super().setUp()
         self.params.update({"layer_defs": {"mmw": {"pg_layer_name": "mmw",
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mmw"],
                             "mmw": 1.0,
                             "step_nr": 1})
+
+    def test(self):
+        from qc_tool.vector.mmw import run_check
+        self.params["code_column_name"] = None
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (2, ST_MakeEnvelope(0, 0, 3, 1, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (3, ST_MakeEnvelope(0, 0, 3, 1.001, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (4, ST_Difference(ST_MakeEnvelope(40, 0, 49, 9, 4326),"
+                                                               " ST_MakeEnvelope(43, 0, 46, 8, 4326)));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         cursor.execute("SELECT fid FROM s01_mmw_warning ORDER BY fid;")
         self.assertListEqual([(1,), (2,), (4,)], cursor.fetchall())
+
+    def test_patchy(self):
+        from qc_tool.vector.mmw import run_check
+        self.params["code_column_name"] = "code"
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (1, NULL, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (2, '1', ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (3, '2', ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
+        cursor.execute("INSERT INTO mmw VALUES (4, '2', ST_MakeEnvelope(0, 0, 3, 1.001, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        cursor.execute("SELECT fid FROM s01_mmw_warning ORDER BY fid;")
+        self.assertListEqual([(3,)], cursor.fetchall())
 
 
 class Test_mmw_ua(VectorCheckTestCase):

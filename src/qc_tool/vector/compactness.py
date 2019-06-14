@@ -5,9 +5,6 @@
 DESCRIPTION = "Compactness."
 IS_SYSTEM = False
 
-LINEAR_CODE = 1
-PATCHY_CODE = 2
-
 
 def run_check(params, status):
     """
@@ -22,6 +19,8 @@ def run_check(params, status):
     """
     from qc_tool.vector.helper import do_layers
     from qc_tool.vector.helper import get_failed_items_message
+    from qc_tool.vector.helper import LINEAR_CODE
+    from qc_tool.vector.helper import PATCHY_CODE
 
     cursor = params["connection_manager"].get_connection().cursor()
 

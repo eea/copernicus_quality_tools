@@ -7,6 +7,10 @@ import re
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
 
+LINEAR_CODE = "1"
+PATCHY_CODE = "2"
+
+
 def do_layers(params):
     if "layers" in params:
         return [params["layer_defs"][layer_alias] for layer_alias in params["layers"]]

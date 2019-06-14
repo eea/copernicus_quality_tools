@@ -9,6 +9,7 @@ IS_SYSTEM = False
 def run_check(params, status):
     from qc_tool.vector.helper import do_layers
     from qc_tool.vector.helper import get_failed_items_message
+    from qc_tool.vector.helper import PATCHY_CODE
 
     cursor = params["connection_manager"].get_connection().cursor()
 
@@ -16,15 +17,24 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
+                      "code_column_name": params["code_column_name"],
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
+        if params["code_column_name"] is None:
+            sql_params["patchy_clause"] = "TRUE"
+        else:
+            sql_params["patchy_clause"] = "{code_column_name} = %(patchy_code)s".format(**sql_params)
+        sql_execute_params = {"buffer": -params["mmw"] / 2,
+                              "patchy_code": PATCHY_CODE}
 
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"
-               " SELECT {layer_name}.{fid_name}"
+               " SELECT {fid_name}"
                " FROM {layer_name}"
-               " WHERE ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) <> 1;")
+               " WHERE"
+               "  {patchy_clause}"
+               "  AND ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) <> 1;")
         sql = sql.format(**sql_params)
-        cursor.execute(sql, {"buffer": -params["mmw"] / 2})
+        cursor.execute(sql, sql_execute_params)
 
         # Report warning features.
         items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
