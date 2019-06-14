@@ -243,7 +243,9 @@
       "required": false,
       "parameters": {
         "layers": ["n2k"],
-        "mmw": 10.0
+        "mmw": 10.0,
+        "code_column_name": null,
+        "patchy_code": null
       }
     },
     {

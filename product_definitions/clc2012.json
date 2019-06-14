@@ -209,7 +209,9 @@
       "required": false,
       "parameters": {
         "layers": ["reference", "initial", "change"],
-        "mmw": 100.0
+        "mmw": 100.0,
+        "code_column_name": null,
+        "patchy_code": null
       }
     },
     {
