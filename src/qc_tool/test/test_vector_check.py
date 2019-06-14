@@ -1254,6 +1254,30 @@ class Test_mmw_ua(VectorCheckTestCase):
         self.assertListEqual([(1,), (2,), (4,)], cursor.fetchall())
 
 
+class Test_mxmw(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.mxmw import run_check
+        self.params.update({"layer_defs": {"mxmw": {"pg_layer_name": "mxmw",
+                                                   "pg_fid_name": "fid",
+                                                   "fid_display_name": "row number"}},
+                            "layers": ["mxmw"],
+                            "mxmw": 1.0,
+                            "code_column_name": "code",
+                            "linear_code": "1",
+                            "step_nr": 1})
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mxmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO mxmw VALUES (1, NULL, ST_MakeEnvelope(0, 0, 3, 2, 4326));")
+        cursor.execute("INSERT INTO mxmw VALUES (2, '1', ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
+        cursor.execute("INSERT INTO mxmw VALUES (3, '1', ST_MakeEnvelope(0, 0, 3, 1.001, 4326));")
+        cursor.execute("INSERT INTO mxmw VALUES (4, '2', ST_MakeEnvelope(0, 0, 3, 2, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        cursor.execute("SELECT fid FROM s01_mxmw_warning ORDER BY fid;")
+        self.assertListEqual([(3,)], cursor.fetchall())
+
+
 class Test_overlap(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
