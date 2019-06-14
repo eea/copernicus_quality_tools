@@ -98,7 +98,7 @@
           ".shp"
         ],
         "layer_names": {
-          "swf_vec": "swf_2015_005m_[a-z_]+_0?3035_(?P<aoi_code>[0-9]+)_"
+          "swf_vec": "swf_2015_vec_[a-z_]+_0?3035_(?P<aoi_code>[0-9]+)_"
         }
       }
     },
@@ -148,6 +148,30 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.layer_area",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster", "swf_vec"],
+        "vector_layer": "swf_vec",
+        "vector_code_column_name": "code",
+        "vector_codes": ["1", "2", "3"],
+        "raster_layer": "swf_raster",
+        "raster_codes": [1, 3]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.compactness",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "code_column_name": "code",
+        "area_column_name": "area",
+        "linear_code": "1",
+        "patchy_code": "2",
+        "threshold": 0.75
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
@@ -170,6 +194,16 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "code_column_name": "code",
+        "patchy_code": "2",
+        "mmw": 10
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
@@ -182,18 +216,6 @@
       "parameters": {
         "layers": ["swf_vec"],
         "code_column_names": ["code"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.layer_area",
-      "required": false,
-      "parameters": {
-        "layers": ["swf_raster", "swf_vec"],
-        "vector_layer": "swf_vec",
-        "vector_code_column_name": "code",
-        "vector_codes": ["1", "2", "3"],
-        "raster_layer": "swf_raster",
-        "raster_codes": [1, 3]
       }
     },
     {
