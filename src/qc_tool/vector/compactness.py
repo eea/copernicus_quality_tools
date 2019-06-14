@@ -33,8 +33,8 @@ def run_check(params, status):
                       "linear_error_table": "s{:02d}_{:s}_linear_error".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "patchy_error_table": "s{:02d}_{:s}_patchy_error".format(params["step_nr"], layer_def["pg_layer_name"])}
         sql_execute_params = {"threshold": params["threshold"],
-                              "linear_code": LINEAR_CODE,
-                              "patchy_code": PATCHY_CODE}
+                              "linear_code": params["linear_code"],
+                              "patchy_code": params["patchy_code"]}
 
         # Create table of error items of linear features.
         sql = ("CREATE TABLE {linear_error_table} AS"

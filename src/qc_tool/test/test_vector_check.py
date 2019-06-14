@@ -693,6 +693,8 @@ class Test_compactness(VectorCheckTestCase):
                             "layers": ["test"],
                             "area_column_name": "area",
                             "code_column_name": "code",
+                            "linear_code": '1',
+                            "patchy_code": '2',
                             "threshold": 0.785,
                             "step_nr": 1})
         status = self.status_class()
@@ -1192,7 +1194,8 @@ class Test_mmw(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.vector.mmw import run_check
-        self.params["code_column_name"] = None
+        self.params.update({"code_column_name": None,
+                            "patchy_code": None})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
@@ -1208,7 +1211,8 @@ class Test_mmw(VectorCheckTestCase):
 
     def test_patchy(self):
         from qc_tool.vector.mmw import run_check
-        self.params["code_column_name"] = "code"
+        self.params.update({"code_column_name": "code",
+                            "patchy_code": '2'})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, NULL, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")

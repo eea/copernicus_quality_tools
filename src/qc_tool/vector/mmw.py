@@ -19,12 +19,12 @@ def run_check(params, status):
                       "layer_name": layer_def["pg_layer_name"],
                       "code_column_name": params["code_column_name"],
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
+        sql_execute_params = {"buffer": -params["mmw"] / 2}
         if params["code_column_name"] is None:
             sql_params["patchy_clause"] = "TRUE"
         else:
             sql_params["patchy_clause"] = "{code_column_name} = %(patchy_code)s".format(**sql_params)
-        sql_execute_params = {"buffer": -params["mmw"] / 2,
-                              "patchy_code": PATCHY_CODE}
+            sql_execute_params["patchy_code"] = params["patchy_code"]
 
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"
