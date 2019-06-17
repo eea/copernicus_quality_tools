@@ -214,6 +214,16 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.mml",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "code_column_name": "code",
+        "linear_code": "1",
+        "mml": 50
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {

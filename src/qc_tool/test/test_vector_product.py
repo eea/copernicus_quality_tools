@@ -49,7 +49,7 @@ class Test_rpz(ProductTestCase):
 class Test_swf_vec_ras(ProductTestCase):
     def test(self):
         self.filepath = TEST_DATA_DIR.joinpath("vector_raster", "swf_2015_vec_ras", "swf_2015_vec_ras_FR_3035_123_pt01.zip")
-        expected_step_results = ["ok"] * 27
+        expected_step_results = ["ok"] * 28
         job_result = dispatch(self.job_uuid, "user_name", self.filepath, "swf_2015_vec_ras")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
