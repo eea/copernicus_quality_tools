@@ -13,7 +13,7 @@ docker run --rm \
  --name=qc_tool_postgis \
  --user=postgres \
  eeacms/copernicus-qctool-worker \
- /usr/lib/postgresql/10/bin/postgres -D /var/lib/postgresql/10/main -c config_file=/etc/postgresql/10/main/postgresql.conf
+ /usr/lib/postgresql/11/bin/postgres -D /var/lib/postgresql/10/main -c config_file=/etc/postgresql/11/main/postgresql.conf
 
 Switch to other terminal.
 
