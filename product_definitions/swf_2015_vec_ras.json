@@ -183,7 +183,7 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.max_area",
+      "check_ident": "qc_tool.vector.mxmu",
       "required": false,
       "parameters": {
         "layers": ["swf_vec"],

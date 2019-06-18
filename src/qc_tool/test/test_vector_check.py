@@ -791,9 +791,9 @@ class Test_gap_unit(VectorCheckTestCase):
         self.cursor.execute("SELECT * FROM s01_reference_unit_warning;")
         self.assertEqual(2, self.cursor.rowcount)
 
-class Test_max_area(VectorCheckTestCase):
+class Test_mxmu(VectorCheckTestCase):
     def test(self):
-        from qc_tool.vector.max_area import run_check
+        from qc_tool.vector.mxmu import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE reference (fid integer, code varchar, shape_area real, geom geometry(Polygon, 4326));")
 
