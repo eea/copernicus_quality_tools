@@ -145,9 +145,9 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "mmw": 10.0,
         "code_column_name": null,
-        "patchy_code": null
+        "filter_code": null,
+        "mmw": 10.0
       }
     },
     {

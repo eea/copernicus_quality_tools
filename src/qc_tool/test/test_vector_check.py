@@ -815,11 +815,10 @@ class Test_mxmu(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "area_column_name": "shape_area",
                             "code_column_name": "code",
-                            "area_m2": 500000,
-                            "exclude_codes": ["code1"],
-                            "margin_exceptions": True,
+                            "filter_code": "code2",
+                            "area_column_name": "shape_area",
+                            "mxmu": 500000,
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
@@ -843,9 +842,9 @@ class Test_mmu_clc_status(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "area_column_name": "shape_area",
                             "code_column_name": "code_12",
-                            "area_m2": 250000,
+                            "area_column_name": "shape_area",
+                            "mmu": 250000,
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
@@ -879,11 +878,10 @@ class Test_mmu(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "area_column_name": "shape_area",
                             "code_column_name": "code",
-                            "area_m2": 500000,
-                            "exclude_codes": ["code1"],
-                            "margin_exceptions": True,
+                            "filter_code": "code2",
+                            "area_column_name": "shape_area",
+                            "mmu": 500000,
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
@@ -927,10 +925,10 @@ class Test_mmu_clc_change(VectorCheckTestCase):
                                                       "fid_display_name": "row number"},
                                            "reference": {"pg_layer_name": "margin"}},
                             "layers": ["change"],
-                            "area_column_name": "shape_area",
-                            "area_m2": 50000,
                             "initial_code_column_name": "code1",
                             "final_code_column_name": "code2",
+                            "area_column_name": "shape_area",
+                            "mmu": 50000,
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT * FROM s01_change_general ORDER BY fid;")
@@ -1195,7 +1193,7 @@ class Test_mmw(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmw import run_check
         self.params.update({"code_column_name": None,
-                            "patchy_code": None})
+                            "filter_code": None})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
@@ -1212,7 +1210,7 @@ class Test_mmw(VectorCheckTestCase):
     def test_patchy(self):
         from qc_tool.vector.mmw import run_check
         self.params.update({"code_column_name": "code",
-                            "patchy_code": '2'})
+                            "filter_code": "2"})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, NULL, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
@@ -1261,9 +1259,9 @@ class Test_mxmw(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mxmw"],
-                            "mxmw": 1.0,
                             "code_column_name": "code",
-                            "linear_code": "1",
+                            "filter_code": "1",
+                            "mxmw": 1.0,
                             "step_nr": 1})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mxmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
@@ -1285,9 +1283,9 @@ class Test_mml(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mml"],
-                            "mml": 10.,
                             "code_column_name": "code",
-                            "linear_code": "1",
+                            "filter_code": "1",
+                            "mml": 10.,
                             "step_nr": 1})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mml (fid integer, code char(1), geom geometry(Polygon, 4326));")

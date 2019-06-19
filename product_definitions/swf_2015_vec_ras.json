@@ -177,9 +177,9 @@
       "parameters": {
         "layers": ["swf_vec"],
         "code_column_name": "code",
-        "exclude_codes": ["1", "3"],
-        "area_m2": 200,
-        "area_column_name": "area"
+        "filter_code": "2",
+        "area_column_name": "area",
+        "mmu": 200
       }
     },
     {
@@ -188,9 +188,9 @@
       "parameters": {
         "layers": ["swf_vec"],
         "code_column_name": "code",
-        "exclude_codes": ["1", "3"],
-        "area_m2": 5000,
-        "area_column_name": "area"
+        "filter_code": "2",
+        "area_column_name": "area",
+        "mxmu": 5000
       }
     },
     {
@@ -199,7 +199,7 @@
       "parameters": {
         "layers": ["swf_vec"],
         "code_column_name": "code",
-        "patchy_code": "2",
+        "filter_code": "2",
         "mmw": 10
       }
     },
@@ -209,7 +209,7 @@
       "parameters": {
         "layers": ["swf_vec"],
         "code_column_name": "code",
-        "linear_code": "1",
+        "filter_code": "1",
         "mxmw": 30
       }
     },
@@ -219,7 +219,7 @@
       "parameters": {
         "layers": ["swf_vec"],
         "code_column_name": "code",
-        "linear_code": "1",
+        "filter_code": "1",
         "mml": 50
       }
     },
