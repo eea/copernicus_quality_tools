@@ -28,10 +28,17 @@ def run_check(params, status):
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"
                " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {filter_clause}"
-               "  AND ST_Length(ST_ApproximateMedialAxis(geom)) < %(mml)s;")
+               " FROM"
+               "  (SELECT {fid_name}, geom FROM {layer_name}"
+               "   WHERE"
+               "    {filter_clause}"
+               "    AND GREATEST(ST_Distance(ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 1),"
+               "                             ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 2)),"
+               "                 ST_Distance(ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 2),"
+               "                             ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 3))) < %(mml)s"
+               "  ) AS filtered_table"
+               " WHERE ST_Length(ST_ApproximateMedialAxis(geom)) <= %(mml)s;")
+
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)
 
