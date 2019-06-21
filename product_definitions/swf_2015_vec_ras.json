@@ -156,7 +156,9 @@
         "vector_code_column_name": "code",
         "vector_codes": ["1", "2", "3"],
         "raster_layer": "swf_raster",
-        "raster_codes": [1, 3]
+        "raster_codes": [1, 3],
+        "warning_percent_difference": 0.05,
+        "error_percent_difference": 0.5
       }
     },
     {

@@ -45,13 +45,14 @@ def run_check(params, status):
     vector_area_sum = float(cursor.fetchone()[0])
 
     # Comparison of vector_area_sum and raster_area_sum
-    area_difference = (raster_area_sum - vector_area_sum) / vector_area_sum
+    area_difference = ((raster_area_sum - vector_area_sum) / vector_area_sum) * 100.0
 
-    # If difference is larger than than 0.1%, return an error.
-    if abs(area_difference) > 0.001:
-        status.failed("Area sums of raster and vector layer differ by more than 0.1% (actual difference is {:f} %)."
-                      .format(area_difference * 100.0))
-    # If difference is larger than 0.05% and smaller than 0.1%, return a warning.
-    elif abs(area_difference) > 0.0005:
-        status.info("Area sums of raster and vector layer differ by more than 0.05% (actual difference is {:f} %)."
-                    .format(area_difference * 100.0))
+    # If difference is larger than than error_percent_difference, return an error.
+    if abs(area_difference) > params["error_percent_difference"]:
+        status.failed("Area sums of raster and vector layer differ by more than {:f}% (actual difference is {:f} %)."
+                      .format(params["error_percent_difference"], area_difference))
+    # If difference is larger than error_percent_difference
+    # and smaller than warning_percent_differnce, return a warning.
+    elif abs(area_difference) > params["warning_percent_difference"]:
+        status.info("Area sums of raster and vector layer differ by more than {:f}% (actual difference is {:f} %)."
+                    .format(params["error_percent_difference"], area_difference))

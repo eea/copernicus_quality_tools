@@ -1606,6 +1606,8 @@ class Test_layer_area(VectorCheckTestCase):
 
         self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
         self.params["output_dir"] = self.params["jobdir_manager"].output_dir
+        self.params["error_percent_difference"] = 0.1
+        self.params["warning_percent_difference"] = 0.05
 
         # Create an example raster layer with sum area = 250 m2
         raster_src_filepath = self.params["tmp_dir"].joinpath("test_raster.tif")
