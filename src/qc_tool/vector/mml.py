@@ -16,18 +16,29 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "code_column_name": params["code_column_name"],
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
-        sql_execute_params = {"mml": params["mml"],
-                              "linear_code": params["linear_code"]}
+        sql_execute_params = {"mml": params["mml"]}
+        if params["code_column_name"] is None:
+            sql_params["filter_clause"] = "TRUE"
+        else:
+            sql_params["code_column_name"] = params["code_column_name"]
+            sql_params["filter_clause"] = "{code_column_name} = %(filter_code)s".format(**sql_params)
+            sql_execute_params["filter_code"] = params["filter_code"]
 
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"
                " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {code_column_name} = %(linear_code)s"
-               "  AND ST_Length(ST_ApproximateMedialAxis(geom)) < %(mml)s;")
+               " FROM"
+               "  (SELECT {fid_name}, geom FROM {layer_name}"
+               "   WHERE"
+               "    {filter_clause}"
+               "    AND GREATEST(ST_Distance(ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 1),"
+               "                             ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 2)),"
+               "                 ST_Distance(ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 2),"
+               "                             ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 3))) < %(mml)s"
+               "  ) AS filtered_table"
+               " WHERE ST_Length(ST_ApproximateMedialAxis(geom)) <= %(mml)s;")
+
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)
 

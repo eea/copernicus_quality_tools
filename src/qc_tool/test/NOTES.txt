@@ -13,13 +13,13 @@ docker run --rm \
  --name=qc_tool_postgis \
  --user=postgres \
  eeacms/copernicus-qctool-worker \
- /usr/lib/postgresql/11/bin/postgres -D /var/lib/postgresql/10/main -c config_file=/etc/postgresql/11/main/postgresql.conf
+ /usr/lib/postgresql/11/bin/postgres -D /var/lib/postgresql/11/main -c config_file=/etc/postgresql/11/main/postgresql.conf
 
 Switch to other terminal.
 
 Setup QC_TOOL_HOME to your development source files, eg.
 
-QC_TOOL_HOME=/mnt/pracovni-archiv-01/projects/cop15m/igor/copernicus_quality_tools
+QC_TOOL_HOME=/home/igor/projects/copernicus_quality_tools
 
 Run all tests:
 

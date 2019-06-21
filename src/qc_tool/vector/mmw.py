@@ -16,21 +16,21 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "code_column_name": params["code_column_name"],
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
         sql_execute_params = {"buffer": -params["mmw"] / 2}
         if params["code_column_name"] is None:
-            sql_params["patchy_clause"] = "TRUE"
+            sql_params["filter_clause"] = "TRUE"
         else:
-            sql_params["patchy_clause"] = "{code_column_name} = %(patchy_code)s".format(**sql_params)
-            sql_execute_params["patchy_code"] = params["patchy_code"]
+            sql_params["code_column_name"] = params["code_column_name"]
+            sql_params["filter_clause"] = "{code_column_name} = %(filter_code)s".format(**sql_params)
+            sql_execute_params["filter_code"] = params["filter_code"]
 
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  {patchy_clause}"
+               "  {filter_clause}"
                "  AND ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) <> 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)

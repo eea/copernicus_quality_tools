@@ -17,19 +17,19 @@ def run_check(params, status):
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
-                      "area_m2": params["area_m2"],
                       "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
+        sql_execute_params = {"mmu": params["mmu"]}
 
         # Create table of general items.
         sql = ("CREATE TABLE {general_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  {area_column_name} >= {area_m2};")
+               "  {area_column_name} >= %(mmu)s;")
         sql = sql.format(**sql_params)
-        cursor.execute(sql)
+        cursor.execute(sql, sql_execute_params)
 
         # Create table of exception items.
         # Marginal features.

@@ -180,8 +180,8 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "area_m2": 250000,
-        "area_column_name": "shape_area"
+        "area_column_name": "shape_area",
+        "mmu": 250000
       }
     },
     {
@@ -189,8 +189,8 @@
       "required": false,
       "parameters": {
         "layers": ["initial"],
-        "area_m2": 250000,
-        "area_column_name": "shape_area"
+        "area_column_name": "shape_area",
+        "mmu": 250000
       }
     },
     {
@@ -198,10 +198,10 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "area_m2": 50000,
-        "area_column_name": "shape_area",
         "initial_code_column_name": "code_06",
-        "final_code_column_name": "code_12"
+        "final_code_column_name": "code_12",
+        "area_column_name": "shape_area",
+        "mmu": 50000
       }
     },
     {
@@ -209,9 +209,9 @@
       "required": false,
       "parameters": {
         "layers": ["reference", "initial", "change"],
-        "mmw": 100.0,
         "code_column_name": null,
-        "patchy_code": null
+        "filter_code": null,
+        "mmw": 100.0
       }
     },
     {
