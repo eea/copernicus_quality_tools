@@ -143,9 +143,10 @@
       "required": true,
       "parameters": {
         "layers": ["swf_vec"],
-        "attributes": {"code": "string",
-                       "area": "real",
-                       "class_name": "string"}
+        "required": {"code": "string",
+                     "area": "real",
+                     "class_name": "string"},
+        "ignored": ["shape_length", "shape_area"]
       }
     },
     {

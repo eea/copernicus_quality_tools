@@ -43,12 +43,13 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "attributes": {"id": "string",
-                       "remark": "string",
-                       "area_ha": "real",
-                       "shape_area": "real",
-                       "shape_length": "real",
-                       "code_18": "string"}
+        "required": {"id": "string",
+                     "remark": "string",
+                     "area_ha": "real",
+                     "shape_area": "real",
+                     "shape_length": "real",
+                     "code_18": "string"},
+        "ignored": []
       }
     },
     {
@@ -56,12 +57,13 @@
       "required": true,
       "parameters": {
         "layers": ["initial"],
-        "attributes": {"id": "string",
-                       "remark": "string",
-                       "area_ha": "real",
-                       "shape_area": "real",
-                       "shape_length": "real",
-                       "code_12": "string"}
+        "required": {"id": "string",
+                     "remark": "string",
+                     "area_ha": "real",
+                     "shape_area": "real",
+                     "shape_length": "real",
+                     "code_12": "string"},
+        "ignored": []
       }
     },
     {
@@ -69,15 +71,16 @@
       "required": true,
       "parameters": {
         "layers": ["change"],
-        "attributes": {"id": "string",
-                       "remark": "string",
-                       "area_ha": "real",
-                       "shape_area": "real",
-                       "shape_length": "real",
-                       "change": "string",
-                       "code_12": "string",
-                       "code_18": "string",
-                       "chtype": "string"}
+        "required": {"id": "string",
+                     "remark": "string",
+                     "area_ha": "real",
+                     "shape_area": "real",
+                     "shape_length": "real",
+                     "change": "string",
+                     "code_12": "string",
+                     "code_18": "string",
+                     "chtype": "string"},
+        "ignored": []
       }
     },
     {
@@ -231,14 +234,14 @@
         "layers": ["reference"]
       }
     },
-	{
+    {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
         "layers": ["initial"]
       }
     },
-	{
+    {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {

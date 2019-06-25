@@ -25,15 +25,16 @@
       "required": true,
       "parameters": {
         "layers": ["reference"],
-        "attributes": {"country": "string",
-                       "cities": "string",
-                       "fua_or_cit": "string",
-                       "prod_date": "string",
-                       "shape_leng": "real",
-                       "shape_area": "real",
-                       "code2012": "string",
-                       "item2012": "string",
-                       "ident": "string"}
+        "required": {"country": "string",
+                     "cities": "string",
+                     "fua_or_cit": "string",
+                     "prod_date": "string",
+                     "shape_leng": "real",
+                     "shape_area": "real",
+                     "code2012": "string",
+                     "item2012": "string",
+                     "ident": "string"},
+        "ignored": []
       }
     },
     {
@@ -41,17 +42,18 @@
       "required": true,
       "parameters": {
         "layers": ["combined", "change"],
-        "attributes": {"country": "string",
-                       "cities": "string",
-                       "fua_or_cit": "string",
-                       "prod_date": "string",
-                       "perimeter": "real",
-                       "area": "real",
-                       "code2006": "string",
-                       "item2006": "string",
-                       "code2012": "string",
-                       "item2012": "string",
-                       "ident": "string"}
+        "required": {"country": "string",
+                     "cities": "string",
+                     "fua_or_cit": "string",
+                     "prod_date": "string",
+                     "perimeter": "real",
+                     "area": "real",
+                     "code2006": "string",
+                     "item2006": "string",
+                     "code2012": "string",
+                     "item2012": "string",
+                     "ident": "string"},
+        "ignored": []
       }
     },
     {

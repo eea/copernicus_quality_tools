@@ -38,38 +38,46 @@ def run_check(params, status):
     for layer_def in do_layers(params):
         ds = ogr.Open(str(layer_def["src_filepath"]))
         layer = ds.GetLayerByName(layer_def["src_layer_name"])
-        product_attrs = {attr_name.lower(): attr_type_name.lower()
-                         for attr_name, attr_type_name in params["attributes"].items()}
-        extra_attrs = {}
+        required_attrs = {attr_name.lower(): attr_type_name.lower()
+                         for attr_name, attr_type_name in params["required"].items()}
+        ignored_attrs = params["ignored"].copy()
+        extra_attrs = []
+        bad_type_attrs = []
         for field_defn in layer.schema:
             field_name = field_defn.name.lower()
             field_type = field_defn.GetType()
-            if field_type not in OGR_TYPES:
-                # Field type is unknown.
-                extra_attrs[field_name] = "unknown-type"
-                del product_attrs[field_name]
-            elif field_type not in ALLOWED_TYPES:
-                # Field type is not allowed.
-                extra_attrs[field_name] = OGR_TYPES[field_type]
-                del product_attrs[field_name]
-            elif field_name not in product_attrs:
-                # Extra field.
-                extra_attrs[field_name] = ALLOWED_TYPES[field_type]
-            elif ALLOWED_TYPES[field_type] != product_attrs[field_name]:
-                # Field does not match a type in product definition.
-                extra_attrs[field_name] = ALLOWED_TYPES[field_type]
+            if field_name in ignored_attrs:
+                # Ignored attribute.
+                ignored_attrs.remove(field_name)
+            elif field_name in required_attrs:
+                # Required attribute.
+                if field_type not in OGR_TYPES:
+                    # Attribute type is unknown.
+                    bad_type_attrs.append(field_name, "unknown-type")
+                elif field_type not in ALLOWED_TYPES:
+                    # Attribute type is not allowed.
+                    bad_type_attrs.append(field_name, OGR_TYPES[field_type])
+                elif ALLOWED_TYPES[field_type] != required_attrs[field_name]:
+                    # Attribute type does not match the type in product definition.
+                    bad_type_attrs.append(field_name, ALLOWED_TYPES[field_type])
+                del required_attrs[field_name]
             else:
-                # Field matches product definition.
-                del product_attrs[field_name]
-        missing_attrs = product_attrs
+                # Extra attribute.
+                extra_attrs.append(field_name, OGR_TYPES[field_type])
 
+        # The attributes remaining in required_attrs are missing.
+        if len(required_attrs) > 0:
+            status.aborted("Layer {:s} has missing attributes: {:s}."
+                           .format(layer_def["src_layer_name"],
+                                   ", ".join("{:s}({:s})".format(attr_name, required_attrs[attr_name])
+                                             for attr_name in sorted(required_attrs.keys()))))
         if len(extra_attrs) > 0:
             status.failed("Layer {:s} has extra attributes: {:s}."
                           .format(layer_def["src_layer_name"],
                                   ", ".join("{:s}({:s})".format(attr_name, extra_attrs[attr_name])
                                             for attr_name in sorted(extra_attrs.keys()))))
-        if len(missing_attrs) > 0:
-            status.aborted("Layer {:s} has missing attributes: {:s}."
+        if len(bad_type_attrs) > 0:
+            status.aborted("Layer {:s} has attributes with bad type: {:s}."
                            .format(layer_def["src_layer_name"],
-                                   ", ".join("{:s}({:s})".format(attr_name, missing_attrs[attr_name])
-                                             for attr_name in sorted(missing_attrs.keys()))))
+                                   ", ".join("{:s}({:s})".format(attr_name, bad_type_attrs[attr_name])
+                                             for attr_name in sorted(bad_type_attrs.keys()))))

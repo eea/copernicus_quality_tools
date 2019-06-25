@@ -250,12 +250,11 @@ class Test_attribute(VectorCheckTestCase):
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
                                                        "src_layer_name": "clc12_mt"}},
                             "layers": ["layer_0"],
-                            "attributes": {"id": "string",
-                                           "code_12": "string",
-                                           "area_ha": "real",
-                                           "remark": "string",
-                                           "shape_length": "real",
-                                           "shape_area": "real"}})
+                            "required": {"id": "string",
+                                         "code_12": "string",
+                                         "area_ha": "real",
+                                         "remark": "string"},
+                            "ignored": ["shape_length", "shape_area"]})
 
     def test(self):
         from qc_tool.vector.attribute import run_check
@@ -265,7 +264,7 @@ class Test_attribute(VectorCheckTestCase):
 
     def test_missing_attribute_aborts(self):
         from qc_tool.vector.attribute import run_check
-        self.params["attributes"]["missing_attribute"] = "string"
+        self.params["required"].update({"missing_attribute": "string"})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)

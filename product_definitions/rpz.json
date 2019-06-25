@@ -27,16 +27,17 @@
       "required": true,
       "parameters": {
         "layers": ["rpz"],
-        "attributes": {"id": "integer",
-                       "du_id": "string",
-                       "maes_1": "integer",
-                       "maes_2": "integer",
-                       "maes_3": "integer",
-                       "maes_4": "integer",
-                       "ua": "string",
-                       "area_ha": "real",
-                       "nodata": "integer",
-                       "comment": "string"}
+        "required": {"id": "integer",
+                     "du_id": "string",
+                     "maes_1": "integer",
+                     "maes_2": "integer",
+                     "maes_3": "integer",
+                     "maes_4": "integer",
+                     "ua": "string",
+                     "area_ha": "real",
+                     "nodata": "integer",
+                     "comment": "string"},
+        "ignored": []
       }
     },
     {
