@@ -676,6 +676,32 @@ class Test_geometry(VectorCheckTestCase):
         self.assertEqual("failed", status.status)
 
 
+class Test_area(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.area import run_check
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE test (fid integer, area_ha real, geom geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO test VALUES (1, 1.0, ST_MakeEnvelope(0, 0, 10000, 0.5, 4326)),"
+                                                   " (2, 1.0, ST_MakeEnvelope(0, 0, 10000, 0.9998, 4326)),"
+                                                   " (3, 1.0, ST_MakeEnvelope(0, 0, 10000, 0.9999, 4326)),"
+                                                   " (4, 1.0, ST_MakeEnvelope(0, 0, 10000, 1, 4326)),"
+                                                   " (5, 1.0, ST_MakeEnvelope(0, 0, 10000, 1.0001, 4326)),"
+                                                   " (6, 1.0, ST_MakeEnvelope(0, 0, 10000, 1.0002, 4326)),"
+                                                   " (7, 1.0, ST_MakeEnvelope(0, 0, 10000, 2, 4326));")
+        self.params.update({"layer_defs": {"test": {"pg_layer_name": "test",
+                                                    "pg_fid_name": "fid",
+                                                    "fid_display_name": "row number"}},
+                            "layers": ["test"],
+                            "area_column_name": "area_ha",
+                            "unit": 10000,
+                            "tolerance": 0.0001,
+                            "step_nr": 1})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.cursor.execute("SELECT fid FROM s01_test_error ORDER BY fid;")
+        self.assertListEqual([(1,), (2,), (6,), (7,)], self.cursor.fetchall())
+
+
 class Test_compactness(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.compactness import run_check

@@ -220,6 +220,16 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"],
+        "area_column_name": "area_ha",
+        "unit": 10000,
+        "tolerance": 0.001
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.gap_unit",
       "required": false,
       "parameters": {

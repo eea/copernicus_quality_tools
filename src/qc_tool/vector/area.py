@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-DESCRIPTION = "Minimum mapping unit."
+DESCRIPTION = "Area attribute has correct values."
 IS_SYSTEM = False
 
 
@@ -18,21 +18,14 @@ def run_check(params, status):
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
-        sql_execute_params = {"mmu": params["mmu"]}
-        if params["code_column_name"] is None:
-            sql_params["filter_clause"] = "TRUE"
-        else:
-            sql_params["code_column_name"] = params["code_column_name"]
-            sql_params["filter_clause"] = "{code_column_name} = %(filter_code)s".format(**sql_params)
-            sql_execute_params["filter_code"] = params["filter_code"]
+        sql_execute_params = {"unit": params["unit"],
+                              "tolerance": params["tolerance"]}
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
                " SELECT {fid_name}"
                " FROM {layer_name}"
-               " WHERE"
-               "  {filter_clause}"
-               "  AND {area_column_name} < %(mmu)s;")
+               " WHERE abs({area_column_name} - ST_Area(geom) / %(unit)s) > %(tolerance)s;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)
 

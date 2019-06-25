@@ -184,6 +184,16 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_vec"],
+        "area_column_name": "area",
+        "unit": 1,
+        "tolerance": 0.001
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.layer_area",
       "required": false,
       "parameters": {

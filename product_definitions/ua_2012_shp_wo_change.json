@@ -86,6 +86,16 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "area_column_name": "shape_area",
+        "unit": 1,
+        "tolerance": 0.001
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.gap_unit",
       "required": false,
       "parameters": {
