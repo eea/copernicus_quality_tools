@@ -49,10 +49,10 @@ def run_check(params, status):
 
     # If difference is larger than than error_percent_difference, return an error.
     if abs(area_difference) > params["error_percent_difference"]:
-        status.failed("Area sums of raster and vector layer differ by more than {0:.2f}% (actual difference is {:f} %)."
+        status.failed("Area sums of raster and vector layer differ by more than {:.2f}% (actual difference is {:f}%)."
                       .format(params["error_percent_difference"], area_difference))
     # If difference is larger than error_percent_difference
     # and smaller than warning_percent_differnce, return a warning.
     elif abs(area_difference) > params["warning_percent_difference"]:
-        status.info("Area sums of raster and vector layer differ by more than {0:.2f}% (actual difference is {:f} %)."
+        status.info("Area sums of raster and vector layer differ by more than {:.2f}% (actual difference is {:f}%)."
                     .format(params["warning_percent_difference"], area_difference))
