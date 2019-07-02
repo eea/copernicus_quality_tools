@@ -134,7 +134,7 @@ class Test_Raster(ProductTestCase):
     # High resolution small woody features - 5m raster + vector
     def test_swf_2015_100m(self):
         filepath = TEST_DATA_DIR.joinpath("raster", "swf_100m", "swf_2015_100m_eu_03035_v1_1.zip")
-        expected_step_results = ["ok"] * 10
+        expected_step_results = ["ok"] * 11
         job_result = dispatch(self.job_uuid, "user_name", filepath, "swf_2015_100m")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)

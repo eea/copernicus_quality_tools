@@ -17,6 +17,7 @@ def write_progress(progress_filepath, message):
         f.write(message + "\n")
 
 def run_check(params, status):
+    import subprocess
     import numpy
     import osgeo.gdal as gdal
     import osgeo.ogr as ogr
@@ -75,15 +76,46 @@ def run_check(params, status):
         mask_lrx = ds_ulx + (mask_ds.RasterXSize * mask_xres)
         mask_lry = ds_uly + (mask_ds.RasterYSize * mask_yres)
 
+        # Check if the dataset extent intersects the mask extent.
+        if (mask_ulx > ds_lrx or mask_uly < ds_lry or mask_lrx < ds_ulx or mask_lry > ds_uly):
+            extent_message = "Layer {:s} does not intersect the aoi mask {:s}."
+            extent_message = extent_message.format(layer_def["src_layer_name"], mask_ident)
+            extent_message += "raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
+            extent_message += "aoi mask extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
+            status.info(extent_message)
+            continue
+
         # Check if the dataset is fully covered by the mask.
         ds_inside_mask = (ds_ulx >= mask_ulx and ds_uly <= mask_uly and ds_lrx <= mask_lrx and ds_lry >= mask_lry)
         if not ds_inside_mask:
-            extent_message = "Layer {:s} is not fully contained inside the boundary mask {:s}."
-            extent_message = extent_message.format(layer_def["src_layer_name"], mask_ident)
-            extent_message += "raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
-            extent_message += "boundary mask extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
-            status.info(extent_message)
-            continue
+            # If the dataset is not fully covered by the mask, then expand the mask extent to the raster extent
+            # (extended mask pixels inside raster extent but outside original mask extent are set to NoData)
+            mask_ds = None
+            mask_file_extended = params["tmp_dir"].joinpath(mask_file.name.replace(".tif", "_extended.tif"))
+            raster_epsg = "EPSG:3035"
+            cmd = ["gdalwarp",
+                   "-dstnodata", str(nodata_value_mask),
+                   "-t_srs", raster_epsg,
+                   "-s_srs", raster_epsg,
+                   "-te_srs", raster_epsg,
+                   "-tr", str(ds_xres), str(ds_xres),
+                   "-r", "near",
+                   "-te", str(ds_ulx), str(ds_lry), str(ds_lrx), str(ds_uly),
+                   "-ot", "Byte",
+                   "-of", "GTiff",
+                   "-co", "TILED=YES",
+                   "-co", "COMPRESS=LZW",
+                   str(mask_file),
+                   str(mask_file_extended)]
+
+            subprocess.check_output(cmd)
+            mask_ds = gdal.Open(str(mask_file_extended))
+            mask_band = mask_ds.GetRasterBand(1)
+            mask_gt = mask_ds.GetGeoTransform()
+            mask_ulx = mask_gt[0]
+            mask_xres = mask_gt[1]
+            mask_uly = mask_gt[3]
+            mask_yres = mask_gt[5]
 
         # Check if raster resolution and boundary mask resolution matches.
         if ds_xres != mask_xres or ds_yres != mask_yres:

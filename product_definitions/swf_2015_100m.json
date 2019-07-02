@@ -72,6 +72,15 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_raster"],
+        "mask": "swf",
+        "outside_area_code": 255
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
