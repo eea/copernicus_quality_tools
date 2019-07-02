@@ -49,13 +49,13 @@ class Test_rpz(ProductTestCase):
 class Test_swf_vec_ras(ProductTestCase):
     def test(self):
         self.filepath = TEST_DATA_DIR.joinpath("vector_raster", "swf_2015_vec_ras", "swf_2015_vec_ras_FR_3035_123_pt01.zip")
-        expected_step_results = ["ok"] * 29
-        expected_step_results[18] = "failed"
+        expected_step_results = ["ok"] * 30
+        expected_step_results[19] = "failed"
         job_result = dispatch(self.job_uuid, "user_name", self.filepath, "swf_2015_vec_ras")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
         self.assertListEqual(['Layer swf_2015_vec_fr_3035_123_pt01 has error features with row number: 10.'],
-                             job_result["steps"][18]["messages"])
+                             job_result["steps"][19]["messages"])
 
 
 class Test_ua_shp(ProductTestCase):
