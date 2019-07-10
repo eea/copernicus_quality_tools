@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"swf_raster": "swf_2015_005m_(?P<country_code>[a-z]{2})_0?3035_(?P<aoi_code>[0-9]{3})_"},
+        "layer_names":{"swf_raster": "^swf_2015_005m_(?P<country_code>[a-z]{2})_0?3035_(?P<aoi_code>[0-9]{3})_"},
         "extensions": [".tif"],
         "aoi_codes": ["001", "002", "003", "004", "005", "006", "007", "008", "009","010",
                       "011", "012", "013", "014", "015", "016", "017", "018", "019","020",
@@ -125,7 +125,7 @@
           ".shp"
         ],
         "layer_names": {
-          "swf_vec": "swf_2015_vec_(?P<country_code>[a-z]{2})_0?3035_0*(?P<aoi_code>[0-9]+)_"
+          "swf_vec": "^swf_2015_vec_(?P<country_code>[a-z]{2})_0?3035_0*(?P<aoi_code>[0-9]+)_"
         },
         "aoi_codes": ["1", "2", "3", "4", "5", "6", "7", "8", "9","10",
                       "11", "12", "13", "14", "15", "16", "17", "18", "19","20",

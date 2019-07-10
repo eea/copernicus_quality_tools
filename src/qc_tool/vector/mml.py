@@ -38,7 +38,6 @@ def run_check(params, status):
                "                             ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 3))) < %(mml)s"
                "  ) AS filtered_table"
                " WHERE ST_Length(ST_ApproximateMedialAxis(geom)) <= %(mml)s;")
-
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)
 
