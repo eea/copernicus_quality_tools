@@ -2,6 +2,9 @@
 
 
 from unittest import skipIf
+from osgeo import gdal
+from osgeo import osr
+import numpy as np
 
 from qc_tool.common import CONFIG
 from qc_tool.common import TEST_DATA_DIR
@@ -173,6 +176,88 @@ class Test_gap(RasterCheckTestCase):
         self.assertIn("has 1237 gap pixels", status.messages[0])
         self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.gpkg", status.attachment_filenames)
         self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
+
+
+class Test_tile(RasterCheckTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.params["tmp_dir"] = self.jobdir_manager.tmp_dir
+        self.params["output_dir"] = self.jobdir_manager.output_dir
+        self.params["max_blocksize"] = 256
+        raster_src_filepath = self.params["tmp_dir"].joinpath("test_raster.tif")
+        self.params["raster_layer_defs"] = {"raster_1": {"src_filepath": str(raster_src_filepath),
+                                                         "src_layer_name": "raster_1"}}
+        self.params["layers"] = ["raster_1"]
+        self.params["step_nr"] = 1
+
+    def test(self):
+
+        # Create an example tiled raster layer
+        width = 2000
+        height = 256
+        xmin = 10000
+        ymax = 10000
+        pixel_size = 5
+
+        # Prepare raster dataset.
+        mem_drv = gdal.GetDriverByName("MEM")
+        mem_ds = mem_drv.Create("memory", width, height, 1, gdal.GDT_Byte)
+        mem_srs = osr.SpatialReference()
+        mem_srs.ImportFromEPSG(3035)
+        mem_ds.SetProjection(mem_srs.ExportToWkt())
+        mem_ds.SetGeoTransform((xmin, pixel_size, 0, ymax, 0, -pixel_size))
+        mem_ds.GetRasterBand(1).Fill(0)
+
+        # Store raster dataset.
+        dest_driver = gdal.GetDriverByName("GTiff")
+        dest_ds = dest_driver.CreateCopy(str(self.params["raster_layer_defs"]["raster_1"]["src_filepath"]),
+                                         mem_ds, False, options=["TILED=YES"])
+
+        # Remove temporary datasource and datasets from memory.
+        mem_dsrc = None
+        mem_ds = None
+        dest_ds = None
+
+        # Run check on tiled raster
+        from qc_tool.raster.tile import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_aborted(self):
+        # Create an example tiled raster layer
+        width = 2000
+        height = 256
+        xmin = 10000
+        ymax = 10000
+        pixel_size = 5
+
+        # Prepare raster dataset.
+        mem_drv = gdal.GetDriverByName("MEM")
+        mem_ds = mem_drv.Create("memory", width, height, 1, gdal.GDT_Byte)
+        mem_srs = osr.SpatialReference()
+        mem_srs.ImportFromEPSG(3035)
+        mem_ds.SetProjection(mem_srs.ExportToWkt())
+        mem_ds.SetGeoTransform((xmin, pixel_size, 0, ymax, 0, -pixel_size))
+        mem_ds.GetRasterBand(1).Fill(0)
+
+        # Store raster dataset.
+        dest_driver = gdal.GetDriverByName("GTiff")
+        dest_ds = dest_driver.CreateCopy(str(self.params["raster_layer_defs"]["raster_1"]["src_filepath"]),
+                                         mem_ds, False, options=["TILED=NO"])
+
+        # Remove temporary datasource and datasets from memory.
+        mem_dsrc = None
+        mem_ds = None
+        dest_ds = None
+
+        # Run check on untiled raster
+        from qc_tool.raster.tile import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+        print(status.messages)
 
 
 class Test_mmu(RasterCheckTestCase):
