@@ -1,5 +1,5 @@
 {
-  "description": "HRL Forest Type 2018 (10m)",
+  "description": "HRL Broadleaved Cover Density 2015 (100m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
@@ -9,14 +9,16 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"fty_010m": "^fty_(?P<reference_year>2018)_010m_"}
+        "layer_names":{"bcd_100m": "^bcd_(?P<reference_year>2015)_100m_"},
+        "extensions": [".tif"],
+        "reference_year": "2015"
 	  }
     },
     {
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["bcd_100m"],
         "formats": [".tif"],
         "drivers": {".tif": "GTiff"}
       }
@@ -25,7 +27,7 @@
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["bcd_100m"],
         "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
       }
     },
@@ -33,7 +35,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["bcd_100m"],
         "epsg": 3035
       }
     },
@@ -41,22 +43,22 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
-        "pixelsize": 10
+        "layers": ["bcd_100m"],
+        "pixelsize": 100
       }
     },
     {
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"]
+        "layers": ["bcd_100m"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["bcd_100m"],
         "datatype": "byte"
       }
     },
@@ -64,7 +66,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["bcd_100m"],
         "compression": ["LZW"]
       }
     },
@@ -72,41 +74,40 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
-        "validcodes": [0, 1, 2, 254, 255]
+        "layers": ["bcd_100m"],
+        "validcodes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                       11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                       21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                       31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                       41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+                       51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+                       61, 62, 63, 64, 65, 66, 67, 68, 69, 70,
+                       71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
+                       81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+                       91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
+                       254, 255]
       }
     },
     {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["bcd_100m"],
         "colors": {
-          "0":[240, 240, 240],
-          "1":[70, 158, 74],
-          "2":[28, 92, 36],
-          "254":[153, 153, 153],
-          "255":[0, 0, 0]
+          "0": [240,240,240],
+          "1": [186,255,172],
+          "50": [85, 160, 89],
+          "100": [28,92,36],
+          "254": [153,153,153],
+          "255": [0,0,0]
         }
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.mmu",
-      "required": false,
-      "parameters": {
-        "layers": ["fty_010m"],
-        "area_pixels": 50,
-        "groupcodes": [[1, 2]],
-        "value_exception_codes": [254, 255],
-        "neighbour_exception_codes": [254, 255],
-        "nodata_value": 255
       }
     },
     {
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"]
+        "layers": ["bcd_100m"]
       }
     }
   ]

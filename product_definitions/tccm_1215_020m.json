@@ -1,5 +1,5 @@
 {
-  "description": "HRL Forest Type 2018 (10m)",
+  "description": "HRL Tree Cover Change Mask 2012-2015 (20m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
@@ -9,14 +9,16 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"fty_010m": "^fty_(?P<reference_year>2018)_010m_"}
+        "layer_names":{"tccm_020m": "^tccm_1215_020m_"},
+        "extensions": [".tif"],
+        "reference_year": "2015"
 	  }
     },
     {
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["tccm_020m"],
         "formats": [".tif"],
         "drivers": {".tif": "GTiff"}
       }
@@ -25,7 +27,7 @@
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["tccm_020m"],
         "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
       }
     },
@@ -33,7 +35,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["tccm_020m"],
         "epsg": 3035
       }
     },
@@ -41,22 +43,22 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
-        "pixelsize": 10
+        "layers": ["tccm_020m"],
+        "pixelsize": 20
       }
     },
     {
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"]
+        "layers": ["tccm_020m"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["tccm_020m"],
         "datatype": "byte"
       }
     },
@@ -64,7 +66,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["tccm_020m"],
         "compression": ["LZW"]
       }
     },
@@ -72,7 +74,7 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["tccm_020m"],
         "validcodes": [0, 1, 2, 254, 255]
       }
     },
@@ -80,13 +82,13 @@
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
+        "layers": ["tccm_020m"],
         "colors": {
-          "0":[240, 240, 240],
-          "1":[70, 158, 74],
-          "2":[28, 92, 36],
-          "254":[153, 153, 153],
-          "255":[0, 0, 0]
+          "0": [240,240,240],
+          "1": [70,158,74],
+          "2": [28,92,36],
+          "254": [153,153,153],
+          "255": [0,0,0]
         }
       }
     },
@@ -94,9 +96,8 @@
       "check_ident": "qc_tool.raster.mmu",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"],
-        "area_pixels": 50,
-        "groupcodes": [[1, 2]],
+        "layers": ["tccm_020m"],
+        "area_pixels": 25,
         "value_exception_codes": [254, 255],
         "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
@@ -106,7 +107,7 @@
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
-        "layers": ["fty_010m"]
+        "layers": ["tccm_020m"]
       }
     }
   ]
