@@ -91,6 +91,14 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.tile",
+      "required": false,
+      "parameters": {
+        "layers": ["fty_010m"],
+        "max_blocksize": 1024
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.mmu",
       "required": false,
       "parameters": {

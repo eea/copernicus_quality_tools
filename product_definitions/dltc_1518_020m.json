@@ -98,6 +98,14 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.tile",
+      "required": false,
+      "parameters": {
+        "layers": ["dltc_020m"],
+        "max_blocksize": 1024
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.mmu",
       "required": false,
       "parameters": {
