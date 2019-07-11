@@ -9,7 +9,10 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"fty_010m": "^fty_(?P<reference_year>2018)_010m_"}
+        "layer_names":{"fty_010m": "^fty_(?P<reference_year>2018)_010m_(?P<aoi_code>eu)_0?3035"},
+        "aoi_codes": ["eu"],
+        "extensions": [".tif"],
+        "reference_year": "2018"
 	  }
     },
     {
@@ -103,11 +106,19 @@
       "required": false,
       "parameters": {
         "layers": ["fty_010m"],
-        "area_pixels": 50,
+        "area_pixels": 40,
         "groupcodes": [[1, 2]],
         "value_exception_codes": [254, 255],
         "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["fty_010m"],
+        "outside_area_code": 255
       }
     },
     {

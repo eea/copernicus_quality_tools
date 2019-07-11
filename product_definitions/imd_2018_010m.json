@@ -9,9 +9,10 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"imd_010m": "^imd_(?P<reference_year>2018)_010m_"},
-        "extensions": [".tif", ".tfw"],
-        "reference_year": "2018"
+        "layer_names":{"imd_010m": "^imd_(?P<reference_year>2018)_010m_(?P<aoi_code>eu)_0?3035"},
+        "extensions": [".tif"],
+        "reference_year": "2018",
+        "aoi_codes": ["eu"]
 	  }
     },
     {
@@ -101,6 +102,14 @@
           "254": [153,153,153],
           "255": [0,0,0]
         }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["imd_010m"],
+        "outside_area_code": 255
       }
     },
     {

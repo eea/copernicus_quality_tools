@@ -10,9 +10,11 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "gra_010m": "^gra_(?P<reference_year>2018)_100m"
+          "gra_100m": "^gra_(?P<reference_year>2018)_100m_(?P<aoi_code>eu)_0?3035"
         },
-        "extensions": [".tif"]
+        "extensions": [".tif"],
+        "aoi_codes": ["eu"],
+        "reference_year": "2018"
       }
     },
     {
@@ -44,7 +46,7 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "layers": ["gra_010m"],
+        "layers": ["gra_100m"],
         "pixelsize": 100
       }
     },
@@ -80,14 +82,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.gap",
-      "required": false,
-      "parameters": {
-        "layers": ["gra_100m"],
-        "outside_area_code": 255
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
@@ -98,6 +92,14 @@
           "254":[153, 153, 153],
           "255":[0, 0, 0]
         }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["gra_100m"],
+        "outside_area_code": 255
       }
     },
     {

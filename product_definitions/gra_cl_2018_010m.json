@@ -10,9 +10,11 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "gra_cl_010m": "^gra_cl_(?P<reference_year>2018)_010m"
+          "gra_cl_010m": "^gra_cl_(?P<reference_year>2018)_010m_(?P<aoi_code>eu)_0?3035"
         },
-        "extensions": [".tif"]
+        "extensions": [".tif"],
+        "aoi_codes": ["eu"],
+        "reference_year": "2018"
       }
     },
     {

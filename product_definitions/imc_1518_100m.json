@@ -10,8 +10,9 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "imc_100m": "^imc_1518_100m_"
+          "imc_100m": "^imc_1518_100m_(?P<aoi_code>eu)_0?3035"
         },
+        "aoi_codes": ["eu"],
         "reference_year": "2018",
         "extensions": [".tif"]
       }
@@ -76,7 +77,7 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "layers": ["imc_020m"],
+        "layers": ["imc_100m"],
         "validcodes": [-100, -99, -98, -97, -96, -95, -94, -93, -92, -91,
                        -90, -89, -88, -87, -86, -85, -84, -83, -82, -81,
                        -80, -79, -78, -77, -76, -75, -74, -73, -72, -71,
@@ -97,22 +98,14 @@
                        71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
                        81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
                        91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
-                       254, 255]
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.gap",
-      "required": false,
-      "parameters": {
-        "layers": ["imc_020m"],
-        "outside_area_code": 255
+                       201, 254, 255]
       }
     },
     {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["imc_020m"],
+        "layers": ["imc_100m"],
         "colors": {
           "-100": [3, 102, 0],
           "-10": [12, 114, 0],
@@ -124,6 +117,14 @@
           "254": [168, 0, 229],
           "255": [0, 0, 0]
         }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["imc_100m"],
+        "outside_area_code": 255
       }
     },
     {

@@ -16,18 +16,18 @@ class Test_naming(RasterCheckTestCase):
         from qc_tool.raster.naming import run_check
         params = {"unzip_dir": TEST_DATA_DIR.joinpath("raster",
                                                      "fty_100m",
-                                                     "fty_2015_100m_mt_03035_d02_clip"),
+                                                     "fty_2018_100m_eu_03035_d02_clip"),
                   "aoi_codes": ["mt", "eu"],
-                  "extensions": [".tif", ".tfw"],
+                  "extensions": [".tif"],
                   "extract_reference_year": True,
                   "layer_names": {"layer_1": "^fty_(?P<reference_year>[0-9]{4})_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"}
                  }
         status = self.status_class()
         run_check(params, status)
         self.assertEqual("ok", status.status)
-        self.assertEqual("mt", status.params["aoi_code"])
-        self.assertEqual("2015", status.status_properties["reference_year"])
-        self.assertEqual("fty_2015_100m_mt_03035_d02_clip.tif", status.params["raster_layer_defs"]["layer_1"]["src_layer_name"])
+        self.assertEqual("eu", status.params["aoi_code"])
+        self.assertEqual("2018", status.status_properties["reference_year"])
+        self.assertEqual("fty_2018_100m_eu_03035_d02_clip.tif", status.params["raster_layer_defs"]["layer_1"]["src_layer_name"])
 
     def test_two_layers(self):
         from qc_tool.raster.naming import run_check
@@ -257,7 +257,6 @@ class Test_tile(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
-        print(status.messages)
 
 
 class Test_mmu(RasterCheckTestCase):

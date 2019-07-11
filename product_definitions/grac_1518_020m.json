@@ -10,9 +10,11 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "grac_020m": "^grac_1518_010m"
+          "grac_020m": "^grac_1518_010m_(?P<aoi_code>eu)_0?3035"
         },
-        "extensions": [".tif"]
+        "extensions": [".tif"],
+        "aoi_codes": ["eu"],
+        "reference_year": "2018"
       }
     },
     {
@@ -80,14 +82,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.gap",
-      "required": false,
-      "parameters": {
-        "layers": ["grac_020m"],
-        "outside_area_code": 255
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
@@ -119,6 +113,14 @@
         "value_exception_codes": [254, 255],
         "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["grac_020m"],
+        "outside_area_code": 255
       }
     },
     {

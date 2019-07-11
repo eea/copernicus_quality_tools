@@ -9,7 +9,8 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"dltc_020m": "^dltc_1215_020m_"},
+        "layer_names":{"dltc_020m": "^dltc_1215_020m_(?P<aoi_code>eu)_0?3035"},
+        "aoi_codes": ["eu"],
         "extensions": [".tif"],
         "reference_year": "2015"
 	  }
@@ -114,6 +115,14 @@
         "value_exception_codes": [254, 255],
         "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["dltc_020m"],
+        "outside_area_code": 255
       }
     },
     {
