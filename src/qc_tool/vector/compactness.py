@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-DESCRIPTION = "Compactness."
+DESCRIPTION = "Linear and patchy features have appropriate compactness coefficient."
 IS_SYSTEM = False
 
 
