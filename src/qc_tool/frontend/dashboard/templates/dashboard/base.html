@@ -33,14 +33,12 @@
                                 <span class="icon-bar"></span>
                                 <span class="icon-bar"></span>
                             </button>
-                            {% if show_logo %}
-                            <a class="navbar-brand" href="/"><img src="{{ STATIC_URL }}dashboard/img/logo_eea_big.png" style="height:40px;margin-top:-10px;float:left" />
-                                <span style="overflow: hidden;">&nbsp;&nbsp;Copernicus QC Tool</span></a>
-                            {% else %}
-                            <a class="navbar-brand" href="/"><span>&nbsp;&nbsp;QC Tool</span></a>
-                            {% endif %}
+                            <a class="navbar-brand" href="/">
+                                <img src="{{ STATIC_URL }}dashboard/img/logo_eea_big.png" style="height:40px;margin-top:-10px;float:left" />
+                                <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_big.png" style="height:40px;margin-top:-10px;float:left" />
+                                <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span></a>
                         </div>
-                        <div class="navbar-collapse collapse">
+                        <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
                             <ul class="nav navbar-nav navbar-right">
                                 {% block menu %}
                                 {% if user.is_superuser %}
@@ -48,10 +46,10 @@
                                     <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
                                 {% endif %}
                                 {% if user.is_authenticated %}
-                                <li><a href="{% url 'logout'%}?next={{request.path}}">
+                                <li><a href="{% url 'logout'%}">
                                     <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
                                 {% else %}
-                                <li><a href="{% url 'login'%}?next={{request.path}}">
+                                <li><a href="{% url 'login'%}">
                                     <span class="glyphicon glyphicon-log-in"></span>Sign in</a></li>
                                 {% endif %}
                                 {% endblock %}
