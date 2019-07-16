@@ -78,7 +78,7 @@
       "required": false,
       "parameters": {
         "layers": ["waw_010m"],
-        "validcodes": [0, 1, 2, 3, 4, 254, 255]
+        "validcodes": [0, 1, 2, 3, 4, 253, 254, 255]
       }
     },
     {
