@@ -88,9 +88,10 @@ def setup_job(request):
         if delivery.date_submitted is not None:
             raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
 
-        # Starting a job for another user's delivery is not permitted.
-        if delivery.user != request.user:
-            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+        # Starting a job for another user's delivery is not permitted unless you are a superuser.
+        if not request.user.is_superuser:
+            if delivery.user != request.user:
+                raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
         deliveries.append(delivery)
 
     # pass in product ident (only for the single delivery case)
@@ -355,12 +356,13 @@ def delivery_delete(request):
             d = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
             # User validation.
-            if request.user.id != d.user.id:
-                error_message = "User {:s} is not authorized to delete delivery {:d}"
-                error_message = error_message.format(request.user.username, d.filename)
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 403
-                return response
+            if not request.user.is_superuser:
+                if request.user.id != d.user.id:
+                    error_message = "User {:s} is not authorized to delete delivery {:d}"
+                    error_message = error_message.format(request.user.username, d.filename)
+                    response = JsonResponse({"status": "error", "message": error_message})
+                    response.status_code = 403
+                    return response
 
             # Job status validation.
             running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
@@ -377,12 +379,13 @@ def delivery_delete(request):
             d = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
             # User validation again.
-            if request.user.id != d.user.id:
-                error_message = "User {:s} is not authorized to delete delivery {:d}"
-                error_message = error_message.format(request.user.username, d.filename)
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 403
-                return response
+            if not request.user.is_superuser:
+                if request.user.id != d.user.id:
+                    error_message = "User {:s} is not authorized to delete delivery {:s}"
+                    error_message = error_message.format(request.user.username, d.filename)
+                    response = JsonResponse({"status": "error", "message": error_message})
+                    response.status_code = 403
+                    return response
 
             # Job status validation.
             running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
@@ -426,9 +429,10 @@ def job_delete(request):
             job = get_object_or_404(models.Job, pk=str(job_uuid))
 
             # User validation.
-            if request.user.id != job.delivery.user.id:
-                return PermissionDenied("User {:s} is not authorized to delete job {:s}"
-                                        .format(request.user.username, job_uuid))
+            if not request.user.is_superuser:
+                if request.user.id != job.delivery.user.id:
+                    return PermissionDenied("User {:s} is not authorized to delete job {:s}"
+                                            .format(request.user.username, job_uuid))
 
             # Job status validation.
             running_jobs = models.Job.objects.filter(job_uuid=str(job_uuid)).filter(job_status=JOB_RUNNING)
