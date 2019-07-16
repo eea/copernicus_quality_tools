@@ -17,6 +17,7 @@ from uuid import uuid4
 
 
 QC_TOOL_HOME = Path(__file__).parents[2]
+QC_TOOL_VERSION_FILENAME = "VERSION"
 QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
@@ -77,6 +78,12 @@ def get_worker_token():
 def auth_worker(token):
     stored_token = get_worker_token()
     return token == stored_token
+
+def get_qc_tool_version():
+    filepath = QC_TOOL_HOME.joinpath(QC_TOOL_VERSION_FILENAME)
+    if filepath.is_file():
+        return filepath.read_text()
+    return None
 
 def locate_product_definition(product_ident):
     for product_dir in CONFIG["product_dirs"]:
@@ -188,6 +195,7 @@ def prepare_job_blueprint(product_definition):
                   "hash": None,
                   "reference_year": None,
                   "error_message": None,
+                  "qc_tool_version": None,
                   "steps": []}
     for step_nr, step_def in enumerate(product_definition["steps"], start=1):
         step_report = {"step_nr": step_nr,

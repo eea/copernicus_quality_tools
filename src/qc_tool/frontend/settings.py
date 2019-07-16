@@ -73,7 +73,8 @@ TEMPLATES = [
                 'django.template.context_processors.tz',
                 'django.template.context_processors.request',
                 'django.template.context_processors.static',
-                'qc_tool.frontend.dashboard.context_processors.show_logo'
+                'qc_tool.frontend.dashboard.context_processors.show_logo',
+                'qc_tool.frontend.dashboard.context_processors.version_processor'
             ],
         },
     },

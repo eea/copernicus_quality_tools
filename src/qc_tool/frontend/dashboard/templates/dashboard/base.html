@@ -46,7 +46,7 @@
                                     <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
                                 {% endif %}
                                 {% if user.is_authenticated %}
-                                <li><a href="{% url 'logout'%}">
+                                <li><a href="{% url 'logout' %}?next=/">
                                     <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
                                 {% else %}
                                 <li><a href="{% url 'login'%}">

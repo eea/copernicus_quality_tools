@@ -30,8 +30,12 @@ from qc_tool.common import CONFIG
 def generate_pdf_report(job_report_filepath, job_uuid):
     job_report = compile_job_report_data(job_uuid)
 
+    # Set report title
+    report_title = "QC tool check report"
+
     # set report page size to A4
     doc = BaseDocTemplate(str(job_report_filepath), pagesize=A4)
+    doc.title = report_title
 
     # Set custom styles
     styles = getSampleStyleSheet()
@@ -47,7 +51,7 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         canvas.saveState()
         styles = getSampleStyleSheet()
         style_normal = styles["Normal"]
-        p = Paragraph("QC Tool Check Report - {:s}  ".format(job_report["filename"]), style_normal)
+        p = Paragraph("{:s} - {:s}  ".format(report_title, job_report["filename"]), style_normal)
         w, h = p.wrap(doc.width, doc.bottomMargin)
         p.drawOn(canvas, doc.leftMargin, h)
         canvas.restoreState()
@@ -77,7 +81,7 @@ def generate_pdf_report(job_report_filepath, job_uuid):
             text.append(Paragraph("", style_normal))
 
         # Add main heading
-        text.append(Paragraph("QC tool check report", styles["Heading1"]))
+        text.append(Paragraph(report_title, styles["Heading1"]))
 
         # Add summary table
         text.append(Paragraph("", styles["Heading1"]))
@@ -98,8 +102,12 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         else:
             raise QCException("Unknown job status {:s}.".format(repr(job_status)))
 
+        # Retrieve QC tool version
+        qc_tool_version = ["QC tool version", job_report.get("qc_tool_version", "Not Available")]
+
+        # Compile summary table
         job_status = ["Job status", Paragraph(job_status, job_status_style)]
-        summary_data = [status_file, status_product, status_date, job_status]
+        summary_data = [status_file, status_product, status_date, qc_tool_version, job_status]
         summary_table = Table(summary_data, hAlign="LEFT", colWidths=[90, None])
         summary_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
                                     ("BOX", (0, 0), (-1, -1), 0.25, colors.black),

@@ -12,6 +12,7 @@ from sys import exc_info
 from traceback import format_exc
 
 from qc_tool.common import compose_job_report_filepath
+from qc_tool.common import get_qc_tool_version
 from qc_tool.common import CONFIG
 from qc_tool.common import copy_product_definition_to_job
 from qc_tool.common import HASH_ALGORITHM
@@ -108,6 +109,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
                           "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
                           "filename": filepath.name,
                           "error_message": None,
+                          "qc_tool_version": get_qc_tool_version(),
                           "steps": []}
             job_result["hash"] = make_signature(filepath)
 
