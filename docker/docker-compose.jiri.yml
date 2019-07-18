@@ -8,7 +8,7 @@ services:
       args:
         - VERSION
 
-    image: eeacms/copernicus-qctool-frontend:latest
+    image: eeacms/copernicus-qctool-frontend:1.4.1
     ports:
       - 8000:8000
     environment:
@@ -34,7 +34,7 @@ services:
       args:
         - VERSION
 
-    image: eeacms/copernicus-qctool-worker:latest
+    image: eeacms/copernicus-qctool-worker:1.4.1
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
