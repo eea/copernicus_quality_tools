@@ -1,4 +1,4 @@
-# EEA Copernicus QC Tool
+# EEA CLMS QC Tool
 
 The application is composed of:
 * Front-end user interface, alias web console;
@@ -8,6 +8,14 @@ The application is composed of:
 
 Documentation of the QC tool, and specification of supported QA checks is available at https://github.com/eea/copernicus_quality_tools/wiki
 
+# Reporting Issues
+
+Please report any issues in the QC tool via GitHub:
+
+* Go to https://github.com/eea/copernicus_quality_tools/issues and click *New Issue*.
+* Sign-in with your GitHub account (or create a new GitHub account if you don't have one).
+* Describe your issue. When describing an issue, please include the QC tool version and steps to reproduce.
+* The development team will investigate the issue and get back to you.
 
 # Prerequisities
 
