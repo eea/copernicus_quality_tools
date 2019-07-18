@@ -1,8 +1,24 @@
 <div class="container-fluid" id="section-footer" xmlns="http://www.w3.org/1999/html">
     <div class="container">
         <div class="row text-center">
-            <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:80px; margin-top: -20px; margin-bottom:10px;">
-            <p>QC Tool version: {{qc_tool_version}}</p>
+            <div class="col-md-4"></div>
+            <div class="col-md-4">
+                <div class="row text-center">
+                    <a href="https://copernicus.eu">
+                        <img src="{{ STATIC_URL }}dashboard/img/copernicus_eu_logo.svg" style="float:left; padding-left: 20px; margin-top: -20px; margin-bottom:10px; height:50px" />
+                    </a>
+
+                    <a href="http://eea.europa.eu">
+                        <img src="{{ STATIC_URL }}dashboard/img/logo_eea_square.png" style="float:right; padding-left:20px; margin-top: -20px; margin-bottom:10px; height:50px" />
+                    </a>
+                </div>
+
+            </div>
+            <div class="col-md-4"></div>
         </div>
+        <div class="row text-center">
+                    <p>Copyright © 2019 Copernicus Programme</p>
+                </div>
+
     </div>
 </div>

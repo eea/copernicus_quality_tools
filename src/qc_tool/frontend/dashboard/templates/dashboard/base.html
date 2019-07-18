@@ -12,9 +12,9 @@
         <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
         <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}dashboard/css/main.css">
         <link rel="stylesheet" href="{{ STATIC_URL }}dashboard/css/bootstrap-dialog.min.css" type="text/css" />
-        <link rel="shortcut icon" type="image/png" href="{{ STATIC_URL }}favicon.ico"/>
-        {% block css %}{% endblock css %}
+        <link rel="shortcut icon" type="image/png" href="{{ STATIC_URL }}dashboard/img/favicon.ico"/>
 
+        {% block css %}{% endblock css %}
 
         {% block js_head %}{% endblock js_head %}
 
@@ -34,17 +34,22 @@
                                 <span class="icon-bar"></span>
                             </button>
                             <a class="navbar-brand" href="/">
-                                <img src="{{ STATIC_URL }}dashboard/img/logo_eea_big.png" style="height:40px;margin-top:-10px;float:left" />
-                                <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_big.png" style="height:40px;margin-top:-10px;float:left" />
-                                <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span></a>
+                                <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:45px;margin-top:-13px;float:left" />
+                                <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_medium.png" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
+                                <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
+                            </a>
                         </div>
                         <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
-                            <ul class="nav navbar-nav navbar-right">
+                            <ul class="nav navbar-nav navbar-right main-menu">
                                 {% block menu %}
                                 {% if user.is_superuser %}
                                 <li><a href="{% url 'boundaries'%}">
                                     <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
                                 {% endif %}
+                                <li><a href="https://github.com/eea/copernicus_quality_tools">
+                                    <span class="glyphicon glyphicon-cog"></span> Github</a></li>
+                                <li><a href="https://github.com/eea/copernicus_quality_tools/wiki">
+                                    <span class="glyphicon glyphicon-question-sign"></span> Documentation</a></li>
                                 {% if user.is_authenticated %}
                                 <li><a href="{% url 'logout' %}?next=/">
                                     <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
