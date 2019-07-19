@@ -17,7 +17,7 @@ from uuid import uuid4
 
 
 QC_TOOL_HOME = Path(__file__).parents[2]
-QC_TOOL_VERSION_FILENAME = "VERSION"
+QC_TOOL_VERSION_FILEPATH = Path("/etc/qc_tool_version.txt")
 QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
@@ -80,7 +80,7 @@ def auth_worker(token):
     return token == stored_token
 
 def get_qc_tool_version():
-    filepath = QC_TOOL_HOME.joinpath(QC_TOOL_VERSION_FILENAME)
+    filepath = QC_TOOL_VERSION_FILEPATH
     if filepath.is_file():
         return filepath.read_text()
     return None
