@@ -1,10 +1,26 @@
 Environment variables
 =====================
 
-All paths are related to container point of view.
-They are passed to applications running inside the containers.
-Default values and environment setup is located at src/qc_tool/common.py:setup_config().
-There is no path related to host viewpoint.
+The paths are passed unmodified to applications running inside service containers.
+Therefore, all paths are must be formulated relative to container's inner filesystem.
+Default values and environment setup can be found in source code at src/qc_tool/common.py:setup_config().
+
+BEWARE!
+Services interchange data among themselves through filesystem.
+Interchange is realized by directory inside docker volume which is then shared by all services.
+Therefore, it must be ensured the directories are accessible by all services.
+
+How the directory configuration of particular service is set depends on how volume mapping is defined for the service.
+In order to keep the configuration simple it is recommended to use the same volume mapping across all services.
+Then the directory configuration will be the same for every service.
+See the examples in source code at docker/docker-compose.*.yml.
+
+Data interchange directories are:
+
+  * PRODUCT_DIRS;
+  * BOUNDARY_DIR;
+  * INCOMING_DIR;
+  * WORK_DIR;
 
 
 Service qc_tool_frontend
@@ -41,6 +57,3 @@ Debugging parameters
   * LEAVE_SCHEMA, if "yes" then job schema will not be dropped;
   * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed;
   * SKIP_INSPIRE_CHECK, if "yes" then connecting to Inspire geoportal for metadata checks will be skipped; applies to tests only;
-
-
-NOTE! As stated above PRODUCT_PATH, BOUNDARY_DIR, INCOMING_DIR and WORK_DIR must be reachable by both services!
