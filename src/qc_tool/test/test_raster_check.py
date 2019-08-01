@@ -298,44 +298,6 @@ class Test_mmu(RasterCheckTestCase):
         self.assertIn("s01_mmu_raster_incorrect_lessmmu_error.gpkg", status.attachment_filenames)
 
 
-@skipIf(CONFIG["skip_inspire_check"], "INSPIRE check has been disabled.")
-class Test_inspire(RasterCheckTestCase):
-    def setUp(self):
-        super().setUp()
-        xml_dir = TEST_DATA_DIR.joinpath("metadata")
-        filepath_good = xml_dir.joinpath("inspire-good.tif")
-        filepath_missing = xml_dir.joinpath("inspire-missing-metadata.tif")
-        filepath_bad = xml_dir.joinpath("inspire-bad.tif")
-        layer_defs = {"layer_good": {"src_filepath": filepath_good, "src_layer_name": filepath_good.name},
-                      "layer_missing": {"src_filepath": filepath_missing, "src_layer_name": filepath_missing.name},
-                      "layer_bad": {"src_filepath": filepath_bad, "src_layer_name": filepath_bad.name}}
-        self.params.update({"raster_layer_defs": layer_defs,
-                            "step_nr": 1,
-                            "output_dir": self.jobdir_manager.output_dir})
-
-    def test(self):
-        from qc_tool.raster.inspire import run_check
-        self.params.update({"layers":["layer_good"]})
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("ok", status.status, "INSPIRE raster check should pass for raster with valid metadata file.")
-
-    def test_missing_xml_fail(self):
-        from qc_tool.raster.inspire import run_check
-        self.params.update({"layers": ["layer_missing"]})
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("failed", status.status, "INSPIRE raster check should fail for raster with missing xml file.")
-
-    def test_fail(self):
-        from qc_tool.raster.inspire import run_check
-        self.params.update({"layers": ["layer_bad"]})
-        self.params["skip_inspire_check"] = False
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("failed", status.status, "INSPIRE raster check should fail for raster with non-compliant xml file.")
-
-
 class Test_color(RasterCheckTestCase):
     def setUp(self):
         super().setUp()

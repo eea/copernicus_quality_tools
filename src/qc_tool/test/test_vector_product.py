@@ -12,7 +12,8 @@ from qc_tool.worker.dispatch import dispatch
 class Test_clc(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        expected_step_results = ["ok"] * 25
+        expected_step_results = ["ok"] * 24 + ["cancelled"]
+
         job_result = dispatch(self.job_uuid, "user_name", filepath, "clc2012")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
@@ -30,28 +31,34 @@ class Test_clc_status(ProductTestCase):
 
 class Test_n2k(ProductTestCase):
     def test(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip")
         expected_step_results = ["ok"] * 16
-        job_result = dispatch(self.job_uuid, "user_name", self.filepath, "n2k")
+        expected_step_results[15] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
 
 class Test_rpz(ProductTestCase):
     def test(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
         expected_step_results = ["ok"] * 16
-        job_result = dispatch(self.job_uuid, "user_name", self.filepath, "rpz")
+        expected_step_results[15] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "rpz")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
 
 class Test_swf_vec_ras(ProductTestCase):
     def test(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector_raster", "swf_2015_vec_ras", "swf_2015_vec_ras_FR_3035_123_pt01.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector_raster", "swf_2015_vec_ras", "swf_2015_vec_ras_FR_3035_123_pt01.zip")
         expected_step_results = ["ok"] * 30
         expected_step_results[19] = "failed"
-        job_result = dispatch(self.job_uuid, "user_name", self.filepath, "swf_2015_vec_ras")
+        expected_step_results[29] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "swf_2015_vec_ras")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
         self.assertListEqual(['Layer swf_2015_vec_fr_3035_123_pt01 has error features with row number: 10.'],
@@ -60,18 +67,22 @@ class Test_swf_vec_ras(ProductTestCase):
 
 class Test_ua_shp(ProductTestCase):
     def test(self):
-        self.filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
         expected_step_results = ["ok"] * 16
-        job_result = dispatch(self.job_uuid, "user_name", self.filepath, "ua_2012_shp_wo_change")
+        expected_step_results[15] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_2012_shp_wo_change")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
 
 class Test_ua_gdb(ProductTestCase):
     def test(self):
-        self.maxDiff = None
         filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
         expected_step_results = ["ok"] * 22
+        expected_step_results[21] = "cancelled"
+
         job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_2012_gdb")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
