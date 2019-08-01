@@ -24,7 +24,7 @@ def run_check(params, status):
                       "gap_warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "unit_warning_table": "s{:02d}_{:s}_unit_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
-        # Create table of error items.
+        # Create table of gaps.
         sql = ("CREATE TABLE {gap_warning_table} AS"
                " SELECT"
                "  layer_union.{boundary_unit_column_name} AS {boundary_unit_column_name},"
@@ -48,12 +48,12 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
-        # Report error items.
+        # Report gaps.
         if cursor.rowcount > 0:
             status.info("Layer {:s} has {:d} gap(s).".format(layer_def["pg_layer_name"], cursor.rowcount))
             status.add_full_table(sql_params["gap_warning_table"])
 
-        # Find warning features.
+        # Create table of excessive items.
         sql = ("CREATE TABLE {unit_warning_table} AS"
                " SELECT"
                "  layer.{boundary_unit_column_name},"
@@ -65,7 +65,7 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
-        # Report warning items.
+        # Report excessive items.
         if cursor.rowcount > 0:
             status.info("Layer {:s} has {:d} feature(s) of unknown boundary unit."
                         .format(layer_def["pg_layer_name"], cursor.rowcount))
