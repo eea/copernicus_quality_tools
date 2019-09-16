@@ -171,7 +171,7 @@ class Test_Raster(ProductTestCase):
     def test_swf_2015_100m(self):
         """High resolution small woody features - 5m raster + vector"""
         product_ident = "swf_2015_100m"
-        filepath = TEST_DATA_DIR.joinpath("raster", "swf_100m", "swf_2015_100m_eu_03035_v1_1.zip")
+        filepath = TEST_DATA_DIR.joinpath("raster", "swf_100m", "swf_2015_100m_eu_3035_v1_1.zip")
 
         expected_step_results = ["ok"] * 11
         expected_step_results[10] = "cancelled"
