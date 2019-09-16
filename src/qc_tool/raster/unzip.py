@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-import os
-from zipfile import ZipFile
+from qc_tool.vector.helper import do_unzip
 
 
 DESCRIPTION = "Delivery file can be unzipped."
@@ -11,16 +10,5 @@ IS_SYSTEM = True
 
 
 def run_check(params, status):
-    zip_filepath = params["filepath"]
-    unzip_dir = params["tmp_dir"].joinpath("r_unzip.d")
-    unzip_dir.mkdir()
-    
-    # Unzip the source zip file.
-    try:
-        with ZipFile(str(zip_filepath)) as zip_file:
-            zip_file.extractall(path=str(unzip_dir))
-    except Exception as ex:
-        status.aborted("Error unzipping file {:s}.".format(zip_filepath.name))
-        return
-
-    status.add_params({"unzip_dir": unzip_dir})
+    # Raster layers are unzipped to the temporary directory r_unzip.d.
+    do_unzip(params["filepath"], params["tmp_dir"].joinpath("r_unzip.d"), status)

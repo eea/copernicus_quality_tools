@@ -47,6 +47,14 @@ class Test_unzip(VectorCheckTestCase):
         unzipped_subdir_names = [path.name for path in unzip_dir.glob("**") if path.is_dir()]
         self.assertIn("DK001L2_KOBENHAVN_clip.gdb", unzipped_subdir_names)
 
+    def test_invalid_extension(self):
+        from qc_tool.vector.unzip import run_check
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.xml")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+        self.assertIn("Delivery must be a .zip file.", status.messages[0])
+
     def test_invalid_file(self):
         from qc_tool.vector.unzip import run_check
         self.params["filepath"] = TEST_DATA_DIR.joinpath("non_existent_zip_file.zip")

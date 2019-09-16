@@ -3,8 +3,27 @@
 
 
 import re
+from zipfile import ZipFile
 
 from qc_tool.common import FAILED_ITEMS_LIMIT
+
+
+def do_unzip(zip_filepath, unzip_dir, status):
+    # The source zip file must have .zip extension.
+    if not zip_filepath.name.lower().endswith(".zip"):
+        status.aborted("Uploaded delivery {:s} has incorrect file format. Delivery must be a .zip file."
+                       .format(zip_filepath.name))
+    unzip_dir.mkdir()
+
+    # The source zip file must be a zip archive.
+    try:
+        with ZipFile(str(zip_filepath)) as zip_file:
+            zip_file.extractall(path=str(unzip_dir))
+    except Exception as ex:
+        status.aborted("Error unzipping file {:s}.".format(zip_filepath.name))
+        return
+
+    status.add_params({"unzip_dir": unzip_dir})
 
 
 def do_layers(params):
