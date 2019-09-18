@@ -586,7 +586,11 @@ def get_result(request, job_uuid):
 def get_pdf_report(request, job_uuid):
     filepath = compose_job_report_filepath(job_uuid)
     try:
-        return FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
+        job = models.Job.objects.get(job_uuid=job_uuid)
+        response = FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
+        report_filename = "{:s}_{:s}.pdf".format(Path(job.delivery.filename).stem, job.date_finished.strftime("%Y%m%d"))
+        response["Content-Disposition"] = 'attachment; filename="{:s}"'.format(report_filename)
+        return response
     except FileNotFoundError:
         raise Http404()
 
