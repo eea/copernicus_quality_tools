@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "formats": [".gdb", ".shp"],
+        "formats": [".gdb"],
         "layer_names": {
           "reference": "^(?P<aoi_code>[a-z]{2}[0-9]{3}l[0-9]{1})_.*_ua2012(_revised)?$"
         },

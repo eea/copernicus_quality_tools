@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2018",
-        "formats": [".gdb", ".shp"],
+        "formats": [".gdb"],
         "layer_names": {
           "reference": "(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9]{1})_.*_ua2018$"
         },
