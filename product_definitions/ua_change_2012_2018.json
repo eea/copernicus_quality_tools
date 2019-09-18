@@ -1,0 +1,181 @@
+{
+  "description": "Urban Atlas Change 2012-2018",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "formats": [".gdb", ".shp"],
+        "layer_names": {
+          "change": "(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9]{1})_.*_Change_2012_2018$"
+        },
+        "excessive_layers_allowed": false,
+        "boundary_source": "aoi_ua2012.gpkg"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["change"],
+        "required": {"country": "string",
+                     "fua_name": "string",
+                     "fua_code": "string",
+                     "code_2012": "string",
+                     "class_2012": "string",
+                     "code_2018": "string",
+                     "class_2018": "string",
+                     "prod_date": "string",
+                     "identifier": "string",
+                     "perimeter": "real",
+                     "area": "real"},
+        "ignored": ["shape_area", "shape_length", "shape_leng"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["change"],
+        "epsg": 3035,
+        "auto_identify_epsg": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "unique_keys": ["identifier"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "column_defs": [["code_2012", ["11100", "11210", "11220", "11230", "11240", "11300",
+                                       "12100", "12210", "12220", "12230", "12300", "12400",
+                                       "13100", "13300", "13400",
+                                       "14100", "14200",
+                                       "21000", "22000", "23000", "24000", "25000",
+                                       "31000", "32000", "33000",
+                                       "40000",
+                                       "50000",
+                                       "91000", "92000"]],
+                        ["code_2018", ["11100", "11210", "11220", "11230", "11240", "11300",
+                                       "12100", "12210", "12220", "12230", "12300", "12400",
+                                       "13100", "13300", "13400",
+                                       "14100", "14200",
+                                       "21000", "22000", "23000", "24000", "25000",
+                                       "31000", "32000", "33000",
+                                       "40000",
+                                       "50000",
+                                       "91000", "92000"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "initial_code_column_name": "code_2012",
+        "final_code_column_name": "code_2018"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.non_probable",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "initial_code_column_name": "code_2012",
+        "final_code_column_name": "code_2018",
+        "changes": [["11100", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["11210", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["11230", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["11240", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["11300", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["12100", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["12210", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["12220",                                              ["31000", "32000", "33000", "40000", "50000"]],
+                    ["12230",                                              ["31000", "32000", "33000", "40000", "50000"]],
+                    ["12300", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["12400", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
+                    ["21000",                                                                         ["40000", "50000"]],
+                    ["22000",                                                                         ["40000", "50000"]],
+                    ["23000",                                                                         ["40000", "50000"]],
+                    ["24000",                                                                         ["40000", "50000"]],
+                    ["25000",                                                                         ["40000", "50000"]],
+                    ["31000",                                                                         ["40000", "50000"]],
+                    ["32000",                                                                         ["40000", "50000"]],
+                    ["33000",                                                                         ["40000", "50000"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["change"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["change"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "area_column_name": "area",
+        "unit": 1,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_ua_change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "area_column_name": "area",
+        "initial_code_column_name": "code_2012",
+        "final_code_column_name": "code_2018"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["change"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "code_column_names": ["code_2012", "code_2018"],
+        "exclude_codes": ["122%"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"]
+      }
+    }
+  ]
+}

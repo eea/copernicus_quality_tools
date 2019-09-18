@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas 2012, shapefile, without change layer.",
+  "description": "Urban Atlas 2012 status",
   "steps": [
     {
       "check_ident": "qc_tool.vector.unzip",
@@ -10,12 +10,12 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "formats": [".shp"],
+        "formats": [".gdb", ".shp"],
         "layer_names": {
-          "reference": "_ua2012$"
+          "reference": "^(?P<aoi_code>[a-z]{2}[0-9]{3}l[0-9]{1})_.*_ua2012(_revised)?$"
         },
-        "excessive_layers_allowed": true,
-        "boundary_source": "boundary_ua2012.shp"
+        "excessive_layers_allowed": false,
+        "boundary_source": "aoi_ua2012.gpkg"
       }
     },
     {
@@ -24,15 +24,15 @@
       "parameters": {
         "layers": ["reference"],
         "required": {"country": "string",
-                     "cities": "string",
-                     "fua_or_cit": "string",
+                     "fua_name": "string",
+                     "fua_code": "string",
+                     "code_2012": "string",
+                     "class_2012": "string",
                      "prod_date": "string",
-                     "shape_leng": "real",
-                     "shape_area": "real",
-                     "code2012": "string",
-                     "item2012": "string",
-                     "ident": "string"},
-        "ignored": []
+                     "identifier": "string",
+                     "perimeter": "real",
+                     "area": "real"},
+        "ignored": ["shape_area", "shape_length"]
       }
     },
     {
@@ -41,7 +41,7 @@
       "parameters": {
         "layers": ["reference"],
         "epsg": 3035,
-        "auto_identify_epsg": true
+        "auto_identify_epsg": false
       }
     },
     {
@@ -53,7 +53,7 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "unique_keys": ["ident"]
+        "unique_keys": ["identifier"]
       }
     },
     {
@@ -61,15 +61,15 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "column_defs": [["code2012", ["11100", "11210", "11220", "11230", "11240", "11300",
-                                      "12100", "12210", "12220", "12230", "12300", "12400",
-                                      "13100", "13300", "13400",
-                                      "14100", "14200",
-                                      "21000", "22000", "23000", "24000", "25000",
-                                      "31000", "32000", "33000",
-                                      "40000",
-                                      "50000",
-                                      "91000", "92000"]]]
+        "column_defs": [["code_2012", ["11100", "11210", "11220", "11230", "11240", "11300",
+                                       "12100", "12210", "12220", "12230", "12300", "12400",
+                                       "13100", "13300", "13400",
+                                       "14100", "14200",
+                                       "21000", "22000", "23000", "24000", "25000",
+                                       "31000", "32000", "33000",
+                                       "40000",
+                                       "50000",
+                                       "91000", "92000"]]]
       }
     },
     {
@@ -91,17 +91,17 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "area_column_name": "shape_area",
+        "area_column_name": "area",
         "unit": 1,
-        "tolerance": 0.001
+        "tolerance": 0.5
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
+      "check_ident": "qc_tool.vector.gap",
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "boundary_unit_column_name": "fua_or_cit"
+        "boundary_unit_column_name": "fua_code"
       }
     },
     {
@@ -109,8 +109,8 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "area_column_name": "shape_area",
-        "code_column_name": "code2012"
+        "area_column_name": "area",
+        "code_column_name": "code_2012"
       }
     },
     {
@@ -118,7 +118,7 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_column_name": "code2012",
+        "code_column_name": "code_2012",
         "mmw": 10.0
       }
     },
@@ -134,7 +134,7 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_column_names": ["code2012"],
+        "code_column_names": ["code_2012"],
         "exclude_codes": ["122%"]
       }
     },

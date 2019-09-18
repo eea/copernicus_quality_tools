@@ -20,7 +20,7 @@ class Test_unzip(VectorCheckTestCase):
 
     def test_shp(self):
         from qc_tool.vector.unzip import run_check
-        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2012.shp.zip")
         status = self.status_class()
         run_check(self.params, status)
 
@@ -31,21 +31,19 @@ class Test_unzip(VectorCheckTestCase):
         unzipped_subdir_names = [path.name for path in unzip_dir.glob("**")]
         unzipped_file_names = [path.name for path in unzip_dir.glob("**/*") if path.is_file()]
 
-        self.assertIn("Shapefiles", unzipped_subdir_names,
-                      "Unzipped directory should contain a 'Shapefiles' subdirectory.")
-        self.assertIn("EE003L0_NARVA_UA2012.shp", unzipped_file_names,
-                      "Unzipped directory should contain a file EE003L0_NARVA_UA2012.shp.")
+        self.assertIn("EE003L1_NARVA_UA2012.shp", unzipped_file_names,
+                      "Unzipped directory should contain a file EE003L1_NARVA_UA2012.shp.")
 
     def test_gdb(self):
         from qc_tool.vector.unzip import run_check
-        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_UA2012.gdb.zip")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         self.assertIn("unzip_dir", status.params)
         unzip_dir = status.params["unzip_dir"]
         unzipped_subdir_names = [path.name for path in unzip_dir.glob("**") if path.is_dir()]
-        self.assertIn("DK001L2_KOBENHAVN_clip.gdb", unzipped_subdir_names)
+        self.assertIn("EE003L1_NARVA_UA2012.gdb", unzipped_subdir_names)
 
     def test_invalid_extension(self):
         from qc_tool.vector.unzip import run_check
@@ -173,7 +171,7 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         super().setUp()
         from qc_tool.vector.unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")})
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_UA2012.gdb.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
@@ -181,11 +179,7 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
                             "formats": [".gdb"],
                             "gdb_filename_regex": "^[a-z0-9]{7}_.*$",
                             "layer_names": {
-                                "reference": "_ua2012$",
-                                "boundary": "^boundary2012_",
-                                "revised": "_ua2006_revised$",
-                                "combined": "_ua2006_2012$",
-                                "change": "_change_2006_2012$"}
+                                "reference": "_ua2012$"}
                             })
 
 
@@ -195,24 +189,17 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual(5, len(status.params["layer_defs"]))
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["boundary"]["src_filepath"].name)
-        self.assertEqual("Boundary2012_DK001L2_KOBENHAVN", status.params["layer_defs"]["boundary"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["revised"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2006_Revised", status.params["layer_defs"]["revised"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["combined"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_UA2006_2012", status.params["layer_defs"]["combined"]["src_layer_name"])
-        self.assertEqual("DK001L2_KOBENHAVN_clip.gdb", status.params["layer_defs"]["change"]["src_filepath"].name)
-        self.assertEqual("DK001L2_KOBENHAVN_Change_2006_2012", status.params["layer_defs"]["change"]["src_layer_name"])
+        self.assertEqual(1, len(status.params["layer_defs"]))
+        self.assertEqual("EE003L1_NARVA_UA2012.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
+        self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+
 
     def test_bad_gdb_filename_aborts(self):
         from qc_tool.vector.naming import run_check
 
         # Rename gdb filename to bad one.
-        src_gdb_filepath = self.params["unzip_dir"].joinpath("DK001L2_KOBENHAVN_clip.gdb")
-        dst_gdb_filepath = src_gdb_filepath.with_name("XDK001L2_KOBENHAVN_clip.gdb")
+        src_gdb_filepath = self.params["unzip_dir"].joinpath("EE003L1_NARVA_UA2012.gdb")
+        dst_gdb_filepath = src_gdb_filepath.with_name("XEE003L1_NARVA_UA2012")
         src_gdb_filepath.rename(dst_gdb_filepath)
 
         status = self.status_class()
@@ -221,7 +208,7 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
 
     def test_missing_layer_aborts(self):
         from qc_tool.vector.naming import run_check
-        self.params["layer_names"]["boundary"] = "non-existing-layer-name"
+        self.params["layer_names"]["reference"] = "non-existing-layer-name"
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
@@ -232,7 +219,7 @@ class Test_naming_ua_shp(VectorCheckTestCase):
         super().setUp()
         from qc_tool.vector.unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")})
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2012.shp.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
@@ -247,8 +234,8 @@ class Test_naming_ua_shp(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("EE003L0_NARVA_UA2012.shp", status.params["layer_defs"]["reference"]["src_filepath"].name)
-        self.assertEqual("EE003L0_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertEqual("EE003L1_NARVA_UA2012.shp", status.params["layer_defs"]["reference"]["src_filepath"].name)
+        self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
 
 
 class Test_attribute(VectorCheckTestCase):
@@ -266,6 +253,13 @@ class Test_attribute(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.vector.attribute import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_ignored_attribute_ok(self):
+        from qc_tool.vector.attribute import run_check
+        self.params["ignored"].append("custom_ignored_attribute")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -334,7 +328,7 @@ class Test_epsg_shp(VectorCheckTestCase):
     def test(self):
         # Unzip the datasource.
         from qc_tool.vector.unzip import run_check as unzip_check
-        zip_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
+        zip_filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2012.shp.zip")
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": zip_filepath})
         status = self.status_class()
@@ -343,8 +337,7 @@ class Test_epsg_shp(VectorCheckTestCase):
 
         # Run the check.
         from qc_tool.vector.epsg import run_check
-        shp_dir = self.params["unzip_dir"].joinpath("EE003L0_NARVA", "Shapefiles")
-        reference_path = shp_dir.joinpath("EE003L0_NARVA_UA2012.shp")
+        reference_path = self.params["unzip_dir"].joinpath("EE003L1_NARVA_UA2012.shp")
         self.params.update({"layer_defs": {"reference": {"src_filepath": reference_path,
                                                          "src_layer_name": reference_path.stem}},
                             "layers": ["reference"],
@@ -358,7 +351,7 @@ class Test_epsg_shp(VectorCheckTestCase):
 class Test_epsg_auto_identify_epsg(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.epsg import run_check
-        boundary_path = TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO_boundary", "ES031L1_LUGO_UA2012_Boundary.shp")
+        boundary_path = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "ES031L1_LUGO", "ES031L1_LUGO_UA2012_old.shp")
         self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
                                                         "src_layer_name": boundary_path.stem}},
                             "layers": ["boundary"],
@@ -406,9 +399,9 @@ class Test_import2pg(VectorCheckTestCase):
     def test_precision(self):
         """ogr2ogr parameter PRECISION=NO should supress numeric field overflow error."""
         from qc_tool.vector.import2pg import run_check
-        shp_filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "ES031L1_LUGO_boundary", "ES031L1_LUGO_UA2012_Boundary.shp")
+        shp_filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "ES031L1_LUGO", "ES031L1_LUGO_UA2012_old.shp")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": shp_filepath,
-                                                       "src_layer_name": "ES031L1_LUGO_UA2012_Boundary"}},
+                                                       "src_layer_name": "ES031L1_LUGO_UA2012_old"}},
                             "layers": ["layer_0"]})
         status = self.status_class()
         run_check(self.params, status)

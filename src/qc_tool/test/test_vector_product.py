@@ -65,24 +65,66 @@ class Test_swf_vec_ras(ProductTestCase):
                              job_result["steps"][19]["messages"])
 
 
-class Test_ua_shp(ProductTestCase):
+class Test_ua2012(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua_shp", "EE003L0_NARVA.shp.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_UA2012.gdb.zip")
         expected_step_results = ["ok"] * 16
         expected_step_results[15] = "cancelled"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_2012_shp_wo_change")
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2012")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+
+    def test_shp(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2012.shp.zip")
+        expected_step_results = ["ok"] * 16
+        expected_step_results[15] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2012")
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
 
 
-class Test_ua_gdb(ProductTestCase):
+class Test_ua2018(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua_gdb", "DK001L2_KOBENHAVN_clip.zip")
-        expected_step_results = ["ok"] * 22
-        expected_step_results[21] = "cancelled"
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_UA2018.gdb.zip")
+        expected_step_results = ["ok"] * 16
+        expected_step_results[15] = "cancelled"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_2012_gdb")
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018")
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+
+    def test_shp(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2018.shp.zip")
+        expected_step_results = ["ok"] * 16
+        expected_step_results[15] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018")
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+
+class Test_ua_change_2012_2018(ProductTestCase):
+    def test(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_Change_2012_2018.gdb.zip")
+        expected_step_results = ["ok"] * 16
+        expected_step_results[15] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018")
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+
+    def test_shp(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_Change_2012_2018.shp.zip")
+        expected_step_results = ["ok"] * 16
+        expected_step_results[15] = "cancelled"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018")
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
