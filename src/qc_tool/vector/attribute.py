@@ -41,8 +41,8 @@ def run_check(params, status):
         required_attrs = {attr_name.lower(): attr_type_name.lower()
                          for attr_name, attr_type_name in params["required"].items()}
         ignored_attrs = params["ignored"].copy()
-        extra_attrs = []
-        bad_type_attrs = []
+        extra_attrs = {}
+        bad_type_attrs = {}
         for field_defn in layer.schema:
             field_name = field_defn.name.lower()
             field_type = field_defn.GetType()
@@ -53,17 +53,17 @@ def run_check(params, status):
                 # Required attribute.
                 if field_type not in OGR_TYPES:
                     # Attribute type is unknown.
-                    bad_type_attrs.append(field_name, "unknown-type")
+                    bad_type_attrs.update({field_name: "unknown-type"})
                 elif field_type not in ALLOWED_TYPES:
                     # Attribute type is not allowed.
-                    bad_type_attrs.append(field_name, OGR_TYPES[field_type])
+                    bad_type_attrs.update({field_name: OGR_TYPES[field_type]})
                 elif ALLOWED_TYPES[field_type] != required_attrs[field_name]:
                     # Attribute type does not match the type in product definition.
-                    bad_type_attrs.append(field_name, ALLOWED_TYPES[field_type])
+                    bad_type_attrs.update({field_name: ALLOWED_TYPES[field_type]})
                 del required_attrs[field_name]
             else:
                 # Extra attribute.
-                extra_attrs.append(field_name, OGR_TYPES[field_type])
+                extra_attrs.update({field_name: OGR_TYPES[field_type]})
 
         # The attributes remaining in required_attrs are missing.
         if len(required_attrs) > 0:

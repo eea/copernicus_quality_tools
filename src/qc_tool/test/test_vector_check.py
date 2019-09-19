@@ -264,6 +264,20 @@ class Test_attribute(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
+    def test_extra_attribute_fails(self):
+        from qc_tool.vector.attribute import run_check
+        del self.params["required"]["remark"]
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+
+    def test_bad_type_aborts(self):
+        from qc_tool.vector.attribute import run_check
+        self.params["required"]["code_12"] = "integer"
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+
     def test_missing_attribute_aborts(self):
         from qc_tool.vector.attribute import run_check
         self.params["required"].update({"missing_attribute": "string"})
