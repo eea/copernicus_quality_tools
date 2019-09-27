@@ -156,7 +156,8 @@ class JobController():
         try:
             job_table.put(self.job_args["job_uuid"])
             put_event.set()
-            args = ["python3",
+            args = ["/usr/bin/time",
+                    "python3",
                     "-m", "qc_tool.worker.cmd",
                     "--job-uuid", self.job_args["job_uuid"],
                     "--product", self.job_args["product_ident"]]
@@ -165,10 +166,20 @@ class JobController():
             args += [self.job_args["username"],
                      self.job_args["filename"]]
             log.debug("Launching a new job: {:s}.".format(repr(args)))
-            process = Popen(args=args)
-            log.info("Started job with pid={:d}.".format(process.pid))
-            process.wait()
-            log.info("Job has exited with code={:d}.".format(process.returncode))
+            stdout_filepath = CONFIG["work_dir"].joinpath("job.{:s}.stdout".format(self.job_args["job_uuid"]))
+            log.debug("The job has stdout and stderr redirected to %s.".format(stdout_filepath))
+            with open(stdout_filepath, "a") as stdout_f:
+                stdout_f.write("\n\n")
+                stdout_f.write("The job {:s} has started at {:s}+00:00.\n".format(self.job_args["job_uuid"], datetime.utcnow()))
+                stdout_f.write("stdout and stderr of the job is redirected to this file.\n".format(self.job_args["job_uuid"]))
+                stdout_f.write("\n")
+                stdout_f.flush()
+                process = Popen(args=args, stdout=stdout_f, stderr=stdout_f)
+                log.info("Started job with pid={:d}.".format(process.pid))
+                process.wait()
+                log.info("Job has exited with code={:d}.".format(process.returncode))
+                stdout_f.write("\n\n")
+                stdout_f.write("The job {:s} has exited with code {:d}.\n".format(process.returncode))
         except:
             log.error(format_exc())
         finally:

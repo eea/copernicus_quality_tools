@@ -12,7 +12,7 @@ ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get -y update \
     && apt-get -y upgrade \
-    && apt-get -y install wget unzip
+    && apt-get -y install wget unzip time
 
 # Install python and bootstrap pip.
 RUN cd /usr/local/src \
