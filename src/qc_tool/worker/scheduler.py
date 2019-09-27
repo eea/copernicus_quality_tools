@@ -179,7 +179,7 @@ class JobController():
                 process.wait()
                 log.info("Job has exited with code={:d}.".format(process.returncode))
                 stdout_f.write("\n\n")
-                stdout_f.write("The job {:s} has exited with code {:d}.\n".format(process.returncode))
+                stdout_f.write("The job {:s} has exited with code {:d}.\n".format(self.job_args["job_uuid"], process.returncode))
         except:
             log.error(format_exc())
         finally:
