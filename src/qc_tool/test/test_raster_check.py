@@ -260,42 +260,163 @@ class Test_tile(RasterCheckTestCase):
 
 
 class Test_mmu(RasterCheckTestCase):
+
+    @staticmethod
+    def create_raster(raster_filepath, data, pixel_size, ulx=0, uly=0, epsg=3035):
+        """
+        Helper method which creates a .TIF raster file with the same pixel values as the data array.
+        :param data: 2D NumPy array of integers with the raster data.
+        :param pixel_size: Raster resolution in metres.
+        :param ulx: X coordinate of upper-left corner of the raster.
+        :param uly: Y coordinate of upper-left corner of the raster.
+        :param epsg: Integer EPSG code of the raster's coordinate reference system (default: 3035).
+        :return: full path of created raster.
+        """
+        height = data.shape[0]
+        width = data.shape[1]
+        mem_drv = gdal.GetDriverByName("MEM")
+        mem_ds = mem_drv.Create("memory", width, height, 1, gdal.GDT_Byte)
+        mem_srs = osr.SpatialReference()
+        mem_srs.ImportFromEPSG(epsg)
+        mem_ds.SetProjection(mem_srs.ExportToWkt())
+        mem_ds.SetGeoTransform((ulx, pixel_size, 0, uly, 0, -pixel_size))
+        mem_ds.GetRasterBand(1).WriteArray(data)
+
+        # Store raster dataset.
+        dest_driver = gdal.GetDriverByName("GTiff")
+        dest_ds = dest_driver.CreateCopy(str(raster_filepath),
+                                         mem_ds, False, options=["TILED=YES"])
+
+        # Remove temporary datasource and datasets from memory.
+        mem_dsrc = None
+        mem_ds = None
+        dest_ds = None
+        return raster_filepath
+
+
     def setUp(self):
         super().setUp()
-        layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "mmu", "mmu_raster_correct.tif")
-        layer_filepath2 = TEST_DATA_DIR.joinpath("raster", "checks", "mmu", "mmu_raster_incorrect.tif")
-        layer_defs = {"layer_correct": {"src_filepath": layer_filepath1, "src_layer_name": layer_filepath1.name},
-                      "layer_incorrect": {"src_filepath": layer_filepath2, "src_layer_name": layer_filepath2.name}}
+        self.tmp_raster = self.jobdir_manager.tmp_dir.joinpath("test_raster1.tif")
+        layer_defs = {"layer1": {"src_filepath": self.tmp_raster, "src_layer_name": self.tmp_raster.name}}
         self.params.update({"raster_layer_defs": layer_defs})
-
 
     def test_dirs(self):
         self.assertTrue(self.jobdir_manager.job_dir.exists(), "job_dir directory must exist.")
         self.assertTrue(self.jobdir_manager.output_dir.exists(), "output_dir directory must exist.")
 
-    def test_ok(self):
-        from qc_tool.raster.mmu import run_check
-        self.params.update({"layers": ["layer_correct"],
-                            "area_pixels": 13,
-                            "nodata_value": 0,
+    def test(self):
+        # Prepare raster dataset.
+        data = [[0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 9, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 1, 1, 0, 0, 0],
+                [9, 1, 0, 1, 1, 0, 0, 0],
+                [9, 0, 0, 0, 0, 0, 0, 0]]
+        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+
+        self.params.update({"layers": ["layer1"],
+                            "area_pixels": 10,
+                            "nodata_value": 9,
+                            "neighbour_exception_codes": [9],
+                            "groupcodes": [],
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
+
+        from qc_tool.raster.mmu import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status, "Raster check r11 should pass for test raster with patches >= 13 pixels.")
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, len(status.attachment_filenames))
+        self.assertIn("s01_test_raster1_lessmmu_exception.gpkg", status.attachment_filenames)
+        self.assertEqual(1, len(status.messages))
+        self.assertIn("1 exceptional objects under MMU limit", status.messages[0])
+
+    def test_groupcodes(self):
+        # Prepare raster dataset.
+        data = [[9, 0, 0, 0, 0, 0, 0],
+                [9, 0, 1, 2, 2, 0, 0],
+                [9, 0, 1, 2, 2, 0, 0],
+                [9, 0, 0, 2, 2, 0, 0],
+                [9, 1, 0, 0, 0, 0, 0],
+                [9, 9, 9, 9, 9, 9, 0]]
+
+        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+        self.params.update(
+            {"layers": ["layer1"],
+             "area_pixels": 8,
+             "nodata_value": 9,
+             "neighbour_exception_codes": [9],
+             "groupcodes": [[1, 2]],
+             "output_dir": self.jobdir_manager.output_dir,
+             "step_nr": 1})
+
+        from qc_tool.raster.mmu import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, len(status.attachment_filenames))
+        self.assertIn("s01_test_raster1_lessmmu_exception.gpkg", status.attachment_filenames)
+        self.assertEqual(1, len(status.messages))
+        self.assertIn("1 exceptional objects under MMU limit", status.messages[0])
+
+    def test_edge_patches(self):
+        # Prepare raster dataset.
+        data = [[1, 0, 1, 1, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0],
+                [0, 1, 1, 1, 1, 0, 1],
+                [1, 0, 0, 0, 0, 1, 1],
+                [1, 1, 1, 1, 0, 1, 1]]
+
+        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+        self.params.update(
+            {"layers": ["layer1"],
+             "area_pixels": 8,
+             "nodata_value": 9,
+             "groupcodes": [],
+             "output_dir": self.jobdir_manager.output_dir,
+             "step_nr": 1})
+
+        from qc_tool.raster.mmu import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, len(status.attachment_filenames))
+        self.assertIn("s01_test_raster1_lessmmu_exception.gpkg", status.attachment_filenames)
+        self.assertEqual(1, len(status.messages))
+        self.assertIn("5 exceptional objects under MMU limit", status.messages[0])
 
     def test_fail(self):
+        # Prepare raster dataset with a patch smaller than MMU.
+        data = np.zeros((4000, 3000), dtype=int)
+        data[2047, 1000] = 1
+        data[2047, 1001] = 1
+        data[2048, 1000] = 1
+        data[2048, 1001] = 1
+        data[2047, 1111] = 1
+        data[2048, 1111] = 1
+        data[2049, 1111] = 1
+
+        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+        self.params.update(
+            {"layers": ["layer1"],
+             "area_pixels": 4,
+             "nodata_value": 9,
+             "groupcodes": [],
+             "output_dir": self.jobdir_manager.output_dir,
+             "step_nr": 1})
+
         from qc_tool.raster.mmu import run_check
-        self.params.update({"layers": ["layer_incorrect"],
-                            "area_pixels": 13,
-                            "nodata_value": 0,
-                            "output_dir": self.jobdir_manager.output_dir,
-                            "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status, "MMU raster check should fail for raster with patches < 13 pixels.")
-        self.assertIn("1", status.messages[0], "There should be 1 object with MMU error.")
-        self.assertIn("s01_mmu_raster_incorrect_lessmmu_error.gpkg", status.attachment_filenames)
+
+        self.assertEqual("failed", status.status)
+        self.assertEqual(1, len(status.attachment_filenames))
+        self.assertIn("s01_test_raster1_lessmmu_error.gpkg", status.attachment_filenames)
+        self.assertEqual(1, len(status.messages))
+        self.assertIn("1 error objects under MMU limit", status.messages[0])
 
 
 class Test_color(RasterCheckTestCase):
