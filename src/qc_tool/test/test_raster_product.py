@@ -33,9 +33,9 @@ class Test_Raster(ProductTestCase):
         expected_step_results = ["ok"] * 15
         # fty_010m has extra checks raster.tile and raster.mmu
         expected_step_results[12] = "failed"
-        expected_step_results[14] = "cancelled"
+        expected_step_results[14] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (15,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -45,9 +45,9 @@ class Test_Raster(ProductTestCase):
         filepath = self.raster_data_dir.joinpath("fty_100m", "fty_2018_100m_eu_03035_d02_clip.zip")
 
         expected_step_results = ["ok"] * 13
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -60,9 +60,9 @@ class Test_Raster(ProductTestCase):
         # gra_010m has mismatching attributes and color table
         expected_step_results[3] = "failed"
         expected_step_results[10] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -75,9 +75,9 @@ class Test_Raster(ProductTestCase):
         # gra_2018_100m has mismatching attributes and color table
         expected_step_results[3] = "failed"
         expected_step_results[10] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -90,9 +90,9 @@ class Test_Raster(ProductTestCase):
         # imc_1518_020m has mismatching attributes and color table
         expected_step_results[3] = "failed"
         expected_step_results[10] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -106,9 +106,9 @@ class Test_Raster(ProductTestCase):
         expected_step_results[3] = "failed"
         expected_step_results[9] = "failed"
         expected_step_results[10] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -120,9 +120,9 @@ class Test_Raster(ProductTestCase):
         expected_step_results = ["ok"] * 13
         # imd_2018_010m has mismatching attributes
         expected_step_results[3] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -134,9 +134,9 @@ class Test_Raster(ProductTestCase):
         expected_step_results = ["ok"] * 13
         # imd_2018_100m has mismatching attributes
         expected_step_results[3] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -148,9 +148,9 @@ class Test_Raster(ProductTestCase):
         expected_step_results = ["ok"] * 13
         # tcd_2018_010m has mismatching colors
         expected_step_results[10] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -162,9 +162,9 @@ class Test_Raster(ProductTestCase):
         expected_step_results = ["ok"] * 13
         # tcd_2018_010m has mismatching colors
         expected_step_results[10] = "failed"
-        expected_step_results[12] = "cancelled"
+        expected_step_results[12] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (13,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
 
@@ -174,9 +174,9 @@ class Test_Raster(ProductTestCase):
         filepath = TEST_DATA_DIR.joinpath("raster", "swf_100m", "swf_2015_100m_eu_3035_v1_1.zip")
 
         expected_step_results = ["ok"] * 11
-        expected_step_results[10] = "cancelled"
+        expected_step_results[10] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, product_ident)
+        job_result = dispatch(self.job_uuid, "user_name", filepath, product_ident, (11,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
@@ -186,8 +186,8 @@ class Test_Raster(ProductTestCase):
         filepath = self.raster_data_dir.joinpath("general_raster", "general_raster.zip")
 
         expected_step_results = ["ok"] * 9
-        expected_step_results[8] = "cancelled"
+        expected_step_results[8] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident)
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (9,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses)

@@ -449,3 +449,46 @@ class Test_color(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status, "Color raster check with incorrect colors should fail.")
+
+
+@skipIf(CONFIG["skip_inspire_check"], "INSPIRE check has been disabled.")
+class Test_inspire(RasterCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.xml_dir = TEST_DATA_DIR.joinpath("metadata")
+        self.params["tmp_dir"] = self.jobdir_manager.tmp_dir
+        self.params["output_dir"] = self.jobdir_manager.output_dir
+        self.params["layers"] = ["layer0"]
+        self.params["step_nr"] = 1
+
+    def test(self):
+        from qc_tool.raster.inspire import run_check
+        self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_good.tif")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("s01_inspire_good_inspire_report.html", status.attachment_filenames)
+        self.assertIn("s01_inspire_good_inspire_log.txt", status.attachment_filenames)
+
+    def test_missing_xml_fail(self):
+        from qc_tool.raster.inspire import run_check
+        self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_missing_xml.tif")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+
+    def test_xml_format_fail(self):
+        from qc_tool.raster.inspire import run_check
+        self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_invalid_xml.tif")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+
+    def test_fail(self):
+        from qc_tool.raster.inspire import run_check
+        self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_bad.tif")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
+        self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)
