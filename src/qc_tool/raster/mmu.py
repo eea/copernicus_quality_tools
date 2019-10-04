@@ -79,6 +79,22 @@ def patch_touches_cell_with_value(coordinates, tile, neighbour_values):
                 return True
     return False
 
+def patch_touches_raster_edge(coordinates, raster_nrows, raster_ncols):
+    """
+    Takes a list of [row, column] cell coordinates and inspects if at least one of the coordinates
+    is located exactly at the specified edge of the tile.
+    This function can be used for detecting patches touching the raster bounding box.
+    :param coordinates: The patch of same-value raster cells.
+    :param raster_nrows: Number of rows in the whole source raster.
+    :param raster_ncols: Number of columns in the whole source raster.
+    :return: True if at least one cell in the patch is located at source raster edge.
+    """
+    for coor in coordinates:
+        if coor[0] == 0 or coor[1] == 0 or coor[0] == raster_ncols - 1 or coor[1] == raster_nrows - 1:
+            return True
+    return False
+
+
 def export(regions, raster_ds, gpkg_filepath):
     """
     Exports a list of lessMMU region dictionaries to geopackage.
@@ -216,14 +232,14 @@ def run_check(params, status):
                 write_percent(percent_filepath, progress_percent)
 
             if tileRow == 0:
-                # first row
+                # First row
                 yOff = 0
                 yOffInner = 0
                 yOffRelative = 0
                 block_height = BLOCKSIZE + buffer_width
                 block_height_inner = BLOCKSIZE
             else:
-                # middle row
+                # Middle row
                 yOff = tileRow * BLOCKSIZE
                 yOffInner = yOff + buffer_width
                 yOffRelative = buffer_width
@@ -231,7 +247,7 @@ def run_check(params, status):
                 block_height_inner = BLOCKSIZE
 
             if tileRow == last_row:
-                # special case for last row - adjust block width
+                # Last row is a special case - block width must be adjusted.
                 block_height = nRasterRows - yOff
                 block_height_inner = block_height - buffer_width
 
@@ -242,14 +258,14 @@ def run_check(params, status):
             # TILES: ITERATE COLUMNS
             for tileCol in range(nTileCols):
                 if tileCol == 0:
-                    # first column
+                    # First column
                     xOff = 0
                     xOffInner = 0
                     xOffRelative = 0
                     block_width = BLOCKSIZE + buffer_width
                     block_width_inner = BLOCKSIZE
                 else:
-                    # middle column
+                    # Middle column
                     xOff = tileCol * BLOCKSIZE
                     xOffInner = xOff + buffer_width
                     xOffRelative = buffer_width
@@ -257,7 +273,7 @@ def run_check(params, status):
                     block_width_inner = BLOCKSIZE
 
                 if tileCol == last_col:
-                    # special case for last column - adjust block width
+                    # Last column is a special case - block width must be adjusted.
                     block_width = nRasterCols - xOff
                     block_width_inner = block_width - buffer_width
 
@@ -286,7 +302,6 @@ def run_check(params, status):
                 tile_inner = tile_buffered[yOffRelative: yOffRelative + block_height_inner, xOffRelative: xOffRelative + block_width_inner]
 
                 # read inner array (without buffer)
-                # tile_inner = ds.ReadAsArray(xOffInner, yOffInner, block_width_inner, block_height_inner)
 
                 # label the inner array and find patches < MMU
                 labels_inner = measure.label(tile_inner, background=NODATA, neighbors=4)
@@ -327,6 +342,8 @@ def run_check(params, status):
                         regions_lessMMU_except.append(lessMMU_info)
                     elif patch_touches_cell_with_value(r.coords, tile_inner, neighbour_exclude_values):
                         regions_lessMMU_except.append(lessMMU_info)
+                    elif patch_touches_raster_edge(absolute_coords, nRasterRows, nRasterCols):
+                        regions_lessMMU_except.append(lessMMU_info)
                     else:
                         regions_lessMMU.append(lessMMU_info)
 
@@ -338,10 +355,7 @@ def run_check(params, status):
                     msg = msg.format(tr=tileRow, ntr=nTileRows, tc=tileCol, w=block_width, h=block_height)
                     write_progress(progress_filepath, msg)
 
-                # read the outer array expanded by buffer with width=number of pixels in MMU
-
-                # no need, already read ...
-                # tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
+                # processing the outer array expanded by buffer with width=number of pixels in MMU
 
                 # optimization: set pixels not within buffer zone (deep inside outer array) to background.
                 inner_buf_startcol = xOffRelative + MMU
@@ -351,11 +365,6 @@ def run_check(params, status):
                 if inner_buf_endcol > inner_buf_startcol and inner_buf_endrow > inner_buf_startrow:
                     tile_buffered[inner_buf_startrow:inner_buf_endrow,
                                   inner_buf_startcol:inner_buf_endcol] = NODATA
-
-                # no need to reclassify, already reclassified ..
-                # reclassify outer tile array if some patches should be grouped together
-                # if use_reclassify:
-                #     tile_buffered = reclassify_values(tile_buffered, params["groupcodes"])
 
                 labels_buf = measure.label(tile_buffered, background=NODATA, neighbors=4)
                 buf_regions = measure.regionprops(labels_buf)
@@ -387,10 +396,12 @@ def run_check(params, status):
                                         "area": r_buf.area, "value": val,
                                         "coords": absolute_coords}
 
-
+                        # handling special cases (exception patches)
                         if val in exclude_values:
                             regions_lessMMU_except.append(lessMMU_info)
                         elif patch_touches_cell_with_value(r_buf.coords, tile_buffered, neighbour_exclude_values):
+                            regions_lessMMU_except.append(lessMMU_info)
+                        elif patch_touches_raster_edge(absolute_coords, nRasterRows, nRasterCols):
                             regions_lessMMU_except.append(lessMMU_info)
                         else:
                             regions_lessMMU.append(lessMMU_info)
