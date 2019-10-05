@@ -79,7 +79,7 @@ You are free to copy the database to other persistent location, however you must
 
 # Demo installation
 
-A demonstration website is running at: http://qc-tool-demo.tk/ Default login is user: guest, password: guest.
+A demonstration website is running at: http://qc-tool-demo.gisat.cz/ Default login is user: guest, password: guest.
 
 # Product definitions
 
