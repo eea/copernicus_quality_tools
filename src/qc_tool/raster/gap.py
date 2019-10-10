@@ -134,30 +134,8 @@ def read_tile(src_ds, tile_xmin, tile_xmax, tile_ymin, tile_ymax, tile_ncols, ti
             return arr_whole
     else:
         print("NO INTERSECTION of tile and dataset!")
-    # ********************************** #
-    # is there an intersection?
-    # x1, y1, x2, y2 are intersection corners in coordinate system of tile.
-    x1 = max(min(ds_xmin, ds_xmax), min(tile_xmin, tile_xmax))
-    y1 = max(min(ds_ymin, ds_ymax), min(tile_ymin, tile_ymax))
-    x2 = min(max(ds_xmin, ds_xmax), max(tile_xmin, tile_xmax))
-    y2 = min(max(ds_ymin, ds_ymax), max(tile_ymin, tile_ymax))
-    print("x1: {:f} x2: {:f}".format(x1, x2))
-    print("y1: {:f} y2: {:f}".format(y1, y2))
-    if x1 < x2 and y1 < y2:
-        print("INTERSECTION of tile and mask:")
-        #arr_intersection = src_band.ReadAsArray(x1 + tile_xoff, y1 + tile_yoff, abs(x2-x1)+1, abs(y2-y1))
-        #print(arr_intersection)
-        #arr_whole = (numpy.ones((tile_height, tile_width)) * nodata_value).astype(int)
-        #print("arr_intersection.shape: ")
-        #print(arr_intersection.shape)
-        #arr_whole[y1:y2, x1:x2] = arr_intersection
-        #arr_whole = arr_whole.astype(int)
-        #print("arr_whole (after filling):")
-        #print(arr_whole)
-        #return arr_whole
-    else:
-        print("NO INTERSECTION of tile and mask!")
-        #return (numpy.ones((tile_height, tile_width)) * nodata_value).astype(int)
+        arr_whole = (numpy.ones((tile_nrows, tile_ncols)) * nodata_value).astype(int)
+        return arr_whole
 
 
 def run_check(params, status):
