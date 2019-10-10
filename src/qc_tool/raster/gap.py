@@ -16,6 +16,150 @@ def write_progress(progress_filepath, message):
     with open(str(progress_filepath), "a") as f:
         f.write(message + "\n")
 
+
+class Rectangle:
+    def __init__(self, x1, y1, x2, y2):
+        if x1 > x2 or y1 > y2:
+            raise ValueError("Coordinates are invalid")
+        self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
+
+    def intersection(self, other):
+        a, b = self, other
+        x1 = max(min(a.x1, a.x2), min(b.x1, b.x2))
+        y1 = max(min(a.y1, a.y2), min(b.y1, b.y2))
+        x2 = min(max(a.x1, a.x2), max(b.x1, b.x2))
+        y2 = min(max(a.y1, a.y2), max(b.y1, b.y2))
+        if x1<x2 and y1<y2:
+            return type(self)(x1, y1, x2, y2)
+
+    def contains(self, r2):
+        return self.x1 < r2.x1 < r2.x2 < self.x2 and self.y1 < r2.y1 < r2.y2 < self.y2
+
+    def __iter__(self):
+        yield self.x1
+        yield self.y1
+        yield self.x2
+        yield self.y2
+
+    def __eq__(self, other):
+        return isinstance(other, Rectangle) and tuple(self) == tuple(other)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __repr__(self):
+        return type(self).__name__ + repr(tuple(self))
+
+
+def read_tile(src_ds, tile_xmin, tile_xmax, tile_ymin, tile_ymax, tile_ncols, tile_nrows, nodata_value):
+
+    import numpy
+
+    """
+    Reads a GDAL raster band into a numpy array.
+    Pixels out of bounds are filled with noData value
+    """
+    print("source raster: {:d} columns, {:d} rows.".format(src_ds.RasterXSize, src_ds.RasterYSize))
+
+
+    # parameters of the ds..
+    ds_gt = src_ds.GetGeoTransform()
+    ds_ulx = ds_gt[0]
+    ds_xres = ds_gt[1]
+    ds_uly = ds_gt[3]
+    ds_yres = ds_gt[5]
+    ds_lrx = ds_ulx + (src_ds.RasterXSize * ds_xres)
+    ds_lry = ds_uly + (src_ds.RasterYSize * ds_yres)
+
+    ds_xmax = ds_lrx
+    ds_ymax = ds_uly
+    ds_xmin = ds_ulx
+    ds_ymin = ds_lry
+
+
+    # CASE 2, dataset completely outside the mask
+
+    print("ds_xmin: {:f}".format(ds_xmin))
+    print("ds_xmax: {:f}".format(ds_xmax))
+    print("ds_ymin: {:f}".format(ds_ymin))
+    print("ds_ymax: {:f}".format(ds_ymax))
+
+    print("tile_xmin: {:f}".format(tile_xmin))
+    print("tile_xmax: {:f}".format(tile_xmax))
+    print("tile_ymin: {:f}".format(tile_ymin))
+    print("tile_ymax: {:f}".format(tile_ymax))
+
+    ds_rect = Rectangle(ds_xmin, ds_ymin, ds_xmax, ds_ymax)
+    tile_rect = Rectangle(tile_xmin, tile_ymin, tile_xmax, tile_ymax)
+
+    # CASE 1, dataset does not overlap with the tile.
+    #if tile_rect.x1 <= ds_rect.x1 and tile_rect.x2 >= ds_rect.x2 and tile_rect.y1 <= ds_rect.y1 and tile_rect.y2 <= ds_rect.y2:
+    if tile_rect.contains(ds_rect):
+        print("DATASET completely inside the tile !!!")
+
+    elif ds_rect.contains(tile_rect):
+        print("TILE completely inside the dataset !!!")
+
+    elif tile_rect.intersection(ds_rect):
+        print("TILE partially intersects with the dataset!")
+        intersection_rect = tile_rect.intersection(ds_rect)
+        print("tile_rect_intersection:")
+        print(intersection_rect)
+
+        if intersection_rect is not None:
+            print("partial intersection!")
+            arr_whole = (numpy.ones((tile_nrows, tile_ncols)) * nodata_value).astype(int)
+
+            intersection_xoff = int((intersection_rect.x1 - ds_xmin) / ds_xres)
+            intersection_yoff = int((intersection_rect.y2 - ds_ymax) / ds_yres)
+            intersection_width = int((intersection_rect.x2 - intersection_rect.x1) / ds_xres)
+            intersection_height = int((intersection_rect.y2 - intersection_rect.y1) / abs(ds_yres))
+
+            print("intersection_xoff: {:d}".format(intersection_xoff))
+            print("intersection_yoff: {:d}".format(intersection_yoff))
+            print("intersection_width: {:d}".format(intersection_width))
+            print("intersection_height: {:d}".format(intersection_height))
+            arr_intersection = src_ds.GetRasterBand(1).ReadAsArray(intersection_xoff, intersection_yoff, intersection_width, intersection_height)
+            print("arr_intersection:")
+            print(arr_intersection)
+
+            # insert arr_whole into arr_intersection:
+            whole_xoff = int((intersection_rect.x1 - tile_xmin) / ds_xres)
+            whole_yoff = int((intersection_rect.y2 - tile_ymax) / ds_yres)
+            print("whole_xoff: {:d}".format(whole_xoff))
+            print("whole_yoff: {:d}".format(whole_yoff))
+            arr_whole[whole_yoff:whole_yoff+intersection_height, whole_xoff:whole_xoff+intersection_width] = arr_intersection
+            print("arr_whole after filling:")
+            print(arr_whole)
+            return arr_whole
+    else:
+        print("NO INTERSECTION of tile and dataset!")
+    # ********************************** #
+    # is there an intersection?
+    # x1, y1, x2, y2 are intersection corners in coordinate system of tile.
+    x1 = max(min(ds_xmin, ds_xmax), min(tile_xmin, tile_xmax))
+    y1 = max(min(ds_ymin, ds_ymax), min(tile_ymin, tile_ymax))
+    x2 = min(max(ds_xmin, ds_xmax), max(tile_xmin, tile_xmax))
+    y2 = min(max(ds_ymin, ds_ymax), max(tile_ymin, tile_ymax))
+    print("x1: {:f} x2: {:f}".format(x1, x2))
+    print("y1: {:f} y2: {:f}".format(y1, y2))
+    if x1 < x2 and y1 < y2:
+        print("INTERSECTION of tile and mask:")
+        #arr_intersection = src_band.ReadAsArray(x1 + tile_xoff, y1 + tile_yoff, abs(x2-x1)+1, abs(y2-y1))
+        #print(arr_intersection)
+        #arr_whole = (numpy.ones((tile_height, tile_width)) * nodata_value).astype(int)
+        #print("arr_intersection.shape: ")
+        #print(arr_intersection.shape)
+        #arr_whole[y1:y2, x1:x2] = arr_intersection
+        #arr_whole = arr_whole.astype(int)
+        #print("arr_whole (after filling):")
+        #print(arr_whole)
+        #return arr_whole
+    else:
+        print("NO INTERSECTION of tile and mask!")
+        #return (numpy.ones((tile_height, tile_width)) * nodata_value).astype(int)
+
+
 def run_check(params, status):
     import subprocess
     import numpy
@@ -54,9 +198,10 @@ def run_check(params, status):
         ds_yres = ds_gt[5]
         ds_lrx = ds_ulx + (ds.RasterXSize * ds_xres)
         ds_lry = ds_uly + (ds.RasterYSize * ds_yres)
+        ds_nrows = ds.RasterYSize
+        ds_ncols = ds.RasterXSize
 
         mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
-
         if not mask_file.exists():
             status.info("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
             return
@@ -86,36 +231,7 @@ def run_check(params, status):
             continue
 
         # Check if the dataset is fully covered by the mask.
-        ds_inside_mask = (ds_ulx >= mask_ulx and ds_uly <= mask_uly and ds_lrx <= mask_lrx and ds_lry >= mask_lry)
-        if not ds_inside_mask:
-            # If the dataset is not fully covered by the mask, then expand the mask extent to the raster extent
-            # (extended mask pixels inside raster extent but outside original mask extent are set to NoData)
-            mask_ds = None
-            mask_file_extended = params["tmp_dir"].joinpath(mask_file.name.replace(".tif", "_extended.tif"))
-            raster_epsg = "EPSG:3035"
-            cmd = ["gdalwarp",
-                   "-dstnodata", str(nodata_value_mask),
-                   "-t_srs", raster_epsg,
-                   "-s_srs", raster_epsg,
-                   "-te_srs", raster_epsg,
-                   "-tr", str(ds_xres), str(ds_xres),
-                   "-r", "near",
-                   "-te", str(ds_ulx), str(ds_lry), str(ds_lrx), str(ds_uly),
-                   "-ot", "Byte",
-                   "-of", "GTiff",
-                   "-co", "TILED=YES",
-                   "-co", "COMPRESS=LZW",
-                   str(mask_file),
-                   str(mask_file_extended)]
-
-            subprocess.check_output(cmd)
-            mask_ds = gdal.Open(str(mask_file_extended))
-            mask_band = mask_ds.GetRasterBand(1)
-            mask_gt = mask_ds.GetGeoTransform()
-            mask_ulx = mask_gt[0]
-            mask_xres = mask_gt[1]
-            mask_uly = mask_gt[3]
-            mask_yres = mask_gt[5]
+        #ds_inside_mask = (ds_ulx >= mask_ulx and ds_uly <= mask_uly and ds_lrx <= mask_lrx and ds_lry >= mask_lry)
 
         # Check if raster resolution and boundary mask resolution matches.
         if ds_xres != mask_xres or ds_yres != mask_yres:
@@ -136,28 +252,31 @@ def run_check(params, status):
             continue
 
         # Calculate offset of checked raster dataset [ulx, uly] from boundary mask [ulx, uly].
-        mask_add_cols = int(abs(ds_ulx - mask_ulx) / abs(ds_xres))
-        mask_add_rows = int(abs(ds_uly - mask_uly) / abs(ds_yres))
+        ds_add_cols = int(abs(mask_ulx - ds_ulx) / abs(ds_xres))
+        ds_add_rows = int(abs(mask_uly - ds_uly) / abs(ds_yres))
+
+        print("ds_add_cols: {:d}".format(ds_add_cols))
+        print("ds_add_rows: {:d}".format(ds_add_rows))
 
         if report_progress:
-            msg = "ds_ulx: {:f} mask_ulx: {:f} mask_add_cols: {:f}".format(ds_ulx, mask_ulx, mask_add_cols)
-            msg += "\nds_uly: {:f} mask_uly: {:f} mask_add_rows: {:f}".format(ds_uly, mask_uly, mask_add_rows)
+            msg = "ds_ulx: {:f} mask_ulx: {:f} ds_add_cols: {:f}".format(ds_ulx, mask_ulx, ds_add_cols)
+            msg += "\nds_uly: {:f} mask_uly: {:f} ds_add_rows: {:f}".format(ds_uly, mask_uly, ds_add_rows)
             msg += "\nRasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize)
             write_progress(progress_filepath, msg)
 
-        n_block_cols = int(ds.RasterXSize / blocksize)
-        n_block_rows = int(ds.RasterYSize / blocksize)
+        n_block_cols = int(mask_ds.RasterXSize / blocksize)
+        n_block_rows = int(mask_ds.RasterYSize / blocksize)
 
         # Handle special case when the last block in a row or column only partially covers the raster.
         last_block_width = blocksize
         last_block_height = blocksize
 
-        if n_block_cols * blocksize < ds.RasterXSize:
-            last_block_width = ds.RasterXSize - (n_block_cols * blocksize)
+        if n_block_cols * blocksize < mask_ds.RasterXSize:
+            last_block_width = mask_ds.RasterXSize - (n_block_cols * blocksize)
             n_block_cols = n_block_cols + 1
 
         if n_block_rows * blocksize < ds.RasterXSize:
-            last_block_height = ds.RasterYSize - (n_block_rows * blocksize)
+            last_block_height = mask_ds.RasterYSize - (n_block_rows * blocksize)
             n_block_rows = n_block_rows + 1
 
         if report_progress:
@@ -171,10 +290,11 @@ def run_check(params, status):
         warning_raster_filename = "s{:02d}_{:s}_gap_warning.tif".format(params["step_nr"], src_stem)
         warning_raster_filepath = params["output_dir"].joinpath(warning_raster_filename)
         driver = gdal.GetDriverByName('GTiff')
-        x_pixels = int(round(ds.RasterXSize))
-        y_pixels = int(round(ds.RasterYSize))
-        warning_raster_ds = driver.Create(str(warning_raster_filepath), x_pixels, y_pixels, 1, gdal.GDT_Byte, ['COMPRESS=LZW'])
-        warning_raster_ds.SetGeoTransform((ds_ulx, ds_xres, 0, ds_uly, 0, ds_yres))
+        mask_x_pixels = int(round(mask_ds.RasterXSize))
+        mask_y_pixels = int(round(mask_ds.RasterYSize))
+        warning_raster_ds = driver.Create(str(warning_raster_filepath), mask_x_pixels, mask_y_pixels, 1,
+                                          gdal.GDT_Byte, ['COMPRESS=LZW'])
+        warning_raster_ds.SetGeoTransform((mask_ulx, mask_xres, 0, mask_uly, 0, mask_yres))
 
         # set output projection
         warning_sr = osr.SpatialReference()
@@ -186,8 +306,7 @@ def run_check(params, status):
 
         # processing of mask is done in tiles (for better performance)
         nodata_count_total = 0
-        ds_xoff = 0
-        ds_yoff = 0
+        mask_yoff = 0
         ds_band = ds.GetRasterBand(1)
         for row in range(n_block_rows):
 
@@ -196,7 +315,7 @@ def run_check(params, status):
                 progress_percent = int(90 * ((row + 1) / n_block_rows))
                 write_percent(percent_filepath, progress_percent)
 
-            ds_xoff = 0
+            mask_xoff = 0
             blocksize_y = blocksize
             if row == n_block_rows - 1:
                 blocksize_y = last_block_height # special case for last row
@@ -205,19 +324,38 @@ def run_check(params, status):
                 if col == n_block_cols - 1:
                     blocksize_x = last_block_width # special case for last column
 
-                # reading the block directly from the boundary mask dataset using computed offsets.
-                arr_mask = mask_band.ReadAsArray(ds_xoff + mask_add_cols, ds_yoff + mask_add_rows, blocksize_x, blocksize_y)
+                # reading the mask data into Numpy array
+                arr_mask = mask_band.ReadAsArray(mask_xoff, mask_yoff, blocksize_x, blocksize_y)
+                print("mask array:")
+                print(arr_mask)
 
                 # if mask has all values unmapped => skip
                 if numpy.max(arr_mask) == 0:
                     continue
 
-                # reading the block from the checked raster dataset.
-                arr_ds = ds_band.ReadAsArray(ds_xoff, ds_yoff, blocksize_x, blocksize_y)
+                # reading the block from the checked raster dataset using computed offsets.
+                tile_xmin = mask_ulx + mask_xoff * mask_xres * blocksize_x
+                tile_xmax = tile_xmin + mask_xres * blocksize_x
+
+                tile_ymax = mask_uly + mask_yoff * mask_yres * blocksize_y
+                tile_ymin = tile_ymax + mask_yres * blocksize_y
+
+                # reading equivalent raster data into numpy array
+                arr_ds = read_tile(ds,
+                                   tile_xmin,
+                                   tile_xmax,
+                                   tile_ymin,
+                                   tile_ymax,
+                                   blocksize_x,
+                                   blocksize_y,
+                                   nodata_value_ds)
 
                 arr_ds_mapped = (arr_ds != nodata_value_ds).astype(int)
-                arr_mask_mapped = (arr_mask != nodata_value_mask).astype(int)
+                arr_mask_mapped = (arr_mask == 1).astype(int)
                 arr_nodata = ((arr_ds_mapped - arr_mask_mapped) < 0)
+
+                print("gaps in the mapped area:")
+                print(arr_nodata.astype(int))
 
                 # find unmapped pixels inside mask
                 nodata_count = int(numpy.sum(arr_nodata))
@@ -227,14 +365,17 @@ def run_check(params, status):
                     if report_progress:
                         msg = "row: {:d} col: {:d} num NoData pixels: {:d}".format(row, col, nodata_count)
                         write_progress(progress_filepath, msg)
+                        print(msg)
+                        print(mask_xoff)
+                        print(mask_yoff)
 
                     nodata_pixels = arr_nodata.astype('byte')
-                    warning_band.WriteArray(nodata_pixels, ds_xoff, ds_yoff)
+                    warning_band.WriteArray(nodata_pixels, mask_xoff, mask_yoff)
 
                 nodata_count_total += nodata_count
 
-                ds_xoff += blocksize
-            ds_yoff += blocksize
+                mask_xoff += blocksize
+            mask_yoff += blocksize
 
         # free memory for checked raster and for boundary mask raster
         ds = None
