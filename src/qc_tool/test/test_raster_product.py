@@ -129,7 +129,7 @@ class Test_Raster(ProductTestCase):
     def test_imd_2018_100m(self):
         """High resolution imperviousness density (IMD) - 100m"""
         product_ident = "imd_2018_100m"
-        filepath = self.raster_data_dir.joinpath("imd_100m", "IMD_2018_100m_eu_03035_d02_clip.zip")
+        filepath = self.raster_data_dir.joinpath("imd_100m", "IMD_2018_100m_eu_03035_v1_0.zip")
 
         expected_step_results = ["ok"] * 13
         # imd_2018_100m has mismatching attributes
@@ -143,7 +143,7 @@ class Test_Raster(ProductTestCase):
     def test_tcd_2018_010m(self):
         """High resolution tree cover density (TCD) - 10m"""
         product_ident = "tcd_2018_010m"
-        filepath = self.raster_data_dir.joinpath("tcd_010m", "TCD_2018_010m_eu_03035_d04_clip.zip")
+        filepath = self.raster_data_dir.joinpath("tcd_010m", "TCD_2018_010m_eu_03035_v0_1.zip")
 
         expected_step_results = ["ok"] * 13
         # tcd_2018_010m has mismatching colors
@@ -157,7 +157,7 @@ class Test_Raster(ProductTestCase):
     def test_tcd_2018_100m(self):
         """High resolution tree cover density (TCD) - 100m"""
         product_ident = "tcd_2018_100m"
-        filepath = self.raster_data_dir.joinpath("tcd_100m", "TCD_2018_100m_eu_03035_d03_clip.zip")
+        filepath = self.raster_data_dir.joinpath("tcd_100m", "TCD_2018_100m_eu_03035_v0_1.zip")
 
         expected_step_results = ["ok"] * 13
         # tcd_2018_010m has mismatching colors

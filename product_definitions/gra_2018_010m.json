@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "gra_010m": "^gra_(?P<reference_year>2018)_010m_(?P<aoi_code>.+)_03035"
+          "gra_010m": "^gra_(?P<reference_year>2018)_010m_(?P<aoi_code>.+)_03035_v[0-9]{1}_[0-9]{1}"
         },
         "extensions": [".tif"],
         "aoi_codes": ["eu"]
