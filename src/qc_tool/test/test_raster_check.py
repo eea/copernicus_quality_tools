@@ -185,6 +185,7 @@ class Test_gap(RasterCheckTestCase):
 
         self.params.update({"layers": ["layer_3"],
                             "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "aoi_code": "aoi01",
                             "outside_area_code": 9,
@@ -216,6 +217,7 @@ class Test_gap(RasterCheckTestCase):
 
         self.params.update({"layers": ["layer_3"],
                             "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "aoi_code": "aoi01",
                             "outside_area_code": 9,
@@ -245,6 +247,7 @@ class Test_gap(RasterCheckTestCase):
 
         self.params.update({"layers": ["layer_3"],
                             "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "aoi_code": "aoi01",
                             "outside_area_code": 9,
@@ -274,6 +277,7 @@ class Test_gap(RasterCheckTestCase):
 
         self.params.update({"layers": ["layer_3"],
                             "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "aoi_code": "aoi01",
                             "outside_area_code": 9,
@@ -303,6 +307,7 @@ class Test_gap(RasterCheckTestCase):
 
         self.params.update({"layers": ["layer_3"],
                             "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "aoi_code": "aoi01",
                             "outside_area_code": 9,
@@ -327,7 +332,7 @@ class Test_gap(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertIn("has 1237 gap pixels", status.messages[0])
-        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.gpkg", status.attachment_filenames)
+        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.tif", status.attachment_filenames)
         self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
 
 
@@ -602,6 +607,8 @@ class Test_inspire(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
+        self.assertEqual(2, len(status.messages))
+        self.assertIn("The xml file inspire_invalid_xml.xml does not contain a <gmd:MD_Metadata> top-level element.", status.messages[1])
 
     def test_fail(self):
         from qc_tool.raster.inspire import run_check
@@ -611,3 +618,12 @@ class Test_inspire(RasterCheckTestCase):
         self.assertEqual("failed", status.status)
         self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)
+
+    def test_fail2(self):
+        from qc_tool.raster.inspire import run_check
+        self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("IMD_2018_010m_eu_03035_test.tif")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("s01_IMD_2018_010m_eu_03035_test_inspire_report.html", status.attachment_filenames)
+        self.assertIn("s01_IMD_2018_010m_eu_03035_test_inspire_log.txt", status.attachment_filenames)
