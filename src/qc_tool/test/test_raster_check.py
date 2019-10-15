@@ -124,12 +124,17 @@ class Test_value(RasterCheckTestCase):
 
 
 class Test_gap(RasterCheckTestCase):
+
     def setUp(self):
         super().setUp()
+        self.mask_filepath = self.jobdir_manager.tmp_dir.joinpath("boundaries", "raster", "mask_default_010m_aoi01.tif")
+        self.layer_filepath = self.jobdir_manager.tmp_dir.joinpath("raster_010m_aoi01.tif")
+
         layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "complete_raster_100m_testaoi.tif")
         layer_filepath2 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "incomplete_raster_100m_testaoi.tif")
         layer_defs = {"layer_1": {"src_filepath": layer_filepath1, "src_layer_name": layer_filepath1.name},
-                      "layer_2": {"src_filepath": layer_filepath2, "src_layer_name": layer_filepath2.name}}
+                      "layer_2": {"src_filepath": layer_filepath2, "src_layer_name": layer_filepath2.name},
+                      "layer_3": {"src_filepath": self.layer_filepath, "src_layer_name": self.layer_filepath.name}}
         self.params.update({"raster_layer_defs": layer_defs})
 
     def test(self):
@@ -161,6 +166,159 @@ class Test_gap(RasterCheckTestCase):
         run_check(self.params, status)
         self.assertIn("cancelled", status.messages[0])
 
+    def test_inside_mask(self):
+        # Prepare mask.
+        mask = [[0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 1, 1, 0, 0, 0],
+                [0, 1, 0, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0]]
+        RasterCheckTestCase.create_raster(self.mask_filepath, np.array(mask), 10, ulx=5000, uly=3000)
+
+        # Prepare raster located completely inside the mask.
+        layer = [[2, 1, 1, 1, 9],
+                 [1, 1, 1, 1, 9],
+                 [9, 9, 1, 1, 9],
+                 [1, 9, 1, 1, 9]]
+        RasterCheckTestCase.create_raster(self.layer_filepath, np.array(layer), 10, ulx=5010, uly=2990)
+
+        self.params.update({"layers": ["layer_3"],
+                            "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "aoi_code": "aoi01",
+                            "outside_area_code": 9,
+                            "step_nr": 1})
+
+        from qc_tool.raster.gap import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("ok", status.status)
+
+    def test_bigger_than_mask(self):
+        mask = [[0, 1, 1, 1, 0],
+                [1, 1, 1, 1, 0],
+                [0, 0, 1, 1, 0],
+                [1, 0, 1, 1, 0]]
+        RasterCheckTestCase.create_raster(self.mask_filepath, np.array(mask), 10, ulx=5010, uly=2990)
+
+        layer = [[0, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 1, 1, 1, 1, 0, 0, 0],
+                 [0, 1, 1, 1, 1, 0, 0, 0],
+                 [0, 0, 0, 1, 1, 0, 0, 0],
+                 [0, 1, 0, 1, 1, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0, 0, 0]]
+        RasterCheckTestCase.create_raster(self.layer_filepath, np.array(layer), 10, ulx=5000, uly=3000)
+
+
+        RasterCheckTestCase.create_raster(self.layer_filepath, np.array(layer), 10, ulx=5010, uly=2990)
+
+        self.params.update({"layers": ["layer_3"],
+                            "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "aoi_code": "aoi01",
+                            "outside_area_code": 9,
+                            "step_nr": 1})
+
+        from qc_tool.raster.gap import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("ok", status.status)
+
+    def test_outside_mask(self):
+        # Prepare mask.
+        mask = [[0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 1, 1, 0, 0, 0],
+                [0, 1, 0, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0]]
+        RasterCheckTestCase.create_raster(self.mask_filepath, np.array(mask), 10, ulx=5000, uly=3000)
+
+        # Prepare raster located completely outside the mask.
+        layer = [[2, 1, 1],
+                 [1, 1, 1],
+                 [9, 9, 1]]
+        RasterCheckTestCase.create_raster(self.layer_filepath, np.array(layer), 10, ulx=4900, uly=3100)
+
+        self.params.update({"layers": ["layer_3"],
+                            "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "aoi_code": "aoi01",
+                            "outside_area_code": 9,
+                            "step_nr": 1})
+
+        from qc_tool.raster.gap import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("ok", status.status)
+
+    def test_intersects_mask_upper_left(self):
+        # Prepare mask.
+        mask = [[0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 1, 1, 0, 0, 0],
+                [0, 1, 0, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0]]
+        RasterCheckTestCase.create_raster(self.mask_filepath, np.array(mask), 10, ulx=5000, uly=3000)
+
+        # Prepare raster located partially outside the mask.
+        layer = [[2, 1, 1, 2],
+                 [1, 1, 1, 9],
+                 [9, 9, 2, 2]]
+        RasterCheckTestCase.create_raster(self.layer_filepath, np.array(layer), 10, ulx=4990, uly=3010)
+
+        self.params.update({"layers": ["layer_3"],
+                            "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "aoi_code": "aoi01",
+                            "outside_area_code": 9,
+                            "step_nr": 1})
+
+        from qc_tool.raster.gap import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("ok", status.status)
+
+    def test_intersects_mask_lower_right(self):
+        # Prepare mask.
+        mask = [[0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 1, 1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 1, 1, 0, 0, 0],
+                [0, 1, 0, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0]]
+        RasterCheckTestCase.create_raster(self.mask_filepath, np.array(mask), 10, ulx=5000, uly=3000)
+
+        # Prepare raster located partially outside the mask.
+        layer = [[2, 1, 1, 2],
+                 [1, 1, 1, 9],
+                 [9, 9, 2, 2]]
+        RasterCheckTestCase.create_raster(self.layer_filepath, np.array(layer), 10, ulx=5050, uly=2960)
+
+        self.params.update({"layers": ["layer_3"],
+                            "boundary_dir": self.jobdir_manager.tmp_dir.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "aoi_code": "aoi01",
+                            "outside_area_code": 9,
+                            "step_nr": 1})
+
+        from qc_tool.raster.gap import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        print(status)
+        self.assertEqual("ok", status.status)
+
     def test_gaps_found(self):
         from qc_tool.raster.gap import run_check
         self.params.update({"layers": ["layer_2"],
@@ -174,7 +332,7 @@ class Test_gap(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertIn("has 1237 gap pixels", status.messages[0])
-        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.gpkg", status.attachment_filenames)
+        self.assertIn("s01_incomplete_raster_100m_testaoi_gap_warning.tif", status.attachment_filenames)
         self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
 
 
@@ -260,40 +418,6 @@ class Test_tile(RasterCheckTestCase):
 
 
 class Test_mmu(RasterCheckTestCase):
-
-    @staticmethod
-    def create_raster(raster_filepath, data, pixel_size, ulx=0, uly=0, epsg=3035):
-        """
-        Helper method which creates a .TIF raster file with the same pixel values as the data array.
-        :param data: 2D NumPy array of integers with the raster data.
-        :param pixel_size: Raster resolution in metres.
-        :param ulx: X coordinate of upper-left corner of the raster.
-        :param uly: Y coordinate of upper-left corner of the raster.
-        :param epsg: Integer EPSG code of the raster's coordinate reference system (default: 3035).
-        :return: full path of created raster.
-        """
-        height = data.shape[0]
-        width = data.shape[1]
-        mem_drv = gdal.GetDriverByName("MEM")
-        mem_ds = mem_drv.Create("memory", width, height, 1, gdal.GDT_Byte)
-        mem_srs = osr.SpatialReference()
-        mem_srs.ImportFromEPSG(epsg)
-        mem_ds.SetProjection(mem_srs.ExportToWkt())
-        mem_ds.SetGeoTransform((ulx, pixel_size, 0, uly, 0, -pixel_size))
-        mem_ds.GetRasterBand(1).WriteArray(data)
-
-        # Store raster dataset.
-        dest_driver = gdal.GetDriverByName("GTiff")
-        dest_ds = dest_driver.CreateCopy(str(raster_filepath),
-                                         mem_ds, False, options=["TILED=YES"])
-
-        # Remove temporary datasource and datasets from memory.
-        mem_dsrc = None
-        mem_ds = None
-        dest_ds = None
-        return raster_filepath
-
-
     def setUp(self):
         super().setUp()
         self.tmp_raster = self.jobdir_manager.tmp_dir.joinpath("test_raster1.tif")
@@ -312,7 +436,7 @@ class Test_mmu(RasterCheckTestCase):
                 [0, 0, 0, 1, 1, 0, 0, 0],
                 [9, 1, 0, 1, 1, 0, 0, 0],
                 [9, 0, 0, 0, 0, 0, 0, 0]]
-        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10)
 
         self.params.update({"layers": ["layer1"],
                             "area_pixels": 10,
@@ -340,7 +464,7 @@ class Test_mmu(RasterCheckTestCase):
                 [9, 1, 0, 0, 0, 0, 0],
                 [9, 9, 9, 9, 9, 9, 0]]
 
-        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10)
         self.params.update(
             {"layers": ["layer1"],
              "area_pixels": 8,
@@ -369,7 +493,7 @@ class Test_mmu(RasterCheckTestCase):
                 [1, 0, 0, 0, 0, 1, 1],
                 [1, 1, 1, 1, 0, 1, 1]]
 
-        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10)
         self.params.update(
             {"layers": ["layer1"],
              "area_pixels": 8,
@@ -399,7 +523,7 @@ class Test_mmu(RasterCheckTestCase):
         data[2048, 1111] = 1
         data[2049, 1111] = 1
 
-        Test_mmu.create_raster(self.tmp_raster, np.array(data), 10)
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10)
         self.params.update(
             {"layers": ["layer1"],
              "area_pixels": 4,
@@ -483,6 +607,8 @@ class Test_inspire(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
+        self.assertEqual(2, len(status.messages))
+        self.assertIn("The xml file inspire_invalid_xml.xml does not contain a <gmd:MD_Metadata> top-level element.", status.messages[1])
 
     def test_fail(self):
         from qc_tool.raster.inspire import run_check
@@ -492,3 +618,12 @@ class Test_inspire(RasterCheckTestCase):
         self.assertEqual("failed", status.status)
         self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)
+
+    def test_fail2(self):
+        from qc_tool.raster.inspire import run_check
+        self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("IMD_2018_010m_eu_03035_test.tif")}}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("s01_IMD_2018_010m_eu_03035_test_inspire_report.html", status.attachment_filenames)
+        self.assertIn("s01_IMD_2018_010m_eu_03035_test_inspire_log.txt", status.attachment_filenames)

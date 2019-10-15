@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"tcddcl_020m": "^tcddcl_(?P<reference_year>2015)_020m_(?P<aoi_code>eu)_0?3035"},
+        "layer_names":{"tcddcl_020m": "^tcddcl_(?P<reference_year>2015)_020m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
         "aoi_codes": ["eu"],
         "extensions": [".tif"],
         "reference_year": "2015"

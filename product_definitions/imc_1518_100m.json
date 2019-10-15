@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "imc_100m": "^imc_1518_100m_(?P<aoi_code>eu)_0?3035"
+          "imc_100m": "^imc_1518_100m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"
         },
         "aoi_codes": ["eu"],
         "reference_year": "2018",

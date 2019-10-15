@@ -9,10 +9,8 @@ IS_SYSTEM = False
 def locate_xml_file(layer_filepath):
     # The INSPIRE XML file can be LAYER.xml or LAYER.tif.xml or LAYER_metadata.xml.
     # The file can also be located in a "metadata" subdirectory.
-    for xml_filepath in [layer_filepath.parent.joinpath(layer_filepath.name + ".xml"),
-                         layer_filepath.parent.joinpath(layer_filepath.stem + ".xml"),
+    for xml_filepath in [layer_filepath.parent.joinpath(layer_filepath.stem + ".xml"),
                          layer_filepath.parent.joinpath(layer_filepath.stem + "_metadata.xml"),
-                         layer_filepath.parent.joinpath("metadata", layer_filepath.name + ".xml"),
                          layer_filepath.parent.joinpath("metadata", layer_filepath.stem + ".xml"),
                          layer_filepath.parent.joinpath("metadata", layer_filepath.stem + "_metadata.xml")]:
         if xml_filepath.exists():

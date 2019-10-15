@@ -4,7 +4,6 @@
 import datetime
 import re
 import time
-from xml.etree import ElementTree
 from zipfile import ZipFile
 
 
@@ -12,7 +11,8 @@ import requests
 
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
-INSPIRE_SERVICE_URL = "http://inspire.ec.europa.eu/validator/v2/"
+INSPIRE_VALIDATOR_URL = "http://inspire.ec.europa.eu/validator/"
+INSPIRE_SERVICE_URL = INSPIRE_VALIDATOR_URL + "v2/"
 INSPIRE_TEST_SUITE_NAME = "INSPIRE Profile based on EN ISO 19115 and EN ISO 19119"
 INSPIRE_SERVER_TIMEOUT = 60
 INSPIRE_TEST_RUN_TIMEOUT = 300
@@ -306,10 +306,10 @@ class InspireServiceClient():
             # The test suites should contain exactly one suite with label equal to INSPIRE_TEST_SUITE_NAME.
             if len(inspire_test_suites) == 0:
                 raise ValueError("The validator service {:s} does not have any test suites named '{:s}'".format(
-                    INSPIRE_SERVICE_URL, INSPIRE_TEST_SUITE_NAME))
+                    INSPIRE_VALIDATOR_URL, INSPIRE_TEST_SUITE_NAME))
             if len(inspire_test_suites) > 1:
                 raise ValueError("The validator service {:s} has more than one test suite named '{:s}'".format(
-                    INSPIRE_SERVICE_URL, INSPIRE_TEST_SUITE_NAME))
+                    INSPIRE_VALIDATOR_URL, INSPIRE_TEST_SUITE_NAME))
 
             return inspire_test_suites[0]["id"], "ok"
         except requests.exceptions.HTTPError as ex:
@@ -329,7 +329,7 @@ class InspireServiceClient():
     def create_test_object(xml_filepath):
         """
         Uploads a xml file to INSPIRE service and receives a temporary test object ID.
-        :return: (test object ID, "ok") if the xml file was correctly uploaded or (None, ERROR_MESSAGE) if upload failed.
+        :return: (status_code, test object ID, "ok") if the xml file was correctly uploaded or (None, ERROR_MESSAGE) if upload failed.
         """
         xml_upload_url = INSPIRE_SERVICE_URL + "TestObjects?action=upload"
 
@@ -338,6 +338,11 @@ class InspireServiceClient():
                 xml_file_data = {"file": (xml_filepath.name, filehandle)}
 
                 r = requests.post(xml_upload_url, files=xml_file_data, timeout=INSPIRE_SERVER_TIMEOUT)
+                if r.status_code == 400:
+                    return (r.status_code,
+                            r.json(),
+                            "The xml file {:s} does not contain a <gmd:MD_Metadata> top-level element."
+                            .format(xml_filepath.name))
                 r.raise_for_status()
 
                 # The service should return a json object with the test object ID.
@@ -345,9 +350,9 @@ class InspireServiceClient():
                 object_id = test_object["testObject"]["id"]
                 # The test_object_id must be used without the "EID" prefix.
                 if object_id.startswith("EID"):
-                    return object_id[3:], "ok"
+                    return r.status_code, object_id[3:], "ok"
                 else:
-                    return object_id, "ok"
+                    return r.status_code, object_id, "ok"
 
         except requests.exceptions.HTTPError as ex:
             return None, str(ex)
@@ -495,25 +500,21 @@ def locate_metadata_file(layer_filepath):
 
 def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0):
 
-    # Initial screening check to ensure that the xml file is a well-formed xml document.
-    try:
-        ElementTree.parse(str(xml_filepath))
-    except ElementTree.ParseError:
-        status.failed("Metadata file {:s} is not a valid XML document.".format(xml_filepath.name))
-        return
-
     # Step 1, Retrieve the predefined test suite from the service. The predefined test suite has a unique test suite ID.
-    status.info("Using validator service {:s}.".format(INSPIRE_SERVICE_URL))
+    status.info("Using validator service {:s}.".format(INSPIRE_VALIDATOR_URL))
     test_suite_id, test_suite_message = InspireServiceClient.retrieve_test_suite_id()
     if test_suite_id is None:
-        status.cancelled("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_suite_message))
+        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_suite_message))
         # if the test_suite_id is unavailable, then the inspire service is probably not working as expected.
         return
 
     # Step 2, Upload xml file to the service. The service creates a temporary test object with a unique test object ID.
-    test_object_id, test_object_message = InspireServiceClient.create_test_object(xml_filepath)
+    status_code, test_object_id, test_object_message = InspireServiceClient.create_test_object(xml_filepath)
+    if status_code == 400:
+        status.failed("Metadata file {:s} is not in INSPIRE XML format and cannot be validated:. ".format(test_object_message))
+        return
     if test_object_id is None:
-        status.cancelled("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_object_message))
+        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_object_message))
         return
 
     # Step 3, Create a new test run using the selected test suite and previously created test object.
@@ -521,13 +522,13 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     test_run_id, test_run_message = InspireServiceClient.start_test_run(test_suite_id, test_object_id)
 
     if test_run_id is None:
-        status.cancelled("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_run_message))
+        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_run_message))
         return
 
     # Step 4, Retrieve result of the test run.
     result_status, result_message = InspireServiceClient.retrieve_test_result(test_run_id)
     if result_status is None:
-        status.cancelled("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, result_message))
+        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, result_message))
         return
 
 
@@ -543,7 +544,7 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
         if retry_no < INSPIRE_MAX_RETRIES:
             do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no+1)
         else:
-            status.cancelled(
+            status.info(
                 "Metadata of {:s} could not be validated, validation service is busy.".format(xml_filepath.name))
 
     # Step 6, Download and add html report and log file attachments.

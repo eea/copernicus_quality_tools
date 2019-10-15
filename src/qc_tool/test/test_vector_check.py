@@ -1760,7 +1760,9 @@ class Test_inspire(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-
+        self.assertEqual(2, len(status.messages))
+        self.assertIn("The xml file inspire_invalid_xml.xml does not contain a <gmd:MD_Metadata> top-level element.",
+                      status.messages[1])
 
     def test_fail(self):
         from qc_tool.vector.inspire import run_check
