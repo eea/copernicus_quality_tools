@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "formats": [".shp"],
+        "formats": [".gdb", ".gpkg", ".shp"],
         "layer_names": {
           "n2k": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"
         },

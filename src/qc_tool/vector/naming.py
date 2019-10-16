@@ -12,6 +12,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import check_gdb_filename
     from qc_tool.vector.helper import extract_aoi_code
     from qc_tool.vector.helper import find_gdb_layers
+    from qc_tool.vector.helper import find_gpkg_layers
     from qc_tool.vector.helper import find_shp_layers
 
 
@@ -19,18 +20,23 @@ def run_check(params, status):
     if "reference_year" in params:
         status.set_status_property("reference_year", params["reference_year"])
 
-    # Find shp layers.
+    # Find Shapefile (.shp) layers.
     shp_layer_infos = []
     if ".shp" in params["formats"]:
         shp_layer_infos = find_shp_layers(params["unzip_dir"], status)
 
-    # Find gdb layers.
+    # Find Geodatabase (.gdb) layers.
     gdb_layer_infos = []
     if ".gdb" in params["formats"]:
         gdb_layer_infos = find_gdb_layers(params["unzip_dir"], status)
 
+    # Find GeoPackage (.gpkg) layers.
+    gpkg_layer_infos = []
+    if ".gpkg" in params["formats"]:
+        gpkg_layer_infos = find_gpkg_layers(params["unzip_dir"], status)
+
     # Check if delivery contains any vector layers.
-    if len(shp_layer_infos) + len(gdb_layer_infos) == 0:
+    if len(shp_layer_infos) + len(gdb_layer_infos) + len(gpkg_layer_infos) == 0:
         status.aborted("No {:s} vector layers were found in the delivery.".format(" or ".join(params["formats"])))
         return
 
@@ -45,16 +51,21 @@ def run_check(params, status):
                                    ", ".join([gdb_dir.name for gdb_dir in gdb_filepaths])))
             return
 
-    # Read all shapefile layer infos into builder.
+    # Read all Shapefile layer infos into builder.
     builder = LayerDefsBuilder(status)
     if ".shp" in params["formats"]:
         for shp_layer_info in shp_layer_infos:
             builder.add_layer_info(shp_layer_info["src_filepath"], shp_layer_info["src_layer_name"])
 
-    # Read all geodatabase layer infos into builder.
+    # Read all Geodatabase layer infos into builder.
     if ".gdb" in params["formats"]:
         for gdb_layer_info in gdb_layer_infos:
             builder.add_layer_info(gdb_layer_info["src_filepath"], gdb_layer_info["src_layer_name"])
+
+    # Read all Geopackage layer infor into the builder.
+    if ".gpkg" in params["formats"]:
+        for gpkg_layer_info in gpkg_layer_infos:
+            builder.add_layer_info(gpkg_layer_info["src_filepath"], gpkg_layer_info["src_layer_name"])
 
     # If no layer_names parameter is specified then pass on all vector layers to other checks.
     if "layer_names" not in params:

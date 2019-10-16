@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2018",
-        "formats": [".gdb"],
+        "formats": [".gdb", ".gpkg", ".shp"],
         "layer_names": {
           "reference": "clc18_(?P<aoi_code>.+)$",
           "initial": "^clc12_(?P<aoi_code>.+)$",

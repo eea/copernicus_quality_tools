@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2018",
-        "formats": [".gdb"],
+        "formats": [".gdb", ".gpkg"],
         "layer_names": {
           "reference": "(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9]{1})_.*_ua2018$"
         },
@@ -142,7 +142,7 @@
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
-        "layers": ["refernce"]
+        "layers": ["reference"]
       }
     }
   ]

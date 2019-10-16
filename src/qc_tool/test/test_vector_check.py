@@ -20,19 +20,25 @@ class Test_unzip(VectorCheckTestCase):
 
     def test_shp(self):
         from qc_tool.vector.unzip import run_check
-        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2012.shp.zip")
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
         status = self.status_class()
         run_check(self.params, status)
-
         self.assertIn("unzip_dir", status.params)
         self.assertEqual("ok", status.status)
-
         unzip_dir = status.params["unzip_dir"]
-        unzipped_subdir_names = [path.name for path in unzip_dir.glob("**")]
         unzipped_file_names = [path.name for path in unzip_dir.glob("**/*") if path.is_file()]
+        self.assertIn("rpz_DU007T_lclu2012_v01.shp", unzipped_file_names)
 
-        self.assertIn("EE003L1_NARVA_UA2012.shp", unzipped_file_names,
-                      "Unzipped directory should contain a file EE003L1_NARVA_UA2012.shp.")
+    def test_gpkg(self):
+        from qc_tool.vector.unzip import run_check
+        self.params["filepath"] = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2012.gpkg.zip")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("unzip_dir", status.params)
+        unzip_dir = status.params["unzip_dir"]
+        unzipped_file_names = [path.name for path in unzip_dir.glob("**/*") if path.is_file()]
+        self.assertIn("EE003L1_NARVA_UA2012.gpkg", unzipped_file_names)
 
     def test_gdb(self):
         from qc_tool.vector.unzip import run_check
@@ -214,17 +220,17 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
 
-class Test_naming_ua_shp(VectorCheckTestCase):
+class Test_naming_ua_gpkg(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.vector.unzip import run_check as unzip_check
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2012.shp.zip")})
+                            "filepath": TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2012.gpkg.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
         self.params["unzip_dir"] = status.params["unzip_dir"]
         self.params.update({"reference_year": "2012",
-                            "formats": [".shp"],
+                            "formats": [".gpkg"],
                             "layer_names": {"reference": "_ua2012$"}})
 
     def test(self):
@@ -234,7 +240,7 @@ class Test_naming_ua_shp(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual(1, len(status.params["layer_defs"]))
-        self.assertEqual("EE003L1_NARVA_UA2012.shp", status.params["layer_defs"]["reference"]["src_filepath"].name)
+        self.assertEqual("EE003L1_NARVA_UA2012.gpkg", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
 
 
@@ -322,6 +328,7 @@ class Test_epsg_gdb(VectorCheckTestCase):
                                            "layer_1": {"src_filepath": gdb_dir,
                                                        "src_layer_name": "clc12_mt"}},
                             "layers": ["layer_0", "layer_1"],
+                            "auto_identify_epsg": False,
                             "epsg": 23033})
 
     def test(self):
@@ -337,26 +344,15 @@ class Test_epsg_gdb(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
 
-
-class Test_epsg_shp(VectorCheckTestCase):
+class Test_epsg_gpkg(VectorCheckTestCase):
     def test(self):
-        # Unzip the datasource.
-        from qc_tool.vector.unzip import run_check as unzip_check
-        zip_filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "EE003L1_NARVA_UA2012.shp.zip")
-        self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
-                            "filepath": zip_filepath})
-        status = self.status_class()
-        unzip_check(self.params, status)
-        self.params["unzip_dir"] = status.params["unzip_dir"]
-
-        # Run the check.
         from qc_tool.vector.epsg import run_check
-        reference_path = self.params["unzip_dir"].joinpath("EE003L1_NARVA_UA2012.shp")
-        self.params.update({"layer_defs": {"reference": {"src_filepath": reference_path,
-                                                         "src_layer_name": reference_path.stem}},
+        gpkg_filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2012.gpkg")
+        self.params.update({"layer_defs": {"reference": {"src_filepath": gpkg_filepath,
+                                                         "src_layer_name": gpkg_filepath.stem}},
                             "layers": ["reference"],
                             "epsg": 3035,
-                            "auto_identify_epsg": True})
+                            "auto_identify_epsg": False})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)

@@ -122,6 +122,7 @@
         "reference_year": "2015",
         "formats": [
           ".gdb",
+          ".gpkg",
           ".shp"
         ],
         "layer_names": {

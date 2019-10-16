@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
-        "formats": [".shp", ".gdb"]
+        "formats": [".gdb", ".gpkg", ".shp"]
       }
     },
     {

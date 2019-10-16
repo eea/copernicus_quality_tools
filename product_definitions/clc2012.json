@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "formats": [".gdb"],
+        "formats": [".gdb", ".gpkg", ".shp"],
         "layer_names": {
           "reference": "clc12_(?P<aoi_code>.+)$",
           "initial": "^clc06_(?P<aoi_code>.+)$",

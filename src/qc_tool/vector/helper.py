@@ -109,6 +109,29 @@ def find_gdb_layers(unzip_dir, status):
     return gdb_layer_infos
 
 
+def find_gpkg_layers(unzip_dir, status):
+    from osgeo import ogr
+
+    # Find .gpkg files.
+    gpkg_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".gpkg"]
+    gpkg_layer_infos = []
+
+    for gpkg_filepath in gpkg_filepaths:
+        # Open geopackage.
+        ds = ogr.Open(str(gpkg_filepath))
+        if ds is None:
+            status.aborted("Can not open geopackage {:s}.".format(gpkg_filepath.name))
+            return
+
+        for layer_index in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(layer_index)
+            layer_name = layer.GetName()
+            gpkg_layer_infos.append({"src_layer_name": layer_name, "src_filepath": gpkg_filepath})
+        ds = None
+    return gpkg_layer_infos
+
+
 def check_gdb_filename(gdb_filepath, gdb_filename_regex, aoi_code, status):
     mobj = re.compile(gdb_filename_regex, re.IGNORECASE).search(gdb_filepath.name)
     if mobj is None:
