@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names": {"general": "^.*.tif$"},
+        "layer_names": {"raster": "^.*.tif$"},
         "extensions": [".tif"]
       }
     },
@@ -17,7 +17,7 @@
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
-        "layers": ["general"],
+        "layers": ["raster"],
         "formats": [".tif"],
         "drivers": {".tif": "GTiff"}
       }
@@ -26,15 +26,15 @@
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "layers": ["general"],
-        "attribute_regexes": ["value", "count", "(km2|area_km2)"]
+        "layers": ["raster"],
+        "attribute_regexes": ["value", "count"]
       }
     },
     {
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["general"],
+        "layers": ["raster"],
         "epsg": 3035
       }
     },
@@ -42,14 +42,14 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["general"]
+        "layers": ["raster"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["general"],
+        "layers": ["raster"],
         "datatype": "byte"
       }
     },
@@ -57,7 +57,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["general"],
+        "layers": ["raster"],
         "compression": ["LZW"]
       }
     },
@@ -65,7 +65,7 @@
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
-        "layers": ["general"]
+        "layers": ["raster"]
       }
     }
   ]

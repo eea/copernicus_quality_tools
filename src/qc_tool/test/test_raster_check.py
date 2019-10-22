@@ -66,7 +66,7 @@ class Test_naming(RasterCheckTestCase):
         status = self.status_class()
         run_check(params, status)
         self.assertEqual("aborted", status.status)
-        self.assertIn("Can not find layer_4 layer.", status.messages)
+        self.assertIn("The layer_4 layer name does not match naming convention.", status.messages)
 
     def test_excessive_layers(self):
         from qc_tool.raster.naming import run_check

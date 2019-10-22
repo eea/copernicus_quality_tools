@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "grac_020m": "^grac_1518_020m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"
+          "raster": "^grac_1518_020m_(?P<aoi_code>eu)_0?3035"
         },
         "extensions": [".tif"],
         "aoi_codes": ["eu"],
@@ -21,7 +21,7 @@
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "formats": [".tif"],
         "drivers": {".tif": "GTiff"}
       }
@@ -30,7 +30,7 @@
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
       }
     },
@@ -38,7 +38,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "epsg": 3035
       }
     },
@@ -46,7 +46,7 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "pixelsize": 20
       }
     },
@@ -54,14 +54,14 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"]
+        "layers": ["raster"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "datatype": "byte"
       }
     },
@@ -69,7 +69,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "compression": ["LZW"]
       }
     },
@@ -77,7 +77,7 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "validcodes": [0, 1, 2, 10, 254, 255]
       }
     },
@@ -85,7 +85,7 @@
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "colors": {
           "0":[240, 240, 240],
           "1":[0, 141, 246],
@@ -100,7 +100,7 @@
       "check_ident": "qc_tool.raster.tile",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "max_blocksize": 1024
       }
     },
@@ -108,7 +108,7 @@
       "check_ident": "qc_tool.raster.mmu",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "area_pixels": 25,
         "value_exception_codes": [254, 255],
         "neighbour_exception_codes": [254, 255],
@@ -119,7 +119,7 @@
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"],
+        "layers": ["raster"],
         "outside_area_code": 255
       }
     },
@@ -127,7 +127,7 @@
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
-        "layers": ["grac_020m"]
+        "layers": ["raster"]
       }
     }
   ]

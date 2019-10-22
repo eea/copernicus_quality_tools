@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"ibu_010m": "^ibu_2018_010m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
+        "layer_names":{"raster": "^ibu_2018_010m_(?P<aoi_code>eu)_0?3035"},
         "extensions": [".tif"],
         "aoi_codes": ["eu"],
         "reference_year": "2018"
@@ -19,7 +19,7 @@
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "formats": [".tif"],
         "drivers": {".tif": "GTiff"}
       }
@@ -28,7 +28,7 @@
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
       }
     },
@@ -36,7 +36,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "epsg": 3035
       }
     },
@@ -44,7 +44,7 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "pixelsize": 10
       }
     },
@@ -52,14 +52,14 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"]
+        "layers": ["raster"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "datatype": "byte"
       }
     },
@@ -67,7 +67,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "compression": ["LZW"]
       }
     },
@@ -75,7 +75,7 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "validcodes": [0, 1, 254, 255]
       }
     },
@@ -83,7 +83,7 @@
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "colors": {
           "0": [240,240,240],
           "1": [255,178,0],
@@ -96,7 +96,7 @@
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"],
+        "layers": ["raster"],
         "outside_area_code": 255
       }
     },
@@ -104,7 +104,7 @@
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
-        "layers": ["ibu_010m"]
+        "layers": ["raster"]
       }
     }
   ]

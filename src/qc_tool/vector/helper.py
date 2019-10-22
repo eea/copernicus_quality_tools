@@ -196,7 +196,7 @@ class LayerDefsBuilder():
         regex = re.compile(regex, re.IGNORECASE)
         matched_infos = [info for info in self.layer_infos if regex.search(info["src_layer_name"])]
         if len(matched_infos) == 0:
-            self.status.aborted("Can not find {:s} layer.".format(layer_alias))
+            self.status.aborted("The {:s} layer name does not match naming convention.".format(layer_alias))
             return
         if len(matched_infos) > 1:
             layer_names = [item["src_layer_name"] for item in matched_infos]

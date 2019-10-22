@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"tcd_100m": "^tcd_(?P<reference_year>2018)_100m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
+        "layer_names":{"raster": "^tcd_(?P<reference_year>2018)_100m_(?P<aoi_code>eu)_0?3035"},
         "extensions": [".tif"],
         "reference_year": "2018",
         "aoi_codes": ["eu"]
@@ -19,7 +19,7 @@
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "formats": [".tif"],
         "drivers": {".tif": "GTiff"}
       }
@@ -28,7 +28,7 @@
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
       }
     },
@@ -36,7 +36,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "epsg": 3035
       }
     },
@@ -44,7 +44,7 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "pixelsize": 100
       }
     },
@@ -52,14 +52,14 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"]
+        "layers": ["raster"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "datatype": "byte"
       }
     },
@@ -67,7 +67,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "compression": ["LZW"]
       }
     },
@@ -75,7 +75,7 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "validcodes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
                        21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -93,7 +93,7 @@
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "colors": {
           "0": [240,240,240],
           "1": [227,176,21],
@@ -107,7 +107,7 @@
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"],
+        "layers": ["raster"],
         "outside_area_code": 255
       }
     },
@@ -115,7 +115,7 @@
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
-        "layers": ["tcd_100m"]
+        "layers": ["raster"]
       }
     }
   ]
