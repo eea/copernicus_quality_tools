@@ -151,6 +151,15 @@ def get_deliveries_json(request):
         return JsonResponse(data, safe=False)
 
 
+@csrf_exempt
+def resumable_upload_demo(request):
+    """
+    Resumable file upload demo.
+    """
+    return render(request, 'dashboard/resumable_upload_demo.html')
+
+
+
 @login_required
 def file_upload(request):
     """

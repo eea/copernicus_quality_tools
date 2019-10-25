@@ -20,6 +20,7 @@ from django.contrib import auth
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('resumable_upload/', include('my_django_resumable.urls')),
     path('', include('dashboard.urls')),
     path('accounts/', include('django.contrib.auth.urls'))
 ]

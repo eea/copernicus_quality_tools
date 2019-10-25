@@ -8,7 +8,7 @@ services:
       args:
         - VERSION
 
-    image: eeacms/copernicus-qctool-frontend
+    image: eeacms/copernicus-qctool-frontend:uploader
     ports:
       - 8000:8000
     environment:
@@ -22,7 +22,7 @@ services:
       - qc_tool_network
     volumes:
       - /home/jiri/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /home/jiri/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /media/jiri/bb377f26-b0e7-42ca-9ef2-6e6e26b6ead91/jirka/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
       - /home/jiri/qc_tool/qc_tool_work:/mnt/qc_tool_work
       - /home/jiri/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
       - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
