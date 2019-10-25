@@ -36,11 +36,11 @@ def guess_product_ident(delivery_filepath):
     """
     Tries to guess the product ident from the uploaded zip file name.
     """
-    fn = delivery_filepath.name.lower()
+    fn = delivery_filepath.stem.lower()
 
     product_descriptions = get_product_descriptions()
     for product_ident, product_description in product_descriptions.items():
-        if product_ident in fn:
+        if fn.startswith(product_ident) or fn.endswith(product_ident):
             return product_ident
     return None
 

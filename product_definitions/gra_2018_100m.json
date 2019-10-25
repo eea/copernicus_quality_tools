@@ -10,7 +10,7 @@
       "required": true,
       "parameters": {
         "layer_names": {
-          "raster": "^gra_(?P<reference_year>2018)_100m_(?P<aoi_code>eu)_0?3035"
+          "raster": "^gra_(?P<reference_year>2018)_100m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"
         },
         "extensions": [".tif"],
         "aoi_codes": ["eu"],

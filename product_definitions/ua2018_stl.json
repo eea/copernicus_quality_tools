@@ -1,0 +1,133 @@
+{
+  "description": "Urban Atlas 2018 Street Tree",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "formats": [".gdb", ".gpkg"],
+        "layer_names": {
+          "stl": "(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9]{1})_.*_ua2018_stl$"
+        },
+        "excessive_layers_allowed": false,
+        "boundary_source": "aoi_ua2012.gpkg"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["stl"],
+        "required": {"country": "string",
+                     "fua_name": "string",
+                     "fua_code": "string",
+                     "stl": "integer",
+                     "perimeter": "real",
+                     "area": "real"},
+        "ignored": ["shape_area", "shape_length"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["stl"],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"],
+        "column_defs": [["stl", [0, 1, 91000, 92000]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"],
+        "area_column_name": "area",
+        "unit": 1,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.gap_unit",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"],
+        "boundary_unit_column_name": "fua_code"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"],
+        "code_column_name": "stl",
+        "filter_code": 1,
+        "area_column_name": "area",
+        "mmu": 500
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"],
+        "code_column_name": "stl",
+        "filter_code": 1,
+        "mmw": 10
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"],
+        "code_column_names": ["stl"],
+        "exclude_codes": []
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"]
+      }
+    }
+  ]
+}
