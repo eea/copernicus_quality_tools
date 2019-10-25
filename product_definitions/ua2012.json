@@ -14,6 +14,10 @@
         "layer_names": {
           "reference": "^(?P<aoi_code>[a-z]{2}[0-9]{3}l[0-9]{1})_.*_ua2012(_revised)?$"
         },
+        "documents": {
+          "map.pdf": "_map.pdf$",
+          "delivery_report.pdf": "_delivery_report.pdf$"
+        },
         "excessive_layers_allowed": false,
         "boundary_source": "aoi_ua2012.gpkg"
       }

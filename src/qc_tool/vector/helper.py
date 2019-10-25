@@ -132,6 +132,15 @@ def find_gpkg_layers(unzip_dir, status):
     return gpkg_layer_infos
 
 
+def find_documents(unzip_dir, regex):
+    document_filepaths = [path for path in unzip_dir.glob("**/*") if path.is_file()]
+    regex = re.compile(regex, re.IGNORECASE)
+    matched_document_filepaths = [doc for doc in document_filepaths if regex.search(doc.name)]
+    if len(matched_document_filepaths) == 0:
+        return False
+    return matched_document_filepaths
+
+
 def check_gdb_filename(gdb_filepath, gdb_filename_regex, aoi_code, status):
     mobj = re.compile(gdb_filename_regex, re.IGNORECASE).search(gdb_filepath.name)
     if mobj is None:
@@ -211,7 +220,6 @@ class LayerDefsBuilder():
             layer_index += 1
             layer_alias = "layer_{:d}".format(layer_index)
             self.layer_defs[layer_alias] = info
-
 
     def extract_layer_def(self, regex, layer_alias):
         if self.tpl_params:

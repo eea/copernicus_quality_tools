@@ -194,7 +194,6 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("ok", status.status)
 
     def test_bigger_than_mask(self):
@@ -226,7 +225,6 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("ok", status.status)
 
     def test_outside_mask(self):
@@ -256,7 +254,6 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("ok", status.status)
 
     def test_intersects_mask_upper_left(self):
@@ -286,7 +283,6 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("ok", status.status)
 
     def test_intersects_mask_lower_right(self):
@@ -316,7 +312,6 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        print(status)
         self.assertEqual("ok", status.status)
 
     def test_gaps_found(self):

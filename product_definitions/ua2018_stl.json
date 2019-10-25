@@ -14,6 +14,10 @@
         "layer_names": {
           "stl": "(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9]{1})_.*_ua2018_stl$"
         },
+        "documents": {
+          "map.pdf": "_map.pdf$",
+          "delivery_report.pdf": "_delivery_report.pdf$"
+        },
         "excessive_layers_allowed": false,
         "boundary_source": "aoi_ua2012.gpkg"
       }

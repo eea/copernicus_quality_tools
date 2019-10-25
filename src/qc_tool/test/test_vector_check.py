@@ -224,14 +224,16 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         from qc_tool.vector.unzip import run_check as unzip_check
+
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2012.gpkg.zip")})
         status = self.status_class()
         unzip_check(self.params, status)
+
         self.params["unzip_dir"] = status.params["unzip_dir"]
-        self.params.update({"reference_year": "2012",
+        self.params.update({"layer_names": {"reference": "_ua2012$"},
                             "formats": [".gpkg"],
-                            "layer_names": {"reference": "_ua2012$"}})
+                            "documents": {}})
 
     def test(self):
         from qc_tool.vector.naming import run_check
@@ -242,6 +244,22 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
         self.assertEqual(1, len(status.params["layer_defs"]))
         self.assertEqual("EE003L1_NARVA_UA2012.gpkg", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+
+    def test_found_document(self):
+        from qc_tool.vector.naming import run_check
+        self.params["documents"] = {"map.pdf": "_map.pdf$",
+                                    "delivery_report.pdf": "_delivery_report.pdf$"}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_missing_document(self):
+        from qc_tool.vector.naming import run_check
+        self.params["documents"] = {"extra_pdf_document": "_extra_pdf_document.pdf$"}
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("The delivery does not contain expected document 'extra_pdf_document'.", status.messages[0])
 
 
 class Test_attribute(VectorCheckTestCase):

@@ -14,6 +14,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import find_gdb_layers
     from qc_tool.vector.helper import find_gpkg_layers
     from qc_tool.vector.helper import find_shp_layers
+    from qc_tool.vector.helper import find_documents
 
 
     # Fix reference year.
@@ -108,5 +109,11 @@ def run_check(params, status):
         else:
             status.info("No boundary has been found at {:s}."
                         .format(boundary_source_name))
+
+    # Find supplementary documents.
+    for document_alias, document_regex in params.get("documents", {}).items():
+        document_filepaths = find_documents(params["unzip_dir"], document_regex)
+        if not document_filepaths:
+            status.failed("The delivery does not contain expected document '{:s}'.".format(document_alias))
 
     status.add_params({"layer_defs": builder.layer_defs})

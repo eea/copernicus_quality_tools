@@ -138,7 +138,6 @@ class Test_ua2018_stl(ProductTestCase):
         expected_step_results[14] = "skipped"
 
         job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018_stl", (15,))
-        print(job_result)
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
