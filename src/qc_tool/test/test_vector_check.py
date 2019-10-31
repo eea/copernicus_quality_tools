@@ -666,7 +666,7 @@ class Test_singlepart(VectorCheckTestCase):
                             "layers": ["layer_0"],
                             "step_nr": 1})
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
 
 
 class Test_geometry(VectorCheckTestCase):
@@ -694,14 +694,14 @@ class Test_geometry(VectorCheckTestCase):
                             "'POLYGON((0 0, 2 0, 1 1, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))', 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
 
     def test_self_intersecting_ring_fails(self):
         from qc_tool.vector.geometry import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText('POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
 
 
 class Test_area(VectorCheckTestCase):

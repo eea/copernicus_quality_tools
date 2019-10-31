@@ -66,6 +66,13 @@
                       <dt class="col-sm-2">Status</dt>
                       <dd class="col-sm-10">{{job_report.status}}</dd>
                     </dl>
+                    {% if job_report.aborted_check %}
+                    <div class="alert alert-danger">
+                        QC-job has been aborted due to errors in the
+                        <strong>{{job_report.aborted_check}}</strong>
+                        that might cause system errors in later checks.
+                    </div>
+                    {% endif %}
                     {% ifequal job_report.status "error" %}
                     <div class="alert alert-danger">SYSTEM ERROR: {{job_report.error_message}}</div>
                     {% endifequal %}
