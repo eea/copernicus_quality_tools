@@ -258,8 +258,7 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
         self.params["documents"] = {"extra_pdf_document": "_extra_pdf_document.pdf$"}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
-        self.assertIn("The delivery does not contain expected document 'extra_pdf_document'.", status.messages[0])
+        self.assertIn("Warning: the delivery does not contain expected document 'extra_pdf_document'.", status.messages[0])
 
 
 class Test_attribute(VectorCheckTestCase):
