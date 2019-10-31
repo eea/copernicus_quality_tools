@@ -690,3 +690,115 @@ def pull_job(request):
                     "filename": job.delivery.filename,
                     "skip_steps": job.skip_steps}
     return JsonResponse(response, safe=False)
+
+
+def get_chunk_name(uploaded_filename, chunk_number):
+    return uploaded_filename + "_part_{:03d}".format(chunk_number)
+
+def merge_uploaded_chunks(chunk_paths, target_filepath):
+    with open(str(target_filepath), "ab") as target_file:
+        for stored_chunk_filepath in chunk_paths:
+            stored_chunk_file = open(str(stored_chunk_filepath), "rb")
+            target_file.write(stored_chunk_file.read())
+            stored_chunk_file.close()
+            stored_chunk_filepath.unlink()
+    target_file.close()
+    logger.debug("Uploaded file saved to: " + str(target_filepath))
+
+@csrf_exempt
+def resumable_upload(request):
+    if request.method == "GET":
+        resumableIdentifier = str(request.GET.get("resumableIdentifier"))
+        resumableFilename = str(request.GET.get("resumableFilename"))
+        resumableChunkNumber = int(request.GET.get("resumableChunkNumber"))
+
+        if not resumableIdentifier or not resumableFilename or not resumableChunkNumber:
+            # Parameters are missing or invalid
+            return JsonResponse({"status":"error", "message": "Missing or invalid parameters."}, status=500)
+
+        # path where data should be uploaded to
+        user_upload_path = Path(CONFIG["upload_dir"]).joinpath(request.user.username)
+        if not user_upload_path.exists():
+            logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
+            user_upload_path.mkdir(parents=True)
+
+        # chunk folder path based on the parameters
+        chunks_dir = user_upload_path.joinpath(resumableIdentifier)
+
+        # chunk path based on the parameters
+        chunk_file = chunks_dir.joinpath(get_chunk_name(resumableFilename, resumableChunkNumber))
+        logger.debug('Getting chunk: %s', chunk_file)
+
+        if chunk_file.is_file():
+            # Let resumable.js know this chunk already exists
+            return HttpResponse(status=200)
+        else:
+            # Let resumable.js know this chunk does not exists and needs to be uploaded
+            return HttpResponse(status=404)
+
+    if request.method == "POST":
+        resumableTotalChunks = int(request.POST.get('resumableTotalChunks'))
+        resumableChunkNumber = int(request.POST.get('resumableChunkNumber'))
+        resumableFilename = str(request.POST.get('resumableFilename'))
+        resumableIdentifier = str(request.POST.get('resumableIdentifier'))
+
+        # get the chunk data
+        chunk_data = request.FILES.get("file")
+
+        # make our temp directory
+        user_upload_path = Path(CONFIG["upload_dir"]).joinpath(request.user.username)
+        if not user_upload_path.exists():
+            logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
+            user_upload_path.mkdir(parents=True)
+
+        # chunk folder path based on the parameters
+        chunks_dir = user_upload_path.joinpath(resumableIdentifier)
+        if not chunks_dir.is_dir():
+            chunks_dir.mkdir(parents=True)
+
+        # save the chunk data
+        chunk_name = get_chunk_name(resumableFilename, resumableChunkNumber)
+        chunk_filepath = chunks_dir.joinpath(chunk_name)
+
+        fs = FileSystemStorage(str(chunk_filepath.parent))
+        fs.save(chunk_filepath.name, chunk_data)
+        logger.info("Saved chunk: " + chunk_filepath.name)
+
+        # check if the upload is complete
+        chunk_paths = [chunks_dir.joinpath(get_chunk_name(resumableFilename, x)) for x in
+                       range(1, resumableTotalChunks + 1)]
+        upload_complete = all([p.is_file() for p in chunk_paths])
+
+        # combine all the chunks to create the final file
+        if upload_complete:
+            user_incoming_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
+            if not user_incoming_path.exists():
+                logger.info("Creating a directory for user-incoming files: {:s}.".format(str(user_incoming_path)))
+                user_upload_path.mkdir(parents=True)
+
+            target_filepath = user_incoming_path.joinpath(resumableFilename)
+            merge_uploaded_chunks(chunk_paths, target_filepath)
+
+            # Assign product description based on product ident.
+
+            product_ident = guess_product_ident(target_filepath)
+            logger.debug(product_ident)
+            product_description = find_product_description(product_ident)
+
+            # Register the uploaded file as a new delivery in the database.
+            d = models.Delivery()
+            d.filename = target_filepath.name
+            d.filepath = user_upload_path
+            d.size_bytes = target_filepath.stat().st_size
+            d.product_ident = product_ident
+            d.product_description = product_description
+            d.date_uploaded = timezone.now()
+            d.user = request.user
+            d.is_deleted = False
+            d.save()
+            logger.debug("Delivery object saved successfully to database.")
+
+        return JsonResponse({"status":"ok", "message": "Chunk uploaded successfully."}, status=200)
+
+    else:
+        return JsonResponse({"status":"error", "message": "request method must be 'GET' or 'POST'."}, status=500)

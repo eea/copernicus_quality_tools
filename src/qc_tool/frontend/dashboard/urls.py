@@ -22,6 +22,7 @@ urlpatterns = [
 
     path("upload/", views.file_upload, name="file_upload"),
 
+    path("resumable_upload/", views.resumable_upload, name="resumable_upload"),
     path("resumable_upload_demo/", views.resumable_upload_demo, name="resumable_upload_demo"),
 
     path("job_history/<delivery_id>/", views.job_history_page, name="job_history"),
