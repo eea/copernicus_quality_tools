@@ -78,6 +78,21 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
+        # Features with specific comments.
+        if len(params["exception_comments"]) > 0:
+            sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
+            for comment_column_name in params["comment_column_names"]:
+                sql = ("INSERT INTO {exception_table}"
+                       " SELECT {fid_name}"
+                       " FROM {layer_name}"
+                       " WHERE"
+                       "  {comment_column_name} IN %(exception_comments)s"
+                       "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                       "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+                sql_params["comment_column_name"] = comment_column_name
+                sql = sql.format(**sql_params)
+                cursor.execute(sql, sql_execute_params)
+
         # Add exceptions comming from complex change.
         # Do that once for initial code and once again for final code.
         for code_column_name in (params["initial_code_column_name"],

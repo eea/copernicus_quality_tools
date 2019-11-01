@@ -575,10 +575,14 @@ def get_result(request, job_uuid):
     job = models.Job.objects.get(job_uuid=job_uuid)
     delivery = job.delivery
     job_report = compile_job_report_data(job_uuid, job.product_ident)
-    # strip initial qc_tool. from check idents
+
     for step in job_report["steps"]:
+        # Strip initial qc_tool. from check idents.
         if step["check_ident"].startswith("qc_tool."):
             step["check_ident"] = ".".join(step["check_ident"].split(".")[1:])
+        # Inform the result page about presence of a check with 'aborted' status.
+        if step["status"] == "aborted":
+            job_report["aborted_check"] = step["check_ident"]
     return render(request, "dashboard/result.html", {"job_report":job_report,
                                                      "delivery": delivery,
                                                      "show_logo": settings.SHOW_LOGO})
@@ -598,7 +602,7 @@ def get_pdf_report(request, job_uuid):
 def download_delivery_file(request, delivery_id):
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    # Authorization check
+    # Authorization check.q
     if not request.user.is_superuser:
         if delivery.user != request.user:
             raise PermissionDenied("You are not authorized to view uploaded file for delivery id={:d}."

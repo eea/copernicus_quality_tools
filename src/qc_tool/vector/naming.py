@@ -114,6 +114,6 @@ def run_check(params, status):
     for document_alias, document_regex in params.get("documents", {}).items():
         document_filepaths = find_documents(params["unzip_dir"], document_regex)
         if not document_filepaths:
-            status.failed("The delivery does not contain expected document '{:s}'.".format(document_alias))
+            status.info("Warning: the delivery does not contain expected document '{:s}'.".format(document_alias))
 
     status.add_params({"layer_defs": builder.layer_defs})
