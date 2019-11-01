@@ -1120,30 +1120,38 @@ class Test_mmu_n2k(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_n2k import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, geom geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, comment_1 varchar(40), comment_2 varchar(40), geom geometry(Polygon, 4326));")
 
         # Artificial margin as a general feature.
-        cursor.execute("INSERT INTO n2k VALUES (0, 0.5, 10, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (0, 0.5, 10, NULL, NULL, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
         # Marginal features.
-        cursor.execute("INSERT INTO n2k VALUES (10, 0.1, 8, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (11, 0.0999, 8, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (10, 0.1, 8, NULL, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (11, 0.0999, 8, NULL, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
 
         # Linear features.
-        cursor.execute("INSERT INTO n2k VALUES (20, 0.1, 121, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (21, 0.1, 1211, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (22, 0.1, 122, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (23, 0.1, 911, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (24, 0.1, 912, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (25, 0.0999, 121, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (20, 0.1, 121, NULL, NULL, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (21, 0.1, 1211, NULL, NULL, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (22, 0.1, 122, NULL, NULL, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (23, 0.1, 911, NULL, NULL, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (24, 0.1, 912, NULL, NULL, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (25, 0.0999, 121, NULL, NULL, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
 
         # Urban feature touching road or railway.
-        cursor.execute("INSERT INTO n2k VALUES (30, 0.25, 1, ST_MakeEnvelope(1, 14, 2, 15, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (30, 0.25, 1, NULL, NULL, ST_MakeEnvelope(1, 14, 2, 15, 4326));")
 
         # Complex change features.
-        cursor.execute("INSERT INTO n2k VALUES (40, 0.2, 9, ST_MakeEnvelope(0, 16, 1, 17, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (41, 0.2, 9, ST_MakeEnvelope(1, 16, 2, 17, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (42, 0.2, 9, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (40, 0.2, 9, NULL, NULL, ST_MakeEnvelope(0, 16, 1, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (41, 0.2, 9, NULL, NULL, ST_MakeEnvelope(1, 16, 2, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (42, 0.2, 9, NULL, NULL, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
+
+        # Features with specific comment.
+        cursor.execute("INSERT INTO n2k VALUES (50, 0, 8, 'comment1', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (51, 0, 8, NULL, 'comment2', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+
+        cursor.execute("INSERT INTO n2k VALUES (52, 0, 8, 'comment1 nok', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (53, 0, 8, NULL, 'comment2 nok', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (54, 0, 8, NULL, NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
 
         self.params.update({"layer_defs": {"n2k": {"pg_layer_name": "n2k",
                                                    "pg_fid_name": "fid",
@@ -1153,14 +1161,16 @@ class Test_mmu_n2k(VectorCheckTestCase):
                             "area_ha": 0.5,
                             "initial_code_column_name": "code",
                             "final_code_column_name": "code",
+                            "comment_column_names": ["comment_1", "comment_2"],
+                            "exception_comments": ["comment1", "comment2"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_n2k_general ORDER BY fid;")
         self.assertListEqual([(0,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_n2k_exception ORDER BY fid;")
-        self.assertListEqual([(10,), (20,), (21,), (22,), (23,), (24,), (30,), (40,), (41,), (42,)], cursor.fetchall())
+        self.assertListEqual([(10,), (20,), (21,), (22,), (23,), (24,), (30,), (40,), (41,), (42,), (50,), (51,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_n2k_error ORDER BY fid;")
-        self.assertListEqual([(11,), (25,)], cursor.fetchall())
+        self.assertListEqual([(11,), (25,), (52,), (53,), (54,)], cursor.fetchall())
 
 
 class Test_mmu_rpz(VectorCheckTestCase):
