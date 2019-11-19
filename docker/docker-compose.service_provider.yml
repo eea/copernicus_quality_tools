@@ -18,7 +18,7 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:1.5.2rc3
+    image: eeacms/copernicus-qctool-worker:1.5.3rc1
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
