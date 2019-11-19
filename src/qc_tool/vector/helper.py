@@ -386,17 +386,17 @@ class InspireServiceClient():
                     return r.status_code, object_id, "ok"
 
         except requests.exceptions.HTTPError as ex:
-            return None, str(ex)
+            return None, None, str(ex)
         except requests.exceptions.ConnectionError:
-            return None, "Service not available."
+            return None, None, "Service not available."
         except requests.exceptions.Timeout:
-            return None, "Connection timeout."
+            return None, None, "Connection timeout."
         except requests.exceptions.RequestException as ex:
-            return None, repr(ex)
+            return None, None, repr(ex)
         except KeyError:
-            return None, "Service API returned unexpected response."
+            return None, None, "Service API returned unexpected response."
         except Exception as ex:
-            return None, repr(ex)
+            return None, None, repr(ex)
 
     @staticmethod
     def start_test_run(test_suite_id, test_object_id):
@@ -538,6 +538,9 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
         status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_suite_message))
         # if the test_suite_id is unavailable, then the inspire service is probably not working as expected.
         return
+
+    # Does the file contain GMD:MD_Metadata element?
+
 
     # Step 2, Upload xml file to the service. The service creates a temporary test object with a unique test object ID.
     status_code, test_object_id, test_object_message = InspireServiceClient.create_test_object(xml_filepath)
