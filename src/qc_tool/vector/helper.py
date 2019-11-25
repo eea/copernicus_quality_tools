@@ -520,10 +520,9 @@ class InspireServiceClient():
 
 def locate_metadata_file(layer_filepath):
     # XML metadata file can be LAYER.xml or LAYER.shp.xml or metadata/LAYER.xml or metadata/LAYER.shp.xml
-    for xml_filepath in [layer_filepath.parent.joinpath(layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath(layer_filepath.name + ".xml"),
+    for xml_filepath in [layer_filepath.parent.joinpath("Metadata", layer_filepath.stem + ".xml"),
                          layer_filepath.parent.joinpath("metadata", layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath("metadata", layer_filepath.name + ".xml")]:
+                         layer_filepath.parent.joinpath(layer_filepath.stem + ".xml")]:
         if xml_filepath.exists():
             return xml_filepath
     return None
@@ -545,7 +544,7 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     # Step 2, Upload xml file to the service. The service creates a temporary test object with a unique test object ID.
     status_code, test_object_id, test_object_message = InspireServiceClient.create_test_object(xml_filepath)
     if status_code == 400:
-        status.failed("Metadata file {:s} is not in INSPIRE XML format and cannot be validated:. ".format(test_object_message))
+        status.info("Metadata file {:s} is not in INSPIRE XML format and cannot be validated:. ".format(test_object_message))
         return
     if test_object_id is None:
         status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_object_message))
@@ -570,7 +569,7 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     if result_status in ["PASSED", "PASSED_MANUAL"]:
         pass
     elif result_status == "FAILED":
-        status.failed(
+        status.info(
             "Metadata of {:s} did not pass INSPIRE validation. See report for details.".format(xml_filepath.name))
     elif result_status == "UNDEFINED":
         # Ocassionally the test run ends with undefined status when executed for the first time.
