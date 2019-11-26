@@ -44,7 +44,6 @@ class Test_Raster(ProductTestCase):
         filepath = self.raster_data_dir.joinpath("fty_100m", "fty_2018_100m_eu_03035_d02_clip.zip")
 
         expected_step_results = ["ok"] * 13
-        expected_step_results[12] = "skipped"
 
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, [])
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
@@ -176,8 +175,7 @@ class Test_Raster(ProductTestCase):
         filepath = self.raster_data_dir.joinpath("general_raster", "general_raster.zip")
 
         expected_step_results = ["ok"] * 9
-        expected_step_results[8] = "skipped"
 
-        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (9,))
+        job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, [])
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses)
