@@ -6,13 +6,10 @@ DESCRIPTION = "Metadata are in accord with INSPIRE specification."
 IS_SYSTEM = False
 
 
-def locate_xml_file(layer_filepath):
-    # The INSPIRE XML file can be LAYER.xml or LAYER.tif.xml or LAYER_metadata.xml.
-    # The file can also be located in a "metadata" subdirectory.
-    for xml_filepath in [layer_filepath.parent.joinpath(layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath(layer_filepath.stem + "_metadata.xml"),
-                         layer_filepath.parent.joinpath("metadata", layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath("metadata", layer_filepath.stem + "_metadata.xml")]:
+def locate_xml_file(metadata_folder_path, layer_filepath):
+    # The INSPIRE XML file can be LAYER.xml or LAYER_metadata.xml.
+    for xml_filepath in [metadata_folder_path.joinpath(layer_filepath.stem + ".xml"),
+                         metadata_folder_path.joinpath(layer_filepath.stem + "_metadata.xml")]:
         if xml_filepath.exists():
             return xml_filepath
     return None
@@ -23,10 +20,18 @@ def run_check(params, status):
     from qc_tool.raster.helper import do_raster_layers
 
     for layer_def in do_raster_layers(params):
-        # Verify if there is any xml INSPIRE metadata file to check.
-        xml_filepath = locate_xml_file(layer_def["src_filepath"])
+
+        # Verify that there is a Metadata subfolder.
+        metadata_dir = layer_def["src_filepath"].parent.joinpath("Metadata")
+        if not metadata_dir.is_dir():
+            status.info("The delivery does not contain the expected 'Metadata' folder.")
+            return
+
+        # The .xml file must be placed inside a Metadata subdirectory.
+        xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
         if xml_filepath is None:
-            status.failed("Metadata file for {:s} has not been found.".format(layer_def["src_filepath"].name))
+            status.info("The delivery does not contain the expected metadata file 'Metadata/{:s}.xml'".format(
+                layer_def["src_filepath"].stem))
             return
 
         # Validate the xml file using INSPIRE validator service
