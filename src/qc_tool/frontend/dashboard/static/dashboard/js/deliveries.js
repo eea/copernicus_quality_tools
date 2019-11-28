@@ -119,7 +119,7 @@ function statusCellStyle(value, row, index) {
     if (value == "ok") {
         return { classes: "success"}
     }
-    if (value == "failed" || value == "error" || value == "expired") {
+    if (value == "failed" || value == "error") {
         return { classes: "danger" }
     }
     return {};
