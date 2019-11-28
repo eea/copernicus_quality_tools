@@ -334,85 +334,68 @@ def delivery_delete(request):
     Deletes a delivery from the database and deleted the associated ZIP file from the filesystem.
     """
     if request.method == "POST":
-        delivery_ids = request.POST.get("ids")
-
-        logger.debug("delivery_delete ids={:s}".format(delivery_ids))
-
         delivery_ids = request.POST.get("ids").split(",")
+        logger.debug("delivery_delete ids={:s}".format(repr(delivery_ids)))
 
-        # Job status validation.
+        # Validate deliveries.
         for delivery_id in delivery_ids:
 
-            # Input validation.
+            # Validate delivery id.
             try:
                 int(delivery_id)
             except ValueError:
-                error_message = "delivery id {0} must be a valid integer id.".format(delivery_id)
+                error_message = "Delivery id {:s} must be an integer.".format(repr(delivery_id))
                 response = JsonResponse({"status": "error", "message": error_message})
                 response.status_code = 400
                 return response
 
-            # Existence validation.
-            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
+            # Get delivery entity.
+            delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-            # User validation.
+            # Authorize the user.
             if not request.user.is_superuser:
-                if request.user.id != d.user.id:
-                    error_message = "User {:s} is not authorized to delete delivery {:d}"
-                    error_message = error_message.format(request.user.username, d.filename)
+                if request.user.id != delivery.user.id:
+                    error_message = "User {:s} is not authorized to delete delivery {:s}.".format(request.user.username, delivery.filename)
                     response = JsonResponse({"status": "error", "message": error_message})
                     response.status_code = 403
                     return response
 
-            # Job status validation.
-            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
-            if len(running_jobs) > 0:
-                error_message = "delivery {:s} cannot be deleted. QC job is currently running.".format(d.filename)
+            # Abort, if the job is in JOB_WAITING or JOB_RUNNING status.
+            waiting_count = models.Job.objects.filter(delivery__id=delivery.id).filter(job_status=JOB_WAITING).count()
+            if waiting_count > 0:
+                error_message = "Delivery {:s} cannot be deleted. QC job is currently waiting.".format(delivery.filename)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 400
+                return response
+            running_count = models.Job.objects.filter(delivery__id=delivery.id).filter(job_status=JOB_RUNNING).count()
+            if running_count > 0:
+                error_message = "Delivery {:s} cannot be deleted. QC job is currently running.".format(delivery.filename)
                 response = JsonResponse({"status": "error", "message": error_message})
                 response.status_code = 400
                 return response
 
-        deleted_filenames = []
+        # Delete deliveries.
         for delivery_id in delivery_ids:
+            # Get delivery entity.
+            delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-            # Existence validation again.
-            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
+            # Delete delivery .zip file on the file system.
+            filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(delivery.filename)
+            if filepath.exists():
+                filepath.unlink()
 
-            # User validation again.
-            if not request.user.is_superuser:
-                if request.user.id != d.user.id:
-                    error_message = "User {:s} is not authorized to delete delivery {:s}"
-                    error_message = error_message.format(request.user.username, d.filename)
-                    response = JsonResponse({"status": "error", "message": error_message})
-                    response.status_code = 403
-                    return response
-
-            # Job status validation.
-            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
-            if len(running_jobs) > 0:
-                error_message = "delivery {:s} cannot be deleted. QC job is currently running.".format(d.filename)
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 400
-                return response
-
-            # Deleting delivery .zip file on the file system.
-            file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
-            if file_path.exists():
-                file_path.unlink()
-
-            # The associated row is not deleted from the database table but its attribute is_deleted is set to True
+            # The delivery and its jobs are not actually deleted from the database.
+            # Only delivery.is_deleted attribute is set to True.
             # This is done in order to preserve the job history.
-            d.is_deleted = True
-            d.save()
-            deleted_filenames.append(file_path.name)
-        return JsonResponse({"status":"ok", "message": "{:d} deliveries deleted successfully."
-                            .format(len(deleted_filenames))})
+            delivery.is_deleted = True
+            delivery.save()
+        return JsonResponse({"status":"ok", "message": "{:d} deliveries have been deleted.".format(len(delivery_ids))})
 
 
 @csrf_exempt
 def job_delete(request):
     """
-    Deletes a job from the database and deleted the associated files from the filesystem.
+    Deletes the job from the database and associated files from the filesystem.
     """
     if request.method == "POST":
         uuids = request.POST.get("uuids")
