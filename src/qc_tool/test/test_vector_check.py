@@ -1770,28 +1770,28 @@ class Test_inspire(VectorCheckTestCase):
         self.assertIn("s01_inspire_good_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_good_inspire_log.txt", status.attachment_filenames)
 
-    def test_missing_xml_fail(self):
+    def test_missing_xml(self):
         from qc_tool.vector.inspire import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_missing_xml.gdb")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
 
-    def test_xml_format_fail(self):
+    def test_xml_format(self):
         from qc_tool.vector.inspire import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_invalid_xml.gdb")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
         self.assertEqual(2, len(status.messages))
         self.assertIn("The xml file inspire_invalid_xml.xml does not contain a <gmd:MD_Metadata> top-level element.",
                       status.messages[1])
 
-    def test_fail(self):
+    def test_metadata_validation_failed(self):
         from qc_tool.vector.inspire import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_bad.gdb")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
         self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)

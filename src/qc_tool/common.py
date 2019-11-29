@@ -31,9 +31,6 @@ JOB_OK = "ok"
 JOB_PARTIAL = "partial"
 JOB_FAILED = "failed"
 JOB_ERROR = "error"
-JOB_EXPIRED = "expired"
-
-JOB_EXPIRE_TIMEOUT = 43200
 
 JOB_INPUT_DIRNAME = "input.d"
 JOB_OUTPUT_DIRNAME = "output.d"
