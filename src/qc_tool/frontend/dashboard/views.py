@@ -111,12 +111,22 @@ def setup_job(request):
 def get_deliveries_json(request):
     """
     Returns a list of all deliveries for the current user.
-    The deliveries are loaded from the dashboard_deliverys database table.
+    The deliveries are loaded from the dashboard_deliveries database table.
     The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
 
     :param request:
-    :return: list of deliveries in JSON format
+    :return: list of deliveries with associated job information in JSON format
     """
+
+    # Before refreshing the page, update status of all waiting or running jobs.
+    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
+    for job in running_jobs:
+        job_status = check_running_job(str(job.job_uuid), job.worker_url)
+        if job_status is not None:
+            job.update_status(job_status)
+
+    # Retrieve a table of deliveries.
+    # If a delivery has one or more jobs, show information about the job with latest date_created.
     with connection.cursor() as cursor:
         sql = """
         SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
