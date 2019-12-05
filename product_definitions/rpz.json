@@ -9,7 +9,6 @@
       "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
-        "reference_year": "2012",
         "formats": [".gdb", ".gpkg", ".shp"],
         "layer_names": {
           "rpz": "^rpz_(?P<aoi_code>du[0-9]{3})[a-z]_lclu(?P<reference_year>2012)_v[0-9]{2}$"
@@ -19,7 +18,8 @@
                       "du020", "du021", "du022", "du023", "du024", "du025", "du026", "du027", "du028", "du029",
                       "du030", "du031", "du032", "du033", "du034", "du035", "du036", "du037", "du038", "du039",
                       "du040", "du041", "du042", "du043"],
-        "boundary_source": "boundary_rpz.shp"
+        "boundary_source": "boundary_rpz.shp",
+        "reference_year": "2012"
       }
     },
     {

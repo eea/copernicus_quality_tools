@@ -10,7 +10,8 @@
       "required": true,
       "parameters": {
         "layer_names": {"raster": "^.*.tif$"},
-        "extensions": [".tif"]
+        "extensions": [".tif"],
+        "reference_year": "ury"
       }
     },
     {

@@ -13,8 +13,9 @@
           "swf_100m": "^swf_2015_100m_(?P<aoi_code>eu)_0?3035_",
           "awf_100m": "^awf_2015_100m_(?P<aoi_code>eu)_0?3035_",
           "swfawf_100m": "^swfawf_2015_100m_(?P<aoi_code>eu)_0?3035_"},
+        "aoi_codes": ["eu"],
         "extensions": [".tif"],
-        "aoi_codes": ["eu"]
+        "reference_year": "2015"
       }
     },
     {

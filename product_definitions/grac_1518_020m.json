@@ -12,8 +12,8 @@
         "layer_names": {
           "raster": "^grac_1518_020m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"
         },
-        "extensions": [".tif"],
         "aoi_codes": ["eu"],
+        "extensions": [".tif"],
         "reference_year": "2018"
       }
     },

@@ -9,7 +9,8 @@
       "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
-        "formats": [".gdb", ".gpkg", ".shp"]
+        "formats": [".gdb", ".gpkg", ".shp"],
+        "reference_year": "ury"
       }
     },
     {

@@ -12,9 +12,9 @@
         "layer_names": {
           "raster": "^imcc_1518_020m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"
         },
-        "reference_year": "2018",
         "aoi_codes": ["eu"],
-        "extensions": [".tif"]
+        "extensions": [".tif"],
+        "reference_year": "2018"
       }
     },
     {

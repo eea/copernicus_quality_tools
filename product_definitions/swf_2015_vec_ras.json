@@ -9,6 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
+        "reference_year": "2015",
         "layer_names":{"raster": "^swf_2015_005m_(?P<country_code>[a-z]{2})_0?3035_(?P<aoi_code>[0-9]{3})_"},
         "extensions": [".tif"],
         "aoi_codes": ["001", "002", "003", "004", "005", "006", "007", "008", "009","010",
