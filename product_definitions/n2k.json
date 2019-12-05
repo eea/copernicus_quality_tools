@@ -57,6 +57,13 @@
       "required": true
     },
     {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["n2k"]
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
@@ -278,13 +285,6 @@
       "parameters": {
         "layers": ["n2k"],
         "code_column_names": ["maes_4_06", "maes_4_12"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["n2k"]
       }
     }
   ]

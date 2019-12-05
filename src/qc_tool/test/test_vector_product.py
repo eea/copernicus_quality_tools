@@ -13,8 +13,10 @@ class Test_clc(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
         expected_step_results = ["ok"] * 25
+        # vector.inspire check is skipped
+        expected_step_results[7] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "clc2012", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "clc2012", (8,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
@@ -33,9 +35,10 @@ class Test_n2k(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
@@ -44,9 +47,10 @@ class Test_rpz(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "rpz", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "rpz", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
@@ -54,24 +58,27 @@ class Test_rpz(ProductTestCase):
 class Test_swf_vec_ras(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector_raster", "swf_2015_vec_ras", "swf_2015_vec_ras_FR_3035_123_pt01.zip")
-        expected_step_results = ["ok"] * 30
-        expected_step_results[19] = "failed"
-        #expected_step_results[29] = "skipped"
+        expected_step_results = ["ok"] * 31
+        # vector.inspire check is skipped
+        expected_step_results[17] = "skipped"
+        # vector.area in the testing data does not match
+        expected_step_results[21] = "failed"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "swf_2015_vec_ras", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "swf_2015_vec_ras", (18,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
         self.assertListEqual(['Layer swf_2015_vec_fr_3035_123_pt01 has error features with row number: 10.'],
-                             job_result["steps"][19]["messages"])
+                             job_result["steps"][21]["messages"])
 
 
 class Test_ua2012(ProductTestCase):
     def test_gdb(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_UA2012.gdb.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2012", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2012", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
@@ -79,9 +86,10 @@ class Test_ua2012(ProductTestCase):
     def test_gpkg(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2012.gpkg.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2012", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2012", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
@@ -91,9 +99,10 @@ class Test_ua2018(ProductTestCase):
     def test_gdb(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_UA2018.gdb.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
@@ -101,9 +110,10 @@ class Test_ua2018(ProductTestCase):
     def test_gpkg(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2018.gpkg.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
@@ -113,9 +123,10 @@ class Test_ua_change_2012_2018(ProductTestCase):
     def test_gdb(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gdb", "EE003L1_NARVA_Change_2012_2018.gdb.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
@@ -123,9 +134,10 @@ class Test_ua_change_2012_2018(ProductTestCase):
     def test_gpkg(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_change_2012_2018.gpkg.zip")
         expected_step_results = ["ok"] * 16
-        #expected_step_results[15] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
@@ -134,9 +146,10 @@ class Test_ua2018_stl(ProductTestCase):
     def test_gpkg(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2018_stl.gpkg.zip")
         expected_step_results = ["ok"] * 15
-        #expected_step_results[14] = "skipped"
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018_stl", [])
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua2018_stl", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
