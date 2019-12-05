@@ -26,6 +26,13 @@
       "required": true
     },
     {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"]
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
@@ -39,12 +46,6 @@
     },
     {
       "check_ident": "qc_tool.vector.overlap",
-      "required": false,
-      "parameters": {
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
       }

@@ -54,6 +54,13 @@
       "required": true
     },
     {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["rpz"]
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
@@ -177,13 +184,6 @@
         "exception_comments": ["Braided river",
                                "Different water levels",
                                "Flooded area"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["rpz"]
       }
     }
   ]

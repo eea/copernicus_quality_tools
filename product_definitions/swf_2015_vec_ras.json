@@ -90,6 +90,14 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.tile",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "max_blocksize": 1024
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
@@ -172,6 +180,13 @@
     {
       "check_ident": "qc_tool.vector.import2pg",
       "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
     },
     {
       "check_ident": "qc_tool.vector.enum",
@@ -296,13 +311,6 @@
       "parameters": {
         "layers": ["vector"],
         "code_column_names": ["code"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["vector"]
       }
     }
   ]

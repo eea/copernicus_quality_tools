@@ -16,6 +16,13 @@
 	  }
     },
     {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"]
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
@@ -118,13 +125,6 @@
       "parameters": {
         "layers": ["raster"],
         "outside_area_code": 255
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["raster"]
       }
     }
   ]

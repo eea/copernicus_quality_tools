@@ -399,7 +399,7 @@ class Test_epsg_gpkg(VectorCheckTestCase):
 class Test_epsg_auto_identify_epsg(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.epsg import run_check
-        boundary_path = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "ES031L1_LUGO", "ES031L1_LUGO_UA2012_old.shp")
+        boundary_path = TEST_DATA_DIR.joinpath("boundaries", "vector", "boundary_n2k.shp")
         self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
                                                         "src_layer_name": boundary_path.stem}},
                             "layers": ["boundary"],
@@ -447,9 +447,9 @@ class Test_import2pg(VectorCheckTestCase):
     def test_precision(self):
         """ogr2ogr parameter PRECISION=NO should supress numeric field overflow error."""
         from qc_tool.vector.import2pg import run_check
-        shp_filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "ES031L1_LUGO", "ES031L1_LUGO_UA2012_old.shp")
+        shp_filepath = TEST_DATA_DIR.joinpath("vector", "checks", "import2pg", "field_overflow_example.shp")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": shp_filepath,
-                                                       "src_layer_name": "ES031L1_LUGO_UA2012_old"}},
+                                                       "src_layer_name": "field_overflow_example"}},
                             "layers": ["layer_0"]})
         status = self.status_class()
         run_check(self.params, status)

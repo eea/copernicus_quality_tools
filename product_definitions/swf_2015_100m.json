@@ -19,6 +19,13 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "awf_100m", "swfawf_100m"]
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
@@ -82,13 +89,6 @@
         "layers": ["swf_100m", "awf_100m", "swfawf_100m"],
         "mask": "swf",
         "outside_area_code": 255
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["swf_100m", "awf_100m", "swfawf_100m"]
       }
     }
   ]

@@ -95,6 +95,13 @@
       "required": true
     },
     {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["reference", "initial", "change"]
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
@@ -270,13 +277,6 @@
       "parameters": {
         "layers": ["change"],
         "code_column_names": ["code_12", "code_18"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["reference", "initial", "change"]
       }
     }
   ]

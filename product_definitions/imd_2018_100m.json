@@ -16,6 +16,13 @@
 	  }
     },
     {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"]
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.format",
       "required": true,
       "parameters": {
@@ -90,14 +97,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.gap",
-      "required": false,
-      "parameters": {
-        "layers": ["raster"],
-        "outside_area_code": 255
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
@@ -113,10 +112,19 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.inspire",
+      "check_ident": "qc_tool.raster.tile",
       "required": false,
       "parameters": {
-        "layers": ["raster"]
+        "layers": ["raster"],
+        "max_blocksize": 1024
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "outside_area_code": 255
       }
     }
   ]
