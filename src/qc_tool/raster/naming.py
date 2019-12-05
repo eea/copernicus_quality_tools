@@ -13,6 +13,10 @@ def run_check(params, status):
     from qc_tool.vector.helper import LayerDefsBuilder
     from qc_tool.vector.helper import extract_aoi_code
 
+    # Fix reference year.
+    if "reference_year" in params:
+        status.set_status_property("reference_year", params["reference_year"])
+
     # Find tif files.
     tif_filepaths = [path for path in list(params["unzip_dir"].glob("**/*"))
                      if path.name.lower().endswith(".tif") and path.is_file()]
@@ -38,20 +42,6 @@ def run_check(params, status):
         # Extract AOI code and compare it to pre-defined list.
         aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status)
         status.add_params({"aoi_code": aoi_code})
-
-    # Extract reference year (might not be needed).
-    if "extract_reference_year" in params and params["extract_reference_year"] == True:
-        for layer_alias, layer_def in builder.layer_defs.items():
-            layer_def = builder.layer_defs[layer_alias]
-            layer_name = layer_def["src_layer_name"]
-            layer_regex = params["layer_names"][layer_alias]
-            mobj = re.match(layer_regex, layer_name.lower())
-            if mobj is not None:
-                try:
-                    reference_year = mobj.group("reference_year")
-                    status.set_status_property("reference_year", reference_year)
-                except IndexError:
-                    status.aborted("Layer {:s} does not contain reference year".format(layer_name))
 
     # Checking existence of required supplementary files for each GeoTiff (i.e. .tfw)
     if "extensions" in params:

@@ -19,7 +19,7 @@ class Test_naming(RasterCheckTestCase):
                                                      "fty_2018_100m_eu_03035_d02_clip"),
                   "aoi_codes": ["mt", "eu"],
                   "extensions": [".tif"],
-                  "extract_reference_year": True,
+                  "reference_year": "2018",
                   "layer_names": {"layer_1": "^fty_(?P<reference_year>[0-9]{4})_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"}
                  }
         status = self.status_class()
@@ -93,6 +93,23 @@ class Test_naming(RasterCheckTestCase):
         run_check(params, status)
         self.assertEqual("aborted", status.status)
         self.assertIn("Layer test_raster1.tif has illegal AOI code raster1.", status.messages)
+
+    def test_reference_year(self):
+        from qc_tool.raster.naming import run_check
+        params = {"unzip_dir": TEST_DATA_DIR.joinpath("raster",
+                                                      "checks",
+                                                      "mmu"),
+                  "extensions": [".tif"],
+                  "layer_names": {"layer_1": "^test_raster1.tif$",
+                                  "layer_2": "^mmu_raster_incorrect.tif$",
+                                  "layer_3": "^mmu_raster_correct.tif"},
+                  "reference_year": "2018"
+                  }
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2018", status.status_properties["reference_year"])
 
 
 class Test_value(RasterCheckTestCase):

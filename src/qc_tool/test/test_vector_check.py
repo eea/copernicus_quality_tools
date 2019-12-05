@@ -80,10 +80,11 @@ class Test_naming_rpz(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.vector.naming import run_check
-        self.params.update({"layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}$"},
+        self.params.update({"layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu2012_v[0-9]{2}$"},
                             "formats": [".shp"],
                             "aoi_codes": ["007"],
-                            "boundary_source": "boundary_rpz.shp"})
+                            "boundary_source": "boundary_rpz.shp",
+                            "reference_year": "2012"})
         status = self.status_class()
         run_check(self.params, status)
 
@@ -92,6 +93,8 @@ class Test_naming_rpz(VectorCheckTestCase):
         self.assertEqual("rpz_DU007T_lclu2012_v01", status.params["layer_defs"]["rpz"]["src_layer_name"])
         self.assertEqual("boundary_rpz.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_rpz", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
 
 class Test_naming_n2k(VectorCheckTestCase):
@@ -118,6 +121,17 @@ class Test_naming_n2k(VectorCheckTestCase):
         self.assertEqual("n2k_du001z_lclu_v99_20190108", status.params["layer_defs"]["n2k"]["src_layer_name"])
         self.assertEqual("boundary_n2k.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_n2k", status.params["layer_defs"]["boundary"]["src_layer_name"])
+
+    def test_reference_year(self):
+        from qc_tool.vector.naming import run_check
+
+        self.params.update({"reference_year": "2019"})
+        status = self.status_class()
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2019", status.status_properties["reference_year"])
 
     def test_bad_layer_name_aborts(self):
         from qc_tool.vector.naming import run_check
@@ -163,6 +177,8 @@ class Test_naming_clc(VectorCheckTestCase):
         self.assertEqual("cha12_MT", status.params["layer_defs"]["change"]["src_layer_name"])
         self.assertEqual("boundary_clc_mt.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_clc_mt", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
     def test_mismatched_regex_aborts(self):
         from qc_tool.vector.naming import run_check
@@ -198,6 +214,8 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         self.assertEqual(1, len(status.params["layer_defs"]))
         self.assertEqual("EE003L1_NARVA_UA2012.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
 
     def test_bad_gdb_filename_aborts(self):
@@ -232,6 +250,7 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
 
         self.params["unzip_dir"] = status.params["unzip_dir"]
         self.params.update({"layer_names": {"reference": "_ua2012$"},
+                            "reference_year": "2012",
                             "formats": [".gpkg"],
                             "documents": {}})
 
@@ -244,6 +263,8 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
         self.assertEqual(1, len(status.params["layer_defs"]))
         self.assertEqual("EE003L1_NARVA_UA2012.gpkg", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
     def test_found_document(self):
         from qc_tool.vector.naming import run_check
