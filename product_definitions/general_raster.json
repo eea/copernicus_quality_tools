@@ -18,23 +18,12 @@
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
-        "layers": ["raster"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "layers": ["raster"],
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
       }
     },
     {
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
         "attribute_regexes": ["value", "count"]
       }
     },
@@ -42,7 +31,6 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
         "epsg": 3035
       }
     },
@@ -50,14 +38,12 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["raster"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
         "datatype": "byte"
       }
     },
@@ -65,7 +51,6 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
         "compression": ["LZW"]
       }
     },
@@ -73,7 +58,6 @@
       "check_ident": "qc_tool.raster.tile",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
         "max_blocksize": 1024
       }
     }

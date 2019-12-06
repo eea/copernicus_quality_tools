@@ -26,15 +26,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "layers": ["swf_100m", "awf_100m", "swfawf_100m"],
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {

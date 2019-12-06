@@ -58,17 +58,17 @@ class Test_rpz(ProductTestCase):
 class Test_swf_vec_ras(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector_raster", "swf_2015_vec_ras", "swf_2015_vec_ras_FR_3035_123_pt01.zip")
-        expected_step_results = ["ok"] * 31
+        expected_step_results = ["ok"] * 30
         # vector.inspire check is skipped
-        expected_step_results[17] = "skipped"
+        expected_step_results[16] = "skipped"
         # vector.area in the testing data does not match
-        expected_step_results[21] = "failed"
+        expected_step_results[20] = "failed"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "swf_2015_vec_ras", (18,))
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "swf_2015_vec_ras", (17,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
         self.assertListEqual(['Layer swf_2015_vec_fr_3035_123_pt01 has error features with row number: 10.'],
-                             job_result["steps"][21]["messages"])
+                             job_result["steps"][20]["messages"])
 
 
 class Test_ua2012(ProductTestCase):
