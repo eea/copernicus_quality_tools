@@ -80,10 +80,11 @@ class Test_naming_rpz(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.vector.naming import run_check
-        self.params.update({"layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu(?P<reference_year>[0-9]{4})_v[0-9]{2}$"},
+        self.params.update({"layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu2012_v[0-9]{2}$"},
                             "formats": [".shp"],
                             "aoi_codes": ["007"],
-                            "boundary_source": "boundary_rpz.shp"})
+                            "boundary_source": "boundary_rpz.shp",
+                            "reference_year": "2012"})
         status = self.status_class()
         run_check(self.params, status)
 
@@ -92,6 +93,8 @@ class Test_naming_rpz(VectorCheckTestCase):
         self.assertEqual("rpz_DU007T_lclu2012_v01", status.params["layer_defs"]["rpz"]["src_layer_name"])
         self.assertEqual("boundary_rpz.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_rpz", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
 
 class Test_naming_n2k(VectorCheckTestCase):
@@ -118,6 +121,17 @@ class Test_naming_n2k(VectorCheckTestCase):
         self.assertEqual("n2k_du001z_lclu_v99_20190108", status.params["layer_defs"]["n2k"]["src_layer_name"])
         self.assertEqual("boundary_n2k.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_n2k", status.params["layer_defs"]["boundary"]["src_layer_name"])
+
+    def test_reference_year(self):
+        from qc_tool.vector.naming import run_check
+
+        self.params.update({"reference_year": "2019"})
+        status = self.status_class()
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2019", status.status_properties["reference_year"])
 
     def test_bad_layer_name_aborts(self):
         from qc_tool.vector.naming import run_check
@@ -163,6 +177,8 @@ class Test_naming_clc(VectorCheckTestCase):
         self.assertEqual("cha12_MT", status.params["layer_defs"]["change"]["src_layer_name"])
         self.assertEqual("boundary_clc_mt.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_clc_mt", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
     def test_mismatched_regex_aborts(self):
         from qc_tool.vector.naming import run_check
@@ -198,6 +214,8 @@ class Test_naming_ua_gdb(VectorCheckTestCase):
         self.assertEqual(1, len(status.params["layer_defs"]))
         self.assertEqual("EE003L1_NARVA_UA2012.gdb", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
 
     def test_bad_gdb_filename_aborts(self):
@@ -232,6 +250,7 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
 
         self.params["unzip_dir"] = status.params["unzip_dir"]
         self.params.update({"layer_names": {"reference": "_ua2012$"},
+                            "reference_year": "2012",
                             "formats": [".gpkg"],
                             "documents": {}})
 
@@ -244,6 +263,8 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
         self.assertEqual(1, len(status.params["layer_defs"]))
         self.assertEqual("EE003L1_NARVA_UA2012.gpkg", status.params["layer_defs"]["reference"]["src_filepath"].name)
         self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2012", status.status_properties["reference_year"])
 
     def test_found_document(self):
         from qc_tool.vector.naming import run_check
@@ -258,8 +279,7 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
         self.params["documents"] = {"extra_pdf_document": "_extra_pdf_document.pdf$"}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
-        self.assertIn("The delivery does not contain expected document 'extra_pdf_document'.", status.messages[0])
+        self.assertIn("Warning: the delivery does not contain expected document 'extra_pdf_document'.", status.messages[0])
 
 
 class Test_attribute(VectorCheckTestCase):
@@ -379,7 +399,7 @@ class Test_epsg_gpkg(VectorCheckTestCase):
 class Test_epsg_auto_identify_epsg(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.epsg import run_check
-        boundary_path = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "ES031L1_LUGO", "ES031L1_LUGO_UA2012_old.shp")
+        boundary_path = TEST_DATA_DIR.joinpath("boundaries", "vector", "boundary_n2k.shp")
         self.params.update({"layer_defs": {"boundary": {"src_filepath": boundary_path,
                                                         "src_layer_name": boundary_path.stem}},
                             "layers": ["boundary"],
@@ -427,9 +447,9 @@ class Test_import2pg(VectorCheckTestCase):
     def test_precision(self):
         """ogr2ogr parameter PRECISION=NO should supress numeric field overflow error."""
         from qc_tool.vector.import2pg import run_check
-        shp_filepath = TEST_DATA_DIR.joinpath("vector", "ua", "shp", "ES031L1_LUGO", "ES031L1_LUGO_UA2012_old.shp")
+        shp_filepath = TEST_DATA_DIR.joinpath("vector", "checks", "import2pg", "field_overflow_example.shp")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": shp_filepath,
-                                                       "src_layer_name": "ES031L1_LUGO_UA2012_old"}},
+                                                       "src_layer_name": "field_overflow_example"}},
                             "layers": ["layer_0"]})
         status = self.status_class()
         run_check(self.params, status)
@@ -666,7 +686,7 @@ class Test_singlepart(VectorCheckTestCase):
                             "layers": ["layer_0"],
                             "step_nr": 1})
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
 
 
 class Test_geometry(VectorCheckTestCase):
@@ -694,14 +714,14 @@ class Test_geometry(VectorCheckTestCase):
                             "'POLYGON((0 0, 2 0, 1 1, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))', 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
 
     def test_self_intersecting_ring_fails(self):
         from qc_tool.vector.geometry import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (2, ST_PolygonFromText('POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("aborted", status.status)
 
 
 class Test_area(VectorCheckTestCase):
@@ -1121,30 +1141,38 @@ class Test_mmu_n2k(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_n2k import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, geom geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE n2k (fid integer, area_ha real, code integer, comment_1 varchar(40), comment_2 varchar(40), geom geometry(Polygon, 4326));")
 
         # Artificial margin as a general feature.
-        cursor.execute("INSERT INTO n2k VALUES (0, 0.5, 10, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (0, 0.5, 10, NULL, NULL, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
 
         # Marginal features.
-        cursor.execute("INSERT INTO n2k VALUES (10, 0.1, 8, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (11, 0.0999, 8, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (10, 0.1, 8, NULL, NULL, ST_MakeEnvelope(-1, 0, 1, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (11, 0.0999, 8, NULL, NULL, ST_MakeEnvelope(-1, 2, 1, 3, 4326));")
 
         # Linear features.
-        cursor.execute("INSERT INTO n2k VALUES (20, 0.1, 121, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (21, 0.1, 1211, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (22, 0.1, 122, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (23, 0.1, 911, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (24, 0.1, 912, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (25, 0.0999, 121, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (20, 0.1, 121, NULL, NULL, ST_MakeEnvelope(0, 4, 1, 5, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (21, 0.1, 1211, NULL, NULL, ST_MakeEnvelope(0, 6, 1, 7, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (22, 0.1, 122, NULL, NULL, ST_MakeEnvelope(0, 8, 1, 9, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (23, 0.1, 911, NULL, NULL, ST_MakeEnvelope(0, 10, 1, 11, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (24, 0.1, 912, NULL, NULL, ST_MakeEnvelope(0, 12, 1, 13, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (25, 0.0999, 121, NULL, NULL, ST_MakeEnvelope(0, 14, 1, 15, 4326));")
 
         # Urban feature touching road or railway.
-        cursor.execute("INSERT INTO n2k VALUES (30, 0.25, 1, ST_MakeEnvelope(1, 14, 2, 15, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (30, 0.25, 1, NULL, NULL, ST_MakeEnvelope(1, 14, 2, 15, 4326));")
 
         # Complex change features.
-        cursor.execute("INSERT INTO n2k VALUES (40, 0.2, 9, ST_MakeEnvelope(0, 16, 1, 17, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (41, 0.2, 9, ST_MakeEnvelope(1, 16, 2, 17, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (42, 0.2, 9, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (40, 0.2, 9, NULL, NULL, ST_MakeEnvelope(0, 16, 1, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (41, 0.2, 9, NULL, NULL, ST_MakeEnvelope(1, 16, 2, 17, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (42, 0.2, 9, NULL, NULL, ST_MakeEnvelope(2, 16, 3, 17, 4326));")
+
+        # Features with specific comment.
+        cursor.execute("INSERT INTO n2k VALUES (50, 0, 8, 'comment1', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (51, 0, 8, NULL, 'comment2', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+
+        cursor.execute("INSERT INTO n2k VALUES (52, 0, 8, 'comment1 nok', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (53, 0, 8, NULL, 'comment2 nok', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (54, 0, 8, NULL, NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
 
         self.params.update({"layer_defs": {"n2k": {"pg_layer_name": "n2k",
                                                    "pg_fid_name": "fid",
@@ -1154,14 +1182,16 @@ class Test_mmu_n2k(VectorCheckTestCase):
                             "area_ha": 0.5,
                             "initial_code_column_name": "code",
                             "final_code_column_name": "code",
+                            "comment_column_names": ["comment_1", "comment_2"],
+                            "exception_comments": ["comment1", "comment2"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_n2k_general ORDER BY fid;")
         self.assertListEqual([(0,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_n2k_exception ORDER BY fid;")
-        self.assertListEqual([(10,), (20,), (21,), (22,), (23,), (24,), (30,), (40,), (41,), (42,)], cursor.fetchall())
+        self.assertListEqual([(10,), (20,), (21,), (22,), (23,), (24,), (30,), (40,), (41,), (42,), (50,), (51,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_n2k_error ORDER BY fid;")
-        self.assertListEqual([(11,), (25,)], cursor.fetchall())
+        self.assertListEqual([(11,), (25,), (52,), (53,), (54,)], cursor.fetchall())
 
 
 class Test_mmu_rpz(VectorCheckTestCase):
@@ -1761,28 +1791,28 @@ class Test_inspire(VectorCheckTestCase):
         self.assertIn("s01_inspire_good_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_good_inspire_log.txt", status.attachment_filenames)
 
-    def test_missing_xml_fail(self):
+    def test_missing_xml(self):
         from qc_tool.vector.inspire import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_missing_xml.gdb")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
 
-    def test_xml_format_fail(self):
+    def test_xml_format(self):
         from qc_tool.vector.inspire import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_invalid_xml.gdb")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
         self.assertEqual(2, len(status.messages))
         self.assertIn("The xml file inspire_invalid_xml.xml does not contain a <gmd:MD_Metadata> top-level element.",
                       status.messages[1])
 
-    def test_fail(self):
+    def test_metadata_validation_failed(self):
         from qc_tool.vector.inspire import run_check
         self.params["layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_bad.gdb")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
         self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)

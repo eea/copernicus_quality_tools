@@ -9,7 +9,8 @@
       "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
-        "formats": [".gdb", ".gpkg", ".shp"]
+        "formats": [".gdb", ".gpkg", ".shp"],
+        "reference_year": "ury"
       }
     },
     {
@@ -25,6 +26,12 @@
       "required": true
     },
     {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
@@ -38,12 +45,6 @@
     },
     {
       "check_ident": "qc_tool.vector.overlap",
-      "required": false,
-      "parameters": {
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
       }

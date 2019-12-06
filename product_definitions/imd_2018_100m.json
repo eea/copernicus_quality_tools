@@ -9,19 +9,17 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"raster": "^imd_(?P<reference_year>2018)_100m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
+        "layer_names":{"raster": "^imd_2018_100m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
+        "aoi_codes": ["eu"],
         "extensions": [".tif"],
-        "reference_year": "2018",
-        "aoi_codes": ["eu"]
+        "reference_year": "2018"
 	  }
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
       "parameters": {
-        "layers": ["raster"],
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
+        "layers": ["raster"]
       }
     },
     {
@@ -90,14 +88,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.gap",
-      "required": false,
-      "parameters": {
-        "layers": ["raster"],
-        "outside_area_code": 255
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
@@ -113,10 +103,19 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.inspire",
+      "check_ident": "qc_tool.raster.tile",
       "required": false,
       "parameters": {
-        "layers": ["raster"]
+        "layers": ["raster"],
+        "max_blocksize": 1024
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "outside_area_code": 255
       }
     }
   ]

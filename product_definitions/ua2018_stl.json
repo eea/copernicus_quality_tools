@@ -50,6 +50,13 @@
       "required": true
     },
     {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["stl"]
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
@@ -124,13 +131,6 @@
         "layers": ["stl"],
         "code_column_names": ["stl"],
         "exclude_codes": []
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["stl"]
       }
     }
   ]

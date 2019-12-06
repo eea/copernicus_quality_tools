@@ -111,12 +111,22 @@ def setup_job(request):
 def get_deliveries_json(request):
     """
     Returns a list of all deliveries for the current user.
-    The deliveries are loaded from the dashboard_deliverys database table.
+    The deliveries are loaded from the dashboard_deliveries database table.
     The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
 
     :param request:
-    :return: list of deliveries in JSON format
+    :return: list of deliveries with associated job information in JSON format
     """
+
+    # Before refreshing the page, update status of all waiting or running jobs.
+    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
+    for job in running_jobs:
+        job_status = check_running_job(str(job.job_uuid), job.worker_url)
+        if job_status is not None:
+            job.update_status(job_status)
+
+    # Retrieve a table of deliveries.
+    # If a delivery has one or more jobs, show information about the job with latest date_created.
     with connection.cursor() as cursor:
         sql = """
         SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
@@ -343,85 +353,68 @@ def delivery_delete(request):
     Deletes a delivery from the database and deleted the associated ZIP file from the filesystem.
     """
     if request.method == "POST":
-        delivery_ids = request.POST.get("ids")
-
-        logger.debug("delivery_delete ids={:s}".format(delivery_ids))
-
         delivery_ids = request.POST.get("ids").split(",")
+        logger.debug("delivery_delete ids={:s}".format(repr(delivery_ids)))
 
-        # Job status validation.
+        # Validate deliveries.
         for delivery_id in delivery_ids:
 
-            # Input validation.
+            # Validate delivery id.
             try:
                 int(delivery_id)
             except ValueError:
-                error_message = "delivery id {0} must be a valid integer id.".format(delivery_id)
+                error_message = "Delivery id {:s} must be an integer.".format(repr(delivery_id))
                 response = JsonResponse({"status": "error", "message": error_message})
                 response.status_code = 400
                 return response
 
-            # Existence validation.
-            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
+            # Get delivery entity.
+            delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-            # User validation.
+            # Authorize the user.
             if not request.user.is_superuser:
-                if request.user.id != d.user.id:
-                    error_message = "User {:s} is not authorized to delete delivery {:d}"
-                    error_message = error_message.format(request.user.username, d.filename)
+                if request.user.id != delivery.user.id:
+                    error_message = "User {:s} is not authorized to delete delivery {:s}.".format(request.user.username, delivery.filename)
                     response = JsonResponse({"status": "error", "message": error_message})
                     response.status_code = 403
                     return response
 
-            # Job status validation.
-            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
-            if len(running_jobs) > 0:
-                error_message = "delivery {:s} cannot be deleted. QC job is currently running.".format(d.filename)
+            # Abort, if the job is in JOB_WAITING or JOB_RUNNING status.
+            waiting_count = models.Job.objects.filter(delivery__id=delivery.id).filter(job_status=JOB_WAITING).count()
+            if waiting_count > 0:
+                error_message = "Delivery {:s} cannot be deleted. QC job is currently waiting.".format(delivery.filename)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 400
+                return response
+            running_count = models.Job.objects.filter(delivery__id=delivery.id).filter(job_status=JOB_RUNNING).count()
+            if running_count > 0:
+                error_message = "Delivery {:s} cannot be deleted. QC job is currently running.".format(delivery.filename)
                 response = JsonResponse({"status": "error", "message": error_message})
                 response.status_code = 400
                 return response
 
-        deleted_filenames = []
+        # Delete deliveries.
         for delivery_id in delivery_ids:
+            # Get delivery entity.
+            delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-            # Existence validation again.
-            d = get_object_or_404(models.Delivery, pk=int(delivery_id))
+            # Delete delivery .zip file on the file system.
+            filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(delivery.filename)
+            if filepath.exists():
+                filepath.unlink()
 
-            # User validation again.
-            if not request.user.is_superuser:
-                if request.user.id != d.user.id:
-                    error_message = "User {:s} is not authorized to delete delivery {:s}"
-                    error_message = error_message.format(request.user.username, d.filename)
-                    response = JsonResponse({"status": "error", "message": error_message})
-                    response.status_code = 403
-                    return response
-
-            # Job status validation.
-            running_jobs = models.Job.objects.filter(delivery__id=d.id).filter(job_status=JOB_RUNNING)
-            if len(running_jobs) > 0:
-                error_message = "delivery {:s} cannot be deleted. QC job is currently running.".format(d.filename)
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 400
-                return response
-
-            # Deleting delivery .zip file on the file system.
-            file_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
-            if file_path.exists():
-                file_path.unlink()
-
-            # The associated row is not deleted from the database table but its attribute is_deleted is set to True
+            # The delivery and its jobs are not actually deleted from the database.
+            # Only delivery.is_deleted attribute is set to True.
             # This is done in order to preserve the job history.
-            d.is_deleted = True
-            d.save()
-            deleted_filenames.append(file_path.name)
-        return JsonResponse({"status":"ok", "message": "{:d} deliveries deleted successfully."
-                            .format(len(deleted_filenames))})
+            delivery.is_deleted = True
+            delivery.save()
+        return JsonResponse({"status":"ok", "message": "{:d} deliveries have been deleted.".format(len(delivery_ids))})
 
 
 @csrf_exempt
 def job_delete(request):
     """
-    Deletes a job from the database and deleted the associated files from the filesystem.
+    Deletes the job from the database and associated files from the filesystem.
     """
     if request.method == "POST":
         uuids = request.POST.get("uuids")
@@ -584,10 +577,14 @@ def get_result(request, job_uuid):
     job = models.Job.objects.get(job_uuid=job_uuid)
     delivery = job.delivery
     job_report = compile_job_report_data(job_uuid, job.product_ident)
-    # strip initial qc_tool. from check idents
+
     for step in job_report["steps"]:
+        # Strip initial qc_tool. from check idents.
         if step["check_ident"].startswith("qc_tool."):
             step["check_ident"] = ".".join(step["check_ident"].split(".")[1:])
+        # Inform the result page about presence of a check with 'aborted' status.
+        if step["status"] == "aborted":
+            job_report["aborted_check"] = step["check_ident"]
     return render(request, "dashboard/result.html", {"job_report":job_report,
                                                      "delivery": delivery,
                                                      "show_logo": settings.SHOW_LOGO})
@@ -607,7 +604,7 @@ def get_pdf_report(request, job_uuid):
 def download_delivery_file(request, delivery_id):
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    # Authorization check
+    # Authorization check.q
     if not request.user.is_superuser:
         if delivery.user != request.user:
             raise PermissionDenied("You are not authorized to view uploaded file for delivery id={:d}."
