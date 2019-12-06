@@ -11,7 +11,10 @@ Tile = namedtuple("Tile", ["xmin", "ymin", "xmax", "ymax", "position", "x_offset
 
 
 def do_raster_layers(params):
-    return [params["raster_layer_defs"][layer_alias] for layer_alias in params["layers"]]
+    if "layers" in params:
+        return [params["raster_layer_defs"][layer_alias] for layer_alias in params["layers"]]
+    else:
+        return params["raster_layer_defs"].values()
 
 
 def write_percent(percent_filepath, percent):

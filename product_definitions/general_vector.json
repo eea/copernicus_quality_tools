@@ -29,7 +29,6 @@
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
-        "layers": ["raster"]
       }
     },
     {

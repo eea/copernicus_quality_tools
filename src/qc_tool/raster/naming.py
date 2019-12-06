@@ -10,6 +10,7 @@ IS_SYSTEM = False
 
 
 def run_check(params, status):
+    import osgeo.gdal as gdal
     from qc_tool.vector.helper import LayerDefsBuilder
     from qc_tool.vector.helper import extract_aoi_code
 
@@ -38,12 +39,24 @@ def run_check(params, status):
     builder.check_excessive_layers()
     status.add_params({"raster_layer_defs": builder.layer_defs})
 
+    # Check AOI codes.
     if "aoi_codes" in params and len(params["aoi_codes"]) > 0:
-        # Extract AOI code and compare it to pre-defined list.
         aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status)
         status.add_params({"aoi_code": aoi_code})
 
-    # Checking existence of required supplementary files for each GeoTiff (i.e. .tfw)
+    # Check raster file format.
+    for layer_alias, layer_def in builder.layer_defs.items():
+        ds = gdal.Open(str(layer_def["src_filepath"]))
+        if ds is None:
+            status.aborted("The raster {:s} cannot be opened."
+                           .format(layer_def["src_filepath"].name))
+            continue
+        if ds.RasterCount != 1:
+            # Check number of bands. Only one band is allowed.
+            status.aborted("The raster {:s} has {:d} bands. The expected number of bands is one."
+                           .format(layer_def["src_filepath"].name, ds.RasterCount))
+
+    # Check existence of required supplementary files for each GeoTiff (i.e. .tfw)
     if "extensions" in params:
         for layer_alias, layer_def in builder.layer_defs.items():
             for ext in params["extensions"]:

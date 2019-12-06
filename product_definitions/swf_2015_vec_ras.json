@@ -33,15 +33,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "layers": ["raster"],
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
