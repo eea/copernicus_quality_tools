@@ -33,7 +33,7 @@ from qc_tool.common import JOB_RUNNING
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
-from qc_tool.common import compose_job_report_filepath
+from qc_tool.common import get_job_report_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import WORKER_PORT
@@ -571,15 +571,17 @@ def get_result(request, job_uuid):
                                                      "show_logo": settings.SHOW_LOGO})
 
 def get_pdf_report(request, job_uuid):
-    filepath = compose_job_report_filepath(job_uuid)
     try:
-        job = models.Job.objects.get(job_uuid=job_uuid)
-        response = FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
-        report_filename = "{:s}_{:s}.pdf".format(Path(job.delivery.filename).stem, job.date_finished.strftime("%Y%m%d"))
-        response["Content-Disposition"] = 'attachment; filename="{:s}"'.format(report_filename)
-        return response
+        filepath = get_job_report_filepath(job_uuid)
     except FileNotFoundError:
+        # There is no result.
         raise Http404()
+    try:
+        response = FileResponse(open(str(filepath), "rb"), content_type="application/pdf", as_attachment=True)
+    except FileNotFoundError:
+        # There is no report.
+        raise Http404()
+    return response
 
 @login_required
 def download_delivery_file(request, delivery_id):
