@@ -16,18 +16,18 @@ class Test_naming(RasterCheckTestCase):
         from qc_tool.raster.naming import run_check
         params = {"unzip_dir": TEST_DATA_DIR.joinpath("raster",
                                                      "fty_100m",
-                                                     "fty_2018_100m_eu_03035_d02_clip"),
+                                                     "fty_2018_100m_eu_03035_v0_1"),
                   "aoi_codes": ["mt", "eu"],
                   "extensions": [".tif"],
-                  "extract_reference_year": True,
-                  "layer_names": {"layer_1": "^fty_(?P<reference_year>[0-9]{4})_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"}
+                  "reference_year": "2018",
+                  "layer_names": {"layer_1": "^fty_2018_100m_(?P<aoi_code>.+)_[0-9]{5}.*.tif$"}
                  }
         status = self.status_class()
         run_check(params, status)
         self.assertEqual("ok", status.status)
         self.assertEqual("eu", status.params["aoi_code"])
         self.assertEqual("2018", status.status_properties["reference_year"])
-        self.assertEqual("fty_2018_100m_eu_03035_d02_clip.tif", status.params["raster_layer_defs"]["layer_1"]["src_layer_name"])
+        self.assertEqual("fty_2018_100m_eu_03035_v0_1.tif", status.params["raster_layer_defs"]["layer_1"]["src_layer_name"])
 
     def test_two_layers(self):
         from qc_tool.raster.naming import run_check
@@ -93,6 +93,23 @@ class Test_naming(RasterCheckTestCase):
         run_check(params, status)
         self.assertEqual("aborted", status.status)
         self.assertIn("Layer test_raster1.tif has illegal AOI code raster1.", status.messages)
+
+    def test_reference_year(self):
+        from qc_tool.raster.naming import run_check
+        params = {"unzip_dir": TEST_DATA_DIR.joinpath("raster",
+                                                      "checks",
+                                                      "mmu"),
+                  "extensions": [".tif"],
+                  "layer_names": {"layer_1": "^test_raster1.tif$",
+                                  "layer_2": "^mmu_raster_incorrect.tif$",
+                                  "layer_3": "^mmu_raster_correct.tif"},
+                  "reference_year": "2018"
+                  }
+        status = self.status_class()
+        run_check(params, status)
+        self.assertEqual("ok", status.status)
+        self.assertIn("reference_year", status.status_properties)
+        self.assertEqual("2018", status.status_properties["reference_year"])
 
 
 class Test_value(RasterCheckTestCase):
@@ -594,31 +611,31 @@ class Test_inspire(RasterCheckTestCase):
         self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_missing_xml.tif")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
 
     def test_xml_format_fail(self):
         from qc_tool.raster.inspire import run_check
         self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_invalid_xml.tif")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
         self.assertEqual(2, len(status.messages))
         self.assertIn("The xml file inspire_invalid_xml.xml does not contain a <gmd:MD_Metadata> top-level element.", status.messages[1])
 
-    def test_fail(self):
+    def test_incorrect_metadata1(self):
         from qc_tool.raster.inspire import run_check
         self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("inspire_bad.tif")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
         self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)
 
-    def test_fail2(self):
+    def test_incorrect_metadata2(self):
         from qc_tool.raster.inspire import run_check
         self.params["raster_layer_defs"] = {"layer0": {"src_filepath": self.xml_dir.joinpath("IMD_2018_010m_eu_03035_test.tif")}}
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("failed", status.status)
+        self.assertEqual("ok", status.status)
         self.assertIn("s01_IMD_2018_010m_eu_03035_test_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_IMD_2018_010m_eu_03035_test_inspire_log.txt", status.attachment_filenames)

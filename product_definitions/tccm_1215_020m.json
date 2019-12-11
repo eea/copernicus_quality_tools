@@ -10,18 +10,16 @@
       "required": true,
       "parameters": {
         "layer_names":{"raster": "^tccm_1215_020m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
-        "extensions": [".tif"],
         "aoi_codes": ["eu"],
+        "extensions": [".tif"],
         "reference_year": "2015"
 	  }
     },
     {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
       "parameters": {
-        "layers": ["raster"],
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
+        "layers": ["raster"]
       }
     },
     {
@@ -118,13 +116,6 @@
       "parameters": {
         "layers": ["raster"],
         "outside_area_code": 255
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["raster"]
       }
     }
   ]

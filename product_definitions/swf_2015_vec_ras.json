@@ -9,6 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
+        "reference_year": "2015",
         "layer_names":{"raster": "^swf_2015_005m_(?P<country_code>[a-z]{2})_0?3035_(?P<aoi_code>[0-9]{3})_"},
         "extensions": [".tif"],
         "aoi_codes": ["001", "002", "003", "004", "005", "006", "007", "008", "009","010",
@@ -29,15 +30,6 @@
                           "es", "fi", "fo", "fr", "gb", "gr", "hr", "hu", "ie", "is", "it",
                           "ks", "lt", "lv", "me", "mk", "nl", "no", "pl", "pt", "ro", "rs",
                           "se", "si", "sk", "tr"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.raster.format",
-      "required": true,
-      "parameters": {
-        "layers": ["raster"],
-        "formats": [".tif"],
-        "drivers": {".tif": "GTiff"}
       }
     },
     {
@@ -86,6 +78,14 @@
       "parameters": {
         "layers": ["raster"],
         "validcodes": [0, 1, 2, 3, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.tile",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "max_blocksize": 1024
       }
     },
     {
@@ -171,6 +171,13 @@
     {
       "check_ident": "qc_tool.vector.import2pg",
       "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
     },
     {
       "check_ident": "qc_tool.vector.enum",
@@ -295,13 +302,6 @@
       "parameters": {
         "layers": ["vector"],
         "code_column_names": ["code"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["vector"]
       }
     }
   ]
