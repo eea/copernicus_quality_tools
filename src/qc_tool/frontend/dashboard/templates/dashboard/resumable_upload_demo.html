@@ -2,21 +2,86 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Resumable.js - Multiple simultaneous, stable and resumable uploads via the HTML5 File API</title>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QC Tool - resumable upload</title>
+    <meta name="description" content=""/>
+    <meta name="robots" content="{% block robots %}index, follow{% endblock robots %}"/>
+    <meta name="keywords" content="eea, copernicus, qc, tool, gis, quality"/>
+    <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}dashboard/css/main.css">
+    <link rel="stylesheet" href="{{ STATIC_URL }}dashboard/css/bootstrap-dialog.min.css" type="text/css" />
+    <link rel="shortcut icon" type="image/png" href="{{ STATIC_URL }}dashboard/img/favicon.ico"/>
+
     <meta charset="utf-8" />
     <link rel="stylesheet" type="text/css" href="style.css" />
   </head>
+
   <body>
-    <div id="frame">
+        <div id="wrap">
 
-      <h1>Resumable.js</h1>
+          <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+          <script src="{% static 'dashboard/js/resumable.js' %}"></script>
+
+            <div id="main" class="clear-top">
+                <!--<div class="container">-->
+                <nav id="menucontainer" class="navbar navbar-default navbar-fixed-top">
+                    <!--<div class="navbar navbar-default" role="navigation">-->
+                    <div class="container-fluid">
+                        <div class="navbar-header">
+                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                            <a class="navbar-brand" href="/">
+                                <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:45px;margin-top:-13px;float:left" />
+                                <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_medium.png" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
+                                <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
+                            </a>
+                        </div>
+                        <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
+                            <ul class="nav navbar-nav navbar-right main-menu">
+                                {% block menu %}
+                                {% if user.is_superuser %}
+                                <li><a href="{% url 'boundaries'%}">
+                                    <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
+                                {% endif %}
+                                <li><a href="https://github.com/eea/copernicus_quality_tools">
+                                    <span class="glyphicon glyphicon-cog"></span> Github</a></li>
+                                <li><a href="https://github.com/eea/copernicus_quality_tools/wiki">
+                                    <span class="glyphicon glyphicon-question-sign"></span> Documentation</a></li>
+                                {% if user.is_authenticated %}
+                                <li><a href="{% url 'logout' %}?next=/">
+                                    <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
+                                {% else %}
+                                <li><a href="{% url 'login'%}">
+                                    <span class="glyphicon glyphicon-log-in"></span>Sign in</a></li>
+                                {% endif %}
+                                {% endblock %}
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="container-fluid main" style="padding-top: 70px;">
+                  <div class="row text-left">
+
+                    <ol class="breadcrumb">
+                      <li><a href="/">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
+                      <li class="active"><a href="">Resumable upload</a></li>
+                    </ol>
+
+                    <div class="main">
+
+                        <div id="frame">
+
+      <h1>Resumable File Upload</h1>
 
 
-      <p>It's a JavaScript library providing multiple simultaneous, stable and resumable uploads via the HTML5 File API.</p>
-
-      <p>The library is designed to introduce fault-tolerance into the upload of large files through HTTP. This is done by splitting each files into small chunks; whenever the upload of a chunk fails, uploading is retried until the procedure completes. This allows uploads to automatically resume uploading after a network connection is lost either locally or to the server. Additionally, it allows for users to pause and resume uploads without loosing state.</p>
-
-      <p>Resumable.js relies on the HTML5 File API and the ability to chunks files into smaller pieces. Currently, this means that support is limited to Firefox 4+ and Chrome 11+.</p>
 
       <hr/>
 
@@ -38,9 +103,11 @@
             <td width="100%"><div class="progress-container"><div class="progress-bar"></div></div></td>
             <td class="progress-text" nowrap="nowrap"></td>
             <td class="progress-pause" nowrap="nowrap">
-              <a href="#" onclick="r.upload(); return(false);" class="progress-resume-link"><img src="resume.png" title="Resume upload" /></a>
-              <a href="#" onclick="r.pause(); return(false);" class="progress-pause-link"><img src="pause.png" title="Pause upload" /></a>
-              <a href="#" onclick="r.cancel(); return(false);" class="progress-cancel-link"><img src="cancel.png" title="Cancel upload" /></a>
+              <a onclick="r.upload(); return(false);" class="progress-resume-link btn btn-primary">Resume upload</a>
+              <a onclick="r.pause(); return(false);" class="progress-pause-link btn btn-primary">Pause upload</a>
+              <!--<a type="button" href="#" onclick="r.pause(); return(false);" class="progress-pause-link">Pause upload<img src="{{ STATIC_URL }}dashboard/img/pause_upload.png" title="Pause upload" /></a>
+              -->
+                <a onclick="r.cancel(); return(false);" class="progress-cancel-link btn btn-primary">Cancel upload</a>
             </td>
           </tr>
         </table>
@@ -112,5 +179,32 @@
       </script>
 
     </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+                {% block js %}
+                    <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootstrap-table.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootstrap-table-export.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/tableexport.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/bootbox.min.js' %}"></script>
+                {% endblock js %}
+            </div>
+            <br>
+        </div>
+        <footer class="footer">
+            {% include "dashboard/footer.html" %}
+        </footer>
+  </body>
+
+
+
+  <body>
+
   </body>
 </html>

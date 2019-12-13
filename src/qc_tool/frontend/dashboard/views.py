@@ -693,7 +693,7 @@ def get_chunk_name(uploaded_filename, chunk_number):
     return uploaded_filename + "_part_{:03d}".format(chunk_number)
 
 def merge_uploaded_chunks(chunk_paths, target_filepath):
-    with open(str(target_filepath), "ab") as target_file:
+    with open(str(target_filepath), "ab+") as target_file:
         for stored_chunk_filepath in chunk_paths:
             stored_chunk_file = open(str(stored_chunk_filepath), "rb")
             target_file.write(stored_chunk_file.read())
@@ -746,12 +746,12 @@ def resumable_upload(request):
         user_upload_path = Path(CONFIG["upload_dir"]).joinpath(request.user.username)
         if not user_upload_path.exists():
             logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
-            user_upload_path.mkdir(parents=True)
+            user_upload_path.mkdir(parents=True, exist_ok=True)
 
         # chunk folder path based on the parameters
         chunks_dir = user_upload_path.joinpath(resumableIdentifier)
         if not chunks_dir.is_dir():
-            chunks_dir.mkdir(parents=True)
+            chunks_dir.mkdir(parents=True, exist_ok=True)
 
         # save the chunk data
         chunk_name = get_chunk_name(resumableFilename, resumableChunkNumber)
@@ -771,7 +771,7 @@ def resumable_upload(request):
             user_incoming_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
             if not user_incoming_path.exists():
                 logger.info("Creating a directory for user-incoming files: {:s}.".format(str(user_incoming_path)))
-                user_upload_path.mkdir(parents=True)
+                user_upload_path.mkdir(parents=True, exist_ok=True)
 
             target_filepath = user_incoming_path.joinpath(resumableFilename)
             merge_uploaded_chunks(chunk_paths, target_filepath)
