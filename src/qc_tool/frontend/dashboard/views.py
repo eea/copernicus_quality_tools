@@ -271,7 +271,7 @@ def get_boundaries_json(request, boundary_type):
     else:
         vector_dir = CONFIG["boundary_dir"].joinpath("vector")
         vector_filepaths = [path for path in vector_dir.glob("**/*") if
-                            path.is_file() and path.suffix.lower() == ".shp"]
+                            path.is_file() and path.suffix.lower() == ".shp" or path.suffix.lower() == ".gpkg"]
         for v in vector_filepaths:
             boundary_list.append({"filepath": str(v), "filename": v.name, "size_bytes": v.stat().st_size, "type": "vector"})
 
