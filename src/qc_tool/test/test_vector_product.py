@@ -50,7 +50,7 @@ class Test_rpz(ProductTestCase):
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "rpz", (6,))
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "rpz_2012", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
