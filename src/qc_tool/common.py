@@ -47,6 +47,8 @@ TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
 
+ANNOUNCEMENT_FILENAME = "announcement.txt"
+
 FAILED_ITEMS_LIMIT = 10
 
 UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
@@ -318,6 +320,7 @@ def setup_config():
     # Parameters consumed by frontend.
 
     config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/var/lib/qc_tool/frontend.sqlite3"))
+    config["announcement_path"] = config["frontend_db_path"].with_name(ANNOUNCEMENT_FILENAME)
     config["submission_dir"] = environ.get("SUBMISSION_DIR", "")
     if config["submission_dir"] == "":
         config["submission_dir"] = None
