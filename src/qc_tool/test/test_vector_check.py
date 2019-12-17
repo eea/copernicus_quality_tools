@@ -628,6 +628,102 @@ class Test_enum(VectorCheckTestCase):
         self.assertEqual(1, len(status.messages))
 
 
+class Test_nodata(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE mytable (fid integer, nodata integer, attr1 integer, attr2 integer);")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "nodata_column_name": "nodata",
+                            "nodata_value": 1,
+                            "dep_column_names": ["attr1", "attr2"],
+                            "dep_value": 0,
+                            "step_nr": 1})
+
+    def test(self):
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES ( 1, 0, 0, 0),"
+                                                      " ( 2, 0, 0, 10),"
+                                                      " ( 3, 0, 10, 0),"
+                                                      " ( 4, 0, 10, 10),"
+                                                      " ( 5, 0, NULL, 0),"
+                                                      " ( 6, 0, NULL, 10),"
+                                                      " ( 7, 0, 0, NULL),"
+                                                      " ( 8, 0, 10, NULL),"
+                                                      " ( 9, 0, NULL, NULL),"
+                                                      " (10, 1, 1, 1);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_fail(self):
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 1, 10);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_fail_null(self):
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 1, NULL);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_nodata_null(self):
+        self.params["nodata_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES ( 1, 0, 0, 0),"
+                                                      " ( 2, 0, 0, 10),"
+                                                      " ( 3, 0, 10, 0),"
+                                                      " ( 4, 0, 10, 10),"
+                                                      " ( 5, 0, NULL, 0),"
+                                                      " ( 6, 0, NULL, 10),"
+                                                      " ( 7, 0, 0, NULL),"
+                                                      " ( 8, 0, 10, NULL),"
+                                                      " ( 9, 0, NULL, NULL),"
+                                                      " (10, NULL, 1, 1);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_nodata_null_fail(self):
+        self.params["nodata_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, NULL, 1, NULL);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_dep_null(self):
+        self.params["dep_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES ( 1, 0, 0, 0),"
+                                                      " ( 2, 0, 0, 10),"
+                                                      " ( 3, 0, 10, 0),"
+                                                      " ( 4, 0, 10, 10),"
+                                                      " ( 5, 0, NULL, 0),"
+                                                      " ( 6, 0, NULL, 10),"
+                                                      " ( 7, 0, 0, NULL),"
+                                                      " ( 8, 0, 10, NULL),"
+                                                      " ( 9, 0, NULL, NULL),"
+                                                      " (10, 1, NULL, NULL);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_nodata_null_fail(self):
+        self.params["dep_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, NULL, 0);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+
 class Test_non_probable(VectorCheckTestCase):
     def test(self):
         super().setUp()
