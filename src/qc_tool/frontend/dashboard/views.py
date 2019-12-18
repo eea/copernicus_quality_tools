@@ -30,6 +30,7 @@ from qc_tool.common import auth_worker
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
+from qc_tool.common import JOB_WAITING
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
