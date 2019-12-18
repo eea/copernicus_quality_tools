@@ -1903,6 +1903,7 @@ class Test_inspire(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.xml_dir = TEST_DATA_DIR.joinpath("metadata")
+        self.params["unzip_dir"] = self.xml_dir
         self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
         self.params["output_dir"] = self.params["jobdir_manager"].output_dir
         self.params["layers"] = ["layer0"]

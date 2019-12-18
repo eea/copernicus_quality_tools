@@ -43,8 +43,10 @@
                             <ul class="nav navbar-nav navbar-right main-menu">
                                 {% block menu %}
                                 {% if user.is_superuser %}
+                                <li><a href="{% url 'announcement'%}">
+                                    <span class="glyphicon glyphicon-edit"></span> Announcement</a></li>
                                 <li><a href="{% url 'boundaries'%}">
-                                    <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
+                                    <span class="glyphicon glyphicon-map-marker"></span> Boundaries</a></li>
                                 {% endif %}
                                 <li><a href="https://github.com/eea/copernicus_quality_tools">
                                     <span class="glyphicon glyphicon-cog"></span> Github</a></li>
