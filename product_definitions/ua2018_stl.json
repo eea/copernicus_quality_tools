@@ -93,7 +93,8 @@
       "required": false,
       "parameters": {
         "layers": ["stl"],
-        "boundary_unit_column_name": "fua_code"
+        "boundary_unit_column_name": "fua_code",
+        "tolerance": 0
       }
     },
     {
