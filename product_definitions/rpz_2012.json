@@ -37,7 +37,7 @@
                      "area_ha": "real",
                      "nodata": "integer",
                      "comment": "string"},
-        "ignored": []
+        "ignored": ["shape_area", "shape_length"]
       }
     },
     {

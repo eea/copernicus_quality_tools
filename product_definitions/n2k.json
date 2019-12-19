@@ -40,7 +40,7 @@
                      "nodata_12": "integer",
                      "changecode": "string",
                      "area_ha": "real"},
-        "ignored": []
+        "ignored": ["shape_area", "shape_length"]
       }
     },
     {
@@ -256,10 +256,11 @@
         "final_code_column_name": "maes_4_12",
         "comment_column_names": ["comment_06", "comment_12"],
         "exception_comments": ["Area size exception (at Natura2000 AoI boundary)",
-                               "Area size exception (inside Natura2000 AoI boundary); Areas related to change",
-                               "Area size exception (inside Natura2000 AoI boundary); Splitted change",
-                               "Area size exception (inside Natura2000 AoI boundary); Braided River System",
-                               "Area size exception (inside Natura2000 AoI boundary); Temporal fluctuation of water level"]
+                               "Area size exception (inside Natura2000 AoI boundary)",
+                               "Areas related to change",
+                               "Splitted change",
+                               "Braided River System",
+                               "Temporal fluctuation of water level"]
       }
     },
     {
