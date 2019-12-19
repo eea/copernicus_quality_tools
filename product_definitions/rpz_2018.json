@@ -43,7 +43,7 @@
                      "nodata_12": "integer",
                      "nodata_18": "integer",
                      "comment": "string"},
-        "ignored": []
+        "ignored": ["shape_area", "shape_length"]
       }
     },
     {

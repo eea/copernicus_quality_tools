@@ -40,7 +40,7 @@
                      "nodata_12": "integer",
                      "changecode": "string",
                      "area_ha": "real"},
-        "ignored": []
+        "ignored": ["shape_area", "shape_length"]
       }
     },
     {
