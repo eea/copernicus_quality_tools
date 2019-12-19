@@ -8,7 +8,6 @@ IS_SYSTEM = False
 
 def run_check(params, status):
     from qc_tool.vector.helper import do_layers
-    from qc_tool.vector.helper import get_failed_items_message
 
     cursor = params["connection_manager"].get_connection().cursor()
 
@@ -16,11 +15,16 @@ def run_check(params, status):
         status.info("Check cancelled due to boundary not being available.")
         return
 
+    tolerance = params.get("tolerance", 0)
+    if tolerance is None:
+        tolerance = 0
+
     for layer_def in do_layers(params):
         # Prepare parameters used in sql clauses.
         sql_params = {"layer_name": layer_def["pg_layer_name"],
                       "boundary_name": params["layer_defs"]["boundary"]["pg_layer_name"],
                       "boundary_unit_column_name": params["boundary_unit_column_name"],
+                      "tolerance": tolerance,
                       "gap_warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "unit_warning_table": "s{:02d}_{:s}_unit_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
@@ -32,14 +36,14 @@ def run_check(params, status):
                " FROM"
                "  (SELECT"
                "    {boundary_unit_column_name},"
-               "    ST_Union(geom) AS geom"
+               "    ST_Buffer(ST_Collect(geom), 0) AS geom"
                "   FROM {layer_name}"
                "   GROUP BY {boundary_unit_column_name}"
                "  ) AS layer_union"
                " INNER JOIN"
                "  (SELECT"
                "    {boundary_unit_column_name},"
-               "    ST_Union(geom) AS geom"
+               "    ST_Buffer(ST_Collect(geom), -{tolerance}) AS geom"
                "   FROM {boundary_name}"
                "   WHERE {boundary_unit_column_name} IN (SELECT {boundary_unit_column_name} FROM {layer_name})"
                "   GROUP BY {boundary_unit_column_name}"
