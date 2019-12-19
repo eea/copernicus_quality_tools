@@ -72,25 +72,26 @@ def run_check(params, status):
         cursor.execute(sql)
         status.info("Created union table of complex polygons.")
 
-        # Create union of the small simple polygons and big complex polygons.
-        sql = ("CREATE TABLE {layer_union_table} AS"
-               " SELECT"
-               " u2.{boundary_unit_column_name},"
-               " ST_MemUnion(u2.geom) AS geom FROM (SELECT {boundary_unit_column_name}, geom FROM {layer_union_table1} "
-               " UNION "
-               " SELECT {boundary_unit_column_name}, geom FROM {layer_union_table2}) u2"
-               " GROUP BY u2.{boundary_unit_column_name}")
-        sql = sql.format(**sql_params)
-        cursor.execute(sql)
-        status.info("Created union table of all layer polygons.")
 
-        # Create table of gaps.
-        sql = ("CREATE TABLE {gap_warning_table} AS"
+        # Create table of suspect gaps.
+        sql = ("CREATE TABLE {gap_suspect_table} AS"
                " SELECT"
                "  layer_union.{boundary_unit_column_name} AS {boundary_unit_column_name},"
-               "  (ST_Dump(ST_Difference(boundary_union.geom, layer_union.geom))).geom AS geom"
-               " FROM {layer_union_table} AS layer_union"
+               "  (ST_Difference(boundary_union.geom, layer_union.geom)) AS geom"
+               " FROM {layer_union_table1} AS layer_union"
                " INNER JOIN {boundary_union_table} AS boundary_union"
+               " USING ({boundary_unit_column_name});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+        status.info("Created table of suspect gap polygons.")
+
+        # Create table of real gaps.
+        sql = ("CREATE TABLE {gap_warning_table} AS"
+               " SELECT"
+               "  suspect_table.{boundary_unit_column_name} AS {boundary_unit_column_name},"
+               "  (ST_Dump(ST_Difference(suspect_table.geom, complex_polygon_table.geom))).geom AS geom"
+               " FROM {gap_suspect_table} AS suspect_table"
+               " INNER JOIN {layer_union_table2} AS complex_polygon_table"
                " USING ({boundary_unit_column_name});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
