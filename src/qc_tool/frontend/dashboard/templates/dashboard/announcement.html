@@ -1,0 +1,65 @@
+{% extends "dashboard/base.html" %}
+{% load staticfiles %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
+{% endblock css %}
+
+{% block content %}
+
+    <div class="container-fluid main" style="padding-top: 70px;">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+                {% if show_logo %}
+              <li><a href="{% url 'deliveries' %}">CLMS QC Tool</a></li>
+                {% else %}
+              <li><a href="{% url 'deliveries' %}">QC Tool</a></li>
+                {% endif %}
+              <li class="active"><a href="">Announcement</a></li>
+            </ol>
+
+            <div class="main">
+
+                {% if result_message %}
+                <div class="alert alert-success" role="alert">{{ result_message }}</div>
+                {% endif %}
+                {% if error_message %}
+                <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+                {% endif %}
+
+
+                <!-- Nav tabs -->
+                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Announcement message</a></li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <form method="POST">
+                    <div role="tabpanel" class="tab-pane active" id="recent">
+                        <h4>Enter announcement message:</h4>
+                        <textarea name="announcement_text" class="form-control">{{ announcement }}</textarea>
+                        <p></p>
+                        <button id="btn_run" type="submit" class="btn btn-success">
+                        <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                    Update announcement
+                        </button>
+                    </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <br><br><br><br>
+
+{% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
+    <script src="{% static 'dashboard/js/announcement.js' %}"></script>
+{% endblock js %}

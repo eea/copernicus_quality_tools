@@ -18,6 +18,12 @@
             </ol>
 
             <div class="main">
+
+                {% if announcement %}
+                <div class="alert alert-danger" role="alert">
+                <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
+                {% endif %}
+
                 <!-- Nav tabs -->
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
                     <li role="presentation" class="active">

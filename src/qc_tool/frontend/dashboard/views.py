@@ -30,6 +30,7 @@ from qc_tool.common import auth_worker
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
+from qc_tool.common import JOB_WAITING
 from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
@@ -38,6 +39,7 @@ from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import WORKER_PORT
 from qc_tool.frontend.dashboard.helpers import find_product_description
+from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
 
@@ -53,7 +55,8 @@ def deliveries(request):
     Displays the main page with uploaded files and action buttons
     """
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
-                                                         "show_logo": settings.SHOW_LOGO})
+                                                         "show_logo": settings.SHOW_LOGO,
+                                                         "announcement": get_announcement_message()})
 
 
 @login_required
@@ -103,7 +106,8 @@ def setup_job(request):
     context = {"deliveries": deliveries,
                "product_ident": product_ident,
                "product_list": product_list,
-               "show_logo": settings.SHOW_LOGO}
+               "show_logo": settings.SHOW_LOGO,
+               "announcement": get_announcement_message()}
     return render(request, "dashboard/setup_job.html", context)
 
 
@@ -238,9 +242,38 @@ def file_upload(request):
 
         return JsonResponse(data)
 
-    return render(request, 'dashboard/file_upload.html')
+    return render(request, 'dashboard/file_upload.html', {"announcement": get_announcement_message()})
 
 
+@csrf_exempt
+@login_required
+def announcement(request):
+    """
+    Saves or loads an announcement message.
+    """
+    if request.method == "GET":
+
+        if CONFIG["announcement_path"].is_file():
+            announcement_message = CONFIG["announcement_path"].read_text()
+        else:
+            announcement_message = ""
+
+        return render(request, 'dashboard/announcement.html', {"announcement": announcement_message})
+    else:
+        try:
+            CONFIG["announcement_path"].write_text(request.POST.get("announcement_text"))
+            announcement_text = request.POST.get("announcement_text")
+            if announcement_text:
+                result_message = "Announcement has been successfully updated."
+            else:
+                result_message = "Announcement has been successfully removed."
+            return render(request, 'dashboard/announcement.html',
+                          {"announcement": request.POST.get("announcement_text"),
+                           "result_message": result_message})
+        except BaseException as e:
+            return render(request, 'dashboard/announcement.html',
+                          {"announcement": request.POST.get("announcement_text"),
+                           "error_message": "Error updating announcement."})
 
 
 @login_required
@@ -578,7 +611,8 @@ def get_result(request, job_uuid):
             job_report["aborted_check"] = step["check_ident"]
     return render(request, "dashboard/result.html", {"job_report":job_report,
                                                      "delivery": delivery,
-                                                     "show_logo": settings.SHOW_LOGO})
+                                                     "show_logo": settings.SHOW_LOGO,
+                                                     "announcement": get_announcement_message()})
 
 def get_pdf_report(request, job_uuid):
     try:

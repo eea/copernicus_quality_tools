@@ -13,7 +13,7 @@ from qc_tool.common import FAILED_ITEMS_LIMIT
 
 INSPIRE_VALIDATOR_URL = "http://inspire.ec.europa.eu/validator/"
 INSPIRE_SERVICE_URL = INSPIRE_VALIDATOR_URL + "v2/"
-INSPIRE_TEST_SUITE_NAME = "INSPIRE Profile based on EN ISO 19115 and EN ISO 19119"
+INSPIRE_TEST_SUITE_NAME = "INSPIRE data sets and data set series interoperability metadata"
 INSPIRE_SERVER_TIMEOUT = 60
 INSPIRE_TEST_RUN_TIMEOUT = 300
 INSPIRE_POLL_INTERVAL = 20
