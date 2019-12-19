@@ -80,18 +80,19 @@ def run_check(params, status):
 
         # Features with specific comments.
         if len(params["exception_comments"]) > 0:
-            sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
-            for comment_column_name in params["comment_column_names"]:
-                sql = ("INSERT INTO {exception_table}"
-                       " SELECT {fid_name}"
-                       " FROM {layer_name}"
-                       " WHERE"
-                       "  {comment_column_name} IN %(exception_comments)s"
-                       "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-                       "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
-                sql_params["comment_column_name"] = comment_column_name
-                sql = sql.format(**sql_params)
-                cursor.execute(sql, sql_execute_params)
+            for exception_comment in params["exception_comments"]:
+                for comment_column_name in params["comment_column_names"]:
+                    sql = ("INSERT INTO {exception_table}"
+                           " SELECT {fid_name}"
+                           " FROM {layer_name}"
+                           " WHERE"
+                           "  {comment_column_name} LIKE %{exception_comment}%"
+                           "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                           "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+                    sql_params["comment_column_name"] = comment_column_name
+                    sql_params["exception_comment"] = exception_comment
+                    sql = sql.format(**sql_params)
+                    cursor.execute(sql)
 
         # Add exceptions comming from complex change.
         # Do that once for initial code and once again for final code.
