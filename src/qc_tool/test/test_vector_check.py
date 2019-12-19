@@ -1266,8 +1266,8 @@ class Test_mmu_n2k(VectorCheckTestCase):
         cursor.execute("INSERT INTO n2k VALUES (50, 0, 8, 'comment1', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
         cursor.execute("INSERT INTO n2k VALUES (51, 0, 8, NULL, 'comment2', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
 
-        cursor.execute("INSERT INTO n2k VALUES (52, 0, 8, 'comment1 nok', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (53, 0, 8, NULL, 'comment2 nok', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (52, 0, 8, 'comment_nok1', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (53, 0, 8, NULL, 'comment_nok2', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
         cursor.execute("INSERT INTO n2k VALUES (54, 0, 8, NULL, NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
 
         self.params.update({"layer_defs": {"n2k": {"pg_layer_name": "n2k",

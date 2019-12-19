@@ -86,7 +86,7 @@ def run_check(params, status):
                            " SELECT {fid_name}"
                            " FROM {layer_name}"
                            " WHERE"
-                           "  {comment_column_name} LIKE %{exception_comment}%"
+                           "  {comment_column_name} LIKE '%{exception_comment}%'"
                            "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
                            "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
                     sql_params["comment_column_name"] = comment_column_name
