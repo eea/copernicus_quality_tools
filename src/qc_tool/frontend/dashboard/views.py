@@ -856,7 +856,7 @@ def resumable_upload(request):
             user_incoming_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
             if not user_incoming_path.exists():
                 logger.info("Creating a directory for user-incoming files: {:s}.".format(str(user_incoming_path)))
-                user_upload_path.mkdir(parents=True, exist_ok=True)
+                user_incoming_path.mkdir(parents=True, exist_ok=True)
             target_filepath = user_incoming_path.joinpath(resumableFilename)
             merge_uploaded_chunks(chunk_paths, target_filepath)
 
@@ -869,7 +869,7 @@ def resumable_upload(request):
             # Register the uploaded file as a new delivery in the database.
             d = models.Delivery()
             d.filename = target_filepath.name
-            d.filepath = user_upload_path
+            d.filepath = user_incoming_path
             d.size_bytes = target_filepath.stat().st_size
             d.product_ident = product_ident
             d.product_description = product_description
