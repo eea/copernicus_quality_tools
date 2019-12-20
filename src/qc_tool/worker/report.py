@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 
 
-import json
 from datetime import datetime
 from os.path import normpath
 from pathlib import Path
@@ -25,6 +25,19 @@ from qc_tool.common import JOB_PARTIAL
 from qc_tool.common import QCException
 from qc_tool.common import TIME_FORMAT
 from qc_tool.common import CONFIG
+
+
+MAX_WORD_LENGTH = 40
+
+
+def truncate_long_words(sentence, max_length):
+    words = sentence.split()
+    for word in words:
+        if len(word) > max_length:
+            for i in range(0, len(word), max_length):
+                yield word[i:i+max_length]
+        else:
+            yield word
 
 
 def generate_pdf_report(job_report_filepath, job_uuid):
@@ -86,7 +99,8 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         # Add summary table
         text.append(Paragraph("", styles["Heading1"]))
         text.append(Paragraph("Report summary", styles["Heading2"]))
-        status_file = ["File name", job_report["filename"]]
+        wrapped_filename = "\n".join(truncate_long_words(job_report["filename"], MAX_WORD_LENGTH))
+        status_file = ["File name", wrapped_filename]
         status_product = ["Product", job_report["description"]]
         display_date = datetime.strptime(job_report["job_finish_date"], TIME_FORMAT).strftime("%Y-%m-%d %H:%M:%S")
         status_date = ["Checked on", display_date]
@@ -162,7 +176,9 @@ def generate_pdf_report(job_report_filepath, job_uuid):
                 messages = []
             display_messages = []
             for message in messages:
-                display_messages.append(Paragraph(message, style_body))
+                # Split long words in a message
+                wrapped_message = " ".join(truncate_long_words(message, MAX_WORD_LENGTH))
+                display_messages.append(Paragraph(wrapped_message, style_body))
 
             check_info = [display_ident,
                           display_layers,
