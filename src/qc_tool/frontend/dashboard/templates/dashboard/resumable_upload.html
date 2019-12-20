@@ -94,7 +94,7 @@
       </div>
 
       <div class="resumable-drop">
-        Drop video files here to upload or <a class="resumable-browse"><u>select from your computer</u></a>
+        Drop ZIP delivery files here to upload or <a class="resumable-browse"><u>select from your computer</u></a>
       </div>
 
       <div class="resumable-progress">
@@ -121,7 +121,8 @@
             chunkSize:5*1024*1024,
             simultaneousUploads:4,
             testChunks:true,
-            throttleProgressCallbacks:1
+            throttleProgressCallbacks:1,
+            fileType: ['zip']
           });
         // Resumable.js isn't supported, fall back on a different method
         if(!r.support) {
@@ -152,7 +153,7 @@
             });
           r.on('complete', function(){
               // Hide pause/resume when the upload has completed
-              $('.resumable-progress .progress-resume-link, .resumable-progress .progress-pause-link').hide();
+              $('.resumable-progress .progress-resume-link, .resumable-progress .progress-pause-link, .resumable-progress .progress-cancel-link').hide();
             });
           r.on('fileSuccess', function(file,message){
               // Reflect that the file upload has completed

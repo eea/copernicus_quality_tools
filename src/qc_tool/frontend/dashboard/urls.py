@@ -20,10 +20,8 @@ urlpatterns = [
     path("data/report/<job_uuid>/report.json", views.get_job_report, name="job_report_json"),
     path("data/report/<job_uuid>/report.pdf", views.get_pdf_report, name="job_report_pdf"),
 
-    path("upload/", views.file_upload, name="file_upload"),
-
+    path("upload/", views.resumable_upload_page, name="file_upload"),
     path("resumable_upload/", views.resumable_upload, name="resumable_upload"),
-    path("resumable_upload_demo/", views.resumable_upload_demo, name="resumable_upload_demo"),
 
     path("job_history/<delivery_id>/", views.job_history_page, name="job_history"),
     path("job/delete/", views.job_delete, name="job_delete"),

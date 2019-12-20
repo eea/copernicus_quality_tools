@@ -4,6 +4,7 @@
 import logging
 import sys
 import shutil
+import time
 import traceback
 from pathlib import Path
 from zipfile import ZipFile
@@ -47,6 +48,8 @@ from qc_tool.frontend.dashboard.helpers import submit_job
 logger = logging.getLogger(__name__)
 
 CHECK_RUNNING_JOB_DELAY = 10
+
+UPLOADED_CHUNK_PROCESSING_DELAY = 3
 
 
 @login_required
@@ -166,11 +169,11 @@ def get_deliveries_json(request):
 
 
 @csrf_exempt
-def resumable_upload_demo(request):
+def resumable_upload_page(request):
     """
     Resumable file upload demo.
     """
-    return render(request, 'dashboard/resumable_upload_demo.html')
+    return render(request, 'dashboard/resumable_upload.html')
 
 
 
@@ -738,6 +741,33 @@ def merge_uploaded_chunks(chunk_paths, target_filepath):
     target_file.close()
     logger.debug("Uploaded file saved to: " + str(target_filepath))
 
+
+def remove_old_chunks(chunks_dir):
+    old_chunks = [chunk for chunk in chunks_dir.iterdir() if chunk.is_file()]
+    for old_chunk in old_chunks:
+        try:
+            old_chunk.unlink()
+        except:
+            pass
+
+
+def uploaded_delivery_file_exists(filename, user_id):
+    """
+    Helper function used by resumable_upload.
+    :param filename: the uploaded .zip file name.
+    :param username: the user id.
+    :return: Returns: an error message if delivery with same filename and username already exists in the DB.
+    """
+    existing_deliveries = models.Delivery.objects.filter(
+        filename=filename, user_id=user_id).exclude(is_deleted=True)
+    if existing_deliveries.count() > 0:
+        logger.info("Upload rejected: file {} already exists for user_id={}".format(filename, user_id))
+
+        file_exists_message = "A file named {} already exists. \
+                            If you want to replace the file, please delete if first.".format(filename)
+        return file_exists_message
+
+
 @csrf_exempt
 def resumable_upload(request):
     if request.method == "GET":
@@ -775,21 +805,32 @@ def resumable_upload(request):
         resumableFilename = str(request.POST.get('resumableFilename'))
         resumableIdentifier = str(request.POST.get('resumableIdentifier'))
 
-        # get the chunk data
+
+        # Get the chunk data.
         chunk_data = request.FILES.get("file")
 
-        # make our temp directory
+        # Make a temp directory for the uploads if needed.
         user_upload_path = Path(CONFIG["upload_dir"]).joinpath(request.user.username)
         if not user_upload_path.exists():
             logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
             user_upload_path.mkdir(parents=True, exist_ok=True)
 
-        # chunk folder path based on the parameters
+        # Chunk folder path is based on the resumableIdentifier parameter.
         chunks_dir = user_upload_path.joinpath(resumableIdentifier)
         if not chunks_dir.is_dir():
             chunks_dir.mkdir(parents=True, exist_ok=True)
 
-        # save the chunk data
+        # If delivery already exists in the DB, return 409 conflict status.
+        if resumableChunkNumber == 1:
+            conflict_message = uploaded_delivery_file_exists(resumableFilename, request.user.id)
+            if conflict_message:
+                remove_old_chunks(chunks_dir)
+                return HttpResponse(conflict_message, status=409)
+
+        # Simulate delay in chunk processing.
+        time.sleep(UPLOADED_CHUNK_PROCESSING_DELAY)
+
+        # Save the chunk data.
         chunk_name = get_chunk_name(resumableFilename, resumableChunkNumber)
         chunk_filepath = chunks_dir.joinpath(chunk_name)
 
@@ -797,23 +838,30 @@ def resumable_upload(request):
         fs.save(chunk_filepath.name, chunk_data)
         logger.info("Saved chunk: " + chunk_filepath.name)
 
-        # check if the upload is complete
+        # Check if the upload is complete.
         chunk_paths = [chunks_dir.joinpath(get_chunk_name(resumableFilename, x)) for x in
                        range(1, resumableTotalChunks + 1)]
         upload_complete = all([p.is_file() for p in chunk_paths])
 
-        # combine all the chunks to create the final file
+        # Combine all the chunks to create the final file.
         if upload_complete:
+
+            # If delivery already exists in the DB, return 409 conflict status.
+            conflict_message = uploaded_delivery_file_exists(resumableFilename, request.user.id)
+            if conflict_message:
+                remove_old_chunks(chunks_dir)
+                return HttpResponse(conflict_message, status=409)
+
+            # Uploaded file will be copied to INCOMING_DIR/{USERNAME}/{FILENAME}.
             user_incoming_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
             if not user_incoming_path.exists():
                 logger.info("Creating a directory for user-incoming files: {:s}.".format(str(user_incoming_path)))
                 user_upload_path.mkdir(parents=True, exist_ok=True)
-
             target_filepath = user_incoming_path.joinpath(resumableFilename)
             merge_uploaded_chunks(chunk_paths, target_filepath)
 
             # Assign product description based on product ident.
-
+            # Typically, the product ident is used as the zip filename prefix.
             product_ident = guess_product_ident(target_filepath)
             logger.debug(product_ident)
             product_description = find_product_description(product_ident)
