@@ -6,8 +6,8 @@ import re
 from datetime import datetime
 from shutil import copyfile
 from shutil import copytree
-from zipfile import ZipFile
 
+from qc_tool.common import CONFIG
 from qc_tool.common import compose_job_dir
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import JOB_INPUT_DIRNAME
@@ -17,6 +17,19 @@ from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
 
 
 logger = logging.getLogger(__name__)
+
+
+def get_announcement_message():
+    """
+    Reads announcement message from the announcement.txt file.
+    """
+    try:
+        if CONFIG["announcement_path"].is_file():
+            return CONFIG["announcement_path"].read_text()
+        else:
+            return None
+    except:
+        return None
 
 
 def find_product_description(product_ident):

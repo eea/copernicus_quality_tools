@@ -9,6 +9,7 @@
 {% block content %}
 
     <div class="container-fluid main" style="padding-top: 70px;">
+
         <div class="row text-left">
 
             <ol class="breadcrumb">
@@ -17,6 +18,11 @@
             </ol>
 
             <div class="main">
+
+                {% if announcement %}
+                <div class="alert alert-danger" role="alert">
+                <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
+                {% endif %}
 
                 <div id="tool-canvas">
                     <div class="panel panel-primary">

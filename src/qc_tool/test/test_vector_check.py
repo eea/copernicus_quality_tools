@@ -628,6 +628,102 @@ class Test_enum(VectorCheckTestCase):
         self.assertEqual(1, len(status.messages))
 
 
+class Test_nodata(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE mytable (fid integer, nodata integer, attr1 integer, attr2 integer);")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "nodata_column_name": "nodata",
+                            "nodata_value": 1,
+                            "dep_column_names": ["attr1", "attr2"],
+                            "dep_value": 0,
+                            "step_nr": 1})
+
+    def test(self):
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES ( 1, 0, 0, 0),"
+                                                      " ( 2, 0, 0, 10),"
+                                                      " ( 3, 0, 10, 0),"
+                                                      " ( 4, 0, 10, 10),"
+                                                      " ( 5, 0, NULL, 0),"
+                                                      " ( 6, 0, NULL, 10),"
+                                                      " ( 7, 0, 0, NULL),"
+                                                      " ( 8, 0, 10, NULL),"
+                                                      " ( 9, 0, NULL, NULL),"
+                                                      " (10, 1, 1, 1);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_fail(self):
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 1, 10);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_fail_null(self):
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 1, NULL);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_nodata_null(self):
+        self.params["nodata_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES ( 1, 0, 0, 0),"
+                                                      " ( 2, 0, 0, 10),"
+                                                      " ( 3, 0, 10, 0),"
+                                                      " ( 4, 0, 10, 10),"
+                                                      " ( 5, 0, NULL, 0),"
+                                                      " ( 6, 0, NULL, 10),"
+                                                      " ( 7, 0, 0, NULL),"
+                                                      " ( 8, 0, 10, NULL),"
+                                                      " ( 9, 0, NULL, NULL),"
+                                                      " (10, NULL, 1, 1);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_nodata_null_fail(self):
+        self.params["nodata_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, NULL, 1, NULL);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_dep_null(self):
+        self.params["dep_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES ( 1, 0, 0, 0),"
+                                                      " ( 2, 0, 0, 10),"
+                                                      " ( 3, 0, 10, 0),"
+                                                      " ( 4, 0, 10, 10),"
+                                                      " ( 5, 0, NULL, 0),"
+                                                      " ( 6, 0, NULL, 10),"
+                                                      " ( 7, 0, 0, NULL),"
+                                                      " ( 8, 0, 10, NULL),"
+                                                      " ( 9, 0, NULL, NULL),"
+                                                      " (10, 1, NULL, NULL);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+    def test_nodata_null_fail(self):
+        self.params["dep_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, NULL, 0);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+
 class Test_non_probable(VectorCheckTestCase):
     def test(self):
         super().setUp()
@@ -1170,8 +1266,8 @@ class Test_mmu_n2k(VectorCheckTestCase):
         cursor.execute("INSERT INTO n2k VALUES (50, 0, 8, 'comment1', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
         cursor.execute("INSERT INTO n2k VALUES (51, 0, 8, NULL, 'comment2', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
 
-        cursor.execute("INSERT INTO n2k VALUES (52, 0, 8, 'comment1 nok', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
-        cursor.execute("INSERT INTO n2k VALUES (53, 0, 8, NULL, 'comment2 nok', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (52, 0, 8, 'comment_nok1', NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
+        cursor.execute("INSERT INTO n2k VALUES (53, 0, 8, NULL, 'comment_nok2', ST_MakeEnvelope(60, 0, 61, 1, 4326));")
         cursor.execute("INSERT INTO n2k VALUES (54, 0, 8, NULL, NULL, ST_MakeEnvelope(60, 0, 61, 1, 4326));")
 
         self.params.update({"layer_defs": {"n2k": {"pg_layer_name": "n2k",
@@ -1361,8 +1457,8 @@ class Test_mxmw(VectorCheckTestCase):
 
 
 class Test_mml(VectorCheckTestCase):
-    def test(self):
-        from qc_tool.vector.mml import run_check
+    def setUp(self):
+        super().setUp()
         self.params.update({"layer_defs": {"mml": {"pg_layer_name": "mml",
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
@@ -1371,19 +1467,49 @@ class Test_mml(VectorCheckTestCase):
                             "filter_code": "1",
                             "mml": 10.,
                             "step_nr": 1})
-        cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE mml (fid integer, code char(1), geom geometry(Polygon, 4326));")
-        cursor.execute("INSERT INTO mml VALUES (1, NULL, ST_MakeEnvelope(0, 0, 5, 1, 4326));")
-        cursor.execute("INSERT INTO mml VALUES (2, '1', ST_MakeEnvelope(0, 0, 5, 1, 4326));")
-        cursor.execute("INSERT INTO mml VALUES (3, '1', ST_MakeEnvelope(0, 0, 9.999, 1, 4326));")
-        cursor.execute("INSERT INTO mml VALUES (4, '1', ST_MakeEnvelope(0, 0, 10, 1, 4326));")
-        cursor.execute("INSERT INTO mml VALUES (5, '1', ST_MakeEnvelope(0, 0, 11, 1, 4326));")
-        cursor.execute("INSERT INTO mml VALUES (6, '2', ST_MakeEnvelope(0, 0, 5, 1, 4326));")
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE mml (fid integer, code char(1), geom geometry(Polygon, 4326));")
+
+    def test(self):
+        from qc_tool.vector.mml import run_check
+        self.cursor.execute("INSERT INTO mml VALUES (1, NULL, ST_MakeEnvelope(0, 0, 5, 1, 4326));")
+        self.cursor.execute("INSERT INTO mml VALUES (2, '1', ST_MakeEnvelope(0, 0, 5, 1, 4326));")
+        self.cursor.execute("INSERT INTO mml VALUES (3, '1', ST_MakeEnvelope(0, 0, 9.999, 1, 4326));")
+        self.cursor.execute("INSERT INTO mml VALUES (4, '1', ST_MakeEnvelope(0, 0, 10, 1, 4326));")
+        self.cursor.execute("INSERT INTO mml VALUES (5, '1', ST_MakeEnvelope(0, 0, 11, 1, 4326));")
+        self.cursor.execute("INSERT INTO mml VALUES (6, '2', ST_MakeEnvelope(0, 0, 5, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        cursor.execute("SELECT fid FROM s01_mml_warning ORDER BY fid;")
-        self.assertListEqual([(2,), (3,)], cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM s01_mml_warning ORDER BY fid;")
+        self.assertListEqual([(2,), (3,)], self.cursor.fetchall())
+
+    def test_arch(self):
+        """The plain box does not pass the check, however, if we make an arch from it, the check passes."""
+        from qc_tool.vector.mml import run_check
+        self.cursor.execute("INSERT INTO mml VALUES (1, '1', ST_Difference(ST_MakeEnvelope(0, 0, 9.999, 1, 4326),"
+                                                                         " ST_MakeEnvelope(0.5, 0, 9.5, 0.5, 4326)));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT fid FROM s01_mml_warning ORDER BY fid;")
+        self.assertListEqual([], self.cursor.fetchall())
+
+    def test_inner_ring(self):
+        """If there are two inner rings intersecting in a point, then ST_ApproximateMedialAxis() raises error:
+
+          psycopg2.InternalError: straight skeleton of Polygon with touching interior rings is not implemented
+
+        Adapted implementation ignores inner rings, so this test should pass with ok status."""
+        from qc_tool.vector.mml import run_check
+        self.cursor.execute("INSERT INTO mml VALUES (1, '1', ST_Difference(ST_Difference(ST_MakeEnvelope(0, 0, 4, 4, 4326),"
+                                                                                       " ST_MakeEnvelope(1, 0, 2, 2, 4326)),"
+                                                                         " ST_MakeEnvelope(2, 2, 3, 3, 4326)));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT fid FROM s01_mml_warning ORDER BY fid;")
+        self.assertListEqual([(1,)], self.cursor.fetchall())
 
 
 class Test_overlap(VectorCheckTestCase):
@@ -1777,6 +1903,7 @@ class Test_inspire(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.xml_dir = TEST_DATA_DIR.joinpath("metadata")
+        self.params["unzip_dir"] = self.xml_dir
         self.params["tmp_dir"] = self.params["jobdir_manager"].tmp_dir
         self.params["output_dir"] = self.params["jobdir_manager"].output_dir
         self.params["layers"] = ["layer0"]

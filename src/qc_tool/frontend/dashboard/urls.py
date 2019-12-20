@@ -39,7 +39,9 @@ urlpatterns = [
     # path("setup_job/<int:delivery_id>", views.setup_job, name="setup_job"),
     path("setup_job", views.setup_job, name="setup_job"),
     path("result/<job_uuid>", views.get_result, name="show_result"),
-    path("attachment/<job_uuid>/<attachment_filename>/", views.get_attachment, name="get_attachment")
+    path("attachment/<job_uuid>/<attachment_filename>/", views.get_attachment, name="get_attachment"),
+
+    path("announcement/", views.announcement, name="announcement")
 ]
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns

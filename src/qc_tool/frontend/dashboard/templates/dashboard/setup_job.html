@@ -18,6 +18,11 @@
 
             <div class="main">
 
+                {% if announcement %}
+                <div class="alert alert-danger" role="alert">
+                <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
+                {% endif %}
+
                 <div id="tool-canvas">
                     <div class="panel panel-primary">
                         <div class="panel-heading">

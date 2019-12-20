@@ -19,7 +19,7 @@
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "aoi_ua2012.gpkg"
+        "boundary_source": "UA2012_2018_FUA_boundaries_20191206.gpkg"
       }
     },
     {
@@ -108,7 +108,7 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap",
+      "check_ident": "qc_tool.vector.gap_unit",
       "required": false,
       "parameters": {
         "layers": ["reference"],

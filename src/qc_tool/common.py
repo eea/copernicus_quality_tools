@@ -37,7 +37,7 @@ JOB_OUTPUT_DIRNAME = "output.d"
 JOB_TMP_DIRNAME = "tmp.d"
 
 JOB_RESULT_FILENAME = "result.json"
-JOB_REPORT_FILENAME = "report.pdf"
+JOB_REPORT_FILENAME_TPL = "{:s}_report.pdf"
 
 HASH_ALGORITHM = "sha256"
 HASH_BUFFER_SIZE = 1024 ** 2
@@ -46,6 +46,8 @@ JOB_STEP_SKIPPED = "skipped"
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
+
+ANNOUNCEMENT_FILENAME = "announcement.txt"
 
 FAILED_ITEMS_LIMIT = 10
 
@@ -133,9 +135,14 @@ def load_product_definition_from_job(job_uuid, product_ident):
     product_definition["product_ident"] = product_ident
     return product_definition
 
-def compose_job_report_filepath(job_uuid):
+def get_job_report_filepath(job_uuid):
+    job_result = load_job_result(job_uuid)
     job_dir = compose_job_dir(job_uuid)
-    job_report_filepath = job_dir.joinpath(JOB_REPORT_FILENAME)
+
+    # FIXME:
+    # Old version of qc_tool still uses "report.pdf", and there is no "report_filename" in result.json.
+    # This part should be cleaned after old jobs using "report.pdf" are removed by service providers.
+    job_report_filepath = job_dir.joinpath(job_result.get("report_filename", "report.pdf"))
     return job_report_filepath
 
 def load_job_result(job_uuid):
@@ -315,6 +322,7 @@ def setup_config():
     # Parameters consumed by frontend.
 
     config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/var/lib/qc_tool/frontend.sqlite3"))
+    config["announcement_path"] = config["frontend_db_path"].with_name(ANNOUNCEMENT_FILENAME)
     config["submission_dir"] = environ.get("SUBMISSION_DIR", "")
     if config["submission_dir"] == "":
         config["submission_dir"] = None

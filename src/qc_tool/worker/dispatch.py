@@ -11,7 +11,6 @@ from subprocess import run
 from sys import exc_info
 from traceback import format_exc
 
-from qc_tool.common import compose_job_report_filepath
 from qc_tool.common import get_qc_tool_version
 from qc_tool.common import CONFIG
 from qc_tool.common import copy_product_definition_to_job
@@ -21,6 +20,7 @@ from qc_tool.common import JOB_ERROR
 from qc_tool.common import JOB_FAILED
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_PARTIAL
+from qc_tool.common import JOB_REPORT_FILENAME_TPL
 from qc_tool.common import JOB_STEP_SKIPPED
 from qc_tool.common import load_product_definition
 from qc_tool.common import QCException
@@ -96,8 +96,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
         # Prepare job variables.
         product_definition = load_product_definition(product_ident)
         validate_skip_steps(skip_steps, product_definition)
-        job_report_filepath = compose_job_report_filepath(job_uuid)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
+        job_report_filepath = jobdir_manager.job_dir.joinpath(JOB_REPORT_FILENAME_TPL.format(filepath.stem))
         try:
             # Make duplicate of product definition in job dir.
             copy_product_definition_to_job(job_uuid, product_ident)
@@ -108,6 +108,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
                           "user_name": user_name,
                           "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
                           "filename": filepath.name,
+                          "report_filename": job_report_filepath.name,
                           "error_message": None,
                           "qc_tool_version": get_qc_tool_version(),
                           "steps": []}
