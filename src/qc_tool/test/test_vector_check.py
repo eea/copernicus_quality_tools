@@ -1113,52 +1113,58 @@ class Test_mmu_ua_status(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_ua_status import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE reference (fid integer, shape_area real, code char(5), geom geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE reference (fid integer, shape_area real, code char(5), comment varchar(10), geom geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO reference VALUES (10, 1, '122', ST_MakeEnvelope(10, 1, 11, 8, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (12, 1, '1228', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (14, 1, '12288', ST_MakeEnvelope(14, 1, 15, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (16, 1, '1228', ST_MakeEnvelope(16, 1, 17, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (10, 1, '122', NULL, ST_MakeEnvelope(10, 1, 11, 8, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (12, 1, '1228', NULL, ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (14, 1, '12288', NULL, ST_MakeEnvelope(14, 1, 15, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (16, 1, '1228', NULL, ST_MakeEnvelope(16, 1, 17, 2, 4326));")
 
-        cursor.execute("INSERT INTO reference VALUES (18, 2501, '1', ST_MakeEnvelope(10, 8, 19, 10, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (20, 2500, '1', ST_MakeEnvelope(20, 1, 21, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (18, 2501, '1', NULL, ST_MakeEnvelope(10, 8, 19, 10, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (20, 2500, '1', NULL, ST_MakeEnvelope(20, 1, 21, 2, 4326));")
 
-        cursor.execute("INSERT INTO reference VALUES (22, 10000, '2', ST_MakeEnvelope(59, 0, 80, 3, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (24, 10000, '3', ST_MakeEnvelope(24, 1, 25, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (26, 10000, '4', ST_MakeEnvelope(26, 1, 27, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (28, 10000, '5', ST_MakeEnvelope(28, 1, 29, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (22, 10000, '2', NULL, ST_MakeEnvelope(59, 0, 80, 3, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (24, 10000, '3', NULL, ST_MakeEnvelope(24, 1, 25, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (26, 10000, '4', NULL, ST_MakeEnvelope(26, 1, 27, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (28, 10000, '5', NULL, ST_MakeEnvelope(28, 1, 29, 2, 4326));")
 
-        cursor.execute("INSERT INTO reference VALUES (30, 1, '9', ST_MakeEnvelope(30, 1, 31, 4, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (30, 1, '9', NULL, ST_MakeEnvelope(30, 1, 31, 4, 4326));")
 
         # Exception features, touches fid=30.
-        cursor.execute("INSERT INTO reference VALUES (40, 1, '2', ST_MakeEnvelope(31, 3, 41, 4, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (40, 1, '2', NULL, ST_MakeEnvelope(31, 3, 41, 4, 4326));")
 
         # Exception feature at margin.
-        cursor.execute("INSERT INTO reference VALUES (42, 100, '2', ST_MakeEnvelope(42, 0, 43, 4, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (42, 100, '2', NULL, ST_MakeEnvelope(42, 0, 43, 4, 4326));")
+
+        # Exception feature with comment.
+        cursor.execute("INSERT INTO reference VALUES (43, 1, '1', 'comment01', ST_MakeEnvelope(60, 1, 61, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (44, 2499, '1', 'comment02', ST_MakeEnvelope(63, 1, 63, 2, 4326));")
 
         # Warning feature, touches fid=10.
-        cursor.execute("INSERT INTO reference VALUES (50, 500, '2', ST_MakeEnvelope(10.1, 8, 11, 9, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (50, 500, '2', NULL, ST_MakeEnvelope(10.1, 8, 11, 9, 4326));")
 
         # Error features breaking general requirements.
-        cursor.execute("INSERT INTO reference VALUES (60, 1, '123', ST_MakeEnvelope(60, 1, 61, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (60, 1, '123', NULL, ST_MakeEnvelope(60, 1, 61, 2, 4326));")
 
-        cursor.execute("INSERT INTO reference VALUES (62, 2499, '1', ST_MakeEnvelope(63, 1, 63, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (64, 2499, '13', ST_MakeEnvelope(65, 1, 65, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (62, 2499, '1', NULL, ST_MakeEnvelope(63, 1, 63, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (64, 2499, '13', NULL, ST_MakeEnvelope(65, 1, 65, 2, 4326));")
 
-        cursor.execute("INSERT INTO reference VALUES (66, 9999, '2', ST_MakeEnvelope(67, 1, 67, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (68, 9999, '3', ST_MakeEnvelope(69, 1, 69, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (70, 9999, '4', ST_MakeEnvelope(71, 1, 71, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (72, 9999, '5', ST_MakeEnvelope(73, 1, 73, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (74, 20000, '6', ST_MakeEnvelope(75, 1, 75, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (76, 20000, '7', ST_MakeEnvelope(77, 1, 77, 2, 4326));")
-        cursor.execute("INSERT INTO reference VALUES (78, 20000, '8', ST_MakeEnvelope(79, 1, 79, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (66, 9999, '2', NULL, ST_MakeEnvelope(67, 1, 67, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (68, 9999, '3', NULL, ST_MakeEnvelope(69, 1, 69, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (70, 9999, '4', NULL, ST_MakeEnvelope(71, 1, 71, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (72, 9999, '5', NULL, ST_MakeEnvelope(73, 1, 73, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (74, 20000, '6', NULL, ST_MakeEnvelope(75, 1, 75, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (76, 20000, '7', NULL, ST_MakeEnvelope(77, 1, 77, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (78, 20000, '8', NULL, ST_MakeEnvelope(79, 1, 79, 2, 4326));")
+
+        cursor.execute("INSERT INTO reference VALUES (79, 2499, '1', 'comment03', ST_MakeEnvelope(63, 1, 63, 2, 4326));")
 
         # Error feature breaking exception requirements.
-        cursor.execute("INSERT INTO reference VALUES (80, 99, '4', ST_MakeEnvelope(80, 0, 81, 2, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (80, 99, '4', NULL, ST_MakeEnvelope(80, 0, 81, 2, 4326));")
 
         # Error feature breaking warning requirements, touches fid=10.
-        cursor.execute("INSERT INTO reference VALUES (82, 499, '2', ST_MakeEnvelope(10.1, 8, 11, 9, 4326));")
+        cursor.execute("INSERT INTO reference VALUES (82, 499, '2', NULL, ST_MakeEnvelope(10.1, 8, 11, 9, 4326));")
 
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
                                                          "pg_fid_name": "fid",
@@ -1166,55 +1172,62 @@ class Test_mmu_ua_status(VectorCheckTestCase):
                             "layers": ["reference"],
                             "area_column_name": "shape_area",
                             "code_column_name": "code",
+                            "comment_column_name": "comment",
+                            "exception_comments": ["comment01", "comment02"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,), (18,), (20,), (22,), (24,), (26,), (28,), (30,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_reference_exception ORDER BY fid;")
-        self.assertListEqual([(40,), (42,)], cursor.fetchall())
+        self.assertListEqual([(40,), (42,), (43,), (44,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_reference_warning ORDER BY fid;")
         self.assertListEqual([(50,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
-        self.assertListEqual([(60,), (62,), (64,), (66,), (68,), (70,), (72,), (74,), (76,), (78,), (80,), (82,)], cursor.fetchall())
+        self.assertListEqual([(60,), (62,), (64,), (66,), (68,), (70,), (72,), (74,), (76,), (78,), (79,), (80,), (82,)], cursor.fetchall())
 
 
 class Test_mmu_ua_change(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmu_ua_change import run_check
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(5), code2 char(5), geom geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE change (fid integer, shape_area real, code1 char(5), code2 char(5), comment varchar(10), geom geometry(Polygon, 4326));")
 
         # General features.
-        cursor.execute("INSERT INTO change VALUES (10, 1001, 'X', '1', ST_MakeEnvelope(10, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (12, 1000, 'X', '1', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (14, 1000, 'X', '12', ST_MakeEnvelope(14, 1, 15, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (10, 1001, 'X', '1', NULL, ST_MakeEnvelope(10, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (12, 1000, 'X', '1', NULL, ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (14, 1000, 'X', '12', NULL, ST_MakeEnvelope(14, 1, 15, 2, 4326));")
 
-        cursor.execute("INSERT INTO change VALUES (16, 2500, 'X', '2', ST_MakeEnvelope(16, 1, 17, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (18, 2500, 'X', '3', ST_MakeEnvelope(18, 1, 19, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (20, 2500, 'X', '4', ST_MakeEnvelope(20, 1, 21, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (22, 2500, 'X', '5', ST_MakeEnvelope(22, 1, 23, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (16, 2500, 'X', '2', NULL, ST_MakeEnvelope(16, 1, 17, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (18, 2500, 'X', '3', NULL, ST_MakeEnvelope(18, 1, 19, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (20, 2500, 'X', '4', NULL, ST_MakeEnvelope(20, 1, 21, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (22, 2500, 'X', '5', NULL, ST_MakeEnvelope(22, 1, 23, 2, 4326));")
 
         # Exception features.
-        cursor.execute("INSERT INTO change VALUES (30, 1, '122', 'X', ST_MakeEnvelope(30, 1, 31, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (32, 1, 'X', '122', ST_MakeEnvelope(32, 1, 33, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (30, 1, '122', 'X', NULL, ST_MakeEnvelope(30, 1, 31, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (32, 1, 'X', '122', NULL, ST_MakeEnvelope(32, 1, 33, 2, 4326));")
+
+        # Exception features with comments.
+        cursor.execute("INSERT INTO change VALUES (33, 999, 'X', '1', 'comment01', ST_MakeEnvelope(40, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (34, 999, 'X', '12', 'comment02', ST_MakeEnvelope(42, 1, 11, 2, 4326));")
 
         # Error features breaking general requirements.
-        cursor.execute("INSERT INTO change VALUES (40, 999, 'X', '1', ST_MakeEnvelope(40, 1, 11, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (42, 999, 'X', '12', ST_MakeEnvelope(42, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (40, 999, 'X', '1', NULL, ST_MakeEnvelope(40, 1, 11, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (42, 999, 'X', '12', NULL, ST_MakeEnvelope(42, 1, 11, 2, 4326));")
 
-        cursor.execute("INSERT INTO change VALUES (44, 2499, 'X', '2', ST_MakeEnvelope(44, 1, 45, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (46, 2499, 'X', '3', ST_MakeEnvelope(46, 1, 46, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (48, 2499, 'X', '4', ST_MakeEnvelope(48, 1, 48, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (50, 2499, 'X', '5', ST_MakeEnvelope(50, 1, 50, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (44, 2499, 'X', '2', NULL, ST_MakeEnvelope(44, 1, 45, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (46, 2499, 'X', '3', NULL, ST_MakeEnvelope(46, 1, 46, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (48, 2499, 'X', '4', NULL, ST_MakeEnvelope(48, 1, 48, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (50, 2499, 'X', '5', NULL, ST_MakeEnvelope(50, 1, 50, 2, 4326));")
 
-        cursor.execute("INSERT INTO change VALUES (52, 20000, 'X', '6', ST_MakeEnvelope(52, 1, 53, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (54, 20000, 'X', '7', ST_MakeEnvelope(54, 1, 55, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (56, 20000, 'X', '8', ST_MakeEnvelope(56, 1, 57, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (58, 20000, 'X', '9', ST_MakeEnvelope(58, 1, 59, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (52, 20000, 'X', '6', NULL, ST_MakeEnvelope(52, 1, 53, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (54, 20000, 'X', '7', NULL, ST_MakeEnvelope(54, 1, 55, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (56, 20000, 'X', '8', NULL, ST_MakeEnvelope(56, 1, 57, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (58, 20000, 'X', '9', NULL, ST_MakeEnvelope(58, 1, 59, 2, 4326));")
+
+        cursor.execute("INSERT INTO change VALUES (59, 999, 'X', '12', 'comment03', ST_MakeEnvelope(42, 1, 11, 2, 4326));")
 
         # Error features breaking exception requirements.
-        cursor.execute("INSERT INTO change VALUES (60, 1, '123', 'X', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
-        cursor.execute("INSERT INTO change VALUES (62, 1, 'X', '123', ST_MakeEnvelope(12, 1, 13, 2, 4326));")
+        cursor.execute("INSERT INTO change VALUES (60, 1, '123', 'X', NULL, ST_MakeEnvelope(12, 1, 13, 2, 4326));")
 
         self.params.update({"layer_defs": {"change": {"pg_layer_name": "change",
                                                       "pg_fid_name": "fid",
@@ -1223,14 +1236,16 @@ class Test_mmu_ua_change(VectorCheckTestCase):
                             "area_column_name": "shape_area",
                             "initial_code_column_name": "code1",
                             "final_code_column_name": "code2",
+                            "comment_column_name": "comment",
+                            "exception_comments": ["comment01", "comment02"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_change_general ORDER BY fid;")
         self.assertListEqual([(10,), (12,), (14,), (16,), (18,), (20,), (22,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_change_exception ORDER BY fid;")
-        self.assertListEqual([(30,), (32,)], cursor.fetchall())
+        self.assertListEqual([(30,), (32,), (33,), (34,)], cursor.fetchall())
         cursor.execute("SELECT fid FROM s01_change_error ORDER BY fid;")
-        self.assertListEqual([(40,), (42,), (44,), (46,), (48,), (50,), (52,), (54,), (56,), (58,), (60,), (62,)], cursor.fetchall())
+        self.assertListEqual([(40,), (42,), (44,), (46,), (48,), (50,), (52,), (54,), (56,), (58,), (59,), (60,)], cursor.fetchall())
 
 
 class Test_mmu_n2k(VectorCheckTestCase):
