@@ -50,6 +50,21 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
+        # Items with specific comment.
+        exception_comments = params.get("exception_comments", [])
+        for exception_comment in exception_comments:
+            sql = ("INSERT INTO {exception_table}"
+                   " SELECT {fid_name}"
+                   " FROM {layer_name}"
+                   " WHERE"
+                   "  {comment_column_name} LIKE '%{exception_comment}%'"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql_params["comment_column_name"] = params["comment_column_name"]
+            sql_params["exception_comment"] = exception_comment
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
         # Items touching cloud.
         sql = ("INSERT INTO {exception_table}"
                " SELECT layer.{fid_name}"
