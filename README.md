@@ -28,10 +28,7 @@ Please report any issues in the QC tool via GitHub:
 
 # Run the application
 
-(1) Go to the latest release
-```
-https://github.com/eea/copernicus_quality_tools/releases
-```
+(1) Go to the [latest release](https://github.com/eea/copernicus_quality_tools/releases)
 
 (2) Download the file `docker-compose.service_provider.yml`
 
