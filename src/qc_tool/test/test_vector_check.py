@@ -1343,7 +1343,7 @@ class Test_mmu_rpz(VectorCheckTestCase):
 
         # Features with specific comment.
         self.cursor.execute("INSERT INTO rpz VALUES (40, 0, 8, NULL, 'comment1', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz VALUES (41, 0, 8, NULL, 'comment1 nok', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (41, 0, 8, NULL, 'comment2 nok', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
 
         self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz",
                                                    "pg_fid_name": "fid",
@@ -1351,9 +1351,13 @@ class Test_mmu_rpz(VectorCheckTestCase):
                             "layers": ["rpz"],
                             "area_column_name": "area_ha",
                             "area_ha": 0.5,
+                            "urban_area_ha": 0.25,
+                            "marginal_area_ha": 0.2,
+                            "linear_area_ha": 0.1,
                             "code_column_name": "code",
                             "urban_feature_codes": [1111, 1112],
                             "linear_feature_codes": [1210, 1220],
+                            "comment_column_names": ["comment"],
                             "exception_comments": ["comment1"],
                             "step_nr": 1})
 
@@ -1576,9 +1580,9 @@ class Test_overlap(VectorCheckTestCase):
         from qc_tool.vector.overlap import run_check
         self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                            " (5, NULL, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (5, NULL, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
-                                                           " (6, NULL, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, 10, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, 20, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
+                                                           " (6, 30, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -1719,20 +1723,21 @@ class Test_neighbour_rpz(VectorCheckTestCase):
                             "step_nr": 1})
 
     def test(self):
-        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code_1 char(1), code_2 char(1), ua_1 char(1), ua_2 char(1), geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code_1 char(1), code_2 char(1), ua_1 char(1), ua_2 char(1), comment char(1), geom geometry(Polygon, 4326));")
         self.params.update({"code_column_names": ["code_1", "code_2"],
                             "initial_ua_column_name": "ua_1",
                             "final_ua_column_name": "ua_2",
+                            "comment_column_name": "comment",
                             "exception_comments": []})
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'B', NULL, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', 'B', NULL, NULL, ST_MakeEnvelope(1, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', 'C', NULL, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', 'C', NULL, NULL, ST_MakeEnvelope(3, 0, 4, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'C',  'U', NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (6, 'B', 'C',  'U', NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (7, 'B', 'C', NULL,  'U', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (8, 'B', 'C',  'U',  'U', ST_MakeEnvelope(7, 0, 8, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (9, 'B', 'C',  'U',  'U', ST_MakeEnvelope(8, 0, 9, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'B', NULL, NULL, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', 'B', NULL, NULL, NULL, ST_MakeEnvelope(1, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', 'C', NULL, NULL, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', 'C', NULL, NULL, NULL, ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'C',  'U', NULL, NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (6, 'B', 'C',  'U', NULL, NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (7, 'B', 'C', NULL,  'U', NULL, ST_MakeEnvelope(6, 0, 7, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (8, 'B', 'C',  'U',  'U', NULL, ST_MakeEnvelope(7, 0, 8, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (9, 'B', 'C',  'U',  'U', NULL, ST_MakeEnvelope(8, 0, 9, 1, 4326));")
 
         from qc_tool.vector.neighbour_rpz import run_check
         status = self.status_class()
@@ -1748,6 +1753,7 @@ class Test_neighbour_rpz(VectorCheckTestCase):
         self.params.update({"code_column_names": ["code"],
                             "initial_ua_column_name": None,
                             "final_ua_column_name": "ua",
+                            "comment_column_name": "comment",
                             "exception_comments": ["Comment 1", "Comment 2"]})
         self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', NULL, 'Comment 1', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', NULL, 'Comment 2', ST_MakeEnvelope(1, 0, 2, 1, 4326));")

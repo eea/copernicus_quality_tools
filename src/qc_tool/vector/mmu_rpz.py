@@ -19,6 +19,9 @@ def run_check(params, status):
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
                       "area_ha": params["area_ha"],
+                      "urban_area_ha": params["urban_area_ha"],
+                      "marginal_area_ha": params["marginal_area_ha"],
+                      "linear_area_ha": params["linear_area_ha"],
                       "code_column_name": params["code_column_name"],
                       "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
@@ -42,7 +45,7 @@ def run_check(params, status):
                "  {layer_name} AS layer,"
                "  (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {layer_name} WHERE ua IS NULL) AS margin"
                " WHERE"
-               "  layer.{area_column_name} >= 0.2"
+               "  layer.{area_column_name} >= {marginal_area_ha}"
                "  AND layer.geom && margin.geom"
                "  AND ST_Dimension(ST_Intersection(layer.geom, margin.geom)) >= 1"
                "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
@@ -56,7 +59,7 @@ def run_check(params, status):
                    " SELECT {fid_name}"
                    " FROM {layer_name}"
                    " WHERE"
-                   "  {area_column_name} >= 0.25"
+                   "  {area_column_name} >= {urban_area_ha}"
                    "  AND {code_column_name} IN %(urban_feature_codes)s"
                    "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
                    "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
@@ -70,7 +73,7 @@ def run_check(params, status):
                    " SELECT {fid_name}"
                    " FROM {layer_name}"
                    " WHERE"
-                   "  {area_column_name} >= 0.1"
+                   "  {area_column_name} >= {linear_area_ha}"
                    "  AND {code_column_name} IN %(linear_feature_codes)s"
                    "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
                    "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
@@ -79,16 +82,19 @@ def run_check(params, status):
 
         # Features with specific comments.
         if len(params["exception_comments"]) > 0:
-            sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
-            sql = ("INSERT INTO {exception_table}"
-                   " SELECT {fid_name}"
-                   " FROM {layer_name}"
-                   " WHERE"
-                   "  comment IN %(exception_comments)s"
-                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql, sql_execute_params)
+            for exception_comment in params["exception_comments"]:
+                for comment_column_name in params["comment_column_names"]:
+                    sql = ("INSERT INTO {exception_table}"
+                           " SELECT {fid_name}"
+                           " FROM {layer_name}"
+                           " WHERE"
+                           "  {comment_column_name} LIKE '%{exception_comment}%'"
+                           "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
+                           "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+                    sql_params["comment_column_name"] = comment_column_name
+                    sql_params["exception_comment"] = exception_comment
+                    sql = sql.format(**sql_params)
+                    cursor.execute(sql)
 
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])

@@ -27,6 +27,7 @@ def run_check(params, status):
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "final_ua_column_name": params["final_ua_column_name"],
+                      "comment_column_name": params["comment_column_name"],
                       "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
@@ -61,7 +62,7 @@ def run_check(params, status):
                "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})")
         if len(params["exception_comments"]) > 0:
             sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
-            sql += " AND comment IN %(exception_comments)s"
+            sql += " AND {comment_column_name} IN %(exception_comments)s"
         else:
             sql_execute_params = {}
             sql += " AND FALSE"
