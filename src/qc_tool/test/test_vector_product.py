@@ -112,7 +112,7 @@ class Test_ua_change_2012_2018(ProductTestCase):
 class Test_ua2018_stl(ProductTestCase):
     def test_gpkg(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2018_stl.gpkg.zip")
-        expected_step_results = ["ok"] * 15
+        expected_step_results = ["ok"] * 14
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
 

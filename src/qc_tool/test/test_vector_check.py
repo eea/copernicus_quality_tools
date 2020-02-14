@@ -1531,36 +1531,54 @@ class Test_overlap(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, geom geometry(Polygon, 4326));")
-        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, code integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, code integer, geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "test_layer_1",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"},
                                            "layer_2": {"pg_layer_name": "test_layer_2",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
+                            "exclude_column_name": "code",
+                            "exclude_codes": [98, 99],
                             "layers": ["layer_1", "layer_2"],
                             "step_nr": 1})
 
     def test_non_overlapping(self):
         from qc_tool.vector.overlap import run_check
-        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
-                                                           " (3, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
-                                                           " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
-        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (2, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                           " (3, NULL, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
+                                                           " (4, NULL, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (2, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
+    def test_excluded(self):
+        from qc_tool.vector.overlap import run_check
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, 30, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, 30, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, 98, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, 99, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
+                                                           " (6, 40, ST_MakeEnvelope(0.8, 0, 3, 1, 4326)),"
+                                                           " (7, 50, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.cursor.execute("SELECT fid FROM s01_test_layer_1_error ORDER BY fid;")
+        self.assertListEqual([(1,), (5,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM s01_test_layer_2_error ORDER BY fid;")
+        self.assertListEqual([(6,), (7,)], self.cursor.fetchall())
+
     def test_overlapping_fails(self):
         from qc_tool.vector.overlap import run_check
-        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
-                                                           " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, NULL, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, NULL, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
+                                                           " (6, NULL, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
