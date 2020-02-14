@@ -89,14 +89,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
-      "required": false,
-      "parameters": {
-        "layers": ["stl"],
-        "boundary_unit_column_name": "fua_code"
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
@@ -121,7 +113,9 @@
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["stl"]
+        "layers": ["stl"],
+        "exclude_column_name": "stl",
+        "exclude_codes": [0]
       }
     },
     {
