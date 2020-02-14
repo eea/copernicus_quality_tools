@@ -22,7 +22,7 @@ def run_check(params, status):
             sql_params["exclude_clause"] = "TRUE"
             sql_execute_params = {}
         else:
-            exclude_clause = ("{exclude_column_name} NOT IN %(exclude_codes)s ")
+            exclude_clause = ("{exclude_column_name} IS NULL OR {exclude_column_name} NOT IN %(exclude_codes)s ")
             sql_params["exclude_clause"] = exclude_clause.format(exclude_column_name=exclude_column_name)
             sql_execute_params = {"exclude_codes": tuple(params["exclude_codes"])}
 
@@ -36,7 +36,6 @@ def run_check(params, status):
                "    AND ta.geom && tb.geom"
                "    AND ST_Relate(ta.geom, tb.geom, 'T********');")
         sql = sql.format(**sql_params)
-        print(cursor.mogrify(sql, sql_execute_params))
         cursor.execute(sql, sql_execute_params)
 
         # Report error items.
