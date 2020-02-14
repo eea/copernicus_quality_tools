@@ -187,15 +187,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.change",
-      "required": false,
-      "parameters": {
-        "layers": ["rpz"],
-        "initial_code_column_name": "maes_4_12",
-        "final_code_column_name": "maes_4_18"
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
