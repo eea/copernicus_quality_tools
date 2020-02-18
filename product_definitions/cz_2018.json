@@ -1,0 +1,241 @@
+{
+  "description": "Coastal Zones 2018 status",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "formats": [".gdb", ".gpkg"],
+        "layer_names": {
+          "status": "^cz_2018_(?P<aoi_code>[a-z0-9]+)_3035_"
+        },
+        "excessive_layers_allowed": false,
+        "boundary_source": "aoi_cz_2018.gpkg"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["status"],
+        "required": {"id": "string",
+                     "du": "string",
+                     "code_1_18": "integer",
+                     "code_2_18": "integer",
+                     "code_3_18": "integer",
+                     "code_4_18": "integer",
+                     "nodata_18": "integer",
+                     "comment_18": "string",
+                     "area_ha": "real"},
+        "ignored": ["shape_area", "shape_length"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["status"],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["status"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "unique_keys": ["id"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "column_defs": [["nodata_18", [0, 1]],
+                        ["code_1_18", [0, 1, 2, 3, 4, 5, 6, 7, 8]],
+                        ["code_2_18", [0,
+                                       11, 12, 13, 14,
+                                       21, 22, 23,
+                                       31, 32, 33, 34, 35, 36,
+                                       41, 42,
+                                       51, 52, 53,
+                                       61, 62, 63,
+                                       71, 72,
+                                       81, 82, 83, 84]],
+                        ["code_3_18", [0,
+                                       111, 112,
+                                       121, 122, 123, 124,
+                                       131, 132, 133, 134,
+                                       140,
+                                       211, 212,
+                                       221, 222,
+                                       231, 232, 233, 234,
+                                       311, 312,
+                                       321, 322,
+                                       331, 332,
+                                       340,
+                                       350,
+                                       360,
+                                       410,
+                                       421, 422,
+                                       510,
+                                       520,
+                                       530,
+                                       611, 612,
+                                       621, 622, 623,
+                                       631, 632, 633,
+                                       711, 712,
+                                       721, 722, 723,
+                                       811, 812, 813,
+                                       821, 822, 823, 824,
+                                       831, 832, 833,
+                                       841, 842]],
+                        ["code_4_18", [0,
+                                       1111, 1112, 1113, 1121, 1122,
+                                       1210, 1220,
+                                       1231, 1232, 1233, 1234, 1235, 1236, 1237,
+                                       1240,
+                                       1310, 1320, 1330, 1340,
+                                       1400,
+                                       2110, 2120,
+                                       2210, 2220,
+                                       2310, 2320, 2330, 2340,
+                                       3110, 3120,
+                                       3210, 3220,
+                                       3310, 3320,
+                                       3400,
+                                       3500,
+                                       3600,
+                                       4100,
+                                       4210, 4220,
+                                       5100,
+                                       5200,
+                                       5300,
+                                       6110, 6120,
+                                       6211, 6212,
+                                       6220, 6230,
+                                       6311, 6312,
+                                       6320, 6330,
+                                       7110, 7121, 7122,
+                                       7210, 7220, 7230,
+                                       8110, 8120, 8130,
+                                       8210, 8220, 8230, 8240,
+                                       8310, 8320, 8330,
+                                       8410, 8420]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.nodata",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "nodata_column_name": "nodata_18",
+        "nodata_value": 1,
+        "dep_column_names": ["code_1_18", "code_2_18", "code_3_18", "code_4_18"],
+        "dep_value": 0
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["status"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["status"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "area_column_name": "area_ha",
+        "unit": 10000,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.gap_unit",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "boundary_unit_column_name": "du"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "area_column_name": "area_ha",
+        "code_column_name": "code_4_18",
+        "area_ha": 0.5,
+        "coastal_intertidal_area_ha": 25,
+        "coastal_intertidal_feature_codes": [7230, 8420],
+        "marginal_area_ha": 0.1,
+        "urban_area_ha": 0.25,
+        "urban_feature_codes": [1111, 1112, 1113, 1121, 1122, 1231, 1232, 1233, 1234, 1235, 1236, 1237, 1240, 1210, 1320, 1330, 1340, 1400],
+        "linear_area_ha": 0.1,
+        "linear_feature_codes": [1210, 1220, 8110, 8120],
+        "road_railway_feature_codes": [1210, 1220],
+        "comment_column_name": "comment_18",
+        "exception_comments": [
+          "Area size exception (at Coastal Zones AoI boundary)",
+          "Area size exception (inside Coastal Zones AoI boundary)",
+          "Splitted change",
+          "Areas related to change",
+          "Flooded area 2012",
+          "Flooded area 2018",
+          "Different water level"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "code_column_name": "code_4_18",
+        "filter_codes": [1210, 1220, 8110, 8120],
+        "mmw": 10.0
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["status"],
+        "code_column_names": ["code_4_18"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["status"]
+      }
+    }
+  ]
+}
