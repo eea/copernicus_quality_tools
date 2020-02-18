@@ -105,7 +105,7 @@
       "parameters": {
         "layers": ["stl"],
         "code_column_name": "stl",
-        "filter_code": 1,
+        "filter_codes": [1],
         "mmw": 10
       }
     },

@@ -22,8 +22,8 @@ def run_check(params, status):
             sql_params["filter_clause"] = "TRUE"
         else:
             sql_params["code_column_name"] = params["code_column_name"]
-            sql_params["filter_clause"] = "{code_column_name} = %(filter_code)s".format(**sql_params)
-            sql_execute_params["filter_code"] = params["filter_code"]
+            sql_params["filter_clause"] = "{code_column_name} IN %(filter_codes)s".format(**sql_params)
+            sql_execute_params["filter_codes"] = tuple(params["filter_codes"])
 
         # Create table of warning items.
         sql = ("CREATE TABLE {warning_table} AS"

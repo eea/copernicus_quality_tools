@@ -1392,7 +1392,7 @@ class Test_mmw(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.mmw import run_check
         self.params.update({"code_column_name": None,
-                            "filter_code": None})
+                            "filter_codes": None})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
@@ -1409,7 +1409,7 @@ class Test_mmw(VectorCheckTestCase):
     def test_patchy(self):
         from qc_tool.vector.mmw import run_check
         self.params.update({"code_column_name": "code",
-                            "filter_code": "2"})
+                            "filter_codes": ["2"]})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, NULL, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")

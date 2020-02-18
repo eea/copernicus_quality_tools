@@ -265,7 +265,7 @@
       "parameters": {
         "layers": ["vector"],
         "code_column_name": "code",
-        "filter_code": "2",
+        "filter_codes": ["2"],
         "mmw": 10
       }
     },
