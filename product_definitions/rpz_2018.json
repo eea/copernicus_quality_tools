@@ -26,26 +26,33 @@
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
-        "layers": ["rpz"],
-        "required": {"id": "integer",
-                     "du_id": "string",
-                     "maes_1_12": "integer",
-                     "maes_2_12": "integer",
-                     "maes_3_12": "integer",
-                     "maes_4_12": "integer",
-                     "maes_1_18": "integer",
-                     "maes_2_18": "integer",
-                     "maes_3_18": "integer",
-                     "maes_4_18": "integer",
-                     "changecode": "string",
-                     "ua_12": "string",
-                     "ua_18": "string",
-                     "area_ha": "real",
-                     "nodata_12": "integer",
-                     "nodata_18": "integer",
-                     "comment_12": "string"},
-                     "comment_18": "string"},
-        "ignored": ["shape_area", "shape_length"]
+        "layers": [
+          "rpz"
+        ],
+        "required": {
+          "id": "integer",
+          "du_id": "string",
+          "maes_1_12": "integer",
+          "maes_2_12": "integer",
+          "maes_3_12": "integer",
+          "maes_4_12": "integer",
+          "maes_1_18": "integer",
+          "maes_2_18": "integer",
+          "maes_3_18": "integer",
+          "maes_4_18": "integer",
+          "changecode": "string",
+          "ua_12": "string",
+          "ua_18": "string",
+          "area_ha": "real",
+          "nodata_12": "integer",
+          "nodata_18": "integer",
+          "comment_12": "string",
+          "comment_18": "string"
+        },
+        "ignored": [
+          "shape_area",
+          "shape_length"
+        ]
       }
     },
     {
