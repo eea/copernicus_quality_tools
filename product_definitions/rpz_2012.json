@@ -167,7 +167,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "code_column_name": null,
+        "filter_column_name": null,
         "filter_code": null,
         "mmw": 10.0
       }

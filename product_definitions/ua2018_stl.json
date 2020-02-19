@@ -93,8 +93,8 @@
       "required": false,
       "parameters": {
         "layers": ["stl"],
-        "code_column_name": "stl",
-        "filter_code": 1,
+        "filter_column_name": "stl",
+        "filter_codes": [1],
         "area_column_name": "area",
         "mmu": 500
       }
@@ -104,7 +104,7 @@
       "required": false,
       "parameters": {
         "layers": ["stl"],
-        "code_column_name": "stl",
+        "filter_column_name": "stl",
         "filter_codes": [1],
         "mmw": 10
       }

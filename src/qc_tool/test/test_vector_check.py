@@ -985,8 +985,8 @@ class Test_mxmu(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "code_column_name": "code",
-                            "filter_code": "code2",
+                            "filter_column_name": "code",
+                            "filter_codes": ["code2"],
                             "area_column_name": "shape_area",
                             "mxmu": 500000,
                             "step_nr": 1})
@@ -1048,8 +1048,8 @@ class Test_mmu(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "code_column_name": "code",
-                            "filter_code": "code2",
+                            "filter_column_name": "code",
+                            "filter_codes": ["code2"],
                             "area_column_name": "shape_area",
                             "mmu": 500000,
                             "step_nr": 1})
@@ -1391,7 +1391,7 @@ class Test_mmw(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.vector.mmw import run_check
-        self.params.update({"code_column_name": None,
+        self.params.update({"filter_column_name": None,
                             "filter_codes": None})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
@@ -1408,7 +1408,7 @@ class Test_mmw(VectorCheckTestCase):
 
     def test_patchy(self):
         from qc_tool.vector.mmw import run_check
-        self.params.update({"code_column_name": "code",
+        self.params.update({"filter_column_name": "code",
                             "filter_codes": ["2"]})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
@@ -1458,8 +1458,8 @@ class Test_mxmw(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mxmw"],
-                            "code_column_name": "code",
-                            "filter_code": "1",
+                            "filter_column_name": "code",
+                            "filter_codes": ["1"],
                             "mxmw": 1.0,
                             "step_nr": 1})
         cursor = self.params["connection_manager"].get_connection().cursor()
@@ -1482,8 +1482,8 @@ class Test_mml(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mml"],
-                            "code_column_name": "code",
-                            "filter_code": "1",
+                            "filter_column_name": "code",
+                            "filter_codes": ["1"],
                             "mml": 10.,
                             "step_nr": 1})
         self.cursor = self.params["connection_manager"].get_connection().cursor()
