@@ -15,7 +15,7 @@
           "change": "^cz_change_2012_2018_(?P<aoi_code>[a-z0-9]+)_3035_"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "aoi_cz_2018.gpkg"
+        "boundary_source": "boundary_cz.shp"
       }
     },
     {
