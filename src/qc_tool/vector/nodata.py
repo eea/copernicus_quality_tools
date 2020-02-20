@@ -46,5 +46,5 @@ def run_check(params, status):
             items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
             if items_message is not None:
                 status.failed("Layer {:s} has column {:s} with invalid nodata code in features with {:s}: {:s}."
-                              .format(layer_def["pg_layer_name"], column_name, layer_def["fid_display_name"], items_message))
+                              .format(layer_def["pg_layer_name"], layer_def["nodata_column_name"], layer_def["fid_display_name"], items_message))
                 status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
