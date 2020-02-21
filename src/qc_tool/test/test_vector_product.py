@@ -148,7 +148,7 @@ class Test_cz_2018(ProductTestCase):
 class Test_cz_change_2012_2018(ProductTestCase):
     def test_gpkg(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_change_2012_2018_DU001_3035_V1_0.gdb.zip")
-        expected_step_results = ["ok"] * 17
+        expected_step_results = ["ok"] * 16
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
 
