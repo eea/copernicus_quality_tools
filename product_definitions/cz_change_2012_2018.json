@@ -252,14 +252,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "boundary_unit_column_name": "du"
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
