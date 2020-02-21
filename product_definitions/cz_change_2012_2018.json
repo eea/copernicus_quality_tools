@@ -219,6 +219,15 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.change",
+      "required": false,
+      "parameters": {
+        "layers": ["change"],
+        "initial_code_column_name": "code_4_12",
+        "final_code_column_name": "code_4_18"
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
