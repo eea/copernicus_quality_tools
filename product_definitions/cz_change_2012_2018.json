@@ -269,7 +269,7 @@
         "linear_area_ha": 0.1,
         "linear_feature_codes": [1210, 1220, 8110, 8120],
         "road_railway_feature_codes": [1210, 1220],
-        "comment_column_name": "comment_12",
+        "comment_column_name": "comment",
         "exception_comments": [
           "Area size exception (at Coastal Zones AoI boundary)",
           "Area size exception (inside Coastal Zones AoI boundary)",
