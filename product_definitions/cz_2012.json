@@ -142,17 +142,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.nodata",
-      "required": false,
-      "parameters": {
-        "layers": ["status"],
-        "nodata_column_name": "nodata_12",
-        "nodata_value": 1,
-        "dep_column_names": ["code_1_12", "code_2_12", "code_3_12", "code_4_12"],
-        "dep_value": 0
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
@@ -218,7 +207,7 @@
       "required": false,
       "parameters": {
         "layers": ["status"],
-        "code_column_name": "code_4_12",
+        "filter_column_name": "code_4_12",
         "filter_codes": [1210, 1220, 8110, 8120],
         "mmw": 10.0
       }
@@ -228,7 +217,7 @@
       "required": false,
       "parameters": {
         "layers": ["status"],
-        "code_column_names": ["code_4_18"]
+        "code_column_names": ["code_4_12"]
       }
     },
     {
