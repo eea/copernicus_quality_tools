@@ -32,7 +32,7 @@ def do_unzip(zip_filepath, unzip_dir, status):
         with ZipFile(str(zip_filepath)) as zip_file:
             zip_file.extractall(path=str(unzip_dir))
     except Exception as ex:
-        status.aborted("Error unzipping file {:s}.".format(zip_filepath.name))
+        status.aborted("Error unzipping file {:s}, reason: {:s}".format(zip_filepath.name, str(ex)))
         return
 
     status.add_params({"unzip_dir": unzip_dir})
