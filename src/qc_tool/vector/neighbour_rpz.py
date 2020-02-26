@@ -13,36 +13,41 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):
+        # Prepare clause for pairing features.
+        # Every feature is identified by composite key including
+        # * value of every code column;
+        # * IS NULL value of initial_ua_column_name;
+        pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_column_name)
+                                   for code_column_name in params["code_column_names"])
+        if params["initial_ua_column_name"] is not None:
+            pair_clause = " AND ".join([pair_clause,
+                                        "(ta.{0:s} IS NULL) = (tb.{0:s} IS NULL)".format(params["initial_ua_column_name"])])
+
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "code_column_name": params["code_column_name"],
+                      "final_ua_column_name": params["final_ua_column_name"],
+                      "comment_column_name": params["comment_column_name"],
                       "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
+                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "pair_clause": pair_clause}
 
-        # Create table of general items.
-        # All features inside Urban Atlas Core Region.
+        # All features not having neighbour with the same key.
+        # Only features outside ua region in the final year (having final_ua_column_name set to NULL) are taken into trial.
+        # All features inside ua region in the final year are considered ok and they are completely excluded from the pairing.
         sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name} WHERE ua IS NOT NULL;")
-        sql = sql.format(**sql_params)
-        cursor.execute(sql)
-
-        # All features outside Urban Atlas Core Region not having neighbour with the same code.
-        sql = ("INSERT INTO {general_table}"
                " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE"
-               "  ua IS NULL"
-               "  AND {fid_name} NOT IN"
+               "  {fid_name} NOT IN"
                "   (SELECT DISTINCT unnest(ARRAY[ta.{fid_name}, tb.{fid_name}]) AS {fid_name}"
                "    FROM {layer_name} AS ta, {layer_name} AS tb"
                "    WHERE"
-               "     ta.ua IS NULL"
-               "     AND tb.ua IS NULL"
+               "     ta.{final_ua_column_name} IS NULL"
+               "     AND tb.{final_ua_column_name} IS NULL"
+               "     AND {pair_clause}"
                "     AND ta.{fid_name} < tb.{fid_name}"
-               "     AND ta.{code_column_name} = tb.{code_column_name}"
                "     AND ta.geom && tb.geom"
                "     AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1"
                "   );")
@@ -57,7 +62,7 @@ def run_check(params, status):
                "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})")
         if len(params["exception_comments"]) > 0:
             sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
-            sql += " AND comment IN %(exception_comments)s"
+            sql += " AND {comment_column_name} IN %(exception_comments)s"
         else:
             sql_execute_params = {}
             sql += " AND FALSE"

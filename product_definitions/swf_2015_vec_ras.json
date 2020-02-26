@@ -242,8 +242,8 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "code_column_name": "code",
-        "filter_code": "2",
+        "filter_column_name": "code",
+        "filter_codes": ["2"],
         "area_column_name": "area",
         "mmu": 200
       }
@@ -253,8 +253,8 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "code_column_name": "code",
-        "filter_code": "2",
+        "filter_column_name": "code",
+        "filter_codes": ["2"],
         "area_column_name": "area",
         "mxmu": 5000
       }
@@ -264,8 +264,8 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "code_column_name": "code",
-        "filter_code": "2",
+        "filter_column_name": "code",
+        "filter_codes": ["2"],
         "mmw": 10
       }
     },
@@ -274,8 +274,8 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "code_column_name": "code",
-        "filter_code": "1",
+        "filter_column_name": "code",
+        "filter_codes": ["1"],
         "mxmw": 30
       }
     },
@@ -284,8 +284,8 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "code_column_name": "code",
-        "filter_code": "1",
+        "filter_column_name": "code",
+        "filter_codes": ["1"],
         "mml": 50
       }
     },

@@ -112,7 +112,7 @@ class Test_ua_change_2012_2018(ProductTestCase):
 class Test_ua2018_stl(ProductTestCase):
     def test_gpkg(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2018_stl.gpkg.zip")
-        expected_step_results = ["ok"] * 15
+        expected_step_results = ["ok"] * 14
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
 
@@ -120,3 +120,40 @@ class Test_ua2018_stl(ProductTestCase):
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
+
+class Test_cz_2012(ProductTestCase):
+    def test_gdb(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_2012_DU001_3035_V1_0.gdb.zip")
+        expected_step_results = ["ok"] * 17
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "cz_2012", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+
+class Test_cz_2018(ProductTestCase):
+    def test_gdb(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_2018_DU001_3035_V1_0.gdb.zip")
+        expected_step_results = ["ok"] * 17
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "cz_2018", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+
+class Test_cz_change_2012_2018(ProductTestCase):
+    def test_gdb(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_change_2012_2018_DU001_3035_V1_0.gdb.zip")
+        expected_step_results = ["ok"] * 16
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "cz_change_2012_2018", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+

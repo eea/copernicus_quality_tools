@@ -654,24 +654,24 @@ class Test_nodata(VectorCheckTestCase):
                                                       " ( 7, 0, 0, NULL),"
                                                       " ( 8, 0, 10, NULL),"
                                                       " ( 9, 0, NULL, NULL),"
-                                                      " (10, 1, 1, 1);")
+                                                      " (10, 1, 0, 0);")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_fail(self):
         from qc_tool.vector.nodata import run_check
-        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 1, 10);")
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 0, 10);")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
 
     def test_fail_null(self):
         from qc_tool.vector.nodata import run_check
-        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 1, NULL);")
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, 0, NULL);")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
 
     def test_nodata_null(self):
         self.params["nodata_value"] = None
@@ -685,7 +685,7 @@ class Test_nodata(VectorCheckTestCase):
                                                       " ( 7, 0, 0, NULL),"
                                                       " ( 8, 0, 10, NULL),"
                                                       " ( 9, 0, NULL, NULL),"
-                                                      " (10, NULL, 1, 1);")
+                                                      " (10, NULL, 0, 0);")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -693,10 +693,18 @@ class Test_nodata(VectorCheckTestCase):
     def test_nodata_null_fail(self):
         self.params["nodata_value"] = None
         from qc_tool.vector.nodata import run_check
-        self.cursor.execute("INSERT INTO mytable VALUES (1, NULL, 1, NULL);")
+        self.cursor.execute("INSERT INTO mytable VALUES (1, NULL, 0, 10);")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+
+    def test_nodata_null_fail_null(self):
+        self.params["dep_value"] = None
+        from qc_tool.vector.nodata import run_check
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, NULL, 10);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
 
     def test_dep_null(self):
         self.params["dep_value"] = None
@@ -711,14 +719,6 @@ class Test_nodata(VectorCheckTestCase):
                                                       " ( 8, 0, 10, NULL),"
                                                       " ( 9, 0, NULL, NULL),"
                                                       " (10, 1, NULL, NULL);")
-        status = self.status_class()
-        run_check(self.params, status)
-        self.assertEqual("ok", status.status)
-
-    def test_nodata_null_fail(self):
-        self.params["dep_value"] = None
-        from qc_tool.vector.nodata import run_check
-        self.cursor.execute("INSERT INTO mytable VALUES (1, 1, NULL, 0);")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -985,8 +985,8 @@ class Test_mxmu(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "code_column_name": "code",
-                            "filter_code": "code2",
+                            "filter_column_name": "code",
+                            "filter_codes": ["code2"],
                             "area_column_name": "shape_area",
                             "mxmu": 500000,
                             "step_nr": 1})
@@ -1048,8 +1048,8 @@ class Test_mmu(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "code_column_name": "code",
-                            "filter_code": "code2",
+                            "filter_column_name": "code",
+                            "filter_codes": ["code2"],
                             "area_column_name": "shape_area",
                             "mmu": 500000,
                             "step_nr": 1})
@@ -1343,7 +1343,7 @@ class Test_mmu_rpz(VectorCheckTestCase):
 
         # Features with specific comment.
         self.cursor.execute("INSERT INTO rpz VALUES (40, 0, 8, NULL, 'comment1', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz VALUES (41, 0, 8, NULL, 'comment1 nok', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz VALUES (41, 0, 8, NULL, 'comment2 nok', ST_MakeEnvelope(6, 0, 7, 1, 4326));")
 
         self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz",
                                                    "pg_fid_name": "fid",
@@ -1351,9 +1351,13 @@ class Test_mmu_rpz(VectorCheckTestCase):
                             "layers": ["rpz"],
                             "area_column_name": "area_ha",
                             "area_ha": 0.5,
+                            "urban_area_ha": 0.25,
+                            "marginal_area_ha": 0.2,
+                            "linear_area_ha": 0.1,
                             "code_column_name": "code",
                             "urban_feature_codes": [1111, 1112],
                             "linear_feature_codes": [1210, 1220],
+                            "comment_column_names": ["comment"],
                             "exception_comments": ["comment1"],
                             "step_nr": 1})
 
@@ -1387,8 +1391,8 @@ class Test_mmw(VectorCheckTestCase):
 
     def test(self):
         from qc_tool.vector.mmw import run_check
-        self.params.update({"code_column_name": None,
-                            "filter_code": None})
+        self.params.update({"filter_column_name": None,
+                            "filter_codes": None})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
@@ -1404,8 +1408,8 @@ class Test_mmw(VectorCheckTestCase):
 
     def test_patchy(self):
         from qc_tool.vector.mmw import run_check
-        self.params.update({"code_column_name": "code",
-                            "filter_code": "2"})
+        self.params.update({"filter_column_name": "code",
+                            "filter_codes": ["2"]})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mmw (fid integer, code char(1), geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (1, NULL, ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
@@ -1454,8 +1458,8 @@ class Test_mxmw(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mxmw"],
-                            "code_column_name": "code",
-                            "filter_code": "1",
+                            "filter_column_name": "code",
+                            "filter_codes": ["1"],
                             "mxmw": 1.0,
                             "step_nr": 1})
         cursor = self.params["connection_manager"].get_connection().cursor()
@@ -1478,8 +1482,8 @@ class Test_mml(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mml"],
-                            "code_column_name": "code",
-                            "filter_code": "1",
+                            "filter_column_name": "code",
+                            "filter_codes": ["1"],
                             "mml": 10.,
                             "step_nr": 1})
         self.cursor = self.params["connection_manager"].get_connection().cursor()
@@ -1531,36 +1535,54 @@ class Test_overlap(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, geom geometry(Polygon, 4326));")
-        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, code integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, code integer, geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "test_layer_1",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"},
                                            "layer_2": {"pg_layer_name": "test_layer_2",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
+                            "exclude_column_name": "code",
+                            "exclude_codes": [98, 99],
                             "layers": ["layer_1", "layer_2"],
                             "step_nr": 1})
 
     def test_non_overlapping(self):
         from qc_tool.vector.overlap import run_check
-        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
-                                                           " (3, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
-                                                           " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
-        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (2, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                           " (3, NULL, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
+                                                           " (4, NULL, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (2, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
+    def test_excluded(self):
+        from qc_tool.vector.overlap import run_check
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, 30, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, 30, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, 98, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, 99, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
+                                                           " (6, 40, ST_MakeEnvelope(0.8, 0, 3, 1, 4326)),"
+                                                           " (7, 50, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.cursor.execute("SELECT fid FROM s01_test_layer_1_error ORDER BY fid;")
+        self.assertListEqual([(1,), (5,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM s01_test_layer_2_error ORDER BY fid;")
+        self.assertListEqual([(6,), (7,)], self.cursor.fetchall())
+
     def test_overlapping_fails(self):
         from qc_tool.vector.overlap import run_check
-        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
-                                                           " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
-                                                           " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, NULL, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, 10, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                           " (5, 20, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
+                                                           " (6, 30, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -1698,18 +1720,24 @@ class Test_neighbour_rpz(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["rpz"],
-                            "code_column_name": "code",
-                            "exception_comments": ["Comment 1", "Comment 2"],
                             "step_nr": 1})
-        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), ua char(1), comment varchar, geom geometry(Polygon, 4326));")
 
     def test(self):
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'U', NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', 'U', NULL, ST_MakeEnvelope(1, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', NULL, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', NULL, NULL, ST_MakeEnvelope(3, 0, 4, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', NULL, NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (6, 'C', NULL, NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
+        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code_1 char(1), code_2 char(1), ua_1 char(1), ua_2 char(1), comment char(1), geom geometry(Polygon, 4326));")
+        self.params.update({"code_column_names": ["code_1", "code_2"],
+                            "initial_ua_column_name": "ua_1",
+                            "final_ua_column_name": "ua_2",
+                            "comment_column_name": "comment",
+                            "exception_comments": []})
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'B', NULL, NULL, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', 'B', NULL, NULL, NULL, ST_MakeEnvelope(1, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', 'C', NULL, NULL, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', 'C', NULL, NULL, NULL, ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'C',  'U', NULL, NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (6, 'B', 'C',  'U', NULL, NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (7, 'B', 'C', NULL,  'U', NULL, ST_MakeEnvelope(6, 0, 7, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (8, 'B', 'C',  'U',  'U', NULL, ST_MakeEnvelope(7, 0, 8, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (9, 'B', 'C',  'U',  'U', NULL, ST_MakeEnvelope(8, 0, 9, 1, 4326));")
 
         from qc_tool.vector.neighbour_rpz import run_check
         status = self.status_class()
@@ -1718,19 +1746,25 @@ class Test_neighbour_rpz(VectorCheckTestCase):
         self.cursor.execute("SELECT fid FROM s01_rpz_layer_exception ORDER BY fid;")
         self.assertListEqual([], self.cursor.fetchall())
         self.cursor.execute("SELECT fid FROM s01_rpz_layer_error ORDER BY fid;")
-        self.assertListEqual([(4,), (5,)], self.cursor.fetchall())
+        self.assertListEqual([(1,), (2,), (5,), (6,)], self.cursor.fetchall())
 
     def test_comments(self):
+        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), ua char(1), comment varchar, geom geometry(Polygon, 4326));")
+        self.params.update({"code_column_names": ["code"],
+                            "initial_ua_column_name": None,
+                            "final_ua_column_name": "ua",
+                            "comment_column_name": "comment",
+                            "exception_comments": ["Comment 1", "Comment 2"]})
         self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', NULL, 'Comment 1', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', NULL, 'Comment 2', ST_MakeEnvelope(1, 0, 2, 1, 4326));")
         self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', NULL, 'Comment 1', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', NULL, 'hu', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'U', 'Comment 1', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', NULL,        'hu', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B',  'U', 'Comment 1', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
 
         from qc_tool.vector.neighbour_rpz import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        #self.assertEqual("ok", status.status)
         self.cursor.execute("SELECT fid FROM s01_rpz_layer_exception ORDER BY fid;")
         self.assertListEqual([(1,), (2,), (3,)], self.cursor.fetchall())
         self.cursor.execute("SELECT fid FROM s01_rpz_layer_error ORDER BY fid;")

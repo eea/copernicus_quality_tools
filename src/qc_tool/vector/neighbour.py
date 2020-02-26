@@ -18,14 +18,15 @@ def run_check(params, status):
         exclude_clause = " AND ".join("{:s} NOT LIKE '{:s}'".format(code_column_name, exclude_code)
                                       for code_column_name in params["code_column_names"]
                                       for exclude_code in params.get("exclude_codes", []))
-        if len(exclude_clause) > 0:
-            exclude_clause = " WHERE " + exclude_clause
+        if len(exclude_clause) == 0:
+            exclude_clause = "TRUE"
 
         # Prepare clause for pairing features.
-        pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_column_name)
-                                   for code_column_name in params["code_column_names"])
-        if len(pair_clause) > 0:
-            pair_clause = " AND " + pair_clause
+        if len(params["code_column_names"]) > 0:
+            pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_column_name)
+                                       for code_column_name in params["code_column_names"])
+        else:
+            pair_clause = "FALSE"
 
         # Prepare clause for technical change.
         if "chtype_column_name" in params:
@@ -48,11 +49,11 @@ def run_check(params, status):
         sql = ("CREATE TABLE {pair_table} AS"
                " SELECT ARRAY[ta.{fid_name}, tb.{fid_name}] AS pair, {technical_clause} AS technical"
                " FROM"
-               "  (SELECT * FROM {layer_name} {exclude_clause}) AS ta,"
-               "  (SELECT * FROM {layer_name} {exclude_clause}) AS tb"
+               "  (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS ta,"
+               "  (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS tb"
                " WHERE"
                "  ta.{fid_name} < tb.{fid_name}"
-               "  {pair_clause}"
+               "  AND {pair_clause}"
                "  AND ta.geom && tb.geom"
                "  AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1;")
         sql = sql.format(**sql_params)

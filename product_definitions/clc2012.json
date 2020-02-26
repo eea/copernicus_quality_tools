@@ -229,7 +229,7 @@
       "required": false,
       "parameters": {
         "layers": ["reference", "initial", "change"],
-        "code_column_name": null,
+        "filter_column_name": null,
         "filter_code": null,
         "mmw": 100.0
       }

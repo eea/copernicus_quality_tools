@@ -32,7 +32,7 @@ def do_unzip(zip_filepath, unzip_dir, status):
         with ZipFile(str(zip_filepath)) as zip_file:
             zip_file.extractall(path=str(unzip_dir))
     except Exception as ex:
-        status.aborted("Error unzipping file {:s}.".format(zip_filepath.name))
+        status.aborted("Error unzipping file {:s}, reason: {:s}".format(zip_filepath.name, str(ex)))
         return
 
     status.add_params({"unzip_dir": unzip_dir})
@@ -90,7 +90,7 @@ def find_shp_layers(unzip_dir, status):
 def find_gdb_layers(unzip_dir, status):
     from osgeo import ogr
 
-    # Find gdb folder.
+    # Find all gdb directories.
     gdb_dirs = [path for path in unzip_dir.glob("**") if path.suffix.lower() == ".gdb"]
     gdb_layer_infos = []
 
@@ -98,9 +98,8 @@ def find_gdb_layers(unzip_dir, status):
         # Open geodatabase.
         ds = ogr.Open(str(gdb_dir))
         if ds is None:
-            status.aborted("Can not open geodatabase {:s}.".format(gdb_dir.name))
-            return
-
+            status.aborted("Can not open geodatabase {:s}.".format(str(gdb_dir.relative_to(unzip_dir))))
+            continue
         for layer_index in range(ds.GetLayerCount()):
             layer = ds.GetLayerByIndex(layer_index)
             layer_name = layer.GetName()
@@ -122,7 +121,7 @@ def find_gpkg_layers(unzip_dir, status):
         ds = ogr.Open(str(gpkg_filepath))
         if ds is None:
             status.aborted("Can not open geopackage {:s}.".format(gpkg_filepath.name))
-            return
+            return []
 
         for layer_index in range(ds.GetLayerCount()):
             layer = ds.GetLayerByIndex(layer_index)
