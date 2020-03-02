@@ -23,7 +23,7 @@
       "required": true,
       "parameters": {
         "layers": ["change"],
-        "required": {"id": "string",
+        "required": {"id": "integer",
                      "du": "string",
                      "code_1_12": "integer",
                      "code_2_12": "integer",

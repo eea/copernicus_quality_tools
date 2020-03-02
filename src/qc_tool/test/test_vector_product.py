@@ -123,7 +123,7 @@ class Test_ua2018_stl(ProductTestCase):
 
 class Test_cz_2012(ProductTestCase):
     def test_gdb(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_2012_DU001_3035_V1_0.gdb.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_2012_DU001_3035_V1_1.gdb.zip")
         expected_step_results = ["ok"] * 17
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
@@ -135,7 +135,7 @@ class Test_cz_2012(ProductTestCase):
 
 class Test_cz_2018(ProductTestCase):
     def test_gdb(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_2018_DU001_3035_V1_0.gdb.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_2018_DU001_3035_V1_1.gdb.zip")
         expected_step_results = ["ok"] * 17
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
@@ -147,7 +147,7 @@ class Test_cz_2018(ProductTestCase):
 
 class Test_cz_change_2012_2018(ProductTestCase):
     def test_gdb(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_change_2012_2018_DU001_3035_V1_0.gdb.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "cz", "gdb", "CZ_change_2012_2018_DU001_3035_V1_1.gdb.zip")
         expected_step_results = ["ok"] * 16
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
