@@ -185,32 +185,32 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmu",
+      "check_ident": "qc_tool.vector.mmu_cz",
       "required": false,
       "parameters": {
         "layers": ["status"],
-        "area_column_name": "area_ha",
-        "code_column_name": "code_4_18",
-        "filter_column_name": null,
-        "mmu": 0.5,
-        "coastal_intertidal_area_ha": 25,
-        "coastal_intertidal_feature_codes": [7230, 8420],
-        "marginal_area_ha": 0.1,
-        "urban_area_ha": 0.25,
-        "urban_feature_codes": [1111, 1112, 1113, 1121, 1122, 1231, 1232, 1233, 1234, 1235, 1236, 1237, 1240, 1210, 1320, 1330, 1340, 1400],
-        "linear_area_ha": 0.1,
-        "linear_feature_codes": [1210, 1220, 8110, 8120],
-        "road_railway_feature_codes": [1210, 1220],
-        "comment_column_name": "comment_18",
-        "exception_comments": [
-          "Area size exception (at Coastal Zones AoI boundary)",
-          "Area size exception (inside Coastal Zones AoI boundary)",
-          "Splitted change",
-          "Areas related to change",
-          "Flooded area 2012",
-          "Flooded area 2018",
-          "Different water level"
-        ]
+        "complex_change": null,
+        "general_where": "area_ha >= 25
+                          OR
+                          (code_4_18 NOT IN (7230, 8420) AND area_ha >= 0.5)",
+        "exception_where": "(meta.margin
+                             AND area_ha >= 0.1)
+                            OR
+                            (code_4_18 IN (1210, 1220, 8110, 8120)
+                             AND EXISTS (SELECT 1 FROM others(meta.fid) WHERE code_4_18 IN (1210, 1220, 8110, 8120))
+                             AND area_ha > 0.1)
+                            OR
+                            (code_1_18 = 1
+                             AND EXISTS (SELECT 1 FROM others(meta.fid) WHERE code_4_18 IN (1210, 1220))
+                             AND area_ha > 0.25)
+                            OR
+                            has_comment(comment_18, ARRAY['Area size exception (at Coastal Zones AoI boundary)',
+                                                          'Area size exception (inside Coastal Zones AoI boundary)',
+                                                          'Splitted change',
+                                                          'Areas related to change',
+                                                          'Flooded area 2012',
+                                                          'Different water level'])",
+        "warning_where": "FALSE"
       }
     },
     {

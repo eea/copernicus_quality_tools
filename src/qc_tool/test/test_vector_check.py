@@ -1992,3 +1992,150 @@ class Test_inspire(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)
+
+class Test_NeighbourTable(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mylayer",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"]})
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE mylayer (fid integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO mylayer VALUES (1, ST_MakeEnvelope(1,   0, 2,   1, 4326)),"
+                                                      " (2, ST_MakeEnvelope(2,   0, 3,   1, 4326)),"
+                                                      " (3, ST_MakeEnvelope(3,   0, 4,   1, 4326)),"
+                                                      " (4, ST_MakeEnvelope(4.1, 0, 4.9, 1, 4326)),"
+                                                      " (5, ST_MakeEnvelope(5,   0, 6.1,   1, 4326)),"
+                                                      " (6, ST_MakeEnvelope(6,   0, 7,   1, 4326)),"
+                                                      " (7, ST_MakeEnvelope(7,   1, 8,   2, 4326));")
+
+    def test(self):
+        from qc_tool.vector.helper import NeighbourTable
+        neighbour_table = NeighbourTable(self.cursor.connection, "nb_mylayer", "mylayer", "fid")
+        neighbour_table.create()
+        neighbour_table.fill()
+        self.cursor.execute("SELECT * FROM nb_mylayer ORDER BY fida, fidb;")
+        self.assertListEqual([(1, 2, 1), (2, 1, 1), (2, 3, 1), (3, 2, 1), (5, 6, 2), (6, 5, 2)], self.cursor.fetchall())
+
+
+class Test_MetaTable(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mylayer",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"]})
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+
+    def test_fill_margin(self):
+        self.cursor.execute("CREATE TABLE mylayer (fid integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO mylayer VALUES (1, ST_MakeEnvelope(0, 0, 5, 3, 4326)),"
+                                                      " (2, ST_MakeEnvelope(1, 1, 2, 2, 4326)),"
+                                                      " (3, ST_MakeEnvelope(3, 0, 4, 1, 4326)),"
+                                                      " (4, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
+        from qc_tool.vector.helper import MetaTable
+        meta_table = MetaTable(self.cursor.connection, "meta_mylayer", "mylayer", "fid")
+        meta_table.create()
+        meta_table.fill_margin()
+        self.cursor.execute("SELECT fid, margin FROM meta_mylayer ORDER BY fid;")
+        self.assertListEqual([(1, True), (2, False), (3, True), (4, True)], self.cursor.fetchall())
+
+    def test_fill_complex_change(self):
+        from qc_tool.vector.helper import MetaTable
+        from qc_tool.vector.helper import NeighbourTable
+        self.cursor.execute("CREATE TABLE mylayer (fid integer, code1 char, code2 char, area real);")
+        self.cursor.execute("INSERT INTO mylayer VALUES (1, 'A', 'A',   1),"
+                                                      " (2, 'A', 'B',   2),"
+                                                      " (3, 'A', 'C',   4),"
+                                                      " (4, 'A', 'D',   8),"
+                                                      " (5, 'B', 'D',  16),"
+                                                      " (6, 'C', 'D',  32),"
+                                                      " (7, 'D', 'D',  64),"
+                                                      " (8, 'A', 'D', 128);\n")
+        neighbour_table = NeighbourTable(self.cursor.connection, "nb_mylayer", "mylayer", "fid")
+        neighbour_table.create()
+        self.cursor.execute("INSERT INTO nb_mylayer VALUES (1, 2, 1), (2, 1, 1),\n"
+                                                         " (2, 3, 1), (3, 2, 1),\n"
+                                                         " (3, 4, 1), (4, 3, 1),\n"
+                                                         " (4, 5, 1), (5, 4, 1),\n"
+                                                         " (5, 6, 1), (6, 5, 1),\n"
+                                                         " (6, 7, 1), (7, 6, 1);")
+        meta_table = MetaTable(self.cursor.connection, "meta_mylayer", "mylayer", "fid")
+        meta_table.create()
+        meta_table.fill_complex_change("nb_mylayer", "code1", "code2", "area")
+        self.cursor.execute("SELECT fid, cc_id_initial, cc_id_final, cc_area FROM meta_mylayer ORDER BY fid;")
+        self.assertListEqual([(1, None, None, None),
+                              (2, 2, None, 14.), (3, 2, None, 14.),
+                              (4, 2, 4, 56),
+                              (5, None, 4, 56), (6, None, 4, 56),
+                              (7, None, None, None), (8, None, None, None)], self.cursor.fetchall())
+
+class Test_mmu_function(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+
+    def test_others(self):
+        from qc_tool.vector.helper import create_others
+        from qc_tool.vector.helper import NeighbourTable
+        self.cursor.execute("CREATE TABLE mylayer (fid integer, area real);")
+        self.cursor.execute("INSERT INTO mylayer VALUES (1, 1),"
+                                                      " (2, 2),"
+                                                      " (3, 4),"
+                                                      " (4, 8);")
+        neighbour_table = NeighbourTable(self.cursor.connection, "nb_mylayer", "mylayer", "fid")
+        neighbour_table.create()
+        self.cursor.execute("INSERT INTO nb_mylayer VALUES (1, 2, 1), (2, 1, 1),"
+                                                         " (2, 3, 1), (3, 2, 1);")
+        create_others(self.cursor.connection, "nb_mylayer", "mylayer", "fid")
+        self.cursor.execute("SELECT * FROM others(2) ORDER BY fid;")
+        self.assertListEqual([(1, 1.), (3, 4.)], self.cursor.fetchall())
+
+    def test_has_comment(self):
+        from qc_tool.vector.helper import create_has_comment
+        create_has_comment(self.cursor.connection)
+        self.cursor.execute("SELECT * FROM has_comment('a; b;c ; bc ', ARRAY['a', 'x']);")
+        self.assertListEqual([(True,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT * FROM has_comment('a; b;c ; bc ', ARRAY['b', 'x']);")
+        self.assertListEqual([(True,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT * FROM has_comment('a; b;c ; bc ', ARRAY['c', 'x']);")
+        self.assertListEqual([(True,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT * FROM has_comment('a; b;c ; bc ', ARRAY['bc', 'x']);")
+        self.assertListEqual([(True,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT * FROM has_comment('a; b;c ; bc ', ARRAY[' b', 'c ', ' bc ', 'x']);")
+        self.assertListEqual([(False,)], self.cursor.fetchall())
+
+
+class Test_mmu_cz(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "code_column_names": ["code1", "code2"],
+                            "complex_change": None,
+                            "general_where": "layer.fid = 1",
+                            "exception_where": "layer.fid IN (2, 3)",
+                            "warning_where": "FALSE",
+                            "step_nr": 1})
+        self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE mytable (fid integer, code1 char, code2 char, geom geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO mytable VALUES (1, 'C', 'D', ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                                                      " (2, 'C', 'D', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                      " (3, 'C', 'D', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                      " (4, 'C', 'D', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+
+    def test(self):
+        from qc_tool.vector.mmu_cz import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.cursor.execute("SELECT fid FROM s01_mytable_general;")
+        self.assertListEqual([(1,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM s01_mytable_exception ORDER BY fid;")
+        self.assertListEqual([(2,), (3,)], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM s01_mytable_warning;")
+        self.assertListEqual([], self.cursor.fetchall())
+        self.cursor.execute("SELECT fid FROM s01_mytable_error;")
+        self.assertListEqual([(4,)], self.cursor.fetchall())
