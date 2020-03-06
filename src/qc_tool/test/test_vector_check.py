@@ -2131,6 +2131,7 @@ class Test_mmu_cz(VectorCheckTestCase):
         from qc_tool.vector.mmu_cz import run_check
         status = self.status_class()
         run_check(self.params, status)
+        self.assertEqual("failed", status.status)
         self.cursor.execute("SELECT fid FROM s01_mytable_general;")
         self.assertListEqual([(1,)], self.cursor.fetchall())
         self.cursor.execute("SELECT fid FROM s01_mytable_exception ORDER BY fid;")

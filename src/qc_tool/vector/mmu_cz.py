@@ -129,7 +129,7 @@ def run_check(params, status):
         # Report error items.
         items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
         if items_message is not None:
-            status.info("Layer {:s} has error features with {:s}: {:s}."
+            status.failed("Layer {:s} has error features with {:s}: {:s}."
                         .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
