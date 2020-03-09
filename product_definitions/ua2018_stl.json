@@ -89,20 +89,12 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
-      "required": false,
-      "parameters": {
-        "layers": ["stl"],
-        "boundary_unit_column_name": "fua_code"
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
         "layers": ["stl"],
-        "code_column_name": "stl",
-        "filter_code": 1,
+        "filter_column_name": "stl",
+        "filter_codes": [1],
         "area_column_name": "area",
         "mmu": 500
       }
@@ -112,8 +104,8 @@
       "required": false,
       "parameters": {
         "layers": ["stl"],
-        "code_column_name": "stl",
-        "filter_code": 1,
+        "filter_column_name": "stl",
+        "filter_codes": [1],
         "mmw": 10
       }
     },
@@ -121,7 +113,9 @@
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["stl"]
+        "layers": ["stl"],
+        "exclude_column_name": "stl",
+        "exclude_codes": [0]
       }
     },
     {

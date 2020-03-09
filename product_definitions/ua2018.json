@@ -34,6 +34,7 @@
                      "class_2018": "string",
                      "prod_date": "string",
                      "identifier": "string",
+                     "comment": "string",
                      "perimeter": "real",
                      "area": "real"},
         "ignored": ["shape_area", "shape_length"]
@@ -121,7 +122,15 @@
       "parameters": {
         "layers": ["reference"],
         "area_column_name": "area",
-        "code_column_name": "code_2018"
+        "code_column_name": "code_2018",
+        "comment_column_name": "comment",
+        "exception_comments": [
+          "Area size exception (at Urban Atlas FUA boundary)",
+          "Area size exception (at Urban Atlas FUA boundary); Areas related to boundary update",
+          "Area size exception (at Urban Atlas FUA boundary); Areas related to change",
+          "Area size exception (inside Urban Atlas FUA boundary)",
+          "Area size exception (inside Urban Atlas FUA boundary); Areas related to change"
+        ]
       }
     },
     {

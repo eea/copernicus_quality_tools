@@ -11,7 +11,7 @@
       "parameters": {
         "formats": [".gdb", ".gpkg", ".shp"],
         "layer_names": {
-          "rpz": "^rpz_(?P<aoi_code>du[0-9]{3})[a-z]_lclu(?P<reference_year>2018)_v[0-9]{2}$"
+          "rpz": "^rpz_(?P<aoi_code>du[0-9]{3})[a-z]_lclu2018_2012_v[0-9]{2}$"
         },
         "aoi_codes": ["du001", "du002", "du003", "du004", "du005", "du006", "du007", "du008", "du009",
                       "du010", "du011", "du012", "du013", "du014", "du015", "du016", "du017", "du018", "du019",
@@ -26,24 +26,33 @@
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
-        "layers": ["rpz"],
-        "required": {"id": "integer",
-                     "du_id": "string",
-                     "maes_1_12": "integer",
-                     "maes_2_12": "integer",
-                     "maes_3_12": "integer",
-                     "maes_4_12": "integer",
-                     "maes_1_18": "integer",
-                     "maes_2_18": "integer",
-                     "maes_3_18": "integer",
-                     "maes_4_18": "integer",
-                     "changecode": "string",
-                     "ua": "string",
-                     "area_ha": "real",
-                     "nodata_12": "integer",
-                     "nodata_18": "integer",
-                     "comment": "string"},
-        "ignored": ["shape_area", "shape_length"]
+        "layers": [
+          "rpz"
+        ],
+        "required": {
+          "id": "integer",
+          "du_id": "string",
+          "maes_1_12": "integer",
+          "maes_2_12": "integer",
+          "maes_3_12": "integer",
+          "maes_4_12": "integer",
+          "maes_1_18": "integer",
+          "maes_2_18": "integer",
+          "maes_3_18": "integer",
+          "maes_4_18": "integer",
+          "changecode": "string",
+          "ua_12": "string",
+          "ua_18": "string",
+          "area_ha": "real",
+          "nodata_12": "integer",
+          "nodata_18": "integer",
+          "comment_12": "string",
+          "comment_18": "string"
+        },
+        "ignored": [
+          "shape_area",
+          "shape_length"
+        ]
       }
     },
     {
@@ -185,15 +194,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.change",
-      "required": false,
-      "parameters": {
-        "layers": ["rpz"],
-        "initial_code_column_name": "maes_4_12",
-        "final_code_column_name": "maes_4_18"
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
@@ -232,9 +232,13 @@
         "layers": ["rpz"],
         "area_column_name": "area_ha",
         "area_ha": 0.5,
-        "code_column_name": "MAES_4",
+        "urban_area_ha": 0.25,
+        "marginal_area_ha": 0.2,
+        "linear_area_ha": 0.1,
+        "code_column_name": "maes_4_18",
         "urban_feature_codes": [1111, 1112, 1113, 1120, 1210, 1220, 1230, 1240, 1310, 1320, 1400],
         "linear_feature_codes": [1210, 1220, 6220, 9110, 9120],
+        "comment_column_names": ["comment_18"],
         "exception_comments": ["Area size exception (inside RZ_AoI / outside UA Core Region)",
                                "Area size exception (at RZ_AoI / UA Core Region boundary)"]
       }
@@ -261,7 +265,10 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "code_column_name": "MAES_4",
+        "code_column_names": ["maes_4_12", "maes_4_18"],
+        "initial_ua_column_name": "ua_12",
+        "final_ua_column_name": "ua_18",
+        "comment_column_name": "comment_18",
         "exception_comments": ["Braided river",
                                "Different water levels",
                                "Flooded area"]

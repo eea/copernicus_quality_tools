@@ -1,15 +1,16 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 import datetime
 import re
 import time
 from zipfile import ZipFile
 
-
 import requests
 
 from qc_tool.common import FAILED_ITEMS_LIMIT
+
 
 INSPIRE_VALIDATOR_URL = "http://inspire.ec.europa.eu/validator/"
 INSPIRE_SERVICE_URL = INSPIRE_VALIDATOR_URL + "v2/"
@@ -32,7 +33,7 @@ def do_unzip(zip_filepath, unzip_dir, status):
         with ZipFile(str(zip_filepath)) as zip_file:
             zip_file.extractall(path=str(unzip_dir))
     except Exception as ex:
-        status.aborted("Error unzipping file {:s}.".format(zip_filepath.name))
+        status.aborted("Error unzipping file {:s}, reason: {:s}".format(zip_filepath.name, str(ex)))
         return
 
     status.add_params({"unzip_dir": unzip_dir})
@@ -43,6 +44,7 @@ def do_layers(params):
         return [params["layer_defs"][layer_alias] for layer_alias in params["layers"]]
     else:
         return params["layer_defs"].values()
+
 
 def get_failed_items_message(cursor, error_table_name, pg_fid_name, limit=FAILED_ITEMS_LIMIT):
     # Get failed items.
@@ -90,7 +92,7 @@ def find_shp_layers(unzip_dir, status):
 def find_gdb_layers(unzip_dir, status):
     from osgeo import ogr
 
-    # Find gdb folder.
+    # Find all gdb directories.
     gdb_dirs = [path for path in unzip_dir.glob("**") if path.suffix.lower() == ".gdb"]
     gdb_layer_infos = []
 
@@ -98,9 +100,8 @@ def find_gdb_layers(unzip_dir, status):
         # Open geodatabase.
         ds = ogr.Open(str(gdb_dir))
         if ds is None:
-            status.aborted("Can not open geodatabase {:s}.".format(gdb_dir.name))
-            return
-
+            status.aborted("Can not open geodatabase {:s}.".format(str(gdb_dir.relative_to(unzip_dir))))
+            continue
         for layer_index in range(ds.GetLayerCount()):
             layer = ds.GetLayerByIndex(layer_index)
             layer_name = layer.GetName()
@@ -122,7 +123,7 @@ def find_gpkg_layers(unzip_dir, status):
         ds = ogr.Open(str(gpkg_filepath))
         if ds is None:
             status.aborted("Can not open geopackage {:s}.".format(gpkg_filepath.name))
-            return
+            return []
 
         for layer_index in range(ds.GetLayerCount()):
             layer = ds.GetLayerByIndex(layer_index)
@@ -529,7 +530,6 @@ def locate_metadata_file(layer_filepath):
 
 
 def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0):
-
     # Step 1, Retrieve the predefined test suite from the service. The predefined test suite has a unique test suite ID.
     status.info("Using validator service {:s}.".format(INSPIRE_VALIDATOR_URL))
     test_suite_id, test_suite_message = InspireServiceClient.retrieve_test_suite_id()
@@ -539,7 +539,6 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
         return
 
     # Does the file contain GMD:MD_Metadata element?
-
 
     # Step 2, Upload xml file to the service. The service creates a temporary test object with a unique test object ID.
     status_code, test_object_id, test_object_message = InspireServiceClient.create_test_object(xml_filepath)
@@ -563,7 +562,6 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     if result_status is None:
         status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, result_message))
         return
-
 
     # Step 5, Evaluate INSPIRE validation status.
     if result_status in ["PASSED", "PASSED_MANUAL"]:
@@ -594,3 +592,206 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
         status.add_attachment(log_filepath.name)
     else:
         status.info("NOTE: log file {:s} is not available: {:s}".format(log_filepath.name, log_status))
+
+
+class NeighbourTable():
+    def __init__(self, connection, neighbour_table_name, layer_name, fid_name):
+        self.connection = connection
+        self.neighbour_table_name = neighbour_table_name
+        self.layer_name = layer_name
+        self.fid_name = fid_name
+
+    def create(self):
+        sql_params = {"neighbour_table_name": self.neighbour_table_name}
+        sql = ("CREATE TABLE {neighbour_table_name}\n"
+               " (fida integer NOT NULL,\n"
+               "  fidb integer NOT NULL,\n"
+               "  dim smallint NOT NULL,\n"
+               " PRIMARY KEY (fida, fidb));")
+        with self.connection.cursor() as cursor:
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def fill(self):
+        sql_params = {"neighbour_table_name": self.neighbour_table_name,
+                      "layer_name": self.layer_name,
+                      "fid_name": self.fid_name}
+        sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
+               " SELECT\n"
+               "  dpairs.fida,\n"
+               "  dpairs.fidb,\n"
+               "  pairs.dim\n"
+               " FROM\n"
+               "  (SELECT\n"
+               "    ta.{fid_name} AS fida,\n"
+               "    tb.{fid_name} AS fidb,\n"
+               "    ST_Dimension(ST_Intersection(ta.geom, tb.geom)) AS dim\n"
+               "   FROM {layer_name} AS ta, {layer_name} AS tb\n"
+               "   WHERE\n"
+               "    ta.{fid_name} < tb.{fid_name}\n"
+               "    AND ta.geom && tb.geom) AS pairs,\n"
+               "  LATERAL (VALUES (fida, fidb), (fidb, fida)) AS dpairs(fida, fidb)\n"
+               " WHERE pairs.dim >= 1;")
+        with self.connection.cursor() as cursor:
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+
+class MetaTable():
+    def __init__(self, connection, meta_table_name, layer_name, fid_name):
+        self.connection = connection
+        self.meta_table_name = meta_table_name
+        self.layer_name = layer_name
+        self.fid_name = fid_name
+
+    def create(self):
+        sql_params = {"meta_table_name": self.meta_table_name,
+                      "layer_name": self.layer_name,
+                      "fid_name": self.fid_name}
+        with self.connection.cursor() as cursor:
+            sql = ("CREATE TABLE {meta_table_name}\n"
+                   " (fid integer PRIMARY KEY,\n"
+                   "  margin boolean DEFAULT FALSE,\n"
+                   "  cc_id_initial integer DEFAULT NULL,\n"
+                   "  cc_id_final integer DEFAULT NULL,\n"
+                   "  cc_area real DEFAULT NULL);")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+            sql = ("INSERT INTO {meta_table_name} (fid)\n"
+                   " SELECT {fid_name} FROM {layer_name} ORDER BY {fid_name};")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def fill_margin(self):
+        sql_params = {"meta_table_name": self.meta_table_name,
+                      "layer_name": self.layer_name,
+                      "fid_name": self.fid_name}
+        sql = ("UPDATE {meta_table_name} AS meta\n"
+               " SET margin = TRUE\n"
+               " FROM\n"
+               "  {layer_name} AS layer,\n"
+               "  (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {layer_name}) AS margin\n"
+               " WHERE\n"
+               "  meta.fid = layer.{fid_name}\n"
+               "  AND ST_Dimension(ST_Intersection(layer.geom, margin.geom)) >= 1;")
+        sql = sql.format(**sql_params)
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql)
+
+    def fill_complex_change(self, neighbour_table_name,
+                                  initial_code_column_name,
+                                  final_code_column_name,
+                                  area_column_name):
+        # Complex change is a cluster consisting of neighbouring features having the same code.
+        # For the purpose of related algorithms every cluster is identified by the smallest fid
+        # of its member feature.
+
+        # Prepare sql params.
+        sql_params = {"neighbour_table_name": neighbour_table_name,
+                      "meta_table_name": self.meta_table_name,
+                      "layer_name": self.layer_name,
+                      "fid_name": self.fid_name,
+                      "area_column_name": area_column_name,
+                      "initial_code_column_name": initial_code_column_name,
+                      "final_code_column_name": final_code_column_name}
+
+        # Do once for initial year and once for final year.
+        for cc_id_column_name, code_column_name in [("cc_id_initial", initial_code_column_name),
+                                                    ("cc_id_final", final_code_column_name)]:
+
+            sql_params.update({"cc_id_column_name": cc_id_column_name,
+                               "code_column_name": code_column_name})
+
+            # Pair every feature with the smallest fid of its neighbours.
+            # Apply filter to members of complex change.
+            # Order the result by fid which is important for the next step.
+            sql = ("SELECT layer.{fid_name}, min(other.{fid_name}) AS nfid\n"
+                   " FROM\n"
+                   "  {layer_name} AS layer\n"
+                   "  INNER JOIN {neighbour_table_name} AS nb ON layer.{fid_name} = nb.fida\n"
+                   "  INNER JOIN {layer_name} AS other ON nb.fidb = other.{fid_name}\n"
+                   " WHERE\n"
+                   "  layer.{code_column_name} = other.{code_column_name}\n"
+                   "  AND layer.{initial_code_column_name} != layer.{final_code_column_name}"
+                   "  AND other.{initial_code_column_name} != other.{final_code_column_name}"
+                   " GROUP BY layer.{fid_name}\n"
+                   " ORDER BY layer.{fid_name};")
+            sql = sql.format(**sql_params)
+            with self.connection.cursor() as cursor:
+                cursor.execute(sql)
+
+                # Assign cluster ids to features.
+                # For every feature find the root feature.
+                # Root feature is cluster member with the smallest fid.
+                # As the features are sorted by fid,
+                # it is enough for every feature being just registered
+                # to take cluster fid from its already registered neighbour.
+                fid_cc_idx = {}
+                for (fid, nfid) in cursor.fetchall():
+                    if fid <= nfid:
+                        fid_cc_idx[fid] = fid
+                    else:
+                        fid_cc_idx[fid] = fid_cc_idx[nfid]
+
+            # Dump clusters.
+            with self.connection.cursor() as cursor:
+                for fid, cc_id in fid_cc_idx.items():
+                    sql = "UPDATE {meta_table_name} SET {cc_id_column_name} = %s WHERE fid = %s;"
+                    sql = sql.format(**sql_params)
+                    cursor.execute(sql, [cc_id, fid])
+
+        # Fill complex change area for initial year.
+        sql = ("UPDATE {meta_table_name} AS meta\n"
+               " SET cc_area = ca.cc_area\n"
+               " FROM\n"
+               "  (SELECT meta.cc_id_initial AS cc_id, sum(layer.{area_column_name}) AS cc_area\n"
+               "    FROM {meta_table_name} as meta\n"
+               "     INNER JOIN {layer_name} AS layer ON meta.fid = layer.{fid_name}\n"
+               "    WHERE meta.cc_id_initial IS NOT NULL\n"
+               "    GROUP BY meta.cc_id_initial) AS ca\n"
+               " WHERE meta.cc_id_initial = ca.cc_id;")
+        sql = sql.format(**sql_params)
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql)
+
+        # Fill complex change area for final year.
+        sql = ("UPDATE {meta_table_name} AS meta\n"
+               " SET cc_area = ca.cc_area\n"
+               " FROM\n"
+               "  (SELECT meta.cc_id_final AS cc_id, sum(layer.{area_column_name}) AS cc_area\n"
+               "    FROM {meta_table_name} as meta\n"
+               "     INNER JOIN {layer_name} AS layer ON meta.fid = layer.{fid_name}\n"
+               "    WHERE meta.cc_id_final IS NOT NULL\n"
+               "    GROUP BY meta.cc_id_final) AS ca\n"
+               " WHERE\n"
+               "  meta.cc_id_final = ca.cc_id\n"
+               "  AND (meta.cc_area IS NULL OR meta.cc_area < ca.cc_area);")
+        sql = sql.format(**sql_params)
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql)
+
+
+def create_others(connection, neighbour_table_name, layer_name, fid_name):
+    sql_params = {"neighbour_table_name": neighbour_table_name,
+                  "layer_name": layer_name,
+                  "fid_name": fid_name}
+    sql = ("CREATE OR REPLACE FUNCTION others(p_fid integer)\n"
+           " RETURNS SETOF {layer_name}\n"
+           " LANGUAGE sql\n"
+           "AS $$\n"
+           " SELECT * FROM {layer_name} WHERE {fid_name} IN (SELECT fidb FROM {neighbour_table_name} WHERE fida = p_fid);\n"
+           "$$")
+    sql = sql.format(**sql_params)
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
+
+
+def create_has_comment(connection):
+    sql = ("CREATE OR REPLACE FUNCTION has_comment(comment varchar, allowed_comments varchar[])\n"
+           " RETURNS boolean\n"
+           " LANGUAGE sql\n"
+           "AS $$\n"
+           " SELECT ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'), '^\\s*(\\S*)\\s*$', '\\1')::varchar) && allowed_comments;\n"
+           "$$")
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
