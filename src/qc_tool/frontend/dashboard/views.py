@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 CHECK_RUNNING_JOB_DELAY = 10
 
-UPLOADED_CHUNK_PROCESSING_DELAY = 3
+UPLOADED_CHUNK_PROCESSING_DELAY = 1
 
 
 @login_required
@@ -780,10 +780,10 @@ def resumable_upload(request):
             return JsonResponse({"status":"error", "message": "Missing or invalid parameters."}, status=500)
 
         # path where data should be uploaded to
-        user_upload_path = Path(CONFIG["upload_dir"]).joinpath(request.user.username)
+        user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username, "uploads")
         if not user_upload_path.exists():
-            logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
-            user_upload_path.mkdir(parents=True)
+           logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
+           user_upload_path.mkdir(parents=True)
 
         # chunk folder path based on the parameters
         chunks_dir = user_upload_path.joinpath(resumableIdentifier)
@@ -810,7 +810,8 @@ def resumable_upload(request):
         chunk_data = request.FILES.get("file")
 
         # Make a temp directory for the uploads if needed.
-        user_upload_path = Path(CONFIG["upload_dir"]).joinpath(request.user.username)
+        # The upload directory will be located at INCOMING_DIR/<user>/uploads.
+        user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username, "uploads")
         if not user_upload_path.exists():
             logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
             user_upload_path.mkdir(parents=True, exist_ok=True)

@@ -282,7 +282,6 @@ def setup_config():
     Environment variables consumed by frontend:
     * PRODUCT_DIRS;
     * BOUNDARY_DIR;
-    * UPLOAD_DIR;
     * INCOMING_DIR;
     * WORK_DIR;
     * SUBMISSION_DIR;
@@ -316,7 +315,6 @@ def setup_config():
         config["product_dirs"] = [QC_TOOL_PRODUCT_DIR]
     config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundaries"))
     config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
-    config["upload_dir"] = Path(environ.get("UPLOAD_DIR", "/mnt/qc_tool_uploads/uploads"))
     config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_volume/work"))
 
     # Parameters consumed by frontend.

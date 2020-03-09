@@ -20,100 +20,120 @@
   </head>
 
   <body>
-        <div id="wrap">
-
-          <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
-          <script src="{% static 'dashboard/js/resumable.js' %}"></script>
-
-            <div id="main" class="clear-top">
-                <!--<div class="container">-->
-                <nav id="menucontainer" class="navbar navbar-default navbar-fixed-top">
-                    <!--<div class="navbar navbar-default" role="navigation">-->
-                    <div class="container-fluid">
-                        <div class="navbar-header">
-                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                                <span class="sr-only">Toggle navigation</span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                            </button>
-                            <a class="navbar-brand" href="/">
-                                <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:45px;margin-top:-13px;float:left" />
-                                <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_medium.png" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
-                                <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
-                            </a>
-                        </div>
-                        <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
-                            <ul class="nav navbar-nav navbar-right main-menu">
-                                {% block menu %}
-                                {% if user.is_superuser %}
-                                <li><a href="{% url 'boundaries'%}">
-                                    <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
-                                {% endif %}
-                                <li><a href="https://github.com/eea/copernicus_quality_tools">
-                                    <span class="glyphicon glyphicon-cog"></span> Github</a></li>
-                                <li><a href="https://github.com/eea/copernicus_quality_tools/wiki">
-                                    <span class="glyphicon glyphicon-question-sign"></span> Documentation</a></li>
-                                {% if user.is_authenticated %}
-                                <li><a href="{% url 'logout' %}?next=/">
-                                    <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
-                                {% else %}
-                                <li><a href="{% url 'login'%}">
-                                    <span class="glyphicon glyphicon-log-in"></span>Sign in</a></li>
-                                {% endif %}
-                                {% endblock %}
-                            </ul>
-                        </div>
-                    </div>
-                </nav>
-
-                <div class="container-fluid main" style="padding-top: 70px;">
-                  <div class="row text-left">
-
-                    <ol class="breadcrumb">
-                      <li><a href="/">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
-                      <li class="active"><a href="">Resumable upload</a></li>
-                    </ol>
-
-                    <div class="main">
-
-                        <div id="frame">
-
-      <h1>Resumable File Upload</h1>
-
-
-
-      <hr/>
-
-      <h3>Demo</h3>
+  <div id="wrap">
       <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
       <script src="{% static 'dashboard/js/resumable.js' %}"></script>
 
-      <div class="resumable-error">
-        Your browser, unfortunately, is not supported by Resumable.js. The library requires support for <a href="http://www.w3.org/TR/FileAPI/">the HTML5 File API</a> along with <a href="http://www.w3.org/TR/FileAPI/#normalization-of-params">file slicing</a>.
-      </div>
+      <div id="main" class="clear-top">
+          <nav id="menucontainer" class="navbar navbar-default navbar-fixed-top">
+              <div class="container-fluid">
+                  <div class="navbar-header">
+                      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                          <span class="sr-only">Toggle navigation</span>
+                          <span class="icon-bar"></span>
+                          <span class="icon-bar"></span>
+                          <span class="icon-bar"></span>
+                      </button>
+                      <a class="navbar-brand" href="/">
+                          <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:45px;margin-top:-13px;float:left" />
+                          <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_medium.png" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
+                          <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
+                      </a>
+                  </div>
+                  <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
+                      <ul class="nav navbar-nav navbar-right main-menu">
+                          {% block menu %}
+                          {% if user.is_superuser %}
+                          <li><a href="{% url 'boundaries'%}">
+                              <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
+                          {% endif %}
+                          <li><a href="https://github.com/eea/copernicus_quality_tools">
+                              <span class="glyphicon glyphicon-cog"></span> Github</a></li>
+                          <li><a href="https://github.com/eea/copernicus_quality_tools/wiki">
+                              <span class="glyphicon glyphicon-question-sign"></span> Documentation</a></li>
+                          {% if user.is_authenticated %}
+                          <li><a href="{% url 'logout' %}?next=/">
+                              <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
+                          {% else %}
+                          <li><a href="{% url 'login'%}">
+                              <span class="glyphicon glyphicon-log-in"></span>Sign in</a></li>
+                          {% endif %}
+                          {% endblock %}
+                      </ul>
+                  </div>
+              </div>
+          </nav>
 
-      <div class="resumable-drop">
-        Drop ZIP delivery files here to upload or <a class="resumable-browse"><u>select from your computer</u></a>
-      </div>
+          <div class="container-fluid main" style="padding-top: 70px;">
+              <div class="row text-left">
 
-      <div class="resumable-progress">
-        <table>
-          <tr>
-            <td width="100%"><div class="progress-container"><div class="progress-bar"></div></div></td>
-            <td class="progress-text" nowrap="nowrap"></td>
-            <td class="progress-pause" nowrap="nowrap">
-              <a onclick="r.upload(); return(false);" class="progress-resume-link btn btn-primary">Resume upload</a>
-              <a onclick="r.pause(); return(false);" class="progress-pause-link btn btn-primary">Pause upload</a>
-              <!--<a type="button" href="#" onclick="r.pause(); return(false);" class="progress-pause-link">Pause upload<img src="{{ STATIC_URL }}dashboard/img/pause_upload.png" title="Pause upload" /></a>
-              -->
-                <a onclick="r.cancel(); return(false);" class="progress-cancel-link btn btn-primary">Cancel upload</a>
-            </td>
-          </tr>
-        </table>
-      </div>
+                  <ol class="breadcrumb">
+                      <li><a href="/">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
+                      <li class="active"><a href="">Upload ZIP Files</a></li>
+                  </ol>
 
-      <ul class="resumable-list"></ul>
+                  <div class="main">
+
+                      <div id="tool-canvas">
+                          <div class="panel panel-primary">
+                              <div class="panel-heading">
+                                  <div class="panel-title">
+                                        Upload New Delivery Files
+                                  </div>
+                              </div>
+
+                              <div class="panel-body">
+
+                                  <!-- Resumable upload starts here -->
+                                  <hr>
+                                  <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+                                  <script src="{% static 'dashboard/js/resumable.js' %}"></script>
+
+                                  <div class="resumable-error">
+                                      Your browser, unfortunately, is not supported by Resumable.js. The library requires support for <a href="http://www.w3.org/TR/FileAPI/">the HTML5 File API</a> along with <a href="http://www.w3.org/TR/FileAPI/#normalization-of-params">file slicing</a>.
+                                  </div>
+
+                                  <div class="resumable-drop">
+                                      Drop ZIP delivery files here to upload or <a class="resumable-browse"><u>select from your computer</u></a>
+                                  </div>
+                                  <br>
+
+                                  <div class="resumable-progress">
+                                      <table>
+                                          <tr>
+                                            <td width="100%"><div class="progress-container"><div class="progress-bar"></div></div></td>
+                                            <td class="progress-text" nowrap="nowrap"></td>
+                                            <td class="progress-pause" nowrap="nowrap">
+                                              <a onclick="r.upload(); return(false);" class="progress-resume-link btn btn-primary">Resume upload</a>
+                                              <a onclick="r.pause(); return(false);" class="progress-pause-link btn btn-primary">Pause upload</a>
+                                              <!--<a type="button" href="#" onclick="r.pause(); return(false);" class="progress-pause-link">Pause upload<img src="{{ STATIC_URL }}dashboard/img/pause_upload.png" title="Pause upload" /></a>
+                                              -->
+                                                <a onclick="r.cancel(); return(false);" class="progress-cancel-link btn btn-primary">Cancel upload</a>
+                                            </td>
+                                          </tr>
+                                      </table>
+                                  </div>
+
+                                  <ul class="resumable-list"></ul>
+                                   <div class="progress">
+                                      <div class="progress-bar" role="progressbar" aria-valuenow="0"
+                                      aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                                        <span class="sr-only"></span>
+                                      </div>
+                                    </div>
+
+                                  <!-- Resumable upload code ends here -->
+                              </div> <!-- end panel-body -->
+                          </div> <!-- end panel-primary -->
+                      </div> <!-- end tool-canvas -->
+                  </div> <!-- end main -->
+              </div> <!-- end row text-left -->
+          </div> <!-- end container-fluid main -->
+
+
+
+
+
 
       <script>
         var r = new Resumable({
@@ -135,7 +155,7 @@
           r.assignBrowse($('.resumable-browse')[0]);
           // Handle file add event
           r.on('fileAdded', function(file){
-              // Show progress pabr
+              // Show progress bar
               $('.resumable-progress, .resumable-list').show();
               // Show pause, hide resume
               $('.resumable-progress .progress-resume-link').hide();
@@ -154,6 +174,15 @@
           r.on('complete', function(){
               // Hide pause/resume when the upload has completed
               $('.resumable-progress .progress-resume-link, .resumable-progress .progress-pause-link, .resumable-progress .progress-cancel-link').hide();
+                var msg = '<tr><td><div class="alert alert-success">';
+                msg += '<span class="glyphicon glyphicon-ok"></span>';
+                msg += ' File uploaded successfully. ';
+                msg += '<a class="btn btn-success btn-pull-right" href="/">Go Back to my Deliveries<a>';
+                msg += '</div></td></tr>';
+              if ($('.panel-body')[0].lastChild.nodeName != 'TR') {
+                $('.panel-body').append(msg);
+              }
+              console.log('on complete!');
             });
           r.on('fileSuccess', function(file,message){
               // Reflect that the file upload has completed
@@ -162,10 +191,21 @@
           r.on('fileError', function(file, message){
               // Reflect that the file upload has resulted in error
               $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html('(file could not be uploaded: '+message+')');
+              console.log(r);
+              var msg = '<tr><td><div class="alert alert-warning">';
+                msg += '<span class="glyphicon glyphicon-warning"></span>';
+                msg += message;
+                msg += '&nbsp;<a class="btn btn-warning btn-pull-right" href="/">Go Back to my Deliveries<a>';
+                msg += '</div></td></tr>';
+              $('.panel-body').append(msg);
+              console.log('on fileError!');
             });
           r.on('fileProgress', function(file){
               // Handle progress for both the file and the overall upload
               $('.resumable-file-'+file.uniqueIdentifier+' .resumable-file-progress').html(Math.floor(file.progress()*100) + '%');
+              if (Math.floor(file.progress()*100 === 99)) {
+                console.log('processing uploaded file ...');
+              }
               $('.progress-bar').css({width:Math.floor(r.progress()*100) + '%'});
             });
           r.on('cancel', function(){
@@ -179,12 +219,6 @@
         }
       </script>
 
-    </div>
-
-                    </div>
-
-                  </div>
-                </div>
 
                 {% block js %}
                     <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
@@ -195,17 +229,11 @@
                     <script src="{% static 'dashboard/js/tableexport.min.js' %}"></script>
                     <script src="{% static 'dashboard/js/bootbox.min.js' %}"></script>
                 {% endblock js %}
-            </div>
             <br>
-        </div>
         <footer class="footer">
             {% include "dashboard/footer.html" %}
         </footer>
-  </body>
-
-
-
-  <body>
-
+  </div>
+  </div>
   </body>
 </html>
