@@ -193,7 +193,7 @@
         "general_where": "area_ha > 25
                           OR
                           (code_4_12 NOT IN (7230, 8420) AND area_ha >= 0.5)",
-        "exception_where": "(meta.margin
+        "exception_where": "(meta.is_marginal
                              AND area_ha >= 0.1)
                             OR
                             (code_4_12 IN (1210, 1220, 8110, 8120)

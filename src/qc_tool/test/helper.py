@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 
+import logging
+import time
 from contextlib import ExitStack
 from unittest import TestCase
 from uuid import uuid4
@@ -16,8 +18,23 @@ from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
 
 
+LOG_FORMAT = "{asctime} {name}:{levelname} {pathname}:{lineno} {message}"
+LOG_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def init_logging():
+    formatter = logging.Formatter(fmt=LOG_FORMAT, style="{", datefmt=LOG_TIME_FORMAT)
+    formatter.converter = time.gmtime
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    root_log = logging.getLogger()
+    root_log.addHandler(handler)
+    root_log.setLevel(logging.DEBUG)
+
+
 class ProductTestCase(TestCase):
     def setUp(self):
+        init_logging()
         super().setUp()
         self.job_uuid = str(uuid4())
         create_job_dir(self.job_uuid)
@@ -61,26 +78,26 @@ class RasterCheckTestCase(TestCase):
         return raster_filepath
 
     def setUp(self):
+        init_logging()
         super().setUp()
         self.status_class = CheckStatus
         job_uuid = str(uuid4())
         create_job_dir(job_uuid)
-        self.params = {}
+        self.params = {"skip_inspire_check": True}
         with ExitStack() as stack:
             self.jobdir_manager = stack.enter_context(create_jobdir_manager(job_uuid))
             self.addCleanup(stack.pop_all().close)
-            self.params["skip_inspire_check"] = True
 
 
 class VectorCheckTestCase(TestCase):
     def setUp(self):
+        init_logging()
         super().setUp()
         self.status_class = CheckStatus
         job_uuid = str(uuid4())
         create_job_dir(job_uuid)
-        self.params = {}
+        self.params = {"skip_inspire_check": True}
         with ExitStack() as stack:
              self.params["connection_manager"] = stack.enter_context(create_connection_manager(job_uuid))
              self.params["jobdir_manager"] = stack.enter_context(create_jobdir_manager(job_uuid))
-             self.params["skip_inspire_check"] = True
              self.addCleanup(stack.pop_all().close)

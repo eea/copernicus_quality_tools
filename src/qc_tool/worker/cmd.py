@@ -2,6 +2,7 @@
 
 
 import logging
+import time
 from argparse import ArgumentParser
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -11,7 +12,21 @@ from qc_tool.common import create_job_dir
 from qc_tool.worker.dispatch import dispatch
 
 
+LOG_FORMAT = "{asctime} {name}:{levelname} {pathname}:{lineno} {message}"
+LOG_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+LOG_FILENAME = "job.log"
+
+
 log = logging.getLogger(__name__)
+
+
+def init_logging(job_dir, log_filename=LOG_FILENAME):
+    formatter = logging.Formatter(fmt=LOG_FORMAT, style="{", datefmt=LOG_TIME_FORMAT)
+    # All log timestamps shoudl be in UTC.
+    formatter.converter = time.gmtime
+    # Every job has its own log located in its job dir.
+    handler = FileHandler(job_dir.joinpath(log_filename))
+    handler.setFormatter(formatter)
 
 
 def main():
@@ -58,12 +73,7 @@ def main():
     job_dir = create_job_dir(job_uuid)
 
     # Set up logging.
-    # Every job has its own log located in its job dir.
-    handler = TimedRotatingFileHandler(job_dir.joinpath("job.log"), when="D", backupCount=14)
-    handler.setFormatter(logging.Formatter(fmt="{asctime} {name}:{levelname} {pathname}:{lineno} {message}", style="{"))
-    root_log = logging.getLogger()
-    root_log.addHandler(handler)
-    root_log.setLevel(logging.DEBUG)
+    init_logging(job_dir)
     log.info("Logging of the job {:s} has been started.".format(job_uuid))
 
     # Run the checks.
