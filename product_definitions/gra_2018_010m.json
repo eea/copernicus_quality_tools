@@ -101,6 +101,17 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "area_pixels": 3,
+        "value_exception_codes": [254, 255],
+        "neighbour_exception_codes": [254, 255],
+        "nodata_value": 255
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {

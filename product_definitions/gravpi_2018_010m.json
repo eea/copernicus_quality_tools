@@ -96,8 +96,9 @@
         "layers": ["raster"],
         "colors": {
           "0":[240, 240, 240],
-          "1":[186, 255, 172],
-          "100": [28, 92, 36],
+          "1":[255, 255, 128],
+          "50": [61, 184, 104],
+          "100": [12, 16, 120],
           "254":[153, 153, 153],
           "255":[0, 0, 0]
         }
@@ -109,6 +110,17 @@
       "parameters": {
         "layers": ["raster"],
         "max_blocksize": 1024
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "area_pixels": 3,
+        "value_exception_codes": [254, 255],
+        "neighbour_exception_codes": [254, 255],
+        "nodata_value": 255
       }
     },
     {
