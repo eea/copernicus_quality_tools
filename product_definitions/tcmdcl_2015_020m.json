@@ -1,5 +1,5 @@
 {
-  "description": "HRL Forest Derived Correction Layer 2012 (20m)",
+  "description": "HRL Forest Derived Correction Layer 2015 (20m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
@@ -9,10 +9,10 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"raster": "^tcddcl_2012_020m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
+        "layer_names":{"raster": "^tcmdcl_2015_020m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
         "aoi_codes": ["eu"],
         "extensions": [".tif"],
-        "reference_year": "2012"
+        "reference_year": "2015"
 	  }
     },
     {
@@ -75,6 +75,20 @@
       "parameters": {
         "layers": ["raster"],
         "validcodes": [0, 1, 2, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.color",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "colors": {
+          "0": [240,240,240],
+          "1": [28,72,201],
+          "2": [255,0,0],
+          "254": [153,153,153],
+          "255": [0,0,0]
+        }
       }
     },
     {
