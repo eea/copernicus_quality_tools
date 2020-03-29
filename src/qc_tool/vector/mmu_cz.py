@@ -2,8 +2,14 @@
 # -*- coding: utf-8 -*-
 
 
+import logging
+
+
 DESCRIPTION = "Minimum mapping unit, Coastal zones."
 IS_SYSTEM = False
+
+
+log = logging.getLogger(__name__)
 
 
 def run_check(params, status):
@@ -19,6 +25,8 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):
+        log.debug("Started mmu check for the pg layer {:s}.".format(layer_def["pg_layer_name"]))
+
         # Prepare support data.
         partitioned_layer = PartitionedLayer(cursor.connection, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
         partitioned_layer.make()
@@ -61,6 +69,7 @@ def run_check(params, status):
                "WHERE {general_where};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
+        log.info("General table {:s} has been inserted {:d} items.".format(sql_params["general_table"], cursor.rowcount))
 
         # Create table of exception items.
         sql = ("CREATE TABLE {exception_table} ({fid_name} integer PRIMARY KEY);")
@@ -71,11 +80,13 @@ def run_check(params, status):
                "FROM\n"
                " {layer_name} AS layer\n"
                " INNER JOIN {meta_table_name} AS meta ON layer.{fid_name} = meta.fid\n"
+               " LEFT JOIN {general_table} AS general ON layer.{fid_name} = general.{fid_name}\n"
                "WHERE\n"
-               " layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})\n"
+               " general.{fid_name} IS NULL\n"
                " AND ({exception_where});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
+        log.info("Exception table {:s} has been inserted {:d} items.".format(sql_params["exception_table"], cursor.rowcount))
 
         # Report exception items.
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])
@@ -93,12 +104,15 @@ def run_check(params, status):
                "FROM\n"
                " {layer_name} AS layer\n"
                " INNER JOIN {meta_table_name} AS meta ON layer.{fid_name} = meta.fid\n"
+               " LEFT JOIN {general_table} AS general ON layer.{fid_name} = general.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
                "WHERE\n"
-               " layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})\n"
-               " AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table})\n"
+               " general.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL\n"
                " AND ({warning_where});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
+        log.info("Warning table {:s} has been inserted {:d} items.".format(sql_params["warning_table"], cursor.rowcount))
 
         # Report warning items.
         items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
@@ -112,14 +126,20 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql)
         sql = ("INSERT INTO {error_table}\n"
-               "SELECT {fid_name}\n"
-               "FROM {layer_name} AS layer\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " INNER JOIN {meta_table_name} AS meta ON layer.{fid_name} = meta.fid\n"
+               " LEFT JOIN {general_table} AS general ON layer.{fid_name} = general.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               " LEFT JOIN {warning_table} AS warn ON layer.{fid_name} = warn.{fid_name}\n"
                "WHERE\n"
-               " layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})\n"
-               " AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table})\n"
-               " AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {warning_table});")
+               " general.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL\n"
+               " AND warn.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
+        log.info("Error table {:s} has been inserted {:d} items.".format(sql_params["error_table"], cursor.rowcount))
 
         # Report error items.
         items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])

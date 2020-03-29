@@ -1234,10 +1234,14 @@ def create_pg_has_comment(connection):
     sql = ("CREATE OR REPLACE FUNCTION has_comment(comment varchar, allowed_comments varchar[])\n"
            "RETURNS boolean\n"
            "PARALLEL SAFE\n"
-           "STABLE\n"
+           "IMMUTABLE\n"
            "LANGUAGE sql\n"
            "AS $$\n"
-           " SELECT ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'), '^\\s*(\\S*)\\s*$', '\\1')::varchar) && allowed_comments;\n"
+           " SELECT\n"
+           "  ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'),\n"
+           "                              '^\\s*(\\S*)\\s*$',\n"
+           "                              '\\1')::varchar)\n"
+           "  && allowed_comments;\n"
            "$$;")
     with connection.cursor() as cursor:
         cursor.execute(sql)
