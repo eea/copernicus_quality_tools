@@ -24,36 +24,41 @@ def run_check(params, status):
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of general items.
-        sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  ({final_code_column_name} LIKE '1%' AND {area_column_name} >= 1000)"
-               "  OR ({final_code_column_name} SIMILAR TO '[2-5]%' AND {area_column_name} >= 2500);")
+        sql = ("CREATE TABLE {general_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name}\n"
+               "WHERE\n"
+               " ({final_code_column_name} LIKE '1%' AND {area_column_name} >= 1000)\n"
+               " OR ({final_code_column_name} SIMILAR TO '[2-5]%' AND {area_column_name} >= 2500);")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Create table of exception items.
-        sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  ({initial_code_column_name} LIKE '122%'"
-               "   OR {final_code_column_name} LIKE '122%')"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})")
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND (layer.{initial_code_column_name} LIKE '122%'\n"
+               "      OR layer.{final_code_column_name} LIKE '122%');")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Items with specific comment.
         exception_comments = params.get("exception_comments", [])
         for exception_comment in exception_comments:
-            sql = ("INSERT INTO {exception_table}"
-                   " SELECT {fid_name}"
-                   " FROM {layer_name}"
-                   " WHERE"
-                   "  {comment_column_name} LIKE '%{exception_comment}%'"
-                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql = ("INSERT INTO {exception_table}\n"
+                   "SELECT layer.{fid_name}\n"
+                   "FROM\n"
+                   " {layer_name} AS layer\n"
+                   " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+                   " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+                   "WHERE\n"
+                   " gen.{fid_name} IS NULL\n"
+                   " AND exc.{fid_name} IS NULL\n"
+                   " AND layer.{comment_column_name} LIKE '%{exception_comment}%';")
             sql_params["comment_column_name"] = params["comment_column_name"]
             sql_params["exception_comment"] = exception_comment
             sql = sql.format(**sql_params)
@@ -67,12 +72,15 @@ def run_check(params, status):
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("CREATE TABLE {error_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

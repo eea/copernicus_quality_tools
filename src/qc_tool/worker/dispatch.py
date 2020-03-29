@@ -50,10 +50,11 @@ def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fi
     sql_params = {"fid_name": pg_fid_name,
                   "src_table": src_table_name,
                   "error_table": error_table_name}
-    sql = ("SELECT *"
-           " FROM {src_table}"
-           " WHERE {fid_name} IN (SELECT {fid_name} FROM {error_table})"
-           " ORDER BY {fid_name};")
+    sql = ("SELECT st.*\n"
+           "FROM\n"
+           " {error_table} AS et\n"
+           " INNER JOIN {src_table} AS st ON et.{fid_name} = st.{fid_name}\n"
+           "ORDER BY st.{fid_name};")
     sql = sql.format(**sql_params)
     args = ["ogr2ogr",
             "-f", "GPKG",

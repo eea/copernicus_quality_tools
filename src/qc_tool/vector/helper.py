@@ -846,8 +846,11 @@ class PartitionedLayer():
                       "partition_table_name": self.partition_table_name}
         with self.connection.cursor() as cursor:
             # Delete features of superpartitions.
-            sql = ("DELETE FROM {feature_table_name}\n"
-                   "WHERE partition_id IN (SELECT DISTINCT superpartition_id FROM {partition_table_name});")
+            sql = ("DELETE FROM {feature_table_name} AS ft\n"
+                   "WHERE\n"
+                   " EXISTS (SELECT\n"
+                   "         FROM {partition_table_name} AS pt\n"
+                   "         WHERE ft.partition_id = pt.superpartition_id);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
             log.debug("{:d} features have been deleted from superpartitions.".format(cursor.rowcount))
@@ -866,8 +869,11 @@ class PartitionedLayer():
             # This query deletes not only all superpartitions
             # from which features have just been deleted,
             # but also these subpartitions where no feature has been delegated to.
-            sql = ("DELETE FROM {partition_table_name}\n"
-                   "WHERE partition_id NOT IN (SELECT DISTINCT partition_id FROM {feature_table_name});")
+            sql = ("DELETE FROM {partition_table_name} AS pt\n"
+                   "WHERE\n"
+                   " NOT EXISTS (SELECT\n"
+                   "             FROM {feature_table_name} AS ft\n"
+                   "             WHERE pt.partition_id = ft.partition_id);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
             log.debug("{:d} superpartitions have been deleted.".format(cursor.rowcount))
@@ -949,10 +955,26 @@ class NeighbourTable():
                    "         ta.fid < tb.fid) AS pairs_1\n"
                    "  WHERE pairs_1.dim >= 1) AS pairs_2\n"
                    "GROUP BY fida, fidb;")
+            sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
+                   "SELECT\n"
+                   " dfid.fid AS fida,\n"
+                   " lat.fid AS fidb,\n"
+                   " lat.dim\n"
+                   "FROM\n"
+                   " (SELECT DISTINCT fid FROM {feature_table_name}) AS dfid,\n"
+                   " LATERAL\n"
+                   " (SELECT tb.fid AS fid, max(ST_Dimension(ST_Intersection(ta.geom, tb.geom))) AS dim\n"
+                   "  FROM {feature_table_name} AS ta\n"
+                   "  INNER JOIN {feature_table_name} AS tb ON ta.geom && tb.geom\n"
+                   "  WHERE\n"
+                   "   ta.fid = dfid.fid\n"
+                   "   AND ta.fid < tb.fid\n"
+                   "  GROUP BY tb.fid) AS lat\n"
+                   "WHERE lat.dim >= 1;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
-            # Insert pairs with swapped fids.
+            # Insert inverted pairs.
             sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
                    "SELECT\n"
                    " fidb, fida, dim\n"

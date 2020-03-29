@@ -44,7 +44,6 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
-
         # Create layer union table of normally sized polygons.
         sql = ("CREATE TABLE {layer_union_table} AS"
                "  (SELECT"

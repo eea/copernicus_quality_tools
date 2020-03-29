@@ -36,37 +36,39 @@ def run_check(params, status):
         # All features not having neighbour with the same key.
         # Only features outside ua region in the final year (having final_ua_column_name set to NULL) are taken into trial.
         # All features inside ua region in the final year are considered ok and they are completely excluded from the pairing.
-        sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN"
-               "   (SELECT DISTINCT unnest(ARRAY[ta.{fid_name}, tb.{fid_name}]) AS {fid_name}"
-               "    FROM {layer_name} AS ta, {layer_name} AS tb"
-               "    WHERE"
-               "     ta.{final_ua_column_name} IS NULL"
-               "     AND tb.{final_ua_column_name} IS NULL"
-               "     AND {pair_clause}"
-               "     AND ta.{fid_name} < tb.{fid_name}"
-               "     AND ta.geom && tb.geom"
-               "     AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1"
-               "   );")
+        sql = ("CREATE TABLE {general_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name}\n"
+               "WHERE\n"
+               " {fid_name} NOT IN\n"
+               "  (SELECT DISTINCT unnest(ARRAY[ta.{fid_name}, tb.{fid_name}]) AS {fid_name}\n"
+               "   FROM\n"
+               "    {layer_name} AS ta\n"
+               "    INNER JOIN {layer_name} AS tb ON ta.geom && tb.geom\n"
+               "   WHERE\n"
+               "    ta.{final_ua_column_name} IS NULL\n"
+               "    AND tb.{final_ua_column_name} IS NULL\n"
+               "    AND {pair_clause}\n"
+               "    AND ta.{fid_name} < tb.{fid_name}\n"
+               "    AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1\n"
+               "  );")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Create table of exception items.
-        sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})")
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               "WHERE\n"
+               "  gen.{fid_name} IS NULL\n")
         if len(params["exception_comments"]) > 0:
             sql_execute_params = {"exception_comments": tuple(params["exception_comments"])}
-            sql += " AND {comment_column_name} IN %(exception_comments)s"
+            sql += " AND {comment_column_name} IN %(exception_comments)s;"
         else:
             sql_execute_params = {}
-            sql += " AND FALSE"
-        sql += ";"
+            sql += " AND FALSE;"
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)
 
@@ -78,12 +80,15 @@ def run_check(params, status):
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("CREATE TABLE {error_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

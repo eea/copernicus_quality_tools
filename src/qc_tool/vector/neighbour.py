@@ -46,24 +46,23 @@ def run_check(params, status):
                       "exclude_clause": exclude_clause}
 
         # Create temporary table of suspected pairs.
-        sql = ("CREATE TABLE {pair_table} AS"
-               " SELECT ARRAY[ta.{fid_name}, tb.{fid_name}] AS pair, {technical_clause} AS technical"
-               " FROM"
-               "  (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS ta,"
-               "  (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS tb"
-               " WHERE"
-               "  ta.{fid_name} < tb.{fid_name}"
-               "  AND {pair_clause}"
-               "  AND ta.geom && tb.geom"
-               "  AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1;")
+        sql = ("CREATE TABLE {pair_table} AS\n"
+               "SELECT ARRAY[ta.{fid_name}, tb.{fid_name}] AS pair, {technical_clause} AS technical\n"
+               "FROM\n"
+               " (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS ta\n"
+               " INNER JOIN (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS tb ON ta.geom && tb.geom\n"
+               "WHERE\n"
+               " ta.{fid_name} < tb.{fid_name}\n"
+               " AND {pair_clause}\n"
+               " AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Extract exception items.
-        sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT DISTINCT unnest(pair) AS {fid_name}"
-               " FROM {pair_table}"
-               " WHERE technical;")
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT DISTINCT unnest(pair) AS {fid_name}\n"
+               "FROM {pair_table}\n"
+               "WHERE technical;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -75,10 +74,10 @@ def run_check(params, status):
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Extract error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT DISTINCT unnest(pair) AS {fid_name}"
-               " FROM {pair_table}"
-               " WHERE NOT technical;")
+        sql = ("CREATE TABLE {error_table} AS\n"
+               "SELECT DISTINCT unnest(pair) AS {fid_name}\n"
+               "FROM {pair_table}\n"
+               "WHERE NOT technical;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

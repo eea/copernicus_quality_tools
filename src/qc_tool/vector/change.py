@@ -26,25 +26,26 @@ def run_check(params, status):
                       "technical_change_flag": TECHNICAL_CHANGE_FLAG}
 
         # Create table of general items.
-        sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {initial_code_column_name} != {final_code_column_name};")
+        sql = ("CREATE TABLE {general_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name}\n"
+               "WHERE\n"
+               " {initial_code_column_name} != {final_code_column_name};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Create table of exception items.
-        sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})")
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n")
         if sql_params["chtype_column_name"] != "":
-            sql += " AND {chtype_column_name} = '{technical_change_flag}'"
+            sql += " AND layer.{chtype_column_name} = '{technical_change_flag}';"
         else:
-            sql += " AND FALSE"
-        sql += ";"
+            sql += " AND FALSE;"
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -56,12 +57,15 @@ def run_check(params, status):
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("CREATE TABLE {error_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

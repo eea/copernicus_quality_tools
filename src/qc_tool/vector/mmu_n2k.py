@@ -28,53 +28,59 @@ def run_check(params, status):
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of general items.
-        sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE {area_column_name} >= {area_ha};")
+        sql = ("CREATE TABLE {general_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name}\n"
+               "WHERE {area_column_name} >= {area_ha};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Create table of exception items.
         # Linear features.
-        sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {area_column_name} >= 0.1"
-               "  AND {code_column_name}::text SIMILAR TO '(121|122|911|912)%'"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND layer.{area_column_name} >= 0.1\n"
+               " AND layer.{code_column_name}::text SIMILAR TO '(121|122|911|912)%';")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Marginal features.
-        sql = ("INSERT INTO {exception_table}"
-               " SELECT layer.{fid_name}"
-               " FROM"
-               "  {layer_name} AS layer,"
-               "  (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {layer_name}) AS margin"
-               " WHERE"
-               "  layer.{area_column_name} >= 0.1"
-               "  AND ST_Dimension(ST_Intersection(layer.geom, margin.geom)) >= 1"
-               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("INSERT INTO {exception_table}\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               " CROSS JOIN (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {layer_name}) AS margin\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL\n"
+               " AND layer.{area_column_name} >= 0.1\n"
+               " AND ST_Dimension(ST_Intersection(layer.geom, margin.geom)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
         # Urban features touching road or railway.
-        sql = ("INSERT INTO {exception_table}"
-               " SELECT layer.{fid_name}"
-               " FROM"
-               "  {layer_name} AS layer,"
-               "  (SELECT * FROM {layer_name} WHERE {code_column_name}::text SIMILAR TO '(121|122)%') AS randr"
-               " WHERE"
-               "  layer.{area_column_name} >= 0.25"
-               "  AND layer.{code_column_name}::text LIKE '1%'"
-               "  AND layer.{code_column_name}::text NOT SIMILAR TO '(10|121|122)%'"
-               "  AND layer.geom && randr.geom"
-               "  AND ST_Dimension(ST_Intersection(layer.geom, randr.geom)) >= 1"
-               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("INSERT INTO {exception_table}\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               " CROSS JOIN (SELECT * FROM {layer_name} WHERE {code_column_name}::text SIMILAR TO '(121|122)%') AS randr\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL\n"
+               " AND layer.{area_column_name} >= 0.25\n"
+               " AND layer.{code_column_name}::text LIKE '1%'\n"
+               " AND layer.{code_column_name}::text NOT SIMILAR TO '(10|121|122)%'\n"
+               " AND layer.geom && randr.geom\n"
+               " AND ST_Dimension(ST_Intersection(layer.geom, randr.geom)) >= 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -82,13 +88,16 @@ def run_check(params, status):
         if len(params["exception_comments"]) > 0:
             for exception_comment in params["exception_comments"]:
                 for comment_column_name in params["comment_column_names"]:
-                    sql = ("INSERT INTO {exception_table}"
-                           " SELECT {fid_name}"
-                           " FROM {layer_name}"
-                           " WHERE"
-                           "  {comment_column_name} LIKE '%{exception_comment}%'"
-                           "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-                           "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+                    sql = ("INSERT INTO {exception_table}\n"
+                           "SELECT layer.{fid_name}\n"
+                           "FROM\n"
+                           " {layer_name} AS layer\n"
+                           " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+                           " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+                           "WHERE\n"
+                           " gen.{fid_name} IS NULL\n"
+                           " AND exc.{fid_name} IS NULL\n"
+                           " AND layer.{comment_column_name} LIKE '%{exception_comment}%';")
                     sql_params["comment_column_name"] = comment_column_name
                     sql_params["exception_comment"] = exception_comment
                     sql = sql.format(**sql_params)
@@ -100,11 +109,14 @@ def run_check(params, status):
                                  params["final_code_column_name"]):
 
             # Find potential bad fids.
-            sql = ("SELECT {fid_name}"
-                   " FROM {layer_name}"
-                   " WHERE"
-                   "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql = ("SELECT layer.{fid_name}\n"
+                   "FROM\n"
+                   " {layer_name} AS layer\n"
+                   " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+                   " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+                   "WHERE\n"
+                   " gen.{fid_name} IS NULL\n"
+                   " AND exc.{fid_name} IS NULL;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
             bad_fids = [row[0] for row in cursor.fetchall()]
@@ -120,17 +132,21 @@ def run_check(params, status):
             del ccc
 
             # Add good fids to exception.
-            sql = ("INSERT INTO {exception_table}"
-                   " SELECT fid"
-                   " FROM {cluster_table}"
-                   " WHERE "
-                   "  fid NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND fid NOT IN (SELECT {fid_name} FROM {exception_table})"
-                   "  AND cluster_id IN ("
-                   "   SELECT cluster_id"
-                   "   FROM {cluster_table} INNER JOIN {layer_name} ON {cluster_table}.fid = {layer_name}.{fid_name}"
-                   "   GROUP BY cluster_id"
-                   "   HAVING sum({layer_name}.{area_column_name}) > 0.5);")
+            sql = ("INSERT INTO {exception_table}\n"
+                   "SELECT ct.fid\n"
+                   "FROM\n"
+                   " {cluster_table} AS ct\n"
+                   " INNER JOIN (SELECT cluster_id\n"
+                   "             FROM\n"
+                   "              {cluster_table} AS cct\n"
+                   "              INNER JOIN {layer_name} AS clr ON cct.fid = clr.{fid_name}\n"
+                   "             GROUP BY cluster_id\n"
+                   "             HAVING sum(clr.{area_column_name}) > 0.5) AS area_ct ON ct.cluster_id = area_ct.cluster_id\n"
+                   " LEFT JOIN {general_table} AS gen ON ct.fid = gen.{fid_name}\n"
+                   " LEFT JOIN {exception_table} AS exc ON ct.fid = exc.{fid_name}\n"
+                   "WHERE\n"
+                   " gen.{fid_name} IS NULL\n"
+                   " AND exc.{fid_name} IS NULL;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
@@ -142,12 +158,15 @@ def run_check(params, status):
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("CREATE TABLE {error_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

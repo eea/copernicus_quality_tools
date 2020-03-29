@@ -80,9 +80,9 @@ def run_check(params, status):
                "FROM\n"
                " {layer_name} AS layer\n"
                " INNER JOIN {meta_table_name} AS meta ON layer.{fid_name} = meta.fid\n"
-               " LEFT JOIN {general_table} AS general ON layer.{fid_name} = general.{fid_name}\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
                "WHERE\n"
-               " general.{fid_name} IS NULL\n"
+               " gen.{fid_name} IS NULL\n"
                " AND ({exception_where});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
@@ -104,10 +104,10 @@ def run_check(params, status):
                "FROM\n"
                " {layer_name} AS layer\n"
                " INNER JOIN {meta_table_name} AS meta ON layer.{fid_name} = meta.fid\n"
-               " LEFT JOIN {general_table} AS general ON layer.{fid_name} = general.{fid_name}\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
                " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
                "WHERE\n"
-               " general.{fid_name} IS NULL\n"
+               " gen.{fid_name} IS NULL\n"
                " AND exc.{fid_name} IS NULL\n"
                " AND ({warning_where});")
         sql = sql.format(**sql_params)
@@ -130,11 +130,11 @@ def run_check(params, status):
                "FROM\n"
                " {layer_name} AS layer\n"
                " INNER JOIN {meta_table_name} AS meta ON layer.{fid_name} = meta.fid\n"
-               " LEFT JOIN {general_table} AS general ON layer.{fid_name} = general.{fid_name}\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
                " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
                " LEFT JOIN {warning_table} AS warn ON layer.{fid_name} = warn.{fid_name}\n"
                "WHERE\n"
-               " general.{fid_name} IS NULL\n"
+               " gen.{fid_name} IS NULL\n"
                " AND exc.{fid_name} IS NULL\n"
                " AND warn.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)

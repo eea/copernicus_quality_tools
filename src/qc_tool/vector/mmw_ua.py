@@ -22,21 +22,23 @@ def run_check(params, status):
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of general items.
-        sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) = 1;")
+        sql = ("CREATE TABLE {general_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name}\n"
+               "WHERE\n"
+               " ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) = 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, {"buffer": -params["mmw"] / 2})
 
         # Create table of exception items.
-        sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {code_column_name} LIKE '122%'"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND {code_column_name} LIKE '122%';")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -48,12 +50,15 @@ def run_check(params, status):
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of warning items.
-        sql = ("CREATE TABLE {warning_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("CREATE TABLE {warning_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

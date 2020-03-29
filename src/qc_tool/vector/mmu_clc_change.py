@@ -30,24 +30,25 @@ def run_check(params, status):
         sql_execute_params = {"mmu": params["mmu"]}
 
         # Create table of general items.
-        sql = ("CREATE TABLE {general_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {area_column_name} >= %(mmu)s;")
+        sql = ("CREATE TABLE {general_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name}\n"
+               "WHERE\n"
+               " {area_column_name} >= %(mmu)s;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)
 
         # Create table of exception items.
         # Marginal features.
-        sql = ("CREATE TABLE {exception_table} AS"
-               " SELECT layer.{fid_name}"
-               " FROM"
-               "  {layer_name} AS layer,"
-               "  (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {margin_layer_name}) AS margin"
-               " WHERE"
-               "  ST_Dimension(ST_Intersection(layer.geom, margin.geom)) >= 1"
-               "  AND layer.{fid_name} NOT IN (SELECT {fid_name} FROM {general_table});")
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " CROSS JOIN (SELECT ST_Boundary(ST_Union(geom)) AS geom FROM {margin_layer_name}) AS margin\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND ST_Dimension(ST_Intersection(layer.geom, margin.geom)) >= 1\n;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -57,11 +58,14 @@ def run_check(params, status):
                                  params["final_code_column_name"]):
 
             # Find potential bad fids.
-            sql = ("SELECT {fid_name}"
-                   " FROM {layer_name}"
-                   " WHERE"
-                   "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+            sql = ("SELECT layer.{fid_name}\n"
+                   "FROM\n"
+                   " {layer_name} AS layer\n"
+                   " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+                   " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+                   "WHERE\n"
+                   " gen.{fid_name} IS NULL\n"
+                   " AND exc.{fid_name} IS NULL;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
             bad_fids = [row[0] for row in cursor.fetchall()]
@@ -77,17 +81,21 @@ def run_check(params, status):
             del ccc
 
             # Add good fids to exception.
-            sql = ("INSERT INTO {exception_table}"
-                   " SELECT fid"
-                   " FROM {cluster_table}"
-                   " WHERE "
-                   "  fid NOT IN (SELECT {fid_name} FROM {general_table})"
-                   "  AND fid NOT IN (SELECT {fid_name} FROM {exception_table})"
-                   "  AND cluster_id IN ("
-                   "   SELECT cluster_id"
-                   "   FROM {cluster_table} INNER JOIN {layer_name} ON {cluster_table}.fid = {layer_name}.{fid_name}"
-                   "   GROUP BY cluster_id"
-                   "   HAVING sum({layer_name}.shape_area) >= 50000);")
+            sql = ("INSERT INTO {exception_table}\n"
+                   "SELECT ct.fid\n"
+                   "FROM\n"
+                   " {cluster_table} AS ct\n"
+                   " LEFT JOIN {general_table} AS gen ON ct.fid = gen.{fid_name}\n"
+                   " LEFT JOIN {exception_table} AS exc ON ct.fid = exc.{fid_name}\n"
+                   " INNER JOIN (SELECT cluster_id\n"
+                   "             FROM\n"
+                   "              {cluster_table} AS cct\n"
+                   "              INNER JOIN {layer_name} AS clr ON cct.fid = clr.{fid_name}\n"
+                   "             GROUP BY cluster_id\n"
+                   "             HAVING sum(clr.shape_area) >= 50000) AS area_ct ON ct.cluster_id = area_ct.cluster_id\n"
+                   "WHERE\n"
+                   " gen.{fid_name} IS NULL\n"
+                   " AND exc.{fid_name} IS NULL;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
@@ -99,12 +107,15 @@ def run_check(params, status):
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {fid_name} NOT IN (SELECT {fid_name} FROM {general_table})"
-               "  AND {fid_name} NOT IN (SELECT {fid_name} FROM {exception_table});")
+        sql = ("CREATE TABLE {error_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
