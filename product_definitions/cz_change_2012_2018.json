@@ -262,23 +262,23 @@
         "general_where": "area_ha > 25
                           OR
                           (code_4_12 NOT IN (7230, 8420) AND area_ha >= 0.5)",
-        "exception_where": "(code_4_12 IN (1210, 1220, 8110, 8120)
-                             AND EXISTS (SELECT 1 FROM others(meta.fid) WHERE code_4_12 IN (1210, 1220, 8110, 8120))
-                             AND area_ha > 0.1)
+        "exception_where": " (code_4_12 IN (1210, 1220, 8110, 8120)
+                              AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_4_12 IN (1210, 1220, 8110, 8120))
+                              AND area_ha > 0.1)
                             OR
-                            (code_1_12 = 1
-                             AND EXISTS (SELECT 1 FROM others(meta.fid) WHERE code_4_12 IN (1210, 1220))
-                             AND area_ha > 0.25)
+                             (code_1_12 = 1
+                              AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_4_12 IN (1210, 1220))
+                              AND area_ha > 0.25)
                             OR
-                            (meta.cc_area >= 0.5
-                             AND area_ha >= 0.05)
+                             (meta.cc_area >= 0.5
+                              AND area_ha >= 0.05)
                             OR
-                            has_comment(comment, ARRAY['Area size exception (at Coastal Zones AoI boundary)',
-                                                       'Area size exception (inside Coastal Zones AoI boundary)',
-                                                       'Splitted change',
-                                                       'Areas related to change',
-                                                       'Flooded area 2012',
-                                                       'Different water level'])",
+                             has_comment(comment, ARRAY['Area size exception (at Coastal Zones AoI boundary)',
+                                                        'Area size exception (inside Coastal Zones AoI boundary)',
+                                                        'Splitted change',
+                                                        'Areas related to change',
+                                                        'Flooded area 2012',
+                                                        'Different water level'])",
         "warning_where": "FALSE"
       }
     },

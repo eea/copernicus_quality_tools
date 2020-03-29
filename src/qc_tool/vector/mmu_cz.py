@@ -7,14 +7,14 @@ IS_SYSTEM = False
 
 
 def run_check(params, status):
+    from qc_tool.vector.helper import ComplexChangeProperty
+    from qc_tool.vector.helper import create_pg_has_comment
+    from qc_tool.vector.helper import create_pg_neighbours
     from qc_tool.vector.helper import do_layers
     from qc_tool.vector.helper import get_failed_items_message
-    from qc_tool.vector.helper import PartitionedLayer
-    from qc_tool.vector.helper import NeighbourTable
     from qc_tool.vector.helper import MarginalProperty
-    from qc_tool.vector.helper import ComplexChangeProperty
-    from qc_tool.vector.helper import create_others
-    from qc_tool.vector.helper import create_has_comment
+    from qc_tool.vector.helper import NeighbourTable
+    from qc_tool.vector.helper import PartitionedLayer
 
     cursor = params["connection_manager"].get_connection().cursor()
 
@@ -32,8 +32,10 @@ def run_check(params, status):
                                                             params["complex_change"]["final_code_column_name"],
                                                             params["complex_change"]["area_column_name"])
             complex_change_property.make()
-        create_others(cursor.connection, neighbour_table.neighbour_table_name, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
-        create_has_comment(cursor.connection)
+        create_pg_neighbours(cursor.connection, neighbour_table.neighbour_table_name,
+                                                layer_def["pg_layer_name"],
+                                                layer_def["pg_fid_name"])
+        create_pg_has_comment(cursor.connection)
 
         # Prepare parameters used in sql clauses.
         sql_params = {"meta_table_name": marginal_property.meta_table.meta_table_name,

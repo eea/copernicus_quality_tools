@@ -864,8 +864,8 @@ class PartitionedLayer():
 
             # Delete all partitions containing no feature.
             # This query deletes not only all superpartitions
-            # from which features have been moved or splitted,
-            # but also these partitions where no feature has been delegated.
+            # from which features have just been deleted,
+            # but also these subpartitions where no feature has been delegated to.
             sql = ("DELETE FROM {partition_table_name}\n"
                    "WHERE partition_id NOT IN (SELECT DISTINCT partition_id FROM {feature_table_name});")
             sql = sql.format(**sql_params)
@@ -1057,7 +1057,7 @@ class MarginalProperty():
                       "exterior_table_name": self.exterior_table_name}
         with self.connection.cursor() as cursor:
             sql = ("UPDATE {meta_table_name} AS meta\n"
-                   "SET is_marginal = EXISTS (SELECT 1\n"
+                   "SET is_marginal = EXISTS (SELECT\n"
                    "                          FROM {feature_table_name} AS f\n"
                    "                          INNER JOIN {exterior_table_name} AS e ON f.geom && e.geom\n"
                    "                          WHERE\n"
@@ -1149,6 +1149,7 @@ class ComplexChangeProperty():
             # For every feature find the root feature.
             # Root feature is cluster member with the smallest fid.
             # As the features are sorted by fid,
+            # and the features are registered sequentially,
             # it is enough for every feature being just registered
             # to take cluster fid from its already registered neighbour.
             fid_cc_idx = {}
@@ -1208,27 +1209,35 @@ class ComplexChangeProperty():
         return column_exists(self.connection, self.meta_table.meta_table_name, "cc_area")
 
 
-def create_others(connection, neighbour_table_name, pg_layer_name, pg_fid_name):
+def create_pg_neighbours(connection, neighbour_table_name, pg_layer_name, pg_fid_name):
     sql_params = {"neighbour_table_name": neighbour_table_name,
                   "pg_layer_name": pg_layer_name,
                   "pg_fid_name": pg_fid_name}
-    sql = ("CREATE OR REPLACE FUNCTION others(p_fid integer)\n"
-           " RETURNS SETOF {pg_layer_name}\n"
-           " LANGUAGE sql\n"
+    sql = ("CREATE OR REPLACE FUNCTION neighbours(ifid integer)\n"
+           "RETURNS SETOF {pg_layer_name}\n"
+           "PARALLEL SAFE\n"
+           "STABLE\n"
+           "LANGUAGE sql\n"
            "AS $$\n"
-           " SELECT * FROM {pg_layer_name} WHERE {pg_fid_name} IN (SELECT fidb FROM {neighbour_table_name} WHERE fida = p_fid);\n"
-           "$$")
+           " SELECT f.*\n"
+           " FROM\n"
+           "  {neighbour_table_name} AS n\n"
+           "  INNER JOIN {pg_layer_name} AS f ON n.fidb = f.{pg_fid_name}\n"
+           " WHERE n.fida = ifid;\n"
+           "$$;")
     sql = sql.format(**sql_params)
     with connection.cursor() as cursor:
         cursor.execute(sql)
 
 
-def create_has_comment(connection):
+def create_pg_has_comment(connection):
     sql = ("CREATE OR REPLACE FUNCTION has_comment(comment varchar, allowed_comments varchar[])\n"
-           " RETURNS boolean\n"
-           " LANGUAGE sql\n"
+           "RETURNS boolean\n"
+           "PARALLEL SAFE\n"
+           "STABLE\n"
+           "LANGUAGE sql\n"
            "AS $$\n"
            " SELECT ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'), '^\\s*(\\S*)\\s*$', '\\1')::varchar) && allowed_comments;\n"
-           "$$")
+           "$$;")
     with connection.cursor() as cursor:
         cursor.execute(sql)
