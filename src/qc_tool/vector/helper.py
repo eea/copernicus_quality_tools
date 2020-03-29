@@ -941,21 +941,6 @@ class NeighbourTable():
         with self.connection.cursor() as cursor:
             # Insert neighbouring pairs.
             sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
-                   "SELECT fida, fidb, max(dim)\n"
-                   "FROM\n"
-                   " (SELECT *\n"
-                   "  FROM (SELECT\n"
-                   "         ta.fid AS fida,\n"
-                   "         tb.fid AS fidb,\n"
-                   "         ST_Dimension(ST_Intersection(ta.geom, tb.geom)) AS dim\n"
-                   "        FROM\n"
-                   "         {feature_table_name} AS ta\n"
-                   "         INNER JOIN {feature_table_name} AS tb ON ta.geom && tb.geom\n"
-                   "        WHERE\n"
-                   "         ta.fid < tb.fid) AS pairs_1\n"
-                   "  WHERE pairs_1.dim >= 1) AS pairs_2\n"
-                   "GROUP BY fida, fidb;")
-            sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
                    "SELECT\n"
                    " dfid.fid AS fida,\n"
                    " lat.fid AS fidb,\n"
