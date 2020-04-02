@@ -113,9 +113,7 @@
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["stl"],
-        "exclude_column_name": "stl",
-        "exclude_codes": [0]
+        "layers": ["stl"]
       }
     },
     {

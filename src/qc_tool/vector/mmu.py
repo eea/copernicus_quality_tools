@@ -25,7 +25,7 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):
-        log.debug("Started mmu check for the pg layer {:s}.".format(layer_def["pg_layer_name"]))
+        log.debug("Started mmu check for the layer {:s}.".format(layer_def["pg_layer_name"]))
 
         # Prepare support data.
         partitioned_layer = PartitionedLayer(cursor.connection, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
@@ -148,3 +148,4 @@ def run_check(params, status):
                         .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
+        log.info("MMU check for the layer {:s} has been finished.".format(layer_def["pg_layer_name"]))
