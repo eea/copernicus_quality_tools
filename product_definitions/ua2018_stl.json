@@ -93,10 +93,10 @@
       "required": false,
       "parameters": {
         "layers": ["stl"],
-        "filter_column_name": "stl",
-        "filter_codes": [1],
-        "area_column_name": "area",
-        "mmu": 500
+        "complex_change": null,
+        "general_where": "layer.area >= 500 OR layer.stl <> 1",
+        "exception_where": "FALSE",
+        "warning_where": "FALSE"
       }
     },
     {

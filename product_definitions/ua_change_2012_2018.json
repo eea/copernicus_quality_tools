@@ -156,21 +156,22 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmu_ua_change",
+      "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "area_column_name": "area",
-        "initial_code_column_name": "code_2012",
-        "final_code_column_name": "code_2018",
-        "comment_column_name": "comment",
-        "exception_comments": [
-          "Area size exception (at Urban Atlas FUA boundary)",
-          "Area size exception (at Urban Atlas FUA boundary); Areas related to boundary update",
-          "Area size exception (at Urban Atlas FUA boundary); Areas related to change",
-          "Area size exception (inside Urban Atlas FUA boundary)",
-          "Area size exception (inside Urban Atlas FUA boundary); Areas related to change"
-        ]
+        "complex_change": null,
+        "general_where": " (layer.code_2018 LIKE '1%' AND layer.area >= 1000)
+                          OR
+                           (layer.code_2018 SIMILAR TO '[2-5]%' AND layer.area >= 2500)",
+        "exception_where": " layer.code_2012 LIKE '122%'
+                            OR
+                             layer.code_2018 LIKE '122%'
+                            OR
+                             (layer.comment IS NOT NULL
+                              AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',
+                                                                   'Area size exception (inside Urban Atlas FUA boundary)']))",
+        "warning_where": "FALSE"
       }
     },
     {

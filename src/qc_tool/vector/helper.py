@@ -1220,35 +1220,39 @@ def create_pg_neighbours(connection, neighbour_table_name, pg_layer_name, pg_fid
     sql_params = {"neighbour_table_name": neighbour_table_name,
                   "pg_layer_name": pg_layer_name,
                   "pg_fid_name": pg_fid_name}
-    sql = ("CREATE OR REPLACE FUNCTION neighbours(ifid integer)\n"
-           "RETURNS SETOF {pg_layer_name}\n"
-           "PARALLEL SAFE\n"
-           "STABLE\n"
-           "LANGUAGE sql\n"
-           "AS $$\n"
-           " SELECT f.*\n"
-           " FROM\n"
-           "  {neighbour_table_name} AS n\n"
-           "  INNER JOIN {pg_layer_name} AS f ON n.fidb = f.{pg_fid_name}\n"
-           " WHERE n.fida = ifid;\n"
-           "$$;")
-    sql = sql.format(**sql_params)
     with connection.cursor() as cursor:
+        sql = "DROP FUNCTION IF EXISTS neighbours;"
+        cursor.execute(sql)
+        sql = ("CREATE FUNCTION neighbours(ifid integer)\n"
+               "RETURNS SETOF {pg_layer_name}\n"
+               "PARALLEL SAFE\n"
+               "STABLE\n"
+               "LANGUAGE sql\n"
+               "AS $$\n"
+               " SELECT f.*\n"
+               " FROM\n"
+               "  {neighbour_table_name} AS n\n"
+               "  INNER JOIN {pg_layer_name} AS f ON n.fidb = f.{pg_fid_name}\n"
+               " WHERE n.fida = ifid;\n"
+               "$$;")
+        sql = sql.format(**sql_params)
         cursor.execute(sql)
 
 
 def create_pg_has_comment(connection):
-    sql = ("CREATE OR REPLACE FUNCTION has_comment(comment varchar, allowed_comments varchar[])\n"
-           "RETURNS boolean\n"
-           "PARALLEL SAFE\n"
-           "IMMUTABLE\n"
-           "LANGUAGE sql\n"
-           "AS $$\n"
-           " SELECT\n"
-           "  ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'),\n"
-           "                              '^\\s*(\\S*)\\s*$',\n"
-           "                              '\\1')::varchar)\n"
-           "  && allowed_comments;\n"
-           "$$;")
     with connection.cursor() as cursor:
+        sql = "DROP FUNCTION IF EXISTS has_comment;"
+        cursor.execute(sql)
+        sql = ("CREATE FUNCTION has_comment(comment varchar, allowed_comments varchar[])\n"
+               "RETURNS boolean\n"
+               "PARALLEL SAFE\n"
+               "IMMUTABLE\n"
+               "LANGUAGE sql\n"
+               "AS $$\n"
+               " SELECT\n"
+               "  ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'),\n"
+               "                              '^\\s*(\\S*)\\s*$',\n"
+               "                              '\\1')::varchar)\n"
+               "  && allowed_comments;\n"
+               "$$;")
         cursor.execute(sql)

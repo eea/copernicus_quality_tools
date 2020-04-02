@@ -242,10 +242,10 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "filter_column_name": "code",
-        "filter_codes": ["2"],
-        "area_column_name": "area",
-        "mmu": 200
+        "complex_change": null,
+        "general_where": "layer.area >= 200 OR layer.code <> '2'",
+        "exception_where": "FALSE",
+        "warning_where": "FALSE"
       }
     },
     {

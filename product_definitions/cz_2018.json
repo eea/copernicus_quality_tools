@@ -185,32 +185,33 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmu_cz",
+      "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
         "layers": ["status"],
         "complex_change": null,
-        "general_where": "area_ha >= 25
+        "general_where": "layer.area_ha >= 25
                           OR
-                          (code_4_18 NOT IN (7230, 8420) AND area_ha >= 0.5)",
+                          (layer.code_4_18 NOT IN (7230, 8420) AND layer.area_ha >= 0.5)",
         "exception_where": " (meta.is_marginal
-                              AND area_ha >= 0.1)
+                              AND layer.area_ha >= 0.1)
                             OR
-                             (code_4_18 IN (1210, 1220, 8110, 8120)
+                             (layer.code_4_18 IN (1210, 1220, 8110, 8120)
                               AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_4_18 IN (1210, 1220, 8110, 8120))
-                              AND area_ha > 0.1)
+                              AND layer.area_ha >= 0.1)
                             OR
-                             (code_1_18 = 1
+                             (layer.code_1_18 = 1
+                              AND layer.code_4_18 NOT IN (1210, 1220, 8110, 8120)
                               AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_4_18 IN (1210, 1220))
-                              AND area_ha > 0.25)
+                              AND layer.area_ha >= 0.25)
                             OR
-                             (comment_18 IS NOT NULL
-                              AND has_comment(comment_18, ARRAY['Area size exception (at Coastal Zones AoI boundary)',
-                                                                'Area size exception (inside Coastal Zones AoI boundary)',
-                                                                'Splitted change',
-                                                                'Areas related to change',
-                                                                'Flooded area 2012',
-                                                                'Different water level']))",
+                             (layer.comment_18 IS NOT NULL
+                              AND has_comment(layer.comment_18, ARRAY['Area size exception (at Coastal Zones AoI boundary)',
+                                                                      'Area size exception (inside Coastal Zones AoI boundary)',
+                                                                      'Splitted change',
+                                                                      'Areas related to change',
+                                                                      'Flooded area 2012',
+                                                                      'Different water level']))",
         "warning_where": "FALSE"
       }
     },

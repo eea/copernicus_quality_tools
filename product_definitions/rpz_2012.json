@@ -145,21 +145,28 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmu_rpz",
+      "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "area_column_name": "area_ha",
-        "area_ha": 0.5,
-        "urban_area_ha": 0.25,
-        "marginal_area_ha": 0.2,
-        "linear_area_ha": 0.1,
-        "code_column_name": "maes_4",
-        "comment_column_names": ["comment"],
-        "urban_feature_codes": [1111, 1112, 1113, 1120, 1210, 1220, 1230, 1240, 1310, 1320, 1400],
-        "linear_feature_codes": [1210, 1220, 6220, 9110, 9120],
-        "exception_comments": ["Area size exception (inside RZ_AoI / outside UA Core Region)",
-                               "Area size exception (at RZ_AoI / UA Core Region boundary)"]
+        "complex_change": null,
+        "general_where": " layer.ua IS NOT NULL
+                          OR
+                           layer.area_ha >= 0.5",
+        "exception_where": " ((meta.is_marginal
+                               OR EXISTS (SELECT FROM neighbours(meta.fid) WHERE ua IS NOT NULL))
+                              AND layer.area_ha >= 0.2)
+                            OR
+                             (layer.maes_4 IN (1111, 1112, 1113, 1120, 1210, 1220, 1230, 1240, 1310, 1320, 1400)
+                              AND layer.area_ha >= 0.25)
+                            OR
+                             (layer.maes_4 IN (1210, 1220, 6220, 9110, 9120)
+                              AND layer.area_ha >= 0.1)
+                            OR
+                             (layer.comment IS NOT NULL
+                              AND has_comment(layer.comment, ARRAY['Area size exception (inside RZ_AoI / outside UA Core Region)',
+                                                                   'Area size exception (at RZ_AoI / UA Core Region boundary)']))",
+        "warning_where": "FALSE"
       }
     },
     {

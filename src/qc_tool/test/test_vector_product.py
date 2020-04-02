@@ -12,7 +12,7 @@ from qc_tool.worker.dispatch import dispatch
 class Test_clc(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb.zip")
-        expected_step_results = ["ok"] * 25
+        expected_step_results = ["ok"] * 24
         # vector.inspire check is skipped
         expected_step_results[7] = "skipped"
 
@@ -38,7 +38,7 @@ class Test_n2k(ProductTestCase):
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k", (6,))
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k_2012", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
