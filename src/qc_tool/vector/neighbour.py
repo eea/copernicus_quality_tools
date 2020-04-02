@@ -2,67 +2,79 @@
 # -*- coding: utf-8 -*-
 
 
+import logging
+
+
 DESCRIPTION = "There is no couple of neighbouring polygons having the same code."
 IS_SYSTEM = False
 
-TECHNICAL_CHANGE_FLAG = "T"
+
+log = logging.getLogger(__name__)
 
 
 def run_check(params, status):
+    from qc_tool.vector.helper import create_pg_has_comment
     from qc_tool.vector.helper import do_layers
     from qc_tool.vector.helper import get_failed_items_message
+    from qc_tool.vector.helper import NeighbourTable
+    from qc_tool.vector.helper import PartitionedLayer
 
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
-        # Prepare clause excluding features with specific codes.
-        exclude_clause = " AND ".join("{:s} NOT LIKE '{:s}'".format(code_column_name, exclude_code)
-                                      for code_column_name in params["code_column_names"]
-                                      for exclude_code in params.get("exclude_codes", []))
-        if len(exclude_clause) == 0:
-            exclude_clause = "TRUE"
+        log.debug("Started neighbour check for the layer {:s}.".format(layer_def["pg_layer_name"]))
 
-        # Prepare clause for pairing features.
-        if len(params["code_column_names"]) > 0:
-            pair_clause = " AND ".join("ta.{0:s} = tb.{0:s}".format(code_column_name)
-                                       for code_column_name in params["code_column_names"])
-        else:
-            pair_clause = "FALSE"
-
-        # Prepare clause for technical change.
-        if "chtype_column_name" in params:
-            technical_clause = ("((ta.{0:s} = '{1:s}') IS TRUE OR (tb.{0:s} = '{1:s}') IS TRUE)"
-                                .format(params["chtype_column_name"], TECHNICAL_CHANGE_FLAG))
-        else:
-            technical_clause = "FALSE"
+        # Prepare support data.
+        partitioned_layer = PartitionedLayer(cursor.connection, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+        partitioned_layer.make()
+        neighbour_table = NeighbourTable(partitioned_layer)
+        neighbour_table.make()
+        create_pg_has_comment(cursor.connection)
 
         # Prepare parameters for sql query.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "pair_table": "s{:02d}_{:s}_pairs".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "neighbour_table": neighbour_table.neighbour_table_name,
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "exception_pairs_table": "s{:02d}_{:s}_exception_pairs".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "technical_clause": technical_clause,
-                      "pair_clause": pair_clause,
-                      "exclude_clause": exclude_clause}
+                      "error_pairs_table": "s{:02d}_{:s}_error_pairs".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "pair_clause": " AND ".join("layer.{0:s} = other.{0:s}".format(code_column_name)
+                                                  for code_column_name in params["code_column_names"]),
+                      "exception_where": params["exception_where"],
+                      "error_where": params["error_where"]}
 
-        # Create temporary table of suspected pairs.
-        sql = ("CREATE TABLE {pair_table} AS\n"
-               "SELECT ARRAY[ta.{fid_name}, tb.{fid_name}] AS pair, {technical_clause} AS technical\n"
+        # Create exception pairs table.
+        sql = ("CREATE TABLE {exception_pairs_table} AS\n"
+               "SELECT layer.{fid_name} AS fida, other.{fid_name} AS fidb\n"
                "FROM\n"
-               " (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS ta\n"
-               " INNER JOIN (SELECT * FROM {layer_name} WHERE {exclude_clause}) AS tb ON ta.geom && tb.geom\n"
+               " {layer_name} AS layer\n"
+               " INNER JOIN {neighbour_table} AS neib ON layer.{fid_name} = neib.fida\n"
+               " INNER JOIN {layer_name} AS other ON neib.fidb = other.{fid_name}\n"
                "WHERE\n"
-               " ta.{fid_name} < tb.{fid_name}\n"
-               " AND {pair_clause}\n"
-               " AND ST_Dimension(ST_Intersection(ta.geom, tb.geom)) >= 1;")
+               " ({exception_where})\n"
+               " AND ({pair_clause});")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
-        # Extract exception items.
+        # Create error pairs table.
+        sql = ("CREATE TABLE {error_pairs_table} AS\n"
+               "SELECT layer.{fid_name} AS fida, other.{fid_name} AS fidb\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " INNER JOIN {neighbour_table} AS neib ON layer.{fid_name} = neib.fida\n"
+               " INNER JOIN {layer_name} AS other ON neib.fidb = other.{fid_name}\n"
+               " LEFT JOIN {exception_pairs_table} AS excp ON layer.{fid_name} = excp.fida AND other.{fid_name} = excp.fidb\n"
+               "WHERE\n"
+               " excp.fida IS NULL\n"
+               " AND ({error_where})\n"
+               " AND ({pair_clause});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # Create exception table.
         sql = ("CREATE TABLE {exception_table} AS\n"
-               "SELECT DISTINCT unnest(pair) AS {fid_name}\n"
-               "FROM {pair_table}\n"
-               "WHERE technical;")
+               "SELECT DISTINCT unnest(ARRAY[fida, fidb]) AS {fid_name}\n"
+               "FROM {exception_pairs_table};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -70,14 +82,13 @@ def run_check(params, status):
         items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])
         if items_message is not None:
             status.info("Layer {:s} has exception features with {:s}: {:s}."
-                          .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+                        .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
-        # Extract error items.
+        # Create error table.
         sql = ("CREATE TABLE {error_table} AS\n"
-               "SELECT DISTINCT unnest(pair) AS {fid_name}\n"
-               "FROM {pair_table}\n"
-               "WHERE NOT technical;")
+               "SELECT DISTINCT unnest(ARRAY[fida, fidb]) AS {fid_name}\n"
+               "FROM {error_pairs_table};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -87,3 +98,5 @@ def run_check(params, status):
             status.failed("Layer {:s} has error features with {:s}: {:s}."
                           .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+
+        log.info("Neighbour check for the layer {:s} has been finished.".format(layer_def["pg_layer_name"]))

@@ -301,7 +301,9 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "code_column_names": ["code"]
+        "code_column_names": ["code"],
+        "exception_where": "FALSE",
+        "error_where": "TRUE"
       }
     }
   ]

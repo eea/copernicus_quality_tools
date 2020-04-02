@@ -122,7 +122,8 @@
       "parameters": {
         "layers": ["stl"],
         "code_column_names": ["stl"],
-        "exclude_codes": []
+        "exception_where": "FALSE",
+        "error_where": "TRUE"
       }
     }
   ]

@@ -300,7 +300,9 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "code_column_names": ["code_4_12", "code_4_18"]
+        "code_column_names": ["code_4_12", "code_4_18"],
+        "exception_where": "FALSE",
+        "error_where": "TRUE"
       }
     },
     {

@@ -187,17 +187,23 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.neighbour_rpz",
+      "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
         "code_column_names": ["maes_4"],
-        "initial_ua_column_name": null,
-        "final_ua_column_name": "ua",
-        "comment_column_name": "comment",
-        "exception_comments": ["Braided river",
-                               "Different water levels",
-                               "Flooded area"]
+        "exception_where": "(layer.ua IS NULL AND other.ua IS NULL)
+                            AND
+                            ((layer.comment IS NOT NULL
+                              AND has_comment(layer.comment, ARRAY['Braided river',
+                                                                   'Different water levels',
+                                                                   'Flooded area']))
+                             OR
+                             (other.comment IS NOT NULL
+                              AND has_comment(layer.comment, ARRAY['Braided river',
+                                                                   'Different water levels',
+                                                                   'Flooded area'])))",
+        "error_where": "(layer.ua IS NULL AND other.ua IS NULL)"
       }
     }
   ]

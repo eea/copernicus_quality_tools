@@ -187,7 +187,8 @@
       "parameters": {
         "layers": ["change"],
         "code_column_names": ["code_2012", "code_2018"],
-        "exclude_codes": ["122%"]
+        "exception_where": "FALSE",
+        "error_where": "layer.code_2012 NOT LIKE '122%' AND layer.code_2018 NOT LIKE '122%'"
       }
     }
   ]

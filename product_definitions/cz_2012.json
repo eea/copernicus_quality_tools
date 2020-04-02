@@ -230,7 +230,9 @@
       "required": false,
       "parameters": {
         "layers": ["status"],
-        "code_column_names": ["code_4_12"]
+        "code_column_names": ["code_4_12"],
+        "exception_where": "FALSE",
+        "error_where": "TRUE"
       }
     },
     {

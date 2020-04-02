@@ -300,7 +300,9 @@
       "required": false,
       "parameters": {
         "layers": ["n2k"],
-        "code_column_names": ["maes_4_06", "maes_4_12"]
+        "code_column_names": ["maes_4_06", "maes_4_12"],
+        "exception_where": "FALSE",
+        "error_where": "TRUE"
       }
     }
   ]

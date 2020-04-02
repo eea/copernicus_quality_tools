@@ -241,7 +241,9 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_column_names": ["code_12"]
+        "code_column_names": ["code_12"],
+        "exception_where": "FALSE",
+        "error_where": "TRUE"
       }
     },
     {
@@ -249,7 +251,9 @@
       "required": false,
       "parameters": {
         "layers": ["initial"],
-        "code_column_names": ["code_06"]
+        "code_column_names": ["code_06"],
+        "exception_where": "FALSE",
+        "error_where": "TRUE"
       }
     },
     {
@@ -257,7 +261,9 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "code_column_names": ["code_06", "code_12"]
+        "code_column_names": ["code_06", "code_12"],
+        "exception_where": "layer.chtype = 'T'",
+        "error_where": "TRUE"
       }
     }
   ]

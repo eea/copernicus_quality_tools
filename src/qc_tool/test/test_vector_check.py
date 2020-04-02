@@ -1192,180 +1192,163 @@ class Test_overlap(VectorCheckTestCase):
 class Test_neighbour(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
-        from qc_tool.vector.neighbour import run_check
-        self.run_check = run_check
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer (fid integer, attr_1 char(1), attr_2 char(1), geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, code1 char(1), code2 char(1), geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "code_column_names": ["attr_1", "attr_2"],
+                            "code_column_names": ["code1", "code2"],
+                            "exception_where": "FALSE",
+                            "error_where": "TRUE",
                             "step_nr": 1})
 
     def test_disjoint(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'A', 'A', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_different_class(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'B', 'B', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                          " (3, 'C', 'B', ST_MakeEnvelope(3, 0, 4, 1, 4326)),"
                                                          " (4, 'C', 'C', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_touching_point(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'A', 'A', ST_MakeEnvelope(2, 1, 3, 2, 4326));")
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_touching_line_fails(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'A', 'A', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("failed", status.status)
 
     def test_complex_geom_fails(self):
+        from qc_tool.vector.neighbour import run_check
         polygon = "POLYGON((2 0, 2 0.5, 2.5 0.5, 2 1, 2 1.5, 2.5 1.5, 2 2, 2.5 2, 2 2.5, 2.5 2.5, 3 3, 3 0, 2 0))"
         create_sql = ("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 3, 4326)),"
                                                    " (2, 'A', 'A', ST_PolygonFromText('" + polygon + "', 4326));")
         self.cursor.execute(create_sql)
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("failed", status.status)
 
     def test_exclude(self):
-        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
-                                                         " (2, 'A', 'A', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.params["exclude_codes"] = ["A", "C%"]
+        from qc_tool.vector.neighbour import run_check
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'B', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'A', 'B', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.params["error_where"] = "layer.code2 <> 'B' AND other.code2 <> 'B'"
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_exclude_fails(self):
-        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
-                                                         " (2, 'A', 'A', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.params["exclude_codes"] = ["B", "C%"]
+        from qc_tool.vector.neighbour import run_check
+        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'B', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                         " (2, 'A', 'B', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.params["error_where"] = "layer.code2 <> 'C' AND other.code2 <> 'C'"
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("failed", status.status)
+
 
 class Test_neighbour_technical(VectorCheckTestCase):
     """Test neighbouring polygons taking into account technical change."""
     def setUp(self):
         super().setUp()
-        from qc_tool.vector.neighbour import run_check
-        self.run_check = run_check
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer (fid integer, attr_1 char(1), attr_2 char(1), chtype char(1), geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE test_layer (fid integer, code1 char(1), code2 char(1), chtype char(1), geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
-                            "code_column_names": ["attr_1", "attr_2"],
-                            "chtype_column_name": "chtype",
+                            "code_column_names": ["code1", "code2"],
+                            "exception_where": "layer.chtype = 'T'",
+                            "error_where": "TRUE",
                             "step_nr": 1})
 
     def test_non_neighbouring(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 1.5, 1, 4326)),"
                                                          " (2, 'A', 'A', 'R', ST_MakeEnvelope(2, 0, 2.5, 1, 4326)),"
                                                          " (3, 'A', 'A', 'R', ST_MakeEnvelope(3, 0, 3.5, 1, 4326));")
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_exception(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'A', 'A', 'T', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                          " (3, 'A', 'A', 'T', ST_MakeEnvelope(3, 0, 4, 1, 4326)),"
                                                          " (4, 'A', 'A', NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326)),"
                                                          " (5, 'A', 'B', NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
         status = self.status_class()
-        self.run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
         self.cursor.execute("SELECT * FROM s01_test_layer_exception ORDER BY fid;")
         self.assertListEqual([(1,), (2,), (3,), (4,)], self.cursor.fetchall())
         self.cursor.execute("SELECT * FROM s01_test_layer_error ORDER BY fid;")
-        self.assertListEqual([], self.cursor.fetchall())
+        self.assertListEqual([(1,), (2,), (3,), (4,)], self.cursor.fetchall())
 
     def test_error(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'A', 'A', 'R', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                          " (3, 'A', 'A', 'T', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
         status = self.status_class()
-        self.run_check(self.params, status)
+        run_check(self.params, status)
         self.assertEqual("failed", status.status)
         self.cursor.execute("SELECT * FROM s01_test_layer_exception ORDER BY fid;")
         self.assertListEqual([(2,), (3,)], self.cursor.fetchall())
         self.cursor.execute("SELECT * FROM s01_test_layer_error ORDER BY fid;")
-        self.assertListEqual([(1,), (2,)], self.cursor.fetchall())
+        self.assertListEqual([(1,), (2,), (3,)], self.cursor.fetchall())
 
 
-class Test_neighbour_rpz(VectorCheckTestCase):
-    def setUp(self):
-        super().setUp()
+class Test_neighbour_comment(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.neighbour import run_check
         self.cursor = self.params["connection_manager"].get_connection().cursor()
+        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), comment varchar, geom geometry(Polygon, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'Comment 1', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', 'Comment 2', ST_MakeEnvelope(1, 0, 2, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A',        NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B',        'hu', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'Comment 1', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
+
         self.params.update({"layer_defs": {"rpz": {"pg_layer_name": "rpz_layer",
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["rpz"],
+                            "code_column_names": ["code"],
+                            "exception_where": "(layer.comment IS NOT NULL\n"
+                                               " AND has_comment(layer.comment, ARRAY['Comment 1']))\n"
+                                               "OR\n"
+                                               "(other.comment IS NOT NULL\n"
+                                               " AND has_comment(other.comment, ARRAY['Comment 1']))",
+                            "error_where": "TRUE",
                             "step_nr": 1})
-
-    def test(self):
-        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code_1 char(1), code_2 char(1), ua_1 char(1), ua_2 char(1), comment char(1), geom geometry(Polygon, 4326));")
-        self.params.update({"code_column_names": ["code_1", "code_2"],
-                            "initial_ua_column_name": "ua_1",
-                            "final_ua_column_name": "ua_2",
-                            "comment_column_name": "comment",
-                            "exception_comments": []})
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', 'B', NULL, NULL, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', 'B', NULL, NULL, NULL, ST_MakeEnvelope(1, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', 'C', NULL, NULL, NULL, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', 'C', NULL, NULL, NULL, ST_MakeEnvelope(3, 0, 4, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B', 'C',  'U', NULL, NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (6, 'B', 'C',  'U', NULL, NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (7, 'B', 'C', NULL,  'U', NULL, ST_MakeEnvelope(6, 0, 7, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (8, 'B', 'C',  'U',  'U', NULL, ST_MakeEnvelope(7, 0, 8, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (9, 'B', 'C',  'U',  'U', NULL, ST_MakeEnvelope(8, 0, 9, 1, 4326));")
-
-        from qc_tool.vector.neighbour_rpz import run_check
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
         self.cursor.execute("SELECT fid FROM s01_rpz_layer_exception ORDER BY fid;")
-        self.assertListEqual([], self.cursor.fetchall())
+        self.assertListEqual([(1,), (2,), (4,), (5,)], self.cursor.fetchall())
         self.cursor.execute("SELECT fid FROM s01_rpz_layer_error ORDER BY fid;")
-        self.assertListEqual([(1,), (2,), (5,), (6,)], self.cursor.fetchall())
-
-    def test_comments(self):
-        self.cursor.execute("CREATE TABLE rpz_layer (fid integer, code char(1), ua char(1), comment varchar, geom geometry(Polygon, 4326));")
-        self.params.update({"code_column_names": ["code"],
-                            "initial_ua_column_name": None,
-                            "final_ua_column_name": "ua",
-                            "comment_column_name": "comment",
-                            "exception_comments": ["Comment 1", "Comment 2"]})
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (1, 'A', NULL, 'Comment 1', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (2, 'A', NULL, 'Comment 2', ST_MakeEnvelope(1, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (3, 'A', NULL, 'Comment 1', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (4, 'B', NULL,        'hu', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
-        self.cursor.execute("INSERT INTO rpz_layer VALUES (5, 'B',  'U', 'Comment 1', ST_MakeEnvelope(4, 0, 5, 1, 4326));")
-
-        from qc_tool.vector.neighbour_rpz import run_check
-        status = self.status_class()
-        run_check(self.params, status)
-        #self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT fid FROM s01_rpz_layer_exception ORDER BY fid;")
-        self.assertListEqual([(1,), (2,), (3,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT fid FROM s01_rpz_layer_error ORDER BY fid;")
-        self.assertListEqual([], self.cursor.fetchall())
+        self.assertListEqual([(2,), (3,)], self.cursor.fetchall())
 
 
 class Test_change(VectorCheckTestCase):
