@@ -985,10 +985,9 @@ class Test_mxmu(VectorCheckTestCase):
                                                          "pg_fid_name": "fid",
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
-                            "filter_column_name": "code",
-                            "filter_codes": ["code2"],
-                            "area_column_name": "shape_area",
                             "mxmu": 500000,
+                            "area_column_name": "shape_area",
+                            "error_where": "layer.code = 'code2'",
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")

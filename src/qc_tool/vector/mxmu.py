@@ -17,24 +17,18 @@ def run_check(params, status):
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
                       "area_column_name": params["area_column_name"],
+                      "error_where": params["error_where"],
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
-        sql_execute_params = {"mxmu": params["mxmu"]}
-        if params["filter_column_name"] is None:
-            sql_params["filter_clause"] = "TRUE"
-        else:
-            sql_params["filter_column_name"] = params["filter_column_name"]
-            sql_params["filter_clause"] = "{filter_column_name} IN %(filter_codes)s".format(**sql_params)
-            sql_execute_params["filter_codes"] = tuple(params["filter_codes"])
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {filter_clause}"
-               "  AND {area_column_name} > %(mxmu)s;")
+        sql = ("CREATE TABLE {error_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name} AS layer\n"
+               "WHERE\n"
+               " ({error_where})"
+               " AND {area_column_name} > %(mxmu)s;")
         sql = sql.format(**sql_params)
-        cursor.execute(sql, sql_execute_params)
+        cursor.execute(sql, {"mxmu": params["mxmu"]})
 
         # Report error items.
         items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])

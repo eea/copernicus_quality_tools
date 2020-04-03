@@ -253,10 +253,9 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "filter_column_name": "code",
-        "filter_codes": ["2"],
         "area_column_name": "area",
-        "mxmu": 5000
+        "mxmu": 5000,
+        "error_where": "layer.code = '2'"
       }
     },
     {
