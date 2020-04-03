@@ -264,9 +264,9 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "filter_column_name": "code",
-        "filter_codes": ["2"],
-        "mmw": 10
+        "mmw": 10,
+        "exception_where": "FALSE",
+        "warning_where": "layer.code = '2'"
       }
     },
     {

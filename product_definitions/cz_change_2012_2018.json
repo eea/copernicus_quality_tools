@@ -290,9 +290,9 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "filter_column_name": "code_4_18",
-        "filter_codes": [1210, 1220, 8110, 8120],
-        "mmw": 10.0
+        "mmw": 10.0,
+        "exception_where": "FALSE",
+        "warning_where": "layer.code_4_18 IN (1210, 1220, 8110, 8120)"
       }
     },
     {

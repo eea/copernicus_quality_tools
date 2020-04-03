@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-DESCRIPTION = "Minimum mapping width."
+DESCRIPTION = "Minimum mapping width, Urban Atlas."
 IS_SYSTEM = False
 
 
@@ -16,24 +16,53 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
+                      "exception_where": params["exception_where"],
+                      "warning_where": params["warning_where"],
+                      "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
-        sql_execute_params = {"buffer": -params["mmw"] / 2}
-        if params["filter_column_name"] is None:
-            sql_params["filter_clause"] = "TRUE"
-        else:
-            sql_params["filter_column_name"] = params["filter_column_name"]
-            sql_params["filter_clause"] = "{filter_column_name} IN %(filter_codes)s".format(**sql_params)
-            sql_execute_params["filter_codes"] = tuple(params["filter_codes"])
+
+        # Create table of general items.
+        sql = ("CREATE TABLE {general_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name}\n"
+               "WHERE\n"
+               " ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) = 1;")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql, {"buffer": -params["mmw"] / 2})
+
+        # Create table of exception items.
+        sql = ("CREATE TABLE {exception_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND ({exception_where});")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+        # Report exception features.
+        items_message = get_failed_items_message(cursor, sql_params["exception_table"], layer_def["pg_fid_name"])
+        if items_message is not None:
+            status.info("Layer {:s} has exception features with {:s}: {:s}."
+                        .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+            status.add_error_table(sql_params["exception_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         # Create table of warning items.
-        sql = ("CREATE TABLE {warning_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {filter_clause}"
-               "  AND ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) <> 1;")
+        sql = ("CREATE TABLE {warning_table} AS\n"
+               "SELECT layer.{fid_name}\n"
+               "FROM\n"
+               " {layer_name} AS layer\n"
+               " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
+               " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
+               "WHERE\n"
+               " gen.{fid_name} IS NULL\n"
+               " AND exc.{fid_name} IS NULL\n"
+               " AND ({warning_where});")
         sql = sql.format(**sql_params)
-        cursor.execute(sql, sql_execute_params)
+        cursor.execute(sql)
 
         # Report warning features.
         items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])

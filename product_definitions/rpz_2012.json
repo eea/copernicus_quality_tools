@@ -174,9 +174,9 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "filter_column_name": null,
-        "filter_code": null,
-        "mmw": 10.0
+        "mmw": 10.0,
+        "exception_where": "FALSE",
+        "warning_where": "TRUE"
       }
     },
     {

@@ -104,9 +104,9 @@
       "required": false,
       "parameters": {
         "layers": ["stl"],
-        "filter_column_name": "stl",
-        "filter_codes": [1],
-        "mmw": 10
+        "mmw": 10,
+        "exception_where": "FALSE",
+        "warning_where": "layer.stl = 1"
       }
     },
     {

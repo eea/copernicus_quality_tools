@@ -145,12 +145,13 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.mmw_ua",
+      "check_ident": "qc_tool.vector.mmw",
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_column_name": "code_2012",
-        "mmw": 10.0
+        "mmw": 10.0,
+        "exception_where": "layer.code_2012 LIKE '122%'",
+        "warning_where": "TRUE"
       }
     },
     {

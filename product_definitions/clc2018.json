@@ -224,9 +224,9 @@
       "required": false,
       "parameters": {
         "layers": ["reference", "initial", "change"],
-        "filter_column_name": null,
-        "filter_code": null,
-        "mmw": 100.0
+        "mmw": 100.0,
+        "exception_where": "FALSE",
+        "warning_where": "TRUE"
       }
     },
     {
