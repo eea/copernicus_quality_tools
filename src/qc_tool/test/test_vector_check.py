@@ -1097,9 +1097,8 @@ class Test_mml(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mml"],
-                            "filter_column_name": "code",
-                            "filter_codes": ["1"],
                             "mml": 10.,
+                            "warning_where": "code = '1'",
                             "step_nr": 1})
         self.cursor = self.params["connection_manager"].get_connection().cursor()
         self.cursor.execute("CREATE TABLE mml (fid integer, code char(1), geom geometry(Polygon, 4326));")

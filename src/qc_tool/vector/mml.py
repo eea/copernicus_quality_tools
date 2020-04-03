@@ -16,30 +16,30 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
+                      "warning_where": params["warning_where"],
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
-        sql_execute_params = {"mml": params["mml"]}
-        if params["filter_column_name"] is None:
-            sql_params["filter_clause"] = "TRUE"
-        else:
-            sql_params["filter_column_name"] = params["filter_column_name"]
-            sql_params["filter_clause"] = "{filter_column_name} IN %(filter_codes)s".format(**sql_params)
-            sql_execute_params["filter_codes"] = tuple(params["filter_codes"])
 
         # Create table of warning items.
-        sql = ("CREATE TABLE {warning_table} AS"
-               " SELECT {fid_name}"
-               " FROM"
-               "  (SELECT {fid_name}, geom FROM {layer_name}"
-               "   WHERE"
-               "    {filter_clause}"
-               "    AND GREATEST(ST_Distance(ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 1),"
-               "                             ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 2)),"
-               "                 ST_Distance(ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 2),"
-               "                             ST_PointN(ST_Boundary(ST_OrientedEnvelope(geom)), 3))) < %(mml)s"
-               "  ) AS filtered_table"
-               " WHERE ST_Length(ST_ApproximateMedialAxis(ST_MakePolygon(ST_ExteriorRing(geom)))) <= %(mml)s;")
+        sql = ("CREATE TABLE {warning_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM\n"
+               " (SELECT {fid_name}, geom\n"
+               "  FROM\n"
+               "   (SELECT\n"
+               "     {fid_name},\n"
+               "     ST_Boundary(ST_OrientedEnvelope(geom)) AS env,\n"
+               "     geom\n"
+               "    FROM {layer_name} AS layer\n"
+               "    WHERE {warning_where}\n"
+               "   ) AS tenv\n"
+               "  WHERE\n"
+               "   greatest(ST_Distance(ST_PointN(env, 1), ST_PointN(env, 2)),\n"
+               "            ST_Distance(ST_PointN(env, 2), ST_PointN(env, 3))) < %(mml)s\n"
+               " ) AS tdist\n"
+               "WHERE\n"
+               " ST_Length(ST_ApproximateMedialAxis(ST_MakePolygon(ST_ExteriorRing(geom)))) <= %(mml)s;")
         sql = sql.format(**sql_params)
-        cursor.execute(sql, sql_execute_params)
+        cursor.execute(sql, {"mml": params["mml"]})
 
         # Report warning features.
         items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
