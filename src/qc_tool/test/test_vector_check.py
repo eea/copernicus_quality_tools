@@ -1067,9 +1067,8 @@ class Test_mxmw(VectorCheckTestCase):
                                                    "pg_fid_name": "fid",
                                                    "fid_display_name": "row number"}},
                             "layers": ["mxmw"],
-                            "filter_column_name": "code",
-                            "filter_codes": ["1"],
                             "mxmw": 1.0,
+                            "warning_where": "layer.code = '1'",
                             "step_nr": 1})
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mxmw (fid integer, code char(1), geom geometry(Polygon, 4326));")

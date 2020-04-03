@@ -273,9 +273,8 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "filter_column_name": "code",
-        "filter_codes": ["1"],
-        "mxmw": 30
+        "mxmw": 30,
+        "warning_where": "layer.code = '1'"
       }
     },
     {

@@ -16,24 +16,18 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
+                      "warning_where": params["warning_where"],
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
-        sql_execute_params = {"buffer": -params["mxmw"] / 2}
-        if params["filter_column_name"] is None:
-            sql_params["filter_clause"] = "TRUE"
-        else:
-            sql_params["filter_column_name"] = params["filter_column_name"]
-            sql_params["filter_clause"] = "{filter_column_name} IN %(filter_codes)s".format(**sql_params)
-            sql_execute_params["filter_codes"] = tuple(params["filter_codes"])
 
         # Create table of warning items.
-        sql = ("CREATE TABLE {warning_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE"
-               "  {filter_clause}"
-               "  AND NOT ST_IsEmpty(ST_Buffer(geom, %(buffer)s));")
+        sql = ("CREATE TABLE {warning_table} AS\n"
+               "SELECT {fid_name}\n"
+               "FROM {layer_name} AS layer\n"
+               "WHERE\n"
+               " ({warning_where})\n"
+               " AND NOT ST_IsEmpty(ST_Buffer(geom, %(buffer)s));")
         sql = sql.format(**sql_params)
-        cursor.execute(sql, sql_execute_params)
+        cursor.execute(sql, {"buffer": -params["mxmw"] / 2})
 
         # Report warning features.
         items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])

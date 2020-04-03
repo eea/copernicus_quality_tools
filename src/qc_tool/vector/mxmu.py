@@ -25,7 +25,7 @@ def run_check(params, status):
                "SELECT {fid_name}\n"
                "FROM {layer_name} AS layer\n"
                "WHERE\n"
-               " ({error_where})"
+               " ({error_where})\n"
                " AND {area_column_name} > %(mxmu)s;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, {"mxmu": params["mxmu"]})
