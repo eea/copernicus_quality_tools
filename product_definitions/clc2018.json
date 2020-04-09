@@ -85,7 +85,7 @@
     },
     {
       "check_ident": "qc_tool.vector.epsg_clc",
-      "required": false,
+      "required": true,
       "parameters": {
         "layers": ["reference", "initial", "change"]
       }
@@ -140,13 +140,13 @@
       "required": false,
       "parameters": {
         "layers": ["change"],
-        "column_defs": [["code_18", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
+        "column_defs": [["code_12", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
                                      "211", "212", "213", "221", "222", "223", "231", "241", "242", "243", "244",
                                      "311", "312", "313", "321", "322", "323", "324", "331", "332", "333", "334", "335",
                                      "411", "412", "421", "422", "423",
                                      "511", "512", "521", "522", "523",
                                      "999"]],
-                        ["code_12", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
+                        ["code_18", ["111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142",
                                      "211", "212", "213", "221", "222", "223", "231", "241", "242", "243", "244",
                                      "311", "312", "313", "321", "322", "323", "324", "331", "332", "333", "334", "335",
                                      "411", "412", "421", "422", "423",
@@ -233,21 +233,7 @@
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["reference"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.overlap",
-      "required": false,
-      "parameters": {
-        "layers": ["initial"]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.overlap",
-      "required": false,
-      "parameters": {
-        "layers": ["change"]
+          "layers": ["reference", "initial", "change"]
       }
     },
     {
@@ -255,8 +241,8 @@
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "code_column_names": ["code_18"]
-        "exception_where": "layer.chtype = 'T'",
+        "code_column_names": ["code_18"],
+        "exception_where": "FALSE",
         "error_where": "TRUE"
       }
     },
@@ -265,8 +251,8 @@
       "required": false,
       "parameters": {
         "layers": ["initial"],
-        "code_column_names": ["code_12"]
-        "exception_where": "layer.chtype = 'T'",
+        "code_column_names": ["code_12"],
+        "exception_where": "FALSE",
         "error_where": "TRUE"
       }
     },
@@ -276,7 +262,7 @@
       "parameters": {
         "layers": ["change"],
         "code_column_names": ["code_12", "code_18"],
-        "exception_where": "FALSE",
+        "exception_where": "layer.chtype = 'T'",
         "error_where": "TRUE"
       }
     }
