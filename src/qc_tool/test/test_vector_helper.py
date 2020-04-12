@@ -5,6 +5,15 @@
 from qc_tool.test.helper import VectorCheckTestCase
 
 
+class Test_extract_srid(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.helper import extract_srid
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mylayer (geom geometry(Polygon, 4326));")
+        srid = extract_srid(cursor.connection, "mylayer")
+        self.assertEqual(4326, srid)
+
+
 class Test_PartitionedLayer(VectorCheckTestCase):
     def setUp(self):
         super().setUp()

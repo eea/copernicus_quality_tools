@@ -565,6 +565,15 @@ def column_exists(connection, table_name, column_name):
     return return_value
 
 
+def extract_srid(connection, table):
+    GEOM_COLUMN = "geom"
+    with connection.cursor() as cursor:
+        sql = ("SELECT Find_SRID(current_schema()::varchar, %s, %s);")
+        cursor.execute(sql, [table, GEOM_COLUMN])
+        srid, = cursor.fetchone()
+    return srid
+
+
 def create_pg_neighbours(connection, neighbour_table_name, pg_layer_name, pg_fid_name):
     sql_params = {"neighbour_table_name": neighbour_table_name,
                   "pg_layer_name": pg_layer_name,
@@ -621,16 +630,9 @@ class PartitionedLayer():
         self.max_vertices = max_vertices
         self.grid_size = grid_size
         if srid is None:
-            self.srid = self.extract_srid()
+            self.srid = extract_srid(connection, pg_layer_name)
         else:
             self.srid = srid
-
-    def extract_srid(self):
-        with self.connection.cursor() as cursor:
-            sql = ("SELECT Find_SRID(current_schema()::varchar, %s, 'geom');")
-            cursor.execute(sql, [self.pg_layer_name])
-            srid, = cursor.fetchone()
-        return srid
 
     def extract_extent(self):
         with self.connection.cursor() as cursor:
