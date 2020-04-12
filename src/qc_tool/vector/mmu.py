@@ -29,7 +29,6 @@ def run_check(params, status):
 
         # Prepare support data.
         partitioned_layer = PartitionedLayer(cursor.connection, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
-        partitioned_layer.make()
         neighbour_table = NeighbourTable(partitioned_layer)
         neighbour_table.make()
         marginal_property = MarginalProperty(partitioned_layer)
