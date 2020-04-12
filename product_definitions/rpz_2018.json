@@ -218,11 +218,11 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
+      "check_ident": "qc_tool.vector.gap",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "boundary_unit_column_name": "du_id"
+        "du_column_name": "du_id"
       }
     },
     {
@@ -252,7 +252,7 @@
                             OR
                              (layer.comment_18 IS NOT NULL
                               AND has_comment(layer.comment_18, ARRAY['Area size exception (inside RZ_AoI / outside UA Core Region)',
-                                                                      'Area size exception (at RZ_AoI / UA Core Region boundary)']))"
+                                                                      'Area size exception (at RZ_AoI / UA Core Region boundary)']))",
         "warning_where": "FALSE"
       }
     },

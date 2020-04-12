@@ -137,11 +137,11 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
+      "check_ident": "qc_tool.vector.gap",
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "boundary_unit_column_name": "du_id"
+        "du_column_name": "du_id"
       }
     },
     {

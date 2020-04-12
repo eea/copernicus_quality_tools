@@ -238,11 +238,11 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
+      "check_ident": "qc_tool.vector.gap",
       "required": false,
       "parameters": {
         "layers": ["n2k"],
-        "boundary_unit_column_name": "id"
+        "du_column_name": "id"
       }
     },
     {

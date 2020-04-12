@@ -557,11 +557,54 @@ def column_exists(connection, table_name, column_name):
             cursor.execute(sql)
             return_value = True
         except psycopg2.ProgrammingError as ex:
-            if ex.pgcode == psycopg2.errorcodes.UNDEFINED_COLUMN:
+            if ex.pgcode in (psycopg2.errorcodes.UNDEFINED_COLUMN,
+                             psycopg2.errorcodes.UNDEFINED_TABLE):
                 return_value = False
             else:
                 raise
     return return_value
+
+
+def create_pg_neighbours(connection, neighbour_table_name, pg_layer_name, pg_fid_name):
+    sql_params = {"neighbour_table_name": neighbour_table_name,
+                  "pg_layer_name": pg_layer_name,
+                  "pg_fid_name": pg_fid_name}
+    with connection.cursor() as cursor:
+        sql = "DROP FUNCTION IF EXISTS neighbours;"
+        cursor.execute(sql)
+        sql = ("CREATE FUNCTION neighbours(ifid integer)\n"
+               "RETURNS SETOF {pg_layer_name}\n"
+               "PARALLEL SAFE\n"
+               "STABLE\n"
+               "LANGUAGE sql\n"
+               "AS $$\n"
+               " SELECT f.*\n"
+               " FROM\n"
+               "  {neighbour_table_name} AS n\n"
+               "  INNER JOIN {pg_layer_name} AS f ON n.fidb = f.{pg_fid_name}\n"
+               " WHERE n.fida = ifid;\n"
+               "$$;")
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+
+
+def create_pg_has_comment(connection):
+    with connection.cursor() as cursor:
+        sql = "DROP FUNCTION IF EXISTS has_comment;"
+        cursor.execute(sql)
+        sql = ("CREATE FUNCTION has_comment(comment varchar, allowed_comments varchar[])\n"
+               "RETURNS boolean\n"
+               "PARALLEL SAFE\n"
+               "IMMUTABLE\n"
+               "LANGUAGE sql\n"
+               "AS $$\n"
+               " SELECT\n"
+               "  ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'),\n"
+               "                              '^\\s*(\\S*)\\s*$',\n"
+               "                              '\\1')::varchar)\n"
+               "  && allowed_comments;\n"
+               "$$;")
+        cursor.execute(sql)
 
 
 class PartitionedLayer():
@@ -569,7 +612,7 @@ class PartitionedLayer():
 
     The whole area of the layer is partitioned into tiles where every tile has no more than maximum allowed vertices.
     If some feature crosses partition boundary, it gets splitted."""
-    def __init__(self, connection, pg_layer_name, pg_fid_name, max_vertices=50000, grid_size=1):
+    def __init__(self, connection, pg_layer_name, pg_fid_name, srid=None, max_vertices=50000, grid_size=1.):
         self.connection = connection
         self.pg_layer_name = pg_layer_name
         self.pg_fid_name = pg_fid_name
@@ -577,16 +620,20 @@ class PartitionedLayer():
         self.feature_table_name = "feature_{:s}".format(pg_layer_name)
         self.max_vertices = max_vertices
         self.grid_size = grid_size
-        self.srid = None
+        if srid is None:
+            self.srid = self.extract_srid()
+        else:
+            self.srid = srid
 
-    def extract_layer_info(self):
+    def extract_srid(self):
         with self.connection.cursor() as cursor:
-            # Extract SRID.
             sql = ("SELECT Find_SRID(current_schema()::varchar, %s, 'geom');")
             cursor.execute(sql, [self.pg_layer_name])
             srid, = cursor.fetchone()
+        return srid
 
-            # Extract NPoints and bounding box.
+    def extract_extent(self):
+        with self.connection.cursor() as cursor:
             sql_params = {"pg_layer_name": self.pg_layer_name}
             sql = ("SELECT\n"
                    " ST_XMin(ex), ST_YMin(ex), ST_XMax(ex), ST_YMax(ex)\n"
@@ -599,7 +646,7 @@ class PartitionedLayer():
             xmin, xmax = xmax, xmin
         if ymin > ymax:
             ymin, ymax = ymax, ymin
-        return srid, xmin, ymin, xmax, ymax
+        return xmin, ymin, xmax, ymax
 
     def expand_box(self, xmin, ymin, xmax, ymax):
         xmin = floor((xmin - self.grid_size) / self.grid_size) * self.grid_size
@@ -608,11 +655,25 @@ class PartitionedLayer():
         ymax = ceil((ymax + self.grid_size) / self.grid_size) * self.grid_size
         return xmin, ymin, xmax, ymax
 
-    def _init_partition_table(self, xmin, ymin, xmax, ymax):
-        """Initialize support table holding partition boxes."""
+    def _create_polygon_dump(self):
+        with self.connection.cursor() as cursor:
+            sql = "DROP FUNCTION IF EXISTS polygon_dump;"
+            cursor.execute(sql)
+            sql = ("CREATE FUNCTION polygon_dump(geom geometry)\n"
+                   "RETURNS SETOF geometry\n"
+                   "PARALLEL SAFE\n"
+                   "IMMUTABLE\n"
+                   "LANGUAGE sql\n"
+                   "AS $$\n"
+                   " SELECT geom\n"
+                   " FROM (SELECT (ST_Dump(geom)).geom) AS tg\n"
+                   " WHERE ST_Dimension(geom) >= 2;\n"
+                   "$$;")
+            cursor.execute(sql)
+
+    def _create_partition_table(self):
         sql_params = {"partition_table_name": self.partition_table_name}
         with self.connection.cursor() as cursor:
-            # Create table.
             sql = ("CREATE TABLE {partition_table_name}\n"
                    " (partition_id SERIAL PRIMARY KEY,\n"
                    "  superpartition_id integer NULL DEFAULT NULL,\n"
@@ -630,7 +691,9 @@ class PartitionedLayer():
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
-            # Insert initial partition.
+    def _fill_initial_partition(self, xmin, ymin, xmax, ymax):
+        sql_params = {"partition_table_name": self.partition_table_name}
+        with self.connection.cursor() as cursor:
             sql = ("INSERT INTO {partition_table_name} (geom)\n"
                    "VALUES (ST_MakeEnvelope(%s, %s, %s, %s, %s))\n"
                    "RETURNING partition_id;")
@@ -639,8 +702,7 @@ class PartitionedLayer():
             initial_partition_id, = cursor.fetchone()
         return initial_partition_id
 
-    def _init_feature_table(self, initial_partition_id):
-        """Initialize support table holding features broken into subpartitions."""
+    def _create_feature_table(self):
         sql_params = {"pg_layer_name": self.pg_layer_name,
                       "pg_fid_name": self.pg_fid_name,
                       "feature_table_name": self.feature_table_name}
@@ -652,13 +714,6 @@ class PartitionedLayer():
                    "  geom geometry(Polygon, %s));")
             sql = sql.format(**sql_params)
             cursor.execute(sql, [self.srid])
-
-            # Copy original features from the layer.
-            sql = ("INSERT INTO {feature_table_name} (fid, partition_id, geom)\n"
-                   "SELECT {pg_fid_name}, %s, (ST_Dump(geom)).geom\n"
-                   "FROM {pg_layer_name};")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql, [initial_partition_id])
             sql = ("CREATE INDEX {feature_table_name}_fid_idx ON {feature_table_name} (fid);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
@@ -668,6 +723,18 @@ class PartitionedLayer():
             sql = ("CREATE INDEX {feature_table_name}_geom_idx ON {feature_table_name} USING GIST (geom);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
+
+    def _fill_initial_features(self, initial_partition_id):
+        sql_params = {"pg_layer_name": self.pg_layer_name,
+                      "pg_fid_name": self.pg_fid_name,
+                      "feature_table_name": self.feature_table_name}
+        with self.connection.cursor() as cursor:
+            # Copy original features from the layer.
+            sql = ("INSERT INTO {feature_table_name} (fid, partition_id, geom)\n"
+                   "SELECT {pg_fid_name}, %s, polygon_dump(geom)\n"
+                   "FROM {pg_layer_name};")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql, [initial_partition_id])
 
     def _update_npoints(self):
         sql_params = {"feature_table_name": self.feature_table_name,
@@ -758,17 +825,14 @@ class PartitionedLayer():
 
             # Split remaining features into both subpartitions.
             sql = ("INSERT INTO {feature_table_name} (fid, partition_id, geom)\n"
-                   "SELECT fid, partition_id, geom\n"
+                   "SELECT\n"
+                   " f.fid,\n"
+                   " p.partition_id,\n"
+                   " polygon_dump(ST_Intersection(f.geom, p.geom))\n"
                    "FROM\n"
-                   " (SELECT\n"
-                   "   f.fid AS fid,\n"
-                   "   p.partition_id AS partition_id,\n"
-                   "   (ST_Dump(ST_Intersection(f.geom, p.geom))).geom AS geom\n"
-                   "  FROM\n"
-                   "   {feature_table_name} AS f\n"
-                   "   INNER JOIN {partition_table_name} AS p ON f.partition_id = p.superpartition_id\n"
-                   "  WHERE p.num_vertices IS NULL) AS sq\n"
-                   "WHERE ST_Dimension(sq.geom) >= 2;")
+                   " {feature_table_name} AS f\n"
+                   " INNER JOIN {partition_table_name} AS p ON f.partition_id = p.superpartition_id\n"
+                   "WHERE p.num_vertices IS NULL;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
             log.debug("{:d} features have been splitted into subpartitions.".format(cursor.rowcount))
@@ -823,10 +887,13 @@ class PartitionedLayer():
             log.info("Layer {:s} has already been partitioned.".format(self.pg_layer_name))
         else:
             log.debug("Started partitioning layer {:s}.".format(self.pg_layer_name))
-            self.srid, xmin, ymin, xmax, ymax = self.extract_layer_info()
+            self._create_polygon_dump()
+            xmin, ymin, xmax, ymax = self.extract_extent()
             xmin, ymin, xmax, ymax = self.expand_box(xmin, ymin, xmax, ymax)
-            initial_partition_id = self._init_partition_table(xmin, ymin, xmax, ymax)
-            self._init_feature_table(initial_partition_id)
+            self._create_partition_table()
+            initial_partition_id = self._fill_initial_partition(xmin, ymin, xmax, ymax)
+            self._create_feature_table()
+            self._fill_initial_features(initial_partition_id)
             self._update_npoints()
             while True:
                 split_count = self._split_partitions()
@@ -844,13 +911,13 @@ class PartitionedLayer():
 class NeighbourTable():
     def __init__(self, partitioned_layer):
         self.partitioned_layer = partitioned_layer
-        self.neighbour_table_name = "neighbour_{:s}".format(self.partitioned_layer.pg_layer_name)
+        self.neighbour_table_name = "neighbour_{:s}".format(partitioned_layer.pg_layer_name)
 
     @property
     def connection(self):
         return self.partitioned_layer.connection
 
-    def _init_neighbour_table(self):
+    def _create_neighbour_table(self):
         sql_params = {"neighbour_table_name": self.neighbour_table_name}
         with self.connection.cursor() as cursor:
             sql = ("CREATE TABLE {neighbour_table_name}\n"
@@ -905,7 +972,7 @@ class NeighbourTable():
         else:
             log.debug("Starting creating support table of neighbours {:s}.".format(self.neighbour_table_name))
             self.partitioned_layer.make()
-            self._init_neighbour_table()
+            self._create_neighbour_table()
             self._fill()
             log.info("Support table of neighbours {:s} has just been created.".format(self.neighbour_table_name))
 
@@ -924,7 +991,7 @@ class _MetaTable():
         self.pg_fid_name = pg_fid_name
         self.meta_table_name = "meta_{:s}".format(pg_layer_name)
 
-    def _init_meta_table(self):
+    def _create_meta_table(self):
         sql_params = {"meta_table_name": self.meta_table_name,
                       "pg_layer_name": self.pg_layer_name,
                       "pg_fid_name": self.pg_fid_name}
@@ -942,17 +1009,120 @@ class _MetaTable():
         if self.is_made():
             log.info("Support meta table {:s} has already been created.".format(self.meta_table_name))
         else:
-            self._init_meta_table()
+            self._create_meta_table()
             log.info("Support meta table {:s} has just been created.".format(self.meta_table_name))
 
     def is_made(self):
         return table_exists(self.connection, self.meta_table_name)
 
 
+class _InteriorTable():
+    def __init__(self, partitioned_layer):
+        self.partitioned_layer = partitioned_layer
+        self.interior_table_name = "interior_{:s}".format(self.partitioned_layer.pg_layer_name)
+
+    @property
+    def connection(self):
+        return self.partitioned_layer.connection
+
+    def _create_interior_table(self):
+        sql_params = {"srid": self.partitioned_layer.srid,
+                      "interior_table": self.interior_table_name}
+        with self.connection.cursor() as cursor:
+            sql = ("CREATE TABLE {interior_table}\n"
+                   " (partition_id integer PRIMARY KEY,\n"
+                   "  geom geometry(MultiPolygon, {srid}));")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+            sql = ("CREATE INDEX {interior_table}_geom_idx ON {interior_table} USING GIST (geom);")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def _fill(self):
+        sql_params = {"partition_table": self.partitioned_layer.partition_table_name,
+                      "feature_table": self.partitioned_layer.feature_table_name,
+                      "interior_table": self.interior_table_name}
+        with self.connection.cursor() as cursor:
+            sql = ("INSERT INTO {interior_table}\n"
+                   "SELECT pt.partition_id, ST_Multi(ST_Union(ft.geom))\n"
+                   "FROM\n"
+                   " {partition_table} AS pt\n"
+                   " INNER JOIN {feature_table} AS ft ON pt.partition_id = ft.partition_id\n"
+                   "GROUP BY pt.partition_id;")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def make(self):
+        if self.is_made():
+            log.info("Interior table for the layer {:s} has already been created.".format(self.partitioned_layer.pg_layer_name))
+        else:
+            log.info("Started creating interior table for the layer {:s}.".format(self.partitioned_layer.pg_layer_name))
+            self.partitioned_layer.make()
+            self._create_interior_table()
+            self._fill()
+            log.info("Interior table for the layer {:s} has just been created.".format(self.partitioned_layer.pg_layer_name))
+
+    def is_made(self):
+        return table_exists(self.connection, self.interior_table_name)
+
+
+class _ExteriorTable():
+    def __init__(self, interior_table):
+        self.interior_table = interior_table
+        self.exterior_table_name = "exterior_{:s}".format(self.partitioned_layer.pg_layer_name)
+
+    @property
+    def partitioned_layer(self):
+        return self.interior_table.partitioned_layer
+
+    @property
+    def connection(self):
+        return self.partitioned_layer.connection
+
+    def _create_exterior_table(self):
+        sql_params = {"srid": self.partitioned_layer.srid,
+                      "exterior_table": self.exterior_table_name}
+        with self.connection.cursor() as cursor:
+            sql = ("CREATE TABLE {exterior_table} (partition_id integer PRIMARY KEY,\n"
+                                                 " geom geometry(MultiPolygon, {srid}));")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+            sql = ("CREATE INDEX {exterior_table}_geom_idx ON {exterior_table} USING GIST (geom);")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def _fill(self):
+        sql_params = {"partition_table": self.partitioned_layer.partition_table_name,
+                      "interior_table": self.interior_table.interior_table_name,
+                      "exterior_table": self.exterior_table_name}
+        with self.connection.cursor() as cursor:
+            sql = ("INSERT INTO {exterior_table} (partition_id, geom)\n"
+                   "SELECT pt.partition_id, ST_Multi(ST_Difference(pt.geom, it.geom))\n"
+                   "FROM\n"
+                   " {partition_table} AS pt\n"
+                   " INNER JOIN {interior_table} AS it ON pt.partition_id = it.partition_id;")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def make(self):
+        if self.is_made():
+            log.info("Exterior table for the layer {:s} has already been created.".format(self.partitioned_layer.pg_layer_name))
+        else:
+            log.info("Started creating exterior table for the layer {:s}.".format(self.partitioned_layer.pg_layer_name))
+            self.interior_table.make()
+            self._create_exterior_table()
+            self._fill()
+            log.info("Exterior table for the layer {:s} has just been created.".format(self.partitioned_layer.pg_layer_name))
+
+    def is_made(self):
+        return table_exists(self.connection, self.exterior_table_name)
+
+
 class MarginalProperty():
     def __init__(self, partitioned_layer):
         self.partitioned_layer = partitioned_layer
-        self.exterior_table_name = "exterior_{:s}".format(self.partitioned_layer.pg_layer_name)
+        interior_table = _InteriorTable(partitioned_layer)
+        self.exterior_table = _ExteriorTable(interior_table)
         self.meta_table = _MetaTable(partitioned_layer.connection,
                                      partitioned_layer.pg_layer_name,
                                      partitioned_layer.pg_fid_name)
@@ -961,44 +1131,23 @@ class MarginalProperty():
     def connection(self):
         return self.partitioned_layer.connection
 
-    def _init_meta_table(self):
-        sql_params = {"meta_table_name": self.meta_table.meta_table_name}
-        sql = ("ALTER TABLE {meta_table_name}\n"
+    def _prepare_meta_table(self):
+        sql_params = {"meta_table": self.meta_table.meta_table_name}
+        sql = ("ALTER TABLE {meta_table}\n"
                "ADD COLUMN is_marginal boolean DEFAULT NULL;")
         sql = sql.format(**sql_params)
         with self.connection.cursor() as cursor:
             cursor.execute(sql)
 
-    def _init_exterior_table(self):
-        sql_params = {"feature_table_name": self.partitioned_layer.feature_table_name,
-                      "partition_table_name": self.partitioned_layer.partition_table_name,
-                      "exterior_table_name": self.exterior_table_name}
-        with self.connection.cursor() as cursor:
-            sql = ("CREATE TABLE {exterior_table_name} AS\n"
-                   "SELECT p.partition_id, ST_Difference(p.geom, u.geom) AS geom\n"
-                   "FROM\n"
-                   " (SELECT partition_id, ST_Union(geom) AS geom\n"
-                   "  FROM {feature_table_name}\n"
-                   "  GROUP BY partition_id) AS u\n"
-                   " INNER JOIN {partition_table_name} AS p ON u.partition_id = p.partition_id;")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
-            sql = ("CREATE INDEX {exterior_table_name}_partition_id_idx ON {exterior_table_name} (partition_id);")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
-            sql = ("CREATE INDEX {exterior_table_name}_geom_idx ON {exterior_table_name} USING GIST (geom);")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
-
     def _fill(self):
-        sql_params = {"meta_table_name": self.meta_table.meta_table_name,
-                      "feature_table_name": self.partitioned_layer.feature_table_name,
-                      "exterior_table_name": self.exterior_table_name}
+        sql_params = {"meta_table": self.meta_table.meta_table_name,
+                      "feature_table": self.partitioned_layer.feature_table_name,
+                      "exterior_table": self.exterior_table.exterior_table_name}
         with self.connection.cursor() as cursor:
-            sql = ("UPDATE {meta_table_name} AS meta\n"
+            sql = ("UPDATE {meta_table} AS meta\n"
                    "SET is_marginal = EXISTS (SELECT\n"
-                   "                          FROM {feature_table_name} AS f\n"
-                   "                          INNER JOIN {exterior_table_name} AS e ON f.geom && e.geom\n"
+                   "                          FROM {feature_table} AS f\n"
+                   "                          INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
                    "                          WHERE\n"
                    "                           f.fid = meta.fid\n"
                    "                           AND ST_Dimension(ST_Intersection(f.geom, e.geom)) >= 1);")
@@ -1010,15 +1159,14 @@ class MarginalProperty():
             log.info("Marginal property for the layer {:s} has already been created.".format(self.partitioned_layer.pg_layer_name))
         else:
             log.info("Started creating marginal property for the layer {:s}.".format(self.partitioned_layer.pg_layer_name))
-            self.partitioned_layer.make()
+            self.exterior_table.make()
             self.meta_table.make()
-            self._init_meta_table()
-            self._init_exterior_table()
+            self._prepare_meta_table()
             self._fill()
             log.info("Marginal property for the layer {:s} has just been created.".format(self.partitioned_layer.pg_layer_name))
 
     def is_made(self):
-        return table_exists(self.connection, self.exterior_table_name)
+        return column_exists(self.connection, self.meta_table.meta_table_name, "is_marginal")
 
 
 class ComplexChangeProperty():
@@ -1027,21 +1175,19 @@ class ComplexChangeProperty():
         self.initial_code_column_name = initial_code_column_name
         self.final_code_column_name = final_code_column_name
         self.area_column_name = area_column_name
-        self.meta_table = _MetaTable(neighbour_table.connection, self.pg_layer_name, self.pg_fid_name)
+        self.meta_table = _MetaTable(neighbour_table.connection,
+                                     self.partitioned_layer.pg_layer_name,
+                                     self.partitioned_layer.pg_fid_name)
+
+    @property
+    def partitioned_layer(self):
+        return self.neighbour_table.partitioned_layer
 
     @property
     def connection(self):
         return self.neighbour_table.connection
 
-    @property
-    def pg_layer_name(self):
-        return self.neighbour_table.partitioned_layer.pg_layer_name
-
-    @property
-    def pg_fid_name(self):
-        return self.neighbour_table.partitioned_layer.pg_fid_name
-
-    def _init_meta_table(self):
+    def _prepare_meta_table(self):
         sql_params = {"meta_table_name": self.meta_table.meta_table_name}
         sql = ("ALTER TABLE {meta_table_name}\n"
                "  ADD COLUMN cc_id_initial integer DEFAULT NULL,\n"
@@ -1059,8 +1205,8 @@ class ComplexChangeProperty():
         # Prepare sql params.
         sql_params = {"neighbour_table_name": self.neighbour_table.neighbour_table_name,
                       "meta_table_name": self.meta_table.meta_table_name,
-                      "pg_layer_name": self.pg_layer_name,
-                      "pg_fid_name": self.pg_fid_name,
+                      "pg_layer_name": self.partitioned_layer.pg_layer_name,
+                      "pg_fid_name": self.partitioned_layer.pg_fid_name,
                       "initial_code_column_name": self.initial_code_column_name,
                       "final_code_column_name": self.final_code_column_name,
                       "cc_id_column_name": cc_id_column_name,
@@ -1107,8 +1253,8 @@ class ComplexChangeProperty():
 
     def _fill_area(self, cc_id_column_name):
         sql_params = {"meta_table_name": self.meta_table.meta_table_name,
-                      "pg_layer_name": self.pg_layer_name,
-                      "pg_fid_name": self.pg_fid_name,
+                      "pg_layer_name": self.partitioned_layer.pg_layer_name,
+                      "pg_fid_name": self.partitioned_layer.pg_fid_name,
                       "cc_id_column_name": cc_id_column_name,
                       "area_column_name": self.area_column_name}
         sql = ("UPDATE {meta_table_name} AS meta\n"
@@ -1128,12 +1274,12 @@ class ComplexChangeProperty():
 
     def make(self):
         if self.is_made():
-            log.info("Complex change properties for the layer {:s} have already been created.".format(self.pg_layer_name))
+            log.info("Complex change properties for the layer {:s} have already been created.".format(self.partitioned_layer.pg_layer_name))
         else:
-            log.info("Started creating complex change properties for the layer {:s}.".format(self.pg_layer_name))
+            log.info("Started creating complex change properties for the layer {:s}.".format(self.partitioned_layer.pg_layer_name))
             self.neighbour_table.make()
             self.meta_table.make()
-            self._init_meta_table()
+            self._prepare_meta_table()
 
             # Fill clusters for initial year and for final year.
             self._fill_cluster("cc_id_initial", self.initial_code_column_name)
@@ -1142,49 +1288,173 @@ class ComplexChangeProperty():
             # Fill complex change area by greater of initial year and final year.
             self._fill_area("cc_id_initial")
             self._fill_area("cc_id_final")
-            log.info("Complex change properties for the layer {:s} has just been created.".format(self.pg_layer_name))
+            log.info("Complex change properties for the layer {:s} has just been created.".format(self.partitioned_layer.pg_layer_name))
 
     def is_made(self):
         return column_exists(self.connection, self.meta_table.meta_table_name, "cc_area")
 
 
-def create_pg_neighbours(connection, neighbour_table_name, pg_layer_name, pg_fid_name):
-    sql_params = {"neighbour_table_name": neighbour_table_name,
-                  "pg_layer_name": pg_layer_name,
-                  "pg_fid_name": pg_fid_name}
-    with connection.cursor() as cursor:
-        sql = "DROP FUNCTION IF EXISTS neighbours;"
-        cursor.execute(sql)
-        sql = ("CREATE FUNCTION neighbours(ifid integer)\n"
-               "RETURNS SETOF {pg_layer_name}\n"
-               "PARALLEL SAFE\n"
-               "STABLE\n"
-               "LANGUAGE sql\n"
-               "AS $$\n"
-               " SELECT f.*\n"
-               " FROM\n"
-               "  {neighbour_table_name} AS n\n"
-               "  INNER JOIN {pg_layer_name} AS f ON n.fidb = f.{pg_fid_name}\n"
-               " WHERE n.fida = ifid;\n"
-               "$$;")
-        sql = sql.format(**sql_params)
-        cursor.execute(sql)
+class GapTable():
+    def __init__(self, partitioned_layer, boundary_layer_name, du_column_name):
+        self.partitioned_layer = partitioned_layer
+        self.interior_table = _InteriorTable(partitioned_layer)
+        self.boundary_layer_name = boundary_layer_name
+        self.du_column_name = du_column_name
+        self.gap_table_name = "gap_{:s}".format(partitioned_layer.pg_layer_name)
 
+    @property
+    def connection(self):
+        return self.interior_table.partitioned_layer.connection
 
-def create_pg_has_comment(connection):
-    with connection.cursor() as cursor:
-        sql = "DROP FUNCTION IF EXISTS has_comment;"
-        cursor.execute(sql)
-        sql = ("CREATE FUNCTION has_comment(comment varchar, allowed_comments varchar[])\n"
-               "RETURNS boolean\n"
-               "PARALLEL SAFE\n"
-               "IMMUTABLE\n"
-               "LANGUAGE sql\n"
-               "AS $$\n"
-               " SELECT\n"
-               "  ARRAY(SELECT regexp_replace(regexp_split_to_table(comment, ';'),\n"
-               "                              '^\\s*(\\S*)\\s*$',\n"
-               "                              '\\1')::varchar)\n"
-               "  && allowed_comments;\n"
-               "$$;")
-        cursor.execute(sql)
+    def _create_split_geom(self):
+        with self.connection.cursor() as cursor:
+            sql = "DROP FUNCTION IF EXISTS split_geom;"
+            cursor.execute(sql)
+            sql = ("CREATE FUNCTION split_geom(geom geometry, grid_size float)\n"
+                   "RETURNS SETOF geometry\n"
+                   "PARALLEL SAFE\n"
+                   "IMMUTABLE\n"
+                   "LANGUAGE plpgsql\n"
+                   "AS $$\n"
+                   "DECLARE\n"
+                   " xmin float;\n"
+                   " xmax float;\n"
+                   " ymin float;\n"
+                   " ymax float;\n"
+                   " xcenter float;\n"
+                   " ycenter float;\n"
+                   "BEGIN\n"
+                   " xmin := least(ST_XMin(geom), ST_XMax(geom));\n"
+                   " xmax := greatest(ST_XMin(geom), ST_XMax(geom));\n"
+                   " ymin := least(ST_YMin(geom), ST_YMax(geom));\n"
+                   " ymax := greatest(ST_YMin(geom), ST_YMax(geom));\n"
+                   " xmin := floor(xmin / grid_size) * grid_size;\n"
+                   " xmax := ceil(xmax / grid_size) * grid_size;\n"
+                   " ymin := floor(ymin / grid_size) * grid_size;\n"
+                   " ymax := ceil(ymax / grid_size) * grid_size;\n"
+                   " IF xmax - xmin >= ymax - ymin\n"
+                   " THEN\n"
+                   "  xcenter := floor((xmin + xmax) / 2 / grid_size) * grid_size;\n"
+                   "  IF xcenter - xmin >= grid_size\n"
+                   "  THEN\n"
+                   "   RETURN QUERY SELECT polygon_dump(ST_Intersection(ST_MakeEnvelope(xmin, ymin, xcenter, ymax, ST_SRID(geom)), geom));\n"
+                   "   RETURN QUERY SELECT polygon_dump(ST_Intersection(ST_MakeEnvelope(xcenter, ymin, xmax, ymax, ST_SRID(geom)), geom));\n"
+                   "  END IF;\n"
+                   " ELSE\n"
+                   "  ycenter := floor((ymin + ymax) / 2 / grid_size) * grid_size;\n"
+                   "  IF ycenter - ymin >= grid_size\n"
+                   "  THEN\n"
+                   "   RETURN QUERY SELECT polygon_dump(ST_Intersection(ST_MakeEnvelope(xmin, ymin, xmax, ycenter, ST_SRID(geom)), geom));\n"
+                   "   RETURN QUERY SELECT polygon_dump(ST_Intersection(ST_MakeEnvelope(xmin, ycenter, xmax, ymax, ST_SRID(geom)), geom));\n"
+                   "  END IF;\n"
+                   " END IF;\n"
+                   " RETURN;\n"
+                   "END;\n"
+                   "$$;")
+            cursor.execute(sql)
+
+    def _create_gap_table(self):
+        sql_params = {"gap_table": self.gap_table_name,
+                      "srid": self.interior_table.partitioned_layer.srid}
+        with self.connection.cursor() as cursor:
+            sql = ("CREATE TABLE {gap_table}\n"
+                   " (fid SERIAL PRIMARY KEY,\n"
+                   "  geom geometry(Polygon, {srid}));")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def _fill_initial_features(self):
+        sql_params = {"gap_table": self.gap_table_name,
+                      "boundary_table": self.boundary_layer_name}
+        if self.du_column_name is None:
+            sql = ("INSERT INTO {gap_table} (geom)\n"
+                   "SELECT polygon_dump(geom)\n"
+                   "FROM {boundary_table};")
+        else:
+            sql_params.update({"du_column": self.du_column_name,
+                               "layer_table": self.partitioned_layer.pg_layer_name})
+            sql = ("INSERT INTO {gap_table} (geom)\n"
+                   "SELECT polygon_dump(bt.geom)\n"
+                   "FROM {boundary_table} AS bt\n"
+                   "INNER JOIN (SELECT DISTINCT {du_column} FROM {layer_table}) AS dut ON bt.{du_column} = dut.{du_column};")
+        with self.connection.cursor() as cursor:
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def _split_features(self):
+        """Splits gap features having too many vertices."""
+        sql_params = {"gap_table": self.gap_table_name}
+        sql_execute_params = {"grid_size": self.partitioned_layer.grid_size,
+                              "max_vertices": self.partitioned_layer.max_vertices}
+        with self.connection.cursor() as cursor:
+            sql = ("WITH\n"
+                   " sel AS (SELECT fid AS orig_fid, split_geom(geom, %(grid_size)s) AS new_geom\n"
+                   "         FROM {gap_table}\n"
+                   "         WHERE ST_NPoints(geom) > %(max_vertices)s),\n"
+                   " ins AS (INSERT INTO {gap_table} (geom)\n"
+                   "         SELECT new_geom\n"
+                   "         FROM sel)\n"
+                   "DELETE FROM {gap_table}\n"
+                   "WHERE fid IN (SELECT orig_fid FROM sel);")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql, sql_execute_params)
+            return cursor.rowcount
+
+    def _subtract_partition(self, partition_id):
+        """Subtracts interior of the partition from the gap table."""
+        sql_params = {"gap_table": self.gap_table_name,
+                      "interior_table": self.interior_table.interior_table_name}
+        sql_execute_params = {"partition_id": partition_id}
+        with self.connection.cursor() as cursor:
+            sql = ("WITH\n"
+                   " par AS (SELECT geom\n"
+                   "         FROM {interior_table}\n"
+                   "         WHERE partition_id = %(partition_id)s),\n"
+                   " sub AS (SELECT\n"
+                   "          gt.fid AS orig_fid,\n"
+                   "          ST_Difference(gt.geom, par.geom) AS sgeom\n"
+                   "         FROM\n"
+                   "          {gap_table} AS gt\n"
+                   "          INNER JOIN par ON gt.geom && par.geom),\n"
+                   " ins AS (INSERT INTO {gap_table} (geom)\n"
+                   "         SELECT polygon_dump(sgeom)\n"
+                   "         FROM sub)\n"
+                   "DELETE FROM {gap_table}\n"
+                   "WHERE fid IN (SELECT orig_fid FROM sub);")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql, sql_execute_params)
+            return cursor.rowcount
+
+    def _subtract_all_partitions(self):
+        sql_params = {"partition_table": self.partitioned_layer.partition_table_name,
+                      "gap_table": self.gap_table_name}
+        with self.connection.cursor() as cursor:
+            sql = "SELECT partition_id FROM {partition_table} ORDER BY partition_id;"
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+            for partition_id in cursor.fetchall():
+                while True:
+                    split_count = self._split_features()
+                    print("splitcount", split_count)
+                    if split_count <= 0:
+                        break
+                self._subtract_partition(partition_id)
+            sql = "VACUUM ANALYZE {gap_table};"
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+    def make(self):
+        if self.is_made():
+            log.info("Gap table for the layer {:s} have already been created.".format(self.partitioned_layer.pg_layer_name))
+        else:
+            log.info("Started creating gap table for the layer {:s}.".format(self.partitioned_layer.pg_layer_name))
+            self.partitioned_layer.make()
+            self.interior_table.make()
+            self._create_split_geom()
+            self._create_gap_table()
+            self._fill_initial_features()
+            self._subtract_all_partitions()
+            log.info("Gap table for the layer {:s} has just been created.".format(self.partitioned_layer.pg_layer_name))
+
+    def is_made(self):
+        return table_exists(self.connection, self.gap_table_name)

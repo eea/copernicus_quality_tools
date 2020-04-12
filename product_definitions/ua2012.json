@@ -109,11 +109,11 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
+      "check_ident": "qc_tool.vector.gap",
       "required": false,
       "parameters": {
         "layers": ["reference"],
-        "boundary_unit_column_name": "fua_code"
+        "du_column_name": "fua_code"
       }
     },
     {

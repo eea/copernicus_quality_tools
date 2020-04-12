@@ -881,85 +881,92 @@ class Test_gap(VectorCheckTestCase):
         self.cursor = self.params["connection_manager"].get_connection().cursor()
         self.cursor.execute("CREATE TABLE boundary (geom geometry(Polygon, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO boundary VALUES (ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
-        self.cursor.execute("CREATE TABLE reference (geom geometry(Polygon, 4326));")
-        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
+        self.cursor.execute("INSERT INTO boundary VALUES (ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326),"
+                                                                      " ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        self.cursor.execute("CREATE TABLE reference (xfid integer, geom geometry(Polygon, 4326));")
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
+                                                         "pg_fid_name": "xfid"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
+                            "du_column_name": None,
                             "step_nr": 1})
 
     def test(self):
         from qc_tool.vector.gap import run_check
-        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(2, 2, 4, 5, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(4, 2, 5, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (2, ST_MakeEnvelope(2, 2, 4, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (3, ST_MakeEnvelope(4, 2, 5, 5, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
-        self.assertEqual(0, self.cursor.rowcount)
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.assertEqual([], self.cursor.fetchall())
 
     def test_gap_warning(self):
         from qc_tool.vector.gap import run_check
-        self.cursor.execute("INSERT INTO reference VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         self.assertIn("gap", status.messages[0])
-        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
-        self.assertEqual(1, self.cursor.rowcount)
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.assertEqual([('POLYGON((2 2,2 5,5 5,5 2,2 2),(3 3,4 3,4 4,3 4,3 3))',)], self.cursor.fetchall())
 
 
-class Test_gap_unit(VectorCheckTestCase):
+class Test_gap_du(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
         self.cursor.execute("CREATE TABLE boundary (unit CHAR(1), geom geometry(Polygon, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO boundary VALUES ('A', ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326), ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        self.cursor.execute("INSERT INTO boundary VALUES ('A', ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326),"
+                                                                           " ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
         self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(8, 8, 9, 9, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('C', ST_MakeEnvelope(10, 10, 11, 11, 4326));")
-        self.cursor.execute("CREATE TABLE reference (unit CHAR(1), geom geometry(Polygon, 4326));")
-        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference"},
+        self.cursor.execute("CREATE TABLE reference (xfid integer, unit CHAR(1), geom geometry(Polygon, 4326));")
+        self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
+                                                         "pg_fid_name": "xfid"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
-                            "boundary_unit_column_name": "unit",
+                            "du_column_name": "unit",
                             "step_nr": 1})
 
     def test(self):
-        from qc_tool.vector.gap_unit import run_check
-        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(2, 2, 4, 5, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(4, 2, 5, 5, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES ('B', ST_MakeEnvelope(6, 6, 9, 9, 4326));")
+        from qc_tool.vector.gap import run_check
+        self.cursor.execute("INSERT INTO reference VALUES (1, 'A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (2, 'A', ST_MakeEnvelope(2, 2, 4, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (3, 'A', ST_MakeEnvelope(4, 2, 5, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (4, 'B', ST_MakeEnvelope(6, 6, 9, 9, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
-        self.assertEqual(0, self.cursor.rowcount)
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.assertListEqual([], self.cursor.fetchall())
 
     def test_gap_warning(self):
-        from qc_tool.vector.gap_unit import run_check
-        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES ('A', ST_MakeEnvelope(2, 2, 5, 5, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
+        from qc_tool.vector.gap import run_check
+        self.cursor.execute("INSERT INTO reference VALUES (1, 'A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (2, 'A', ST_MakeEnvelope(2, 2, 5, 5, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (3, 'B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         self.assertIn("gap", status.messages[0])
-        self.cursor.execute("SELECT * FROM s01_reference_gap_warning;")
-        self.assertEqual(1, self.cursor.rowcount)
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.assertListEqual([('POLYGON((8 8,8 9,9 9,9 8,8 8))',)], self.cursor.fetchall())
 
-    def test_unit_warning(self):
-        from qc_tool.vector.gap_unit import run_check
-        self.cursor.execute("INSERT INTO reference VALUES ('D', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
-        self.cursor.execute("INSERT INTO reference VALUES (NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+    def test_du_warning(self):
+        from qc_tool.vector.gap import run_check
+        self.cursor.execute("INSERT INTO reference VALUES (1, 'A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (2, 'D', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (3, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT * FROM s01_reference_unit_warning;")
-        self.assertEqual(2, self.cursor.rowcount)
+        self.cursor.execute("SELECT * FROM s01_reference_du_warning;")
+        self.assertListEqual([(2,), (3,)], self.cursor.fetchall())
+
 
 class Test_mxmu(VectorCheckTestCase):
     def test(self):

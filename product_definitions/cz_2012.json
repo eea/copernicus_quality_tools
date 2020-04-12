@@ -177,11 +177,11 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.gap_unit",
+      "check_ident": "qc_tool.vector.gap",
       "required": false,
       "parameters": {
         "layers": ["status"],
-        "boundary_unit_column_name": "du"
+        "du_column_name": "du"
       }
     },
     {
