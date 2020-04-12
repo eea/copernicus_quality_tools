@@ -535,34 +535,36 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
 
 
 def table_exists(connection, table_name):
-    sql = "SELECT FROM {table_name} LIMIT 0;"
-    sql = sql.format(**{"table_name": table_name})
+    sql = ("SELECT\n"
+           "FROM information_schema.tables\n"
+           "WHERE\n"
+           " table_schema = current_schema()\n"
+           " AND table_name = %s;")
     with connection.cursor() as cursor:
-        try:
-            cursor.execute(sql)
-            return_value = True
-        except psycopg2.ProgrammingError as ex:
-            if ex.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
-                return_value = False
-            else:
-                raise
-    return return_value
+        cursor.execute(sql, [table_name])
+        if cursor.rowcount == 0:
+            return False
+        if cursor.rowcount == 1:
+            return True
+        else:
+            raise Exception("Found {:d} tables named {:s}.".format(cursor.rowcount, table_name))
 
 
 def column_exists(connection, table_name, column_name):
-    sql = "SELECT {column_name} FROM {table_name} LIMIT 0;"
-    sql = sql.format(**{"table_name": table_name, "column_name": column_name})
+    sql = ("SELECT\n"
+           "FROM information_schema.columns\n"
+           "WHERE\n"
+           " table_schema = current_schema()\n"
+           " AND table_name = %s\n"
+           " AND column_name = %s;")
     with connection.cursor() as cursor:
-        try:
-            cursor.execute(sql)
-            return_value = True
-        except psycopg2.ProgrammingError as ex:
-            if ex.pgcode in (psycopg2.errorcodes.UNDEFINED_COLUMN,
-                             psycopg2.errorcodes.UNDEFINED_TABLE):
-                return_value = False
-            else:
-                raise
-    return return_value
+        cursor.execute(sql, [table_name, column_name])
+        if cursor.rowcount == 0:
+            return False
+        if cursor.rowcount == 1:
+            return True
+        else:
+            raise Exception("Found {:d} columns named {:s} in table {:s}.".format(cursor.rowcount, column_name, table_name))
 
 
 def extract_srid(connection, table):

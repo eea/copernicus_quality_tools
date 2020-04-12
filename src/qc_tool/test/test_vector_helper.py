@@ -5,6 +5,26 @@
 from qc_tool.test.helper import VectorCheckTestCase
 
 
+class Test_table_exists(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.helper import table_exists
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        self.assertFalse(table_exists(cursor.connection, "mylayer"))
+        cursor.execute("CREATE TABLE mylayer ();")
+        self.assertTrue(table_exists(cursor.connection, "mylayer"))
+
+
+class Test_column_exists(VectorCheckTestCase):
+    def test(self):
+        from qc_tool.vector.helper import column_exists
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        self.assertFalse(column_exists(cursor.connection, "mylayer", "mycolumn"))
+        cursor.execute("CREATE TABLE mylayer (fid integer);")
+        self.assertFalse(column_exists(cursor.connection, "mylayer", "mycolumn"))
+        cursor.execute("ALTER TABLE mylayer ADD COLUMN mycolumn integer;")
+        self.assertTrue(column_exists(cursor.connection, "mylayer", "mycolumn"))
+
+
 class Test_extract_srid(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.helper import extract_srid
