@@ -31,9 +31,9 @@ class Test_mmu(VectorCheckTestCase):
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "complex_change": None,
-                            "general_where": "layer.shape_area >= 500000 OR layer.code <> 'code2'",
-                            "exception_where": "FALSE",
-                            "warning_where": "FALSE",
+                            "general_where": ["layer.shape_area >= 500000 OR layer.code <> 'code2'"],
+                            "exception_where": ["FALSE"],
+                            "warning_where": ["FALSE"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_error ORDER BY fid;")
@@ -61,9 +61,9 @@ class Test_mmu_clc_status(VectorCheckTestCase):
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "complex_change": None,
-                            "general_where": "layer.shape_area >= 250000",
-                            "exception_where": "meta.is_marginal",
-                            "warning_where": "FALSE",
+                            "general_where": ["layer.shape_area >= 250000"],
+                            "exception_where": ["meta.is_marginal"],
+                            "warning_where": ["FALSE"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
@@ -110,9 +110,9 @@ class Test_mmu_clc_change(VectorCheckTestCase):
                             "complex_change": {"initial_code_column_name": "code1",
                                                "final_code_column_name": "code2",
                                                "area_column_name": "shape_area"},
-                            "general_where": "layer.shape_area >= 50000",
-                            "exception_where": "meta.cc_area IS NOT NULL AND meta.cc_area >= 50000",
-                            "warning_where": "FALSE",
+                            "general_where": ["layer.shape_area >= 50000"],
+                            "exception_where": ["meta.cc_area IS NOT NULL AND meta.cc_area >= 50000"],
+                            "warning_where": ["FALSE"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT * FROM s01_change_general ORDER BY fid;")
@@ -187,26 +187,26 @@ class Test_mmu_ua_status(VectorCheckTestCase):
                                                          "fid_display_name": "row number"}},
                             "layers": ["reference"],
                             "complex_change": None,
-                            "general_where": " layer.code LIKE '122%'\n"
-                                             "OR\n"
-                                             " (layer.code LIKE '1%'\n"
-                                             "  AND layer.area >= 2500)\n"
-                                             "OR\n"
-                                             " (layer.code SIMILAR TO '[2-5]%'\n"
-                                             "  AND layer.area >= 10000)\n"
-                                             "OR\n"
-                                             " layer.code LIKE '9%'",
-                            "exception_where": " (meta.is_marginal\n"
-                                               "  AND layer.area >= 100)\n"
-                                               "OR\n"
-                                               " EXISTS (SELECT FROM neighbours(meta.fid) WHERE code LIKE '9%')\n"
-                                               "OR\n"
-                                               " (layer.comment IS NOT NULL\n"
-                                               "  AND has_comment(layer.comment, ARRAY['comment01',\n"
-                                               "                                       'comment02']))",
-                            "warning_where": "(layer.code NOT LIKE '122%'\n"
-                                             " AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code LIKE '122%')\n"
-                                             " AND layer.area >= 500)",
+                            "general_where": [" layer.code LIKE '122%'",
+                                              "OR",
+                                              " (layer.code LIKE '1%'",
+                                              "  AND layer.area >= 2500)",
+                                              "OR",
+                                              " (layer.code SIMILAR TO '[2-5]%'",
+                                              "  AND layer.area >= 10000)",
+                                              "OR",
+                                              " layer.code LIKE '9%'"],
+                            "exception_where": [" (meta.is_marginal",
+                                                "  AND layer.area >= 100)",
+                                                "OR",
+                                                " EXISTS (SELECT FROM neighbours(meta.fid) WHERE code LIKE '9%')",
+                                                "OR",
+                                                " (layer.comment IS NOT NULL",
+                                                "  AND has_comment(layer.comment, ARRAY['comment01',",
+                                                "                                       'comment02']))"],
+                            "warning_where": ["(layer.code NOT LIKE '122%'",
+                                              " AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code LIKE '122%')",
+                                              " AND layer.area >= 500)"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_reference_general ORDER BY fid;")
@@ -269,17 +269,17 @@ class Test_mmu_ua_change(VectorCheckTestCase):
                                                       "fid_display_name": "row number"}},
                             "layers": ["change"],
                             "complex_change": None,
-                            "general_where": " (code2 LIKE '1%' AND area >= 1000)\n"
-                                             "OR\n"
-                                             " (code2 SIMILAR TO '[2-5]%' AND area >= 2500)",
-                            "exception_where": " code1 LIKE '122%'\n"
-                                               "OR\n"
-                                               " code2 LIKE '122%'\n"
-                                               "OR\n"
-                                               " (comment IS NOT NULL\n"
-                                               "  AND has_comment(comment, ARRAY['comment01',\n"
-                                               "                                 'comment02']))",
-                            "warning_where": "FALSE",
+                            "general_where": [" (code2 LIKE '1%' AND area >= 1000)",
+                                              "OR",
+                                              " (code2 SIMILAR TO '[2-5]%' AND area >= 2500)"],
+                            "exception_where": [" code1 LIKE '122%'",
+                                                "OR",
+                                                " code2 LIKE '122%'",
+                                                "OR",
+                                                " (comment IS NOT NULL",
+                                                "  AND has_comment(comment, ARRAY['comment01',",
+                                                "                                 'comment02']))"],
+                            "warning_where": ["FALSE"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_change_general ORDER BY fid;")
@@ -296,14 +296,14 @@ class Test_mmu_n2k(VectorCheckTestCase):
         from qc_tool.vector.mmu import run_check
 
         cursor = self.params["connection_manager"].get_connection().cursor()
-        cursor.execute("CREATE TABLE n2k (fid integer,\n"
-                                         "area_ha real,\n"
-                                         "maes_4_1 integer,\n"
-                                         "maes_1_2 integer,\n"
-                                         "maes_3_2 integer,\n"
-                                         "maes_4_2 integer,\n"
-                                         "comment2 varchar(40),\n"
-                                         "geom geometry(Polygon, 4326));")
+        cursor.execute("CREATE TABLE n2k (fid integer,"
+                                        " area_ha real,"
+                                        " maes_4_1 integer,"
+                                        " maes_1_2 integer,"
+                                        " maes_3_2 integer,"
+                                        " maes_4_2 integer,"
+                                        " comment2 varchar(40),"
+                                        " geom geometry(Polygon, 4326));")
 
         # Artificial margin as a general feature.
         cursor.execute("INSERT INTO n2k VALUES (0, 0.5, NULL, 1, 100, 1000, NULL, ST_MakeEnvelope(-1, -1, 100, 100, 4326));")
@@ -342,25 +342,25 @@ class Test_mmu_n2k(VectorCheckTestCase):
                             "complex_change": {"initial_code_column_name": "maes_4_1",
                                                "final_code_column_name": "maes_4_2",
                                                "area_column_name": "area_ha"},
-                            "general_where": "layer.area_ha >= 0.5",
-                            "exception_where": " (meta.is_marginal\n"
-                                               "  AND layer.area_ha >= 0.1)\n"
-                                               "OR\n"
-                                               " (layer.maes_1_2 = 1\n"
-                                               "  AND layer.maes_3_2 NOT IN (121, 122)\n"
-                                               "  AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE maes_3_2 IN (121, 122))\n"
-                                               "  AND layer.area_ha >= 0.25)\n"
-                                               "OR\n"
-                                               " (layer.maes_3_2 IN (121, 122, 911, 912)\n"
-                                               "  AND layer.area_ha >= 0.1)\n"
-                                               "OR\n"
-                                               " (meta.cc_area IS NOT NULL\n"
-                                               "  AND meta.cc_area >= 0.5)\n"
-                                               "OR\n"
-                                               " (layer.comment2 IS NOT NULL\n"
-                                               "  AND has_comment(layer.comment2, ARRAY['comment1',\n"
-                                               "                                        'comment2']))",
-                            "warning_where": "FALSE",
+                            "general_where": ["layer.area_ha >= 0.5"],
+                            "exception_where": [" (meta.is_marginal",
+                                                "  AND layer.area_ha >= 0.1)",
+                                                "OR",
+                                                " (layer.maes_1_2 = 1",
+                                                "  AND layer.maes_3_2 NOT IN (121, 122)",
+                                                "  AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE maes_3_2 IN (121, 122))",
+                                                "  AND layer.area_ha >= 0.25)",
+                                                "OR",
+                                                " (layer.maes_3_2 IN (121, 122, 911, 912)",
+                                                "  AND layer.area_ha >= 0.1)",
+                                                "OR",
+                                                " (meta.cc_area IS NOT NULL",
+                                                "  AND meta.cc_area >= 0.5)",
+                                                "OR",
+                                                " (layer.comment2 IS NOT NULL",
+                                                "  AND has_comment(layer.comment2, ARRAY['comment1',",
+                                                "                                        'comment2']))"],
+                            "warning_where": ["FALSE"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         cursor.execute("SELECT fid FROM s01_n2k_general ORDER BY fid;")
@@ -418,22 +418,22 @@ class Test_mmu_rpz(VectorCheckTestCase):
                                                    "fid_display_name": "row number"}},
                             "layers": ["rpz"],
                             "complex_change": None,
-                            "general_where": " layer.ua IS NOT NULL\n"
-                                             "OR\n"
-                                             " layer.area_ha >= 0.5",
-                            "exception_where": " ((meta.is_marginal\n"
-                                               "   OR EXISTS (SELECT FROM neighbours(meta.fid) WHERE ua IS NOT NULL))\n"
-                                               "  AND layer.area_ha >= 0.2)\n"
-                                               "OR\n"
-                                               " (layer.code IN (1111, 1112)\n"
-                                               "  AND layer.area_ha >= 0.25)\n"
-                                               "OR\n"
-                                               " (layer.code IN (1210, 1220)\n"
-                                               "  AND layer.area_ha >= 0.1)\n"
-                                               "OR\n"
-                                               " (layer.comment IS NOT NULL\n"
-                                               "  AND has_comment(layer.comment, ARRAY['comment1']))",
-                            "warning_where": "FALSE",
+                            "general_where": [" layer.ua IS NOT NULL",
+                                              "OR",
+                                              " layer.area_ha >= 0.5"],
+                            "exception_where": [" ((meta.is_marginal",
+                                                "   OR EXISTS (SELECT FROM neighbours(meta.fid) WHERE ua IS NOT NULL))",
+                                                "  AND layer.area_ha >= 0.2)",
+                                                "OR",
+                                                " (layer.code IN (1111, 1112)",
+                                                "  AND layer.area_ha >= 0.25)",
+                                                "OR",
+                                                " (layer.code IN (1210, 1220)",
+                                                "  AND layer.area_ha >= 0.1)",
+                                                "OR",
+                                                " (layer.comment IS NOT NULL",
+                                                "  AND has_comment(layer.comment, ARRAY['comment1']))"],
+                            "warning_where": ["FALSE"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         self.cursor.execute("SELECT fid FROM s01_rpz_general ORDER BY fid;")
@@ -461,9 +461,9 @@ class Test_mmu_cz(VectorCheckTestCase):
                             "layers": ["layer_0"],
                             "code_column_names": ["code1", "code2"],
                             "complex_change": None,
-                            "general_where": "layer.fid = 1",
-                            "exception_where": "layer.fid IN (2, 3)",
-                            "warning_where": "FALSE",
+                            "general_where": ["layer.fid = 1"],
+                            "exception_where": ["layer.fid IN (2, 3)"],
+                            "warning_where": ["FALSE"],
                             "step_nr": 1})
         run_check(self.params, self.status_class())
         self.cursor.execute("SELECT fid FROM s01_mytable_general;")

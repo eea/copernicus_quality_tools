@@ -52,9 +52,9 @@ def run_check(params, status):
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "general_where": params["general_where"],
-                      "exception_where": params["exception_where"],
-                      "warning_where": params["warning_where"]}
+                      "general_where": "\n".join(params["general_where"]),
+                      "exception_where": "\n".join(params["exception_where"]),
+                      "warning_where": "\n".join(params["warning_where"])}
 
         # Create table of general items.
         sql = "CREATE TABLE {general_table} ({fid_name} integer PRIMARY KEY);"

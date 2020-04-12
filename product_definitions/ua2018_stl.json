@@ -94,9 +94,9 @@
       "parameters": {
         "layers": ["stl"],
         "complex_change": null,
-        "general_where": "layer.area >= 500 OR layer.stl <> 1",
-        "exception_where": "FALSE",
-        "warning_where": "FALSE"
+        "general_where": ["layer.area >= 500 OR layer.stl <> 1"],
+        "exception_where": ["FALSE"],
+        "warning_where": ["FALSE"]
       }
     },
     {
@@ -122,8 +122,8 @@
       "parameters": {
         "layers": ["stl"],
         "code_column_names": ["stl"],
-        "exception_where": "FALSE",
-        "error_where": "TRUE"
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
       }
     }
   ]

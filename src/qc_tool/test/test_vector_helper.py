@@ -310,7 +310,7 @@ class Test_ComplexChangeProperty(VectorCheckTestCase):
                                                  " (5, 'B', 'D',  16, NULL),"
                                                  " (6, 'C', 'D',  32, NULL),"
                                                  " (7, 'D', 'D',  64, NULL),"
-                                                 " (8, 'A', 'D', 128, NULL);\n")
+                                                 " (8, 'A', 'D', 128, NULL);")
 
     def test_fill_cluster(self):
         from qc_tool.vector.helper import PartitionedLayer
@@ -321,11 +321,11 @@ class Test_ComplexChangeProperty(VectorCheckTestCase):
         partitioned_layer = PartitionedLayer(self.connection, "mylayer", "xfid")
         neighbour_table = NeighbourTable(partitioned_layer)
         neighbour_table._create_neighbour_table()
-        cursor.execute("INSERT INTO neighbour_mylayer VALUES (1, 2, 1), (2, 1, 1),\n"
-                                                           " (2, 3, 1), (3, 2, 1),\n"
-                                                           " (3, 4, 1), (4, 3, 1),\n"
-                                                           " (4, 5, 1), (5, 4, 1),\n"
-                                                           " (5, 6, 1), (6, 5, 1),\n"
+        cursor.execute("INSERT INTO neighbour_mylayer VALUES (1, 2, 1), (2, 1, 1),"
+                                                           " (2, 3, 1), (3, 2, 1),"
+                                                           " (3, 4, 1), (4, 3, 1),"
+                                                           " (4, 5, 1), (5, 4, 1),"
+                                                           " (5, 6, 1), (6, 5, 1),"
                                                            " (6, 7, 1), (7, 6, 1);")
         meta_table = _MetaTable(self.connection, "mylayer", "xfid")
         meta_table._create_meta_table()
@@ -357,13 +357,13 @@ class Test_ComplexChangeProperty(VectorCheckTestCase):
         complex_change_property._prepare_meta_table()
         cursor = self.connection.cursor()
         cursor.execute("DELETE FROM meta_mylayer;")
-        cursor.execute("INSERT INTO meta_mylayer VALUES (1, NULL, NULL),\n"
-                                                      " (2, 2, NULL),\n"
-                                                      " (3, 2, NULL),\n"
-                                                      " (4, 2, 4),\n"
-                                                      " (5, NULL, 4),\n"
-                                                      " (6, NULL, 4),\n"
-                                                      " (7, NULL, NULL),\n"
+        cursor.execute("INSERT INTO meta_mylayer VALUES (1, NULL, NULL),"
+                                                      " (2, 2, NULL),"
+                                                      " (3, 2, NULL),"
+                                                      " (4, 2, 4),"
+                                                      " (5, NULL, 4),"
+                                                      " (6, NULL, 4),"
+                                                      " (7, NULL, NULL),"
                                                       " (8, NULL, NULL);")
         complex_change_property._fill_area("cc_id_initial")
         complex_change_property._fill_area("cc_id_final")

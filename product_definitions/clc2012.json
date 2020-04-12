@@ -202,9 +202,9 @@
       "parameters": {
         "layers": ["initial", "reference"],
         "complex_change": null,
-        "general_where": "layer.shape_area >= 250000",
-        "exception_where": "meta.is_marginal",
-        "warning_where": "FALSE"
+        "general_where": ["layer.shape_area >= 250000"],
+        "exception_where": ["meta.is_marginal"],
+        "warning_where": ["FALSE"]
       }
     },
     {
@@ -215,9 +215,9 @@
         "complex_change": {"initial_code_column_name": "code_06",
                            "final_code_column_name": "code_12",
                            "area_column_name": "shape_area"},
-        "general_where": "layer.shape_area >= 50000",
-        "exception_where": "meta.cc_area IS NOT NULL AND meta.cc_area >= 50000",
-        "warning_where": "FALSE"
+        "general_where": ["layer.shape_area >= 50000"],
+        "exception_where": ["meta.cc_area IS NOT NULL AND meta.cc_area >= 50000"],
+        "warning_where": ["FALSE"]
       }
     },
     {
@@ -243,8 +243,8 @@
       "parameters": {
         "layers": ["reference"],
         "code_column_names": ["code_12"],
-        "exception_where": "FALSE",
-        "error_where": "TRUE"
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
       }
     },
     {
@@ -253,8 +253,8 @@
       "parameters": {
         "layers": ["initial"],
         "code_column_names": ["code_06"],
-        "exception_where": "FALSE",
-        "error_where": "TRUE"
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
       }
     },
     {
@@ -263,8 +263,8 @@
       "parameters": {
         "layers": ["change"],
         "code_column_names": ["code_06", "code_12"],
-        "exception_where": "layer.chtype = 'T'",
-        "error_where": "TRUE"
+        "exception_where": ["layer.chtype = 'T'"],
+        "error_where": ["TRUE"]
       }
     }
   ]

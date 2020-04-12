@@ -150,23 +150,23 @@
       "parameters": {
         "layers": ["rpz"],
         "complex_change": null,
-        "general_where": " layer.ua IS NOT NULL
-                          OR
-                           layer.area_ha >= 0.5",
-        "exception_where": " ((meta.is_marginal
-                               OR EXISTS (SELECT FROM neighbours(meta.fid) WHERE ua IS NOT NULL))
-                              AND layer.area_ha >= 0.2)
-                            OR
-                             (layer.maes_4 IN (1111, 1112, 1113, 1120, 1210, 1220, 1230, 1240, 1310, 1320, 1400)
-                              AND layer.area_ha >= 0.25)
-                            OR
-                             (layer.maes_4 IN (1210, 1220, 6220, 9110, 9120)
-                              AND layer.area_ha >= 0.1)
-                            OR
-                             (layer.comment IS NOT NULL
-                              AND has_comment(layer.comment, ARRAY['Area size exception (inside RZ_AoI / outside UA Core Region)',
-                                                                   'Area size exception (at RZ_AoI / UA Core Region boundary)']))",
-        "warning_where": "FALSE"
+        "general_where": [" layer.ua IS NOT NULL",
+                          "OR",
+                          " layer.area_ha >= 0.5"],
+        "exception_where": [" ((meta.is_marginal",
+                            "   OR EXISTS (SELECT FROM neighbours(meta.fid) WHERE ua IS NOT NULL))",
+                            "  AND layer.area_ha >= 0.2)",
+                            "OR",
+                            " (layer.maes_4 IN (1111, 1112, 1113, 1120, 1210, 1220, 1230, 1240, 1310, 1320, 1400)",
+                            "  AND layer.area_ha >= 0.25)",
+                            "OR",
+                            " (layer.maes_4 IN (1210, 1220, 6220, 9110, 9120)",
+                            "  AND layer.area_ha >= 0.1)",
+                            "OR",
+                            " (layer.comment IS NOT NULL",
+                            "  AND has_comment(layer.comment, ARRAY['Area size exception (inside RZ_AoI / outside UA Core Region)',",
+                            "                                       'Area size exception (at RZ_AoI / UA Core Region boundary)']))"],
+        "warning_where": ["FALSE"]
       }
     },
     {
@@ -192,18 +192,18 @@
       "parameters": {
         "layers": ["rpz"],
         "code_column_names": ["maes_4"],
-        "exception_where": "(layer.ua IS NULL AND other.ua IS NULL)
-                            AND
-                            ((layer.comment IS NOT NULL
-                              AND has_comment(layer.comment, ARRAY['Braided river',
-                                                                   'Different water levels',
-                                                                   'Flooded area']))
-                             OR
-                             (other.comment IS NOT NULL
-                              AND has_comment(layer.comment, ARRAY['Braided river',
-                                                                   'Different water levels',
-                                                                   'Flooded area'])))",
-        "error_where": "(layer.ua IS NULL AND other.ua IS NULL)"
+        "exception_where": ["(layer.ua IS NULL AND other.ua IS NULL)",
+                            "AND",
+                            "((layer.comment IS NOT NULL",
+                            "  AND has_comment(layer.comment, ARRAY['Braided river',",
+                            "                                       'Different water levels',",
+                            "                                       'Flooded area']))",
+                            " OR",
+                            " (other.comment IS NOT NULL",
+                            "  AND has_comment(layer.comment, ARRAY['Braided river',",
+                            "                                       'Different water levels',",
+                            "                                       'Flooded area'])))"],
+        "error_where": ["(layer.ua IS NULL AND other.ua IS NULL)"]
       }
     }
   ]

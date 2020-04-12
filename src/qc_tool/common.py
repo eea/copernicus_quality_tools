@@ -94,7 +94,7 @@ def locate_product_definition(product_ident):
 def load_product_definition(product_ident):
     filepath = locate_product_definition(product_ident)
     data = filepath.read_text()
-    product_definition = json.loads(data, strict=False)
+    product_definition = json.loads(data)
     product_definition["product_ident"] = product_ident
     return product_definition
 
@@ -107,7 +107,7 @@ def get_product_descriptions():
             if PRODUCT_FILENAME_REGEX.match(filepath.name) is not None:
                 product_ident = filepath.stem
                 product_definition = filepath.read_text()
-                product_definition = json.loads(product_definition, strict=False)
+                product_definition = json.loads(product_definition)
                 product_description = product_definition["description"]
                 product_descriptions[product_ident] = product_description
     return product_descriptions
@@ -131,7 +131,7 @@ def copy_product_definition_to_job(job_uuid, product_ident):
 def load_product_definition_from_job(job_uuid, product_ident):
     filepath = compose_job_dir(job_uuid).joinpath("{:s}.json".format(product_ident))
     data = filepath.read_text()
-    product_definition = json.loads(data, strict=False)
+    product_definition = json.loads(data)
     product_definition["product_ident"] = product_ident
     return product_definition
 

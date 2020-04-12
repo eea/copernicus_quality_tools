@@ -253,29 +253,29 @@
         "complex_change": {"initial_code_column_name": "maes_4_06",
                            "final_code_column_name": "maes_4_12",
                            "area_column_name": "area_ha"},
-        "general_where": "layer.area_ha >= 0.5",
-        "exception_where": " (meta.is_marginal
-                              AND layer.area_ha >= 0.1)
-                            OR
-                             (layer.maes_1_12 = 1
-                              AND layer.maes_3_12 NOT IN (121, 122)
-                              AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE maes_3_12 IN (121, 122))
-                              AND layer.area_ha >= 0.25)
-                            OR
-                             (layer.maes_3_12 IN (121, 122, 911, 912)
-                              AND layer.area_ha >= 0.1)
-                            OR
-                             (meta.cc_area IS NOT NULL
-                              AND meta.cc_area >= 0.5)
-                            OR
-                             (layer.comment_12 IS NOT NULL
-                              AND has_comment(layer.comment_12, ARRAY['Area size exception (at Natura2000 AoI boundary)',
-                                                                      'Area size exception (inside Natura2000 AoI boundary)',
-                                                                      'Areas related to change',
-                                                                      'Splitted change',
-                                                                      'Braided River System',
-                                                                      'Temporal fluctuation of water level']))",
-        "warning_where": "FALSE"
+        "general_where": ["layer.area_ha >= 0.5"],
+        "exception_where": [" (meta.is_marginal",
+                            "  AND layer.area_ha >= 0.1)",
+                            "OR",
+                            " (layer.maes_1_12 = 1",
+                            "  AND layer.maes_3_12 NOT IN (121, 122)",
+                            "  AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE maes_3_12 IN (121, 122))",
+                            "  AND layer.area_ha >= 0.25)",
+                            "OR",
+                            " (layer.maes_3_12 IN (121, 122, 911, 912)",
+                            "  AND layer.area_ha >= 0.1)",
+                            "OR",
+                            " (meta.cc_area IS NOT NULL",
+                            "  AND meta.cc_area >= 0.5)",
+                            "OR",
+                            " (layer.comment_12 IS NOT NULL",
+                            "  AND has_comment(layer.comment_12, ARRAY['Area size exception (at Natura2000 AoI boundary)',",
+                            "                                          'Area size exception (inside Natura2000 AoI boundary)',",
+                            "                                          'Areas related to change',",
+                            "                                          'Splitted change',",
+                            "                                          'Braided River System',",
+                            "                                          'Temporal fluctuation of water level']))"],
+        "warning_where": ["FALSE"]
       }
     },
     {
@@ -301,8 +301,8 @@
       "parameters": {
         "layers": ["n2k"],
         "code_column_names": ["maes_4_06", "maes_4_12"],
-        "exception_where": "FALSE",
-        "error_where": "TRUE"
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
       }
     }
   ]

@@ -161,17 +161,17 @@
       "parameters": {
         "layers": ["change"],
         "complex_change": null,
-        "general_where": " (layer.code_2018 LIKE '1%' AND layer.area >= 1000)
-                          OR
-                           (layer.code_2018 SIMILAR TO '[2-5]%' AND layer.area >= 2500)",
-        "exception_where": " layer.code_2012 LIKE '122%'
-                            OR
-                             layer.code_2018 LIKE '122%'
-                            OR
-                             (layer.comment IS NOT NULL
-                              AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',
-                                                                   'Area size exception (inside Urban Atlas FUA boundary)']))",
-        "warning_where": "FALSE"
+        "general_where": [" (layer.code_2018 LIKE '1%' AND layer.area >= 1000)",
+                          "OR",
+                          " (layer.code_2018 SIMILAR TO '[2-5]%' AND layer.area >= 2500)"],
+        "exception_where": [" layer.code_2012 LIKE '122%'",
+                            "OR",
+                            " layer.code_2018 LIKE '122%'",
+                            "OR",
+                            " (layer.comment IS NOT NULL",
+                            "  AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',",
+                            "                                       'Area size exception (inside Urban Atlas FUA boundary)']))"],
+        "warning_where": ["FALSE"]
       }
     },
     {
@@ -187,8 +187,10 @@
       "parameters": {
         "layers": ["change"],
         "code_column_names": ["code_2012", "code_2018"],
-        "exception_where": "FALSE",
-        "error_where": "layer.code_2012 NOT LIKE '122%' AND layer.code_2018 NOT LIKE '122%'"
+        "exception_where": ["FALSE"],
+        "error_where": [" layer.code_2012 NOT LIKE '122%'",
+                        "AND",
+                        " layer.code_2018 NOT LIKE '122%'"]
       }
     }
   ]

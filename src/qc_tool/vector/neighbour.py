@@ -39,8 +39,8 @@ def run_check(params, status):
                       "error_pairs_table": "s{:02d}_{:s}_error_pairs".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "pair_clause": " AND ".join("layer.{0:s} = other.{0:s}".format(code_column_name)
                                                   for code_column_name in params["code_column_names"]),
-                      "exception_where": params["exception_where"],
-                      "error_where": params["error_where"]}
+                      "exception_where": "\n".join(params["exception_where"]),
+                      "error_where": "\n".join(params["error_where"])}
 
         # Create exception pairs table.
         sql = ("CREATE TABLE {exception_pairs_table} AS\n"

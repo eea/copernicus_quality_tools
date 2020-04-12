@@ -1198,8 +1198,8 @@ class Test_neighbour(VectorCheckTestCase):
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "code_column_names": ["code1", "code2"],
-                            "exception_where": "FALSE",
-                            "error_where": "TRUE",
+                            "exception_where": ["FALSE"],
+                            "error_where": ["TRUE"],
                             "step_nr": 1})
 
     def test_disjoint(self):
@@ -1250,7 +1250,7 @@ class Test_neighbour(VectorCheckTestCase):
         from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'B', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'A', 'B', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.params["error_where"] = "layer.code2 <> 'B' AND other.code2 <> 'B'"
+        self.params["error_where"] = ["layer.code2 <> 'B' AND other.code2 <> 'B'"]
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
@@ -1259,7 +1259,7 @@ class Test_neighbour(VectorCheckTestCase):
         from qc_tool.vector.neighbour import run_check
         self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'B', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
                                                          " (2, 'A', 'B', ST_MakeEnvelope(2, 0, 3, 1, 4326));")
-        self.params["error_where"] = "layer.code2 <> 'C' AND other.code2 <> 'C'"
+        self.params["error_where"] = ["layer.code2 <> 'C' AND other.code2 <> 'C'"]
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
@@ -1276,8 +1276,8 @@ class Test_neighbour_technical(VectorCheckTestCase):
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
                             "code_column_names": ["code1", "code2"],
-                            "exception_where": "layer.chtype = 'T'",
-                            "error_where": "TRUE",
+                            "exception_where": ["layer.chtype = 'T'"],
+                            "error_where": ["TRUE"],
                             "step_nr": 1})
 
     def test_non_neighbouring(self):
@@ -1334,12 +1334,12 @@ class Test_neighbour_comment(VectorCheckTestCase):
                                                    "fid_display_name": "row number"}},
                             "layers": ["rpz"],
                             "code_column_names": ["code"],
-                            "exception_where": "(layer.comment IS NOT NULL\n"
-                                               " AND has_comment(layer.comment, ARRAY['Comment 1']))\n"
-                                               "OR\n"
-                                               "(other.comment IS NOT NULL\n"
-                                               " AND has_comment(other.comment, ARRAY['Comment 1']))",
-                            "error_where": "TRUE",
+                            "exception_where": ["(layer.comment IS NOT NULL",
+                                                " AND has_comment(layer.comment, ARRAY['Comment 1']))",
+                                                "OR",
+                                                "(other.comment IS NOT NULL",
+                                                " AND has_comment(other.comment, ARRAY['Comment 1']))"],
+                            "error_where": ["TRUE"],
                             "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)

@@ -243,9 +243,9 @@
       "parameters": {
         "layers": ["vector"],
         "complex_change": null,
-        "general_where": "layer.area >= 200 OR layer.code <> '2'",
-        "exception_where": "FALSE",
-        "warning_where": "FALSE"
+        "general_where": ["layer.area >= 200 OR layer.code <> '2'"],
+        "exception_where": ["FALSE"],
+        "warning_where": ["FALSE"]
       }
     },
     {
@@ -299,8 +299,8 @@
       "parameters": {
         "layers": ["vector"],
         "code_column_names": ["code"],
-        "exception_where": "FALSE",
-        "error_where": "TRUE"
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
       }
     }
   ]
