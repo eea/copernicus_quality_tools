@@ -11,7 +11,7 @@
       "parameters": {
         "formats": [".gdb", ".gpkg", ".shp"],
         "layer_names": {
-          "rpz": "^rpz_(?P<aoi_code>du[0-9]{3})[a-z]_lclu2018_2012_v[0-9]{2}$"
+          "rpz": "^rpz_(?P<aoi_code>du[0-9]{3})[a-z]_lclu_2018_2012_v[0-9]{2}$"
         },
         "aoi_codes": ["du001", "du002", "du003", "du004", "du005", "du006", "du007", "du008", "du009",
                       "du010", "du011", "du012", "du013", "du014", "du015", "du016", "du017", "du018", "du019",
@@ -26,27 +26,25 @@
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
-        "layers": [
-          "rpz"
-        ],
+        "layers": ["rpz"],
         "required": {
           "id": "integer",
           "du_id": "string",
+          "changecode": "string",
+          "area_ha": "real",
           "maes_1_12": "integer",
           "maes_2_12": "integer",
           "maes_3_12": "integer",
           "maes_4_12": "integer",
+          "ua_12": "string",
+          "nodata_12": "integer",
+          "comment_12": "string",
           "maes_1_18": "integer",
           "maes_2_18": "integer",
           "maes_3_18": "integer",
           "maes_4_18": "integer",
-          "changecode": "string",
-          "ua_12": "string",
           "ua_18": "string",
-          "area_ha": "real",
-          "nodata_12": "integer",
           "nodata_18": "integer",
-          "comment_12": "string",
           "comment_18": "string"
         },
         "ignored": [
@@ -88,7 +86,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "exclude_column_name": "ua",
+        "exclude_column_name": "ua_18",
         "column_defs": [["nodata_12", [0, 1]],
                         ["nodata_18", [0, 1]],
                         ["maes_1_12", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]],
@@ -134,7 +132,7 @@
                         ["maes_2_18", [0,
                                        11, 12, 13, 14,
                                        21, 22, 23,
-                                       31, 32, 33 , 34, 35,
+                                       31, 32, 33, 34, 35,
                                        41, 42,
                                        51, 52,
                                        61, 62, 63,
@@ -176,7 +174,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "nodata_column_name": "nodata_2012",
+        "nodata_column_name": "nodata_12",
         "nodata_value": 1,
         "dep_column_names": ["maes_1_12", "maes_2_12", "maes_3_12", "maes_4_12"],
         "dep_value": 0
@@ -187,7 +185,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "nodata_column_name": "nodata_2018",
+        "nodata_column_name": "nodata_18",
         "nodata_value": 1,
         "dep_column_names": ["maes_1_18", "maes_2_18", "maes_3_18", "maes_4_18"],
         "dep_value": 0
@@ -233,11 +231,11 @@
         "complex_change": {"initial_code_column_name": "maes_4_12",
                            "final_code_column_name": "maes_4_18",
                            "area_column_name": "area_ha"},
-        "general_where": [" layer.ua IS NOT NULL",
+        "general_where": [" layer.ua_18 IS NOT NULL",
                           "OR",
                           " layer.area_ha >= 0.5"],
          "exception_where": [" ((meta.is_marginal",
-                             "   OR EXISTS (SELECT FROM neighbours(meta.fid) WHERE ua IS NOT NULL))",
+                             "   OR EXISTS (SELECT FROM neighbours(meta.fid) WHERE ua_18 IS NOT NULL))",
                              "  AND layer.area_ha >= 0.2)",
                              "OR",
                              " ((layer.maes_1_12 = 1 OR layer.maes_1_18 = 1)",
@@ -281,7 +279,7 @@
         "code_column_names": ["maes_4_12", "maes_4_18"],
         "exception_where": [" (layer.ua_18 IS NULL AND other.ua_18 IS NULL)",
                             "AND",
-                            " (layer.ua_12 IS NULL = layer.ua_12 IS NULL)",
+                            " ((layer.ua_12 IS NULL) = (layer.ua_12 IS NULL))",
                             "AND",
                             " ((layer.comment_12 IS NOT NULL",
                             "   AND has_comment(layer.comment_12, ARRAY['Braided river',",
@@ -292,9 +290,9 @@
                             "   AND has_comment(layer.comment_18, ARRAY['Braided river',",
                             "                                           'Different water levels',",
                             "                                           'Flooded area'])))"],
-        "error_where": [" (layer.ua IS NULL AND other.ua IS NULL)",
+        "error_where": [" (layer.ua_18 IS NULL AND other.ua_18 IS NULL)",
                         "AND",
-                        " (layer.ua_12 IS NULL = layer.ua_12 IS NULL)"]
+                        " ((layer.ua_12 IS NULL) = (layer.ua_12 IS NULL))"]
       }
     }
   ]

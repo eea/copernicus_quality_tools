@@ -43,7 +43,7 @@ class Test_n2k(ProductTestCase):
         self.assertListEqual(expected_step_results, step_results)
 
 
-class Test_rpz(ProductTestCase):
+class Test_rpz_2012(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_LCLU2012_DU007T.zip")
         expected_step_results = ["ok"] * 16
@@ -51,6 +51,18 @@ class Test_rpz(ProductTestCase):
         expected_step_results[5] = "skipped"
 
         job_result = dispatch(self.job_uuid, "user_name", filepath, "rpz_2012", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(expected_step_results, step_results)
+
+
+class Test_rpz_2018(ProductTestCase):
+    def test(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_DU001B_lclu_2018_2012_v01.gpkg.zip")
+        expected_step_results = ["ok"] * 18
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "rpz_2018", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
