@@ -865,15 +865,12 @@ class PartitionedLayer():
             cursor.execute(sql)
             log.debug("Feature table {:s} has been vacuumed.".format(self.feature_table_name))
 
-            # Delete all partitions containing no feature.
-            # This query deletes not only all superpartitions
-            # from which features have just been deleted,
-            # but also these subpartitions where no feature has been delegated to.
-            sql = ("DELETE FROM {partition_table_name} AS pt\n"
+            # Delete all superpartitions.
+            sql = ("DELETE FROM {partition_table_name} AS superpt\n"
                    "WHERE\n"
-                   " NOT EXISTS (SELECT\n"
-                   "             FROM {feature_table_name} AS ft\n"
-                   "             WHERE pt.partition_id = ft.partition_id);")
+                   " EXISTS (SELECT\n"
+                   "         FROM {partition_table_name} AS subpt\n"
+                   "         WHERE superpt.partition_id = subpt.superpartition_id);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
             log.debug("{:d} superpartitions have been deleted.".format(cursor.rowcount))
@@ -1101,10 +1098,10 @@ class _ExteriorTable():
                       "exterior_table": self.exterior_table_name}
         with self.connection.cursor() as cursor:
             sql = ("INSERT INTO {exterior_table} (partition_id, geom)\n"
-                   "SELECT pt.partition_id, ST_Multi(ST_Difference(pt.geom, it.geom))\n"
+                   "SELECT pt.partition_id, ST_Multi(COALESCE(ST_Difference(pt.geom, it.geom), pt.geom))\n"
                    "FROM\n"
                    " {partition_table} AS pt\n"
-                   " INNER JOIN {interior_table} AS it ON pt.partition_id = it.partition_id;")
+                   " LEFT JOIN {interior_table} AS it ON pt.partition_id = it.partition_id;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 

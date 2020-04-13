@@ -39,7 +39,7 @@
                      "maes_3_18": "integer",
                      "maes_4_18": "integer",
                      "comment_18": "string",
-                     "nodata_18": "integer"}
+                     "nodata_18": "integer"},
         "ignored": ["shape_area", "shape_length"]
       }
     },

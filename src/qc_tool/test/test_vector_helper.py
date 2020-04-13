@@ -182,7 +182,6 @@ class Test_NeighbourTable(VectorCheckTestCase):
         super().setUp()
         self.connection = self.params["connection_manager"].get_connection()
         cursor = self.connection.cursor()
-        cursor.execute("CREATE TABLE mylayer (xfid integer, geom geometry(Polygon, 4326));")
         cursor.execute("CREATE TABLE feature_mylayer (fid integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO feature_mylayer VALUES (1, ST_MakeEnvelope(0, 0, 1.1, 1, 4326)),"
                                                          " (2, ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
@@ -193,7 +192,7 @@ class Test_NeighbourTable(VectorCheckTestCase):
     def test_fill(self):
         from qc_tool.vector.helper import PartitionedLayer
         from qc_tool.vector.helper import NeighbourTable
-        partitioned_layer = PartitionedLayer(self.connection, "mylayer", "xfid")
+        partitioned_layer = PartitionedLayer(self.connection, "mylayer", "xfid", srid=4326)
         neighbour_table = NeighbourTable(partitioned_layer)
         neighbour_table._create_neighbour_table()
         neighbour_table._fill()
@@ -247,6 +246,20 @@ class Test_InteriorTable(VectorCheckTestCase):
                               (5, 'MULTIPOLYGON(((10 1,10 2,11 2,11 1,10 1)),((19 1,19 2,20 2,20 1,19 1)))')],
                              cursor.fetchall())
 
+    def test_empty_interior(self):
+        from qc_tool.vector.helper import _InteriorTable
+        from qc_tool.vector.helper import PartitionedLayer
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE partition_mylayer (partition_id integer, geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO partition_mylayer VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        cursor.execute("CREATE TABLE feature_mylayer (partition_id integer, geom geometry(Polygon, 4326));")
+        partitioned_layer = PartitionedLayer(cursor.connection, "mylayer", "xfid", srid=4326)
+        interior_table = _InteriorTable(partitioned_layer)
+        interior_table._create_interior_table()
+        interior_table._fill()
+        cursor.execute("SELECT partition_id, ST_AsText(geom) FROM interior_mylayer ORDER BY partition_id;")
+        self.assertListEqual([], cursor.fetchall())
+
 
 class Test_ExteriorTable(VectorCheckTestCase):
     def test(self):
@@ -271,13 +284,28 @@ class Test_ExteriorTable(VectorCheckTestCase):
                               (5, 'MULTIPOLYGON(((11 2,19 2,19 1,11 1,11 2)))')],
                              cursor.fetchall())
 
+    def test_empty_interior(self):
+        from qc_tool.vector.helper import _ExteriorTable
+        from qc_tool.vector.helper import _InteriorTable
+        from qc_tool.vector.helper import PartitionedLayer
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE partition_mylayer (partition_id integer, geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO partition_mylayer VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        cursor.execute("CREATE TABLE interior_mylayer (partition_id integer, geom geometry(MultiPolygon, 4326));")
+        partitioned_layer = PartitionedLayer(cursor.connection, "mylayer", "xfid", srid=4326)
+        interior_table = _InteriorTable(partitioned_layer)
+        exterior_table = _ExteriorTable(interior_table)
+        exterior_table._create_exterior_table()
+        exterior_table._fill()
+        cursor.execute("SELECT partition_id, ST_AsText(geom) FROM exterior_mylayer ORDER BY partition_id;")
+        self.assertListEqual([(1, 'MULTIPOLYGON(((0 0,0 1,1 1,1 0,0 0)))')], cursor.fetchall())
+
 
 class Test_MarginalProperty(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.helper import MarginalProperty
         from qc_tool.vector.helper import PartitionedLayer
         cursor = self.params["connection_manager"].get_connection().cursor()
-        #cursor.execute("CREATE TABLE mylayer (xfid integer, geom geometry(Polygon, 4326));")
         cursor.execute("CREATE TABLE meta_mylayer (fid integer);")
         cursor.execute("CREATE TABLE feature_mylayer (fid integer, geom geometry(Polygon, 4326));")
         cursor.execute("INSERT INTO feature_mylayer VALUES (2, ST_MakeEnvelope(1, 1, 2, 2, 4326)),"
