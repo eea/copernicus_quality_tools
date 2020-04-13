@@ -31,7 +31,7 @@ class Test_clc_status(ProductTestCase):
                          "Job result returned by dispatch() must be the same as job result stored in json file.")
 
 
-class Test_n2k(ProductTestCase):
+class Test_n2k_2012(ProductTestCase):
     def test(self):
         filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip")
         expected_step_results = ["ok"] * 16
@@ -39,6 +39,21 @@ class Test_n2k(ProductTestCase):
         expected_step_results[5] = "skipped"
 
         job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k_2012", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(expected_step_results, step_results)
+
+
+# FIXME: remove the skip after test product is in place.
+import unittest
+@unittest.skip("Missing test product.")
+class Test_n2k_2018(ProductTestCase):
+    def test(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_????????.zip")
+        expected_step_results = ["ok"] * 16
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k_2018", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
