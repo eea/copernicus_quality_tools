@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-DESCRIPTION = "Minimum mapping width, Urban Atlas."
+DESCRIPTION = "Minimum mapping width"
 IS_SYSTEM = False
 
 

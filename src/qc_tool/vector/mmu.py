@@ -5,7 +5,7 @@
 import logging
 
 
-DESCRIPTION = "Minimum mapping unit, Coastal zones."
+DESCRIPTION = "Minimum mapping unit"
 IS_SYSTEM = False
 
 
