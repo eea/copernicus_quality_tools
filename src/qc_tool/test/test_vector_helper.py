@@ -300,6 +300,23 @@ class Test_ExteriorTable(VectorCheckTestCase):
         cursor.execute("SELECT partition_id, ST_AsText(geom) FROM exterior_mylayer ORDER BY partition_id;")
         self.assertListEqual([(1, 'MULTIPOLYGON(((0 0,0 1,1 1,1 0,0 0)))')], cursor.fetchall())
 
+    def test_empty_exterior(self):
+        from qc_tool.vector.helper import _ExteriorTable
+        from qc_tool.vector.helper import _InteriorTable
+        from qc_tool.vector.helper import PartitionedLayer
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE partition_mylayer (partition_id integer, geom geometry(Polygon, 4326));")
+        cursor.execute("INSERT INTO partition_mylayer VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        cursor.execute("CREATE TABLE interior_mylayer (partition_id integer, geom geometry(MultiPolygon, 4326));")
+        cursor.execute("INSERT INTO interior_mylayer VALUES (1, ST_Multi(ST_MakeEnvelope(0, 0, 1, 1, 4326)));")
+        partitioned_layer = PartitionedLayer(cursor.connection, "mylayer", "xfid", srid=4326)
+        interior_table = _InteriorTable(partitioned_layer)
+        exterior_table = _ExteriorTable(interior_table)
+        exterior_table._create_exterior_table()
+        exterior_table._fill()
+        cursor.execute("SELECT partition_id, ST_AsText(geom) FROM exterior_mylayer ORDER BY partition_id;")
+        self.assertListEqual([], cursor.fetchall())
+
 
 class Test_MarginalProperty(VectorCheckTestCase):
     def test(self):

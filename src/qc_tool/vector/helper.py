@@ -1098,10 +1098,19 @@ class _ExteriorTable():
                       "exterior_table": self.exterior_table_name}
         with self.connection.cursor() as cursor:
             sql = ("INSERT INTO {exterior_table} (partition_id, geom)\n"
-                   "SELECT pt.partition_id, ST_Multi(COALESCE(ST_Difference(pt.geom, it.geom), pt.geom))\n"
+                   "SELECT\n"
+                   " partition_id,\n"
+                   " ST_Multi(geom)\n"
                    "FROM\n"
-                   " {partition_table} AS pt\n"
-                   " LEFT JOIN {interior_table} AS it ON pt.partition_id = it.partition_id;")
+                   " (SELECT\n"
+                   "   pt.partition_id AS partition_id,\n"
+                   "   COALESCE(ST_Difference(pt.geom, it.geom), pt.geom) AS geom\n"
+                   "  FROM\n"
+                   "   {partition_table} AS pt\n"
+                   "   LEFT JOIN {interior_table} AS it ON pt.partition_id = it.partition_id\n"
+                   " ) AS dt\n"
+                   "WHERE\n"
+                   " NOT ST_IsEmpty(geom);")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
