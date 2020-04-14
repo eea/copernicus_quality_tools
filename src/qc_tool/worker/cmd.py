@@ -22,10 +22,10 @@ log = logging.getLogger(__name__)
 
 def init_logging(job_dir, log_filename=LOG_FILENAME):
     formatter = logging.Formatter(fmt=LOG_FORMAT, style="{", datefmt=LOG_TIME_FORMAT)
-    # All log timestamps shoudl be in UTC.
+    # All log timestamps should be in UTC.
     formatter.converter = time.gmtime
     # Every job has its own log located in its job dir.
-    handler = FileHandler(job_dir.joinpath(log_filename))
+    handler = logging.FileHandler(job_dir.joinpath(log_filename))
     handler.setFormatter(formatter)
 
 
