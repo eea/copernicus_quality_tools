@@ -1,4 +1,4 @@
-FROM ubuntu:disco
+FROM ubuntu:eoan
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
