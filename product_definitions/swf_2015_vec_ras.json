@@ -264,8 +264,8 @@
       "parameters": {
         "layers": ["vector"],
         "mmw": 10,
-        "exception_where": "FALSE",
-        "warning_where": "layer.code = '2'"
+        "general_where": "layer.code <> '2'",
+        "exception_where": "FALSE"
       }
     },
     {

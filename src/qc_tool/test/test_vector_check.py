@@ -1008,8 +1008,8 @@ class Test_mmw(VectorCheckTestCase):
                                                    "fid_display_name": "row number"}},
                             "layers": ["mmw"],
                             "mmw": 1.0,
+                            "general_where": "FALSE",
                             "exception_where": "FALSE",
-                            "warning_where": "TRUE",
                             "step_nr": 1})
 
     def test(self):
@@ -1038,7 +1038,7 @@ class Test_mmw(VectorCheckTestCase):
         cursor.execute("INSERT INTO mmw VALUES (3, '2', ST_MakeEnvelope(0, 0, 3, 0.999, 4326));")
         cursor.execute("INSERT INTO mmw VALUES (4, '2', ST_MakeEnvelope(0, 0, 3, 1.001, 4326));")
 
-        self.params["warning_where"] = "layer.code = '2'"
+        self.params["general_where"] = "layer.code IS NULL OR layer.code = '1'"
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)

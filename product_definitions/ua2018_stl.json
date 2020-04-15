@@ -105,8 +105,8 @@
       "parameters": {
         "layers": ["stl"],
         "mmw": 10,
-        "exception_where": "FALSE",
-        "warning_where": "layer.stl = 1"
+        "general_where": "layer.stl <> 1",
+        "exception_where": "FALSE"
       }
     },
     {

@@ -16,8 +16,8 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
+                      "general_where": params["general_where"],
                       "exception_where": params["exception_where"],
-                      "warning_where": params["warning_where"],
                       "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
@@ -25,9 +25,10 @@ def run_check(params, status):
         # Create table of general items.
         sql = ("CREATE TABLE {general_table} AS\n"
                "SELECT {fid_name}\n"
-               "FROM {layer_name}\n"
+               "FROM {layer_name} AS layer\n"
                "WHERE\n"
-               " ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) = 1;")
+               " ({general_where})\n"
+               " OR ST_NumGeometries(ST_Buffer(geom, %(buffer)s)) = 1;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, {"buffer": -params["mmw"] / 2})
 
@@ -59,8 +60,7 @@ def run_check(params, status):
                " LEFT JOIN {exception_table} AS exc ON layer.{fid_name} = exc.{fid_name}\n"
                "WHERE\n"
                " gen.{fid_name} IS NULL\n"
-               " AND exc.{fid_name} IS NULL\n"
-               " AND ({warning_where});")
+               " AND exc.{fid_name} IS NULL;")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 

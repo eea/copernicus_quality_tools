@@ -152,8 +152,8 @@
       "parameters": {
         "layers": ["reference"],
         "mmw": 10.0,
-        "exception_where": "layer.code_2012 LIKE '122%'",
-        "warning_where": "TRUE"
+        "general_where": "FALSE",
+        "exception_where": "layer.code_2012 LIKE '122%'"
       }
     },
     {

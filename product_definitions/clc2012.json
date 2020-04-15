@@ -226,8 +226,8 @@
       "parameters": {
         "layers": ["reference", "initial", "change"],
         "mmw": 100.0,
-        "exception_where": "FALSE",
-        "warning_where": "TRUE"
+        "general_where": "FALSE",
+        "exception_where": "FALSE"
       }
     },
     {

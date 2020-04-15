@@ -175,8 +175,8 @@
       "parameters": {
         "layers": ["rpz"],
         "mmw": 10.0,
-        "exception_where": "FALSE",
-        "warning_where": "TRUE"
+        "general_where": "FALSE",
+        "exception_where": "FALSE"
       }
     },
     {
