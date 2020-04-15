@@ -13,7 +13,7 @@
         "layer_names": {
           "n2k": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"
         },
-        "boundary_source": "boundary_n2k.shp",
+        "boundary_source": "boundary_n2k.gpkg",
         "reference_year": "2018"
       }
     },
