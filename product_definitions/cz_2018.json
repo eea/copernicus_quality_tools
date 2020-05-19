@@ -190,9 +190,7 @@
       "parameters": {
         "layers": ["status"],
         "complex_change": null,
-        "general_where": [" layer.area_ha >= 25",
-                          "OR",
-                          " (layer.code_4_18 NOT IN (7230, 8420) AND layer.area_ha >= 0.5)"],
+        "general_where": [" layer.area_ha >= 0.5"],
         "exception_where": [" (meta.is_marginal",
                             "  AND layer.area_ha >= 0.1)",
                             "OR",
