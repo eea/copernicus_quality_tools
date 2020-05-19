@@ -25,6 +25,8 @@ INSPIRE_TEST_RUN_TIMEOUT = 300
 INSPIRE_POLL_INTERVAL = 20
 INSPIRE_MAX_RETRIES = 3
 
+PARTITION_MAX_VERTICES = 50000
+
 
 log = logging.getLogger(__name__)
 
@@ -225,10 +227,11 @@ class LayerDefsBuilder():
 
     def extract_all_layers(self):
         layer_index = 0
-        for info in self.layer_infos:
+        for layer_info in self.layer_infos:
             layer_index += 1
             layer_alias = "layer_{:d}".format(layer_index)
-            self.layer_defs[layer_alias] = info
+            layer_info["layer_alias"] = layer_alias
+            self.layer_defs[layer_alias] = layer_info
 
     def extract_layer_def(self, regex, layer_alias):
         if self.tpl_params:
@@ -246,6 +249,7 @@ class LayerDefsBuilder():
 
         # Pop the layer info from the source list.
         layer_info = self.layer_infos.pop(self.layer_infos.index(matched_infos[0]))
+        layer_info["layer_alias"] = layer_alias
 
         # Add regex groups to layer info.
         layer_info["groups"] = regex.search(layer_info["src_layer_name"]).groupdict()
@@ -623,7 +627,7 @@ class PartitionedLayer():
 
     The whole area of the layer is partitioned into tiles where every tile has no more than maximum allowed vertices.
     If some feature crosses partition boundary, it gets splitted."""
-    def __init__(self, connection, pg_layer_name, pg_fid_name, srid=None, max_vertices=50000, grid_size=1.):
+    def __init__(self, connection, pg_layer_name, pg_fid_name, srid=None, max_vertices=PARTITION_MAX_VERTICES, grid_size=1.):
         self.connection = connection
         self.pg_layer_name = pg_layer_name
         self.pg_fid_name = pg_fid_name

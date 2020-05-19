@@ -94,7 +94,7 @@ class Test_swf_vec_ras(ProductTestCase):
         job_result = dispatch(self.job_uuid, "user_name", filepath, "swf_2015_vec_ras", (17,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
-        self.assertListEqual(['Layer swf_2015_vec_fr_3035_123_pt01 has error features with row number: 10.'],
+        self.assertListEqual(['Layer vector has error features with row number: 10.'],
                              job_result["steps"][20]["messages"])
 
 
@@ -135,6 +135,18 @@ class Test_ua_change_2012_2018(ProductTestCase):
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
+
+    def test_very_long_layer_name(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "UK568L1_CHESHIRE_WEST_AND_CHESTER_change_2012_2018.zip")
+        expected_step_results = ["ok"] * 16
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.maxDiff = None
+        self.assertListEqual(expected_step_results, step_results)
+
 
 class Test_ua2018_stl(ProductTestCase):
     def test_gpkg(self):

@@ -415,17 +415,20 @@ class Test_import2pg(VectorCheckTestCase):
         from qc_tool.vector.import2pg import run_check
         gdb_dir = TEST_DATA_DIR.joinpath("vector", "clc", "clc2012_mt.gdb")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": gdb_dir,
-                                                       "src_layer_name": "clc06_mt"},
+                                                       "src_layer_name": "clc06_mt",
+                                                       "layer_alias": "layer_0"},
                                            "layer_1": {"src_filepath": gdb_dir,
-                                                       "src_layer_name": "clc12_mt"}},
+                                                       "src_layer_name": "clc12_mt",
+                                                       "layer_alias": "layer_1"}},
                             "layers": ["layer_0", "layer_1"]})
         status = self.status_class()
         run_check(self.params, status)
+        print(status)
 
         self.assertEqual("ok", status.status)
-        self.assertEqual("clc06_mt", self.params["layer_defs"]["layer_0"]["pg_layer_name"])
+        self.assertEqual("layer_0", self.params["layer_defs"]["layer_0"]["pg_layer_name"])
         self.assertEqual("objectid", self.params["layer_defs"]["layer_0"]["pg_fid_name"])
-        self.assertEqual("clc12_mt", self.params["layer_defs"]["layer_1"]["pg_layer_name"])
+        self.assertEqual("layer_1", self.params["layer_defs"]["layer_1"]["pg_layer_name"])
         self.assertEqual("objectid", self.params["layer_defs"]["layer_1"]["pg_fid_name"])
 
         cur = self.params["connection_manager"].get_connection().cursor()
@@ -438,7 +441,8 @@ class Test_import2pg(VectorCheckTestCase):
         from qc_tool.vector.import2pg import run_check
         bad_filepath = TEST_DATA_DIR.joinpath("raster", "checks", "r11", "test_raster1.tif")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": bad_filepath,
-                                                       "src_layer_name": "irrelevant_layer"}},
+                                                       "src_layer_name": "irrelevant_layer",
+                                                       "layer_alias": "layer_0"}},
                             "layers": ["layer_0"]})
         status = self.status_class()
         run_check(self.params, status)
@@ -449,7 +453,8 @@ class Test_import2pg(VectorCheckTestCase):
         from qc_tool.vector.import2pg import run_check
         shp_filepath = TEST_DATA_DIR.joinpath("vector", "checks", "import2pg", "field_overflow_example.shp")
         self.params.update({"layer_defs": {"layer_0": {"src_filepath": shp_filepath,
-                                                       "src_layer_name": "field_overflow_example"}},
+                                                       "src_layer_name": "field_overflow_example",
+                                                       "layer_alias": "layer_0"}},
                             "layers": ["layer_0"]})
         status = self.status_class()
         run_check(self.params, status)
@@ -1149,12 +1154,14 @@ class Test_overlap(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer_1 (fid integer, geom geometry(Polygon, 4326));")
-        self.cursor.execute("CREATE TABLE test_layer_2 (fid integer, geom geometry(Polygon, 4326));")
-        self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "test_layer_1",
+        self.cursor.execute("CREATE TABLE layer_1 (fid integer, geom geometry(Polygon, 4326));")
+        self.cursor.execute("CREATE TABLE layer_2 (fid integer, geom geometry(Polygon, 4326));")
+        self.params.update({"layer_defs": {"layer_1": {"pg_layer_name": "layer_1",
                                                        "pg_fid_name": "fid",
-                                                       "fid_display_name": "row number"},
-                                           "layer_2": {"pg_layer_name": "test_layer_2",
+                                                       "fid_display_name": "row number",
+                                                       "layer_alias": "layer_1"},
+                                           "layer_2": {"pg_layer_name": "layer_2",
+                                                       "layer_alias": "layer_2",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_1", "layer_2"],
@@ -1162,11 +1169,11 @@ class Test_overlap(VectorCheckTestCase):
 
     def test_non_overlapping(self):
         from qc_tool.vector.overlap import run_check
-        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+        self.cursor.execute("INSERT INTO layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                            " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
                                                            " (3, ST_MakeEnvelope(3, 1, 4, 2, 4326)),"
                                                            " (4, ST_MakeEnvelope(4, 1, 5, 2, 4326));")
-        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+        self.cursor.execute("INSERT INTO layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                            " (2, ST_MakeEnvelope(2, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
@@ -1174,17 +1181,17 @@ class Test_overlap(VectorCheckTestCase):
 
     def test_overlapping_fails(self):
         from qc_tool.vector.overlap import run_check
-        self.cursor.execute("INSERT INTO test_layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+        self.cursor.execute("INSERT INTO layer_1 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                            " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326));")
-        self.cursor.execute("INSERT INTO test_layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+        self.cursor.execute("INSERT INTO layer_2 VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
                                                            " (5, ST_MakeEnvelope(0.9, 0, 2, 1, 4326)),"
                                                            " (6, ST_MakeEnvelope(0.8, 0, 3, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT fid FROM s01_test_layer_1_error ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_layer_1_error ORDER BY fid;")
         self.assertListEqual([(1,), (5,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT fid FROM s01_test_layer_2_error ORDER BY fid;")
+        self.cursor.execute("SELECT fid FROM s01_layer_2_error ORDER BY fid;")
         self.assertListEqual([(1,), (5,), (6,)], self.cursor.fetchall())
 
 
@@ -1270,8 +1277,8 @@ class Test_neighbour_technical(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.cursor = self.params["connection_manager"].get_connection().cursor()
-        self.cursor.execute("CREATE TABLE test_layer (fid integer, code1 char(1), code2 char(1), chtype char(1), geom geometry(Polygon, 4326));")
-        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "test_layer",
+        self.cursor.execute("CREATE TABLE layer_0 (fid integer, code1 char(1), code2 char(1), chtype char(1), geom geometry(Polygon, 4326));")
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "layer_0",
                                                        "pg_fid_name": "fid",
                                                        "fid_display_name": "row number"}},
                             "layers": ["layer_0"],
@@ -1282,39 +1289,39 @@ class Test_neighbour_technical(VectorCheckTestCase):
 
     def test_non_neighbouring(self):
         from qc_tool.vector.neighbour import run_check
-        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 1.5, 1, 4326)),"
-                                                         " (2, 'A', 'A', 'R', ST_MakeEnvelope(2, 0, 2.5, 1, 4326)),"
-                                                         " (3, 'A', 'A', 'R', ST_MakeEnvelope(3, 0, 3.5, 1, 4326));")
+        self.cursor.execute("INSERT INTO layer_0 VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 1.5, 1, 4326)),"
+                                                      " (2, 'A', 'A', 'R', ST_MakeEnvelope(2, 0, 2.5, 1, 4326)),"
+                                                      " (3, 'A', 'A', 'R', ST_MakeEnvelope(3, 0, 3.5, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
 
     def test_exception(self):
         from qc_tool.vector.neighbour import run_check
-        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
-                                                         " (2, 'A', 'A', 'T', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
-                                                         " (3, 'A', 'A', 'T', ST_MakeEnvelope(3, 0, 4, 1, 4326)),"
-                                                         " (4, 'A', 'A', NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326)),"
-                                                         " (5, 'A', 'B', NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
+        self.cursor.execute("INSERT INTO layer_0 VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                       " (2, 'A', 'A', 'T', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                       " (3, 'A', 'A', 'T', ST_MakeEnvelope(3, 0, 4, 1, 4326)),"
+                                                       " (4, 'A', 'A', NULL, ST_MakeEnvelope(4, 0, 5, 1, 4326)),"
+                                                       " (5, 'A', 'B', NULL, ST_MakeEnvelope(5, 0, 6, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT * FROM s01_test_layer_exception ORDER BY fid;")
+        self.cursor.execute("SELECT * FROM s01_layer_0_exception ORDER BY fid;")
         self.assertListEqual([(1,), (2,), (3,), (4,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT * FROM s01_test_layer_error ORDER BY fid;")
+        self.cursor.execute("SELECT * FROM s01_layer_0_error ORDER BY fid;")
         self.assertListEqual([(1,), (2,), (3,), (4,)], self.cursor.fetchall())
 
     def test_error(self):
         from qc_tool.vector.neighbour import run_check
-        self.cursor.execute("INSERT INTO test_layer VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
-                                                         " (2, 'A', 'A', 'R', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
-                                                         " (3, 'A', 'A', 'T', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
+        self.cursor.execute("INSERT INTO layer_0 VALUES (1, 'A', 'A', 'R', ST_MakeEnvelope(1, 0, 2, 1, 4326)),"
+                                                      " (2, 'A', 'A', 'R', ST_MakeEnvelope(2, 0, 3, 1, 4326)),"
+                                                      " (3, 'A', 'A', 'T', ST_MakeEnvelope(3, 0, 4, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("failed", status.status)
-        self.cursor.execute("SELECT * FROM s01_test_layer_exception ORDER BY fid;")
+        self.cursor.execute("SELECT * FROM s01_layer_0_exception ORDER BY fid;")
         self.assertListEqual([(2,), (3,)], self.cursor.fetchall())
-        self.cursor.execute("SELECT * FROM s01_test_layer_error ORDER BY fid;")
+        self.cursor.execute("SELECT * FROM s01_layer_0_error ORDER BY fid;")
         self.assertListEqual([(1,), (2,), (3,)], self.cursor.fetchall())
 
 

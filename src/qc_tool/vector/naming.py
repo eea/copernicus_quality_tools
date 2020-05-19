@@ -105,7 +105,8 @@ def run_check(params, status):
         boundary_filepath = params["boundary_dir"].joinpath("vector", boundary_source_name)
         if boundary_filepath.is_file():
             builder.layer_defs["boundary"] = {"src_filepath": boundary_filepath,
-                                              "src_layer_name": boundary_filepath.stem}
+                                              "src_layer_name": boundary_filepath.stem,
+                                              "layer_alias": boundary_filepath.stem}
         else:
             status.info("No boundary has been found at {:s}."
                         .format(boundary_source_name))
