@@ -18,8 +18,7 @@
           "map.pdf": "_map.pdf$",
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
-        "excessive_layers_allowed": false,
-        "boundary_source": "UA2012_2018_FUA_boundaries_20191206.gpkg"
+        "excessive_layers_allowed": false
       }
     },
     {
