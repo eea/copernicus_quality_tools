@@ -104,7 +104,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
-        "area_pixels": 40,
+        "area_pixels": 50,
         "groupcodes": [[1, 2]],
         "value_exception_codes": [254, 255],
         "neighbour_exception_codes": [254, 255],
