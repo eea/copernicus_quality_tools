@@ -304,7 +304,7 @@ def run_check(params, status):
                 # read inner array (without buffer)
 
                 # label the inner array and find patches < MMU
-                labels_inner = measure.label(tile_inner, background=NODATA, neighbors=4)
+                labels_inner = measure.label(tile_inner, background=NODATA, connectivity=1)
                 regions_inner = measure.regionprops(labels_inner)
                 regions_inner_lessMMU = [r for r in regions_inner if r.area < MMU]
 
@@ -366,7 +366,7 @@ def run_check(params, status):
                     tile_buffered[inner_buf_startrow:inner_buf_endrow,
                                   inner_buf_startcol:inner_buf_endcol] = NODATA
 
-                labels_buf = measure.label(tile_buffered, background=NODATA, neighbors=4)
+                labels_buf = measure.label(tile_buffered, background=NODATA, connectivity=1)
                 buf_regions = measure.regionprops(labels_buf)
                 buf_regions_small = [r for r in buf_regions if r.area < MMU]
                 buf_labels_small = [r.label for r in buf_regions_small]
