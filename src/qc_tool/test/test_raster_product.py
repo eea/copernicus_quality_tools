@@ -58,10 +58,9 @@ class Test_Raster(ProductTestCase):
         product_ident = "gra_2018_010m"
         filepath = self.raster_data_dir.joinpath("gra_010m", "GRA_2018_010m_eu_03035_v0_1.zip")
 
-        expected_step_results = ["ok"] * 13
+        expected_step_results = ["ok"] * 14
         # gra_010m has mismatching attributes.
         expected_step_results[2] = "skipped"
-        expected_step_results[3] = "failed"
 
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]

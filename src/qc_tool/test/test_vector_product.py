@@ -31,10 +31,22 @@ class Test_clc_status(ProductTestCase):
                          "Job result returned by dispatch() must be the same as job result stored in json file.")
 
 
+class Test_n2k_2006(ProductTestCase):
+    def test(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2006_LCLU_v1_20200519.gpkg.zip")
+        expected_step_results = ["ok"] * 17
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k_2006", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(expected_step_results, step_results)
+
+
 class Test_n2k_2012(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip")
-        expected_step_results = ["ok"] * 16
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2012_LCLU_v1_20200519.gpkg.zip")
+        expected_step_results = ["ok"] * 17
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
 
@@ -43,17 +55,39 @@ class Test_n2k_2012(ProductTestCase):
         self.assertListEqual(expected_step_results, step_results)
 
 
-# FIXME: remove the skip after test product is in place.
-import unittest
-@unittest.skip("Missing test product.")
 class Test_n2k_2018(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_????????.zip")
-        expected_step_results = ["ok"] * 16
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2018_LCLU_v1_20200519.gpkg.zip")
+        expected_step_results = ["ok"] * 17
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
 
         job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k_2018", (6,))
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(expected_step_results, step_results)
+
+
+class Test_n2k_2012_change(ProductTestCase):
+    def test(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Change2006-2012_LCLU_v1_20200520.gpkg.zip")
+        expected_step_results = ["ok"] * 16
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k_2012_change", (6,))
+        print(job_result)
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(expected_step_results, step_results)
+
+
+class Test_n2k_2018_change(ProductTestCase):
+    def test(self):
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Change2012-2018_LCLU_v1_20200520.gpkg.zip")
+        expected_step_results = ["ok"] * 16
+        # vector.inspire check is skipped
+        expected_step_results[5] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "n2k_2018_change", (6,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
@@ -100,7 +134,7 @@ class Test_swf_vec_ras(ProductTestCase):
 
 class Test_ua2012(ProductTestCase):
     def test_gpkg(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2012.gpkg.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "FR044L2_NIMES_UA2012_revised.zip")
         expected_step_results = ["ok"] * 16
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
@@ -141,8 +175,9 @@ class Test_ua_change_2012_2018(ProductTestCase):
         expected_step_results = ["ok"] * 16
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
+        expected_step_results[13] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018", (6,))
+        job_result = dispatch(self.job_uuid, "user_name", filepath, "ua_change_2012_2018", (6, 14))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)

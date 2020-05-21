@@ -1,5 +1,5 @@
 {
-  "description": "Natura 2000, LCLU 2012",
+  "description": "Natura 2000, old combined product 2006-2012",
   "steps": [
     {
       "check_ident": "qc_tool.vector.unzip",
