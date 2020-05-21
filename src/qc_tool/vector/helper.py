@@ -25,7 +25,7 @@ INSPIRE_TEST_RUN_TIMEOUT = 300
 INSPIRE_POLL_INTERVAL = 20
 INSPIRE_MAX_RETRIES = 3
 
-PARTITION_MAX_VERTICES = 50000
+PARTITION_MAX_VERTICES = 100000
 
 
 log = logging.getLogger(__name__)
@@ -952,7 +952,9 @@ class NeighbourTable():
                    "FROM\n"
                    " (SELECT DISTINCT fid FROM {feature_table_name}) AS dfid,\n"
                    " LATERAL\n"
-                   " (SELECT tb.fid AS fid, max(ST_Dimension(ST_Intersection(ta.geom, tb.geom))) AS dim\n"
+                   " (SELECT\n"
+                   " tb.fid AS fid,\n"
+                   " max(ST_Dimension(ST_Intersection(ta.geom, tb.geom))) AS dim\n"
                    "  FROM {feature_table_name} AS ta\n"
                    "  INNER JOIN {feature_table_name} AS tb ON ta.geom && tb.geom\n"
                    "  WHERE\n"
