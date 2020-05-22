@@ -21,6 +21,7 @@ def run_check(params, status):
             return
 
         # Search EPSG authority code
+        srs.AutoIdentifyEPSG()
         authority_name = srs.GetAuthorityName(None)
         authority_code = srs.GetAuthorityCode(None)
         if authority_name != "EPSG":
