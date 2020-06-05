@@ -517,3 +517,165 @@ class Test_GapTable(VectorCheckTestCase):
         self.assertListEqual([(1, 'POLYGON((0 0,0 1,1 1,1 0,0 0))'),
                               (4, 'POLYGON((1 3,2 3,2 2,1 2,1 3))')],
                              cursor.fetchall())
+
+
+orig_polygon = ("""POLYGON(
+(4185553.87870000116527080535888671875 2421242.403499999083578586578369140625,
+ 4184000 2421242.403499999083578586578369140625,
+ 4184000 2422537.6,
+4185863.8933000001125037670135498046875 2421369.047499998472630977630615234375,
+4185884.244300005026161670684814453125 2421352.4066999997012317180633544921875,
+4186315.22270000167191028594970703125 2421000,
+4185874.643699995242059230804443359375 2420583.701399997808039188385009765625,
+4185703.87870000116527080535888671875 2421047.4035000004805624485015869140625,
+4185738.0089999996125698089599609375 2421159.557199998758733272552490234375,
+4185735.044400003738701343536376953125 2421162.3692000010050833225250244140625,4185553.87870000116527080535888671875 2421242.403499999083578586578369140625),
+(4185703.87870000116527080535888671875 2421047.4035000004805624485015869140625,4186052.387999995611608028411865234375 2420992.5710999988950788974761962890625,4185704.7221000022254884243011474609375 2421047.3133000009693205356597900390625,4185703.87870000116527080535888671875 2421047.4035000004805624485015869140625)
+)""")
+
+
+partition = ("POLYGON(("
+              "4185868 2417711,"
+              "4185868 2425417,"
+              "4189787 2425417,"
+              "4189787 2417711,"
+              "4185868 2417711"
+             "))")
+
+x_cut = 4185868
+
+import re
+class Test_drift2(VectorCheckTestCase):
+    def test_intersection(self):
+        cursor = self.params["connection_manager"].get_connection().cursor()
+
+        sql = ("SELECT ST_AsText((geom).geom, 50) FROM"
+               "(SELECT ST_DumpPoints(ST_GeomFromText(%s)) AS geom"
+               ") AS sq"
+               " WHERE ST_X((geom).geom) > %s"
+               " ORDER BY ST_X((geom).geom), ST_Y((geom).geom);")
+        cursor.execute(sql, [orig_polygon, x_cut])
+        orig_points = cursor.fetchall()
+
+        sql = ("SELECT ST_AsText((geom).geom, 50) FROM"
+               "(SELECT ST_DumpPoints("
+               "  ST_Intersection("
+               "   ST_GeomFromText(%s), "
+               "   ST_GeomFromText(%s)"
+               "  )"
+               " ) AS geom"
+               ") AS sq"
+               " WHERE ST_X((geom).geom) > %s"
+               " ORDER BY ST_X((geom).geom), ST_Y((geom).geom);")
+        cursor.execute(sql, [orig_polygon, partition, x_cut])
+        part_points = cursor.fetchall()
+
+        regex_x = "POINT\(([0-9\.]+)\s"
+        n_drifted_points = 0
+        for (orig_point, part_point) in zip(orig_points, part_points):
+            if orig_point != part_point:
+                print(orig_point)
+                print(part_point)
+                orig_point_x = re.search(regex_x, str(orig_point)).group(1)
+                part_point_x = re.search(regex_x, str(part_point)).group(1)
+                print("difference: {}".format(float(orig_point_x) - float(part_point_x)))
+                print("------------------")
+                n_drifted_points += 1
+        print("number of drifted points: {}".format(n_drifted_points))
+
+        sql = "SELECT ST_NPoints(ST_GeomFromText(%s));"
+        cursor.execute(sql, [orig_polygon])
+        n_orig_points = cursor.fetchone()
+        print(n_orig_points)
+
+
+class Test_snap(VectorCheckTestCase):
+    def test_snap(self):
+        cursor = self.params["connection_manager"].get_connection().cursor()
+
+        sql = ("SELECT ST_AsText((geom).geom, 50) FROM"
+               "(SELECT ST_DumpPoints(ST_GeomFromText(%s)) AS geom"
+               ") AS sq"
+               " WHERE ST_X((geom).geom) > %s"
+               " ORDER BY ST_X((geom).geom), ST_Y((geom).geom);")
+        cursor.execute(sql, [orig_polygon, x_cut])
+        orig_points = cursor.fetchall()
+
+        sql = ("SELECT ST_AsText((geom).geom, 50) FROM"
+               "(SELECT ST_DumpPoints("
+               "  ST_Snap("
+               "   ST_Intersection("
+               "    ST_GeomFromText(%s), "
+               "    ST_GeomFromText(%s)"
+               "   ),"
+               "   ST_GeomFromText(%s), 1e-3"
+               "  )) AS geom"
+               ") AS sq"
+               " WHERE ST_X((geom).geom) > %s"
+               " ORDER BY ST_X((geom).geom), ST_Y((geom).geom);")
+        cursor.execute(sql, [orig_polygon, partition, orig_polygon, x_cut])
+        part_points = cursor.fetchall()
+
+        regex_x = "POINT\(([0-9\.]+)\s"
+        n_drifted_points = 0
+        for (orig_point, part_point) in zip(orig_points, part_points):
+            if orig_point != part_point:
+                print(orig_point)
+                print(part_point)
+                orig_point_x = re.search(regex_x, str(orig_point)).group(1)
+                part_point_x = re.search(regex_x, str(part_point)).group(1)
+                print("difference: {}".format(float(orig_point_x) - float(part_point_x)))
+                print("------------------")
+                n_drifted_points += 1
+        print("number of drifted points: {}".format(n_drifted_points))
+
+
+
+class Test_drift(VectorCheckTestCase):
+    def test_intersection(self):
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE original_polygon (fid SERIAL PRIMARY KEY,"
+                       "GEOM geometry(Polygon, 3035));")
+        cursor.execute("INSERT INTO original_polygon (geom) VALUES ("
+                       "ST_Difference("
+                       "ST_MakeEnvelope(4185000,"
+                       "                2420000,"
+                       "                4187000, "
+                       "                2421000,"
+                       "                3035),"
+                       "ST_MakeEnvelope(4186003.6767000020481646060943603515625, "
+                       "                2420953.49070000089704990386962890625,"
+                       "                4186004.0712999999523162841796875,"
+                       "                2420955.9968999992124736309051513671875,"
+                       "                3035))"
+                       ");")
+
+        cursor.execute("SELECT ST_AsText(ST_Intersection(geom, "
+                       "ST_MakeEnvelope(4186001, 2419000, 4188000, 2422000, 3035)), 50)"
+                       "FROM original_polygon;")
+        row = cursor.fetchone()
+        print(row)
+
+
+    def test_intersection2(self):
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE original_polygon (fid SERIAL PRIMARY KEY,"
+                       "GEOM geometry(Polygon, 3035));")
+        cursor.execute("INSERT INTO original_polygon (geom) VALUES ("
+                       "ST_Difference("
+                       "ST_MakeEnvelope(4185000,"
+                       "                2420000,"
+                       "                4187000, "
+                       "                2421000,"
+                       "                3035),"
+                       "ST_MakeEnvelope(4186000,"
+                       "                2420953,"
+                       "                4186003.6767000020481646060943603515625, "
+                       "                2420953.49070000089704990386962890625,"
+                       "                3035))"
+                       ");")
+
+        cursor.execute("SELECT ST_AsText(geom, 50)"
+                       "FROM original_polygon;")
+        row = cursor.fetchone()
+        print(row)
