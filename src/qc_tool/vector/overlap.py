@@ -34,10 +34,10 @@ def run_check(params, status):
         sql = ("CREATE TABLE {error_table} AS\n"
                "SELECT DISTINCT a.fid AS {fid_name}\n"
                "FROM\n"
-               " (SELECT fid, geom FROM {feature_table}\n"
-               "   WHERE fid in (SELECT fida from {neighbour_table} WHERE dim > 1)) AS a,\n"
-               " (SELECT fid, geom FROM {feature_table}\n"
-               "   WHERE fid in (SELECT fidb from {neighbour_table} WHERE dim > 1)) AS b\n"
+               " (SELECT {fid_name} AS fid, geom FROM {feature_table}\n"
+               "   WHERE {fid_name} in (SELECT fida from {neighbour_table} WHERE dim > 1)) AS a,\n"
+               " (SELECT {fid_name} AS fid, geom FROM {feature_table}\n"
+               "   WHERE {fid_name} in (SELECT fidb from {neighbour_table} WHERE dim > 1)) AS b\n"
                "WHERE a.fid <> b.fid AND ST_Dimension(ST_Intersection(a.geom, b.geom)) >= 2\n")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
@@ -50,9 +50,9 @@ def run_check(params, status):
             sql = ("CREATE TABLE {overlap_detail_table} AS\n"
                "SELECT DISTINCT a.fid AS fida, b.fid as fidb, polygon_dump(ST_Intersection(a.geom, b.geom)) as geom\n"
                "FROM\n"
-               " (SELECT fid, geom FROM {feature_table}\n"
+               " (SELECT {fid_name} AS fid, geom FROM {feature_table}\n"
                "   WHERE fid in (SELECT fida from {neighbour_table} WHERE dim > 1)) AS a,\n"
-               " (SELECT fid, geom FROM {feature_table} "
+               " (SELECT {fid_name} AS fid, geom FROM {feature_table} "
                "   WHERE fid in (SELECT fidb from {neighbour_table} WHERE dim > 1)) AS b\n"
                "WHERE a.fid > b.fid AND ST_Dimension(ST_Intersection(a.geom, b.geom)) >= 2\n")
             sql_params["overlap_detail_table"] = "s{:02d}_{:s}_detail".format(params["step_nr"], layer_def["pg_layer_name"])
