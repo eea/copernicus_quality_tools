@@ -17,7 +17,7 @@
           "change": "^cha12_(?P<aoi_code>.+)$"
         },
         "gdb_filename_regex": "^clc2012_(?P<aoi_code>.+).gdb$",
-        "aoi_codes": ["al", "at",
+        "aoi_codes": ["al", "am", "at", "az",
                       "ba", "be", "bg",
                       "ch", "cy", "cz",
                       "de", "dk",
