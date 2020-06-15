@@ -17,7 +17,7 @@ import requests
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
 
-INSPIRE_VALIDATOR_URL = "http://inspire.ec.europa.eu/validator/"
+INSPIRE_VALIDATOR_URL = "https://inspire.ec.europa.eu/validator/"
 INSPIRE_SERVICE_URL = INSPIRE_VALIDATOR_URL + "v2/"
 INSPIRE_TEST_SUITE_NAME = "INSPIRE data sets and data set series interoperability metadata"
 INSPIRE_SERVER_TIMEOUT = 60
@@ -278,6 +278,7 @@ class InspireServiceClient():
             r.raise_for_status()
             # The service should return a json object with a list of test suites.
             test_suites = r.json()["EtfItemCollection"]["executableTestSuites"]["ExecutableTestSuite"]
+
             inspire_test_suites = [t for t in test_suites if INSPIRE_TEST_SUITE_NAME in t["label"]]
             # The test suites should contain exactly one suite with label equal to INSPIRE_TEST_SUITE_NAME.
             if len(inspire_test_suites) == 0:
@@ -311,7 +312,7 @@ class InspireServiceClient():
 
         try:
             with open(str(xml_filepath), "rb") as filehandle:
-                xml_file_data = {"file": (xml_filepath.name, filehandle)}
+                xml_file_data = {"fileupload": (xml_filepath.name, filehandle)}
 
                 r = requests.post(xml_upload_url, files=xml_file_data, timeout=INSPIRE_SERVER_TIMEOUT)
                 if r.status_code == 400:
@@ -324,6 +325,7 @@ class InspireServiceClient():
                 # The service should return a json object with the test object ID.
                 test_object = r.json()
                 object_id = test_object["testObject"]["id"]
+
                 # The test_object_id must be used without the "EID" prefix.
                 if object_id.startswith("EID"):
                     return r.status_code, object_id[3:], "ok"
@@ -370,6 +372,7 @@ class InspireServiceClient():
         try:
             r = requests.post(start_run_url, json=test_run_data, timeout=INSPIRE_SERVER_TIMEOUT)
             r.raise_for_status()
+
             test_run = r.json()["EtfItemCollection"]["testRuns"]["TestRun"]
             return test_run["id"], "ok"
         except requests.exceptions.HTTPError as ex:
@@ -477,6 +480,7 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     # Step 1, Retrieve the predefined test suite from the service. The predefined test suite has a unique test suite ID.
     status.info("Using validator service {:s}.".format(INSPIRE_VALIDATOR_URL))
     test_suite_id, test_suite_message = InspireServiceClient.retrieve_test_suite_id()
+
     if test_suite_id is None:
         status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_suite_message))
         # if the test_suite_id is unavailable, then the inspire service is probably not working as expected.
