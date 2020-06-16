@@ -15,7 +15,7 @@ def run_check(params, status):
 
         # get dictionary of pixel 'codes-counts'
         ds_band = ds.GetRasterBand(1)
-        counts = ds_band.GetHistogram()
+        counts = ds_band.GetHistogram(approx_ok=False)
         codes = range(len(counts))
         hist = dict(zip(codes, counts))
 

@@ -120,7 +120,6 @@ class Test_value(RasterCheckTestCase):
         self.params.update({"raster_layer_defs": layer_defs,
                             "layers": ["layer_1"]})
 
-
     def test(self):
         from qc_tool.raster.value import run_check
 
@@ -139,6 +138,26 @@ class Test_value(RasterCheckTestCase):
                                                   "if the raster has invalid codes.")
         self.assertIn("invalid values: 0.", status.messages[0])
 
+    def test_fail_isolated_invalid_pixel(self):
+        from qc_tool.raster.value import run_check
+
+        self.tmp_raster = self.jobdir_manager.tmp_dir.joinpath("tmp_big_raster.tif")
+        tmp_array = np.ones((10000, 10000))
+        tmp_array[5555, 4444] = 253
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(tmp_array), 10, ulx=5000, uly=3000)
+
+        layer_defs = {"layer_1": {"src_filepath": self.tmp_raster,
+                                 "src_layer_name": self.tmp_raster.name}}
+        self.params.update({"raster_layer_defs": layer_defs,
+                            "layers": ["layer_1"]})
+
+        self.params.update({"validcodes": [1]})
+
+        status = self.status_class()
+        run_check(self.params, status)
+
+        self.assertEqual("failed", status.status)
+        self.assertIn("Layer tmp_big_raster.tif has pixels with invalid values: 253.", status.messages)
 
 class Test_gap(RasterCheckTestCase):
 
