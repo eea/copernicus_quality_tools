@@ -90,6 +90,7 @@ class Test_Raster(ProductTestCase):
         expected_step_results[2] = "skipped"
         # imc_1518_020m has mismatching attributes and color table
         expected_step_results[3] = "failed"
+        expected_step_results[9] = "failed"
         expected_step_results[10] = "failed"
 
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))

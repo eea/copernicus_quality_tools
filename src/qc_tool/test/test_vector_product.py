@@ -134,7 +134,7 @@ class Test_swf_vec_ras(ProductTestCase):
 
 class Test_ua2012(ProductTestCase):
     def test_gpkg(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "FR044L2_NIMES_UA2012_revised.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "ua", "gpkg", "EE003L1_NARVA_UA2012.gpkg.zip")
         expected_step_results = ["ok"] * 16
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"

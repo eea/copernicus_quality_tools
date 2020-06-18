@@ -335,13 +335,13 @@ class InspireServiceClient():
         except requests.exceptions.HTTPError as ex:
             return None, None, str(ex)
         except requests.exceptions.ConnectionError:
-            return None, None, "Service not available."
+            return None, None, "Service not available (url: {:s}).".format(xml_upload_url)
         except requests.exceptions.Timeout:
-            return None, None, "Connection timeout."
+            return None, None, "Connection timeout (url: {:s}).".format(xml_upload_url)
         except requests.exceptions.RequestException as ex:
             return None, None, repr(ex)
         except KeyError:
-            return None, None, "Service API returned unexpected response."
+            return None, None, "Service API returned unexpected response (url: {:s}).".format(xml_upload_url)
         except Exception as ex:
             return None, None, repr(ex)
 
@@ -378,13 +378,13 @@ class InspireServiceClient():
         except requests.exceptions.HTTPError as ex:
             return None, str(ex)
         except requests.exceptions.ConnectionError:
-            return None, "Service not available."
+            return None, "Service not available (url: {:s}).".format(start_run_url)
         except requests.exceptions.Timeout:
-            return None, "Connection timeout."
+            return None, "Connection timeout (url: {:s}).".format(start_run_url)
         except requests.exceptions.RequestException as ex:
             return None, repr(ex)
         except KeyError:
-            return None, "Service API returned unexpected response."
+            return None, "Service API returned unexpected response (url: {:s}).".format(start_run_url)
         except Exception as ex:
             return None, repr(ex)
 
@@ -427,13 +427,13 @@ class InspireServiceClient():
         except requests.exceptions.HTTPError as ex:
             return None, str(ex)
         except requests.exceptions.ConnectionError:
-            return None, "Service not available."
+            return None, "Service not available (url: {:s}).".format(run_url)
         except requests.exceptions.Timeout:
-            return None, "Connection timeout."
+            return None, "Connection timeout (url: {:s}).".format(run_url)
         except requests.exceptions.RequestException as ex:
             return None, repr(ex)
         except KeyError:
-            return None, "Service API returned unexpected response."
+            return None, "Service API returned unexpected response (url: {:s}).".format(run_url)
         except Exception as ex:
             return None, repr(ex)
 
