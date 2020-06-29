@@ -40,7 +40,7 @@ docker run --rm \
   --name=qc_tool_test \
   --link=qc_tool_postgis \
   --env=PG_HOST=qc_tool_postgis \
-  --env=SKIP_INSPIRE_CHECK=no \
+  --env=SKIP_INSPIRE_CHECK=yes \
   --volume=$QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
   eeacms/copernicus-qctool-worker \
   python3 -m unittest qc_tool.test.test_vector_check
