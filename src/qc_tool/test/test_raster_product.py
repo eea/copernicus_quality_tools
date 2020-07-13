@@ -85,13 +85,12 @@ class Test_Raster(ProductTestCase):
         product_ident = "imc_1518_020m"
         filepath = self.raster_data_dir.joinpath("imc_020m", "IMC_1518_020m_eu_03035_v0_1.zip")
 
-        expected_step_results = ["ok"] * 13
+        expected_step_results = ["ok"] * 12
         # inspire check is skipped
         expected_step_results[2] = "skipped"
         # imc_1518_020m has mismatching attributes and color table
         expected_step_results[3] = "failed"
         expected_step_results[9] = "failed"
-        expected_step_results[10] = "failed"
 
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
@@ -102,13 +101,12 @@ class Test_Raster(ProductTestCase):
         product_ident = "imc_1518_100m"
         filepath = self.raster_data_dir.joinpath("imc_100m", "IMC_1518_100m_eu_03035_v0_1.zip")
 
-        expected_step_results = ["ok"] * 13
+        expected_step_results = ["ok"] * 12
         # inspire check is skipped
         expected_step_results[2] = "skipped"
         # imc_1518_020m has mismatching attributes, values and color table
         expected_step_results[3] = "failed"
         expected_step_results[9] = "failed"
-        expected_step_results[10] = "failed"
 
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
