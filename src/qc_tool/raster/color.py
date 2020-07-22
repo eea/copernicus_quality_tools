@@ -9,6 +9,8 @@ from pathlib import Path
 DESCRIPTION = "Color table is in accord with specification."
 IS_SYSTEM = False
 
+BIT_DEPTHS_WITH_COLORTABLE = ["byte", "uint16"]
+
 
 # read-in the actual tif.clr color table into a dictionary
 def parse_clr_file(clr_filepath):
@@ -42,6 +44,13 @@ def run_check(params, status):
 
         ds = gdal.Open(str(layer_def["src_filepath"]))
         band = ds.GetRasterBand(1)
+        bit_depth = str(gdal.GetDataTypeName(band.DataType)).lower()
+
+        # Colour tables can only be checked for specific bit depths.
+        if str(bit_depth) not in BIT_DEPTHS_WITH_COLORTABLE:
+            status.info("The raster {:s} is in {:s} bit depth and thus it is not possible to check for colour table"
+                        .format(layer_def["src_layer_name"], bit_depth))
+            return
 
         # check the color table of the band
         ct = band.GetRasterColorTable()
