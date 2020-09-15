@@ -33,7 +33,7 @@ class Test_clc_status(ProductTestCase):
 
 class Test_n2k_2006(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2006_LCLU_v1_20200519.gpkg.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2006_LCLU_v1_20200915.gpkg.zip")
         expected_step_results = ["ok"] * 17
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
@@ -45,7 +45,7 @@ class Test_n2k_2006(ProductTestCase):
 
 class Test_n2k_2012(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2012_LCLU_v1_20200519.gpkg.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2012_LCLU_v1_20200915.gpkg.zip")
         expected_step_results = ["ok"] * 17
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
@@ -57,7 +57,7 @@ class Test_n2k_2012(ProductTestCase):
 
 class Test_n2k_2018(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2018_LCLU_v1_20200519.gpkg.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Status2018_LCLU_v1_20200915.gpkg.zip")
         expected_step_results = ["ok"] * 17
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
@@ -69,7 +69,7 @@ class Test_n2k_2018(ProductTestCase):
 
 class Test_n2k_2012_change(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Change2006-2012_LCLU_v1_20200520.gpkg.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Change2006_2012_LCLU_v1_20200915.gpkg.zip")
         expected_step_results = ["ok"] * 16
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
@@ -82,7 +82,7 @@ class Test_n2k_2012_change(ProductTestCase):
 
 class Test_n2k_2018_change(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Change2012-2018_LCLU_v1_20200520.gpkg.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "n2k", "gpkg", "N2K_DU001A_Change2012_2018_LCLU_v1_20200915.gpkg.zip")
         expected_step_results = ["ok"] * 16
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"
