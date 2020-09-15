@@ -23,8 +23,7 @@
       "required": true,
       "parameters": {
         "layers": ["status2018"],
-        "required": {"id": "integer",
-                     "uid": "string",
+        "required": {"uid": "string",
                      "sitecode": "string",
                      "grasstype": "string",
                      "code_1_18": "integer",

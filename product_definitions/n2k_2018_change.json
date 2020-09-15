@@ -22,10 +22,7 @@
       "required": true,
       "parameters": {
         "layers": ["change2018"],
-        "required": {"id": "integer",
-                     "uid": "string",
-                     "sitecode": "string",
-                     "grasstype": "string",
+        "required": {"uid": "string",
                      "code_1_12": "integer",
                      "code_2_12": "integer",
                      "code_3_12": "integer",

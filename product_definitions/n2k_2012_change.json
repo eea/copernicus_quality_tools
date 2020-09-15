@@ -22,10 +22,7 @@
       "required": true,
       "parameters": {
         "layers": ["change2012"],
-        "required": {"id": "integer",
-                     "uid": "string",
-                     "sitecode": "string",
-                     "grasstype": "string",
+        "required": {"uid": "string",
                      "code_1_06": "integer",
                      "code_2_06": "integer",
                      "code_3_06": "integer",

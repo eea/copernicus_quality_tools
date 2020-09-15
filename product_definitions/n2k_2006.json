@@ -23,18 +23,14 @@
       "required": true,
       "parameters": {
         "layers": ["status2006"],
-        "required": {"id": "integer",
-                     "uid": "string",
-                     "sitecode": "string",
-                     "grasstype": "string",
+        "required": {"uid": "string",
                      "code_1_06": "integer",
                      "code_2_06": "integer",
                      "code_3_06": "integer",
                      "code_4_06": "integer",
                      "nodata_06": "integer",
                      "comment_06": "string",
-                     "area_ha": "real",
-                     "revision": "integer"},
+                     "area_ha": "real"},
         "ignored": ["shape_area", "shape_length"]
       }
     },
