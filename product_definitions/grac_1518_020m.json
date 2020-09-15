@@ -111,6 +111,7 @@
         "layers": ["raster"],
         "area_pixels": 25,
         "value_exception_codes": [0, 10, 11, 22, 254, 255],
+        "report_exceptions": false,
         "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
       }
