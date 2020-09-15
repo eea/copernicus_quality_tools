@@ -14,7 +14,8 @@
         "layer_names": {
           "change2012": "^n2k_(?P<delivery_unit_id>du[0-9]{3}[a-z])_Change2006_2012_lclu_v[0-9]+_[0-9]{8}$"
         },
-        "excessive_layers_allowed": true
+        "excessive_layers_allowed": false,
+        "boundary_source": null
       }
     },
     {
