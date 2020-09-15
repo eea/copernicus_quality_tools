@@ -276,23 +276,23 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "code_column_names": ["maes_4_12", "maes_4_18"],
+        "code_column_names": ["maes_4_12", "maes_4_18", "comment_12", "comment_18"],
         "exception_where": [" (layer.ua_18 IS NULL AND other.ua_18 IS NULL)",
                             "AND",
-                            " ((layer.ua_12 IS NULL) = (layer.ua_12 IS NULL))",
+                            " ((layer.ua_12 IS NULL) = (other.ua_12 IS NULL))",
                             "AND",
                             " ((layer.comment_12 IS NOT NULL",
                             "   AND has_comment(layer.comment_12, ARRAY['Braided river',",
                             "                                           'Different water levels',",
                             "                                           'Flooded area']))",
                             "  OR",
-                            "  (other.comment_18 IS NOT NULL",
+                            "  (layer.comment_18 IS NOT NULL",
                             "   AND has_comment(layer.comment_18, ARRAY['Braided river',",
                             "                                           'Different water levels',",
                             "                                           'Flooded area'])))"],
         "error_where": [" (layer.ua_18 IS NULL AND other.ua_18 IS NULL)",
                         "AND",
-                        " ((layer.ua_12 IS NULL) = (layer.ua_12 IS NULL))"]
+                        " ((layer.ua_12 IS NULL) = (other.ua_12 IS NULL))"]
       }
     }
   ]
