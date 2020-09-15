@@ -95,10 +95,9 @@ def run_check(params, status):
             check_gdb_filename(gdb_filepath, params["gdb_filename_regex"], aoi_code, status)
 
     # Find boundary layer.
-    if "boundary_source" in params:
-
+    boundary_source_name = params.get("boundary_source", None)
+    if boundary_source_name:
         # If boundary expression contains '{aoi_code}' then try to inject aoi_code into boundary file path.
-        boundary_source_name = params["boundary_source"]
         if "{aoi_code}" in params["boundary_source"] and aoi_code is not None:
             boundary_source_name = boundary_source_name.format(**{"aoi_code": aoi_code})
 
