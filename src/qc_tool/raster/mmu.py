@@ -4,6 +4,8 @@ import math
 DESCRIPTION = "Minimum mapping unit."
 IS_SYSTEM = False
 
+MAX_REPORTED_REGION_COUNT = 1000000
+
 
 def write_percent(percent_filepath, percent):
     percent_filepath.write_text(str(percent))
@@ -95,12 +97,13 @@ def patch_touches_raster_edge(coordinates, raster_nrows, raster_ncols):
     return False
 
 
-def export(regions, raster_ds, gpkg_filepath):
+def export(regions, raster_ds, gpkg_filepath, max_regions_count):
     """
     Exports a list of lessMMU region dictionaries to geopackage.
     :param regions: list of dicts with {"coords", "area", "value"}
     :param raster_ds: original raster dataset
     :param gpkg_filepath: filepath the vector datasource is to be exported to
+    :param max_regions_count: maximum number of regions to be exported.
     """
     import osgeo.ogr as ogr
     import osgeo.osr as osr
@@ -125,6 +128,10 @@ def export(regions, raster_ds, gpkg_filepath):
 
         i = 0
         for rInfo in regions:
+
+            if i > max_regions_count:
+                break
+
             x_proj = rInfo["coords"][0][0] * x_size + upper_left_x + (x_size / 2)  # add half the cell size
             y_proj = rInfo["coords"][0][1] * y_size + upper_left_y + (y_size / 2)  # to centre the point
             area = rInfo["area"]
@@ -164,6 +171,9 @@ def run_check(params, status):
         NODATA = params["nodata_value"]
     else:
         NODATA = -1  # FIXME use a value that is outside of the range of possible raster values.
+
+    # The optional report_exceptions parameter indicates whether any exceptions should be reported.
+    report_exceptions = params.get("report_exceptions", False)
 
     # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
     BLOCKSIZE = 2048
@@ -255,6 +265,10 @@ def run_check(params, status):
             if block_height <= buffer_width:
                 continue
 
+            # if we reached the maximum number of patches < MMU, then report message and exit.
+            if len(regions_lessMMU) > MAX_REPORTED_REGION_COUNT:
+                break
+
             # TILES: ITERATE COLUMNS
             for tileCol in range(nTileCols):
                 if tileCol == 0:
@@ -281,10 +295,14 @@ def run_check(params, status):
                 if block_width <= buffer_width:
                     continue
 
+                # if we reached the maximum number of patches < MMU, then report message and exit.
+                if len(regions_lessMMU) > MAX_REPORTED_REGION_COUNT:
+                    break
+
                 # read whole array (with buffers)
                 tile_buffered = ds.ReadAsArray(xOff, yOff, block_width, block_height)
 
-                # special case: if the tile has all values equal then skip MMW checks.
+                # special case: if the tile has all values equal then skip MMU checks.
                 if tile_buffered.min() == tile_buffered.max():
                     if report_progress:
                         msg_tile = "tileRow: {tr}/{ntr} tileCol: {tc} width: {w} height: {h} all values same."
@@ -339,11 +357,14 @@ def run_check(params, status):
                                     "area": r.area, "value": lessMMU_value,
                                     "coords": absolute_coords}
                     if lessMMU_value in exclude_values:
-                        regions_lessMMU_except.append(lessMMU_info)
+                        if report_exceptions:
+                            regions_lessMMU_except.append(lessMMU_info)
                     elif patch_touches_cell_with_value(r.coords, tile_inner, neighbour_exclude_values):
-                        regions_lessMMU_except.append(lessMMU_info)
+                        if report_exceptions:
+                            regions_lessMMU_except.append(lessMMU_info)
                     elif patch_touches_raster_edge(absolute_coords, nRasterRows, nRasterCols):
-                        regions_lessMMU_except.append(lessMMU_info)
+                        if report_exceptions:
+                            regions_lessMMU_except.append(lessMMU_info)
                     else:
                         regions_lessMMU.append(lessMMU_info)
 
@@ -420,19 +441,27 @@ def run_check(params, status):
         # The geopackage contains one sample point from each lessMMU patch.
 
         ## lessMMU patches belonging to one of exclude_values classes are reported as exceptions.
-        if len(regions_lessMMU_except) > 0:
+        if report_exceptions and len(regions_lessMMU_except) > 0:
             gpkg_filename = "s{:02d}_{:s}_lessmmu_exception.gpkg".format(params["step_nr"], layer_def["src_filepath"].stem)
             gpkg_filepath = params["output_dir"].joinpath(gpkg_filename)
-            export(regions_lessMMU_except, ds, gpkg_filepath)
+            export(regions_lessMMU_except, ds, gpkg_filepath, MAX_REPORTED_REGION_COUNT)
             status.add_attachment(gpkg_filename)
-            status.info("The data source has {:d} exceptional objects under MMU limit of {:d} pixels."
-                        .format(len(regions_lessMMU_except), params["area_pixels"]))
+            if len(regions_lessMMU_except) <= MAX_REPORTED_REGION_COUNT:
+                status.info("The data source has {:d} exceptional objects under MMU limit of {:d} pixels."
+                            .format(len(regions_lessMMU_except), params["area_pixels"]))
+            else:
+                status.info("The data source has more than {:d} exceptional objects under MMU limit of {:d} pixels."
+                            .format(MAX_REPORTED_REGION_COUNT, params["area_pixels"]))
 
         ## lessMMU patches not belonging to exclude_values are reported as errors.
         if len(regions_lessMMU) > 0:
             gpkg_filename = "s{:02d}_{:s}_lessmmu_error.gpkg".format(params["step_nr"], layer_def["src_filepath"].stem)
             gpkg_filepath = params["output_dir"].joinpath(gpkg_filename)
-            export(regions_lessMMU, ds, gpkg_filepath)
+            export(regions_lessMMU, ds, gpkg_filepath, MAX_REPORTED_REGION_COUNT)
             status.add_attachment(gpkg_filename)
-            status.failed("The data source has {:d} error objects under MMU limit of {:d} pixels."
-                          .format(len(regions_lessMMU), params["area_pixels"]))
+            if len(regions_lessMMU) <= MAX_REPORTED_REGION_COUNT:
+                status.failed("The data source has {:d} error objects under MMU limit of {:d} pixels."
+                              .format(len(regions_lessMMU), params["area_pixels"]))
+            else:
+                status.failed("The data source has more than {:d} error objects under MMU limit of {:d} pixels."
+                              .format(MAX_REPORTED_REGION_COUNT, params["area_pixels"]))
