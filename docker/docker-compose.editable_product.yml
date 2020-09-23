@@ -22,6 +22,7 @@ services:
 
   worker:
     image: eeacms/copernicus-qctool-worker
+    shm_size: 1gb
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
