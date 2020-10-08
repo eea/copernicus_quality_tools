@@ -78,21 +78,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.color",
-      "required": false,
-      "parameters": {
-        "layers": ["raster"],
-        "colors": {
-          "0":[240, 240, 240],
-          "1":[70, 158, 74],
-          "2":[28, 92, 36],
-          "3":[76, 133, 67],
-          "254":[153, 153, 153],
-          "255":[0, 0, 0]
-        }
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.tile",
       "required": false,
       "parameters": {
