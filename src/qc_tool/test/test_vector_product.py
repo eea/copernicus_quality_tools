@@ -106,7 +106,7 @@ class Test_rpz_2012(ProductTestCase):
 
 class Test_rpz_2018(ProductTestCase):
     def test(self):
-        filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_DU001B_lclu_2018_2012_v02.gpkg.zip")
+        filepath = TEST_DATA_DIR.joinpath("vector", "rpz", "rpz_DU001B_lclu_2018_2012_v03.gpkg.zip")
         expected_step_results = ["ok"] * 18
         # vector.inspire check is skipped
         expected_step_results[5] = "skipped"

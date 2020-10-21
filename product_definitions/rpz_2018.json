@@ -78,7 +78,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "unique_keys": ["id"]
+        "unique_keys": ["uid"]
       }
     },
     {
