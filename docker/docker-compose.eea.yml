@@ -22,7 +22,7 @@ services:
       - qc_tool_frontend:/mnt/qc_tool_frontend
 
   worker:
-    image: eeacms/copernicus-qctool-worker:1.8.1
+    image: eeacms/copernicus-qctool-worker:1.8.2
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS
