@@ -28,7 +28,7 @@
       "parameters": {
         "layers": ["rpz"],
         "required": {
-          "id": "integer",
+          "uid": "string",
           "du_id": "string",
           "changecode": "string",
           "area_ha": "real",
@@ -78,7 +78,7 @@
       "required": false,
       "parameters": {
         "layers": ["rpz"],
-        "unique_keys": ["id"]
+        "unique_keys": ["uid"]
       }
     },
     {
