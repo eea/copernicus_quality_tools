@@ -292,7 +292,7 @@
       "required": false,
       "parameters": {
         "layers": ["change2012"],
-        "code_column_names": ["code_4_06", "code_4_06"],
+        "code_column_names": ["code_4_06", "code_4_12"],
         "exception_where": ["FALSE"],
         "error_where": ["TRUE"]
       }
