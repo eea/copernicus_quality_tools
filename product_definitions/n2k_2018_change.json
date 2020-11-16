@@ -14,7 +14,8 @@
         "layer_names": {
           "change2018": "^n2k_(?P<delivery_unit_id>du[0-9]{3}[a-z])_Change2012_2018_lclu_v[0-9]+_[0-9]{8}$"
         },
-        "excessive_layers_allowed": true
+        "excessive_layers_allowed": false,
+        "boundary_source": null
       }
     },
     {
@@ -36,7 +37,7 @@
                      "comment": "string",
                      "changecode": "string",
                      "area_ha": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "ignored": ["shape_area", "shape_length", "du_id"]
       }
     },
     {

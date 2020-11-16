@@ -37,7 +37,7 @@
                      "comment": "string",
                      "changecode": "string",
                      "area_ha": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "ignored": ["shape_area", "shape_length", "du_id"]
       }
     },
     {

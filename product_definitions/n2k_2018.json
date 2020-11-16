@@ -15,7 +15,7 @@
           "status2018": "^n2k_(?P<delivery_unit_id>du[0-9]{3}[a-z]{1})_Status2018_lclu_v[0-9]+_[0-9]{8}$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": null
+        "boundary_source": "boundary_n2k.gpkg"
       }
     },
     {
@@ -24,6 +24,7 @@
       "parameters": {
         "layers": ["status2018"],
         "required": {"uid": "string",
+                     "du_id": "string",
                      "code_1_18": "integer",
                      "code_2_18": "integer",
                      "code_3_18": "integer",
@@ -176,7 +177,7 @@
       "required": false,
       "parameters": {
         "layers": ["status2018"],
-        "du_column_name": "id"
+        "du_column_name": "du_id"
       }
     },
     {
