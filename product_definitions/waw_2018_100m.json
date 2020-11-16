@@ -45,7 +45,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
-        "pixelsize": 10
+        "pixelsize": 100
       }
     },
     {
