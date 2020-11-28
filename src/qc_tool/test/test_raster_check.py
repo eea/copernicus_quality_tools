@@ -112,6 +112,73 @@ class Test_naming(RasterCheckTestCase):
         self.assertEqual("2018", status.status_properties["reference_year"])
 
 
+class Test_nodata(RasterCheckTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.params["tmp_dir"] = self.jobdir_manager.tmp_dir
+        self.params["output_dir"] = self.jobdir_manager.output_dir
+        self.params["nodata_value"] = 255
+        self.tmp_raster = self.params["tmp_dir"].joinpath("test_raster.tif")
+        self.params["raster_layer_defs"] = {"raster": {"src_filepath": str(self.tmp_raster),
+                                                       "src_layer_name": "raster_1"}}
+        self.params["layers"] = ["raster"]
+        self.params["step_nr"] = 1
+
+
+    def test(self):
+        # Prepare raster dataset.
+        data = [[0, 1, 0, 255],
+                [0, 0, 9, 255],
+                [0, 0, 0, 255]]
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10, ulx=0, uly=0, epsg=3035, nodata_value=255)
+
+        self.params.update({"layers": ["raster"],
+                            "nodata_value": 255,
+                            "step_nr": 1})
+
+        from qc_tool.raster.nodata import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+
+
+    def test_fail(self):
+        # Prepare raster dataset.
+        data = [[0, 1, 0, 255],
+                [0, 0, 9, 255],
+                [0, 0, 0, 255]]
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10, ulx=0, uly=0, epsg=3035, nodata_value=None)
+
+        self.params.update({"layers": ["raster"],
+                            "nodata_value": 255,
+                            "step_nr": 1})
+
+        from qc_tool.raster.nodata import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+        self.assertIn("does not have a NoData value set", status.messages[0])
+
+
+    def test_fail_nodata_value_mismatch(self):
+        # Prepare raster dataset.
+        data = [[0, 1, 0, 255],
+                [0, 0, 9, 255],
+                [0, 0, 0, 255]]
+        RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10, ulx=0, uly=0, epsg=3035, nodata_value=0)
+
+        self.params.update({"layers": ["raster"],
+                            "nodata_value": 255,
+                            "step_nr": 1})
+
+        from qc_tool.raster.nodata import run_check
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+        self.assertIn("has invalid NoData value: 0", status.messages[0])
+
+
 class Test_value(RasterCheckTestCase):
     def setUp(self):
         super().setUp()

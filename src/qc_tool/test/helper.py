@@ -45,7 +45,7 @@ class ProductTestCase(TestCase):
 
 class RasterCheckTestCase(TestCase):
     @staticmethod
-    def create_raster(raster_filepath, data, pixel_size, ulx=0, uly=0, epsg=3035):
+    def create_raster(raster_filepath, data, pixel_size, ulx=0, uly=0, epsg=3035, nodata_value=None):
         """
         Helper method which creates a .TIF raster file with the same pixel values as the data array.
         :param data: 2D NumPy array of integers with the raster data.
@@ -53,6 +53,7 @@ class RasterCheckTestCase(TestCase):
         :param ulx: X coordinate of upper-left corner of the raster.
         :param uly: Y coordinate of upper-left corner of the raster.
         :param epsg: Integer EPSG code of the raster's coordinate reference system (default: 3035).
+        :param nodata_value: NoData value of the raster being created (default: None, NoData value is not set).
         :return: full path of created raster.
         """
         height = data.shape[0]
@@ -64,6 +65,8 @@ class RasterCheckTestCase(TestCase):
         mem_ds.SetProjection(mem_srs.ExportToWkt())
         mem_ds.SetGeoTransform((ulx, pixel_size, 0, uly, 0, -pixel_size))
         mem_ds.GetRasterBand(1).WriteArray(data)
+        if nodata_value is not None:
+            mem_ds.GetRasterBand(1).SetNoDataValue(nodata_value)
 
         # Store raster dataset.
         raster_filepath.parent.mkdir(parents=True, exist_ok=True)
