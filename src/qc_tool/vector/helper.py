@@ -173,12 +173,15 @@ def check_gdb_filename(gdb_filepath, gdb_filename_regex, aoi_code, status):
 
 
 # Extract AOI code and compare it to pre-defined list.
-def extract_aoi_code(layer_defs, layer_regexes, expected_aoi_codes, status):
+def extract_aoi_code(layer_defs, layer_regexes, expected_aoi_codes, status, preserve_aoicode_case=False, compare_aoi_codes=True):
     layer_aoi_codes = []
     for layer_alias, layer_def in layer_defs.items():
         layer_name = layer_def["src_layer_name"]
         layer_regex = layer_regexes[layer_alias]
-        mobj = re.match(layer_regex, layer_name.lower())
+        if preserve_aoicode_case:
+            mobj = re.match(layer_regex, layer_name, re.IGNORECASE)
+        else:
+            mobj = re.match(layer_regex, layer_name.lower())
         if mobj is None:
             status.aborted("Layer {:s} has illegal name: {:s}.".format(layer_alias, layer_name))
             continue
@@ -190,7 +193,7 @@ def extract_aoi_code(layer_defs, layer_regexes, expected_aoi_codes, status):
         layer_aoi_codes.append(aoi_code)
 
         # Compare detected AOI code to pre-defined list.
-        if aoi_code not in expected_aoi_codes:
+        if compare_aoi_codes and aoi_code not in expected_aoi_codes:
             status.aborted("Layer {:s} has illegal AOI code {:s}.".format(layer_name, aoi_code))
             continue
 
