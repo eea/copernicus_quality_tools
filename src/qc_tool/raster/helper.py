@@ -2,6 +2,7 @@
 
 
 from collections import namedtuple
+from subprocess import run
 import numpy
 
 BLOCKSIZE = 2048
@@ -170,3 +171,28 @@ def read_tile(src_ds, tile, gap_value):
     else:
         arr_whole = (numpy.ones((tile.nrows, tile.ncols)) * gap_value).astype(int)
         return arr_whole
+
+
+def rasterize_mask(vector_filepath, pixel_size, du_column_name, aoi_code, align_grid, work_dir):
+
+    # Create a new filtered GeoPackage that only contains polygons belonging to the delivery unit.
+    filtered_vector_filepath = work_dir.joinpath("{}_filtered.gpkg".format(vector_filepath.stem))
+    args = ["ogr2ogr",
+            "-where", '\"{:s}\" = \"{:s}\"'.format(du_column_name, aoi_code),
+            "-f", "GPKG", str(filtered_vector_filepath),
+            vector_filepath, vector_filepath.stem]
+    run(args)
+
+    # Rasterize the filtered GeoPackage. The option -tap ensures that the resulting mask is aligned to target pixel size.
+    raster_filepath = work_dir.joinpath("{}_{}.tif".format(filtered_vector_filepath.stem, aoi_code))
+    args = ["gdal_rasterize",
+            "-burn", "1",
+            "-tr", str(pixel_size), str(pixel_size),
+            "-tap",
+            "-ot", "Byte",
+            "-of", "GTiff",
+            "-co", "COMPRESS=LZW",
+            str(filtered_vector_filepath),
+            str(raster_filepath)]
+    run(args)
+    return raster_filepath

@@ -434,6 +434,69 @@ class Test_gap(RasterCheckTestCase):
         self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
 
 
+    def test_vector_aoi(self):
+        layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "raster_for_vector_aoi_ok.tif")
+        layer_defs = {"layer_1": {"src_filepath": layer_filepath1, "src_layer_name": layer_filepath1.name}}
+        self.params.update({"raster_layer_defs": layer_defs,
+                            "aoi_code": "city002"})
+
+        from qc_tool.raster.gap import run_check
+        self.params.update({"layers": ["layer_1"],
+                            "outside_area_code": "NODATA",
+                            "mask": "aoi_ua_building_heights.gpkg",
+                            "du_column_name": "CodeCITY",
+                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "step_nr": 1})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual(0, len(status.messages))
+
+
+    def test_vector_aoi_not_intersect(self):
+        layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "raster_for_vector_aoi_ok.tif")
+        layer_defs = {"layer_1": {"src_filepath": layer_filepath1, "src_layer_name": layer_filepath1.name}}
+        self.params.update({"raster_layer_defs": layer_defs,
+                            "aoi_code": "city001"})
+
+        from qc_tool.raster.gap import run_check
+        self.params.update({"layers": ["layer_1"],
+                            "outside_area_code": "NODATA",
+                            "mask": "aoi_ua_building_heights.gpkg",
+                            "du_column_name": "CodeCITY",
+                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "step_nr": 1})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertIn("does not intersect any AOI polygon with CodeCITY=city001 from boundary aoi_ua_building_heights.gpkg", status.messages[0])
+
+
+    def test_vector_aoi_incomplete(self):
+
+        layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "raster_for_vector_aoi_nok01.tif")
+        layer_defs = {"layer_1": {"src_filepath": layer_filepath1, "src_layer_name": layer_filepath1.name}}
+        self.params.update({"raster_layer_defs": layer_defs,
+                            "aoi_code": "city002"})
+
+        from qc_tool.raster.gap import run_check
+        self.params.update({"layers": ["layer_1"],
+                            "outside_area_code": "NODATA",
+                            "mask": "aoi_ua_building_heights.gpkg",
+                            "du_column_name": "CodeCITY",
+                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "step_nr": 1})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertIn("has 136 gap pixels in the mapped area.", status.messages[0])
+        self.assertIn("s01_raster_for_vector_aoi_nok01_gap_warning.tif", status.attachment_filenames)
+        self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
+
+
 class Test_tile(RasterCheckTestCase):
     def setUp(self):
         super().setUp()

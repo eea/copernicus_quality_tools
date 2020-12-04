@@ -5,6 +5,7 @@
 DESCRIPTION = "There is no gap in the AOI."
 IS_SYSTEM = False
 
+MASK_ALIGN_GRID = 1000
 
 def run_check(params, status):
     import subprocess
@@ -14,6 +15,7 @@ def run_check(params, status):
 
     from qc_tool.raster.helper import do_raster_layers
     from qc_tool.raster.helper import find_tiles
+    from qc_tool.raster.helper import rasterize_mask
     from qc_tool.raster.helper import read_tile
     from qc_tool.raster.helper import write_progress
     from qc_tool.raster.helper import write_percent
@@ -21,6 +23,7 @@ def run_check(params, status):
 
     aoi_code = params["aoi_code"]
     gap_value_ds = params["outside_area_code"]
+    du_column_name = params.get("du_column_name", None)
 
     # Find the external boundary raster mask layer.
     raster_boundary_dir = params["boundary_dir"].joinpath("raster")
@@ -48,7 +51,17 @@ def run_check(params, status):
         ds_lry = ds_uly + (ds.RasterYSize * ds_yres)
 
         # Check availability of mask.
-        mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
+
+        # The mask is either retrieved from boundary package or it is generated using mask_ident, du_column_name and aoi_code.
+        if mask_ident.endswith(".gpkg") or mask_ident.endswith(".shp"):
+            mask_vector_filepath = raster_boundary_dir.joinpath(mask_ident)
+            if not mask_vector_filepath.exists():
+                status.info("Check cancelled due to boundary vector file {:s} not available.".format(mask_ident))
+                return
+            mask_file = rasterize_mask(mask_vector_filepath, int(ds_xres), params["du_column_name"], aoi_code, MASK_ALIGN_GRID, params["tmp_dir"])
+        else:
+            mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
+
         if not mask_file.exists():
             status.info("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
             return
@@ -70,10 +83,14 @@ def run_check(params, status):
 
         # Check if the dataset extent intersects the mask extent.
         if (mask_ulx > ds_lrx or mask_uly < ds_lry or mask_lrx < ds_ulx or mask_lry > ds_uly):
-            extent_message = "Layer {:s} does not intersect the aoi mask {:s}."
-            extent_message = extent_message.format(layer_def["src_layer_name"], mask_ident)
-            extent_message += "raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
-            extent_message += "aoi mask extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
+            if mask_ident.endswith(".gpkg") or mask_ident.endswith(".shp"):
+                extent_message = "Layer {:s} does not intersect any AOI polygon with {:s}={:s} from boundary {:s}."
+                extent_message = extent_message.format(layer_def["src_filepath"].name, du_column_name, aoi_code, mask_ident)
+            else:
+                extent_message = "Layer {:s} does not intersect the AOI mask {:s}."
+                extent_message = extent_message.format(layer_def["src_layer_name"], mask_ident)
+            extent_message += "Raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
+            extent_message += "AOI extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
             status.info(extent_message)
             continue
 
@@ -112,6 +129,11 @@ def run_check(params, status):
 
         # processing all the tiles:
         ds_band = ds.GetRasterBand(1)
+
+        # retrieval of NoData value:
+        if gap_value_ds == "NODATA":
+            gap_value_ds = ds_band.GetNoDataValue()
+
         gap_count_total = 0
         num_tiles = len(tiles)
         gap_filepaths = []
