@@ -10,6 +10,15 @@ def run_check(params, status):
     import osgeo.gdal as gdal
     from qc_tool.raster.helper import do_raster_layers
 
+    # extract validcodes parameter. An item in validcodes can be a single number or a range.
+    valid_codes = []
+    for validcode_item in params["validcodes"]:
+        if type(validcode_item) is list:
+            valid_codes = valid_codes + list(range(validcode_item[0], validcode_item[1] + 1))
+        else:
+            valid_codes.append(validcode_item)
+
+
     for layer_def in do_raster_layers(params):
         ds = gdal.Open(str(layer_def["src_filepath"]))
 
@@ -25,7 +34,7 @@ def run_check(params, status):
         # check particular codes against given list of valid codes
         invalid_codes = list()
         for code in used_codes:
-            if code not in params["validcodes"]:
+            if code not in valid_codes:
                 invalid_codes.append(str(code))
         if len(invalid_codes) > 0:
             invalid_codes_str = ', '.join(invalid_codes)
