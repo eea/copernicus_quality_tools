@@ -41,7 +41,14 @@ def run_check(params, status):
 
     # Check AOI codes.
     if "aoi_codes" in params and len(params["aoi_codes"]) > 0:
-        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status)
+        if params["aoi_codes"][0] == "*":
+            case_sensitive = True
+            compare_aoi_codes = False
+        else:
+            case_sensitive = False
+            compare_aoi_codes = True
+        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status,
+                                    case_sensitive=case_sensitive, compare_aoi_codes=compare_aoi_codes)
         status.add_params({"aoi_code": aoi_code})
 
     # Check raster file format.
