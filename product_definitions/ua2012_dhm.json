@@ -16,14 +16,6 @@
 	  }
     },
     {
-      "check_ident": "qc_tool.raster.nodata",
-      "required": true,
-      "parameters": {
-        "layers": ["raster"],
-        "nodata_value": 65535
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.inspire",
       "required": false,
       "parameters": {
@@ -83,6 +75,14 @@
       "parameters": {
         "layers": ["raster"],
         "max_blocksize": 256
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.nodata",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "nodata_value": 65535
       }
     },
     {

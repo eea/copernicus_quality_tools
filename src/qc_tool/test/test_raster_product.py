@@ -183,6 +183,20 @@ class Test_Raster(ProductTestCase):
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
 
+    def test_ua2012_dhm(self):
+        """Urban Atlas 2012 Building Heights - 10m raster"""
+        product_ident = "ua2012_dhm"
+        filepath = TEST_DATA_DIR.joinpath("raster", "ua2012_dhm", "EE003Ly_NARVA_ua2012_dhm.zip")
+
+        expected_step_results = ["ok"] * 12
+        # inspire check is skipped
+        expected_step_results[2] = "skipped"
+
+        job_result = dispatch(self.job_uuid, "user_name", filepath, product_ident, (3,))
+        print(job_result)
+        step_results = [step_result["status"] for step_result in job_result["steps"]]
+        self.assertListEqual(expected_step_results, step_results)
+
     def test_general_raster(self):
         """General raster product"""
         product_ident = "general_raster"
