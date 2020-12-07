@@ -91,8 +91,8 @@
       "parameters": {
         "layers": ["raster"],
         "outside_area_code": "NODATA",
-        "mask": "ua2012_dhm.gpkg",
-        "du_column_name": "CodeCITY"
+        "mask": "boundary_ua2012_dhm.gpkg",
+        "du_column_name": "CODE_CITY"
       }
     }
   ]

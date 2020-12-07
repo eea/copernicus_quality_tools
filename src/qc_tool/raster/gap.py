@@ -27,6 +27,7 @@ def run_check(params, status):
 
     # Find the external boundary raster mask layer.
     raster_boundary_dir = params["boundary_dir"].joinpath("raster")
+    vector_boundary_dir = params["boundary_dir"].joinpath("vector")
     mask_ident = "default"
     if "mask" in params:
         mask_ident = params["mask"]
@@ -54,7 +55,7 @@ def run_check(params, status):
 
         # The mask is either retrieved from boundary package or it is generated using mask_ident, du_column_name and aoi_code.
         if mask_ident.endswith(".gpkg") or mask_ident.endswith(".shp"):
-            mask_vector_filepath = raster_boundary_dir.joinpath(mask_ident)
+            mask_vector_filepath = vector_boundary_dir.joinpath(mask_ident)
             if not mask_vector_filepath.exists():
                 status.info("Check cancelled due to boundary vector file {:s} not available.".format(mask_ident))
                 return
