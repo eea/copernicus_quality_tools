@@ -91,7 +91,7 @@
       "parameters": {
         "layers": ["raster"],
         "area_pixels": 25,
-        "value_exception_codes": [254, 255],
+        "value_exception_codes": [0, 10, 254, 255],
         "neighbour_exception_codes": [254, 255],
         "nodata_value": 255
       }
