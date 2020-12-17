@@ -1,4 +1,4 @@
-FROM amd64/ubuntu:eoan
+FROM ubuntu:focal
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
@@ -12,7 +12,7 @@ ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get -y update \
     && apt-get -y upgrade \
-    && apt-get -y install wget unzip time
+    && apt-get -y install wget unzip time gnupg2
 
 # Install python and bootstrap pip.
 RUN cd /usr/local/src \
@@ -34,11 +34,20 @@ COPY ./supervisord.conf /etc
 # Expose the port of supervisor.
 EXPOSE 9001
 
-# Install postgresql & postgis.
+# Install postgresql version 11 & postgis version 2.5.
+#
+# Create the file postgresql apt repository configuration.
+RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt focal-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+
+# Import the repository signing key:
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+
+# Update the package lists to include PostgreSQL.
+RUN apt-get update
+
 # During install tzdata package needs timezone having been set already.
 ENV TZ=UTC
-RUN ln -s /usr/share/zoneinfo/UTC /etc/localtime \
-    && apt-get -y install postgresql-11-postgis-2.5
+RUN apt-get -y install postgresql-11-postgis-2.5
 
 # Configure the qc tool database.
 #
