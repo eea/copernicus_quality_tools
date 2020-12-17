@@ -24,6 +24,7 @@ def run_check(params, status):
     aoi_code = params["aoi_code"]
     gap_value_ds = params["outside_area_code"]
     du_column_name = params.get("du_column_name", None)
+    mask_align_grid = params.get("mask_align_grid", MASK_ALIGN_GRID)
 
     # Find the external boundary raster mask layer.
     raster_boundary_dir = params["boundary_dir"].joinpath("raster")
@@ -59,7 +60,8 @@ def run_check(params, status):
             if not mask_vector_filepath.exists():
                 status.info("Check cancelled due to boundary vector file {:s} not available.".format(mask_ident))
                 return
-            mask_file = rasterize_mask(mask_vector_filepath, int(ds_xres), params["du_column_name"], aoi_code, MASK_ALIGN_GRID, params["tmp_dir"])
+            mask_file = rasterize_mask(mask_vector_filepath, int(ds_xres), params["du_column_name"], aoi_code,
+                                       mask_align_grid, ds_ulx, ds_uly, params["tmp_dir"])
         else:
             mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
 
@@ -100,6 +102,12 @@ def run_check(params, status):
             status.info("Resolution of the raster [{:f}, {:f}] does not match "
                         "the resolution [{:f}, {:f}] of the boundary mask {:s}.tif."
                         .format(ds_xres, ds_yres, mask_xres, mask_yres, mask_ident))
+            continue
+
+        # Check if coordinates of the raster origin are whole integers.
+        if not ds_ulx.is_integer() or not ds_uly.is_integer():
+            status.info("Coordinates of the raster origin ({:f}, {:f}) are not whole integers."
+                        .format(ds_ulx, ds_uly))
             continue
 
         # Check if origin of mask is aligned with origin of raster.

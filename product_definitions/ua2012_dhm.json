@@ -42,7 +42,8 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["raster"]
+        "layers": ["raster"],
+        "grid_size": 1
       }
     },
     {
@@ -92,7 +93,8 @@
         "layers": ["raster"],
         "outside_area_code": "NODATA",
         "mask": "boundary_ua2012_dhm.gpkg",
-        "du_column_name": "CODE_CITY"
+        "du_column_name": "CODE_CITY",
+        "mask_align_grid": 1
       }
     }
   ]
