@@ -175,7 +175,7 @@ def read_tile(src_ds, tile, gap_value):
         return arr_whole
 
 
-def find_integer_bbox(vector_filepath, attr_name, attr_value):
+def find_bbox(vector_filepath, attr_name, attr_value):
     from osgeo import ogr as ogr
     ds = ogr.Open(str(vector_filepath))
     lyr = ds.GetLayer()
@@ -187,12 +187,6 @@ def find_integer_bbox(vector_filepath, attr_name, attr_value):
     for feat in lyr:
         if feat.GetField(attr_name) == attr_value:
             xminc, xmaxc, yminc, ymaxc = feat.GetGeometryRef().GetEnvelope()
-            print(feat)
-            print(xminc, xmaxc, yminc, ymaxc)
-            xminc = floor(xminc)
-            xmaxc = ceil(xmaxc)
-            yminc = floor(yminc)
-            ymaxc = ceil(ymaxc)
             if xminc < xmin:
                 xmin = xminc
             if xmaxc > xmax:
@@ -201,8 +195,7 @@ def find_integer_bbox(vector_filepath, attr_name, attr_value):
                 ymin = yminc
             if ymaxc > ymax:
                 ymax = ymaxc
-    print(xmin, ymin, xmax, ymax)
-    return int(round(xmin)), int(round(xmax)), int(round(ymin)), int(round(ymax))
+    return xmin, xmax, ymin, ymax
 
 
 def rasterize_mask(vector_filepath, pixel_size, du_column_name, aoi_code, mask_align_grid, src_ulx, src_uly, work_dir):
@@ -232,24 +225,22 @@ def rasterize_mask(vector_filepath, pixel_size, du_column_name, aoi_code, mask_a
                 str(raster_filepath)]
         run(args)
     else:
-        # If align_grid is smaller than pixel_size then ensure that the raster origin is whole integer.
-        mask_ulx, mask_lrx, mask_lry, mask_uly = find_integer_bbox(vector_filepath, du_column_name, aoi_code)
-        # Align the pixel_size with src_ulx, src_uly
+        # Find the bounding box of the mask.
+        mask_ulx, mask_lrx, mask_lry, mask_uly = find_bbox(vector_filepath, du_column_name, aoi_code)
+
+        # Align the bounding box of the mask with bounding box of the checked raster.
+        # It is assumed that the bounding box coordinates of the checked raster are whole integers.
         if src_ulx > mask_ulx:
-            ulx_shift = int((src_ulx - mask_ulx) % pixel_size)
+            mask_ulx = src_ulx - ceil((src_ulx - mask_ulx) / pixel_size) * pixel_size
         else:
-            ulx_shift = int((mask_ulx - src_ulx) % pixel_size)
-        mask_ulx = mask_ulx - ulx_shift
-        print("ulx_shift: {}".format(ulx_shift))
+            mask_ulx = src_ulx + floor((mask_ulx - src_ulx) / pixel_size) * pixel_size
         print("src_ulx: {}".format(src_ulx))
         print("mask_ulx: {}".format(mask_ulx))
 
         if src_uly < mask_uly:
-            uly_shift = int((mask_uly - src_uly) % pixel_size)
+            mask_uly = src_uly + ceil((mask_uly - src_uly) / pixel_size) * pixel_size
         else:
-            uly_shift = int((src_uly - mask_uly) % pixel_size)
-        mask_uly = mask_uly - uly_shift
-        print("uly_shift: {}".format(uly_shift))
+            mask_uly = src_uly - floor((src_uly - mask_uly) / pixel_size) * pixel_size
         print("src_uly: {}".format(src_uly))
         print("mask_uly: {}".format(mask_uly))
 
