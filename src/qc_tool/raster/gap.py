@@ -61,7 +61,7 @@ def run_check(params, status):
                 status.info("Check cancelled due to boundary vector file {:s} not available.".format(mask_ident))
                 return
             mask_file = rasterize_mask(mask_vector_filepath, int(ds_xres), params["du_column_name"], aoi_code,
-                                       mask_align_grid, ds_ulx, ds_uly, params["tmp_dir"])
+                                       mask_align_grid, ds_ulx, ds_uly, params["output_dir"])
         else:
             mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
 
@@ -121,13 +121,9 @@ def run_check(params, status):
                         "Raster origin: {:f}, Mask origin: {:f}".format(ds_uly, mask_uly))
             continue
 
-        # Calculate offset of checked raster dataset [ulx, uly] from boundary mask [ulx, uly].
-        ds_add_cols = int(abs(mask_ulx - ds_ulx) / abs(ds_xres))
-        ds_add_rows = int(abs(mask_uly - ds_uly) / abs(ds_yres))
-
         if report_progress:
-            msg = "ds_ulx: {:f} mask_ulx: {:f} ds_add_cols: {:f}".format(ds_ulx, mask_ulx, ds_add_cols)
-            msg += "\nds_uly: {:f} mask_uly: {:f} ds_add_rows: {:f}".format(ds_uly, mask_uly, ds_add_rows)
+            msg = "ds_ulx: {:f} mask_ulx: {:f}".format(ds_ulx, mask_ulx)
+            msg += "\nds_uly: {:f} mask_uly: {:f}".format(ds_uly, mask_uly)
             msg += "\nRasterXSize: {:d} RasterYSize: {:d}".format(ds.RasterXSize, ds.RasterYSize)
             write_progress(progress_filepath, msg)
 
@@ -148,6 +144,8 @@ def run_check(params, status):
         gap_filepaths = []
         for tile_no, tile in enumerate(tiles):
 
+            write_progress(progress_filepath, "Processing tile {}/{} ({}).".format(tile_no + 1, len(tiles), tile.position))
+
             # reading the mask data into Numpy array
             mask_xoff = tile.x_offset
             mask_yoff = tile.y_offset
@@ -157,16 +155,19 @@ def run_check(params, status):
 
             # If mask has all values unmapped then mask / raster comparison can be skipped.
             if numpy.max(arr_mask) == 0 or numpy.min(arr_mask) == nodata_value_mask:
+                write_progress(progress_filepath, "Tile {} has all values outside of mask, skipping.".format(tile_no + 1))
                 continue
 
             if tile.position == "outside":
+                # Current tile is completely outside the bounds of the checked raster.
+                write_progress(progress_filepath, "tile_position: outside.")
                 arr_gaps = (arr_mask == 1)
             elif tile.position == "inside":
-                # current tile is completely inside the raster bounds (needs more testing..)
-                arr_ds = ds_band.ReadAsArray(mask_xoff + ds_add_cols, mask_yoff + ds_add_rows, blocksize_x, blocksize_y)
+                # Current tile is completely inside the bounds of the checked raster.
+                arr_ds = read_tile(ds, tile, gap_value_ds)
                 arr_gaps = ((arr_mask == 1) * (arr_ds == gap_value_ds))
             else:
-                # current tile is partially inside the raster bounds
+                # Current tile is partially inside and partially outside the bounds of the checked raster.
                 arr_ds = read_tile(ds, tile, gap_value_ds)
                 arr_gaps = ((arr_mask == 1) * (arr_ds == gap_value_ds))
 
@@ -194,7 +195,7 @@ def run_check(params, status):
                 gap_count_total += gap_count
 
             if report_progress:
-                msg = "tile: {:d}/{:d} ({:s}), gaps: {:d}".format(tile_no, num_tiles, tile.position, gap_count)
+                msg = "tile: {:d}/{:d} ({:s}), gaps: {:d}".format(tile_no + 1, num_tiles, tile.position, gap_count)
                 write_progress(progress_filepath, msg)
                 progress_percent = int(100 * (tile_no / num_tiles))
                 write_percent(percent_filepath, progress_percent)
