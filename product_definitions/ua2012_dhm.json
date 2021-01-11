@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"raster": "^(?P<aoi_code>[a-z0-9]+)_[a-z0-9]+_ua2012_dhm"},
+        "layer_names":{"raster": "^(?P<aoi_code>[a-z0-9]+)_[a-z0-9_]+_ua2012_dhm\\.tif$"},
         "aoi_codes": ["*"],
         "extensions": [".tif"],
         "reference_year": "2012"
