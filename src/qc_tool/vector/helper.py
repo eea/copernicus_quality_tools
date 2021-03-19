@@ -951,31 +951,28 @@ class NeighbourTable():
                       "neighbour_table_name": self.neighbour_table_name}
         with self.connection.cursor() as cursor:
             # Insert neighbouring pairs.
-            sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
-                   "SELECT\n"
-                   " dfid.fid AS fida,\n"
-                   " lat.fid AS fidb,\n"
-                   " lat.dim\n"
-                   "FROM\n"
-                   " (SELECT DISTINCT fid FROM {feature_table_name}) AS dfid,\n"
-                   " LATERAL\n"
-                   " (SELECT\n"
-                   " tb.fid AS fid,\n"
-                   " max(ST_Dimension(ST_Intersection(ta.geom, tb.geom))) AS dim\n"
-                   "  FROM {feature_table_name} AS ta\n"
-                   "  INNER JOIN {feature_table_name} AS tb ON ta.geom && tb.geom\n"
-                   "  WHERE\n"
-                   "   ta.fid = dfid.fid\n"
-                   "   AND ta.fid < tb.fid\n"
-                   "  GROUP BY tb.fid) AS lat\n"
-                   "WHERE lat.dim >= 1;")
+            sql = ("WITH\n"
+                   " intersections AS\n"
+                   "  (SELECT\n"
+                   "    ta.fid AS fida,\n"
+                   "    tb.fid AS fidb,\n"
+                   "    ST_Intersection(ta.geom, tb.geom) AS geom\n"
+                   "   FROM {feature_table_name} AS ta\n"
+                   "   INNER JOIN {feature_table_name} AS tb ON ta.geom && tb.geom\n"
+                   "   WHERE\n"
+                   "    ta.fid < tb.fid)\n"
+                   "INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
+                   "SELECT fida, fidb, max(ST_Dimension(geom)) AS dim\n"
+                   "FROM intersections\n"
+                   "WHERE NOT ST_IsEmpty(geom)\n"
+                   "GROUP BY fida, fidb\n"
+                   "HAVING max(ST_Dimension(geom)) >= 1;")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
             # Insert inverted pairs.
             sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
-                   "SELECT\n"
-                   " fidb, fida, dim\n"
+                   "SELECT fidb, fida, dim\n"
                    "FROM {neighbour_table_name};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
