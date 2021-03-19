@@ -26,40 +26,49 @@ def run_check(params, status):
         neighbour_table = NeighbourTable(partitioned_layer)
         neighbour_table.make()
 
-        # Create table of error items.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
-                      "feature_table": layer_def["pg_layer_name"],
+                      "layer_name": layer_def["pg_layer_name"],
                       "neighbour_table": neighbour_table.neighbour_table_name,
+                      "overlap_detail_table": "s{:02d}_{:s}_detail".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
-        sql = ("CREATE TABLE {error_table} AS\n"
-               "SELECT DISTINCT a.fid AS {fid_name}\n"
-               "FROM\n"
-               " (SELECT {fid_name} AS fid, geom FROM {feature_table}\n"
-               "   WHERE {fid_name} in (SELECT fida from {neighbour_table} WHERE dim > 1)) AS a,\n"
-               " (SELECT {fid_name} AS fid, geom FROM {feature_table}\n"
-               "   WHERE {fid_name} in (SELECT fidb from {neighbour_table} WHERE dim > 1)) AS b\n"
-               "WHERE a.fid <> b.fid AND ST_Dimension(ST_Intersection(a.geom, b.geom)) >= 2\n")
+
+        # FIXME:
+        # It may happen during partitioning, that the splitted geometries may get shifted a bit.
+        # The NeighbourTable then reports two neighbouring geometries as overlapping with ST_Dimension()=2.
+        # In order to avoid reporting such misleading overlaps we verify the overlap by generating anew
+        # intersection from original geometries.
+        # If some overlaps are found actually, they are propagated into error table.
+        # So, the order of building the tables are reversed, the content of error table is extracted
+        # from the overlap detail table.
+
+        # Create overlap detail table.
+        sql = ("WITH\n"
+               " suspects AS\n"
+               "  (SELECT fida, fidb\n"
+               "   FROM {neighbour_table}\n"
+               "   WHERE\n"
+               "    fida < fidb\n"
+               "    AND dim >= 2)\n"
+               "CREATE TABLE {overlap_detail_table} AS\n"
+               "SELECT fida, fidb, polygon_dump(ST_Intersection(layer_a.geom, layer_b.geom)) AS geom\n"
+               "FROM suspects\n"
+               "INNER JOIN {layer_name} AS layer_a ON suspects.fida = layer_a.{fid_name}\n"
+               "INNER JOIN {layer_name} AS layer_b ON suspects.fidb = layer_b.{fid_name};\n")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
-
-        # Report error items.
-        items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
-        if items_message is not None:
-
-            # If there are error items are found, then add a full table with intersection areas.
-            sql = ("CREATE TABLE {overlap_detail_table} AS\n"
-               "SELECT DISTINCT a.fid AS fida, b.fid as fidb, polygon_dump(ST_Intersection(a.geom, b.geom)) as geom\n"
-               "FROM\n"
-               " (SELECT {fid_name} AS fid, geom FROM {feature_table}\n"
-               "   WHERE {fid_name} in (SELECT fida from {neighbour_table} WHERE dim > 1)) AS a,\n"
-               " (SELECT {fid_name} AS fid, geom FROM {feature_table} "
-               "   WHERE {fid_name} in (SELECT fidb from {neighbour_table} WHERE dim > 1)) AS b\n"
-               "WHERE a.fid > b.fid AND ST_Dimension(ST_Intersection(a.geom, b.geom)) >= 2\n")
-            sql_params["overlap_detail_table"] = "s{:02d}_{:s}_detail".format(params["step_nr"], layer_def["pg_layer_name"])
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
+        if cursor.rowcount > 0:
+            # Report overlap detail table.
             status.add_full_table(sql_params["overlap_detail_table"])
 
+            # Create table of error items.
+            sql = ("CREATE TABLE {error_table} AS\n"
+                   "SELECT DISTINCT unnest(ARRAY[fida, fidb]) AS {fid_name}\n"
+                   "FROM {overlap_detail_table};")
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
+            # Report error items.
+            items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
             status.failed("Layer {:s} has overlapping pairs in features with {:s}: {:s}."
                           .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
