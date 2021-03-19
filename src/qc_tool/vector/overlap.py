@@ -50,10 +50,10 @@ def run_check(params, status):
                "    fida < fidb\n"
                "    AND dim >= 2)\n"
                "CREATE TABLE {overlap_detail_table} AS\n"
-               "SELECT fida, fidb, polygon_dump(ST_Intersection(layer_a.geom, layer_b.geom)) AS geom\n"
+               "(SELECT fida, fidb, polygon_dump(ST_Intersection(layer_a.geom, layer_b.geom)) AS geom\n"
                "FROM suspects\n"
                "INNER JOIN {layer_name} AS layer_a ON suspects.fida = layer_a.{fid_name}\n"
-               "INNER JOIN {layer_name} AS layer_b ON suspects.fidb = layer_b.{fid_name};\n")
+               "INNER JOIN {layer_name} AS layer_b ON suspects.fidb = layer_b.{fid_name});\n")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
         if cursor.rowcount > 0:
