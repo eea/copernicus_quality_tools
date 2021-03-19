@@ -85,17 +85,6 @@
         "layers": ["raster"],
         "nodata_value": 65535
       }
-    },
-    {
-      "check_ident": "qc_tool.raster.gap",
-      "required": false,
-      "parameters": {
-        "layers": ["raster"],
-        "outside_area_code": "NODATA",
-        "mask": "boundary_ua2012_dhm.gpkg",
-        "du_column_name": "CODE_CITY",
-        "mask_align_grid": 1
-      }
     }
   ]
 }
