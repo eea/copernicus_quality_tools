@@ -11,7 +11,7 @@
       "parameters": {
         "formats": [".gdb", ".gpkg", ".shp"],
         "layer_names": {
-          "rpz": "^rpz_(?P<aoi_code>du[0-9]{3})[a-z]_lclu_2018_2012_v[0-9]{2}$"
+          "rpz": "^rpz_(?P<aoi_code>du[0-9]{3})[a-z]_lclu_2012_2018_v03$"
         },
         "aoi_codes": ["du001", "du002", "du003", "du004", "du005", "du006", "du007", "du008", "du009",
                       "du010", "du011", "du012", "du013", "du014", "du015", "du016", "du017", "du018", "du019",
