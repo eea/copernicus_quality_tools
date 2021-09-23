@@ -896,6 +896,28 @@ class Test_gap(VectorCheckTestCase):
                             "du_column_name": None,
                             "step_nr": 1})
 
+    def test_tolerance(self):
+        from qc_tool.vector.gap import run_check
+        self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (2, ST_MakeEnvelope(2.009, 2.009, 5, 5, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.assertEqual([], self.cursor.fetchall())
+
+    def test_tolerance_finds_gaps(self):
+        from qc_tool.vector.gap import run_check
+        self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
+        self.cursor.execute("INSERT INTO reference VALUES (2, ST_MakeEnvelope(2.05, 2.05, 5, 5, 4326));")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.assertEqual(1, len(self.cursor.fetchall()))
+        self.assertIn("has 1 gaps", status.messages[0])
+
+
     def test(self):
         from qc_tool.vector.gap import run_check
         self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")

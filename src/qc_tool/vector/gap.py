@@ -7,6 +7,7 @@ import logging
 
 DESCRIPTION = "There is no gap in the AOI."
 IS_SYSTEM = False
+TOLERANCE = 0.01
 
 
 log = logging.getLogger(__name__)
@@ -23,12 +24,22 @@ def run_check(params, status):
         return
 
     for layer_def in do_layers(params):
-        log.debug("Started mmu check for the layer {:s}.".format(layer_def["pg_layer_name"]))
+        log.debug("Started gap check for the layer {:s}.".format(layer_def["pg_layer_name"]))
 
         # Prepare support data.
         partitioned_layer = PartitionedLayer(params["connection_manager"].get_connection(),
                                              layer_def["pg_layer_name"],
                                              layer_def["pg_fid_name"])
+
+        # Update boundary with negative tolerance buffer
+        boundary_table_name = params["layer_defs"]["boundary"]["pg_layer_name"]
+        sql_params = {"boundary_table": boundary_table_name,
+                      "tolerance": TOLERANCE}
+        with params["connection_manager"].get_connection().cursor() as cursor:
+            sql = "UPDATE {boundary_table} SET geom = ST_BUFFER(geom, -{tolerance});"
+            sql = sql.format(**sql_params)
+            cursor.execute(sql)
+
         gap_table = GapTable(partitioned_layer,
                              params["layer_defs"]["boundary"]["pg_layer_name"],
                              params["du_column_name"])
