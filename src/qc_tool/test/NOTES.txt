@@ -9,7 +9,7 @@ Run container with postgis service:
 
 docker run --rm \
  --interactive --tty \
- --publish 5432:5432 \
+ --publish 15432:5432 \
  --name=qc_tool_postgis \
  --user=postgres \
  eeacms/copernicus-qctool-worker \
