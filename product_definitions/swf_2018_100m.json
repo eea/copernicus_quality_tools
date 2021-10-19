@@ -1,0 +1,84 @@
+{
+  "description": "HRL Small Woody Features, 100m raster",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "layer_names":{
+          "swf_100m": "^swf_2018_100m_(?P<aoi_code>eu)_0?3035_",
+        "aoi_codes": ["eu"],
+        "extensions": [".tif"],
+        "reference_year": "2018"
+      }
+    }},
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"],
+        "auto_identify_epsg": true,
+        "epsg": 3035
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"],
+        "pixelsize": 100
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"],
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"],
+        "validcodes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"],
+        "mask": "swf",
+        "outside_area_code": 255
+      }
+    }
+  ]
+}

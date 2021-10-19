@@ -1,0 +1,84 @@
+{
+  "description": "HRL Small Woody Features Change, 100m raster",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "layer_names":{
+          "swfc_100m": "^swfc_1518_100m_(?P<aoi_code>eu)_0?3035_",
+        "aoi_codes": ["eu"],
+        "extensions": [".tif"],
+        "reference_year": "2015-2018"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "auto_identify_epsg": true,
+        "epsg": 3035
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "pixelsize": 100
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"],
+        "validcodes": [0, 1, 2, 210, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "mask": "swf",
+        "outside_area_code": 255
+      }
+    }
+  ]
+}

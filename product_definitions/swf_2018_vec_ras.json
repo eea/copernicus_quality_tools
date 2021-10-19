@@ -1,0 +1,306 @@
+{
+  "description": "HRL Small Woody Features, vector + 5m raster",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "layer_names":{"raster": "^swf_2018_005m_(?P<country_code>[a-z]{2})_0?3035_(?P<aoi_code>[0-9]{3})_"},
+        "extensions": [".tif"],
+        "aoi_codes": ["001", "002", "003", "004", "005", "006", "007", "008", "009","010",
+                      "011", "012", "013", "014", "015", "016", "017", "018", "019","020",
+                      "021", "022", "023", "024", "025", "026", "027", "028", "029","030",
+                      "031", "032", "033", "034", "035", "036", "037", "038", "039","040",
+                      "041", "042", "043", "044", "045", "046", "047", "048", "049","050",
+                      "051", "052", "053", "054", "055", "056", "057", "058", "059","060",
+                      "061", "062", "063", "064", "065", "066", "067", "068", "069","070",
+                      "071", "072", "073", "074", "075", "076", "077", "078", "079","080",
+                      "081", "082", "083", "084", "085", "086", "087", "088", "089","090",
+                      "091", "092", "093", "094", "095", "096", "097", "098", "099","100",
+                      "101", "102", "103", "104", "105", "106", "107", "108", "109","110",
+                      "111", "112", "113", "114", "115", "116", "117", "118", "119","120",
+                      "121", "122", "123", "124", "125", "126", "127", "128", "129","130",
+                      "131", "132", "133", "134", "135", "136"],
+        "country_codes": ["al", "at", "ba", "be", "bg", "ch", "cy", "cz", "de", "dk", "ee",
+                          "es", "fi", "fo", "fr", "gb", "gr", "hr", "hu", "ie", "is", "it",
+                          "ks", "lt", "lv", "me", "mk", "nl", "no", "pl", "pt", "ro", "rs",
+                          "se", "si", "sk", "tr"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "auto_identify_epsg": true,
+        "epsg": 3035
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "pixelsize": 5
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "validcodes": [0, 1, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.tile",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "max_blocksize": 1024
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "mask": "swf",
+        "outside_area_code": 255
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.color",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "colors": {
+          "0":[240, 240, 240],
+          "1":[215, 245, 0],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".shp"
+        ],
+        "layer_names": {
+          "vector": "^swf_2015_vec_(?P<country_code>[a-z]{2})_0?3035_0*(?P<aoi_code>[0-9]+)_"
+        },
+        "aoi_codes": ["1", "2", "3", "4", "5", "6", "7", "8", "9","10",
+                      "11", "12", "13", "14", "15", "16", "17", "18", "19","20",
+                      "21", "22", "23", "24", "25", "26", "27", "28", "29","30",
+                      "31", "32", "33", "34", "35", "36", "37", "38", "39","40",
+                      "41", "42", "43", "44", "45", "46", "47", "48", "49","50",
+                      "51", "52", "53", "54", "55", "56", "57", "58", "59","60",
+                      "61", "62", "63", "64", "65", "66", "67", "68", "69","70",
+                      "71", "72", "73", "74", "75", "76", "77", "78", "79","80",
+                      "81", "82", "83", "84", "85", "86", "87", "88", "89","90",
+                      "91", "92", "93", "94", "95", "96", "97", "98", "99","100",
+                      "101", "102", "103", "104", "105", "106", "107", "108", "109","110",
+                      "111", "112", "113", "114", "115", "116", "117", "118", "119","120",
+                      "121", "122", "123", "124", "125", "126", "127", "128", "129","130",
+                      "131", "132", "133", "134", "135", "136"],
+        "country_codes": ["al", "at", "ba", "be", "bg", "ch", "cy", "cz", "de", "dk", "ee",
+                          "es", "fi", "fo", "fr", "gb", "gr", "hr", "hu", "ie", "is", "it",
+                          "ks", "lt", "lv", "me", "mk", "nl", "no", "pl", "pt", "ro", "rs",
+                          "se", "si", "sk", "tr"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["vector"],
+        "required": {"code": "string",
+                     "area": "real",
+                     "class_name": "string"},
+        "ignored": ["shape_length", "shape_area"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["vector"],
+        "epsg": 3035,
+        "auto_identify_epsg": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "column_defs": [["code", ["1"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "area_column_name": "area",
+        "unit": 1,
+        "tolerance": 0.001
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.layer_area",
+      "required": false,
+      "parameters": {
+        "layers": ["raster", "vector"],
+        "vector_layer": "vector",
+        "vector_code_column_name": "code",
+        "vector_codes": ["1"],
+        "raster_layer": "raster",
+        "raster_codes": [1],
+        "warning_percent_difference": 0.05,
+        "error_percent_difference": 0.5
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.compactness",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "code_column_name": "code",
+        "area_column_name": "area",
+        "linear_code": "1",
+        "patchy_code": "2",
+        "threshold": 0.75
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "complex_change": null,
+        "general_where": ["layer.area >= 200 OR layer.code <> '2'"],
+        "exception_where": ["FALSE"],
+        "warning_where": ["FALSE"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mxmu",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "area_column_name": "area",
+        "mxmu": 5000,
+        "error_where": "layer.code = '2'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mmw": 10,
+        "general_where": "layer.code <> '2'",
+        "exception_where": "FALSE"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mxmw",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mxmw": 30,
+        "warning_where": "layer.code = '1'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mml",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mml": 50,
+        "warning_where": "layer.code = '1'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "code_column_names": ["code"],
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
+      }
+    }
+  ]
+}
