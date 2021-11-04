@@ -33,10 +33,11 @@ def run_check(params, status):
 
         # Update boundary with negative tolerance buffer
         boundary_table_name = params["layer_defs"]["boundary"]["pg_layer_name"]
+
         sql_params = {"boundary_table": boundary_table_name,
-                      "tolerance": TOLERANCE}
+                          "tolerance": TOLERANCE}
         with params["connection_manager"].get_connection().cursor() as cursor:
-            sql = "UPDATE {boundary_table} SET geom = ST_BUFFER(geom, -{tolerance});"
+            sql = "UPDATE {boundary_table} SET geom = ST_Multi(ST_BUFFER(geom, -{tolerance}));"
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
