@@ -13,6 +13,7 @@ def run_check(params, status):
     import osgeo.gdal as gdal
     from qc_tool.vector.helper import LayerDefsBuilder
     from qc_tool.vector.helper import extract_aoi_code
+    from qc_tool.vector.helper import extract_epsg_code
 
     # Fix reference year.
     if "reference_year" in params:
@@ -50,6 +51,13 @@ def run_check(params, status):
         aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status,
                                     preserve_aoicode_case=preserve_aoicode_case, compare_aoi_codes=compare_aoi_codes)
         status.add_params({"aoi_code": aoi_code})
+
+    # Check EPSG codes.
+    if "epsg_codes" in params and len(params["epsg_codes"]) > 0:
+        compare_epsg_codes = True
+        name_epsg = extract_epsg_code(builder.layer_defs, params["layer_names"], params["epsg_codes"], status,
+                                    compare_epsg_codes=compare_epsg_codes)
+        status.add_params({"name_epsg": name_epsg})
 
     # Check raster file format.
     for layer_alias, layer_def in builder.layer_defs.items():

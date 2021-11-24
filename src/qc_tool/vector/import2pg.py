@@ -15,7 +15,7 @@ def run_check(params, status):
 
     from qc_tool.vector.helper import do_layers
 
-    dsn, schema =  params["connection_manager"].get_dsn_schema()
+    dsn, schema = params["connection_manager"].get_dsn_schema()
 
     # Import all layers found in layer_defs.
     for layer_def in params["layer_defs"].values():

@@ -210,6 +210,41 @@ def extract_aoi_code(layer_defs, layer_regexes, expected_aoi_codes, status, pres
     # Set aoi_code as a global parameter.
     return aoi_code
 
+# Extract EPSG code and compare it to pre-defined list.
+def extract_epsg_code(layer_defs, layer_regexes, expected_epsg_codes, status, compare_epsg_codes=True):
+    layer_epsg_codes = []
+    for layer_alias, layer_def in layer_defs.items():
+        layer_name = layer_def["src_layer_name"]
+        layer_regex = layer_regexes[layer_alias]
+        mobj = re.match(layer_regex, layer_name.lower())
+        if mobj is None:
+            status.aborted("Layer {:s} has illegal name: {:s}.".format(layer_alias, layer_name))
+            continue
+        try:
+            epsg_code = mobj.group("epsg_code")
+        except IndexError:
+            status.aborted("Layer {:s} does not contain EPSG code.".format(layer_name))
+            continue
+        layer_epsg_codes.append(epsg_code)
+
+        # Compare detected AOI code to pre-defined list.
+        if compare_epsg_codes and epsg_code not in expected_epsg_codes:
+            status.aborted("Layer {:s} has illegal EPSG code {:s}.".format(layer_name, epsg_code))
+            continue
+
+    # Check that AOI code could be detected.
+    if len(set(layer_epsg_codes)) == 0:
+        status.aborted("EPSG code could not be detected from any layer name.")
+        return
+
+    # If there are multiple layers, check that all layers have the same EPSG code.
+    if len(set(layer_epsg_codes)) > 1:
+        status.aborted("Layers do not have the same EPSG code. Detected EPSG codes: {:s}"
+                       .format(",".join(list(layer_epsg_codes))))
+
+    # Set aoi_code as a global parameter.
+    return epsg_code
+
 
 class LayerDefsBuilder():
     """

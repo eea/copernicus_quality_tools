@@ -129,6 +129,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
 
             for step_nr, step_def in enumerate(product_definition["steps"], start=1):
+                print(step_nr, step_def)
 
                 step_result = {"check_ident": step_def["check_ident"]}
 
