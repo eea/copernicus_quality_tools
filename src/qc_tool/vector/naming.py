@@ -11,6 +11,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import LayerDefsBuilder
     from qc_tool.vector.helper import check_gdb_filename
     from qc_tool.vector.helper import extract_aoi_code
+    from qc_tool.vector.helper import extract_epsg_code
     from qc_tool.vector.helper import find_gdb_layers
     from qc_tool.vector.helper import find_gpkg_layers
     from qc_tool.vector.helper import find_shp_layers
@@ -86,8 +87,23 @@ def run_check(params, status):
     # Extract AOI code and compare it to pre-defined list.
     aoi_code = None
     if "aoi_codes" in params and len(params["aoi_codes"]) > 0:
-        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status)
+        if params["aoi_codes"][0] == "*":
+            preserve_aoicode_case = True
+            compare_aoi_codes = False
+        else:
+            preserve_aoicode_case = False
+            compare_aoi_codes = True
+        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status,
+                                    preserve_aoicode_case=preserve_aoicode_case, compare_aoi_codes=compare_aoi_codes)
         status.add_params({"aoi_code": aoi_code})
+
+    # Extract EPSG code and compare it to pre-defined list.
+    name_epsg = None
+    if "epsg_codes" in params and len(params["epsg_codes"]) > 0:
+        compare_epsg_codes = True
+        name_epsg = extract_epsg_code(builder.layer_defs, params["layer_names"], params["epsg_codes"], status,
+                                      compare_epsg_codes=compare_epsg_codes)
+        status.add_params({"name_epsg": name_epsg})
 
     # Check geodatabase name. If set, the aoi_code in the geodatabase name should match aoi_code from the layers.
     if "gdb_filename_regex" in params:

@@ -1,0 +1,121 @@
+{
+  "description": "HRL Small Woody Features 2018, 100m raster",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "layer_names":{
+          "swf_100m": "^swf_2018_100m_(?P<aoi_code>[0-9a-zA-Z]{2,6})_(?P<epsg_code>[0-9]{5})",
+          "swfc_100m": "^swfc_1518_100m_(?P<aoi_code>[0-9a-zA-Z]{2,6})_(?P<epsg_code>[0-9]{5})"
+        },
+        "aoi_codes": ["*",
+          "E08N29", "E10N27", "E12N23", "E12N25", "E14N11", "E14N13", "E16N11", "E16N13", "E16N17", "E18N11", "E18N13",
+          "E18N15", "E12N27", "E26N23", "E28N51", "E30N51", "E18N17", "E20N11", "E26N19", "E26N21", "E26N25", "E26N49",
+          "E26N51", "E26N53", "E28N17", "E28N19", "E28N21", "E28N23", "E28N25", "E28N35", "E28N37", "E28N49", "E28N53",
+          "E30N15", "E30N17", "E30N19", "E30N21", "E30N23", "E30N25", "E30N33", "E30N35", "E30N37", "E30N39", "E30N49",
+          "E32N17", "E32N19", "E32N21", "E32N23", "E32N25", "E32N27", "E32N29", "E32N31", "E32N33", "E32N35", "E32N37",
+          "E32N39", "E32N41", "E32N49", "E32N51", "E34N19", "E34N21", "E34N23", "E34N25", "E34N27", "E34N31", "E34N33",
+          "E34N35", "E34N37", "E34N39", "E34N41", "E34N43", "E36N19", "E36N21", "E36N23", "E36N25", "E36N27", "E36N31",
+          "E36N33", "E36N35", "E36N37", "E36N39", "E36N41", "E36N43", "E38N19", "E38N21", "E38N23", "E38N25", "E38N27",
+          "E38N31", "E38N33", "E38N35", "E40N19", "E40N21", "E40N23", "E40N25", "E40N27", "E40N29", "E40N31", "E40N33",
+          "E40N35", "E40N39", "E40N41", "E40N43", "E40N45", "E34N29", "E36N29", "E38N29", "E42N19", "E42N21", "E42N23",
+          "E42N25", "E42N27", "E42N29", "E42N31", "E42N33", "E42N37", "E42N39", "E42N41", "E42N43", "E42N45", "E42N47",
+          "E42N49", "E44N15", "E44N17", "E44N19", "E44N21", "E44N23", "E44N27", "E44N29", "E44N31", "E44N33", "E44N35",
+          "E44N37", "E44N39", "E44N41", "E44N43", "E44N45", "E44N47", "E44N49", "E44N53", "E46N15", "E46N17", "E46N19",
+          "E46N21", "E46N23", "E46N25", "E46N27", "E46N29", "E46N31", "E46N33", "E46N35", "E46N39", "E46N41", "E46N43",
+          "E46N45", "E42N35", "E44N25", "E44N51", "E40N37", "E46N37", "E52N23", "E46N47", "E46N49", "E46N51", "E46N53",
+          "E46N55", "E48N17", "E48N19", "E48N21", "E48N25", "E48N27", "E48N29", "E48N31", "E48N33", "E48N35", "E48N37",
+          "E48N39", "E48N41", "E48N43", "E48N45", "E48N47", "E48N51", "E48N53", "E48N55", "E50N19", "E50N21", "E50N23",
+          "E50N25", "E50N27", "E50N29", "E50N31", "E50N33", "E50N35", "E50N39", "E50N41", "E50N43", "E50N45", "E50N47",
+          "E50N49", "E50N51", "E50N53", "E50N55", "E52N17", "E52N19", "E52N21", "E52N25", "E52N27", "E52N29", "E52N31",
+          "E48N23", "E48N49", "E50N37", "E52N33", "E52N35", "E52N37", "E52N39", "E52N41", "E52N43", "E52N45", "E52N47",
+          "E52N51", "E54N15", "E54N17", "E54N19", "E54N21", "E54N23", "E54N25", "E54N27", "E54N29", "E54N31", "E54N39",
+          "E54N47", "E56N17", "E56N19", "E56N21", "E56N23", "E56N25", "E56N27", "E56N29", "E58N15", "E58N17", "E58N19",
+          "E58N21", "E58N23", "E58N27", "E60N17", "E60N19", "E60N21", "E60N23", "E60N25", "E62N17", "E62N19", "E62N21",
+          "E62N23", "E62N25", "E64N17", "E64N21", "E64N23", "E64N25", "E66N19", "E52N49", "E56N15", "E58N25", "E64N19",
+          "E70N25", "E66N21", "E66N23", "E66N25", "E68N21", "E68N23", "E68N25", "E68N27", "E70N23", "E70N27", "E72N23",
+          "E72N25", "E72N27"],
+        "epsg_codes": ["03035"],
+        "extensions": [".tif"],
+        "reference_year": "2018"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"],
+        "auto_identify_epsg": true,
+        "epsg": 3035
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"],
+        "pixelsize": 100
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"],
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m"],
+        "validcodes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "validcodes": [0, 1, 2, 210, 254, 255]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_100m", "swfc_100m"],
+        "mask": "swf",
+        "outside_area_code": 255
+      }
+    }
+  ]
+}

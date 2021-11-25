@@ -67,7 +67,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
-        "validcodes": [[0, 1000], 65535]
+        "validcodes": [[1, 1000], 65535]
       }
     },
     {
