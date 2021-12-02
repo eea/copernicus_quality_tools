@@ -1,5 +1,5 @@
 {
-  "description": "HRL Small Woody Features, 100m raster",
+  "description": "HRL Small Woody Features 2015, 100m raster",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
