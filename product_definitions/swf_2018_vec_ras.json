@@ -176,9 +176,9 @@
       "parameters": {
         "layers": ["vector"],
         "required": {"code": "integer",
-                     "shape_area": "real",
+                     "area": "real",
                      "class_name": "string"},
-        "ignored": ["shape_length"]
+        "ignored": ["shape_length", "shape_area"]
       }
     },
     {
@@ -228,7 +228,7 @@
       "required": false,
       "parameters": {
         "layers": ["vector"],
-        "area_column_name": "shape_area",
+        "area_column_name": "area",
         "unit": 1,
         "tolerance": 0.001
       }
