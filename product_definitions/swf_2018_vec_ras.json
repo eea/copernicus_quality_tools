@@ -106,7 +106,7 @@
       "required": false,
       "parameters": {
         "layers": ["swf_005m", "swf_fm_005m"],
-        "mask": "swf",
+        "mask": "swf_2018",
         "outside_area_code": 255
       }
     },

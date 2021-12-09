@@ -77,7 +77,7 @@
       "required": false,
       "parameters": {
         "layers": ["swfc_100m"],
-        "mask": "swf",
+        "mask": "swf_2018",
         "outside_area_code": 255
       }
     }
