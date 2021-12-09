@@ -21,7 +21,7 @@ def run_check(params, status):
     from qc_tool.raster.helper import write_percent
 
 
-    aoi_code = params["aoi_code"]
+    aoi_code = params["aoi_code"].lower()
     gap_value_ds = params["outside_area_code"]
     du_column_name = params.get("du_column_name", None)
     mask_align_grid = params.get("mask_align_grid", MASK_ALIGN_GRID)
@@ -32,6 +32,7 @@ def run_check(params, status):
     mask_ident = "default"
     if "mask" in params:
         mask_ident = params["mask"]
+    mask_ident = mask_ident.lower()
 
     for layer_def in do_raster_layers(params):
 

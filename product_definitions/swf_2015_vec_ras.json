@@ -93,7 +93,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
-        "mask": "swf",
+        "mask": "swf_2015",
         "outside_area_code": 255
       }
     },

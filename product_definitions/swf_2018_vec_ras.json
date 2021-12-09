@@ -10,7 +10,10 @@
       "required": true,
       "parameters": {
         "reference_year": "2018",
-        "layer_names":{"raster": "^swf_2018_005m_(?P<aoi_code>[0-9a-zA-Z]{2,6})_(?P<epsg_code>[0-9]{5})"},
+        "layer_names":{
+          "swf_005m": "^swf_2018_005m_(?P<aoi_code>[0-9a-zA-Z]{2,6})_(?P<epsg_code>[0-9]{5})",
+          "swf_fm_005m": "^swf_2018_fm_(?P<aoi_code>[0-9a-zA-Z]{2,6})_(?P<epsg_code>[0-9]{5})"
+        },
         "extensions": [".tif"],
         "aoi_codes": ["*",
           "E08N29", "E10N27", "E12N23", "E12N25", "E14N11", "E14N13", "E16N11", "E16N13", "E16N17", "E18N11", "E18N13",
@@ -46,7 +49,7 @@
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
+        "layers": ["swf_005m", "swf_fm_005m"],
         "auto_identify_epsg": true,
         "epsg": 3035
       }
@@ -55,7 +58,7 @@
       "check_ident": "qc_tool.raster.pixel_size",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
+        "layers": ["swf_005m", "swf_fm_005m"],
         "pixelsize": 5
       }
     },
@@ -63,14 +66,14 @@
       "check_ident": "qc_tool.raster.origin",
       "required": false,
       "parameters": {
-        "layers": ["raster"]
+        "layers": ["swf_005m", "swf_fm_005m"]
       }
     },
     {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
+        "layers": ["swf_005m", "swf_fm_005m"],
         "datatype": "byte"
       }
     },
@@ -78,7 +81,7 @@
       "check_ident": "qc_tool.raster.compress",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
+        "layers": ["swf_005m", "swf_fm_005m"],
         "compression": ["LZW"]
       }
     },
@@ -86,7 +89,7 @@
       "check_ident": "qc_tool.raster.value",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
+        "layers": ["swf_005m", "swf_fm_005m"],
         "validcodes": [0, 1, 254, 255]
       }
     },
@@ -94,7 +97,7 @@
       "check_ident": "qc_tool.raster.tile",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
+        "layers": ["swf_005m", "swf_fm_005m"],
         "max_blocksize": 1024
       }
     },
@@ -102,8 +105,8 @@
       "check_ident": "qc_tool.raster.gap",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
-        "mask": "swf",
+        "layers": ["swf_005m", "swf_fm_005m"],
+        "mask": "swf_2018",
         "outside_area_code": 255
       }
     },
@@ -111,7 +114,7 @@
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["raster"],
+        "layers": ["swf_005m", "swf_fm_005m"],
         "colors": {
           "0":[240, 240, 240],
           "1":[215, 245, 0],
@@ -172,7 +175,7 @@
       "required": true,
       "parameters": {
         "layers": ["vector"],
-        "required": {"code": "string",
+        "required": {"code": "integer",
                      "area": "real",
                      "class_name": "string"},
         "ignored": ["shape_length", "shape_area"]
@@ -234,11 +237,11 @@
       "check_ident": "qc_tool.vector.layer_area",
       "required": false,
       "parameters": {
-        "layers": ["raster", "vector"],
+        "layers": ["swf_005m", "vector"],
         "vector_layer": "vector",
         "vector_code_column_name": "code",
-        "vector_codes": ["1"],
-        "raster_layer": "raster",
+        "vector_codes": [1],
+        "raster_layer": "swf_005m",
         "raster_codes": [1],
         "warning_percent_difference": 0.05,
         "error_percent_difference": 0.5
