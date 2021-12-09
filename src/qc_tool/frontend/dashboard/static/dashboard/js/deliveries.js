@@ -1,5 +1,19 @@
 // Populate content of deliveries table from /data/delivery/list/ URL.
-
+$('#tbl-deliveries').bootstrapTable({
+    cache: false,
+    striped: true,
+    search: true,
+    pagination: true,
+    showColumns: true,
+    sortName: 'name',
+    sortOrder: 'desc',
+    url: "/data/delivery/list/",
+    pageSize: 20,
+    pageList: [20, 50, 100, 500],
+    formatNoMatches: function () {
+        return 'No deliveries found. Please upload a delivery ZIP file.';
+    }
+});
 
 function fileSizeFormatter(value, row) {
 
@@ -299,22 +313,6 @@ $(document).ready(function() {
 
     // Set defult tooltip in each table row.
     $('[data-toggle="tooltip"]').tooltip();
-
-    $('#tbl-deliveries').bootstrapTable({
-       cache: false,
-       striped: true,
-       search: true,
-       pagination: true,
-       showColumns: true,
-       sortName: 'name',
-       sortOrder: 'desc',
-       url: "/data/delivery/list/",
-       pageSize: 20,
-       pageList: [20, 50, 100, 500],
-       formatNoMatches: function () {
-           return 'No deliveries found. Please upload a delivery ZIP file.';
-       }
-    });
 
     // check one row
     $('#tbl-deliveries').on('check.bs.table', function (e, row) {
