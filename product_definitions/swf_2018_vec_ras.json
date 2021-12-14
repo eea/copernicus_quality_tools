@@ -46,6 +46,13 @@
       }
     },
     {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_005m", "swf_fm_005m"]
+      }
+    },
+    {
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
       "parameters": {
