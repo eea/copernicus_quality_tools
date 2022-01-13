@@ -69,7 +69,8 @@
       "required": false,
       "parameters": {
         "layers": ["swfc_100m"],
-        "validcodes": [0, 1, 2, 210, 254, 255]
+        "validcodes": [0, 1, 2, 201, 202, 203, 254, 255]
+
       }
     },
     {
@@ -79,6 +80,23 @@
         "layers": ["swfc_100m"],
         "mask": "swf_2018",
         "outside_area_code": 255
+      }
+    },
+        {
+      "check_ident": "qc_tool.raster.color",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "colors": {
+          "0":[240, 240, 240],
+          "1":[20, 255, 0],
+          "2": [255, 0, 0],
+          "201": [188, 130, 67],
+          "202": [121, 83, 43],
+          "203": [88, 61, 31],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }
       }
     }
   ]

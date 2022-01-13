@@ -121,10 +121,23 @@
       "check_ident": "qc_tool.raster.color",
       "required": false,
       "parameters": {
-        "layers": ["swf_005m", "swf_fm_005m"],
+        "layers": ["swf_005m"],
         "colors": {
           "0":[240, 240, 240],
           "1":[215, 245, 0],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.color",
+      "required": false,
+      "parameters": {
+        "layers": ["swf_fm_005m"],
+        "colors": {
+          "0":[240, 240, 240],
+          "1":[121, 83, 43],
           "254":[153, 153, 153],
           "255":[0, 0, 0]
         }
