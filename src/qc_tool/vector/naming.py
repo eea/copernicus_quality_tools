@@ -97,6 +97,12 @@ def run_check(params, status):
                                     preserve_aoicode_case=preserve_aoicode_case, compare_aoi_codes=compare_aoi_codes)
         status.add_params({"aoi_code": aoi_code})
 
+    # Check if the current AOI code belongs to the excluded AOI codes
+    if "aoi_codes_excluded" in params and len(params["aoi_codes_excluded"]) > 0:
+        if str(aoi_code) in params["aoi_codes_excluded"]:
+            status.info("The delivery will be excluded from further vector checks because the vector data source does not contain a single object of interest.")
+            status.add_params({"skip_vector_checks": True})
+
     # Extract EPSG code and compare it to pre-defined list.
     name_epsg = None
     if "epsg_codes" in params and len(params["epsg_codes"]) > 0:
