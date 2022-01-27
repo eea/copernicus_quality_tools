@@ -9,6 +9,12 @@ IS_SYSTEM = False
 def run_check(params, status):
     import osgeo.gdal as gdal
 
+    # Check if the current delivery is excluded from vector checks
+    if "skip_vector_checks" in params:
+        if params["skip_vector_checks"]:
+            status.info("The delivery has been excluded from vector.layer_area check because the vector data source does not contain a single object of interest.")
+            return
+
     # Raster layer - total area of compared pixels
     raster_layer_alias = params["raster_layer"]
 

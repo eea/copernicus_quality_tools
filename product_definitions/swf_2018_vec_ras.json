@@ -187,6 +187,7 @@
           "E62N23", "E62N25", "E64N17", "E64N21", "E64N23", "E64N25", "E66N19", "E52N49", "E56N15", "E58N25", "E64N19",
           "E70N25", "E66N21", "E66N23", "E66N25", "E68N21", "E68N23", "E68N25", "E68N27", "E70N23", "E70N27", "E72N23",
           "E72N25", "E72N27"],
+        "aoi_codes_excluded": ["E18N15", "E26N53", "E28N37", "E34N43", "E40N37", "E42N49", "E46N55"],
         "epsg_codes": ["03035"]
       }
     },
@@ -250,7 +251,7 @@
         "layers": ["vector"],
         "area_column_name": "area",
         "unit": 1,
-        "tolerance": 0.001
+        "tolerance": 0.5
       }
     },
     {
@@ -264,7 +265,7 @@
         "raster_layer": "swf_005m",
         "raster_codes": [1],
         "warning_percent_difference": 0.05,
-        "error_percent_difference": 0.5
+        "error_percent_difference": 1.5
       }
     },
     {

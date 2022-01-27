@@ -21,6 +21,12 @@ def run_check(params, status):
     from qc_tool.vector.helper import do_inspire_check
     from qc_tool.vector.helper import do_layers
 
+    # Check if the current delivery is excluded from vector checks
+    if "skip_vector_checks" in params:
+        if params["skip_vector_checks"]:
+            status.info("The delivery has been excluded from vector.inspire check because the vector data source does not contain a single object of interest.")
+            return
+
     for layer_def in do_layers(params):
 
         # Locate a 'metadata' subdirectory inside the delivery.
