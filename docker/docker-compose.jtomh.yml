@@ -1,0 +1,56 @@
+version: '3'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VERSION
+
+    image: eeacms/copernicus-qctool-frontend:latest
+    ports:
+      - 8000:8000
+    environment:
+      - PRODUCT_DIRS
+      - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - WORK_DIR=/mnt/qc_tool_work
+      - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
+      - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
+    networks:
+      - qc_tool_network
+    volumes:
+      - /home/jiri/copernicus_quality_tools/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /home/jiri/copernicus_quality_tools/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
+      - /home/jiri/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /home/jiri/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
+      - /home/jiri/copernicus_quality_tools/qc_tool_submission:/mnt/qc_tool_submission
+      - /home/jiri/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+      args:
+        - VERSION
+
+    image: eeacms/copernicus-qctool-worker
+    shm_size: 1gb
+    environment:
+      - PRODUCT_DIRS
+      - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - PULL_JOB_URL=http://frontend:8000/pull_job
+      - WORK_DIR=/mnt/qc_tool_work
+    networks:
+      - qc_tool_network
+    volumes:
+      - /home/jiri/copernicus_quality_tools/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /home/jiri/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /home/jiri/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
+      - /home/jiri/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+
+networks:
+  qc_tool_network:
+    driver: bridge
