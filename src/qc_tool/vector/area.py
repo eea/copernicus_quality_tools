@@ -29,7 +29,7 @@ def run_check(params, status):
 
         # Create table of error items.
         sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}, ST_Area(geom), abs({area_column_name} - ST_Area(geom) / %(unit)s)"
+               " SELECT {fid_name}"
                " FROM {layer_name}"
                " WHERE abs({area_column_name} - ST_Area(geom) / %(unit)s) > %(tolerance)s;")
         sql = sql.format(**sql_params)
