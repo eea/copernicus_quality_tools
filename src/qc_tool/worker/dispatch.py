@@ -10,6 +10,8 @@ from importlib import import_module
 from subprocess import run
 from sys import exc_info
 from traceback import format_exc
+from signal import signal, alarm, SIGALRM
+from time import time
 
 from qc_tool.common import get_qc_tool_version
 from qc_tool.common import CONFIG
@@ -26,6 +28,7 @@ from qc_tool.common import load_product_definition
 from qc_tool.common import QCException
 from qc_tool.common import TIME_FORMAT
 from qc_tool.common import store_job_result
+from qc_tool.common import get_timeout
 from qc_tool.worker.report import generate_pdf_report
 from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
@@ -33,6 +36,11 @@ from qc_tool.worker.manager import create_jobdir_manager
 
 log = logging.getLogger(__name__)
 
+class TimedOutExc(Exception):
+    print ("The check has failed due to a timeout.")
+
+def signal_handler(signum, frame):
+    raise TimedOutExc()
 
 def make_signature(filepath):
     h = hashlib.new(HASH_ALGORITHM)
@@ -93,6 +101,8 @@ def validate_skip_steps(skip_steps, product_definition):
         validated_skip_steps.add(skip_step)
 
 def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
+
+    task_timeout = get_timeout()
     with ExitStack() as exit_stack:
         # Prepare job variables.
         product_definition = load_product_definition(product_ident)
@@ -129,8 +139,6 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
 
             for step_nr, step_def in enumerate(product_definition["steps"], start=1):
-                print(step_nr, step_def)
-
                 step_result = {"check_ident": step_def["check_ident"]}
 
                 # Skip this step.
@@ -145,13 +153,35 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
                 step_params.update(step_def.get("parameters", {}))
                 step_params.update(job_params)
                 step_params["step_nr"] = step_nr
+                step_params["check_is_required"] = step_def.get("required", {})
 
                 # Run the step.
                 check_status = CheckStatus()
                 check_module = import_module(step_def["check_ident"])
-                check_module.run_check(step_params, check_status)
+
+                # time limit implementation
+                signal(SIGALRM, signal_handler)
+                alarm(task_timeout["seconds"])
 
                 # Set the check result into the job status.
+                try:
+                    start = time()
+                    check_module.run_check(step_params, check_status)
+                    stop = time()
+                    task_runtime = stop - start
+                    if check_status.status == "aborted" and task_runtime > task_timeout["seconds"]:
+                        check_status.aborted("The check has failed due to a timeout "
+                                             "(the implemented timeout is {to} seconds).".format(
+                            to=str(task_timeout["seconds"])))
+                except TimedOutExc as e:
+                    if step_params["check_is_required"]:
+                        check_status.aborted("The check has failed due to a timeout "
+                                               "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
+
+                    else:
+                        check_status.failed("The check has failed due to a timeout "
+                                             "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
+
                 step_result["status"] = check_status.status
                 step_result["messages"] = check_status.messages
                 step_result["attachment_filenames"] = check_status.attachment_filenames.copy()
