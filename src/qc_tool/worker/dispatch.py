@@ -173,21 +173,14 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
                         check_status.aborted("The check has failed due to a timeout "
                                              "(the implemented timeout is {to} seconds).".format(
                             to=str(task_timeout["seconds"])))
-                        # step_result["messages"].append("The check has failed due to a timeout. "
-                        #                                "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
                 except TimedOutExc as e:
                     if step_params["check_is_required"]:
                         check_status.aborted("The check has failed due to a timeout "
                                                "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
 
-                        # step_result["status"] = "aborted"
                     else:
-                        # step_result["status"] = "failed"
                         check_status.failed("The check has failed due to a timeout "
                                              "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
-                    # step_result["messages"] = ["The check has failed due to a timeout "
-                    #                            "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"]))]
-                    # step_result["attachment_filenames"] = list()
 
                 step_result["status"] = check_status.status
                 step_result["messages"] = check_status.messages
