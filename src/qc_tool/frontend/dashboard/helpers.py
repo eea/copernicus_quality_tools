@@ -38,15 +38,15 @@ def get_boundary_version():
     Reads .txt file in boundary/raster folder with format ver_{date}.txt and return datetime string.
     """
     try:
-        version_path = Path('/mnt/qc_tool_boundary/raster')
-        files_in_versionpath = os.listdir(version_path)
-        for file_ in files_in_versionpath:
-            if 'ver' in file_:
-               version_str = file_.split('_')[1].split('.')[0]
-               datetime_str = datetime.strptime(version_str, '%d%m%Y').strftime("%d/%m/%Y")
-        return datetime_str       
-      
-    except:
+        boundaries_dir = CONFIG["boundary_dir"]
+        rasterdir_path = Path(boundaries_dir).joinpath('raster')
+        files_in_rasterpath = os.listdir(rasterdir_path)
+        for file_name in files_in_rasterpath:
+            if 'ver' in file_name:
+               version_str = file_name.split('_')[1].split('.')[0]
+               datetime_str = datetime.strptime(version_str,"%d%m%Y").strftime("%d/%m/%Y")
+               return datetime_str       
+    except:    
         return 'None'
 
 def find_product_description(product_ident):
