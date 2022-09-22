@@ -3,9 +3,11 @@
 
 import logging
 import re
+import os
 from datetime import datetime
 from shutil import copyfile
 from shutil import copytree
+from pathlib import Path
 
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_job_dir
@@ -31,6 +33,21 @@ def get_announcement_message():
     except:
         return None
 
+def get_boundary_version():
+    """
+    Reads .txt file in boundary/raster folder with format ver_{date}.txt and return datetime string.
+    """
+    try:
+        version_path = Path('/mnt/qc_tool_boundary/raster')
+        files_in_versionpath = os.listdir(version_path)
+        for file_ in files_in_versionpath:
+            if 'ver' in file_:
+               version_str = file_.split('_')[1].split('.')[0]
+               datetime_str = datetime.strptime(version_str, '%d%m%Y').strftime("%d/%m/%Y")
+        return datetime_str       
+      
+    except:
+        return 'None'
 
 def find_product_description(product_ident):
     """
