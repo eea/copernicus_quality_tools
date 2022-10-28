@@ -43,7 +43,7 @@ from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
-
+from qc_tool.frontend.dashboard.helpers import get_boundary_version
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,8 @@ def deliveries(request):
     """
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
-                                                         "announcement": get_announcement_message()})
+                                                         "announcement": get_announcement_message(),
+                                                         "boundary_version":get_boundary_version()})
 
 
 @login_required
@@ -543,7 +544,8 @@ def get_result(request, job_uuid):
     return render(request, "dashboard/result.html", {"job_report":job_report,
                                                      "delivery": delivery,
                                                      "show_logo": settings.SHOW_LOGO,
-                                                     "announcement": get_announcement_message()})
+                                                     "announcement": get_announcement_message()
+                                                     })
 
 def get_pdf_report(request, job_uuid):
     try:
