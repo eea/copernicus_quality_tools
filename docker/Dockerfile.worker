@@ -24,7 +24,7 @@ RUN cd /usr/local/src \
 RUN apt-get -y install gdal-bin python3-gdal \
     && apt-get -y install python3-psycopg2 \
     && pip3 install numpy \
-    && pip3 install scikit-image reportlab requests \
+    && pip3 install scikit-image reportlab==3.6.13 requests \
     && pip3 install bottle \
     && pip3 install supervisor
 
@@ -34,7 +34,7 @@ COPY ./supervisord.conf /etc
 # Expose the port of supervisor.
 EXPOSE 9001
 
-# Install postgresql version 11 & postgis version 2.5.
+# Install postgresql version 14 & postgis version 3.
 #
 # Create the file postgresql apt repository configuration.
 RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt focal-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -47,7 +47,7 @@ RUN apt-get update
 
 # During install tzdata package needs timezone having been set already.
 ENV TZ=UTC
-RUN apt-get -y install postgresql-11-postgis-2.5
+RUN apt-get -y install postgresql-14-postgis-3
 
 # Configure the qc tool database.
 #
@@ -56,8 +56,8 @@ RUN apt-get -y install postgresql-11-postgis-2.5
 # when connecting to 127.0.0.1.
 USER postgres
 COPY ./init_qc_tool_db.sql /usr/local/src
-RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/11/main/pg_hba.conf \
-    && echo "listen_addresses='*'" >>/etc/postgresql/11/main/postgresql.conf \
+RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/14/main/pg_hba.conf \
+    && echo "listen_addresses='*'" >>/etc/postgresql/14/main/postgresql.conf \
     && /etc/init.d/postgresql start \
     && psql --file=/usr/local/src/init_qc_tool_db.sql \
     && /etc/init.d/postgresql stop
