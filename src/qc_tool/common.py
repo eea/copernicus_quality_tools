@@ -51,6 +51,8 @@ ANNOUNCEMENT_FILENAME = "announcement.txt"
 
 FAILED_ITEMS_LIMIT = 10
 
+JOB_TIME_LIMIT_HOURS = 0.0055
+
 UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
 
 CONFIG = None
@@ -58,6 +60,11 @@ CONFIG = None
 
 class QCException(Exception):
     pass
+
+def get_timeout(job_time_limit_hours=JOB_TIME_LIMIT_HOURS):
+    return {"hours": int(round(job_time_limit_hours)),
+            "minutes": int(round(job_time_limit_hours * 60)),
+            "seconds": int(round(job_time_limit_hours * 3600))}
 
 
 def create_worker_token():
