@@ -173,7 +173,7 @@ def run_check(params, status):
         NODATA = -1  # FIXME use a value that is outside of the range of possible raster values.
 
     # The optional report_exceptions parameter indicates whether any exceptions should be reported.
-    report_exceptions = params.get("report_exceptions", True)
+    report_exceptions = params.get("report_exceptions", False)
 
     # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
     BLOCKSIZE = 2048
