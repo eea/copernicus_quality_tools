@@ -66,7 +66,7 @@ You are free to copy the database to other persistent location, however you must
 
 # Demo installation
 
-A demonstration website is running at: http://qc-tool-demo.gisat.cz/ Default login is user: guest, password: guest.
+The service is publicly available at: https://qc-copernicus.eea.europa.eu/ Demo login is user: guest, password: guest.
 
 # Product definitions
 
