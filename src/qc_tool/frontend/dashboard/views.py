@@ -8,6 +8,7 @@ import time
 import traceback
 from pathlib import Path
 from zipfile import ZipFile
+import json
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -50,6 +51,173 @@ logger = logging.getLogger(__name__)
 CHECK_RUNNING_JOB_DELAY = 10
 
 UPLOADED_CHUNK_PROCESSING_DELAY = 1
+
+def api_register_delivery(request):
+    # target_filepath = request.POST.get("uploaded_file")
+
+    body = request.body.decode("utf-8")
+    target_filepath = Path(json.loads(body).get("uploaded_file"))
+
+    if not target_filepath:
+        return JsonResponse({"status": "error", "message":"missing parameter: uploaded_file"})
+    if not target_filepath.exists():
+        return JsonResponse({"status": "error", "message": f"uploaded_file does not exist."})
+    if not target_filepath.name.endswith(".zip"):
+        return JsonResponse({"status": "error", "message": f"uploaded_file does not have .zip extension."})
+    # Assign product description based on product ident.
+    # Typically, the product ident is used as the zip filename prefix.
+    product_ident = guess_product_ident(target_filepath)
+    logger.debug(product_ident)
+    product_description = find_product_description(product_ident)
+
+    # Register the uploaded file as a new delivery in the database.
+    d = models.Delivery()
+    d.filename = target_filepath.name
+    d.filepath = target_filepath.parent
+    d.size_bytes = target_filepath.stat().st_size
+    d.product_ident = product_ident
+    d.product_description = product_description
+    d.date_uploaded = timezone.now()
+    d.user = request.user
+    d.is_deleted = False
+    d.save()
+    logger.debug("Delivery object saved successfully to database.")
+    response_data = {"status": "ok", "message": "delivery successfully registered", "delivery_id": d.id}
+    return JsonResponse(response_data, safe=False)
+
+def api_delivery_list(request):
+    # TODO: zkontrolovat s Jirkou K.!!!
+    """
+       Returns a list of all deliveries for the current user.
+       The deliveries are loaded from the dashboard_deliveries database table.
+       The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
+
+       :param request:
+       :return: list of deliveries with associated job information in JSON format
+       """
+
+    # Before refreshing the page, update status of all waiting or running jobs.
+    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
+    for job in running_jobs:
+        job_status = check_running_job(str(job.job_uuid), job.worker_url)
+        if job_status is not None:
+            job.update_status(job_status)
+
+    # Retrieve a table of deliveries.
+    # If a delivery has one or more jobs, show information about the job with latest date_created.
+    with connection.cursor() as cursor:
+        sql = """
+           SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
+           d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
+           j.job_uuid AS last_job_uuid,
+           j.date_created, j.date_started, j.job_status as last_job_status
+           FROM dashboard_delivery d
+           LEFT JOIN dashboard_job j
+           ON j.job_uuid = (
+             SELECT job_uuid FROM dashboard_job j
+             WHERE j.delivery_id = d.id
+             ORDER BY j.date_created DESC LIMIT 1)
+           INNER JOIN auth_user u
+           ON d.user_id = u.id
+           WHERE d.is_deleted = false
+           """
+
+        # if request.user.is_superuser:
+        #     # Superusers see deliveries of all other users.
+        #     # Deleted delivery records are not shown , see #106579.
+        #     sql += "WHERE d.is_deleted != 1 ORDER BY d.id DESC"
+        #     cursor.execute(sql)
+        # else:
+        #     # Regular users only see their own deliveries.
+        #     sql += "WHERE d.is_deleted != 1 AND d.user_id = %s ORDER BY d.id DESC"
+        # cursor.execute(sql, (request.user.id,))
+        cursor.execute(sql)
+        header = [i[0] for i in cursor.description]
+        rows = cursor.fetchall()
+        data = []
+        for row in rows:
+            data.append(dict(zip(header, row)))
+
+        logger.debug("List of deliveries successfully obtained.")
+        response_data = {"status": "ok", "message": "list of deliveries successfully obtained", "deliveries": data}
+        return JsonResponse(response_data, safe=False)
+
+def api_job_result(request, job_uuid):
+    # TODO: Doplnit spolu s Jirkou K.
+    response_data = {"status": "not yet implemente"}
+    return JsonResponse(response_data, safe=False)
+
+# TODO: analogicky vytvorit dalsi funkce pro ostatni API features, dle dashboard/urls, zkusit najit odpovidajici 'ne-api' funkce a vratit jejich obsah
+
+def api_job_info(request, product_ident):
+    """
+    returns a table of details about the product
+    :param request:
+    :param product_ident: the name of the product type for example clc
+    :return: product details with a list of job steps and their type (system, required, optional)
+    """
+    job_report = compile_job_form_data(product_ident)
+    response_data = {"status": "ok", "message": "job report successfully created", "job_result": job_report}
+    return JsonResponse(response_data, safe=False)
+
+def api_create_job(request):
+    # TODO: zkontrolovat s Jirkou K.!!!
+    # delivery_ids = request.POST.get("delivery_ids").split(",")
+    # product_ident = request.POST.get("product_ident")
+
+    body = request.body.decode("utf-8")
+    body_json = json.loads(body)
+    delivery_ids = body_json.get("delivery_ids")
+    product_ident = body_json.get("product_ident")
+
+    num_created = 0
+
+    for delivery_id in delivery_ids:
+        # Input validation.
+        try:
+            int(delivery_id)
+        except ValueError:
+            return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
+
+        # Update delivery status in the frontend database.
+        d = models.Delivery.objects.get(id=int(delivery_id))
+        num_created += 1
+        logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
+
+    if num_created == 1:
+        msg = "QC Job has been set up for execution (product: {:s}).".format(product_ident)
+    else:
+        msg = "{:d} QC Jobs have been set up for execution (product: {:s}).".format(num_created, product_ident)
+
+    result = {"num_created": num_created, "status": "OK", "message": msg}
+    return JsonResponse(result)
+
+def api_job_history(request, delivery_id):
+    """
+        Shows the history of all jobs for a specific delivery in .json format.
+        """
+    delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+
+    # if not request.user.is_superuser:
+    #     if delivery.user != request.user:
+    #         raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+    #
+    # # find all jobs with same filename
+    # if request.user.is_superuser:
+    #     # superuser can see all jobs.
+    jobs = models.Job.objects.filter(delivery__filename=delivery.filename) \
+        .order_by("-date_created")
+    # else:
+    #     # regular user can only see their own jobs.
+    #     jobs = models.Job.objects.filter(delivery__filename=delivery.filename) \
+    #         .filter(delivery__user=request.user) \
+    #         .order_by("-date_created")
+    for job in jobs:
+        if job.job_status == JOB_RUNNING:
+            job_status = check_running_job(str(job.job_uuid), job.worker_url)
+            if job_status is not None:
+                job.update_status(job_status)
+    return JsonResponse(list(jobs.values()), safe=False)
 
 
 @login_required
