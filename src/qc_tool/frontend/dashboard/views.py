@@ -78,7 +78,7 @@ def api_register_delivery(request):
     d.product_ident = product_ident
     d.product_description = product_description
     d.date_uploaded = timezone.now()
-    d.user = request.user
+    d.user = request.user # TODO: nefunguje kdyz je user odhlaseny!
     d.is_deleted = False
     d.save()
     logger.debug("Delivery object saved successfully to database.")
@@ -142,10 +142,6 @@ def api_delivery_list(request):
         response_data = {"status": "ok", "message": "list of deliveries successfully obtained", "deliveries": data}
         return JsonResponse(response_data, safe=False)
 
-def api_job_result(request, job_uuid):
-    # TODO: Doplnit spolu s Jirkou K.
-    response_data = {"status": "not yet implemente"}
-    return JsonResponse(response_data, safe=False)
 
 # TODO: analogicky vytvorit dalsi funkce pro ostatni API features, dle dashboard/urls, zkusit najit odpovidajici 'ne-api' funkce a vratit jejich obsah
 
@@ -156,41 +152,35 @@ def api_job_info(request, product_ident):
     :param product_ident: the name of the product type for example clc
     :return: product details with a list of job steps and their type (system, required, optional)
     """
-    job_report = compile_job_form_data(product_ident)
-    response_data = {"status": "ok", "message": "job report successfully created", "job_result": job_report}
+    job_form_data = compile_job_form_data(product_ident)
+    response_data = {"status": "ok", "message": "showing job info", "data": job_form_data}
     return JsonResponse(response_data, safe=False)
 
 def api_create_job(request):
-    # TODO: zkontrolovat s Jirkou K.!!!
-    # delivery_ids = request.POST.get("delivery_ids").split(",")
-    # product_ident = request.POST.get("product_ident")
-
     body = request.body.decode("utf-8")
     body_json = json.loads(body)
-    delivery_ids = body_json.get("delivery_ids")
+    delivery_id = body_json.get("delivery_id")
     product_ident = body_json.get("product_ident")
+    skip_steps = body_json.get("skip_steps", [])
 
-    num_created = 0
+    # Update delivery status in the frontend database.
+    d = models.Delivery.objects.get(id=int(delivery_id))
+    job_uuid = d.create_job(product_ident, skip_steps)
 
-    for delivery_id in delivery_ids:
-        # Input validation.
-        try:
-            int(delivery_id)
-        except ValueError:
-            return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
-
-        # Update delivery status in the frontend database.
-        d = models.Delivery.objects.get(id=int(delivery_id))
-        num_created += 1
-        logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
-
-    if num_created == 1:
-        msg = "QC Job has been set up for execution (product: {:s}).".format(product_ident)
-    else:
-        msg = "{:d} QC Jobs have been set up for execution (product: {:s}).".format(num_created, product_ident)
-
-    result = {"num_created": num_created, "status": "OK", "message": msg}
+    # Update delivery status in the frontend database.
+    d = models.Delivery.objects.get(id=int(delivery_id))
+    job_uuid = d.create_job(product_ident, skip_steps)
+    
+    response_data = {"job_uuid": str(job_uuid)}
+    result = {"status": "OK", "message": "QC job successfully created", "data": response_data}
     return JsonResponse(result)
+
+def api_job_result(request, job_uuid):
+    job = models.Job.objects.get(job_uuid=job_uuid)
+    job_report = compile_job_report_data(job_uuid, job.product_ident)
+    response_data = {"status": "ok", "message": "job status", "data": job_report}
+    return JsonResponse(response_data, safe=False)
+
 
 def api_job_history(request, delivery_id):
     """
@@ -198,20 +188,10 @@ def api_job_history(request, delivery_id):
         """
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    # if not request.user.is_superuser:
-    #     if delivery.user != request.user:
-    #         raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
-    #
-    # # find all jobs with same filename
-    # if request.user.is_superuser:
-    #     # superuser can see all jobs.
+    # TODO filter the jobs by the current user
     jobs = models.Job.objects.filter(delivery__filename=delivery.filename) \
         .order_by("-date_created")
-    # else:
-    #     # regular user can only see their own jobs.
-    #     jobs = models.Job.objects.filter(delivery__filename=delivery.filename) \
-    #         .filter(delivery__user=request.user) \
-    #         .order_by("-date_created")
+    # Ensure job status is up-to-date.
     for job in jobs:
         if job.job_status == JOB_RUNNING:
             job_status = check_running_job(str(job.job_uuid), job.worker_url)

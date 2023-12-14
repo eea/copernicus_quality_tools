@@ -65,6 +65,9 @@ class Delivery(models.Model):
         self.product_description = job.product_description
         self.save()
 
+        # Return uuid of the created job
+        return job.job_uuid
+
 
     def get_submittable_job(self):
         jobs_to_submit = Job.objects.filter(delivery__id=self.id).filter(job_status=JOB_OK).order_by("-date_created")[:1]
