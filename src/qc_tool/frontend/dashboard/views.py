@@ -161,11 +161,11 @@ def api_create_job(request):
     body_json = json.loads(body)
     delivery_id = body_json.get("delivery_id")
     product_ident = body_json.get("product_ident")
-    skip_steps = body_json.get("skip_steps", [])
+    skip_steps = body_json.get("skip_steps", None)
 
-    # Update delivery status in the frontend database.
-    d = models.Delivery.objects.get(id=int(delivery_id))
-    job_uuid = d.create_job(product_ident, skip_steps)
+    # Handle case when skip_steps parameter is empty string
+    if skip_steps == "":
+        skip_steps = None
 
     # Update delivery status in the frontend database.
     d = models.Delivery.objects.get(id=int(delivery_id))
