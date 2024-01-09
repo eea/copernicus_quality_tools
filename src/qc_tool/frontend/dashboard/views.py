@@ -181,6 +181,21 @@ def api_job_result(request, job_uuid):
     response_data = {"status": "ok", "message": "job status", "data": job_report}
     return JsonResponse(response_data, safe=False)
 
+def api_job_result_pdf(request, job_uuid):
+    try:
+        filepath = get_job_report_filepath(job_uuid)
+    except FileNotFoundError:
+        # There is no result.
+        return JsonResponse({"status": "error", "message": "pdf report does not exist"})
+    except:
+        return JsonResponse({"status": "error", "message": "pdf report is not available"})
+    try:
+        response_pdf = FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
+    except FileNotFoundError:
+        # There is no report.
+        return JsonResponse({"status": "error", "message": "pdf report does not exist"})
+    return response_pdf
+
 
 def api_job_history(request, delivery_id):
     """
