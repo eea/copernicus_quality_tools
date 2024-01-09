@@ -6,6 +6,8 @@ from uuid import uuid4
 
 import django.db.models as models
 from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
@@ -38,6 +40,11 @@ def pull_job(worker_url):
             return None
     else:
         return None
+
+
+class ApiUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    api_key = models.CharField(max_length=100)
 
 
 class Delivery(models.Model):

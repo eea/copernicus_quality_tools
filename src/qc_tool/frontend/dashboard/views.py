@@ -41,6 +41,7 @@ from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import WORKER_PORT
 from qc_tool.frontend.dashboard.helpers import find_product_description
+from qc_tool.frontend.dashboard.helpers import generate_api_key
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
@@ -220,10 +221,20 @@ def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
     """
+
+    # ensure current user has a valid api key and generate the key if it does not exist.
+    try:
+        api_key = request.user.apiuser.api_key
+    except ObjectDoesNotExist:
+        api_key = generate_api_key()
+        api_user = models.ApiUser(user=request.user, api_key=api_key)
+        api_user.save()
+
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
                                                          "announcement": get_announcement_message(),
-                                                         "boundary_version":get_boundary_version()})
+                                                         "boundary_version": get_boundary_version(),
+                                                         "api_key": api_key})
 
 
 @login_required
