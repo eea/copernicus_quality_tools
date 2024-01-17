@@ -69,6 +69,11 @@ def check_api_key(request):
     return user, msg
 
 
+def api_homepage(request):
+    return render(request, 'dashboard/swagger-ui.html',
+                  {"schema_url": "openapi-schema"})
+
+
 def api_register_delivery(request):
     # Verify api key
     user, message = check_api_key(request)
@@ -106,7 +111,6 @@ def api_register_delivery(request):
     return JsonResponse(response_data, safe=False)
 
 def api_delivery_list(request):
-    # TODO: zkontrolovat s Jirkou K.!!!
     """
        Returns a list of all deliveries for the current user.
        The deliveries are loaded from the dashboard_deliveries database table.
@@ -166,9 +170,15 @@ def api_delivery_list(request):
         return JsonResponse(response_data, safe=False)
 
 
-# TODO: analogicky vytvorit dalsi funkce pro ostatni API features, dle dashboard/urls, zkusit najit odpovidajici 'ne-api' funkce a vratit jejich obsah
+def api_product_list(request):
+    product_infos = get_product_descriptions()
+    product_list = [{"product_ident": product_ident, "description": product_description}
+                    for product_ident, product_description in product_infos.items()]
+    product_list = sorted(product_list, key=lambda x: x["product_ident"])
+    return JsonResponse({"products": product_list})
 
-def api_job_info(request, product_ident):
+
+def api_product_info(request, product_ident):
     """
     returns a table of details about the product
     :param request:
@@ -181,7 +191,7 @@ def api_job_info(request, product_ident):
         return JsonResponse({"status": "error", "message": message}, status=403)
 
     job_form_data = compile_job_form_data(product_ident)
-    response_data = {"status": "ok", "message": "showing job info", "data": job_form_data}
+    response_data = {"status": "ok", "message": f"showing available checks for {product_ident}", "data": job_form_data}
     return JsonResponse(response_data, safe=False)
 
 def api_create_job(request):

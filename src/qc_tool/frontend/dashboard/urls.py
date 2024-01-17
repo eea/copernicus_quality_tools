@@ -1,20 +1,19 @@
-# from django.conf.urls import url
 from django.urls import path
-from django.urls import re_path
 from qc_tool.frontend.dashboard import views
 
 urlpatterns = [
 
     path("", views.deliveries, name="deliveries"),
 
-    # TODO: Zkontrolovat s Jirkou K.!!!
+    path("api/", views.api_homepage, name="api_homepage"),
     path("api/register-delivery", views.api_register_delivery, name="api_register_delivery"),
     path("api/delivery-list", views.api_delivery_list, name="api_delivery_list"),
+    path("api/product-list", views.api_product_list, name="api_product_list"),
+    path("api/product-info/<product_ident>", views.api_product_info, name="api_product_info"),
+    path("api/create-job", views.api_create_job, name="api_create_job"),
     path("api/job-result/<job_uuid>", views.api_job_result, name="api_job_result"),
     path("api/job-result-pdf/<job_uuid>", views.api_job_result_pdf, name="api_job_result_pdf"),
-    path("api/job-info/<product_ident>", views.api_job_info, name="api_job_info"),
-    path("api/create-job", views.api_create_job, name="api_create_job"), # VYZKOUSET
-    path("api/job-history/<delivery_id>", views.api_job_history, name="api_job_history"),  # VYZKOUSET
+    path("api/job-history/<delivery_id>", views.api_job_history, name="api_job_history"),
 
     path("data/delivery/list/", views.get_deliveries_json, name="deliveries_json"),
     path("data/job_history/<delivery_id>/", views.get_job_history_json, name="job_history_json"),
