@@ -149,7 +149,7 @@ def api_delivery_list(request):
            ON d.user_id = u.id
            """
 
-        if request.user.is_superuser:
+        if user.is_superuser:
              # Superusers see deliveries of all other users.
              # Deleted delivery records are not shown , see #106579.
              sql += "WHERE d.is_deleted != 1 ORDER BY d.id DESC"
@@ -157,7 +157,8 @@ def api_delivery_list(request):
         else:
             # Regular api users only see their own deliveries.
             sql += "WHERE d.is_deleted != 1 AND d.user_id = %s ORDER BY d.id DESC"
-        cursor.execute(sql, (user.id,))
+            cursor.execute(sql, (user.id,))
+
         header = [i[0] for i in cursor.description]
         rows = cursor.fetchall()
         data = []
