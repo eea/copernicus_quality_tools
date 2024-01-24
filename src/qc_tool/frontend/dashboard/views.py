@@ -212,9 +212,20 @@ def api_create_job(request):
         skip_steps = None
 
     # Update delivery status in the frontend database.
-    d = models.Delivery.objects.get(id=int(delivery_id))
+    try:
+        d = models.Delivery.objects.get(id=int(delivery_id))
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "delivery with id={} not found.".format(delivery_id)}
+        return JsonResponse(result, status=404)
+
+    # Check if the delivery belongs to authorized user
+    if d.user != user:
+        result = {"status": "error", "message": "delivery id={} does not belong to user {}.".format(
+            delivery_id, user.username)}
+        return JsonResponse(result, status=401)
+
     job_uuid = d.create_job(product_ident, skip_steps)
-    
+
     response_data = {"job_uuid": str(job_uuid)}
     result = {"status": "OK", "message": "QC job successfully created", "data": response_data}
     return JsonResponse(result)
@@ -225,7 +236,17 @@ def api_job_result(request, job_uuid):
     if not user:
         return JsonResponse({"status": "error", "message": message}, status=403)
 
-    job = models.Job.objects.get(job_uuid=job_uuid)
+    try:
+        job = models.Job.objects.get(job_uuid=job_uuid)
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "job with uuid={} does not exist.".format(job_uuid)}
+        return JsonResponse(result, status=404)
+
+    if (job.delivery.user != user):
+        result = {"status": "error", "message": "job with uuid={} does not belong to user {}.".format(
+            job_uuid, user.username)}
+        return JsonResponse(result, status=401)
+
     job_report = compile_job_report_data(job_uuid, job.product_ident)
     response_data = {"status": "ok", "message": "job status", "data": job_report}
     return JsonResponse(response_data, safe=False)
@@ -237,6 +258,17 @@ def api_job_result_pdf(request, job_uuid):
         return JsonResponse({"status": "error", "message": message}, status=403)
 
     try:
+        job = models.Job.objects.get(job_uuid=job_uuid)
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "job with uuid={} does not exist.".format(job_uuid)}
+        return JsonResponse(result, status=404)
+
+    if (job.delivery.user != user):
+        result = {"status": "error", "message": "job with uuid={} does not belong to user {}.".format(
+            job_uuid, user.username)}
+        return JsonResponse(result, status=401)
+
+    try:
         filepath = get_job_report_filepath(job_uuid)
     except FileNotFoundError:
         # There is no result.
@@ -244,7 +276,7 @@ def api_job_result_pdf(request, job_uuid):
     except:
         return JsonResponse({"status": "error", "message": "pdf report is not available"}, status=404)
     try:
-        response_pdf = FileResponse(open(str(filepath), "rb"), content_type="application/pdf")
+        response_pdf = FileResponse(open(str(filepath), "rb"), content_type="application/pdf", as_attachment=True)
     except FileNotFoundError:
         # There is no report.
         return JsonResponse({"status": "error", "message": "pdf report does not exist"}, status=404)
@@ -259,19 +291,37 @@ def api_job_history(request, delivery_id):
     user, message = check_api_key(request)
     if not user:
         return JsonResponse({"status": "error", "message": message}, status=403)
-    
-    delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    # TODO filter the jobs by the current user
-    jobs = models.Job.objects.filter(delivery__filename=delivery.filename) \
+    # Check delivery existence
+    try:
+        delivery = models.Delivery.objects.get(id=int(delivery_id))
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "delivery with id={} not found.".format(delivery_id)}
+        return JsonResponse(result, status=404)
+
+    # Check if the delivery belongs to authorized user
+    if delivery.user != user:
+        result = {"status": "error", "message": "delivery id={} does not belong to user {}.".format(
+            delivery_id, user.username)}
+        return JsonResponse(result, status=401)
+
+    jobs = models.Job.objects.filter(delivery__filename=delivery.filename, delivery__user=user) \
         .order_by("-date_created")
-    # Ensure job status is up-to-date.
+    # Ensure job status is up-to-date
     for job in jobs:
         if job.job_status == JOB_RUNNING:
             job_status = check_running_job(str(job.job_uuid), job.worker_url)
             if job_status is not None:
                 job.update_status(job_status)
-    return JsonResponse(list(jobs.values()), safe=False)
+
+    # Remove "-" characters from job uuids
+    job_list = list(jobs.values())
+    for job_info in job_list:
+        job_info["job_uuid"] = str(job_info["job_uuid"]).replace("-", "")
+    result = {"status": "OK",
+              "message": "Job history of delivery id={}".format(delivery_id),
+              "data": job_list}
+    return JsonResponse(result)
 
 
 @login_required

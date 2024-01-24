@@ -341,19 +341,8 @@
             "content": {
               "application/pdf": {
                 "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "showing job result in pdf format"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/JobTemplate"
-                    }
-                  }
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }
@@ -645,7 +634,7 @@
     }
   ],
   "externalDocs": {
-    "url": "https://github.com/eea/copernicus_quality_tools/wiki/API",
-    "description": "Step-by-step API tutorial on CLMS QC Tool Wiki"
+    "url": "https://github.com/eea/copernicus_quality_tools/wiki/CLMS-QC-Tool-API",
+    "description": "API guide on CLMS QC Tool Wiki"
   }
 }
