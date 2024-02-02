@@ -12,7 +12,7 @@ services:
     ports:
       - 8000:8000
     environment:
-      - PRODUCT_DIRS
+      - PRODUCT_DIRS=/usr/local/src/copernicus_quality_tools/product_definitions
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - WORK_DIR=/mnt/qc_tool_work
@@ -38,7 +38,7 @@ services:
     image: eeacms/copernicus-qctool-worker
     shm_size: 1gb
     environment:
-      - PRODUCT_DIRS
+      - PRODUCT_DIRS=/usr/local/src/copernicus_quality_tools/product_definitions
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - PULL_JOB_URL=http://frontend:8000/pull_job

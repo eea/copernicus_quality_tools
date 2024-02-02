@@ -8,6 +8,7 @@ import time
 import traceback
 from pathlib import Path
 from zipfile import ZipFile
+import json
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -40,6 +41,7 @@ from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import WORKER_PORT
 from qc_tool.frontend.dashboard.helpers import find_product_description
+from qc_tool.frontend.dashboard.helpers import generate_api_key
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
@@ -51,16 +53,296 @@ CHECK_RUNNING_JOB_DELAY = 10
 
 UPLOADED_CHUNK_PROCESSING_DELAY = 1
 
+def check_api_key(request):
+    api_key = request.GET.get("apikey")
+    user = None
+    if not api_key:
+        msg = "api key was not provided"
+        return user, msg
+    try:
+        api_user = models.ApiUser.objects.get(api_key=api_key)
+        user = api_user.user
+    except ObjectDoesNotExist:
+        msg = "provided api key does not match any user"
+    if user:
+        msg = "ok"
+    return user, msg
+
+
+def api_homepage(request):
+    return render(request, 'dashboard/swagger-ui.html',
+                  {"schema_url": "openapi-schema"})
+
+
+def api_register_delivery(request):
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    body = request.body.decode("utf-8")
+    target_filepath = Path(json.loads(body).get("uploaded_file"))
+
+    if not target_filepath:
+        return JsonResponse({"status": "error", "message":"missing parameter: uploaded_file"}, status=400)
+    if not target_filepath.exists():
+        return JsonResponse({"status": "error", "message": f"uploaded_file does not exist."}, status=404)
+    if not target_filepath.name.endswith(".zip"):
+        return JsonResponse({"status": "error", "message": f"uploaded_file does not have .zip extension."}, status=400)
+    # Assign product description based on product ident.
+    # Typically, the product ident is used as the zip filename prefix.
+    product_ident = guess_product_ident(target_filepath)
+    logger.debug(product_ident)
+    product_description = find_product_description(product_ident)
+
+    # Register the uploaded file as a new delivery in the database.
+    d = models.Delivery()
+    d.filename = target_filepath.name
+    d.filepath = target_filepath.parent
+    d.size_bytes = target_filepath.stat().st_size
+    d.product_ident = product_ident
+    d.product_description = product_description
+    d.date_uploaded = timezone.now()
+    d.user = user
+    d.is_deleted = False
+    d.save()
+    logger.debug("Delivery object saved successfully to database.")
+    response_data = {"status": "ok", "message": "delivery successfully registered", "delivery_id": d.id}
+    return JsonResponse(response_data, safe=False)
+
+def api_delivery_list(request):
+    """
+       Returns a list of all deliveries for the current user.
+       The deliveries are loaded from the dashboard_deliveries database table.
+       The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
+
+       :param request:
+       :return: list of deliveries with associated job information in JSON format
+       """
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    # Before refreshing the page, update status of all waiting or running jobs.
+    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
+    for job in running_jobs:
+        job_status = check_running_job(str(job.job_uuid), job.worker_url)
+        if job_status is not None:
+            job.update_status(job_status)
+
+    # Retrieve a table of deliveries.
+    # If a delivery has one or more jobs, show information about the job with latest date_created.
+    with connection.cursor() as cursor:
+        sql = """
+           SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
+           d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
+           j.job_uuid AS last_job_uuid,
+           j.date_created, j.date_started, j.job_status as last_job_status
+           FROM dashboard_delivery d
+           LEFT JOIN dashboard_job j
+           ON j.job_uuid = (
+             SELECT job_uuid FROM dashboard_job j
+             WHERE j.delivery_id = d.id
+             ORDER BY j.date_created DESC LIMIT 1)
+           INNER JOIN auth_user u
+           ON d.user_id = u.id
+           """
+
+        if user.is_superuser:
+             # Superusers see deliveries of all other users.
+             # Deleted delivery records are not shown , see #106579.
+             sql += "WHERE d.is_deleted != 1 ORDER BY d.id DESC"
+             cursor.execute(sql)
+        else:
+            # Regular api users only see their own deliveries.
+            sql += "WHERE d.is_deleted != 1 AND d.user_id = %s ORDER BY d.id DESC"
+            cursor.execute(sql, (user.id,))
+
+        header = [i[0] for i in cursor.description]
+        rows = cursor.fetchall()
+        data = []
+        for row in rows:
+            data.append(dict(zip(header, row)))
+
+        logger.debug("List of deliveries successfully obtained.")
+        response_data = {"status": "ok", "message": "list of deliveries successfully obtained", "deliveries": data}
+
+        return JsonResponse(response_data, safe=False)
+
+
+def api_product_list(request):
+    product_infos = get_product_descriptions()
+    product_list = [{"product_ident": product_ident, "description": product_description}
+                    for product_ident, product_description in product_infos.items()]
+    product_list = sorted(product_list, key=lambda x: x["product_ident"])
+    return JsonResponse({"products": product_list})
+
+
+def api_product_info(request, product_ident):
+    """
+    returns a table of details about the product
+    :param request:
+    :param product_ident: the name of the product type for example clc
+    :return: product details with a list of job steps and their type (system, required, optional)
+    """
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    job_form_data = compile_job_form_data(product_ident)
+    response_data = {"status": "ok", "message": f"showing available checks for {product_ident}", "data": job_form_data}
+    return JsonResponse(response_data, safe=False)
+
+def api_create_job(request):
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    body = request.body.decode("utf-8")
+    body_json = json.loads(body)
+    delivery_id = body_json.get("delivery_id")
+    product_ident = body_json.get("product_ident")
+    skip_steps = body_json.get("skip_steps", None)
+
+    # Handle case when skip_steps parameter is empty string
+    if skip_steps == "":
+        skip_steps = None
+
+    # Update delivery status in the frontend database.
+    try:
+        d = models.Delivery.objects.get(id=int(delivery_id))
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "delivery with id={} not found.".format(delivery_id)}
+        return JsonResponse(result, status=404)
+
+    # Check if the delivery belongs to authorized user
+    if d.user != user:
+        result = {"status": "error", "message": "delivery id={} does not belong to user {}.".format(
+            delivery_id, user.username)}
+        return JsonResponse(result, status=401)
+
+    job_uuid = d.create_job(product_ident, skip_steps)
+
+    response_data = {"job_uuid": str(job_uuid)}
+    result = {"status": "OK", "message": "QC job successfully created", "data": response_data}
+    return JsonResponse(result)
+
+def api_job_result(request, job_uuid):
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    try:
+        job = models.Job.objects.get(job_uuid=job_uuid)
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "job with uuid={} does not exist.".format(job_uuid)}
+        return JsonResponse(result, status=404)
+
+    if (job.delivery.user != user):
+        result = {"status": "error", "message": "job with uuid={} does not belong to user {}.".format(
+            job_uuid, user.username)}
+        return JsonResponse(result, status=401)
+
+    job_report = compile_job_report_data(job_uuid, job.product_ident)
+    response_data = {"status": "ok", "message": "job status", "data": job_report}
+    return JsonResponse(response_data, safe=False)
+
+def api_job_result_pdf(request, job_uuid):
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    try:
+        job = models.Job.objects.get(job_uuid=job_uuid)
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "job with uuid={} does not exist.".format(job_uuid)}
+        return JsonResponse(result, status=404)
+
+    if (job.delivery.user != user):
+        result = {"status": "error", "message": "job with uuid={} does not belong to user {}.".format(
+            job_uuid, user.username)}
+        return JsonResponse(result, status=401)
+
+    try:
+        filepath = get_job_report_filepath(job_uuid)
+    except FileNotFoundError:
+        # There is no result.
+        return JsonResponse({"status": "error", "message": "pdf report does not exist"}, status=404)
+    except:
+        return JsonResponse({"status": "error", "message": "pdf report is not available"}, status=404)
+    try:
+        response_pdf = FileResponse(open(str(filepath), "rb"), content_type="application/pdf", as_attachment=True)
+    except FileNotFoundError:
+        # There is no report.
+        return JsonResponse({"status": "error", "message": "pdf report does not exist"}, status=404)
+    return response_pdf
+
+
+def api_job_history(request, delivery_id):
+    """
+    Shows the history of all jobs for a specific delivery in .json format.
+    """
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    # Check delivery existence
+    try:
+        delivery = models.Delivery.objects.get(id=int(delivery_id))
+    except ObjectDoesNotExist:
+        result = {"status": "error", "message": "delivery with id={} not found.".format(delivery_id)}
+        return JsonResponse(result, status=404)
+
+    # Check if the delivery belongs to authorized user
+    if delivery.user != user:
+        result = {"status": "error", "message": "delivery id={} does not belong to user {}.".format(
+            delivery_id, user.username)}
+        return JsonResponse(result, status=401)
+
+    jobs = models.Job.objects.filter(delivery__filename=delivery.filename, delivery__user=user) \
+        .order_by("-date_created")
+    # Ensure job status is up-to-date
+    for job in jobs:
+        if job.job_status == JOB_RUNNING:
+            job_status = check_running_job(str(job.job_uuid), job.worker_url)
+            if job_status is not None:
+                job.update_status(job_status)
+
+    # Remove "-" characters from job uuids
+    job_list = list(jobs.values())
+    for job_info in job_list:
+        job_info["job_uuid"] = str(job_info["job_uuid"]).replace("-", "")
+    result = {"status": "OK",
+              "message": "Job history of delivery id={}".format(delivery_id),
+              "data": job_list}
+    return JsonResponse(result)
+
 
 @login_required
 def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
     """
+
+    # ensure current user has a valid api key and generate the key if it does not exist.
+    try:
+        api_key = request.user.apiuser.api_key
+    except ObjectDoesNotExist:
+        api_key = generate_api_key()
+        api_user = models.ApiUser(user=request.user, api_key=api_key)
+        api_user.save()
+
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
                                                          "announcement": get_announcement_message(),
-                                                         "boundary_version":get_boundary_version()})
+                                                         "boundary_version": get_boundary_version(),
+                                                         "api_key": api_key})
 
 
 @login_required

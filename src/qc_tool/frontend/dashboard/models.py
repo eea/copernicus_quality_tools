@@ -6,6 +6,8 @@ from uuid import uuid4
 
 import django.db.models as models
 from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
@@ -40,6 +42,11 @@ def pull_job(worker_url):
         return None
 
 
+class ApiUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    api_key = models.CharField(max_length=100)
+
+
 class Delivery(models.Model):
     class Meta:
         app_label = "dashboard"
@@ -65,6 +72,8 @@ class Delivery(models.Model):
         self.product_description = job.product_description
         self.save()
 
+        # Return formatted uuid of the newly created job
+        return str(job.job_uuid).lower().replace("-", "")
 
     def get_submittable_job(self):
         jobs_to_submit = Job.objects.filter(delivery__id=self.id).filter(job_status=JOB_OK).order_by("-date_created")[:1]
