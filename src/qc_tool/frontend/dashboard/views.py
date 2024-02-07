@@ -138,13 +138,16 @@ def api_delivery_list(request):
            SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
            d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
            j.job_uuid AS last_job_uuid,
-           j.date_created, j.date_started, j.job_status as last_job_status
+           j.date_created, j.date_started, j.job_status as last_job_status,
+           s3.host AS s3_host, s3.bucketname as s3_bucketname, s3.pattern AS s3_pattern
            FROM dashboard_delivery d
            LEFT JOIN dashboard_job j
            ON j.job_uuid = (
              SELECT job_uuid FROM dashboard_job j
              WHERE j.delivery_id = d.id
              ORDER BY j.date_created DESC LIMIT 1)
+           LEFT JOIN dashboard_s3info s3
+           ON s3.id = d.s3_id
            INNER JOIN auth_user u
            ON d.user_id = u.id
            """
@@ -164,6 +167,13 @@ def api_delivery_list(request):
         data = []
         for row in rows:
             data.append(dict(zip(header, row)))
+
+        # Add calculated "type" column to indicate if the file is local upload or s3.
+        for item in data:
+            if item["s3_host"]:
+                item["type"] = "s3"
+            else:
+                item["type"] = "local"
 
         logger.debug("List of deliveries successfully obtained.")
         response_data = {"status": "ok", "message": "list of deliveries successfully obtained", "deliveries": data}
@@ -421,6 +431,7 @@ def get_deliveries_json(request):
         sql = """
         SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
         d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
+        d.s3_id,
         j.job_uuid AS last_job_uuid,
         j.date_created, j.date_started, j.job_status as last_job_status
         FROM dashboard_delivery d
@@ -447,6 +458,13 @@ def get_deliveries_json(request):
         data = []
         for row in rows:
             data.append(dict(zip(header, row)))
+
+        # Add calculated "type" column to indicate if the file is local upload or s3.
+        for item in data:
+            if item["s3_id"]:
+                item["type"] = "s3"
+            else:
+                item["type"] = "local"
 
         return JsonResponse(data, safe=False)
 
