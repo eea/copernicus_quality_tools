@@ -83,6 +83,17 @@ def guess_product_ident(delivery_filepath):
             return product_ident
     return None
 
+def guess_product_ident_from_pattern(pattern):
+    # TODO: Discuss with JK!!!
+    """
+    Tries to guess the product ident from the user-defined filename pattern.
+    """
+    product_descriptions = get_product_descriptions()
+    for product_ident, product_description in product_descriptions.items():
+        if product_ident in pattern.lower():
+            return product_ident
+    return None
+
 
 def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     # Prepare parameters.
