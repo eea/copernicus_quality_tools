@@ -10,6 +10,7 @@ from datetime import datetime
 from shutil import copyfile
 from shutil import copytree
 from pathlib import Path
+import boto3
 
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_job_dir
@@ -83,17 +84,50 @@ def guess_product_ident(delivery_filepath):
             return product_ident
     return None
 
-def guess_product_ident_from_pattern(pattern):
-    # TODO: Discuss with JK!!!
+def find_s3_delivery(host, access_key, secret_key, bucketname, pattern):
     """
-    Tries to guess the product ident from the user-defined filename pattern.
+    Tries to find the delivery files on S3 storage based on user-defined filename pattern.
     """
-    product_descriptions = get_product_descriptions()
-    for product_ident, product_description in product_descriptions.items():
-        if product_ident in pattern.lower():
-            return product_ident
-    return None
 
+    # Check the S3 storage connection, filter objects by naming pattern
+    try:
+        s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
+        bucket = s3.Bucket(bucketname)
+        objects_filtered = list(bucket.objects.filter(Prefix=pattern))
+        if len(objects_filtered) == 0:
+            return {"delivery_filename": None,
+                    "message": "s3-key prefix does not match any object on S3 storage"}
+        else:
+            s3_deliveries_found = list()
+            for obj in objects_filtered:
+                s3_deliveries_found.append(obj.key.split(".")[0])
+            delivery_found = list(set(s3_deliveries_found))
+            if len(delivery_found) > 1:
+                return {"delivery_filename": None,
+                        "message": "s3-key prefix does not match the delivery unambiguously"}
+            else:
+                return {"delivery_filename": delivery_found[0],
+                        "message": "s3 delivery found: '{:s}'".format(delivery_found[0])}
+    except Exception as e:
+        return {"delivery_filename": None,
+                "message": str(e)}
+def get_s3_delivery_size(host, access_key, secret_key, bucketname, pattern):
+    """
+    Get the summary size of the S3 delivery objects.
+    """
+    try:
+        s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
+        bucket = s3.Bucket(bucketname)
+        objects_filtered = list(bucket.objects.filter(Prefix=pattern))
+        if len(objects_filtered) == 0:
+            return None
+        else:
+            s3_dlivery_size = 0
+            for obj in objects_filtered:
+                s3_dlivery_size += obj.size
+            return s3_dlivery_size
+    except:
+        return None
 
 def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     # Prepare parameters.

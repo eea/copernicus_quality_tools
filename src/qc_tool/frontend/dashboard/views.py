@@ -44,7 +44,8 @@ from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import generate_api_key
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
-from qc_tool.frontend.dashboard.helpers import guess_product_ident_from_pattern
+from qc_tool.frontend.dashboard.helpers import find_s3_delivery
+from qc_tool.frontend.dashboard.helpers import get_s3_delivery_size
 from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.helpers import get_boundary_version
 
@@ -81,8 +82,14 @@ def api_register_delivery(request):
     if not user:
         return JsonResponse({"status": "error", "message": message}, status=403)
 
-    body = request.body.decode("utf-8")
-    target_filepath = Path(json.loads(body).get("uploaded_file"))
+    # Get request body parameters
+    try:
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+
+    target_filepath = Path(body_json.get("uploaded_file"))
 
     if not target_filepath:
         return JsonResponse({"status": "error", "message":"missing parameter: uploaded_file"}, status=400)
@@ -118,52 +125,73 @@ def api_register_delivery_s3(request):
         return JsonResponse({"status": "error", "message": message}, status=403)
 
     # Get request body parameters
-    body = request.body.decode("utf-8")
-    host = json.loads(body).get("host")
+    try:
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+
+    host = body_json.get("host")
     if not host:
         return JsonResponse({"status": "error", "message":"missing parameter: host"}, status=400)
 
-    access_key = json.loads(body).get("access_key")
+    access_key = body_json.get("access_key")
     if not access_key:
         return JsonResponse({"status": "error", "message":"missing parameter: access_key"}, status=400)
 
-    secret_key = json.loads(body).get("secret_key")
+    secret_key = body_json.get("secret_key")
     if not secret_key:
         return JsonResponse({"status": "error", "message":"missing parameter: secret_key"}, status=400)
 
-    bucketname = json.loads(body).get("bucketname")
+    bucketname = body_json.get("bucketname")
     if not bucketname:
         return JsonResponse({"status": "error", "message":"missing parameter: bucketname"}, status=400)
 
-    pattern = json.loads(body).get("pattern")
-    if not pattern:
-        return JsonResponse({"status": "error", "message":"missing parameter: pattern"}, status=400)
+    key_prefix = body_json.get("key_prefix")
+    if not key_prefix:
+        return JsonResponse({"status": "error", "message":"missing parameter: key_prefix"}, status=400)
+
+    # Try to find delivery files in S3
+    delivery_filename = find_s3_delivery(host, access_key, secret_key, bucketname, key_prefix)
+    if not delivery_filename["delivery_filename"]:
+        return JsonResponse({"status": "error", "message": delivery_filename["message"]})
+
+    delivery_filename = delivery_filename["delivery_filename"]
+
+    if not delivery_filename:
+        return JsonResponse({"status": "error", "message":"s3-key prefix does not match the delivery unambiguously"}, status=400)
+
+    # Get size of the S3 object
+    delivery_size = get_s3_delivery_size(host, access_key, secret_key, bucketname, key_prefix)
 
     # Assign product description based on product ident.
     # Typically, the product ident should be contained in a user-defined filename pattern.
-    product_ident = guess_product_ident_from_pattern(pattern)
+    product_ident = guess_product_ident(Path(delivery_filename))
     logger.debug(product_ident)
     product_description = find_product_description(product_ident)
 
-    # TODO: continue here!!!!
-
-    # Register the uploaded file as a new delivery in the database.
+    # Register the S3 delivery as a new delivery in the database.
     d = models.Delivery()
-    d.filename = target_filepath.name
-    d.filepath = target_filepath.parent
-    d.size_bytes = target_filepath.stat().st_size
+    d.filename = Path(delivery_filename).name
+    d.filepath = None
+    d.size_bytes = delivery_size
     d.product_ident = product_ident
     d.product_description = product_description
     d.date_uploaded = timezone.now()
     d.user = user
     d.is_deleted = False
+    s3 = models.S3Info()
+    s3.host = host
+    s3.access_key = access_key
+    s3.secret_key = secret_key
+    s3.bucketname = bucketname
+    s3.key_prefix = key_prefix
+    s3.save()
+    d.s3=s3
     d.save()
     logger.debug("Delivery object saved successfully to database.")
-    response_data = {"status": "ok", "message": "delivery successfully registered", "delivery_id": d.id}
+    response_data = {"status": "ok", "message": "S3 delivery successfully registered", "delivery_id": d.id}
     return JsonResponse(response_data, safe=False)
-
-
-
 
 def api_delivery_list(request):
     """
@@ -194,7 +222,7 @@ def api_delivery_list(request):
            d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
            j.job_uuid AS last_job_uuid,
            j.date_created, j.date_started, j.job_status as last_job_status,
-           s3.host AS s3_host, s3.bucketname as s3_bucketname, s3.pattern AS s3_pattern
+           s3.host AS s3_host, s3.bucketname as s3_bucketname, s3.key_prefix AS s3_key_prefix
            FROM dashboard_delivery d
            LEFT JOIN dashboard_job j
            ON j.job_uuid = (
@@ -266,8 +294,11 @@ def api_create_job(request):
     if not user:
         return JsonResponse({"status": "error", "message": message}, status=403)
 
-    body = request.body.decode("utf-8")
-    body_json = json.loads(body)
+    # Get request body parameters
+    try:
+        body_json = request.body.decode("utf-8")
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
     delivery_id = body_json.get("delivery_id")
     product_ident = body_json.get("product_ident")
     skip_steps = body_json.get("skip_steps", None)

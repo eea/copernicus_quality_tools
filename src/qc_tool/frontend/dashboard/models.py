@@ -52,7 +52,7 @@ class S3Info(models.Model):
     access_key = models.CharField(max_length=100)
     secret_key = models.CharField(max_length=100)
     bucketname = models.CharField(max_length=100)
-    pattern = models.CharField(max_length=500)
+    key_prefix = models.CharField(max_length=500)
 
 
 class Delivery(models.Model):

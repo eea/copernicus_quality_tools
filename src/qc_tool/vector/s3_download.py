@@ -12,6 +12,6 @@ def run_check(params, status):
                    params["s3"]["access_key"],
                    params["s3"]["secret_key"],
                    params["s3"]["bucketname"],
-                   params["s3"]["pattern"],
+                   params["s3"]["key_prefix"],
                    params["s3"]["s3_local_dir"],
                    status)
