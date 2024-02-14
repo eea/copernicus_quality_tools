@@ -165,6 +165,12 @@ class JobController():
                 args += ["--skip-steps", self.job_args["skip_steps"]]
             args += [self.job_args["username"],
                      self.job_args["filename"]]
+            if self.job_args.get("s3_host") is not None:
+                args += ["--s3-host", self.job_args["s3_host"]]
+                args += ["--s3-access-key", self.job_args["s3_access_key"]]
+                args += ["--s3-secret-key", self.job_args["s3_secret_key"]]
+                args += ["--s3-bucketname", self.job_args["s3_bucketname"]]
+                args += ["--s3-key-prefix", self.job_args["s3_key_prefix"]]
             log.debug("Launching a new job: {:s}.".format(repr(args)))
             stdout_filepath = CONFIG["work_dir"].joinpath("job.{:s}.stdout".format(self.job_args["job_uuid"]))
             log.debug("The job has stdout and stderr redirected to %s.".format(stdout_filepath))

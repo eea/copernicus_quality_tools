@@ -1032,6 +1032,14 @@ def pull_job(request):
                     "username": job.delivery.user.username,
                     "filename": job.delivery.filename,
                     "skip_steps": job.skip_steps}
+        if job.delivery.s3:
+            response.update({
+                 "s3_host": job.delivery.s3.host,
+                 "s3_access_key": job.delivery.s3.access_key,
+                 "s3_secret_key": job.delivery.s3.secret_key,
+                 "s3_bucketname": job.delivery.s3.bucketname,
+                 "s3_key_prefix": job.delivery.s3.key_prefix
+            })
     return JsonResponse(response, safe=False)
 
 
