@@ -64,6 +64,73 @@
         }
       }
     },
+    "/register-delivery-s3": {
+      "post": {
+        "summary": "Register a new delivery from S3 storage",
+        "operationId": "registerDeliveryS3",
+        "tags": [
+          "registering a new delivery"
+        ],
+        "requestBody": {
+          "description": "Specify S3 access credentials and delivery S3 object prefix",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "example": "https://s3.waw3-1.cloudferro.com"
+                  },
+                  "access_key": {
+                    "type": "string",
+                    "example": "dasldkQ123"
+                  },
+                  "secret_key": {
+                    "type": "string",
+                    "example": "35H12refsaadf"
+                  },
+                  "bucketname": {
+                    "type": "string",
+                    "example": "delivery"
+                  },
+                  "key_prefix": {
+                    "type": "string",
+                    "example": "20231127/TCD/CLMS_HRL_VLCC_TCD_S2020_R10m_E49N35_03035_V01_R00"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Id of the registered delivery",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Deliery successfully registered"
+                    },
+                    "delivery_id": {
+                      "type": "integer",
+                      "format": "int64",
+                      "example": 123
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/delivery-list": {
       "get": {
         "summary": "List all deliveries",
