@@ -9,8 +9,8 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names":{"raster": "^tcd_2018_010m_(?P<aoi_code>eu)_0?3035_v[0-9]{1}_[0-9]{1}"},
-        "aoi_codes": ["eu"],
+        "layer_names":{"raster": "^clms_hrl_vlcc_tcd_s2020_r10m_(?P<aoi_code>[a-zA-Z0-9]+)_0?3035_v[0-9]+_r[0-9]+"},
+        "aoi_codes": ["e49n35", "e49n36"],
         "extensions": [".tif"],
         "reference_year": "2018"
 	  }

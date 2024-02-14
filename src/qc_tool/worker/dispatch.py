@@ -100,7 +100,7 @@ def validate_skip_steps(skip_steps, product_definition):
             raise QCException("Required step {:d} can not be skipped.".format(skip_step))
         validated_skip_steps.add(skip_step)
 
-def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
+def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s3_params=None):
 
     task_timeout = get_timeout()
     with ExitStack() as exit_stack:
@@ -123,7 +123,12 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
                           "error_message": None,
                           "qc_tool_version": get_qc_tool_version(),
                           "steps": []}
-            job_result["hash"] = make_signature(filepath)
+
+            if s3_params:
+                # FIXME make correct signature also in case of S3 files.
+                pass
+            else:
+                job_result["hash"] = make_signature(filepath)
 
             # Store initial job result.
             # This way we announce that the job has started.
@@ -137,9 +142,23 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple()):
             job_params["filepath"] = filepath
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
+            job_params["s3"] = {}
+
+            # Add S3 job params if specified.
+            if s3_params:
+                job_params["s3"] = s3_params
 
             for step_nr, step_def in enumerate(product_definition["steps"], start=1):
+
                 step_result = {"check_ident": step_def["check_ident"]}
+
+                # Replace by unzip checks by s3_download checks for s3 deliveries
+                if s3_params and step_def["check_ident"] in ("qc_tool.vector.unzip", "qc_tool.raster.unzip"):
+                    replaced_check_ident = step_def["check_ident"].replace("unzip", "s3_download")
+                    replaced_check_description = "Data can be downloaded from S3" #TODO load description from module
+                    step_def["check_ident"] = replaced_check_ident
+                    step_result = {"check_ident": step_def["check_ident"],
+                                   "description": replaced_check_description}
 
                 # Skip this step.
                 if step_nr in skip_steps:

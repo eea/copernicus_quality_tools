@@ -154,7 +154,7 @@ def api_register_delivery_s3(request):
     # Try to find delivery files in S3
     delivery_filename = find_s3_delivery(host, access_key, secret_key, bucketname, key_prefix)
     if not delivery_filename["delivery_filename"]:
-        return JsonResponse({"status": "error", "message": delivery_filename["message"]})
+        return JsonResponse({"status": "error", "message": delivery_filename["message"]}, status=400)
 
     delivery_filename = delivery_filename["delivery_filename"]
 
@@ -296,7 +296,8 @@ def api_create_job(request):
 
     # Get request body parameters
     try:
-        body_json = request.body.decode("utf-8")
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
     except:
         return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
     delivery_id = body_json.get("delivery_id")
@@ -1032,6 +1033,14 @@ def pull_job(request):
                     "username": job.delivery.user.username,
                     "filename": job.delivery.filename,
                     "skip_steps": job.skip_steps}
+        if job.delivery.s3:
+            response.update({
+                 "s3_host": job.delivery.s3.host,
+                 "s3_access_key": job.delivery.s3.access_key,
+                 "s3_secret_key": job.delivery.s3.secret_key,
+                 "s3_bucketname": job.delivery.s3.bucketname,
+                 "s3_key_prefix": job.delivery.s3.key_prefix
+            })
     return JsonResponse(response, safe=False)
 
 
