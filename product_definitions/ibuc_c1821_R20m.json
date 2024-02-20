@@ -881,6 +881,14 @@
         ]
       }
     },
+     {
+      "check_ident": "qc_tool.raster.attribute",
+      "required": false,
+      "parameters": {
+        "layers": ["raster"],
+        "attribute_regexes": ["value", "count", "area_km2", "area_perc", "class_name"]
+      }
+    },
     {
       "check_ident": "qc_tool.raster.epsg",
       "required": false,
