@@ -15,6 +15,7 @@ urlpatterns = [
     path("api/job-result/<job_uuid>", views.api_job_result, name="api_job_result"),
     path("api/job-result-pdf/<job_uuid>", views.api_job_result_pdf, name="api_job_result_pdf"),
     path("api/job-history/<delivery_id>", views.api_job_history, name="api_job_history"),
+    path("api/submit-delivery-to-eea/<delivery_id>", views.api_submit_delivery_to_eea, name="api_submit_delivery_to_eea"),
 
     path("data/delivery/list/", views.get_deliveries_json, name="deliveries_json"),
     path("data/job_history/<delivery_id>/", views.get_job_history_json, name="job_history_json"),

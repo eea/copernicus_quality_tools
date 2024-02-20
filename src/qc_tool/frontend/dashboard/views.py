@@ -836,6 +836,59 @@ def submit_delivery_to_eea(request):
         return JsonResponse({"status":"ok",
                              "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
 
+def api_submit_delivery_to_eea(request):
+
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    # Get request body parameters
+    try:
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+
+    # Check if delivery with given ID exists.
+    delivery_id = body_json.get("delivery_id")
+    if not delivery_id:
+        return JsonResponse({"status": "error", "message": "missing parameter: delivery_id"}, status=400)
+    try:
+        d = models.Delivery.objects.get(id=delivery_id)
+    except ObjectDoesNotExist:
+        response = JsonResponse({"status": "error",
+                                 "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
+        response.status_code = 404
+        return response
+    try:
+        logger.debug("delivery_submit_eea id=" + str(delivery_id))
+
+        job = d.get_submittable_job()
+        if job is None:
+            message = "Delivery with ID '{:s}' cannot be submitted to EEA. Status is not OK.)".format(d.id)
+            response = JsonResponse({"status": "error", "message": message})
+            response.status_code = 400
+            return response
+        submission_date = timezone.now()
+
+        submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date)
+        d.submit()
+        d.submission_date = submission_date
+        d.save()
+
+    except BaseException as e:
+        d.date_submitted = None
+        d.save()
+        error_message = "ERROR submitting delivery to EEA. Delivery ID '{:s}'. exception {:s}".format(d.id, str(e))
+        logger.error(error_message)
+        response = JsonResponse({"status": "error", "message": error_message})
+        response.status_code = 500
+        return response
+
+    return JsonResponse({"status": "ok",
+                         "message": "Delivery with ID {:s} successfully submitted to EEA.".format(d.id)})
+
 @login_required
 def get_product_list(request):
     """
