@@ -18,7 +18,7 @@
         "summary": "Register a new delivery from already uploaded file",
         "operationId": "registerDelivery",
         "tags": [
-          "Registering a new delivery"
+          "registering a new delivery"
         ],
         "requestBody": {
           "description": "Specify full path of the uploaded file.",
@@ -69,7 +69,7 @@
         "summary": "Register a new delivery from S3 storage",
         "operationId": "registerDeliveryS3",
         "tags": [
-          "Registering a new delivery"
+          "registering a new delivery"
         ],
         "requestBody": {
           "description": "Specify S3 access credentials and delivery S3 object prefix",
@@ -136,7 +136,7 @@
         "summary": "List all deliveries",
         "operationId": "listDeliveries",
         "tags": [
-          "Deliveries"
+          "deliveries"
         ],
         "responses": {
           "200": {
@@ -180,7 +180,7 @@
         "summary": "List all products that can be checked",
         "operationId": "listProducts",
         "tags": [
-          "Products"
+          "products"
         ],
         "responses": {
           "200": {
@@ -218,7 +218,7 @@
         "summary": "Show all QC checks for a product",
         "operationId": "productInfo",
         "tags": [
-          "Products"
+          "products"
         ],
         "parameters": [
           {
@@ -273,7 +273,7 @@
         "summary": "Run a new QC job",
         "operationId": "createJob",
         "tags": [
-          "Running a new QC job"
+          "running a new QC job"
         ],
         "requestBody": {
           "description": "Specify delivery_id, product_ident, skip_steps",
@@ -477,54 +477,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/submit-delivery-to-eea": {
-      "post": {
-        "summary": "Submit job reports to EEA",
-        "operationId": "submitDeliveryToEEA",
-        "tags": [
-          "Submission of deliveries to EEA"
-        ],
-        "requestBody": {
-          "description": "Specify delivery_id",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "required": [
-                  "delivery_id"
-                ],
-                "properties": {
-                  "delivery_id": {
-                    "type": "integer",
-                    "example": 1
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Delivery successfully submitted to EEA"
-                    }
-                  }
                 }
               }
             }
