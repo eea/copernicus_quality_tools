@@ -99,13 +99,16 @@ def main():
     username = pargs.username[0]
     filename = pargs.filename[0]
 
-    s3_params={
-        "host": pargs.s3_host[0],
-        "access_key": pargs.s3_access_key[0],
-        "secret_key": pargs.s3_secret_key[0],
-        "bucketname": pargs.s3_bucketname[0],
-        "key_prefix": pargs.s3_key_prefix[0]
-    }
+    if pargs.s3_host is not None:
+        s3_params={
+            "host": pargs.s3_host[0],
+            "access_key": pargs.s3_access_key[0],
+            "secret_key": pargs.s3_secret_key[0],
+            "bucketname": pargs.s3_bucketname[0],
+            "key_prefix": pargs.s3_key_prefix[0]
+        }
+    else:
+        s3_params = None
 
     filepath = CONFIG["incoming_dir"].joinpath(username, filename)
     if pargs.skip_steps is None:
