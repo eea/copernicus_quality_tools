@@ -18,14 +18,14 @@ def read_vatdbf(vatdbf_filepath):
         return None
 
 def read_gtiff_attributes(gtiff_filepath):
-    # try:
-    import osgeo.gdal as gdal
-    ds = gdal.Open(str(gtiff_filepath))
-    band = ds.GetRasterBand(1)
-    rat = band.GetDefaultRAT()
-    return [rat.GetNameOfCol(icol) for icol in range(rat.GetColumnCount())]
-    # except:
-    #     return None
+    try:
+        import osgeo.gdal as gdal
+        ds = gdal.Open(str(gtiff_filepath))
+        band = ds.GetRasterBand(1)
+        rat = band.GetDefaultRAT()
+        return [rat.GetNameOfCol(icol) for icol in range(rat.GetColumnCount())]
+    except:
+        return None
 
 def run_check(params, status):
     from qc_tool.raster.helper import do_raster_layers

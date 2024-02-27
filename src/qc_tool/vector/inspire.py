@@ -34,8 +34,8 @@ def run_check(params, status):
         metadata_dirs = [d for d in params["unzip_dir"].glob('**/*')
                          if d.is_dir() and str(d).lower().endswith(METADATA_DIRNAME)]
         if len(metadata_dirs) == 0:
-            status.info("The delivery does not contain the expected '{:s}' folder".format(METADATA_DIRNAME))
-            return
+            status.info("The delivery does not contain the expected '{:s}' folder. The native delivery folder will be used instead.".format(METADATA_DIRNAME))
+            metadata_dir = params["unzip_dir"]
         elif len(metadata_dirs) > 1:
             status.info("Multiple folders named '{:s}' were found in the delivery.",
                         "Only one '{:s}' folder is allowed.".format(METADATA_DIRNAME))

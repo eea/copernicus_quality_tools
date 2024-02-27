@@ -512,6 +512,7 @@
         },
         "responses": {
           "200": {
+            "description": "Delivery has been submitted",
             "content": {
               "application/json": {
                 "schema": {

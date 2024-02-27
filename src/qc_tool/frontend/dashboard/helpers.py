@@ -129,7 +129,7 @@ def get_s3_delivery_size(host, access_key, secret_key, bucketname, pattern):
     except:
         return None
 
-def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
+def submit_job(job_uuid, input_filepath, submission_dir, submission_date, is_s3=False):
     # Prepare parameters.
     job_uuid = str(job_uuid)
     job_result = load_job_result(job_uuid)
@@ -137,7 +137,10 @@ def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     reference_year = job_result.get("reference_year", None)
     if reference_year is None:
         reference_year = UNKNOWN_REFERENCE_YEAR_LABEL
-    uploaded_name = re.sub(".zip$", "", job_result["filename"])
+    if not is_s3:
+        uploaded_name = re.sub(".zip$", "", job_result["filename"])
+    else:
+        uploaded_name = job_result["filename"]
 
     # Create submission directory for the job.
     submission_dirname = "{:s}-{:s}-{:s}.d".format(submission_date.strftime("%Y%m%d"),
@@ -160,10 +163,11 @@ def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     copytree(str(src_filepath), str(dst_filepath))
 
     # Copy the uploaded file.
-    dst_dir = job_submission_dir.joinpath(JOB_INPUT_DIRNAME)
-    dst_dir.mkdir()
-    dst_filepath = dst_dir.joinpath(input_filepath.name)
-    copyfile(str(input_filepath), str(dst_filepath))
+    if not is_s3:
+        dst_dir = job_submission_dir.joinpath(JOB_INPUT_DIRNAME)
+        dst_dir.mkdir()
+        dst_filepath = dst_dir.joinpath(input_filepath.name)
+        copyfile(str(input_filepath), str(dst_filepath))
 
     # Put stamp confirming finished submission.
     dst_filepath = job_submission_dir.joinpath("SUBMITTED")

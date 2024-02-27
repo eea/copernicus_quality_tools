@@ -811,7 +811,7 @@ def submit_delivery_to_eea(request):
         try:
             logger.debug("delivery_submit_eea id=" + str(delivery_id))
 
-            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+            # zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
 
             job = d.get_submittable_job()
             if job is None:
@@ -820,7 +820,15 @@ def submit_delivery_to_eea(request):
                 response.status_code = 400
                 return response
             submission_date = timezone.now()
-            submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date)
+
+            if d.s3:
+                submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
+            else:
+                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+                submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
+
+
+            # submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date)
             d.submit()
             d.submission_date = submission_date
             d.save()
@@ -866,13 +874,18 @@ def api_submit_delivery_to_eea(request):
 
         job = d.get_submittable_job()
         if job is None:
-            message = "Delivery with ID '{:s}' cannot be submitted to EEA. Status is not OK.)".format(d.id)
+            message = "Delivery with ID '{:d}' cannot be submitted to EEA. Status is not OK.)".format(d.id)
             response = JsonResponse({"status": "error", "message": message})
             response.status_code = 400
             return response
         submission_date = timezone.now()
 
-        submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date)
+        # check if the delivery is from local or S3 storage
+        if d.s3:
+            submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
+        else:
+            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+            submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
         d.submit()
         d.submission_date = submission_date
         d.save()
@@ -880,14 +893,14 @@ def api_submit_delivery_to_eea(request):
     except BaseException as e:
         d.date_submitted = None
         d.save()
-        error_message = "ERROR submitting delivery to EEA. Delivery ID '{:s}'. exception {:s}".format(d.id, str(e))
+        error_message = "ERROR submitting delivery to EEA. Delivery ID '{:d}'. exception {:s}".format(d.id, str(e))
         logger.error(error_message)
         response = JsonResponse({"status": "error", "message": error_message})
         response.status_code = 500
         return response
 
     return JsonResponse({"status": "ok",
-                         "message": "Delivery with ID {:s} successfully submitted to EEA.".format(d.id)})
+                         "message": "Delivery with ID {:d} successfully submitted to EEA.".format(d.id)})
 
 @login_required
 def get_product_list(request):

@@ -943,6 +943,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
+        "mask": "2021",
         "outside_area_code": 255
       }
     },

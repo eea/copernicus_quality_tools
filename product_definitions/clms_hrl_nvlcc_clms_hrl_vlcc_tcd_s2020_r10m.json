@@ -1,5 +1,5 @@
 {
-  "description": "HRL Share of Built up 2021 (100m)",
+  "description": "HRL Tree Cover Density 2020 (10m)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
@@ -9,8 +9,8 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "layer_names": {"raster": "^clms_hrlnvlcc_sbu_s2021_r100m_(?P<aoi_code>[0-9a-zA-Z]{6})_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}"},
-                "aoi_codes": [
+        "layer_names": {"raster": "^clms_hrl_vlcc_tcd_s2020_r10m_(?P<aoi_code>[0-9a-zA-Z]{6})_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}"},
+        "aoi_codes": [
           "e46n43",
           "e10n25",
           "e11n25",
@@ -855,17 +855,15 @@
           "e44n32",
           "e44n33",
           "e44n34",
-          "e44n35"
-        ],
+          "e44n35"],
         "epsg_codes": [
           "03035",
           "32622",
           "32620",
           "32740",
-          "32738"
-        ],
+          "32738"],
         "extensions": [".tif"],
-        "reference_year": "2021"
+        "reference_year": "2020"
       }
     },
     {
@@ -875,7 +873,7 @@
         "layers": ["raster"]
       }
     },
-     {
+    {
       "check_ident": "qc_tool.raster.attribute",
       "required": false,
       "parameters": {
@@ -896,7 +894,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
-        "pixelsize": 100
+        "pixelsize": 10
       }
     },
     {
@@ -964,10 +962,9 @@
         "layers": ["raster"],
         "colors": {
           "0": [240,240,240],
-          "1": [251,255,214],
-          "30": [255,221,0],
-          "70": [255,178,0],
-          "100": [219,106,6],
+          "1": [253,255,115],
+          "50": [76,230,0],
+          "100": [28,92,36],
           "255": [0,0,0]
         }
       }
