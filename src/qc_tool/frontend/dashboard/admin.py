@@ -8,6 +8,7 @@ from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 
 from qc_tool.frontend.dashboard.models import ApiUser
+from qc_tool.frontend.dashboard.models import S3Info
 
 # Define an inline admin descriptor for ApiUser model
 # which acts a bit like a singleton
@@ -23,6 +24,7 @@ class UserAdmin(BaseUserAdmin):
 
 # Register your models here.
 admin.site.register(Delivery)
+admin.site.register(S3Info)
 admin.site.register(Job)
 
 # Re-register UserAdmin

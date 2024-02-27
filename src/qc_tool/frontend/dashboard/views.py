@@ -44,6 +44,8 @@ from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import generate_api_key
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
+from qc_tool.frontend.dashboard.helpers import find_s3_delivery
+from qc_tool.frontend.dashboard.helpers import get_s3_delivery_size
 from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.helpers import get_boundary_version
 
@@ -80,8 +82,14 @@ def api_register_delivery(request):
     if not user:
         return JsonResponse({"status": "error", "message": message}, status=403)
 
-    body = request.body.decode("utf-8")
-    target_filepath = Path(json.loads(body).get("uploaded_file"))
+    # Get request body parameters
+    try:
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+
+    target_filepath = Path(body_json.get("uploaded_file"))
 
     if not target_filepath:
         return JsonResponse({"status": "error", "message":"missing parameter: uploaded_file"}, status=400)
@@ -108,6 +116,81 @@ def api_register_delivery(request):
     d.save()
     logger.debug("Delivery object saved successfully to database.")
     response_data = {"status": "ok", "message": "delivery successfully registered", "delivery_id": d.id}
+    return JsonResponse(response_data, safe=False)
+
+def api_register_delivery_s3(request):
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    # Get request body parameters
+    try:
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+
+    host = body_json.get("host")
+    if not host:
+        return JsonResponse({"status": "error", "message":"missing parameter: host"}, status=400)
+
+    access_key = body_json.get("access_key")
+    if not access_key:
+        return JsonResponse({"status": "error", "message":"missing parameter: access_key"}, status=400)
+
+    secret_key = body_json.get("secret_key")
+    if not secret_key:
+        return JsonResponse({"status": "error", "message":"missing parameter: secret_key"}, status=400)
+
+    bucketname = body_json.get("bucketname")
+    if not bucketname:
+        return JsonResponse({"status": "error", "message":"missing parameter: bucketname"}, status=400)
+
+    key_prefix = body_json.get("key_prefix")
+    if not key_prefix:
+        return JsonResponse({"status": "error", "message":"missing parameter: key_prefix"}, status=400)
+
+    # Try to find delivery files in S3
+    delivery_filename = find_s3_delivery(host, access_key, secret_key, bucketname, key_prefix)
+    if not delivery_filename["delivery_filename"]:
+        return JsonResponse({"status": "error", "message": delivery_filename["message"]}, status=400)
+
+    delivery_filename = delivery_filename["delivery_filename"]
+
+    if not delivery_filename:
+        return JsonResponse({"status": "error", "message":"s3-key prefix does not match the delivery unambiguously"}, status=400)
+
+    # Get size of the S3 object
+    delivery_size = get_s3_delivery_size(host, access_key, secret_key, bucketname, key_prefix)
+
+    # Assign product description based on product ident.
+    # Typically, the product ident should be contained in a user-defined filename pattern.
+    product_ident = guess_product_ident(Path(delivery_filename))
+    logger.debug(product_ident)
+    product_description = find_product_description(product_ident)
+
+    # Register the S3 delivery as a new delivery in the database.
+    d = models.Delivery()
+    d.filename = Path(delivery_filename).name
+    d.filepath = None
+    d.size_bytes = delivery_size
+    d.product_ident = product_ident
+    d.product_description = product_description
+    d.date_uploaded = timezone.now()
+    d.user = user
+    d.is_deleted = False
+    s3 = models.S3Info()
+    s3.host = host
+    s3.access_key = access_key
+    s3.secret_key = secret_key
+    s3.bucketname = bucketname
+    s3.key_prefix = key_prefix
+    s3.save()
+    d.s3=s3
+    d.save()
+    logger.debug("Delivery object saved successfully to database.")
+    response_data = {"status": "ok", "message": "S3 delivery successfully registered", "delivery_id": d.id}
     return JsonResponse(response_data, safe=False)
 
 def api_delivery_list(request):
@@ -138,13 +221,16 @@ def api_delivery_list(request):
            SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
            d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
            j.job_uuid AS last_job_uuid,
-           j.date_created, j.date_started, j.job_status as last_job_status
+           j.date_created, j.date_started, j.job_status as last_job_status,
+           s3.host AS s3_host, s3.bucketname as s3_bucketname, s3.key_prefix AS s3_key_prefix
            FROM dashboard_delivery d
            LEFT JOIN dashboard_job j
            ON j.job_uuid = (
              SELECT job_uuid FROM dashboard_job j
              WHERE j.delivery_id = d.id
              ORDER BY j.date_created DESC LIMIT 1)
+           LEFT JOIN dashboard_s3info s3
+           ON s3.id = d.s3_id
            INNER JOIN auth_user u
            ON d.user_id = u.id
            """
@@ -164,6 +250,13 @@ def api_delivery_list(request):
         data = []
         for row in rows:
             data.append(dict(zip(header, row)))
+
+        # Add calculated "type" column to indicate if the file is local upload or s3.
+        for item in data:
+            if item["s3_host"]:
+                item["type"] = "s3"
+            else:
+                item["type"] = "local"
 
         logger.debug("List of deliveries successfully obtained.")
         response_data = {"status": "ok", "message": "list of deliveries successfully obtained", "deliveries": data}
@@ -201,8 +294,12 @@ def api_create_job(request):
     if not user:
         return JsonResponse({"status": "error", "message": message}, status=403)
 
-    body = request.body.decode("utf-8")
-    body_json = json.loads(body)
+    # Get request body parameters
+    try:
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
     delivery_id = body_json.get("delivery_id")
     product_ident = body_json.get("product_ident")
     skip_steps = body_json.get("skip_steps", None)
@@ -421,6 +518,7 @@ def get_deliveries_json(request):
         sql = """
         SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
         d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
+        d.s3_id,
         j.job_uuid AS last_job_uuid,
         j.date_created, j.date_started, j.job_status as last_job_status
         FROM dashboard_delivery d
@@ -447,6 +545,13 @@ def get_deliveries_json(request):
         data = []
         for row in rows:
             data.append(dict(zip(header, row)))
+
+        # Add calculated "type" column to indicate if the file is local upload or s3.
+        for item in data:
+            if item["s3_id"]:
+                item["type"] = "s3"
+            else:
+                item["type"] = "local"
 
         return JsonResponse(data, safe=False)
 
@@ -706,7 +811,7 @@ def submit_delivery_to_eea(request):
         try:
             logger.debug("delivery_submit_eea id=" + str(delivery_id))
 
-            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+            # zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
 
             job = d.get_submittable_job()
             if job is None:
@@ -715,7 +820,15 @@ def submit_delivery_to_eea(request):
                 response.status_code = 400
                 return response
             submission_date = timezone.now()
-            submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date)
+
+            if d.s3:
+                submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
+            else:
+                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+                submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
+
+
+            # submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date)
             d.submit()
             d.submission_date = submission_date
             d.save()
@@ -730,6 +843,64 @@ def submit_delivery_to_eea(request):
 
         return JsonResponse({"status":"ok",
                              "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
+
+def api_submit_delivery_to_eea(request):
+
+    # Verify api key
+    user, message = check_api_key(request)
+    if not user:
+        return JsonResponse({"status": "error", "message": message}, status=403)
+
+    # Get request body parameters
+    try:
+        body = request.body.decode("utf-8")
+        body_json = json.loads(body)
+    except:
+        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+
+    # Check if delivery with given ID exists.
+    delivery_id = body_json.get("delivery_id")
+    if not delivery_id:
+        return JsonResponse({"status": "error", "message": "missing parameter: delivery_id"}, status=400)
+    try:
+        d = models.Delivery.objects.get(id=delivery_id)
+    except ObjectDoesNotExist:
+        response = JsonResponse({"status": "error",
+                                 "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
+        response.status_code = 404
+        return response
+    try:
+        logger.debug("delivery_submit_eea id=" + str(delivery_id))
+
+        job = d.get_submittable_job()
+        if job is None:
+            message = "Delivery with ID '{:d}' cannot be submitted to EEA. Status is not OK.)".format(d.id)
+            response = JsonResponse({"status": "error", "message": message})
+            response.status_code = 400
+            return response
+        submission_date = timezone.now()
+
+        # check if the delivery is from local or S3 storage
+        if d.s3:
+            submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
+        else:
+            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+            submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
+        d.submit()
+        d.submission_date = submission_date
+        d.save()
+
+    except BaseException as e:
+        d.date_submitted = None
+        d.save()
+        error_message = "ERROR submitting delivery to EEA. Delivery ID '{:d}'. exception {:s}".format(d.id, str(e))
+        logger.error(error_message)
+        response = JsonResponse({"status": "error", "message": error_message})
+        response.status_code = 500
+        return response
+
+    return JsonResponse({"status": "ok",
+                         "message": "Delivery with ID {:d} successfully submitted to EEA.".format(d.id)})
 
 @login_required
 def get_product_list(request):
@@ -928,6 +1099,14 @@ def pull_job(request):
                     "username": job.delivery.user.username,
                     "filename": job.delivery.filename,
                     "skip_steps": job.skip_steps}
+        if job.delivery.s3:
+            response.update({
+                 "s3_host": job.delivery.s3.host,
+                 "s3_access_key": job.delivery.s3.access_key,
+                 "s3_secret_key": job.delivery.s3.secret_key,
+                 "s3_bucketname": job.delivery.s3.bucketname,
+                 "s3_key_prefix": job.delivery.s3.key_prefix
+            })
     return JsonResponse(response, safe=False)
 
 

@@ -18,7 +18,7 @@
         "summary": "Register a new delivery from already uploaded file",
         "operationId": "registerDelivery",
         "tags": [
-          "registering a new delivery"
+          "Registering a new delivery"
         ],
         "requestBody": {
           "description": "Specify full path of the uploaded file.",
@@ -64,12 +64,79 @@
         }
       }
     },
+    "/register-delivery-s3": {
+      "post": {
+        "summary": "Register a new delivery from S3 storage",
+        "operationId": "registerDeliveryS3",
+        "tags": [
+          "Registering a new delivery"
+        ],
+        "requestBody": {
+          "description": "Specify S3 access credentials and delivery S3 object prefix",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "example": "https://s3.waw3-1.cloudferro.com"
+                  },
+                  "access_key": {
+                    "type": "string",
+                    "example": "dasldkQ123"
+                  },
+                  "secret_key": {
+                    "type": "string",
+                    "example": "35H12refsaadf"
+                  },
+                  "bucketname": {
+                    "type": "string",
+                    "example": "delivery"
+                  },
+                  "key_prefix": {
+                    "type": "string",
+                    "example": "20231127/TCD/CLMS_HRL_VLCC_TCD_S2020_R10m_E49N35_03035_V01_R00"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Id of the registered delivery",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Deliery successfully registered"
+                    },
+                    "delivery_id": {
+                      "type": "integer",
+                      "format": "int64",
+                      "example": 123
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/delivery-list": {
       "get": {
         "summary": "List all deliveries",
         "operationId": "listDeliveries",
         "tags": [
-          "deliveries"
+          "Deliveries"
         ],
         "responses": {
           "200": {
@@ -113,7 +180,7 @@
         "summary": "List all products that can be checked",
         "operationId": "listProducts",
         "tags": [
-          "products"
+          "Products"
         ],
         "responses": {
           "200": {
@@ -151,7 +218,7 @@
         "summary": "Show all QC checks for a product",
         "operationId": "productInfo",
         "tags": [
-          "products"
+          "Products"
         ],
         "parameters": [
           {
@@ -206,7 +273,7 @@
         "summary": "Run a new QC job",
         "operationId": "createJob",
         "tags": [
-          "running a new QC job"
+          "Running a new QC job"
         ],
         "requestBody": {
           "description": "Specify delivery_id, product_ident, skip_steps",
@@ -410,6 +477,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submit-delivery-to-eea": {
+      "post": {
+        "summary": "Submit job reports to EEA",
+        "operationId": "submitDeliveryToEEA",
+        "tags": [
+          "Submission of deliveries to EEA"
+        ],
+        "requestBody": {
+          "description": "Specify delivery_id",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "delivery_id"
+                ],
+                "properties": {
+                  "delivery_id": {
+                    "type": "integer",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Delivery has been submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Delivery successfully submitted to EEA"
+                    }
+                  }
                 }
               }
             }

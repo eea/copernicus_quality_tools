@@ -70,7 +70,7 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
     except Exception as ex:
         status.aborted("Error S3 download, reason: {:s}".format(str(ex)))
         return
-    status.add_params({"s3_local_dir": s3_local_dir})
+    status.add_params({"unzip_dir": s3_local_dir})
 
 def do_layers(params):
     if "layers" in params:

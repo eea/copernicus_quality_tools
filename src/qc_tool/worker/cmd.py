@@ -51,6 +51,41 @@ def main():
                         action="store",
                         nargs=1,
                         required=False)
+    parser.add_argument("--s3-host",
+                        help="URL of the S3 host where the delivery files can be downloaded from.",
+                        dest="s3_host",
+                        default=None,
+                        action="store",
+                        nargs=1,
+                        required=False)
+    parser.add_argument("--s3-access-key",
+                        help="S3 access key.",
+                        dest="s3_access_key",
+                        default=None,
+                        action="store",
+                        nargs=1,
+                        required=False)
+    parser.add_argument("--s3-secret-key",
+                        help="S3 secret key.",
+                        dest="s3_secret_key",
+                        default=None,
+                        action="store",
+                        nargs=1,
+                        required=False)
+    parser.add_argument("--s3-bucketname",
+                        help="S3 bucket name where the delivery files can be downloaded from.",
+                        dest="s3_bucketname",
+                        default=None,
+                        action="store",
+                        nargs=1,
+                        required=False)
+    parser.add_argument("--s3-key-prefix",
+                        help="Prefix of the s3 delivery object (without any file extension)",
+                        dest="s3_key_prefix",
+                        default=None,
+                        action="store",
+                        nargs=1,
+                        required=False)
     parser.add_argument("username",
                         help="The name of the user managing the delivery.",
                         action="store",
@@ -63,6 +98,18 @@ def main():
     job_uuid = pargs.job_uuid[0]
     username = pargs.username[0]
     filename = pargs.filename[0]
+
+    if pargs.s3_host is not None:
+        s3_params={
+            "host": pargs.s3_host[0],
+            "access_key": pargs.s3_access_key[0],
+            "secret_key": pargs.s3_secret_key[0],
+            "bucketname": pargs.s3_bucketname[0],
+            "key_prefix": pargs.s3_key_prefix[0]
+        }
+    else:
+        s3_params = None
+
     filepath = CONFIG["incoming_dir"].joinpath(username, filename)
     if pargs.skip_steps is None:
         skip_steps = tuple()
@@ -77,7 +124,7 @@ def main():
     log.info("Logging of the job {:s} has been started.".format(job_uuid))
 
     # Run the checks.
-    dispatch(job_uuid, username, filepath, pargs.product_ident[0], skip_steps)
+    dispatch(job_uuid, username, filepath, pargs.product_ident[0], skip_steps, s3_params)
 
 
 if __name__ == "__main__":
