@@ -2,12 +2,15 @@
 
 
 import logging
-import re
 import os
+import random
+import re
+import string
 from datetime import datetime
 from shutil import copyfile
 from shutil import copytree
 from pathlib import Path
+import boto3
 
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_job_dir
@@ -19,6 +22,13 @@ from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
 
 
 logger = logging.getLogger(__name__)
+
+
+def generate_api_key():
+    """
+    Generates an API key with 25 random characters.
+    """
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=25))
 
 
 def get_announcement_message():
@@ -74,8 +84,52 @@ def guess_product_ident(delivery_filepath):
             return product_ident
     return None
 
+def find_s3_delivery(host, access_key, secret_key, bucketname, pattern):
+    """
+    Tries to find the delivery files on S3 storage based on user-defined filename pattern.
+    """
 
-def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
+    # Check the S3 storage connection, filter objects by naming pattern
+    try:
+        s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
+        bucket = s3.Bucket(bucketname)
+        objects_filtered = list(bucket.objects.filter(Prefix=pattern))
+        if len(objects_filtered) == 0:
+            return {"delivery_filename": None,
+                    "message": "s3-key prefix does not match any object on S3 storage"}
+        else:
+            s3_deliveries_found = list()
+            for obj in objects_filtered:
+                s3_deliveries_found.append(obj.key.split(".")[0])
+            delivery_found = list(set(s3_deliveries_found))
+            if len(delivery_found) > 1:
+                return {"delivery_filename": None,
+                        "message": "s3-key prefix does not match the delivery unambiguously"}
+            else:
+                return {"delivery_filename": delivery_found[0],
+                        "message": "s3 delivery found: '{:s}'".format(delivery_found[0])}
+    except Exception as e:
+        return {"delivery_filename": None,
+                "message": str(e)}
+def get_s3_delivery_size(host, access_key, secret_key, bucketname, pattern):
+    """
+    Get the summary size of the S3 delivery objects.
+    """
+    try:
+        s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
+        bucket = s3.Bucket(bucketname)
+        objects_filtered = list(bucket.objects.filter(Prefix=pattern))
+        if len(objects_filtered) == 0:
+            return None
+        else:
+            s3_dlivery_size = 0
+            for obj in objects_filtered:
+                s3_dlivery_size += obj.size
+            return s3_dlivery_size
+    except:
+        return None
+
+def submit_job(job_uuid, input_filepath, submission_dir, submission_date, is_s3=False):
     # Prepare parameters.
     job_uuid = str(job_uuid)
     job_result = load_job_result(job_uuid)
@@ -83,7 +137,10 @@ def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     reference_year = job_result.get("reference_year", None)
     if reference_year is None:
         reference_year = UNKNOWN_REFERENCE_YEAR_LABEL
-    uploaded_name = re.sub(".zip$", "", job_result["filename"])
+    if not is_s3:
+        uploaded_name = re.sub(".zip$", "", job_result["filename"])
+    else:
+        uploaded_name = job_result["filename"]
 
     # Create submission directory for the job.
     submission_dirname = "{:s}-{:s}-{:s}.d".format(submission_date.strftime("%Y%m%d"),
@@ -106,10 +163,11 @@ def submit_job(job_uuid, input_filepath, submission_dir, submission_date):
     copytree(str(src_filepath), str(dst_filepath))
 
     # Copy the uploaded file.
-    dst_dir = job_submission_dir.joinpath(JOB_INPUT_DIRNAME)
-    dst_dir.mkdir()
-    dst_filepath = dst_dir.joinpath(input_filepath.name)
-    copyfile(str(input_filepath), str(dst_filepath))
+    if not is_s3:
+        dst_dir = job_submission_dir.joinpath(JOB_INPUT_DIRNAME)
+        dst_dir.mkdir()
+        dst_filepath = dst_dir.joinpath(input_filepath.name)
+        copyfile(str(input_filepath), str(dst_filepath))
 
     # Put stamp confirming finished submission.
     dst_filepath = job_submission_dir.joinpath("SUBMITTED")

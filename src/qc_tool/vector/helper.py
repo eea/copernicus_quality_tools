@@ -9,6 +9,8 @@ from datetime import datetime
 from math import ceil
 from math import floor
 from zipfile import ZipFile
+import boto3
+from pathlib import Path
 
 import psycopg2
 import psycopg2.errorcodes
@@ -49,6 +51,26 @@ def do_unzip(zip_filepath, unzip_dir, status):
 
     status.add_params({"unzip_dir": unzip_dir})
 
+def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_dir, status):
+
+    s3_local_dir.mkdir()
+
+    # Check the S3 storage connection, filter objects by naming pattern, download to s3_local_dir
+    try:
+        s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
+        bucket = s3.Bucket(bucketname)
+        objects_filtered = list(bucket.objects.filter(Prefix=pattern))
+        if len(objects_filtered) == 0:
+            status.error("Error S3 download, the {:s} pattern doesn't match any object on the S3 storage.".format(pattern)) # jaky typ vyjimky??
+            return
+        for obj in objects_filtered:
+            obj_name = Path(obj.key).name
+            local_filepath = s3_local_dir.joinpath(obj_name)
+            s3.Bucket(bucketname).download_file(obj.key, local_filepath)
+    except Exception as ex:
+        status.aborted("Error S3 download, reason: {:s}".format(str(ex)))
+        return
+    status.add_params({"unzip_dir": s3_local_dir})
 
 def do_layers(params):
     if "layers" in params:

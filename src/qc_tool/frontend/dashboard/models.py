@@ -6,6 +6,8 @@ from uuid import uuid4
 
 import django.db.models as models
 from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
@@ -40,6 +42,19 @@ def pull_job(worker_url):
         return None
 
 
+class ApiUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    api_key = models.CharField(max_length=100)
+
+
+class S3Info(models.Model):
+    host = models.CharField(max_length=200)
+    access_key = models.CharField(max_length=100)
+    secret_key = models.CharField(max_length=100)
+    bucketname = models.CharField(max_length=100)
+    key_prefix = models.CharField(max_length=500)
+
+
 class Delivery(models.Model):
     class Meta:
         app_label = "dashboard"
@@ -65,6 +80,8 @@ class Delivery(models.Model):
         self.product_description = job.product_description
         self.save()
 
+        # Return formatted uuid of the newly created job
+        return str(job.job_uuid).lower().replace("-", "")
 
     def get_submittable_job(self):
         jobs_to_submit = Job.objects.filter(delivery__id=self.id).filter(job_status=JOB_OK).order_by("-date_created")[:1]
@@ -88,6 +105,7 @@ class Delivery(models.Model):
     product_ident = models.CharField(max_length=64, default=None, blank=True, null=True)
     product_description = models.CharField(max_length=500, default=None, blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
+    s3 = models.ForeignKey(S3Info, null=True, on_delete=models.CASCADE)
 
 
 class Job(models.Model):

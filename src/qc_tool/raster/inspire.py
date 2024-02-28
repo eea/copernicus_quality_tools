@@ -28,8 +28,8 @@ def run_check(params, status):
         metadata_dirs = [d for d in params["unzip_dir"].glob('**/*')
                          if d.is_dir() and str(d).lower().endswith(METADATA_DIRNAME)]
         if len(metadata_dirs) == 0:
-            status.info("The delivery does not contain the expected '{:s}' folder".format(METADATA_DIRNAME))
-            return
+            status.info("The delivery does not contain the expected '{:s}' folder. The native delivery folder will be used instead.".format(METADATA_DIRNAME))
+            metadata_dir = params["unzip_dir"]
         elif len(metadata_dirs) > 1:
             status.info("Multiple folders named '{:s}' were found in the delivery.",
                         "Only one '{:s}' folder is allowed.".format(METADATA_DIRNAME))
@@ -40,7 +40,7 @@ def run_check(params, status):
         # If the Metadata directory exists, try to locate the .xml file inside it.
         xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
         if xml_filepath is None:
-            status.info("The delivery does not contain the expected metadata file '{:s}/{:s}.xml'".format(
+            status.failed("The delivery does not contain the expected metadata file '{:s}/{:s}.xml'".format(
                 metadata_dir.stem, layer_def["src_filepath"].stem))
             return
 

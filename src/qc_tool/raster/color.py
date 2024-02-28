@@ -1,10 +1,8 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 import time
 from pathlib import Path
-
 
 DESCRIPTION = "Color table is in accord with specification."
 IS_SYSTEM = False
@@ -32,6 +30,20 @@ def parse_clr_file(clr_filepath):
     if len(actual_colors.keys()) == 0:
         raise ValueError("The color table {:s} is in incorrect format.".format(clr_filepath.name))
     return actual_colors
+
+def parse_gtif_file(gtif_filepath):
+    try:
+        import osgeo.gdal as gdal
+        ds = gdal.Open(str(gtif_filepath))
+        band = ds.GetRasterBand(1)
+        ct = band.GetColorTable()
+        if ct:
+            i2rgb = [ct.GetColorEntry(i)[:3] for i in range(ct.GetCount())]
+            return {str(i): list(rgb) for i, rgb in enumerate(i2rgb)}
+        else:
+            return None
+    except:
+        return None
 
 
 def run_check(params, status):
@@ -96,31 +108,35 @@ def run_check(params, status):
                           .format("; ".join(color_reports)))
             continue
 
-        # Check existence of a .tif.clr or .clr file.
-        clr_name1 = str(layer_def["src_filepath"]).replace(".tif", ".clr")
-        clr_filepath1 = Path(clr_name1)
-        clr_filename1 = clr_filepath1.name
+        # Try to get internal GTIFF color table
+        actual_colors = parse_gtif_file(layer_def["src_filepath"])
+        if actual_colors is None:
 
-        clr_name2 = str(layer_def["src_filepath"]).replace(".tif", ".tif.clr")
-        clr_filepath2 = Path(clr_name2)
-        clr_filename2 = clr_filepath2.name
+            # Check existence of a .tif.clr or .clr file.
+            clr_name1 = str(layer_def["src_filepath"]).replace(".tif", ".clr")
+            clr_filepath1 = Path(clr_name1)
+            clr_filename1 = clr_filepath1.name
 
-        if clr_filepath1.is_file():
-            clr_filepath = clr_filepath1
-            clr_filename = clr_filename1
-        elif clr_filepath2.is_file():
-            clr_filepath = clr_filepath2
-            clr_filename = clr_filename2
-        else:
-            status.failed("The expected color table text file {:s} or {:s} is missing.".format(clr_filename1, clr_filename2))
-            continue
+            clr_name2 = str(layer_def["src_filepath"]).replace(".tif", ".tif.clr")
+            clr_filepath2 = Path(clr_name2)
+            clr_filename2 = clr_filepath2.name
 
-        # read-in the actual tif.clr color table into a dictionary
-        try:
-            actual_colors = parse_clr_file(clr_filepath)
-        except ValueError:
-            status.failed("The color table text file {:s} is in incorrect format.".format(clr_filename))
-            continue
+            if clr_filepath1.is_file():
+                clr_filepath = clr_filepath1
+                clr_filename = clr_filename1
+            elif clr_filepath2.is_file():
+                clr_filepath = clr_filepath2
+                clr_filename = clr_filename2
+            else:
+                status.failed("The expected color table text file {:s} or {:s} is missing.".format(clr_filename1, clr_filename2))
+                continue
+
+            # read-in the actual tif.clr color table into a dictionary
+            try:
+                actual_colors = parse_clr_file(clr_filepath)
+            except ValueError:
+                status.failed("The color table text file {:s} is in incorrect format.".format(clr_filename))
+                continue
 
         # Check colors in .tif.clr file
         missing_codes = []
