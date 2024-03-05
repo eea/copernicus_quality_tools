@@ -1,0 +1,175 @@
+{
+  "description": "Urban Atlas 2021 status",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2021",
+        "formats": [".gdb", ".gpkg"],
+        "layer_names": {
+          "reference": "(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9]{1})_.*_ua2021$"
+        },
+        "documents": {
+          "map.pdf": "_map.pdf$",
+          "delivery_report.pdf": "_delivery_report.pdf$"
+        },
+        "excessive_layers_allowed": false,
+        "boundary_source": "boundary_ua2018_eea38.gpkg"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["reference"],
+        "required": {"country": "string",
+                     "fua_name": "string",
+                     "fua_code": "string",
+                     "code_2021": "string",
+                     "class_2021": "string",
+                     "prod_date": "string",
+                     "identifier": "string",
+                     "comment": "string",
+                     "perimeter": "real",
+                     "area": "real"},
+        "ignored": ["shape_area", "shape_length"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["reference"],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "unique_keys": ["identifier"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "column_defs": [["code_2021", ["11100", "11210", "11220", "11230", "11240", "11300",
+                                       "12100", "12210", "12220", "12230", "12300", "12400",
+                                       "13100", "13300", "13400",
+                                       "14100", "14200",
+                                       "21000", "22000", "23000", "24000", "25000",
+                                       "31000", "32000", "33000",
+                                       "40000",
+                                       "50000",
+                                       "91000", "92000"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "area_column_name": "area",
+        "unit": 1,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "du_column_name": "fua_code"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "complex_change": null,
+        "general_where": [" layer.code_2021 LIKE '122%'",
+                          "OR",
+                          " (layer.code_2021 LIKE '1%'",
+                          "  AND layer.area >= 2500)",
+                          "OR",
+                          " (layer.code_2021 SIMILAR TO '[2-5]%'",
+                          "  AND layer.area >= 10000)",
+                          "OR",
+                          " layer.code_2021 LIKE '9%'"],
+        "exception_where": [" (meta.is_marginal",
+                            "  AND layer.area >= 100)",
+                            "OR",
+                            " EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_2021 LIKE '9%')",
+                            "OR",
+                            " (layer.comment IS NOT NULL",
+                            "  AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',",
+                            "                                       'Area size exception (inside Urban Atlas FUA boundary)']))"],
+        "warning_where": ["(layer.code_2021 NOT LIKE '122%'",
+                          " AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_2021 LIKE '122%')",
+                          " AND layer.area >= 500)"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "mmw": 10.0,
+        "general_where": "FALSE",
+        "exception_where": "layer.code_2021 LIKE '122%'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["reference"],
+        "code_column_names": ["code_2021"],
+        "exception_where": ["FALSE"],
+        "error_where": ["layer.code_2021 NOT LIKE '122%'"]
+      }
+    }
+  ]
+}
