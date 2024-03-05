@@ -53,6 +53,8 @@
                                 <li><a href="https://github.com/eea/copernicus_quality_tools/wiki">
                                     <span class="glyphicon glyphicon-question-sign"></span> Documentation</a></li>
                                 {% if user.is_authenticated %}
+                                <li><a href="{% url 'change_password' %}?next=/">
+                                    <span class="glyphicon glyphicon-change-password"></span> Change password</a></li>
                                 <li><a href="{% url 'logout' %}?next=/">
                                     <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
                                 {% else %}
