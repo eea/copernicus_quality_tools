@@ -11,7 +11,11 @@ from zipfile import ZipFile
 import json
 
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import FileSystemStorage
@@ -24,6 +28,7 @@ from django.http import HttpResponseBadRequest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
+from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
@@ -1266,3 +1271,20 @@ def resumable_upload(request):
 
     else:
         return JsonResponse({"status":"error", "message": "request method must be 'GET' or 'POST'."}, status=500)
+    
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, form.user) # dont logout the user.
+            messages.success(request, "Password changed.")
+            return redirect("/")
+    else:
+        form = PasswordChangeForm(request.user)
+    data = {
+        'form': form
+    }
+    return render(request, "registration/change_password.html", data)
