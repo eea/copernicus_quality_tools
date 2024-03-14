@@ -735,6 +735,42 @@ class Test_color(RasterCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("failed", status.status, "Color raster check with incorrect colors should fail.")
 
+class Test_cog(RasterCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "cog", "valid_cog.tif")
+        layer_defs = {"layer_1": {"src_filepath": layer_filepath1, "src_layer_name": layer_filepath1.name}}
+        self.params.update({"raster_layer_defs": layer_defs})
+
+    def test(self):
+        from qc_tool.raster.cog import run_check
+        self.params.update({"layers": ["layer_1"]})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status, "COG raster check on the COG compliant raster should pass.")
+
+    def test_warning(self):
+        from qc_tool.raster.cog import run_check
+        layer_filepath_warning = TEST_DATA_DIR.joinpath("raster", "checks", "cog", "valid_cog_warning.tif")
+        layer_defs = {"layer_warning": {"src_filepath": layer_filepath_warning, "src_layer_name": layer_filepath_warning.name}}
+        self.params.update({"raster_layer_defs": layer_defs})
+        self.params.update({"layers": ["layer_warning"]})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status, "COG raster check on the COG compliant raster should pass.")
+        self.assertGreater(len(status.messages), 0)
+        self.assertIn("The following warnings were found:", status.messages)
+
+    def test_fail(self):
+        from qc_tool.raster.cog import run_check
+        layer_filepath_invaid = TEST_DATA_DIR.joinpath("raster", "checks", "cog", "invalid_cog.tif")
+        layer_defs = {"layer_invalid": {"src_filepath": layer_filepath_invaid, "src_layer_name": layer_filepath_invaid.name}}
+        self.params.update({"raster_layer_defs": layer_defs})
+        self.params.update({"layers": ["layer_invalid"]})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status, "COG raster check on the COG invalid raster should fail.")
+
 
 @skipIf(CONFIG["skip_inspire_check"], "INSPIRE check has been disabled.")
 class Test_inspire(RasterCheckTestCase):
