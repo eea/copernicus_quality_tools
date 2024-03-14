@@ -5,7 +5,6 @@
 DESCRIPTION = "The raster file complies with the Cloud Optimized GeoTIFF (COG) specification."
 IS_SYSTEM = False
 
-
 def run_check(params, status):
     import subprocess
     import os
@@ -19,8 +18,7 @@ def run_check(params, status):
         qc_tool_raster_dir = os.path.dirname(__file__)
         cmd = ["python3", os.path.join(qc_tool_raster_dir, "validate_cloud_optimized_geotiff.py"), "--full-check=yes", str(layer_def["src_filepath"])]
         try:
-            cog_validation_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode("utf-8")
-
+            cog_validation_output = str(subprocess.check_output(cmd, stderr=subprocess.STDOUT))
         except subprocess.CalledProcessError as e:
             cog_validation_output = str(e.output)
 
