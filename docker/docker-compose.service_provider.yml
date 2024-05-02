@@ -2,7 +2,7 @@ version: '3'
 
 services:
   frontend:
-    image: eeacms/copernicus-qctool-frontend:2.0.1
+    image: eeacms/copernicus-qctool-frontend:2.0.2rc1
     ports:
       - 8000:8000
     environment:
@@ -18,7 +18,7 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.0.1
+    image: eeacms/copernicus-qctool-worker:2.0.2rc1
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS
