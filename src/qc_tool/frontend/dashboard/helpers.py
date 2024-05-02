@@ -100,7 +100,8 @@ def find_s3_delivery(host, access_key, secret_key, bucketname, pattern):
         else:
             s3_deliveries_found = list()
             for obj in objects_filtered:
-                s3_deliveries_found.append(obj.key.split(".")[0])
+                delivery_file_prefix = os.path.join(os.path.dirname(obj.key), os.path.basename(obj.key).split(os.extsep)[0])
+                s3_deliveries_found.append(delivery_file_prefix)
             delivery_found = list(set(s3_deliveries_found))
             if len(delivery_found) > 1:
                 return {"delivery_filename": None,
@@ -111,6 +112,7 @@ def find_s3_delivery(host, access_key, secret_key, bucketname, pattern):
     except Exception as e:
         return {"delivery_filename": None,
                 "message": str(e)}
+
 def get_s3_delivery_size(host, access_key, secret_key, bucketname, pattern):
     """
     Get the summary size of the S3 delivery objects.
