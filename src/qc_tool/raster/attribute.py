@@ -54,5 +54,5 @@ def run_check(params, status):
                 missing_attr_regexes.append(attr_regex)
         if len(missing_attr_regexes) > 0:
             missing_attr_message = ", ".join(missing_attr_regexes)
-            status.failed("Raster attribute table {:s} has missing attributes: {:s}."
-                          .format(dbf_filepath.name, missing_attr_message))
+            status.failed("Raster attribute table has missing attributes: {:s}."
+                          .format(missing_attr_message))

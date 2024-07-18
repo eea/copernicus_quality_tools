@@ -53,7 +53,8 @@ def do_unzip(zip_filepath, unzip_dir, status):
 
 def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_dir, status):
 
-    s3_local_dir.mkdir()
+    if not s3_local_dir.exists():
+        s3_local_dir.mkdir()
 
     # Check the S3 storage connection, filter objects by naming pattern, download to s3_local_dir
     try:
@@ -61,7 +62,7 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
         bucket = s3.Bucket(bucketname)
         objects_filtered = list(bucket.objects.filter(Prefix=pattern))
         if len(objects_filtered) == 0:
-            status.error("Error S3 download, the {:s} pattern doesn't match any object on the S3 storage.".format(pattern)) # jaky typ vyjimky??
+            status.aborted("Error S3 download, the {:s} pattern doesn't match any object on the S3 storage.".format(pattern)) # jaky typ vyjimky??
             return
         for obj in objects_filtered:
             obj_name = Path(obj.key).name

@@ -150,11 +150,59 @@ def export(regions, raster_ds, gpkg_filepath, max_regions_count):
             i += 1
         shapeData.Destroy()
 
+def get_neighbouring_tiles(boundary_source, aoi_code):
+    """
+    Get list of aoi codes of neighbouring tiles
+    :param boundary_source: Boundary source file path.
+    :param aoi_code: Aoi code of the processed tile.
+    :return: List of aoi codes of neighbouring tiles.
+
+    """
+    import osgeo.ogr as ogr
+
+    neighbour_aoi_codes = list()
+
+    # try:
+    aoi_code = aoi_code.lower()
+
+    # read the boundary source, get the geometry of the processed tile
+    boundary_ds = ogr.Open(boundary_source)
+    boundary_lyr = boundary_ds.GetLayer()
+
+    boundary_lyr.SetAttributeFilter("aoi_code = '{aoi_code}'".format(aoi_code=aoi_code))
+    if boundary_lyr.GetFeatureCount() < 1:
+        return neighbour_aoi_codes
+
+    tile_feature = boundary_lyr.GetNextFeature()
+    tile_geom = tile_feature.GetGeometryRef()
+    tile_geom_buffered = tile_geom.Buffer(1)
+
+    boundary_ds, boundary_lyr, tile_feature = None, None, None
+
+    # read the boundary source again, select neighbouring tiles using buffered geometry of the processed tile
+
+    boundary_ds = ogr.Open(boundary_source)
+    boundary_lyr = boundary_ds.GetLayer()
+
+    boundary_lyr.SetSpatialFilter(tile_geom_buffered)
+    tile_feature = boundary_lyr.GetNextFeature()
+    while tile_feature is not None:
+        neighbour_aoi_code = tile_feature.GetField("aoi_code")
+        if neighbour_aoi_code == aoi_code:
+            tile_feature = boundary_lyr.GetNextFeature()
+        else:
+            neighbour_aoi_codes.append(neighbour_aoi_code)
+            tile_feature = boundary_lyr.GetNextFeature()
+    return neighbour_aoi_codes
+    # except:
+    #     return neighbour_aoi_codes
+
 def run_check(params, status):
     import osgeo.gdal as gdal
     import skimage.measure as measure
 
     from qc_tool.raster.helper import do_raster_layers
+    from qc_tool.vector.helper import do_s3_download
 
     # set this to true for reporting partial progress to a _progress.txt file.
     report_progress = True
@@ -171,6 +219,51 @@ def run_check(params, status):
         NODATA = params["nodata_value"]
     else:
         NODATA = -1  # FIXME use a value that is outside of the range of possible raster values.
+
+    # TODO: THIS IS NEW!!!!
+    # The optional 'check_neighbours' parameter indicates whether to check MMU rules also on raster borders using neighbouring tiles.
+    # If 'check_neighbours' parameter is True, then also 'boundary_source' optional parameter has to be set.
+    check_neighbours = params.get("check_neighbours", False)
+    status.info("check_neighbours {}".format(str(check_neighbours)))
+    status.info(str(params))
+    if check_neighbours:
+        if "boundary_source" in params:
+            boundary_source = params["boundary_source"]
+        else:
+            status.aborted("If the optional parameter 'check_neighbours' is turned on, "
+                          "the optional parameter 'boundary_source' must also be set.")
+            return
+
+        # find absolute path to the boundary source file
+        if boundary_source.endswith(".gpkg") or boundary_source.endswith(".shp"):
+            boundary_source_filepath = params["boundary_dir"].joinpath("vector", boundary_source)
+            if not boundary_source_filepath.exists():
+                status.aborted("Boundary source '{bs}' does not exist.".format(bs=str(boundary_source_filepath)))
+                return
+        else:
+            status.aborted("Boundary source file must be either GEOPACKAGE (.gpkg) or ESRI SHAPEFILE (.shp). "
+                           "Specified boundary source: '{bs}.'".format(bs=str(boundary_source)))
+            return
+        neighbouring_tiles_aoi_codes = get_neighbouring_tiles(str(boundary_source_filepath), params["aoi_code"])
+
+        # download deliveries for the neighbouring tiles
+        for neighbouring_tile_aoi_code in neighbouring_tiles_aoi_codes:
+            key_prefix = params["s3"]["key_prefix"].replace(params["aoi_code"].upper(), neighbouring_tile_aoi_code.upper()) # TODO: osetrit lower/upper case nejak obecne!!!
+            s3_local_dir = params["unzip_dir"].joinpath("neighbours")
+
+            status.info("processing of {}".format(key_prefix))
+            do_s3_download(params["s3"]["host"],
+                           params["s3"]["access_key"],
+                           params["s3"]["secret_key"],
+                           params["s3"]["bucketname"],
+                           key_prefix,
+                           s3_local_dir,
+                           status)
+        import os
+        status.info(str(os.listdir(str(params["unzip_dir"]))))
+
+
+    # TODO: THIS IS NEW!!!!
 
     # The optional report_exceptions parameter indicates whether any exceptions should be reported.
     report_exceptions = params.get("report_exceptions", False)
@@ -326,15 +419,16 @@ def run_check(params, status):
                 regions_inner = measure.regionprops(labels_inner)
                 regions_inner_lessMMU = [r for r in regions_inner if r.area < MMU]
 
-                # find lessMMU patches inside inner array not touching edge
                 regions_lessMMU_edge = [r for r in regions_inner_lessMMU
                                         if r.bbox[0] == 0
                                         or r.bbox[1] == 0
-                                        or r.bbox[2] == block_width_inner
-                                        or r.bbox[3] == block_height_inner]
+                                        or r.bbox[3] == block_width_inner
+                                        or r.bbox[2] == block_height_inner]
+
                 labels_lessMMU_edge = [r.label for r in regions_lessMMU_edge]
 
                 regions_lessMMU_inside = [r for r in regions_inner_lessMMU if r.label not in labels_lessMMU_edge]
+
 
                 # progress reporting..
                 if report_progress:
@@ -379,13 +473,15 @@ def run_check(params, status):
                 # processing the outer array expanded by buffer with width=number of pixels in MMU
 
                 # optimization: set pixels not within buffer zone (deep inside outer array) to background.
-                inner_buf_startcol = xOffRelative + MMU
-                inner_buf_startrow = yOffRelative + MMU
-                inner_buf_endcol = xOffRelative + block_width_inner - MMU
-                inner_buf_endrow = yOffRelative + block_height_inner - MMU
-                if inner_buf_endcol > inner_buf_startcol and inner_buf_endrow > inner_buf_startrow:
-                    tile_buffered[inner_buf_startrow:inner_buf_endrow,
-                                  inner_buf_startcol:inner_buf_endcol] = NODATA
+                optimization = True
+                if optimization:
+                    inner_buf_startcol = xOffRelative + MMU
+                    inner_buf_startrow = yOffRelative + MMU
+                    inner_buf_endcol = xOffRelative + block_width_inner - MMU
+                    inner_buf_endrow = yOffRelative + block_height_inner - MMU
+                    if inner_buf_endcol > inner_buf_startcol and inner_buf_endrow > inner_buf_startrow:
+                        tile_buffered[inner_buf_startrow:inner_buf_endrow,
+                                      inner_buf_startcol:inner_buf_endcol] = NODATA
 
                 labels_buf = measure.label(tile_buffered, background=NODATA, connectivity=1)
                 buf_regions = measure.regionprops(labels_buf)
@@ -396,15 +492,19 @@ def run_check(params, status):
                 edge_regions_small = []
 
                 for r in regions_lessMMU_edge:
-                    first_coord_x = r.coords[0][0]
-                    first_coord_y = r.coords[0][1]
-                    val = tile_inner[first_coord_x, first_coord_y]
+
+                    first_coord_row = r.coords[0][0]
+                    first_coord_col = r.coords[0][1]
+
+                    val = tile_inner[first_coord_row, first_coord_col]
 
                     # get corresponding value of tile edge patch in buffered array..
                     # if the inner tile edge patch has area < MMU also in the expanded tile, report it.
-                    coord_x_buf = first_coord_x + xOffRelative
-                    coord_y_buf = first_coord_y + yOffRelative
-                    lbl_buf = labels_buf[coord_x_buf, coord_y_buf]
+                    coord_row_buf = first_coord_row + yOffRelative
+                    coord_col_buf = first_coord_col + xOffRelative
+
+                    #lbl_buf = labels_buf[coord_x_buf, coord_y_buf]
+                    lbl_buf = labels_buf[coord_row_buf, coord_col_buf]
                     if lbl_buf in buf_labels_small:
                         r_buf = buf_regions[lbl_buf - 1]
                         edge_regions_small.append(r)
@@ -419,11 +519,14 @@ def run_check(params, status):
 
                         # handling special cases (exception patches)
                         if val in exclude_values:
-                            regions_lessMMU_except.append(lessMMU_info)
+                            if report_exceptions:
+                                regions_lessMMU_except.append(lessMMU_info)
                         elif patch_touches_cell_with_value(r_buf.coords, tile_buffered, neighbour_exclude_values):
-                            regions_lessMMU_except.append(lessMMU_info)
+                            if report_exceptions:
+                                regions_lessMMU_except.append(lessMMU_info)
                         elif patch_touches_raster_edge(absolute_coords, nRasterRows, nRasterCols):
-                            regions_lessMMU_except.append(lessMMU_info)
+                            if report_exceptions:
+                                regions_lessMMU_except.append(lessMMU_info)
                         else:
                             regions_lessMMU.append(lessMMU_info)
 
