@@ -71,3 +71,39 @@ The service is publicly available at: https://qc-copernicus.eea.europa.eu/ Demo 
 # Product definitions
 
 QA check configurations for Copernicus products are defined in the [product_definitions](product_definitions) directory. Each product definition .json file contains a list of parametrized checks. For QC tool setup with editable product definitions, see instructions in [docker/NOTES.product_definitions](docker/NOTES.product_definitions.md).
+
+
+
+# Upgrade of the EEA QC TOOL instance
+## Getting a VPN connection to the EEA:
+
+1. Ask the EEA technical department (either try [andrei.cenja@eea.europa.eu](mailto:andrei.cenja@eea.europa.eu) or [adrian.Dascalu@eea.europa.eu](mailto:adrian.Dascalu@eea.europa.eu), or ask your EEA partner for a more up-to-date contact) for an openVPN package containing:
+    - security keys (*tls.key, *.p12)
+    - configuration file (*.ovpn)
+    - certificate password
+2. Set up your wikid client and request token validation:
+    
+    Depending on the chosen platform, you will install the wikid client from the "Play Store" or the "iTunes App Store". Use *WiKID Token 64* for iPhones or *WiKID Enterprise Token 4.0* for Android.  For PC based software tokens one would use a client from [https://www.wikidsystems.com/downloads/software-token-clients/](https://www.wikidsystems.com/downloads/software-token-clients/)
+    
+    When the client is fired-up for the first time it asks for a password to be set (to access the software token).
+    
+    - It will then tell you to add a new domain. Enter: "217074209204". Use of an asterisk in front of the numbers on phone clients used to be needed to force the use of "dns before IP" option, but recent experience shows that it is not needed anymore.
+    - Select a pin that you will remember
+    - It will then show a registration code.
+    
+    Write or call the "EEA [Helpdesk":mailto:helpdesk@eea.europa.eu](mailto:Helpdesk%22:mailto:helpdesk@eea.europa.eu) to have your registration validated and to supply a username (will also be used for your OpenVPN access). Have the Registration Code ready when calling or don't forget to mention it in your mail to helpdesk.
+    *Please keep in mind that wikid request expires in one hour and is mandatory to validate with EEA Helpdesk.*
+    
+
+## Connecting to the EEA VPN itself in Linux terminal
+
+- Install OpenVPN if you don't already have it: (sudo apt install openvpn easy-rsa)
+- Cd to the directory with your security keys and configuration file (e.g.: cd /home/jtomicek/eea_vpn)
+- Initialize the connection using the openvpn tool and the .ovpn configuration file (sudo openvpn --config <filename>.ovpn)
+- You will be prompted for username Auth Username (same as for eionet), Auth Password (from wikid) and Private Key Password (certificate password).
+
+## Upgrade copernicus-qa-tool/worker and copernicus-qa-tool/frontend services on the EEA Rancher platform
+
+- In web browser, go to: [https://kvm-rancher-s3.eea.europa.eu/env/1a433/apps/stacks/1st203](https://kvm-rancher-s3.eea.europa.eu/env/1a433/apps/stacks/1st203)
+- Login with your Eionet account
+- Click the 'Upgrade' button on the worker and frontend lines, then edit the Image version (Select Image) and confirm with the 'Upgrade' button.
