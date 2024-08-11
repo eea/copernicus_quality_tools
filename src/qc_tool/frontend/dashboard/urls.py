@@ -6,6 +6,7 @@ urlpatterns = [
     path("", views.deliveries, name="deliveries"),
 
     path("api/", views.api_homepage, name="api_homepage"),
+    path("api/openapi.json", views.api_openapi_json, name="api_openapi_json"),
     path("api/register-delivery", views.api_register_delivery, name="api_register_delivery"),
     path("api/register-delivery-s3", views.api_register_delivery_s3, name="api_register_delivery_s3"),
     path("api/delivery-list", views.api_delivery_list, name="api_delivery_list"),
