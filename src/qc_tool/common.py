@@ -21,6 +21,9 @@ QC_TOOL_VERSION_FILEPATH = Path("/etc/qc_tool_version.txt")
 QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
+API_URL = "http://localhost:8000/api"
+
+
 WORKER_PORT = 8000
 WORKER_ADDR = "0.0.0.0"
 WORKER_TOKEN_FILENAME = "worker.token"
@@ -294,6 +297,7 @@ def setup_config():
     * SUBMISSION_DIR;
     * FRONTEND_DB_PATH;
     * SHOW_LOGO;
+    * API_URL;
 
     Environment variables consumed by worker:
     * PRODUCT_DIRS;
@@ -351,6 +355,9 @@ def setup_config():
 
     # Logo customization.
     config["show_logo"] = environ.get("SHOW_LOGO", "yes") == "yes"
+
+    # api url
+    config["api_url"] = environ.get("API_URL", API_URL)
 
     return config
 
