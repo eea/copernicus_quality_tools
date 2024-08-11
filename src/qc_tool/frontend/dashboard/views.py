@@ -2,6 +2,7 @@
 
 
 import logging
+import os
 import sys
 import shutil
 import time
@@ -78,8 +79,18 @@ def check_api_key(request):
 
 def api_homepage(request):
     return render(request, 'dashboard/swagger-ui.html',
-                  {"schema_url": "openapi-schema"})
+                  {
+                    "api_url": CONFIG["api_url"],
+                    "schema_url": "openapi-schema"
+                  })
 
+def api_openapi_json(request):
+    api_url = CONFIG["api_url"]
+    openapi_json_path = os.path.join(settings.BASE_DIR, "frontend", "dashboard", "static", "dashboard", "api", "openapi.json")
+    with open(openapi_json_path, "r") as f:
+        openapi_dict = json.load(f)
+        openapi_dict["servers"][0]["url"] = api_url
+        return JsonResponse(openapi_dict)
 
 def api_register_delivery(request):
     # Verify api key

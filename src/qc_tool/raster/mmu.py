@@ -1,5 +1,6 @@
 import math
-
+import os
+import subprocess
 
 DESCRIPTION = "Minimum mapping unit."
 IS_SYSTEM = False
@@ -197,9 +198,35 @@ def get_neighbouring_tiles(boundary_source, aoi_code):
     # except:
     #     return neighbour_aoi_codes
 
+def raster_extend_shifted(raster_file_path, mmu):
+    """
+    Get extent of the input raster shifted by mmu
+    :param raster_file_path: Input raster file path.
+    :param mmu: Minimum mapping unit (in pixels).
+    :return: MMU-shifted raster extend (minx, miny, maxx, maxy]).
+    """
+    import osgeo.gdal as gdal
+    rf_ds = gdal.Open(raster_file_path)
+    geoTransform = rf_ds.GetGeoTransform()
+    raster_xsize, raster_ysize = rf_ds.RasterXSize, rf_ds.RasterYSize
+    minx, maxy = geoTransform[0], geoTransform[3]
+    pixel_xsize, pixel_ysize = geoTransform[1], geoTransform[5]
+    mmu_xshift = mmu * pixel_xsize
+    mmu_yshift = mmu * pixel_ysize
+    maxx = minx + (pixel_xsize * raster_xsize) + mmu_xshift
+    miny = maxy + pixel_ysize * raster_ysize + mmu_yshift
+    minx = minx - mmu_xshift
+    maxy = maxy - mmu_yshift
+    rf_ds = None
+    return [minx, miny, maxx, maxy]
+
+
 def run_check(params, status):
     import osgeo.gdal as gdal
+    import osgeo.ogr as ogr
     import skimage.measure as measure
+    from pathlib import Path
+    from copy import deepcopy
 
     from qc_tool.raster.helper import do_raster_layers
     from qc_tool.vector.helper import do_s3_download
@@ -220,12 +247,55 @@ def run_check(params, status):
     else:
         NODATA = -1  # FIXME use a value that is outside of the range of possible raster values.
 
+    # The optional report_exceptions parameter indicates whether any exceptions should be reported.
+    report_exceptions = params.get("report_exceptions", False)
+
+    # TODO: SMAZAT!!!!!
+    # report_exceptions = True
+    # TODO: SMAZAT!!!!!
+
+    # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
+    BLOCKSIZE = 2048
+    MMU = params["area_pixels"]
+
+    # Some classes can optionally be excluded from MMU requirements.
+    # Pixels belonging to these classes are reported as exceptions.
+    if "value_exception_codes" in params:
+        exclude_values = params["value_exception_codes"]
+    else:
+        exclude_values = []
+
+    # neighbouring values to exclude.
+    # patches with area < MMU which touch a patch having class in neighbour_exclude_values are reported
+    # as exceptions.
+    if "neighbour_exception_codes" in params:
+        neighbour_exclude_values = params["neighbour_exception_codes"]
+    else:
+        neighbour_exclude_values = []
+
+    # Get layer definitions dictionary for further MMU-check processing...
+    layer_defs = deepcopy(do_raster_layers(params))
+
+    # TODO: check behaviour of tiles on the edge of the mapped area !!!!!!
+
+    # TODO: SMAZAT!!!!!
+    import numpy as np
+    ds = gdal.Open(str(layer_defs[0]["src_filepath"]), 1)
+    band = ds.GetRasterBand(1)
+    array = band.ReadAsArray()
+    mask = np.ones((10000, 10000))
+    mask[9567, 0] = 0
+    mask[9568, 0] = 0
+    mask[8950, 1] = 0
+    array = array * mask
+    band.WriteArray(array)
+    ds, band, array = None, None, None
+    # TODO: SMAZAT!!!!!
+
     # TODO: THIS IS NEW!!!!
     # The optional 'check_neighbours' parameter indicates whether to check MMU rules also on raster borders using neighbouring tiles.
     # If 'check_neighbours' parameter is True, then also 'boundary_source' optional parameter has to be set.
     check_neighbours = params.get("check_neighbours", False)
-    status.info("check_neighbours {}".format(str(check_neighbours)))
-    status.info(str(params))
     if check_neighbours:
         if "boundary_source" in params:
             boundary_source = params["boundary_source"]
@@ -247,11 +317,14 @@ def run_check(params, status):
         neighbouring_tiles_aoi_codes = get_neighbouring_tiles(str(boundary_source_filepath), params["aoi_code"])
 
         # download deliveries for the neighbouring tiles
+        raster_path_orig = params['raster_layer_defs']['raster']['src_filepath'].as_posix()
+        s3_local_filepaths = [raster_path_orig]
         for neighbouring_tile_aoi_code in neighbouring_tiles_aoi_codes:
             key_prefix = params["s3"]["key_prefix"].replace(params["aoi_code"].upper(), neighbouring_tile_aoi_code.upper()) # TODO: osetrit lower/upper case nejak obecne!!!
             s3_local_dir = params["unzip_dir"].joinpath("neighbours")
 
-            status.info("processing of {}".format(key_prefix))
+            # osetrit chybu stazeni jednoho nebo vice ze sousednich tilu -> status.failed
+
             do_s3_download(params["s3"]["host"],
                            params["s3"]["access_key"],
                            params["s3"]["secret_key"],
@@ -259,36 +332,26 @@ def run_check(params, status):
                            key_prefix,
                            s3_local_dir,
                            status)
-        import os
-        status.info(str(os.listdir(str(params["unzip_dir"]))))
+            s3_local_filepaths.append(s3_local_dir.joinpath(Path(key_prefix).with_suffix('.tif').name).as_posix())
 
+        # create VRT mosaic
+        mosaic_path_vrt = raster_path_orig.replace('.tif', '.vrt')
+        gdal.BuildVRT(mosaic_path_vrt, s3_local_filepaths)
 
-    # TODO: THIS IS NEW!!!!
+        # clip the mosaic with MMU-extended original tile footprint
+        re_shft = raster_extend_shifted(raster_path_orig, MMU + 1)
+        raster_path_extended = raster_path_orig.replace(".tif", "_mmushift.tif")
+        warp_cmd = ["gdalwarp", "-te", str(re_shft[0]), str(re_shft[1]), str(re_shft[2]), str(re_shft[3]),
+                    "-co", "COMPRESS=DEFLATE", mosaic_path_vrt, raster_path_extended]
+        subprocess.check_output(warp_cmd)
 
-    # The optional report_exceptions parameter indicates whether any exceptions should be reported.
-    report_exceptions = params.get("report_exceptions", False)
+        # update layer defs to check the MMU on the extended raster file
+        raster_path_extended = Path(raster_path_extended)
+        layer_defs[0]["src_filepath"] = raster_path_extended
+        layer_defs[0]["src_layer_name"] = raster_path_extended.name
 
-    # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
-    BLOCKSIZE = 2048
-    MMU = params["area_pixels"]
+    for layer_def in layer_defs:
 
-    # Some classes can optionally be excluded from MMU requirements.
-    # Pixels belonging to these classes are reported as exceptions.
-    if "value_exception_codes" in params:
-        exclude_values = params["value_exception_codes"]
-    else:
-        exclude_values = []
-
-    # neighbouring values to exclude.
-    # patches with area < MMU which touch a patch having class in neighbour_exclude_values are reported
-    # as exceptions.
-    if "neighbour_exception_codes" in params:
-        neighbour_exclude_values = params["neighbour_exception_codes"]
-    else:
-        neighbour_exclude_values = []
-
-
-    for layer_def in do_raster_layers(params):
         progress_filename = "{:s}_{:s}_progress.txt".format(__name__.split(".")[-1], layer_def["src_filepath"].stem)
         progress_filepath = params["output_dir"].joinpath(progress_filename)
         percent_filename = "{:s}_{:s}_percent.txt".format(__name__.split(".")[-1], layer_def["src_filepath"].stem)
