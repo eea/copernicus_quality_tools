@@ -963,7 +963,9 @@
         "area_pixels": 25,
         "value_exception_codes": [65535],
         "neighbour_exception_codes": [65535],
-        "nodata_value": 65535
+        "nodata_value": 65535,
+        "check_neighbours": true,
+        "boundary_source": "boundary_eea38.gpkg"
       }
     }
   ]

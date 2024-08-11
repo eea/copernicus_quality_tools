@@ -12,7 +12,7 @@
     <script>
 
    const ui = SwaggerUIBundle({
-    url: "{% static 'dashboard/api/openapi.json' %}" ,
+    url: "{{api_url}}openapi.json" ,
     dom_id: '#swagger-ui',
     presets: [
       SwaggerUIBundle.presets.apis,

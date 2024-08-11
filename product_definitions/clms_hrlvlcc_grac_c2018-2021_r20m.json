@@ -954,7 +954,9 @@
         "value_exception_codes": [0,10,255],
         "report_exceptions": false,
         "neighbour_exception_codes": [255],
-        "nodata_value": 255
+        "nodata_value": 255,
+        "check_neighbours": true,
+        "boundary_source": "boundary_eea38.gpkg"
       }
     },
     {
