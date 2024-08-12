@@ -21,7 +21,8 @@ QC_TOOL_VERSION_FILEPATH = Path("/etc/qc_tool_version.txt")
 QC_TOOL_PRODUCT_DIR = QC_TOOL_HOME.joinpath("product_definitions")
 TEST_DATA_DIR = QC_TOOL_HOME.joinpath("testing_data")
 
-API_URL = "http://localhost:8000/api"
+# API_URL = "http://localhost:8000/api"
+API_URL = "/api"
 
 
 WORKER_PORT = 8000
