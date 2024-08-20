@@ -1,0 +1,56 @@
+version: '3.7'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VERSION
+
+    image: eeacms/copernicus-qctool-frontend:latest
+    ports:
+      - 8000:8000
+    environment:
+      - PRODUCT_DIRS
+      - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - WORK_DIR=/mnt/qc_tool_work
+      - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
+      - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
+    networks:
+      - qc_tool_network
+    volumes:
+      - ../testing_data/boundaries:/mnt/qc_tool_boundary
+      - ../testing_data/vector:/mnt/qc_tool_incoming/incoming/guest/vector
+      - ../testing_data/raster:/mnt/qc_tool_incoming/incoming/guest/raster
+      - ..:/usr/local/src/copernicus_quality_tools
+    command: ["sh", 
+              "-c", 
+              "cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend && python3 ./manage.py migrate && python3 ./manage.py create_default_user --username guest --password guest && python3 ./manage.py runserver 0.0.0.0:8000"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+      args:
+        - VERSION
+
+    image: eeacms/copernicus-qctool-worker
+    shm_size: 1gb
+    environment:
+      - PRODUCT_DIRS
+      - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
+      - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - PULL_JOB_URL=http://frontend:8000/pull_job
+      - WORK_DIR=/mnt/qc_tool_work
+    networks:
+      - qc_tool_network
+    volumes:
+      - ../testing_data/boundaries:/mnt/qc_tool_boundary
+      - ../testing_data:/mnt/qc_tool_incoming/incoming/guest
+      - ..:/usr/local/src/copernicus_quality_tools
+
+networks:
+  qc_tool_network:
+    driver: bridge
