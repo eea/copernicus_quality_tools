@@ -1,5 +1,40 @@
 // Populate content of deliveries table from /data/delivery/list/ URL.
+global_query_params = {};
 
+function customSearchFunction(text, value, field, data) {
+    console.log("customSearchFunction!")
+ }
+
+ function queryParams(params) {
+    console.log(params);
+    if (params.filter) {
+        //delete params.filter;
+        if (global_query_params.offset != params.offset) {
+            global_query_params = params;
+            return params;
+        } else if (global_query_params.sort != params.sort) {
+            global_query_params = params;
+            return params;
+        } else if (global_query_params.order != params.order) {
+            global_query_params = params;
+            return params;
+        } else if (global_query_params.limit != params.limit) {
+            global_query_params = params;
+            return params;
+        } else {
+            if (JSON.stringify(params.filter) === JSON.stringify(global_query_params.filter)) {
+                global_query_params = params;
+                console.log("No change of filter params!");
+                return false;
+            }
+            // HERE the CUSTOM filter could be run ...
+        }
+    }
+    console.log(global_query_params);
+    console.log(params);
+    global_query_params = params;
+    return params;
+}
 
 function fileSizeFormatter(value, row) {
 
@@ -316,6 +351,8 @@ $(document).ready(function() {
        }
     });
 
+
+
     // check one row
     $('#tbl-deliveries').on('check.bs.table', function (e, row) {
         toggle_select_button();
@@ -338,6 +375,15 @@ $(document).ready(function() {
 
     $('#tbl-deliveries').on('load-success.bs.table', function () {
         toggle_select_button();
+    });
+
+    $('#tbl-deliveries').on('column-search.bs.table', function (event, text) {
+        event.preventDefault();
+        console.log(event);
+        console.log(text);
+        
+        event.stopImmediatePropagation();
+        
     });
 
     // "QC all selected" button is clicked

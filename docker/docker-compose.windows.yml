@@ -27,7 +27,7 @@ services:
       - ..:/usr/local/src/copernicus_quality_tools
     command: ["sh", 
               "-c", 
-              "cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend && python3 ./manage.py migrate && python3 ./manage.py create_default_user --username guest --password guest && python3 ./manage.py runserver 0.0.0.0:8000"]
+              "rm -r /mnt/qc_tool_volume/frontend.sqlite3 && cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend && python3 ./manage.py migrate && python3 ./manage.py create_default_user --username guest --password guest && python3 ./manage.py runserver 0.0.0.0:8000"]
 
   worker:
     build:
