@@ -13,6 +13,8 @@ services:
       - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
       - FRONTEND_DB_PATH=/mnt/qc_tool_frontend/frontend.sqlite3
       - API_URL=https://qc-copernicus.eea.europa.eu/api
+      - UPDATE_JOB_STATUSES=yes
+      - UPDATE_JOB_STATUSES_INTERVAL=5000
     networks:
       - qc_tool_network
     volumes:

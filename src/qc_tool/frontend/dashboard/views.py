@@ -223,61 +223,52 @@ def api_delivery_list(request):
     if not user:
         return JsonResponse({"status": "error", "message": message}, status=403)
 
-    # Before refreshing the page, update status of all waiting or running jobs.
-    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
+    # Retrieve query parameters (offset, limit).
+    # Offset and limit must be positive numbers.
+    try:
+        offset = int(request.GET.get("offset", 0))
+    except ValueError:
+        offset = 0
+    try:
+        limit = int(request.GET.get("limit", 20))
+    except ValueError:
+        limit = 20
+    if offset < 0:
+        offset = 0
+    if limit < 0:
+        limit = 0
+
+    sort = request.GET.get("sort", "id")
+    order = request.GET.get("order", "desc")
+    # filter and search are ignored by the API, they are used for UI only.
+    filter = ""
+    search = ""
+
+    # Before retrieving the result, update status of any waiting or running jobs.
+    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING, delivery__user=user)
     for job in running_jobs:
         job_status = check_running_job(str(job.job_uuid), job.worker_url)
         if job_status is not None:
             job.update_status(job_status)
 
-    # Retrieve a table of deliveries.
-    # If a delivery has one or more jobs, show information about the job with latest date_created.
-    with connection.cursor() as cursor:
-        sql = """
-           SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
-           d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
-           j.job_uuid AS last_job_uuid,
-           j.date_created, j.date_started, j.job_status as last_job_status,
-           s3.host AS s3_host, s3.bucketname as s3_bucketname, s3.key_prefix AS s3_key_prefix
-           FROM dashboard_delivery d
-           LEFT JOIN dashboard_job j
-           ON j.job_uuid = (
-             SELECT job_uuid FROM dashboard_job j
-             WHERE j.delivery_id = d.id
-             ORDER BY j.date_created DESC LIMIT 1)
-           LEFT JOIN dashboard_s3info s3
-           ON s3.id = d.s3_id
-           INNER JOIN auth_user u
-           ON d.user_id = u.id
-           """
+    total, data = query_deliveries(user, offset=offset, limit=limit,
+                                   sort=sort, order=order, filter=filter, search=search)
+    logger.debug("List of deliveries successfully obtained.")
 
-        if user.is_superuser:
-             # Superusers see deliveries of all other users.
-             # Deleted delivery records are not shown , see #106579.
-             sql += "WHERE d.is_deleted != 1 ORDER BY d.id DESC"
-             cursor.execute(sql)
-        else:
-            # Regular api users only see their own deliveries.
-            sql += "WHERE d.is_deleted != 1 AND d.user_id = %s ORDER BY d.id DESC"
-            cursor.execute(sql, (user.id,))
+    # next_offset is the link to the next page.
+    if len(data) < limit:
+        next_offset = 0
+    else:
+        next_offset = offset + limit
 
-        header = [i[0] for i in cursor.description]
-        rows = cursor.fetchall()
-        data = []
-        for row in rows:
-            data.append(dict(zip(header, row)))
-
-        # Add calculated "type" column to indicate if the file is local upload or s3.
-        for item in data:
-            if item["s3_host"]:
-                item["type"] = "s3"
-            else:
-                item["type"] = "local"
-
-        logger.debug("List of deliveries successfully obtained.")
-        response_data = {"status": "ok", "message": "list of deliveries successfully obtained", "deliveries": data}
-
-        return JsonResponse(response_data, safe=False)
+    response_data = {"status": "ok",
+                     "message": "list of deliveries successfully obtained",
+                     "total": total,
+                     "offset": offset,
+                     "limit": limit,
+                     "next_offset": offset + limit,
+                     "deliveries": data}
+    return JsonResponse(response_data, safe=False)
 
 
 def api_product_list(request):
@@ -451,11 +442,16 @@ def deliveries(request):
         api_user = models.ApiUser(user=request.user, api_key=api_key)
         api_user.save()
 
+    update_job_statuses = CONFIG.get("update_job_statuses", True)
+    update_job_statuses_interval = CONFIG.get("update_job_statuses_iterval", 5000)
+
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
                                                          "announcement": get_announcement_message(),
                                                          "boundary_version": get_boundary_version(),
-                                                         "api_key": api_key})
+                                                         "api_key": api_key,
+                                                         "update_job_statuses": update_job_statuses,
+                                                         "update_job_statuses_interval": update_job_statuses_interval})
 
 
 @login_required
@@ -510,28 +506,73 @@ def setup_job(request):
     return render(request, "dashboard/setup_job.html", context)
 
 
-@login_required
-def get_deliveries_json(request):
-    """
-    Returns a list of all deliveries for the current user.
-    The deliveries are loaded from the dashboard_deliveries database table.
-    The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
+def parse_filter(filter_str, column_lookup):
+    filter_sql = ""
+    try:
+        filter_dict = json.loads(filter_str)
+    except json.JsonDecodeError:
+        logger.warning("Unable to decode filter expression " + filter)
+        return ""
 
-    :param request:
-    :return: list of deliveries with associated job information in JSON format
-    """
+    for key, val in filter_dict.items():
+        filter_column = column_lookup.get(key)
+        if not filter_column:
+            # ignore any undefined filter columns
+            continue
+        if key  == "product_description":
+            filter_sql += (f" AND {filter_column}='{val}'")
+        elif key == "last_job_status":
+            if val == "Not checked":
+                filter_sql += (f" AND {filter_column} IS NULL")
+            else:
+                filter_sql += (f" AND {filter_column}='{val}'")
+        else:
+            filter_sql += (f" AND {filter_column} LIKE '%{val}%'")
+    return filter_sql
 
-    # Before refreshing the page, update status of all waiting or running jobs.
-    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
-    for job in running_jobs:
-        job_status = check_running_job(str(job.job_uuid), job.worker_url)
-        if job_status is not None:
-            job.update_status(job_status)
 
+def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="", search=""):
     # Retrieve a table of deliveries.
     # If a delivery has one or more jobs, show information about the job with latest date_created.
-    with connection.cursor() as cursor:
-        sql = """
+    column_lookup = {
+        "id": "d.id",
+        "name": "d.filename",
+        "type": "d.s3_id",
+        "filename": "d.filename",
+        "date_uploaded": "d.date_uploaded",
+        "size_bytes": "d.size_bytes",
+        "product_ident": "d.product_ident",
+        "product_description": "d.product_description",
+        "date_submitted": "d.date_submitted",
+        "is_deleted": "d.is_deleted",
+        "product_ident": "d.product_ident",
+        "date_submitted": "d.date_submitted",
+        "date_created": "j.date_created",
+        "date_started": "j.date_started",
+        "last_job_status": "j.job_status",
+        "username": "u.username",
+        "user": "u.username"}
+
+    # Lookup sort column, if not found then sort by id (default)
+    sort_column = column_lookup.get(sort, "d.id")
+
+    # Order asc or desc, must be asc or desc, default is desc
+    order = order.strip().lower()
+    if order not in ("asc", "desc"):
+        order = "desc"
+
+    # Assemble SQL filtering and/or searching
+    filter_sql = ""
+    if filter:
+        filter_sql = parse_filter(filter, column_lookup)
+
+    # searching is done on filename column only.
+    search_sql = ""
+    if search:
+        search_sql += (f" AND filename LIKE '%{search}%'")
+
+    # Assemble SQL queries
+    sql = """
         SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
         d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
         d.s3_id,
@@ -545,17 +586,33 @@ def get_deliveries_json(request):
           ORDER BY j.date_created DESC LIMIT 1)
         INNER JOIN auth_user u
         ON d.user_id = u.id
+        WHERE d.is_deleted != 1
         """
 
-        if request.user.is_superuser:
-            # Superusers see deliveries of all other users.
-            # Deleted delivery records are not shown , see #106579.
-            sql += "WHERE d.is_deleted != 1 ORDER BY d.id DESC"
-            cursor.execute(sql)
-        else:
-            # Regular users only see their own deliveries.
-            sql += "WHERE d.is_deleted != 1 AND d.user_id = %s ORDER BY d.id DESC"
-            cursor.execute(sql, (request.user.id,))
+    if user.is_superuser:
+        sql_total = "SELECT COUNT (id) FROM dashboard_delivery WHERE is_deleted != 1;"
+    else:
+        sql_total = f"""SELECT COUNT (id) FROM dashboard_delivery 
+                WHERE is_deleted != 1 AND user_id = {user.id}"""
+        sql +=  f" AND user_id = {user.id}"
+
+    # Add filter expression and search expression to sql query (optional)
+    sql += filter_sql
+    sql += search_sql
+
+    # Add sort, offset and limit to sql query (with assigned or default values)
+    sql += f" ORDER BY {sort_column} {order} LIMIT {limit} OFFSET {offset};"
+
+    with connection.cursor() as cursor:
+        # fetch total rows
+        cursor.execute(sql_total)
+        total_result = cursor.fetchone()
+        total = int(total_result[0])
+
+        # fetch query results
+        cursor.execute(sql)
+
+        # arrange the results
         header = [i[0] for i in cursor.description]
         rows = cursor.fetchall()
         data = []
@@ -568,8 +625,36 @@ def get_deliveries_json(request):
                 item["type"] = "s3"
             else:
                 item["type"] = "local"
+        return total, data
 
-        return JsonResponse(data, safe=False)
+
+@login_required
+def get_deliveries_json(request):
+    """
+    Returns a list of all deliveries for the current user.
+    The deliveries are loaded from the dashboard_deliveries database table.
+    The associated ZIP files are stored in <MEDIA_ROOT>/<username>/
+
+    :param request:
+    :return: list of deliveries with associated job information in JSON format
+    """
+    offset = int(request.GET.get("offset", 0))
+    limit = int(request.GET.get("limit", 100))
+    sort = request.GET.get("sort", "id")
+    order = request.GET.get("order", "desc")
+    filter = request.GET.get("filter", "")
+    search = request.GET.get("search", "")
+
+    # Before refreshing the page, update status of all waiting or running jobs.
+    running_jobs = models.Job.objects.filter(delivery__user=request.user, job_status=JOB_RUNNING)
+    for job in running_jobs:
+        job_status = check_running_job(str(job.job_uuid), job.worker_url)
+        if job_status is not None:
+            job.update_status(job_status)
+
+    total, data = query_deliveries(request.user, offset=offset, limit=limit, sort=sort, 
+                                   order=order, filter=filter, search=search)
+    return JsonResponse({"total": total, "rows": data})
 
 
 @csrf_exempt

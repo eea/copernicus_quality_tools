@@ -27,11 +27,8 @@ function customSearchFunction(text, value, field, data) {
                 console.log("No change of filter params!");
                 return false;
             }
-            // HERE the CUSTOM filter could be run ...
         }
     }
-    console.log(global_query_params);
-    console.log(params);
     global_query_params = params;
     return params;
 }
@@ -417,6 +414,9 @@ $(document).ready(function() {
 
     // Start the timer to auto-refresh status of running jobs. Check for updates every 5 seconds.
     toggle_select_button();
-    update_job_statuses();
-    setInterval(function(){update_job_statuses();}, 5000);
+
+    if (UPDATE_JOB_STATUSES) {
+        update_job_statuses();
+        setInterval(function(){update_job_statuses();}, UPDATE_JOB_STATUSES_INTERVAL);
+    }
 });

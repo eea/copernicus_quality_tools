@@ -62,7 +62,7 @@
                             API Key:
                             <input type="text" value="{{ api_key }}" class="field left" size=30 readonly="readonly">
                         </div>
-                        <table id="tbl-deliveries" class="table table-striped table-vcenter" data-checkbox-header="true" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="client" data-filter-control="true">
+                        <table id="tbl-deliveries" class="table table-striped table-vcenter" data-checkbox-header="true" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="date_uploaded" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="server" data-filter-control="true" data-query-params="queryParams">
                             <thead>
                             <tr>
                                 <th data-checkbox="true" data-formatter="checkboxFormatter"></th>
@@ -70,7 +70,7 @@
                                 <th data-field="type" data-sortable="true">Type</th>
                                 <th data-field="filename" data-filter-control="input" data-sortable="true">Name</th>
                                 <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
-                                <th data-field="date_uploaded" data-filter-control="input" data-sortable="true" data-formatter="dateFormatter">Date Uploaded</th>
+                                <th data-field="date_uploaded" data-filter-control="input" data-search-on-enter-key="true" data-sortable="true" data-formatter="dateFormatter">Date Uploaded</th>
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
                                 <th data-field="product_description" data-filter-control="select" data-sortable="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
@@ -79,15 +79,15 @@
                                 {% else %}
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
                                 {% endif %}
-                                <th data-field="last_job_status" data-filter-control="input" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
+                                <th data-field="last_job_status" data-filter-control="select" data-search-on-enter-key="true" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
                                 {% if submission_enabled %}
-                                <th data-field="date_submitted" data-visible="true" data-filter-control="input" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
+                                <th data-field="date_submitted" data-visible="true" data-search-on-enter-key="true" data-filter-control="input" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
                                 {% endif %}
                                 {% if user.is_superuser %}
                                 <th data-field="is_deleted" data-visible="true" data-sortable="true" >Deleted</th>
                                 {% endif %}
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
-                                <th data-field="actions" data-sortable="true" data-formatter="actionsFormatter">Actions</th>
+                                <th data-field="actions" data-sortable="false" data-formatter="actionsFormatter">Actions</th>
                             </tr>
                             </thead>
                            <tbody>
@@ -133,9 +133,19 @@
     {% else %}
     <script type="text/javascript">var SUBMISSION_ENABLED = false;</script>
     {% endif %}
+
+    {% if update_job_statuses %}
+    <script type="text/javascript">
+    var UPDATE_JOB_STATUSES = true;
+    var UPDATE_JOB_STATUSES_INTERVAL = "{{update_job_statuses_interval}}"
+    </script>
+    {% else %}
+    <script type="text/javascript">var UPDATE_JOB_STATUSES = false;</script>
+    {% endif %}
     <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
     <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
     <script src="{% static 'dashboard/js/deliveries.js' %}"></script>
-    <script src="{% static 'dashboard/js/bootstrap-table-filter-control.min.js' %}" type="text/javascript"></script>
+
+    <script src="{% static 'dashboard/js/bootstrap-table-filter-control.min.js' %}"type="text/javascript"></script>
     <script src="{% static 'dashboard/js/utils.min.js' %}" type="text/javascript"></script>
 {% endblock js %}

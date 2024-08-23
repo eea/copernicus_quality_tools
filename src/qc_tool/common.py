@@ -359,6 +359,10 @@ def setup_config():
     # api url
     config["api_url"] = environ.get("API_URL", API_URL)
 
+    # update job statuses in the ui. 
+    config["update_job_statuses"] = environ.get("UPDATE_JOB_STATUSES", "yes") == "yes"
+    config["update_job_statuses_interval"] = environ.get("UPDATE_JOB_STATUSES", 5000)
+
     return config
 
 CONFIG = setup_config()

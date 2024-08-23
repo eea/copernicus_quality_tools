@@ -138,6 +138,36 @@
         "tags": [
           "Deliveries"
         ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "type": "integer",
+            "default": 0,
+            "description": "The number of items to skip before start of the current page"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "type": "integer",
+            "default": 20,
+            "description": "the number of items to return on one page"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "type": "string",
+            "default": "id",
+            "description": "the property to sort the results by"
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "type": "string",
+            "default": "desc",
+            "description": "the sort order (asc or desc)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "An array of deliveries",
@@ -150,6 +180,22 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "total number of all deliveries for current user."
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "description": "the current offset (number of skipped items before current page)"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "description": "the current limit (current page size)"
+                    },
+                    "next_offset": {
+                      "type": "integer",
+                      "description": "the offset of the next page (or 0 if we are on last page)"
                     },
                     "deliveries": {
                       "type": "array",

@@ -189,6 +189,7 @@ class JobController():
         except:
             log.error(format_exc())
         finally:
+            # TODO Here the updated job status could be sent to the frontend DB.
             job_table.rm(self.job_args["job_uuid"])
             log.info("Closing controller.")
 
