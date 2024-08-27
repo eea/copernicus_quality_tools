@@ -21,13 +21,14 @@ services:
     networks:
       - qc_tool_network
     volumes:
+      - ../testing_data/work:/mnt/qc_tool_work
       - ../testing_data/boundaries:/mnt/qc_tool_boundary
       - ../testing_data/vector:/mnt/qc_tool_incoming/incoming/guest/vector
       - ../testing_data/raster:/mnt/qc_tool_incoming/incoming/guest/raster
       - ..:/usr/local/src/copernicus_quality_tools
     command: ["sh", 
               "-c", 
-              "rm -r /mnt/qc_tool_volume/frontend.sqlite3 && cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend && python3 ./manage.py migrate && python3 ./manage.py create_default_user --username guest --password guest && python3 ./manage.py runserver 0.0.0.0:8000"]
+              "rm -rf /mnt/qc_tool_work/frontend.sqlite3 && cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend && python3 ./manage.py migrate && python3 ./manage.py create_default_user --username guest --password guest && python3 ./manage.py runserver 0.0.0.0:8000"]
 
   worker:
     build:
@@ -47,6 +48,7 @@ services:
     networks:
       - qc_tool_network
     volumes:
+      - ../testing_data/work:/mnt/qc_tool_work
       - ../testing_data/boundaries:/mnt/qc_tool_boundary
       - ../testing_data:/mnt/qc_tool_incoming/incoming/guest
       - ..:/usr/local/src/copernicus_quality_tools
