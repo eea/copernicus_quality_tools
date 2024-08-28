@@ -15,7 +15,9 @@ from pathlib import Path
 import psycopg2
 import psycopg2.errorcodes
 import requests
+from checksumdir import dirhash
 
+from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
 
@@ -68,10 +70,14 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
             obj_name = Path(obj.key).name
             local_filepath = s3_local_dir.joinpath(obj_name)
             s3.Bucket(bucketname).download_file(obj.key, local_filepath)
+
+        downloaded_files_hash = dirhash(s3_local_dir, HASH_ALGORITHM)
+        status.set_status_property("hash", downloaded_files_hash)
     except Exception as ex:
         status.aborted("Error S3 download, reason: {:s}".format(str(ex)))
         return
     status.add_params({"unzip_dir": s3_local_dir})
+
 
 def do_layers(params):
     if "layers" in params:

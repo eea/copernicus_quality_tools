@@ -23,8 +23,7 @@ services:
     volumes:
       - ../testing_data/work:/mnt/qc_tool_work
       - ../testing_data/boundaries:/mnt/qc_tool_boundary
-      - ../testing_data/vector:/mnt/qc_tool_incoming/incoming/guest/vector
-      - ../testing_data/raster:/mnt/qc_tool_incoming/incoming/guest/raster
+      - ../testing_data/incoming:/mnt/qc_tool_incoming
       - ..:/usr/local/src/copernicus_quality_tools
     command: ["sh", 
               "-c", 
@@ -50,7 +49,7 @@ services:
     volumes:
       - ../testing_data/work:/mnt/qc_tool_work
       - ../testing_data/boundaries:/mnt/qc_tool_boundary
-      - ../testing_data:/mnt/qc_tool_incoming/incoming/guest
+      - ../testing_data/incoming:/mnt/qc_tool_incoming
       - ..:/usr/local/src/copernicus_quality_tools
 
 networks:
