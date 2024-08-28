@@ -338,7 +338,7 @@ $(document).ready(function() {
        search: true,
        pagination: true,
        showColumns: true,
-       sortName: 'name',
+       sortName: 'id',
        sortOrder: 'desc',
        url: "/data/delivery/list/",
        pageSize: 20,
