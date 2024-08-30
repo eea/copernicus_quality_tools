@@ -544,7 +544,7 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     test_suite_id, test_suite_message = InspireServiceClient.retrieve_test_suite_id()
 
     if test_suite_id is None:
-        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_suite_message))
+        status.failed("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_suite_message))
         # if the test_suite_id is unavailable, then the inspire service is probably not working as expected.
         return
 
@@ -553,10 +553,10 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     # Step 2, Upload xml file to the service. The service creates a temporary test object with a unique test object ID.
     status_code, test_object_id, test_object_message = InspireServiceClient.create_test_object(xml_filepath)
     if status_code == 400:
-        status.info("Metadata file {:s} is not in INSPIRE XML format and cannot be validated:. ".format(test_object_message))
+        status.failed("Metadata file {:s} is not in INSPIRE XML format and cannot be validated:. ".format(test_object_message))
         return
     if test_object_id is None:
-        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_object_message))
+        status.failed("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_object_message))
         return
 
     # Step 3, Create a new test run using the selected test suite and previously created test object.
@@ -564,20 +564,20 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     test_run_id, test_run_message = InspireServiceClient.start_test_run(test_suite_id, test_object_id)
 
     if test_run_id is None:
-        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_run_message))
+        status.failed("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, test_run_message))
         return
 
     # Step 4, Retrieve result of the test run.
     result_status, result_message = InspireServiceClient.retrieve_test_result(test_run_id)
     if result_status is None:
-        status.info("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, result_message))
+        status.failed("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, result_message))
         return
 
     # Step 5, Evaluate INSPIRE validation status.
     if result_status in ["PASSED", "PASSED_MANUAL"]:
         pass
     elif result_status == "FAILED":
-        status.info(
+        status.failed(
             "Metadata of {:s} did not pass INSPIRE validation. See report for details.".format(xml_filepath.name))
     elif result_status == "UNDEFINED":
         # Ocassionally the test run ends with undefined status when executed for the first time.
@@ -585,7 +585,7 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
         if retry_no < INSPIRE_MAX_RETRIES:
             do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no+1)
         else:
-            status.info(
+            status.failed(
                 "Metadata of {:s} could not be validated, validation service is busy.".format(xml_filepath.name))
 
     # Step 6, Download and add html report and log file attachments.
@@ -594,14 +594,14 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     if html_filepath.is_file():
         status.add_attachment(html_filepath.name)
     else:
-        status.info("NOTE: report {:s} is not available: {:s}".format(html_filepath.name, html_status))
+        status.failed("Report {:s} is not available: {:s}".format(html_filepath.name, html_status))
 
     log_filepath = output_dir.joinpath(export_prefix + "_log.txt")
     log_status = InspireServiceClient.download_test_result(test_run_id, log_filepath)
     if log_filepath.is_file():
         status.add_attachment(log_filepath.name)
     else:
-        status.info("NOTE: log file {:s} is not available: {:s}".format(log_filepath.name, log_status))
+        status.failed("Log file {:s} is not available: {:s}".format(log_filepath.name, log_status))
 
 
 def table_exists(connection, table_name):

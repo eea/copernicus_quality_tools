@@ -250,10 +250,6 @@ def run_check(params, status):
     # The optional report_exceptions parameter indicates whether any exceptions should be reported.
     report_exceptions = params.get("report_exceptions", False)
 
-    # TODO: SMAZAT!!!!!
-    # report_exceptions = True
-    # TODO: SMAZAT!!!!!
-
     # size of a raster tile. Should be a multiple of 256 because GeoTiff stores its data in 256*256 pixel blocks.
     BLOCKSIZE = 2048
     MMU = params["area_pixels"]
@@ -276,23 +272,6 @@ def run_check(params, status):
     # Get layer definitions dictionary for further MMU-check processing...
     layer_defs = deepcopy(do_raster_layers(params))
 
-    # TODO: check behaviour of tiles on the edge of the mapped area !!!!!!
-
-    # TODO: SMAZAT!!!!!
-    import numpy as np
-    ds = gdal.Open(str(layer_defs[0]["src_filepath"]), 1)
-    band = ds.GetRasterBand(1)
-    array = band.ReadAsArray()
-    mask = np.ones((10000, 10000))
-    mask[9567, 0] = 0
-    mask[9568, 0] = 0
-    mask[8950, 1] = 0
-    array = array * mask
-    band.WriteArray(array)
-    ds, band, array = None, None, None
-    # TODO: SMAZAT!!!!!
-
-    # TODO: THIS IS NEW!!!!
     # The optional 'check_neighbours' parameter indicates whether to check MMU rules also on raster borders using neighbouring tiles.
     # If 'check_neighbours' parameter is True, then also 'boundary_source' optional parameter has to be set.
     check_neighbours = params.get("check_neighbours", False)
@@ -320,6 +299,7 @@ def run_check(params, status):
         raster_path_orig = params['raster_layer_defs']['raster']['src_filepath'].as_posix()
         s3_local_filepaths = [raster_path_orig]
         for neighbouring_tile_aoi_code in neighbouring_tiles_aoi_codes:
+
             key_prefix = params["s3"]["key_prefix"].replace(params["aoi_code"].upper(), neighbouring_tile_aoi_code.upper()) # TODO: osetrit lower/upper case nejak obecne!!!
             s3_local_dir = params["unzip_dir"].joinpath("neighbours")
 
@@ -332,8 +312,7 @@ def run_check(params, status):
                            key_prefix,
                            s3_local_dir,
                            status)
-            s3_local_filepaths.append(s3_local_dir.joinpath(Path(key_prefix).with_suffix('.tif').name).as_posix())
-
+        s3_local_filepaths += [os.path.join(s3_local_dir, s3_local_filename) for s3_local_filename in os.listdir(s3_local_dir)]
         # create VRT mosaic
         mosaic_path_vrt = raster_path_orig.replace('.tif', '.vrt')
         gdal.BuildVRT(mosaic_path_vrt, s3_local_filepaths)
