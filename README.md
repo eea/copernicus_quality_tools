@@ -72,3 +72,6 @@ The service is publicly available at: https://qc-copernicus.eea.europa.eu/ Demo 
 # Product definitions
 
 QA check configurations for Copernicus products are defined in the [product_definitions](product_definitions) directory. Each product definition .json file contains a list of parametrized checks. For QC tool setup with editable product definitions, see instructions in [docker/NOTES.product_definitions](docker/NOTES.product_definitions.md).
+
+
+
