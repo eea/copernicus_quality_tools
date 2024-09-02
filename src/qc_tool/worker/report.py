@@ -101,6 +101,11 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         text.append(Paragraph("Report summary", styles["Heading2"]))
         wrapped_filename = "\n".join(truncate_long_words(job_report["filename"], MAX_WORD_LENGTH))
         status_file = ["File name", wrapped_filename]
+        status_hash = ["Hash (checksum)", job_report.get("hash", "")]
+        hash_files = job_report.get("hash_files", [])
+        hash_files_str = ", ".join(hash_files)
+        wrapped_hash_files = "\n".join(truncate_long_words(hash_files_str, MAX_WORD_LENGTH))
+        status_hash_files = ["Hash files", wrapped_hash_files]
         status_product = ["Product", job_report["description"]]
         display_date = datetime.strptime(job_report["job_finish_date"], TIME_FORMAT).strftime("%Y-%m-%d %H:%M:%S")
         status_date = ["Checked on", display_date]
@@ -121,7 +126,7 @@ def generate_pdf_report(job_report_filepath, job_uuid):
 
         # Compile summary table
         job_status = ["Job status", Paragraph(job_status, job_status_style)]
-        summary_data = [status_file, status_product, status_date, qc_tool_version, job_status]
+        summary_data = [status_file, status_hash, status_hash_files, status_product, status_date, qc_tool_version, job_status]
         summary_table = Table(summary_data, hAlign="LEFT", colWidths=[90, None])
         summary_style = TableStyle([("INNERGRID", (0, 0), (-1, -1), 0.25, colors.black),
                                     ("BOX", (0, 0), (-1, -1), 0.25, colors.black),

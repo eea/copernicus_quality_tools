@@ -15,7 +15,9 @@ from pathlib import Path
 import psycopg2
 import psycopg2.errorcodes
 import requests
+from checksumdir import dirhash
 
+from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
 
@@ -39,6 +41,8 @@ def do_unzip(zip_filepath, unzip_dir, status):
     if not zip_filepath.name.lower().endswith(".zip"):
         status.aborted("Uploaded delivery {:s} has incorrect file format. Delivery must be a .zip file."
                        .format(zip_filepath.name))
+
+    status.set_status_property("hash_files", [zip_filepath.name])
     unzip_dir.mkdir()
 
     # The source zip file must be a zip archive.
@@ -57,6 +61,7 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
         s3_local_dir.mkdir()
 
     # Check the S3 storage connection, filter objects by naming pattern, download to s3_local_dir
+    downloaded_filenames = []
     try:
         s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
         bucket = s3.Bucket(bucketname)
@@ -68,10 +73,16 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
             obj_name = Path(obj.key).name
             local_filepath = s3_local_dir.joinpath(obj_name)
             s3.Bucket(bucketname).download_file(obj.key, local_filepath)
+            downloaded_filenames.append(obj_name)
+
+        downloaded_files_hash = dirhash(s3_local_dir, HASH_ALGORITHM)
+        status.set_status_property("hash", downloaded_files_hash)
+        status.set_status_property("hash_files", downloaded_filenames)
     except Exception as ex:
         status.aborted("Error S3 download, reason: {:s}".format(str(ex)))
         return
     status.add_params({"unzip_dir": s3_local_dir})
+
 
 def do_layers(params):
     if "layers" in params:

@@ -536,7 +536,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
     # If a delivery has one or more jobs, show information about the job with latest date_created.
     column_lookup = {
         "id": "d.id",
-        "name": "d.filename",
+        "name": "d.id",
         "type": "d.s3_id",
         "filename": "d.filename",
         "date_uploaded": "d.date_uploaded",
