@@ -64,6 +64,7 @@ The initial database structure is made during docker build.
 The `service_provider` and `eea` configurations use named volumes for persisting such database.
 You are free to copy the database to other persistent location, however you must ensure setting up FRONTEND_DB_PATH properly.
 
+
 # Demo installation
 
 The service is publicly available at: https://qc-copernicus.eea.europa.eu/ Demo login is user: guest, password: guest.
