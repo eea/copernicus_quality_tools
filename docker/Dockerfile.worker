@@ -25,7 +25,6 @@ RUN apt-get -y install gdal-bin python3-gdal \
     && apt-get -y install python3-psycopg2 \
     && pip3 install numpy \
     && pip3 install boto3 \
-    && pip3 install checksumdir \
     && pip3 install scikit-image reportlab==3.6.13 requests \
     && pip3 install bottle \
     && pip3 install supervisor
