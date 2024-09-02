@@ -23,8 +23,8 @@ RUN cd /usr/local/src \
     && wget --no-verbose https://bootstrap.pypa.io/get-pip.py \
     && python3 get-pip.py
     
-# Install boto3.
-RUN pip3 install boto3
+# Install boto3 and checksumdir.
+RUN pip3 install boto3 checksumdir
 
 # Install qc tool, frontend application.
 RUN cd /usr/local/src \
