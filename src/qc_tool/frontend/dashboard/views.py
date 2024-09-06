@@ -588,15 +588,28 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         ON d.user_id = u.id
         WHERE d.is_deleted != 1
         """
+    sql_total = "SELECT COUNT (id) FROM dashboard_delivery d WHERE d.is_deleted != 1"
 
-    if user.is_superuser:
-        sql_total = "SELECT COUNT (id) FROM dashboard_delivery WHERE is_deleted != 1;"
-    else:
-        sql_total = f"""SELECT COUNT (id) FROM dashboard_delivery 
-                WHERE is_deleted != 1 AND user_id = {user.id}"""
+    # special case of sql_total query for job status filter
+    if "j.job_status" in filter_sql:
+        sql_total = """
+        SELECT COUNT (id) FROM dashboard_delivery d
+        LEFT JOIN dashboard_job j
+            ON j.job_uuid = (
+            SELECT job_uuid FROM dashboard_job j
+            WHERE j.delivery_id = d.id
+            ORDER BY j.date_created DESC LIMIT 1)
+        WHERE d.is_deleted != 1
+        """
+
+    # Filter items by current user (except for superuser)
+    if not user.is_superuser:
+        sql_total += f" AND d.user_id = {user.id}"
         sql +=  f" AND user_id = {user.id}"
 
-    # Add filter expression and search expression to sql query (optional)
+    # Add filter expression and search expressions to sql queries
+    sql_total += filter_sql
+    sql_total += search_sql
     sql += filter_sql
     sql += search_sql
 
