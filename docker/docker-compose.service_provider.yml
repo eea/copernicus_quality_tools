@@ -2,7 +2,7 @@ version: '3'
 
 services:
   frontend:
-    image: eeacms/copernicus-qctool-frontend:2.0.8
+    image: eeacms/copernicus-qctool-frontend:2.0.9
     ports:
       - 8000:8000
     environment:
@@ -14,13 +14,16 @@ services:
       - FRONTEND_DB_PATH=/mnt/qc_tool_volume/frontend.sqlite3
       - UPDATE_JOB_STATUSES=yes
       - UPDATE_JOB_STATUSES_INTERVAL=30000
+      - WORKER_ALIVE_TIMEOUT=5
+      - REFRESH_JOB_STATUSES_BACKGROUND=yes
+      - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
     networks:
       - qc_tool_network
     volumes:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.0.8
+    image: eeacms/copernicus-qctool-worker:2.0.9
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS
