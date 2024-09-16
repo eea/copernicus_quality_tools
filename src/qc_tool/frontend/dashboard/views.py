@@ -244,17 +244,10 @@ def api_delivery_list(request):
     filter = ""
     search = ""
 
-    # Before retrieving the result, update status of any waiting or running jobs.
-    running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING, delivery__user=user)
-    for job in running_jobs:
-        job_status = check_running_job(str(job.job_uuid), job.worker_url)
-        if job_status is not None:
-            job.update_status(job_status)
-
     total, data = query_deliveries(user, offset=offset, limit=limit,
                                    sort=sort, order=order, filter=filter, search=search)
     logger.debug("List of deliveries successfully obtained.")
-
+    
     # next_offset is the link to the next page.
     if len(data) < limit:
         next_offset = 0
@@ -266,7 +259,7 @@ def api_delivery_list(request):
                      "total": total,
                      "offset": offset,
                      "limit": limit,
-                     "next_offset": offset + limit,
+                     "next_offset": next_offset,
                      "deliveries": data}
     return JsonResponse(response_data, safe=False)
 
@@ -414,7 +407,8 @@ def api_job_history(request, delivery_id):
     # Ensure job status is up-to-date
     for job in jobs:
         if job.job_status == JOB_RUNNING:
-            job_status = check_running_job(str(job.job_uuid), job.worker_url)
+            job_status = check_running_job(str(job.job_uuid), job.worker_url,
+                                           CONFIG["worker_alive_timeout"])
             if job_status is not None:
                 job.update_status(job_status)
 
@@ -443,7 +437,7 @@ def deliveries(request):
         api_user.save()
 
     update_job_statuses = CONFIG.get("update_job_statuses", True)
-    update_job_statuses_interval = CONFIG.get("update_job_statuses_iterval", 5000)
+    update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
 
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
@@ -550,6 +544,8 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         "date_created": "j.date_created",
         "date_started": "j.date_started",
         "last_job_status": "j.job_status",
+        "last_job_uuid": "j.job_uuid",
+        "last_job_worker_url": "j.worker_url",
         "username": "u.username",
         "user": "u.username"}
 
@@ -577,6 +573,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,
+        j.worker_url AS last_job_worker_url,
         j.date_created, j.date_started, j.job_status as last_job_status
         FROM dashboard_delivery d
         LEFT JOIN dashboard_job j
@@ -658,15 +655,9 @@ def get_deliveries_json(request):
     filter = request.GET.get("filter", "")
     search = request.GET.get("search", "")
 
-    # Before refreshing the page, update status of all waiting or running jobs.
-    running_jobs = models.Job.objects.filter(delivery__user=request.user, job_status=JOB_RUNNING)
-    for job in running_jobs:
-        job_status = check_running_job(str(job.job_uuid), job.worker_url)
-        if job_status is not None:
-            job.update_status(job_status)
-
     total, data = query_deliveries(request.user, offset=offset, limit=limit, sort=sort, 
                                    order=order, filter=filter, search=search)
+
     return JsonResponse({"total": total, "rows": data})
 
 
@@ -1077,7 +1068,8 @@ def get_job_history_json(request, delivery_id):
             .order_by("-date_created")
     for job in jobs:
         if job.job_status == JOB_RUNNING:
-            job_status = check_running_job(str(job.job_uuid), job.worker_url)
+            job_status = check_running_job(str(job.job_uuid), job.worker_url,
+                                           CONFIG["worker_alive_timeout"])
             if job_status is not None:
                 job.update_status(job_status)
     return JsonResponse(list(jobs.values()), safe=False)
@@ -1159,7 +1151,8 @@ def update_job(request, job_uuid):
     if job.job_status == JOB_RUNNING:
         time_running = (timezone.now() - job.date_started).total_seconds()
         if time_running > CHECK_RUNNING_JOB_DELAY:
-            job_status = check_running_job(str(job.job_uuid), job.worker_url)
+            job_status = check_running_job(str(job.job_uuid), job.worker_url,
+                                           CONFIG["worker_alive_timeout"])
             if job_status is not None:
                 job.update_status(job_status)
 
@@ -1397,3 +1390,22 @@ def change_password(request):
         'form': form
     }
     return render(request, "registration/change_password.html", data)
+
+
+def refresh_job_statuses():
+    # This function is running in a background thread, refreshing statuses of running jobs.
+    time.sleep(10)
+    while True:
+        running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
+        logger.info("Found {:d} running jobs.".format(len(running_jobs)))
+        updated_count = 0
+        for job in running_jobs:
+            time_running = (timezone.now() - job.date_started).total_seconds()
+            if time_running > CHECK_RUNNING_JOB_DELAY:
+                job_status = check_running_job(str(job.job_uuid), job.worker_url, CONFIG["worker_alive_timeout"])
+                if job_status is not None:
+                    if job_status != JOB_RUNNING:
+                        job.update_status(job_status)
+                        updated_count += 1
+        logger.info("Status of {:d} running jobs has been updated.".format(updated_count))
+        time.sleep(int(CONFIG["refresh_job_statuses_background_interval"]))

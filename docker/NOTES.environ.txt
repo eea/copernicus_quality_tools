@@ -34,8 +34,11 @@ Service qc_tool_frontend
   * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
       the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
   * SHOW_LOGO, informs the frontend server to put the Copernicus logo at web pages;
-  * UPDATE_JOB_STATUSES, instructs the frontend server to auto-refresh job status info (yes or no);
-  * UPDATE_JOB_STATUSES_INTERVAL, interval to update job statuses on frontend server (5000 miliseconds);
+  * UPDATE_JOB_STATUSES, instructs the frontend deliveries page to auto-refresh job status info (yes or no);
+  * UPDATE_JOB_STATUSES_INTERVAL, interval to refresh job statuses on frontend deliveries page (30000 miliseconds);
+  * WORKER_ALIVE_TIMEOUT, timeout in seconds to wait for job status response from worker (5 seconds);
+  * REFRESH_JOB_STATUSES_BACKGROUND, instructs the frontend server to refresh running job statuses in a background thread;
+  * REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL, interval to refresh job statuses on frontend server in background thread (60 seconds);
 
 
 Service qc_tool_worker
