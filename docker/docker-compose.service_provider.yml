@@ -14,6 +14,9 @@ services:
       - FRONTEND_DB_PATH=/mnt/qc_tool_volume/frontend.sqlite3
       - UPDATE_JOB_STATUSES=yes
       - UPDATE_JOB_STATUSES_INTERVAL=30000
+      - WORKER_ALIVE_TIMEOUT=5
+      - REFRESH_JOB_STATUSES_BACKGROUND=yes
+      - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
     networks:
       - qc_tool_network
     volumes:

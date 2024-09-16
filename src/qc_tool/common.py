@@ -58,6 +58,10 @@ JOB_TIME_LIMIT_HOURS = 12
 
 UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
 
+UPDATE_JOB_STATUSES_INTERVAL = 30000
+WORKER_ALIVE_TIMEOUT = 5
+REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL = 60
+
 CONFIG = None
 
 
@@ -254,12 +258,12 @@ def compile_job_report_data(job_uuid, product_ident=None):
             job_report["steps"][i].update(job_step)
     return job_report
 
-def check_running_job(job_uuid, worker_url):
+def check_running_job(job_uuid, worker_url, timeout):
     job_status = None
     worker_info = None
     url = urljoin(worker_url, "/jobs/{:s}.json".format(job_uuid))
     try:
-        with urlopen(url) as resp:
+        with urlopen(url, timeout=int(timeout)) as resp:
             if resp.status != 200:
                 # Bad request.
                 # FIXME: inform logger about such awkward situation.
@@ -282,6 +286,7 @@ def check_running_job(job_uuid, worker_url):
             return JOB_ERROR
     return job_status
 
+
 def compose_attachment_filepath(job_uuid, filename):
     job_dir = compose_job_dir(job_uuid)
     filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME).joinpath(filename)
@@ -298,6 +303,10 @@ def setup_config():
     * FRONTEND_DB_PATH;
     * SHOW_LOGO;
     * API_URL;
+    * UPDATE_JOB_STATUSES;
+    * UPDATE_JOB_STATUSES_INTERVAL;
+    * WORKER_ALIVE_TIMEOUT;
+
 
     Environment variables consumed by worker:
     * PRODUCT_DIRS;
@@ -361,7 +370,16 @@ def setup_config():
 
     # update job statuses in the ui. 
     config["update_job_statuses"] = environ.get("UPDATE_JOB_STATUSES", "yes") == "yes"
-    config["update_job_statuses_interval"] = environ.get("UPDATE_JOB_STATUSES", 30000)
+    config["update_job_statuses_interval"] = environ.get(
+        "UPDATE_JOB_STATUSES_INTERVAL", UPDATE_JOB_STATUSES_INTERVAL)
+
+    # timeout for checking if a worker is alive.
+    config["worker_alive_timeout"] = environ.get(
+        "WORKER_ALIVE_TIMEOUT", WORKER_ALIVE_TIMEOUT)
+
+    # timeout for updating job statuses in the background thread
+    config["refresh_job_statuses_background_interval"] = environ.get(
+        "REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL", REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL)
 
     return config
 
