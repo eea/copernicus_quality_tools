@@ -1020,6 +1020,32 @@ def get_product_list(request):
     product_list = sorted(product_list, key=lambda x: x['description'])
     return JsonResponse({'product_list': product_list})
 
+def get_product_descriptions_dropdown(request):
+    """
+    returns a list of product descriptions for the UI filter dropdown based on current user.
+    :param request:
+    :return: dictionary of the product descriptions
+    """
+    if request.user.is_superuser:
+        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted != 1 AND user_id={} GROUP BY product_description"
+               .format(request.user.id))
+    else:
+        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted != 1 AND user_id={} GROUP BY product_description"
+               .format(request.user.id))
+    with connection.cursor() as cursor:
+        # fetch query results
+        cursor.execute(sql)
+        # arrange the results
+        rows = cursor.fetchall()
+        data = []
+        for row in rows:
+            data.append(row[0])
+    product_descriptions = sorted(data)
+    product_dict = {}
+    for item in product_descriptions:
+        product_dict[item] = item
+    return JsonResponse(product_dict)
+
 def get_product_definition(request, product_ident):
     """
     Shows the json product definition.
