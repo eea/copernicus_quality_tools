@@ -62,6 +62,8 @@ UPDATE_JOB_STATUSES_INTERVAL = 30000
 WORKER_ALIVE_TIMEOUT = 5
 REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL = 60
 
+INSPIRE_SERVICE_URL_DEFAULT = "https://sdi.eea.europa.eu/validator/v2/"
+
 CONFIG = None
 
 
@@ -380,6 +382,11 @@ def setup_config():
     # timeout for updating job statuses in the background thread
     config["refresh_job_statuses_background_interval"] = environ.get(
         "REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL", REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL)
+
+    # INSPIRE validator service URL
+    config["inspire_service_url"] = environ.get(
+        "INSPIRE_SERVICE_URL", INSPIRE_SERVICE_URL_DEFAULT
+    )
 
     return config
 

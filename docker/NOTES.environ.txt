@@ -54,6 +54,7 @@ Service qc_tool_worker
   * PG_USER, informs the job which user name it should use when connecting to postgresql server;
   * PG_DATABASE, informs the job which database name it should use when connecting to postgresql server;
   * SHOW_LOGO, informs the worker to put Copernicus logo in pdf report;
+  * INSPIRE_SERVICE_URL, informs the worker to connect to a custom local instance of the INSPIRE validator service;
 
 
 Debugging parameters
