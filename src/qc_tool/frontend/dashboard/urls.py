@@ -28,6 +28,7 @@ urlpatterns = [
     path("data/job_info/<product_ident>/", views.get_job_info, name="job_info_json"),
     path("data/product_definition/<product_ident>/", views.get_product_definition, name="product_definition_json"),
     path("data/product_list/", views.get_product_list, name="product_list_json"),
+    path("data/product_descriptions/", views.get_product_descriptions_dropdown, name="product_descriptions_dropdown"),
     path("data/report/<job_uuid>/report.json", views.get_job_report, name="job_report_json"),
     path("data/report/<job_uuid>/report.pdf", views.get_pdf_report, name="job_report_pdf"),
 

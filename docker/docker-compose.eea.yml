@@ -36,6 +36,7 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work/work
+      - INSPIRE_SERVICE_URL=https://sdi.eea.europa.eu/validator/v2/
     networks:
       - qc_tool_network
     volumes:

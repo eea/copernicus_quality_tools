@@ -20,14 +20,15 @@ from checksumdir import dirhash
 from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
+from qc_tool.common import CONFIG
 
-# INSPIRE_VALIDATOR_URL = "https://inspire.ec.europa.eu/validator/"
-INSPIRE_VALIDATOR_URL = "https://sdi.eea.europa.eu/validator/"
-INSPIRE_SERVICE_URL = INSPIRE_VALIDATOR_URL + "v2/"
+
+# INSPIRE_SERVICE_URL = "https://inspire.ec.europa.eu/validator/"
+# INSPIRE_SERVICE_URL = "https://sdi.eea.europa.eu/validator/v2/"
 INSPIRE_TEST_SUITE_NAME = "INSPIRE data sets and data set series interoperability metadata"
 INSPIRE_SERVER_TIMEOUT = 60
-INSPIRE_TEST_RUN_TIMEOUT = 300
-INSPIRE_POLL_INTERVAL = 20
+INSPIRE_TEST_RUN_TIMEOUT = 360
+INSPIRE_POLL_INTERVAL = 40
 INSPIRE_MAX_RETRIES = 3
 
 PARTITION_MAX_VERTICES = 50000
@@ -347,7 +348,7 @@ class InspireServiceClient():
         :return: (suite ID, "ok") if the suite ID is correctly returned or (None, ERROR_MESSAGE) in case of failure.
         """
         try:
-            r = requests.get(INSPIRE_SERVICE_URL + "ExecutableTestSuites.json", timeout=INSPIRE_SERVER_TIMEOUT)
+            r = requests.get(CONFIG["inspire_service_url"] + "ExecutableTestSuites.json", timeout=INSPIRE_SERVER_TIMEOUT)
             r.raise_for_status()
             # The service should return a json object with a list of test suites.
             test_suites = r.json()["EtfItemCollection"]["executableTestSuites"]["ExecutableTestSuite"]
@@ -356,10 +357,10 @@ class InspireServiceClient():
             # The test suites should contain exactly one suite with label equal to INSPIRE_TEST_SUITE_NAME.
             if len(inspire_test_suites) == 0:
                 raise ValueError("The validator service {:s} does not have any test suites named '{:s}'".format(
-                    INSPIRE_VALIDATOR_URL, INSPIRE_TEST_SUITE_NAME))
+                    CONFIG["inspire_service_url"], INSPIRE_TEST_SUITE_NAME))
             if len(inspire_test_suites) > 1:
                 raise ValueError("The validator service {:s} has more than one test suite named '{:s}'".format(
-                    INSPIRE_VALIDATOR_URL, INSPIRE_TEST_SUITE_NAME))
+                    CONFIG["inspire_service_url"], INSPIRE_TEST_SUITE_NAME))
 
             return inspire_test_suites[0]["id"], "ok"
         except requests.exceptions.HTTPError as ex:
@@ -381,7 +382,7 @@ class InspireServiceClient():
         Uploads a xml file to INSPIRE service and receives a temporary test object ID.
         :return: (status_code, test object ID, "ok") if the xml file was correctly uploaded or (None, ERROR_MESSAGE) if upload failed.
         """
-        xml_upload_url = INSPIRE_SERVICE_URL + "TestObjects?action=upload"
+        xml_upload_url = CONFIG["inspire_service_url"] + "TestObjects?action=upload"
 
         try:
             with open(str(xml_filepath), "rb") as filehandle:
@@ -441,7 +442,7 @@ class InspireServiceClient():
                 "id": test_object_id
             }
         }
-        start_run_url = INSPIRE_SERVICE_URL + "TestRuns"
+        start_run_url = CONFIG["inspire_service_url"] + "TestRuns"
         try:
             r = requests.post(start_run_url, json=test_run_data, timeout=INSPIRE_SERVER_TIMEOUT)
             r.raise_for_status()
@@ -470,13 +471,13 @@ class InspireServiceClient():
         :return: A tuple with test result status [PASSED, PASSED_MANUAL, FAILED or None] and message ["ok" or "error"]
         """
 
-        run_url = INSPIRE_SERVICE_URL + "TestRuns/" + test_run_id
+        run_url = CONFIG["inspire_service_url"] + "TestRuns/" + test_run_id
         progress_url = run_url + "/progress"
         json_report_url = run_url + ".json"
 
         total_seconds = 0
         try:
-            # polling the service every 10 seconds for progress
+            # polling the service every POLL_INTERVAL seconds for progress
             while True:
                 time.sleep(INSPIRE_POLL_INTERVAL)
                 total_seconds = total_seconds + INSPIRE_POLL_INTERVAL
@@ -518,7 +519,7 @@ class InspireServiceClient():
         :param test_object_id: The test object ID, obtained with create_test_object() function.
         :return: message ["ok" or "error"]
         """
-        result_url = INSPIRE_SERVICE_URL + "TestRuns/" + test_run_id
+        result_url = CONFIG["inspire_service_url"] + "TestRuns/" + test_run_id
 
         if attachment_filepath.name.endswith(".html"):
             attachment_url = result_url + ".html"
@@ -551,7 +552,7 @@ def locate_metadata_file(layer_filepath):
 
 def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0):
     # Step 1, Retrieve the predefined test suite from the service. The predefined test suite has a unique test suite ID.
-    status.info("Using validator service {:s}.".format(INSPIRE_VALIDATOR_URL))
+    status.info("Using validator service {:s}.".format(CONFIG["inspire_service_url"]))
     test_suite_id, test_suite_message = InspireServiceClient.retrieve_test_suite_id()
 
     if test_suite_id is None:

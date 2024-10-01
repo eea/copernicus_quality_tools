@@ -21,12 +21,12 @@ services:
     networks:
       - qc_tool_network
     volumes:
-      - /home/jiri/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /home/jiri/qc_tool/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
-      - /home/jiri/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/qc_tool/qc_tool_work:/mnt/qc_tool_work
-      - /home/jiri/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
-      - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_work:/mnt/qc_tool_work
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
+      - /mnt/c/Users/jkadlec/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   worker:
     build:
@@ -46,10 +46,10 @@ services:
     networks:
       - qc_tool_network
     volumes:
-      - /home/jiri/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /home/jiri/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
-      - /home/jiri/qc_tool/qc_tool_work:/mnt/qc_tool_work
-      - /home/jiri/github/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/Users/jkadlec/qc_tool_work:/mnt/qc_tool_work
+      - /mnt/c/Users/jkadlec/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
 networks:
   qc_tool_network:
