@@ -31,7 +31,7 @@ def run_check(params, status):
             status.info("The delivery does not contain the expected '{:s}' folder. The native delivery folder will be used instead.".format(METADATA_DIRNAME))
             metadata_dir = params["unzip_dir"]
         elif len(metadata_dirs) > 1:
-            status.info("Multiple folders named '{:s}' were found in the delivery.",
+            status.failed("Multiple folders named '{:s}' were found in the delivery.",
                         "Only one '{:s}' folder is allowed.".format(METADATA_DIRNAME))
             return
         else:

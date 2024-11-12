@@ -20,7 +20,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import PartitionedLayer
 
     if "boundary" not in params["layer_defs"]:
-        status.info("Check cancelled due to boundary not being available.")
+        status.cancelled("Check cancelled due to boundary not being available.")
         return
 
     for layer_def in do_layers(params):
@@ -58,7 +58,7 @@ def run_check(params, status):
 
             # Report warning items.
             if cursor.rowcount > 0:
-                status.info("Layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
+                status.failed("Layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
                 status.add_full_table(sql_params["gap_warning_table"])
 
         if params["du_column_name"] is not None:
@@ -81,7 +81,7 @@ def run_check(params, status):
 
                 # Report excessive items.
                 if cursor.rowcount > 0:
-                    status.info("Layer {:s} has {:d} feature(s) of unknown boundary unit."
+                    status.failed("Layer {:s} has {:d} feature(s) of unknown boundary unit."
                                 .format(layer_def["pg_layer_name"], cursor.rowcount))
                     status.add_error_table(sql_params["du_warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 

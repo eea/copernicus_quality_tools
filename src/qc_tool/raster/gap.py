@@ -59,7 +59,7 @@ def run_check(params, status):
         if mask_ident.endswith(".gpkg") or mask_ident.endswith(".shp"):
             mask_vector_filepath = vector_boundary_dir.joinpath(mask_ident)
             if not mask_vector_filepath.exists():
-                status.info("Check cancelled due to boundary vector file {:s} not available.".format(mask_ident))
+                status.failed("Check cancelled due to boundary vector file {:s} not available.".format(mask_ident))
                 return
             mask_file = rasterize_mask(mask_vector_filepath, int(ds_xres), params["du_column_name"], aoi_code,
                                        mask_align_grid, ds_ulx, ds_uly, params["output_dir"])
@@ -67,11 +67,11 @@ def run_check(params, status):
             mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
 
         if not mask_file.exists():
-            status.info("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
+            status.failed("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
             return
         mask_ds = gdal.Open(str(mask_file))
         if mask_ds is None:
-            status.info("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
+            status.failed("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
             return
         mask_band = mask_ds.GetRasterBand(1)
         nodata_value_mask = mask_band.GetNoDataValue()
@@ -95,30 +95,30 @@ def run_check(params, status):
                 extent_message = extent_message.format(layer_def["src_layer_name"], mask_ident)
             extent_message += "Raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
             extent_message += "AOI extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
-            status.info(extent_message)
+            status.failed(extent_message)
             continue
 
         # Check if the raster and the AOI mask have the same resolution.
         if ds_xres != mask_xres or ds_yres != mask_yres:
-            status.info("Resolution of the raster [{:f}, {:f}] does not match "
+            status.failed("Resolution of the raster [{:f}, {:f}] does not match "
                         "the resolution [{:f}, {:f}] of the boundary mask {:s}.tif."
                         .format(ds_xres, ds_yres, mask_xres, mask_yres, mask_ident))
             continue
 
         # Check if coordinates of the raster origin are whole integers.
         if not ds_ulx.is_integer() or not ds_uly.is_integer():
-            status.info("Coordinates of the raster origin ({:f}, {:f}) are not whole integers."
+            status.failed("Coordinates of the raster origin ({:f}, {:f}) are not whole integers."
                         .format(ds_ulx, ds_uly))
             continue
 
         # Check if origin of mask is aligned with origin of raster.
         if abs(ds_ulx - mask_ulx) % ds_xres > 0:
-            status.info("X coordinates of the raster are not exactly aligned with x coordinates of boundary mask."
+            status.failed("X coordinates of the raster are not exactly aligned with x coordinates of boundary mask."
                         "Raster origin: {:f}, Mask origin: {:f}".format(ds_ulx, mask_ulx))
             continue
 
         if abs(ds_uly - mask_uly) % ds_yres > 0:
-            status.info("Y coordinates of the raster are not exactly aligned with Y coordinates of boundary mask."
+            status.failed("Y coordinates of the raster are not exactly aligned with Y coordinates of boundary mask."
                         "Raster origin: {:f}, Mask origin: {:f}".format(ds_uly, mask_uly))
             continue
 
@@ -218,7 +218,7 @@ def run_check(params, status):
                 cmd = cmd + gap_filepaths
                 write_progress(progress_filepath, " ".join(cmd))
                 subprocess.run(cmd)
-                status.info("Layer {:s} has {:d} gap pixels in the mapped area."
+                status.failed("Layer {:s} has {:d} gap pixels in the mapped area."
                             .format(layer_def["src_layer_name"], gap_count_total))
 
             # Convert the .vrt to a GeoTiff
