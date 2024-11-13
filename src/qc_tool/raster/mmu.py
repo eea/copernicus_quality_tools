@@ -299,6 +299,13 @@ def run_check(params, status):
         raster_path_orig = params['raster_layer_defs']['raster']['src_filepath'].as_posix()
         s3_local_filepaths = [raster_path_orig]
         s3_local_dir = params["unzip_dir"].joinpath("neighbours")
+        if not s3_local_dir.exists():
+            s3_local_dir.mkdir()
+
+        if not neighbouring_tiles_aoi_codes:
+            status.info("Tile {aoi} does not have any neighbouring tiles specified in {bs}".format(
+                aoi=params.get("aoi_code"), bs=str(boundary_source)))
+
         for neighbouring_tile_aoi_code in neighbouring_tiles_aoi_codes:
 
             key_prefix = params["s3"]["key_prefix"].replace(params["aoi_code"].upper(), neighbouring_tile_aoi_code.upper()) # TODO: osetrit lower/upper case nejak obecne!!!
