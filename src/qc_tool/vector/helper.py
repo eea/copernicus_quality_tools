@@ -76,13 +76,16 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
             s3.Bucket(bucketname).download_file(obj.key, local_filepath)
             downloaded_filenames.append(obj_name)
 
-        downloaded_files_hash = dirhash(s3_local_dir, HASH_ALGORITHM)
-        status.set_status_property("hash", downloaded_files_hash)
-        status.set_status_property("hash_files", downloaded_filenames)
+        if downloaded_filenames:
+            if not status.params.get("hash"):
+                downloaded_files_hash = dirhash(s3_local_dir, HASH_ALGORITHM)
+                status.set_status_property("hash", downloaded_files_hash)
+                status.set_status_property("hash_files", downloaded_filenames)
     except Exception as ex:
         status.aborted("Error S3 download, reason: {:s}".format(str(ex)))
         return
-    status.add_params({"unzip_dir": s3_local_dir})
+    if not status.params.get("unzip_dir"):
+        status.add_params({"unzip_dir": s3_local_dir})
 
 
 def do_layers(params):
