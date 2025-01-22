@@ -1,5 +1,5 @@
 {
-  "description": "Urban Atlas Change 2021-2024",
+  "description": "Urban Atlas 2021 status with 2018 (EEA38) boundary definitioin.",
   "steps": [
     {
       "check_ident": "qc_tool.vector.unzip",
@@ -9,9 +9,14 @@
       "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
-        "reference_year": "2024",
-        "formats": [".gdb", ".gpkg"],
-        "layer_names": {"change": "^clms_ua_lcuc_c2021-2024_v010ha_(?P<aoi_code>[0-9a-zA-Z]{6})[0-9]{1}_[a-zA-Z]*_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"},
+        "reference_year": "2021",
+        "formats": [
+          ".gdb",
+          ".gpkg"
+        ],
+        "layer_names": {
+          "reference": "^clms_ua_lcu_s2021_v025ha_(?P<aoi_code>[0-9a-zA-Z]{6})[0-9]{1}_[a-zA-Z]*_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
+        },
         "aoi_codes": [
           "el001l",
           "cz009l",
@@ -764,36 +769,44 @@
           "map.pdf": "_map.pdf$",
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
-        "excessive_layers_allowed": false
+        "excessive_layers_allowed": false,
+        "boundary_source": "boundary_ua2018_eea38.gpkg"
       }
     },
     {
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
-        "layers": ["change"],
-        "required": {"country": "string",
-                     "fua_name": "string",
-                     "fua_code": "string",
-                     "code_2021": "string",
-                     "class_2021": "string",
-                     "code_2024": "string",
-                     "class_2024": "string",
-                     "prod_date": "string",
-                     "identifier": "string",
-                     "comment": "string",
-                     "perimeter": "real",
-                     "area": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "layers": [
+          "reference"
+        ],
+        "required": {
+          "country": "string",
+          "fua_name": "string",
+          "fua_code": "string",
+          "code_2021": "string",
+          "class_2021": "string",
+          "prod_date": "string",
+          "identifier": "string",
+          "comment": "string",
+          "perimeter": "real",
+          "area": "real"
+        },
+        "ignored": [
+          "shape_area",
+          "shape_length"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "reference"
+        ],
         "epsg": 3035,
-        "auto_identify_epsg": true
+        "auto_identify_epsg": false
       }
     },
     {
@@ -804,139 +817,183 @@
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "reference"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
-        "layers": ["change"],
-        "unique_keys": ["identifier"]
+        "layers": [
+          "reference"
+        ],
+        "unique_keys": [
+          "identifier"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
-        "layers": ["change"],
-        "column_defs": [["code_2021", ["11100", "11210", "11220", "11230", "11240", "11300",
-                                       "12100", "12210", "12220", "12230", "12300", "12400",
-                                       "13100", "13300", "13400",
-                                       "14110", "14120", "14130", "14200",
-                                       "21000", "22000", "23000", "24000", "25000",
-                                       "31000", "32000", "33000",
-                                       "40000",
-                                       "50000",
-                                       "91000", "92000"]],
-                        ["code_2024", ["11100", "11210", "11220", "11230", "11240", "11300",
-                                       "12100", "12210", "12220", "12230", "12300", "12400",
-                                       "13100", "13300", "13400",
-                                       "14110", "14120", "14130", "14200",
-                                       "21000", "22000", "23000", "24000", "25000",
-                                       "31000", "32000", "33000",
-                                       "40000",
-                                       "50000",
-                                       "91000", "92000"]]]
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.change",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "initial_code_column_name": "code_2021",
-        "final_code_column_name": "code_2024"
-      }
-    },
-    {
-      "check_ident": "qc_tool.vector.non_probable",
-      "required": false,
-      "parameters": {
-        "layers": ["change"],
-        "initial_code_column_name": "code_2021",
-        "final_code_column_name": "code_2024",
-        "changes": [["11100", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11210", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11230", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11240", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11300", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12100", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12210", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12220",                                              ["31000", "32000", "33000", "40000", "50000"]],
-                    ["12230",                                              ["31000", "32000", "33000", "40000", "50000"]],
-                    ["12300", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12400", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["21000",                                                                         ["40000", "50000"]],
-                    ["22000",                                                                         ["40000", "50000"]],
-                    ["23000",                                                                         ["40000", "50000"]],
-                    ["24000",                                                                         ["40000", "50000"]],
-                    ["25000",                                                                         ["40000", "50000"]],
-                    ["31000",                                                                         ["40000", "50000"]],
-                    ["32000",                                                                         ["40000", "50000"]],
-                    ["33000",                                                                         ["40000", "50000"]]]
+        "layers": [
+          "reference"
+        ],
+        "column_defs": [
+          [
+            "code_2021",
+            [
+              "11100",
+              "11210",
+              "11220",
+              "11230",
+              "11240",
+              "11300",
+              "12100",
+              "12210",
+              "12220",
+              "12230",
+              "12300",
+              "12400",
+              "13100",
+              "13300",
+              "13400",
+              "14110",
+              "14120",
+              "14130",
+              "14200",
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000",
+              "91000",
+              "92000"
+            ]
+          ]
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "reference"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "reference"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.area",
       "required": false,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "reference"
+        ],
         "area_column_name": "area",
         "unit": 1,
         "tolerance": 0.5
       }
     },
     {
+      "check_ident": "qc_tool.vector.gap",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "reference"
+        ],
+        "du_column_name": "fua_code"
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "reference"
+        ],
         "complex_change": null,
-        "general_where": [" (layer.code_2024 LIKE '1%' AND layer.area >= 1000)",
-                          "OR",
-                          " (layer.code_2024 SIMILAR TO '[2-5]%' AND layer.area >= 2500)"],
-        "exception_where": [" layer.code_2021 LIKE '122%'",
-                            "OR",
-                            " layer.code_2024 LIKE '122%'",
-                            "OR",
-                            " (layer.comment IS NOT NULL",
-                            "  AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',",
-                            "                                       'Area size exception (inside Urban Atlas FUA boundary)']))"],
-        "warning_where": ["FALSE"]
+        "general_where": [
+          " layer.code_2021 LIKE '122%'",
+          "OR",
+          " (layer.code_2021 LIKE '1%'",
+          "  AND layer.area >= 2500)",
+          "OR",
+          " (layer.code_2021 SIMILAR TO '[2-5]%'",
+          "  AND layer.area >= 10000)",
+          "OR",
+          " layer.code_2021 LIKE '9%'"
+        ],
+        "exception_where": [
+          " (meta.is_marginal",
+          "  AND layer.area >= 100)",
+          "OR",
+          " EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_2021 LIKE '9%')",
+          "OR",
+          " (layer.comment IS NOT NULL",
+          "  AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',",
+          "                                       'Area size exception (inside Urban Atlas FUA boundary)']))"
+        ],
+        "warning_where": [
+          "(layer.code_2021 NOT LIKE '122%'",
+          " AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_2021 LIKE '122%')",
+          " AND layer.area >= 500)"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "reference"
+        ],
+        "mmw": 10.0,
+        "general_where": "FALSE",
+        "exception_where": "layer.code_2021 LIKE '122%'"
       }
     },
     {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "reference"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
-        "layers": ["change"],
-        "code_column_names": ["code_2021", "code_2024"],
-        "exception_where": ["FALSE"],
-        "error_where": [" layer.code_2021 NOT LIKE '122%'",
-                        "AND",
-                        " layer.code_2024 NOT LIKE '122%'"]
+        "layers": [
+          "reference"
+        ],
+        "code_column_names": [
+          "code_2021"
+        ],
+        "exception_where": [
+          "FALSE"
+        ],
+        "error_where": [
+          "layer.code_2021 NOT LIKE '122%'"
+        ]
       }
     }
   ]
