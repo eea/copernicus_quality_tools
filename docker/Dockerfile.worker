@@ -121,14 +121,31 @@ RUN cd /usr/local/src \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
 
+# Download and extract the INSPIRE Validator WAR file and the ui.zip file
+RUN wget --no-verbose -O /tmp/inspire-validator.zip \
+    https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v2024.3/inspire-validator-2024.3.zip \
+    && unzip -q /tmp/inspire-validator.zip -d /tmp \
+    && mv /tmp/validator.war /usr/local/jetty/webapps/${ETF_RELATIVE_URL}.war \
+    && mv /tmp/ui.zip ui.zip \
+    && rm -rf /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip
+
+# Download the INSPIRE registry resources
+# https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v2024.3/inspire-registry-resources.zip
+RUN mkdir -p /tmp/inspire-registry-resources \
+    && wget --no-verbose -O /tmp/inspire-registry-resources.zip \
+    https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v2024.3/inspire-registry-resources.zip \
+    && unzip -q /tmp/inspire-registry-resources.zip -d /tmp/inspire-registry-resources \
+    && mkdir -p ${ETF_DIR}/inspire-registry-resources \
+    && mv /tmp/inspire-registry-resources ${ETF_DIR}/inspire-registry-resources/
+
 # Copy INSPIRE validator resources and prepare directories
 COPY res/docker-entrypoint.sh /
 COPY res/squid.conf /etc/squid/squid.conf
 COPY res/proxy_1.conf /etc/apache2/conf.d/proxy_1.conf
 COPY res/proxy_2.conf /etc/apache2/conf.d/proxy_2.conf
 COPY res/httpd.conf /etc/apache2/httpd.conf
-COPY ui.zip ui.zip
-COPY $ETF_RELATIVE_URL.war /usr/local/jetty/webapps/
+#COPY ui.zip ui.zip
+#COPY $ETF_RELATIVE_URL.war /usr/local/jetty/webapps/
 RUN mkdir -p $ETF_DIR $ETF_LOG_DIR /run/tini && \
     touch /run/tini/tini-ready
 RUN mkdir /tmp/jetty
