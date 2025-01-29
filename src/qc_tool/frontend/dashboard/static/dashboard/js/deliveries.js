@@ -88,13 +88,19 @@ function actionsFormatter(value, row) {
         // job is not running and delivery is not submitted --> QC button is enabled
         btn_data += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
         btn_data += 'title="Run quality controls for this delivery." href="/setup_job?deliveries=' + row.id + '" >QC</a>';
+        if (IS_TEST_GROUP) {
+        btn_data += ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ';
+        btn_data += 'title="Cannot delete this delivery. ' + tooltip_message + '" disabled>Delete</button>';
+        }
+        else {
         btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
         btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
         btn_data += 'Delete</button>';
+        }
     }
 
     // "Submit to EEA" button visibility is controlled by the SUBMISSION_ENABLED setting.
-    if (SUBMISSION_ENABLED) {
+    if (SUBMISSION_ENABLED && !IS_TEST_GROUP) {
         if (row.date_submitted) {
             btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
             btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';
@@ -155,8 +161,15 @@ function toggle_select_button() {
     } else {
         $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
         $("#btn-qc-multi").prop("disabled", false);
+        if (IS_TEST_GROUP) {
+        $("#btn-delete-multi").text("Delete all selected");
+        $("#btn-delete-multi").prop("disabled", true);
+        }
+        else {
         $("#btn-delete-multi").text("Delete all selected (" + numChecked + ")");
         $("#btn-delete-multi").prop("disabled", false);
+        }
+
     }
 }
 
