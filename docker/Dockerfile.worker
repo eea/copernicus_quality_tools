@@ -8,6 +8,35 @@ ARG VERSION
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
+# Set environment variables for INSPIRE validator
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ETF_DIR=/etf
+ENV ETF_LOG_DIR=/etf/logs
+ENV ETF_RELATIVE_URL=validator
+ENV ETF_WEBAPP_VERSION=latest
+ENV ETF_TESTDRIVER_BSX_VERSION=latest
+ENV ETF_GMLGEOX_VERSION=latest
+ENV ETF_TESTDRIVER_SUI_VERSION=latest
+ENV ETF_TESTDRIVER_TE_VERSION=latest
+ENV REPO_URL=https://services.interactive-instruments.de/etfdev-af/etf-public-dev
+ENV REPO_USER=etf-public-dev
+ENV REPO_PWD=etf-public-dev
+ENV ETF_DL_TESTPROJECTS_ZIP=https://github.com/inspire-eu-validation/ets-repository/archive/v2024.3.zip
+ENV ETF_DL_TESTPROJECTS_DIR_NAME=inspire-ets-repository
+ENV ETF_DL_TESTPROJECTS_OVERWRITE_EXISTING=true
+ENV MAX_MEM=max
+ENV HTTP_PROXY_HOST=localhost
+ENV HTTP_PROXY_PORT=3128
+ENV HTTP_PROXY_USERNAME=none
+ENV HTTP_PROXY_PASSWORD=none
+ENV HTTPS_PROXY_HOST=none
+ENV HTTPS_PROXY_PORT=3129
+ENV HTTPS_PROXY_USERNAME=none
+ENV HTTPS_PROXY_PASSWORD=none
+# Set the Jetty version for INSPIRE validator.
+ENV JETTY_VERSION=9.4.56.v20240826
+ENV JETTY_HOME=/usr/local/jetty
+
 # Build the initial environment.
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get -y update \
@@ -29,6 +58,24 @@ RUN apt-get -y install gdal-bin python3-gdal \
     && pip3 install scikit-image reportlab==3.6.13 requests \
     && pip3 install bottle \
     && pip3 install supervisor
+
+# Install INSPIRE validator dependencies, TODO check apache2 and squid
+RUN apt-get install -y --no-install-recommends \
+    openjdk-11-jre \
+    curl \
+    nano \
+    apache2 \
+    squid \
+    tini \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install jetty for the INSPIRE validator
+RUN mkdir -p "$JETTY_HOME"
+
+# Download and unpack Jetty
+RUN wget https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz && \
+tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 && \
+rm /tmp/jetty.tar.gz
 
 # Copy supervisor config file.
 COPY ./supervisord.conf /etc
@@ -73,7 +120,27 @@ RUN cd /usr/local/src \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
+
+# Copy INSPIRE validator resources and prepare directories
+COPY res/docker-entrypoint.sh /
+COPY res/squid.conf /etc/squid/squid.conf
+COPY res/proxy_1.conf /etc/apache2/conf.d/proxy_1.conf
+COPY res/proxy_2.conf /etc/apache2/conf.d/proxy_2.conf
+COPY res/httpd.conf /etc/apache2/httpd.conf
+COPY ui.zip ui.zip
+COPY $ETF_RELATIVE_URL.war /usr/local/jetty/webapps/
+RUN mkdir -p $ETF_DIR $ETF_LOG_DIR /run/tini && \
+    touch /run/tini/tini-ready
+RUN mkdir /tmp/jetty
+WORKDIR /usr/local/jetty
+
+# Run entrypoint for the inspire validator
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
 # Expose the port of job scheduler.
 EXPOSE 8000
+
+# Expose the port of the validator (for debugging ..)
+EXPOSE 8080
 
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]

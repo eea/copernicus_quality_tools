@@ -62,7 +62,8 @@ UPDATE_JOB_STATUSES_INTERVAL = 30000
 WORKER_ALIVE_TIMEOUT = 5
 REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL = 60
 
-INSPIRE_SERVICE_URL_DEFAULT = "https://sdi.eea.europa.eu/validator/v2/"
+#INSPIRE_SERVICE_URL_DEFAULT = "https://sdi.eea.europa.eu/validator/v2/"
+INSPIRE_SERVICE_URL_DEFAULT = "http://localhost:8080/validator/v2/"
 
 CONFIG = None
 
