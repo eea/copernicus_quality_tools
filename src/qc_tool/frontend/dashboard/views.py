@@ -438,6 +438,7 @@ def deliveries(request):
 
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
+    is_test_group = request.user.groups.filter(name='test_group').exists()
 
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
@@ -445,7 +446,8 @@ def deliveries(request):
                                                          "boundary_version": get_boundary_version(),
                                                          "api_key": api_key,
                                                          "update_job_statuses": update_job_statuses,
-                                                         "update_job_statuses_interval": update_job_statuses_interval})
+                                                         "update_job_statuses_interval": update_job_statuses_interval,
+                                                         "is_test_group": is_test_group})
 
 
 @login_required
