@@ -8,6 +8,7 @@ import logging
 DESCRIPTION = "There is no gap in the AOI."
 IS_SYSTEM = False
 TOLERANCE = 0.01
+GAP_AREA_TOLERANCE = 0.000001
 
 
 log = logging.getLogger(__name__)
@@ -48,16 +49,18 @@ def run_check(params, status):
 
         # Prepare parameters used in sql clauses.
         sql_params = {"gap_table": gap_table.gap_table_name,
-                      "gap_warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
+                      "gap_warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "gap_area_tolerance": str(GAP_AREA_TOLERANCE)}
         with params["connection_manager"].get_connection().cursor() as cursor:
             # Create table of warning items.
             sql = ("CREATE TABLE {gap_warning_table} AS\n"
-                   "SELECT geom FROM {gap_table};")
+                   "SELECT geom FROM {gap_table} WHERE ST_AREA(geom) > {gap_area_tolerance};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
             # Report warning items.
             if cursor.rowcount > 0:
+
                 status.failed("Layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
                 status.add_full_table(sql_params["gap_warning_table"])
 
