@@ -205,4 +205,6 @@ chown -fR $appServerUserGroup $ETF_DIR
 #	set -- java -Djava.io.tmpdir=$TMPDIR $JAVA_OPTIONS "$@"
 #fi
 
+echo "127.0.0.1 inspire.ec.europa.eu" >> /etc/hosts
+
 exec "$@"

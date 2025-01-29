@@ -5,6 +5,8 @@ LABEL description="QC tool environment, worker service."
 
 ARG VERSION
 
+ARG TRAEFIK_VERSION=2.11.19
+
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
@@ -76,6 +78,15 @@ RUN mkdir -p "$JETTY_HOME"
 RUN wget https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz && \
 tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 && \
 rm /tmp/jetty.tar.gz
+
+# Install Traefik - used as a proxy to access the local registry of resources
+RUN wget -qO /tmp/traefik.tar.gz https://github.com/traefik/traefik/releases/download/v${TRAEFIK_VERSION}/traefik_v${TRAEFIK_VERSION}_linux_amd64.tar.gz \
+    && tar -xzf /tmp/traefik.tar.gz -C /usr/local/bin traefik \
+    && chmod +x /usr/local/bin/traefik \
+    && rm /tmp/traefik.tar.gz
+
+# Copy traefik config file.
+COPY traefik.yml /etc/traefik/traefik.yml
 
 # Copy supervisor config file.
 COPY ./supervisord.conf /etc

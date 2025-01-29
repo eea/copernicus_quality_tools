@@ -1,0 +1,15 @@
+entryPoints:
+  web:
+    address: ":80"
+
+http:
+  routers:
+    inspire:
+      rule: "Host(`inspire.ec.europa.eu`)"
+      service: inspire
+
+  services:
+    inspire:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8001"
