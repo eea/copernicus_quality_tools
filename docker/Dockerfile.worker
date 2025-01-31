@@ -5,8 +5,6 @@ LABEL description="QC tool environment, worker service."
 
 ARG VERSION
 
-ARG TRAEFIK_VERSION=2.11.19
-
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
@@ -61,15 +59,19 @@ RUN apt-get -y install gdal-bin python3-gdal \
     && pip3 install bottle \
     && pip3 install supervisor
 
-# Install INSPIRE validator dependencies, TODO check apache2 and squid
+# Install INSPIRE validator and squid proxy
 RUN apt-get install -y --no-install-recommends \
     openjdk-11-jre \
     curl \
     nano \
-    apache2 \
-    squid \
     tini \
+    net-tools \
+    lsof \
+    squid \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Install jetty for the INSPIRE validator
 RUN mkdir -p "$JETTY_HOME"
@@ -78,15 +80,6 @@ RUN mkdir -p "$JETTY_HOME"
 RUN wget https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz && \
 tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 && \
 rm /tmp/jetty.tar.gz
-
-# Install Traefik - used as a proxy to access the local registry of resources
-RUN wget -qO /tmp/traefik.tar.gz https://github.com/traefik/traefik/releases/download/v${TRAEFIK_VERSION}/traefik_v${TRAEFIK_VERSION}_linux_amd64.tar.gz \
-    && tar -xzf /tmp/traefik.tar.gz -C /usr/local/bin traefik \
-    && chmod +x /usr/local/bin/traefik \
-    && rm /tmp/traefik.tar.gz
-
-# Copy traefik config file.
-COPY traefik.yml /etc/traefik/traefik.yml
 
 # Copy supervisor config file.
 COPY ./supervisord.conf /etc
@@ -151,10 +144,23 @@ RUN mkdir -p /tmp/inspire-registry-resources \
 
 # Copy INSPIRE validator resources and prepare directories
 COPY res/docker-entrypoint.sh /
-COPY res/squid.conf /etc/squid/squid.conf
-COPY res/proxy_1.conf /etc/apache2/conf.d/proxy_1.conf
-COPY res/proxy_2.conf /etc/apache2/conf.d/proxy_2.conf
-COPY res/httpd.conf /etc/apache2/httpd.conf
+
+# Copy the Squid configuration, ensure correct permissions and create required directories.
+COPY res/squid_ubuntu.conf /etc/squid/squid.conf
+RUN chmod 644 /etc/squid/squid.conf
+RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
+    && cd /var/spool/squid \
+    && chown -R proxy:proxy /var/spool/squid /var/log/squid /var/run/squid \
+    && touch /var/log/squid/access.log /var/log/squid/cache.log \
+    && chown proxy:proxy /var/log/squid/*.log
+
+# Initialize Squid cache
+RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
+#COPY res/squid.conf /etc/squid/squid.conf
+#COPY res/proxy_1.conf /etc/apache2/conf.d/proxy_1.conf
+#COPY res/proxy_2.conf /etc/apache2/conf.d/proxy_2.conf
+#COPY res/httpd.conf /etc/apache2/httpd.conf
+
 #COPY ui.zip ui.zip
 #COPY $ETF_RELATIVE_URL.war /usr/local/jetty/webapps/
 RUN mkdir -p $ETF_DIR $ETF_LOG_DIR /run/tini && \
@@ -167,8 +173,5 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # Expose the port of job scheduler.
 EXPOSE 8000
-
-# Expose the port of the validator (for debugging ..)
-EXPOSE 8080
 
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]
