@@ -59,7 +59,7 @@ RUN apt-get -y install gdal-bin python3-gdal \
     && pip3 install bottle \
     && pip3 install supervisor
 
-# Install INSPIRE validator and squid proxy
+# Install INSPIRE validator, squid proxy and apache reverse proxy
 RUN apt-get install -y --no-install-recommends \
     openjdk-11-jre \
     curl \
@@ -68,10 +68,9 @@ RUN apt-get install -y --no-install-recommends \
     net-tools \
     lsof \
     squid \
+    openssl \
+    apache2 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-
-COPY nginx.conf /etc/nginx/nginx.conf
 
 # Install jetty for the INSPIRE validator
 RUN mkdir -p "$JETTY_HOME"
@@ -151,15 +150,22 @@ RUN chmod 644 /etc/squid/squid.conf
 RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
     && cd /var/spool/squid \
     && chown -R proxy:proxy /var/spool/squid /var/log/squid /var/run/squid \
+    && chmod -R 755 /var/run/squid /var/log/squid /var/spool/squid \
     && touch /var/log/squid/access.log /var/log/squid/cache.log \
     && chown proxy:proxy /var/log/squid/*.log
 
 # Initialize Squid cache
 RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
+
+# Copy the Apache configuration and enable correct Apache modules
 #COPY res/squid.conf /etc/squid/squid.conf
-#COPY res/proxy_1.conf /etc/apache2/conf.d/proxy_1.conf
+COPY res/proxy_1.conf /etc/apache2/sites-available/proxy_1.conf
+COPY res/httpd.conf /etc/apache2/httpd.conf
+RUN a2enmod proxy proxy_http ssl
+RUN a2ensite proxy_1.conf
+RUN a2dissite 000-default.conf
 #COPY res/proxy_2.conf /etc/apache2/conf.d/proxy_2.conf
-#COPY res/httpd.conf /etc/apache2/httpd.conf
+
 
 #COPY ui.zip ui.zip
 #COPY $ETF_RELATIVE_URL.war /usr/local/jetty/webapps/

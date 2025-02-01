@@ -20,42 +20,40 @@ appServerDeplPath=/usr/local/jetty/webapps
 appServerUserGroup=root:root
 
 
-
-
 wgetRcFile="/root/.wgetrc"
 touch $wgetRcFile
 echo "user=$REPO_USER" >> $wgetRcFile
 echo "password=$REPO_PWD" >> $wgetRcFile
 
-#if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]] || [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
-#  echo "use_proxy=on" >> $wgetRcFile
-#fi
+if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]] || [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
+ echo "use_proxy=on" >> $wgetRcFile
+fi
 
-# javaHttpProxyOpts=""
-# if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]]; then
-#   if [[ -n "$HTTP_PROXY_USERNAME" && "$HTTP_PROXY_USERNAME" != "none" ]]; then
-#     echo "Using HTTP proxy server $HTTP_PROXY_HOST on port $HTTP_PROXY_PORT as user $HTTP_PROXY_USERNAME"
-#     javaHttpProxyOpts="-Dhttp.proxyHost=$HTTP_PROXY_HOST -Dhttp.proxyPort=$HTTP_PROXY_PORT -Dhttp.proxyUser=$HTTP_PROXY_USERNAME -Dhttp.proxyPassword=$HTTP_PROXY_PASSWORD"
-#     echo "http_proxy=http://$HTTP_PROXY_USERNAME:$HTTP_PROXY_PASSWORD@$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> $wgetRcFile
-#   else
-#     echo "Using HTTP proxy server $HTTP_PROXY_HOST on port $HTTP_PROXY_PORT"
-#     javaHttpProxyOpts="-Dhttp.proxyHost=$HTTP_PROXY_HOST -Dhttp.proxyPort=$HTTP_PROXY_PORT"
-#     echo "http_proxy=http://$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> $wgetRcFile
-#   fi
-# fi
+javaHttpProxyOpts=""
+if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]]; then
+  if [[ -n "$HTTP_PROXY_USERNAME" && "$HTTP_PROXY_USERNAME" != "none" ]]; then
+    echo "Using HTTP proxy server $HTTP_PROXY_HOST on port $HTTP_PROXY_PORT as user $HTTP_PROXY_USERNAME"
+    javaHttpProxyOpts="-Dhttp.proxyHost=$HTTP_PROXY_HOST -Dhttp.proxyPort=$HTTP_PROXY_PORT -Dhttp.proxyUser=$HTTP_PROXY_USERNAME -Dhttp.proxyPassword=$HTTP_PROXY_PASSWORD"
+    echo "http_proxy=http://$HTTP_PROXY_USERNAME:$HTTP_PROXY_PASSWORD@$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> $wgetRcFile
+  else
+    echo "Using HTTP proxy server $HTTP_PROXY_HOST on port $HTTP_PROXY_PORT"
+    javaHttpProxyOpts="-Dhttp.proxyHost=$HTTP_PROXY_HOST -Dhttp.proxyPort=$HTTP_PROXY_PORT"
+    echo "http_proxy=http://$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> $wgetRcFile
+  fi
+fi
 
-# javaHttpsProxyOpts=""
-# if [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
-#   if [[ -n "$HTTPS_PROXY_USERNAME" && "$HTTPS_PROXY_USERNAME" != "none" ]]; then
-#     echo "Using HTTP Secure proxy server $HTTPS_PROXY_HOST on port $HTTPS_PROXY_PORT as user $HTTPS_PROXY_USERNAME"
-#     javaHttpsProxyOpts="-Dhttps.proxyHost=$HTTPS_PROXY_HOST -Dhttps.proxyPort=$HTTPS_PROXY_PORT -Dhttps.proxyUser=$HTTPS_PROXY_USERNAME -Dhttps.proxyPassword=$HTTPS_PROXY_PASSWORD"
-#     echo "https_proxy=https://$HTTPS_PROXY_USERNAME:$HTTPS_PROXY_PASSWORD@$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> $wgetRcFile
-#   else
-#     echo "Using HTTP Secure proxy server $HTTPS_PROXY_HOST on port $HTTPS_PROXY_PORT"
-#     javaHttpsProxyOpts="-Dhttps.proxyHost=$HTTPS_PROXY_HOST -Dhttps.proxyPort=$HTTPS_PROXY_PORT"
-#     echo "https_proxy=https://$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> $wgetRcFile
-#   fi
-# fi
+javaHttpsProxyOpts=""
+if [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
+  if [[ -n "$HTTPS_PROXY_USERNAME" && "$HTTPS_PROXY_USERNAME" != "none" ]]; then
+    echo "Using HTTP Secure proxy server $HTTPS_PROXY_HOST on port $HTTPS_PROXY_PORT as user $HTTPS_PROXY_USERNAME"
+    javaHttpsProxyOpts="-Dhttps.proxyHost=$HTTPS_PROXY_HOST -Dhttps.proxyPort=$HTTPS_PROXY_PORT -Dhttps.proxyUser=$HTTPS_PROXY_USERNAME -Dhttps.proxyPassword=$HTTPS_PROXY_PASSWORD"
+    echo "https_proxy=https://$HTTPS_PROXY_USERNAME:$HTTPS_PROXY_PASSWORD@$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> $wgetRcFile
+  else
+    echo "Using HTTP Secure proxy server $HTTPS_PROXY_HOST on port $HTTPS_PROXY_PORT"
+    javaHttpsProxyOpts="-Dhttps.proxyHost=$HTTPS_PROXY_HOST -Dhttps.proxyPort=$HTTPS_PROXY_PORT"
+    echo "https_proxy=https://$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> $wgetRcFile
+  fi
+fi
 
 set -x
 
