@@ -40,6 +40,7 @@ from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import compose_attachment_filepath
+from qc_tool.common import compose_job_stdout_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
 from qc_tool.common import get_job_report_filepath
@@ -1069,10 +1070,6 @@ def get_job_info(request, product_ident):
     job_report = compile_job_form_data(product_ident)
     return JsonResponse({'job_result': job_report})
 
-def get_job_report(request, job_uuid):
-    job = models.Job.objects.get(job_uuid=job_uuid)
-    job_result = compile_job_report_data(job_uuid, job.product_ident)
-    return JsonResponse(job_result, safe=False)
 
 def get_job_history_json(request, delivery_id):
     """
@@ -1148,6 +1145,22 @@ def get_pdf_report(request, job_uuid):
         response = FileResponse(open(str(filepath), "rb"), content_type="application/pdf", as_attachment=True)
     except FileNotFoundError:
         # There is no report.
+        raise Http404()
+    return response
+
+def get_job_report(request, job_uuid):
+    job = models.Job.objects.get(job_uuid=job_uuid)
+    job_result = compile_job_report_data(job_uuid, job.product_ident)
+    return JsonResponse(job_result, safe=False)
+
+def get_stdout_log(request, job_uuid):
+    filepath = compose_job_stdout_filepath(job_uuid)
+    logger.warning("Fetching stdout from {:s}".format(str(filepath)))
+
+    try:
+        response = HttpResponse(open(str(filepath), "rb"), content_type="text/plain")
+    except FileNotFoundError:
+        # There is no .stdout file.
         raise Http404()
     return response
 
