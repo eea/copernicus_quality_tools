@@ -60,7 +60,7 @@ JOB_TIME_LIMIT_HOURS = 12
 UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
 
 UPDATE_JOB_STATUSES_INTERVAL = 30000
-WORKER_ALIVE_TIMEOUT = 5
+WORKER_ALIVE_TIMEOUT = 20
 REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL = 60
 
 INSPIRE_SERVICE_URL_DEFAULT = "https://sdi.eea.europa.eu/validator/v2/"
@@ -134,6 +134,9 @@ def compose_job_dir(job_uuid):
     job_uuid = job_uuid.lower().replace("-", "")
     job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
     return job_dir
+
+def compose_job_stdout_filepath(job_uuid):
+    return CONFIG["work_dir"].joinpath(("job.{:s}.stdout").format(job_uuid))
 
 def create_job_dir(job_uuid):
     job_dir = compose_job_dir(job_uuid)
