@@ -1121,6 +1121,10 @@ def get_result(request, job_uuid):
     delivery = job.delivery
     job_report = compile_job_report_data(job_uuid, job.product_ident)
 
+    # if job status is not set in the report then try get status from the DB table (case of TIMEOUT or LOST)
+    if job_report.get("status") is None:
+        job_report["status"] = job.job_status
+
     for step in job_report["steps"]:
         # Strip initial qc_tool. from check idents.
         if step["check_ident"].startswith("qc_tool."):
@@ -1435,5 +1439,5 @@ def refresh_job_statuses():
                     if job_status != JOB_RUNNING:
                         job.update_status(job_status)
                         updated_count += 1
-        logger.info("Status of {:d} running jobs has been updated.".format(updated_count))
+        logger.info("refresh_job_statuses: Status of {:d} running jobs has been updated.".format(updated_count))
         time.sleep(int(CONFIG["refresh_job_statuses_background_interval"]))
