@@ -37,7 +37,8 @@ from qc_tool.worker.manager import create_jobdir_manager
 log = logging.getLogger(__name__)
 
 class TimedOutExc(Exception):
-    print ("The check has failed due to a timeout.")
+    pass
+    #print ("The check has failed due to a timeout.")
 
 def signal_handler(signum, frame):
     raise TimedOutExc()

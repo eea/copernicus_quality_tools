@@ -176,7 +176,7 @@ class JobController():
             log.debug("The job has stdout and stderr redirected to %s.".format(stdout_filepath))
             with open(stdout_filepath, "a") as stdout_f:
                 stdout_f.write("\n\n")
-                stdout_f.write("The job {:s} has started at {:s}+00:00.\n".format(self.job_args["job_uuid"], datetime.utcnow()))
+                stdout_f.write("The job {:s} has started at {:s}+00:00.\n".format(self.job_args["job_uuid"], datetime.utcnow().isoformat()))
                 stdout_f.write("stdout and stderr of the job is redirected to this file.\n".format(self.job_args["job_uuid"]))
                 stdout_f.write("\n")
                 stdout_f.flush()

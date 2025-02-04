@@ -40,6 +40,7 @@ from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import compose_attachment_filepath
+from qc_tool.common import compose_job_stdout_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
 from qc_tool.common import get_job_report_filepath
@@ -438,6 +439,7 @@ def deliveries(request):
 
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
+    is_test_group = request.user.groups.filter(name='test_group').exists()
 
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
@@ -445,7 +447,8 @@ def deliveries(request):
                                                          "boundary_version": get_boundary_version(),
                                                          "api_key": api_key,
                                                          "update_job_statuses": update_job_statuses,
-                                                         "update_job_statuses_interval": update_job_statuses_interval})
+                                                         "update_job_statuses_interval": update_job_statuses_interval,
+                                                         "is_test_group": is_test_group})
 
 
 @login_required
@@ -1067,10 +1070,6 @@ def get_job_info(request, product_ident):
     job_report = compile_job_form_data(product_ident)
     return JsonResponse({'job_result': job_report})
 
-def get_job_report(request, job_uuid):
-    job = models.Job.objects.get(job_uuid=job_uuid)
-    job_result = compile_job_report_data(job_uuid, job.product_ident)
-    return JsonResponse(job_result, safe=False)
 
 def get_job_history_json(request, delivery_id):
     """
@@ -1119,6 +1118,10 @@ def get_result(request, job_uuid):
     delivery = job.delivery
     job_report = compile_job_report_data(job_uuid, job.product_ident)
 
+    # if job status is not set in the report then try get status from the DB table (case of TIMEOUT or LOST)
+    if job_report.get("status") is None:
+        job_report["status"] = job.job_status
+
     for step in job_report["steps"]:
         # Strip initial qc_tool. from check idents.
         if step["check_ident"].startswith("qc_tool."):
@@ -1142,6 +1145,22 @@ def get_pdf_report(request, job_uuid):
         response = FileResponse(open(str(filepath), "rb"), content_type="application/pdf", as_attachment=True)
     except FileNotFoundError:
         # There is no report.
+        raise Http404()
+    return response
+
+def get_job_report(request, job_uuid):
+    job = models.Job.objects.get(job_uuid=job_uuid)
+    job_result = compile_job_report_data(job_uuid, job.product_ident)
+    return JsonResponse(job_result, safe=False)
+
+def get_stdout_log(request, job_uuid):
+    filepath = compose_job_stdout_filepath(job_uuid)
+    logger.warning("Fetching stdout from {:s}".format(str(filepath)))
+
+    try:
+        response = HttpResponse(open(str(filepath), "rb"), content_type="text/plain")
+    except FileNotFoundError:
+        # There is no .stdout file.
         raise Http404()
     return response
 
@@ -1433,5 +1452,5 @@ def refresh_job_statuses():
                     if job_status != JOB_RUNNING:
                         job.update_status(job_status)
                         updated_count += 1
-        logger.info("Status of {:d} running jobs has been updated.".format(updated_count))
+        logger.info("refresh_job_statuses: Status of {:d} running jobs has been updated.".format(updated_count))
         time.sleep(int(CONFIG["refresh_job_statuses_background_interval"]))
