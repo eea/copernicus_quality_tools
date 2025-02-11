@@ -7,9 +7,10 @@
 
 cp /etc/hosts /etc/squid_hosts
 echo "127.0.0.1 inspire.ec.europa.eu" >> /etc/squid_hosts
-rm -f /var/run/squid.pid
 
-#rm -rf /var/run/apache2/apache2.pid
+rm -f /var/run/squid.pid
+rm -rf /var/run/apache2/apache2.pid
+
 #service apache2 start
 #service apache2 reload
 
