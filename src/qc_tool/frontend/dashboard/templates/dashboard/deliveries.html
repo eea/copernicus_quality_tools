@@ -43,10 +43,12 @@
                                 Upload ZIP File(s)
                             </a>
                             {% else %}
+                            <span data-toggle="tooltip" data-placement="top" title="As a test user you are not allowed to upload ZIP files.">
                             <a href="{% url 'file_upload' %}" class="btn btn-primary disabled" role="button">
                                 <span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>
                                 Upload ZIP File(s)
                             </a>
+                            </span>
                             {% endif %}
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-qc-multi" onclick="" class="btn btn-success mr-10" disabled>

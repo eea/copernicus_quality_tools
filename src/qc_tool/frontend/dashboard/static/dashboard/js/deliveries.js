@@ -161,12 +161,19 @@ function toggle_select_button() {
         $("#btn-qc-multi").prop("disabled", true);
         $("#btn-delete-multi").text("Delete all selected");
         $("#btn-delete-multi").prop("disabled", true);
+        if (IS_TEST_GROUP) {
+            $("#btn-qc-multi").prop("title", "As a test user account you are not allowed to run QC.");
+            $("#btn-delete-multi").prop("title", "As a test user account you are not allowed to delete deliveries.");
+        }
     } else {
         if (IS_TEST_GROUP) {
             $("#btn-qc-multi").text("QC all selected");
             $("#btn-qc-multi").prop("disabled", true);
+            $("#btn-qc-multi").prop("title", "As a test user account you are not allowed to run QC.");
+
             $("#btn-delete-multi").text("Delete all selected");
             $("#btn-delete-multi").prop("disabled", true);
+            $("#btn-delete-multi").prop("title", "As a test user account you are not allowed to delete deliveries.");
         }
         else {
             $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
