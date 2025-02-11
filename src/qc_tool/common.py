@@ -139,6 +139,10 @@ def compose_job_dir(job_uuid):
 def compose_job_stdout_filepath(job_uuid):
     return CONFIG["work_dir"].joinpath(("job.{:s}.stdout").format(job_uuid))
 
+def compose_job_log_filepath(job_uuid):
+    job_dir = compose_job_dir(job_uuid)
+    return job_dir.joinpath("job.log")
+
 def create_job_dir(job_uuid):
     job_dir = compose_job_dir(job_uuid)
     job_dir.mkdir(parents=True)

@@ -40,6 +40,7 @@ from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import compose_attachment_filepath
+from qc_tool.common import compose_job_log_filepath
 from qc_tool.common import compose_job_stdout_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
@@ -1153,16 +1154,24 @@ def get_job_report(request, job_uuid):
     job_result = compile_job_report_data(job_uuid, job.product_ident)
     return JsonResponse(job_result, safe=False)
 
-def get_stdout_log(request, job_uuid):
-    filepath = compose_job_stdout_filepath(job_uuid)
-    logger.warning("Fetching stdout from {:s}".format(str(filepath)))
+def get_combined_job_log(request, job_uuid):
+    stdout_filepath = compose_job_stdout_filepath(job_uuid)
+    joblog_filepath = compose_job_log_filepath(job_uuid)
+
+    stdout_log_text = "Loading stdout log .."
+    joblog_log_text = "Loading job log .."
+    try:
+        stdout_log_text = stdout_filepath.read_text()
+    except FileNotFoundError:
+        stdout_log_text = "stdout log: no data."
 
     try:
-        response = HttpResponse(open(str(filepath), "rb"), content_type="text/plain")
+        joblog_log_text = joblog_filepath.read_text()
     except FileNotFoundError:
-        # There is no .stdout file.
-        raise Http404()
-    return response
+        joblog_log_text = "job log: no data."
+
+    combined_log = "STDOUT LOG:" + "\n" + stdout_log_text + "DETAILED JOB LOG:" + "\n" + joblog_log_text
+    return HttpResponse(combined_log, content_type="text/plain")
 
 @login_required
 def download_delivery_file(request, delivery_id):

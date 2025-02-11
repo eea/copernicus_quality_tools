@@ -73,9 +73,12 @@ function actionsFormatter(value, row) {
     // for example /setup_job/1234
     var btn_data = '<div class="btn-group">';
 
-    if (row.last_job_status === "waiting" || row.last_job_status === "running" || row.date_submitted) {
+    if (IS_TEST_GROUP || row.last_job_status === "waiting" || row.last_job_status === "running" || row.date_submitted) {
         // job is running --> QC button disabled, Delete button disabled
         var tooltip_message = "QC job is currently running.";
+        if (IS_TEST_GROUP) {
+            tooltip_message = "As a test user account you are not allowed to run QC.";
+        }
         if (row.is_submitted) {
             tooltip_message = "Delivery has been already submitted to EEA.";
         }
@@ -89,13 +92,13 @@ function actionsFormatter(value, row) {
         btn_data += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
         btn_data += 'title="Run quality controls for this delivery." href="/setup_job?deliveries=' + row.id + '" >QC</a>';
         if (IS_TEST_GROUP) {
-        btn_data += ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ';
-        btn_data += 'title="Cannot delete this delivery. ' + tooltip_message + '" disabled>Delete</button>';
+            btn_data += ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ';
+            btn_data += 'title="Cannot delete this delivery. ' + tooltip_message + '" disabled>Delete</button>';
         }
         else {
-        btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
-        btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
-        btn_data += 'Delete</button>';
+            btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
+            btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
+            btn_data += 'Delete</button>';
         }
     }
 
@@ -158,16 +161,25 @@ function toggle_select_button() {
         $("#btn-qc-multi").prop("disabled", true);
         $("#btn-delete-multi").text("Delete all selected");
         $("#btn-delete-multi").prop("disabled", true);
-    } else {
-        $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
-        $("#btn-qc-multi").prop("disabled", false);
         if (IS_TEST_GROUP) {
-        $("#btn-delete-multi").text("Delete all selected");
-        $("#btn-delete-multi").prop("disabled", true);
+            $("#btn-qc-multi").prop("title", "As a test user account you are not allowed to run QC.");
+            $("#btn-delete-multi").prop("title", "As a test user account you are not allowed to delete deliveries.");
+        }
+    } else {
+        if (IS_TEST_GROUP) {
+            $("#btn-qc-multi").text("QC all selected");
+            $("#btn-qc-multi").prop("disabled", true);
+            $("#btn-qc-multi").prop("title", "As a test user account you are not allowed to run QC.");
+
+            $("#btn-delete-multi").text("Delete all selected");
+            $("#btn-delete-multi").prop("disabled", true);
+            $("#btn-delete-multi").prop("title", "As a test user account you are not allowed to delete deliveries.");
         }
         else {
-        $("#btn-delete-multi").text("Delete all selected (" + numChecked + ")");
-        $("#btn-delete-multi").prop("disabled", false);
+            $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
+            $("#btn-qc-multi").prop("disabled", false);
+            $("#btn-delete-multi").text("Delete all selected (" + numChecked + ")");
+            $("#btn-delete-multi").prop("disabled", false);
         }
 
     }
