@@ -127,21 +127,23 @@ RUN cd /usr/local/src \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
 
-# Find out the latest INSPIRE validator version via GitHub API
-RUN if [ -z "$INSPIRE_VALIDATOR_VERSION" ]; then \
-        INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name); \
-    fi
+# Find out the latest INSPIRE validator version via  GitHub API
+#RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name);
+#RUN echo ${INSPIRE_VALIDATOR_VERSION}
 
 # Download and extract the INSPIRE Validator WAR file and the ui.zip file
-RUN wget --no-verbose -O /tmp/inspire-validator.zip \
+RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
+    && wget --no-verbose -O /tmp/inspire-validator.zip \
     https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip \
     && unzip -q /tmp/inspire-validator.zip -d /tmp \
     && mv /tmp/validator.war /usr/local/jetty/webapps/${ETF_RELATIVE_URL}.war \
     && mv /tmp/ui.zip ui.zip \
-    && rm -rf /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip
+    && rm -rf /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
+    && echo "$INSPIRE_VALIDATOR_VERSION" >/etc/inspire_validator_version.txt
 
 # Download the INSPIRE registry resources
-RUN mkdir -p /tmp/inspire-registry-resources \
+RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
+    && mkdir -p /tmp/inspire-registry-resources \
     && wget --no-verbose -O /tmp/inspire-registry-resources.zip \
     https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-registry-resources.zip \
     && unzip -q /tmp/inspire-registry-resources.zip -d /tmp/inspire-registry-resources \
