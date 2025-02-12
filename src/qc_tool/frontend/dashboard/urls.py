@@ -31,6 +31,7 @@ urlpatterns = [
     path("data/product_descriptions/", views.get_product_descriptions_dropdown, name="product_descriptions_dropdown"),
     path("data/report/<job_uuid>/report.json", views.get_job_report, name="job_report_json"),
     path("data/report/<job_uuid>/report.pdf", views.get_pdf_report, name="job_report_pdf"),
+    path("data/log/<job_uuid>/log.txt", views.get_combined_job_log, name="job_combined_log"),
 
     path("upload/", views.resumable_upload_page, name="file_upload"),
     path("resumable_upload/", views.resumable_upload, name="resumable_upload"),

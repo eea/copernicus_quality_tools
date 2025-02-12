@@ -40,6 +40,8 @@ from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import compose_attachment_filepath
+from qc_tool.common import compose_job_log_filepath
+from qc_tool.common import compose_job_stdout_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
 from qc_tool.common import get_job_report_filepath
@@ -1069,10 +1071,6 @@ def get_job_info(request, product_ident):
     job_report = compile_job_form_data(product_ident)
     return JsonResponse({'job_result': job_report})
 
-def get_job_report(request, job_uuid):
-    job = models.Job.objects.get(job_uuid=job_uuid)
-    job_result = compile_job_report_data(job_uuid, job.product_ident)
-    return JsonResponse(job_result, safe=False)
 
 def get_job_history_json(request, delivery_id):
     """
@@ -1121,6 +1119,10 @@ def get_result(request, job_uuid):
     delivery = job.delivery
     job_report = compile_job_report_data(job_uuid, job.product_ident)
 
+    # if job status is not set in the report then try get status from the DB table (case of TIMEOUT or LOST)
+    if job_report.get("status") is None:
+        job_report["status"] = job.job_status
+
     for step in job_report["steps"]:
         # Strip initial qc_tool. from check idents.
         if step["check_ident"].startswith("qc_tool."):
@@ -1146,6 +1148,30 @@ def get_pdf_report(request, job_uuid):
         # There is no report.
         raise Http404()
     return response
+
+def get_job_report(request, job_uuid):
+    job = models.Job.objects.get(job_uuid=job_uuid)
+    job_result = compile_job_report_data(job_uuid, job.product_ident)
+    return JsonResponse(job_result, safe=False)
+
+def get_combined_job_log(request, job_uuid):
+    stdout_filepath = compose_job_stdout_filepath(job_uuid)
+    joblog_filepath = compose_job_log_filepath(job_uuid)
+
+    stdout_log_text = "Loading stdout log .."
+    joblog_log_text = "Loading job log .."
+    try:
+        stdout_log_text = stdout_filepath.read_text()
+    except FileNotFoundError:
+        stdout_log_text = "stdout log: no data."
+
+    try:
+        joblog_log_text = joblog_filepath.read_text()
+    except FileNotFoundError:
+        joblog_log_text = "job log: no data."
+
+    combined_log = "STDOUT LOG:" + "\n" + stdout_log_text + "DETAILED JOB LOG:" + "\n" + joblog_log_text
+    return HttpResponse(combined_log, content_type="text/plain")
 
 @login_required
 def download_delivery_file(request, delivery_id):
@@ -1435,5 +1461,5 @@ def refresh_job_statuses():
                     if job_status != JOB_RUNNING:
                         job.update_status(job_status)
                         updated_count += 1
-        logger.info("Status of {:d} running jobs has been updated.".format(updated_count))
+        logger.info("refresh_job_statuses: Status of {:d} running jobs has been updated.".format(updated_count))
         time.sleep(int(CONFIG["refresh_job_statuses_background_interval"]))

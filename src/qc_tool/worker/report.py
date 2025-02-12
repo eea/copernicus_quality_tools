@@ -22,6 +22,8 @@ from qc_tool.common import JOB_ERROR
 from qc_tool.common import JOB_FAILED
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_PARTIAL
+from qc_tool.common import JOB_TIMEOUT
+from qc_tool.common import JOB_LOST
 from qc_tool.common import QCException
 from qc_tool.common import TIME_FORMAT
 from qc_tool.common import CONFIG
@@ -112,7 +114,7 @@ def generate_pdf_report(job_report_filepath, job_uuid):
         job_status = job_report["status"]
         if job_status is None:
             job_status = JOB_ERROR
-        if job_status in (JOB_ERROR, JOB_FAILED):
+        if job_status in (JOB_ERROR, JOB_FAILED, JOB_LOST, JOB_TIMEOUT):
             job_status_style = style_check_failed
         elif job_status == JOB_OK:
             job_status_style = style_check_ok

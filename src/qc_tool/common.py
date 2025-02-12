@@ -3,11 +3,10 @@
 
 import json
 import re
-import time
+import socket
 import xml.etree.ElementTree as ET
 from importlib import import_module
 from os import environ
-from os.path import normpath
 from pathlib import Path
 from shutil import copyfile
 from urllib.error import URLError
@@ -34,6 +33,8 @@ JOB_OK = "ok"
 JOB_PARTIAL = "partial"
 JOB_FAILED = "failed"
 JOB_ERROR = "error"
+JOB_TIMEOUT = "worker timeout"
+JOB_LOST = "worker lost"
 
 JOB_INPUT_DIRNAME = "input.d"
 JOB_OUTPUT_DIRNAME = "output.d"
@@ -59,7 +60,7 @@ JOB_TIME_LIMIT_HOURS = 12
 UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
 
 UPDATE_JOB_STATUSES_INTERVAL = 30000
-WORKER_ALIVE_TIMEOUT = 5
+WORKER_ALIVE_TIMEOUT = 20
 REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL = 60
 
 INSPIRE_SERVICE_URL_DEFAULT = "https://sdi.eea.europa.eu/validator/v2/"
@@ -133,6 +134,13 @@ def compose_job_dir(job_uuid):
     job_uuid = job_uuid.lower().replace("-", "")
     job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
     return job_dir
+
+def compose_job_stdout_filepath(job_uuid):
+    return CONFIG["work_dir"].joinpath(("job.{:s}.stdout").format(job_uuid))
+
+def compose_job_log_filepath(job_uuid):
+    job_dir = compose_job_dir(job_uuid)
+    return job_dir.joinpath("job.log")
 
 def create_job_dir(job_uuid):
     job_dir = compose_job_dir(job_uuid)
@@ -260,32 +268,46 @@ def compile_job_report_data(job_uuid, product_ident=None):
             job_report["steps"][i].update(job_step)
     return job_report
 
+
+def load_job_status(job_uuid):
+    try:
+        job_result = load_job_result(job_uuid)
+        job_status = job_result.get("status", JOB_ERROR)
+        if job_status is None:
+            job_status = JOB_ERROR
+    except FileNotFoundError:
+        # If the job has already finished there must be correct job result orelse there is some error.
+        # FIXME: inform logger.
+        job_status = JOB_ERROR
+    return job_status
+
+
 def check_running_job(job_uuid, worker_url, timeout):
     job_status = None
     worker_info = None
     url = urljoin(worker_url, "/jobs/{:s}.json".format(job_uuid))
     try:
-        with urlopen(url, timeout=int(timeout)) as resp:
+        with urlopen(url, timeout=float(timeout)) as resp:
             if resp.status != 200:
-                # Bad request.
-                # FIXME: inform logger about such awkward situation.
-                return JOB_ERROR
+                # Bad request or timeout.
+                # This situation might be the case of worker timeout / worker unreachable.
+                job_status = load_job_status(job_uuid)
+                if job_status == JOB_ERROR:
+                    return JOB_TIMEOUT
             worker_info = json.loads(resp.read())
+    except (TimeoutError, socket.timeout) as ex:
+        # This situation might be the case of worker timeout / worker not responding.
+        job_status = load_job_status(job_uuid)
+        if job_status == JOB_ERROR:
+            return JOB_TIMEOUT
     except URLError as ex:
         # Cannot connect to worker, maybe the job had already finished and then the worker was shutdown.
-        # FIXME: make notice to log.
-        pass
+        job_status = load_job_status(job_uuid)
+        if job_status == JOB_ERROR:
+            return JOB_LOST
     if worker_info is None:
         # The job has already finished so load status from job result.
-        try:
-            job_result = load_job_result(job_uuid)
-            job_status = job_result.get("status", JOB_ERROR)
-            if job_status is None:
-                job_status = JOB_ERROR
-        except FileNotFoundError:
-            # If the job has already finished there must be correct job result orelse there is some error.
-            # FIXME: inform logger.
-            return JOB_ERROR
+        job_status = load_job_status(job_uuid)
     return job_status
 
 
