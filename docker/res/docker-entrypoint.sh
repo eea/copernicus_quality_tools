@@ -17,19 +17,20 @@ rm -rf /var/run/apache2/apache2.pid
 # rm -rf /var/spool/squid3/*
 # service squid start
 # service squid restart
-basicArtifactoryUrl=$REPO_URL
-appServerDeplPath=/usr/local/jetty/webapps
-appServerUserGroup=root:root
+
+#basicArtifactoryUrl=$REPO_URL
+#appServerDeplPath=/usr/local/jetty/webapps
+#appServerUserGroup=root:root
 
 
-wgetRcFile="/root/.wgetrc"
-touch $wgetRcFile
-echo "user=$REPO_USER" >> $wgetRcFile
-echo "password=$REPO_PWD" >> $wgetRcFile
+#wgetRcFile="/root/.wgetrc"
+#touch $wgetRcFile
+#echo "user=$REPO_USER" >> $wgetRcFile
+#echo "password=$REPO_PWD" >> $wgetRcFile
 
-if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]] || [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
- echo "use_proxy=on" >> $wgetRcFile
-fi
+#if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]] || [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
+# echo "use_proxy=on" >> $wgetRcFile
+#fi
 
 javaHttpProxyOpts=""
 if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]]; then
@@ -150,31 +151,15 @@ mkdir -p "$ETF_DIR"/projects
 mkdir -p "$ETF_DIR"/config
 unzip -o ui.zip -d "$ETF_DIR"
 
-if [ ! -n "$ETF_RELATIVE_URL" ]; then
-    ETF_RELATIVE_URL=etf-webapp
-fi
+#if [ ! -n "$ETF_RELATIVE_URL" ]; then
+#    ETF_RELATIVE_URL=etf-webapp
+#fi
 
 # Download Webapp
-if [ ! -f "$appServerDeplPath/$ETF_RELATIVE_URL".war ]; then
-    echo "Downloading ETF. This may take a while..."
-    get de/interactive_instruments/etf/etf-webapp etf-webapp-[0-9\.]+.war "$ETF_WEBAPP_VERSION" "$appServerDeplPath/$ETF_RELATIVE_URL".war
-fi
-
-# Download Executable Test Suites
-if [[ -n "$ETF_DL_TESTPROJECTS_ZIP" && "$ETF_DL_TESTPROJECTS_ZIP" != "none" ]]; then
-  if [ "$ETF_DL_TESTPROJECTS_OVERWRITE_EXISTING" == "true" ]; then
-    rm -R "$ETF_DIR"/projects/"$ETF_DL_TESTPROJECTS_DIR_NAME"
-  fi
-  if [ -d "$ETF_DIR"/projects/"$ETF_DL_TESTPROJECTS_DIR_NAME" ]; then
-    echo "Using existing Executable Test Suites, skipping download"
-  else
-  	echo "Downloading Executable Test Suites"
-    wget -q "$ETF_DL_TESTPROJECTS_ZIP" -O projects.zip
-    mkdir -p "$ETF_DIR"/projects/"$ETF_DL_TESTPROJECTS_DIR_NAME"
-    unzip -o projects.zip -d "$ETF_DIR"/projects/"$ETF_DL_TESTPROJECTS_DIR_NAME"
-    rm master.zip
-  fi
-fi
+#if [ ! -f "$appServerDeplPath/$ETF_RELATIVE_URL".war ]; then
+#    echo "Downloading ETF. This may take a while..."
+#    get de/interactive_instruments/etf/etf-webapp etf-webapp-[0-9\.]+.war "$ETF_WEBAPP_VERSION" "$appServerDeplPath/$ETF_RELATIVE_URL".war
+#fi
 
 
 chmod 770 -R "$ETF_DIR"/td
@@ -197,15 +182,5 @@ chmod 775 "$ETF_DIR"/logs/etf.log
 
 chown -fR $appServerUserGroup $ETF_DIR
 
-#if ! command -v -- "$1" >/dev/null 2>&1 ; then
-#	set -- java -jar "$JETTY_HOME/start.jar" $javaHttpProxyOpts $javaHttpsProxyOpts "$@"
-#fi
-
-#if [ "$1" = "java" -a -n "$JAVA_OPTIONS" ] ; then
-#	shift
-#	set -- java -Djava.io.tmpdir=$TMPDIR $JAVA_OPTIONS "$@"
-#fi
-
-#echo "127.0.0.1 inspire.ec.europa.eu" >> /etc/hosts
 
 exec "$@"

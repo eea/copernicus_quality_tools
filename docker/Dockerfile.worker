@@ -4,26 +4,24 @@ LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
 
 ARG VERSION
-#ARG INSPIRE_VALIDATOR_VERSION
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
 # Set environment variables for INSPIRE validator
 ENV DEBIAN_FRONTEND=noninteractive
-#ENV INSPIRE_VALIDATOR_VERSION=2024.3
 ENV ETF_DIR=/etf
 ENV ETF_LOG_DIR=/etf/logs
-ENV ETF_RELATIVE_URL=validator
-ENV ETF_WEBAPP_VERSION=latest
-ENV ETF_TESTDRIVER_BSX_VERSION=latest
-ENV ETF_GMLGEOX_VERSION=latest
-ENV ETF_TESTDRIVER_SUI_VERSION=latest
-ENV ETF_TESTDRIVER_TE_VERSION=latest
-ENV REPO_URL=https://services.interactive-instruments.de/etfdev-af/etf-public-dev
-ENV REPO_USER=etf-public-dev
-ENV REPO_PWD=etf-public-dev
-ENV ETF_DL_TESTPROJECTS_ZIP=https://github.com/inspire-eu-validation/ets-repository/archive/v${INSPIRE_VALIDATOR_VERSION}.zip
+#ENV ETF_RELATIVE_URL=validator
+#ENV ETF_WEBAPP_VERSION=latest
+#ENV ETF_TESTDRIVER_BSX_VERSION=latest
+#ENV ETF_GMLGEOX_VERSION=latest
+#ENV ETF_TESTDRIVER_SUI_VERSION=latest
+#ENV ETF_TESTDRIVER_TE_VERSION=latest
+#ENV REPO_URL=https://services.interactive-instruments.de/etfdev-af/etf-public-dev
+#ENV REPO_USER=etf-public-dev
+#ENV REPO_PWD=etf-public-dev
+
 ENV ETF_DL_TESTPROJECTS_DIR_NAME=inspire-ets-repository
 ENV ETF_DL_TESTPROJECTS_OVERWRITE_EXISTING=true
 ENV MAX_MEM=max
@@ -39,27 +37,46 @@ ENV HTTPS_PROXY_PASSWORD=none
 ENV JETTY_VERSION=9.4.56.v20240826
 ENV JETTY_HOME=/usr/local/jetty
 
-# Build the initial environment.
+# Build the initial environment with python packages.
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get -y update \
     && apt-get -y upgrade \
-    && apt-get -y install wget unzip time gnupg2
-
-# Install python and bootstrap pip.
-RUN cd /usr/local/src \
-    && apt-get -y install python3 python3-distutils \
-    && wget --no-verbose https://bootstrap.pypa.io/get-pip.py \
-    && python3 get-pip.py
-
-# Install environment.
-RUN apt-get -y install gdal-bin python3-gdal \
-    && apt-get -y install python3-psycopg2 \
+    && apt-get install -y --no-install-recommends \
+    wget \
+    unzip \
+    time \
+    gnupg2 \
+    gdal-bin \
+    python3 \
+    python3-pip \
+    python3-gdal \
+    python3-psycopg2 \
     && pip3 install numpy \
     && pip3 install boto3 \
     && pip3 install checksumdir \
-    && pip3 install scikit-image reportlab==3.6.13 requests \
+    && pip3 install scikit-image \
+    && pip3 install requests \
+    && pip3 install reportlab==3.6.13 \
     && pip3 install bottle \
     && pip3 install supervisor
+
+
+
+# Install python and  pip.
+#RUN cd /usr/local/src \
+#    && apt-get -y install python3 python3-distutils \
+#    && wget --no-verbose https://bootstrap.pypa.io/get-pip.py \
+#    && python3 get-pip.py
+
+# Install environment.
+# RUN apt-get -y install gdal-bin python3-gdal \
+#     && apt-get -y install python3-psycopg2 \
+#     && pip install numpy \
+#     && pip install boto3 \
+#     && pip install checksumdir \
+#     && pip install scikit-image reportlab==3.6.13 requests \
+#     && pip install bottle \
+#     && pip install supervisor
 
 # Install INSPIRE validator, squid proxy and apache reverse proxy
 RUN apt-get install -y --no-install-recommends \
@@ -126,20 +143,19 @@ RUN cd /usr/local/src \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
-
-# Find out the latest INSPIRE validator version via  GitHub API
-#RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name);
-#RUN echo ${INSPIRE_VALIDATOR_VERSION}
-
 # Download and extract the INSPIRE Validator WAR file and the ui.zip file
 RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
+    && ETF_DL_TESTPROJECTS_ZIP=https://github.com/inspire-eu-validation/ets-repository/archive/v${INSPIRE_VALIDATOR_VERSION}.zip \
     && wget --no-verbose -O /tmp/inspire-validator.zip \
     https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip \
     && unzip -q /tmp/inspire-validator.zip -d /tmp \
-    && mv /tmp/validator.war /usr/local/jetty/webapps/${ETF_RELATIVE_URL}.war \
+    && mv /tmp/validator.war /usr/local/jetty/webapps/validator.war \
     && mv /tmp/ui.zip ui.zip \
-    && rm -rf /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
-    && echo "$INSPIRE_VALIDATOR_VERSION" >/etc/inspire_validator_version.txt
+    && wget -q ${ETF_DL_TESTPROJECTS_ZIP} -O projects.zip \
+    && mkdir -p ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
+    && unzip -o projects.zip -d "$ETF_DIR"/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
+    && rm -rf projects.zip /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
+    && echo ${INSPIRE_VALIDATOR_VERSION} >/etc/inspire-validator-version.txt
 
 # Download the INSPIRE registry resources
 RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
