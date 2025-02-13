@@ -12,15 +12,6 @@ ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ETF_DIR=/etf
 ENV ETF_LOG_DIR=/etf/logs
-#ENV ETF_RELATIVE_URL=validator
-#ENV ETF_WEBAPP_VERSION=latest
-#ENV ETF_TESTDRIVER_BSX_VERSION=latest
-#ENV ETF_GMLGEOX_VERSION=latest
-#ENV ETF_TESTDRIVER_SUI_VERSION=latest
-#ENV ETF_TESTDRIVER_TE_VERSION=latest
-#ENV REPO_URL=https://services.interactive-instruments.de/etfdev-af/etf-public-dev
-#ENV REPO_USER=etf-public-dev
-#ENV REPO_PWD=etf-public-dev
 
 ENV ETF_DL_TESTPROJECTS_DIR_NAME=inspire-ets-repository
 ENV ETF_DL_TESTPROJECTS_OVERWRITE_EXISTING=true
@@ -59,24 +50,6 @@ RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && pip3 install reportlab==3.6.13 \
     && pip3 install bottle \
     && pip3 install supervisor
-
-
-
-# Install python and  pip.
-#RUN cd /usr/local/src \
-#    && apt-get -y install python3 python3-distutils \
-#    && wget --no-verbose https://bootstrap.pypa.io/get-pip.py \
-#    && python3 get-pip.py
-
-# Install environment.
-# RUN apt-get -y install gdal-bin python3-gdal \
-#     && apt-get -y install python3-psycopg2 \
-#     && pip install numpy \
-#     && pip install boto3 \
-#     && pip install checksumdir \
-#     && pip install scikit-image reportlab==3.6.13 requests \
-#     && pip install bottle \
-#     && pip install supervisor
 
 # Install INSPIRE validator, squid proxy and apache reverse proxy
 RUN apt-get install -y --no-install-recommends \
@@ -167,10 +140,10 @@ RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF
     && mv /tmp/inspire-registry-resources ${ETF_DIR}/inspire-registry-resources/
 
 # Copy INSPIRE validator resources and prepare directories
-COPY res/docker-entrypoint.sh /
+COPY inspire/docker-entrypoint.sh /
 
 # Copy the Squid configuration, ensure correct permissions and create required directories.
-COPY res/squid_ubuntu.conf /etc/squid/squid.conf
+COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
 RUN chmod 644 /etc/squid/squid.conf
 RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
     && cd /var/spool/squid \
@@ -183,8 +156,8 @@ RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid 
 RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
 
 # Copy the Apache configuration and enable correct Apache modules
-COPY res/proxy_1.conf /etc/apache2/sites-available/proxy_1.conf
-COPY res/httpd.conf /etc/apache2/httpd.conf
+COPY inspire/apache_proxy.conf /etc/apache2/sites-available/proxy_1.conf
+COPY inspire/httpd.conf /etc/apache2/httpd.conf
 RUN a2enmod proxy proxy_http ssl
 RUN a2ensite proxy_1.conf
 RUN a2dissite 000-default.conf
