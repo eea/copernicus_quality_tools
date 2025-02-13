@@ -126,7 +126,7 @@ RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF
     && mv /tmp/ui.zip ui.zip \
     && wget -q ${ETF_DL_TESTPROJECTS_ZIP} -O projects.zip \
     && mkdir -p ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
-    && unzip -o projects.zip -d "$ETF_DIR"/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
+    && unzip -o projects.zip -d ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
     && rm -rf projects.zip /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
     && echo ${INSPIRE_VALIDATOR_VERSION} >/etc/inspire-validator-version.txt
 
@@ -162,7 +162,7 @@ RUN a2enmod proxy proxy_http ssl
 RUN a2ensite proxy_1.conf
 RUN a2dissite 000-default.conf
 
-#COPY ui.zip ui.zip
+# Set up directories for jetty (inspire-validator app)
 RUN mkdir -p $ETF_DIR $ETF_LOG_DIR /run/tini && \
     touch /run/tini/tini-ready
 RUN mkdir /tmp/jetty

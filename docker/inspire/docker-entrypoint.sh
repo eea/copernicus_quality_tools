@@ -18,19 +18,6 @@ rm -rf /var/run/apache2/apache2.pid
 # service squid start
 # service squid restart
 
-#basicArtifactoryUrl=$REPO_URL
-#appServerDeplPath=/usr/local/jetty/webapps
-#appServerUserGroup=root:root
-
-
-#wgetRcFile="/root/.wgetrc"
-#touch $wgetRcFile
-#echo "user=$REPO_USER" >> $wgetRcFile
-#echo "password=$REPO_PWD" >> $wgetRcFile
-
-#if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]] || [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
-# echo "use_proxy=on" >> $wgetRcFile
-#fi
 
 javaHttpProxyOpts=""
 if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]]; then
@@ -59,50 +46,6 @@ if [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
 fi
 
 set -x
-
-# $1 relative path, $2 egrep regex, $3 destination
-getLatestFromII() {
-    url=$basicArtifactoryUrl/$1
-    eex=$2
-    dest=$3
-    versionSubPath=$(wget -O- $url | grep -v "maven" | grep -o -E 'href="([^"#]+)"' | cut -d'"' -f2 | sort -V | tail -1)
-    latest=$(wget -O- $url/$versionSubPath | egrep -o $eex | sort -V | tail -1)
-    echo $latest
-    wget -q $url/$versionSubPath/$latest -O $dest
-    # TODO verifiy checksum
-    md5sum $dest
-    chown -R $appServerUserGroup $dest
-}
-
-# $1 relative path, $2 egrep regex, $version, $4 destination
-getSpecificFromII() {
-    url=$basicArtifactoryUrl/$1
-    eex=$2
-    version=$3
-    dest=$4
-    versionSubPath=$(wget -O- $url | grep -v "maven" | grep $version | grep -o -E 'href="([^"#]+)"' | cut -d'"' -f2 | sort -V | tail -1)
-    latest=$(wget -O- $url/$versionSubPath | egrep -o $eex | sort -V | tail -1)
-    wget -q $url/$versionSubPath/$latest -O $dest
-    # TODO verifiy checksum
-    md5sum $dest
-    chown -R $appServerUserGroup $dest
-}
-
-# $1 full path with artifact name and version, $2 destination
-getFrom() {
-    url=$1
-    dest=$2
-    wget -q $url -O $dest
-}
-
-#$1 relative path, $2 egrep, $3 configured value, $4 destination
-get() {
-    if [ "$3" == "latest" ]; then
-        getLatestFromII $1 $2 $4
-    else
-        getSpecificFromII $1 $2 $3 $4
-    fi
-}
 
 max_mem_kb=0
 xms_xmx=""
@@ -136,7 +79,6 @@ JAVA_OPTIONS="-server $xms_xmx $javaHttpProxyOpts $javaHttpsProxyOpts -Xdebug -X
 export JAVA_OPTIONS
 echo "Using JAVA_OPTIONS: ${JAVA_OPTIONS}"
 
-#mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport "$EFS_FILESYSTEM":/ "$ETF_DIR"
 mkdir -p "$ETF_DIR"/bak
 mkdir -p "$ETF_DIR"/td
 mkdir -p "$ETF_DIR"/logs
@@ -149,18 +91,8 @@ mkdir -p "$ETF_DIR"/ds/db/repo
 mkdir -p "$ETF_DIR"/ds/db/data
 mkdir -p "$ETF_DIR"/projects
 mkdir -p "$ETF_DIR"/config
-unzip -o ui.zip -d "$ETF_DIR"
 
-#if [ ! -n "$ETF_RELATIVE_URL" ]; then
-#    ETF_RELATIVE_URL=etf-webapp
-#fi
-
-# Download Webapp
-#if [ ! -f "$appServerDeplPath/$ETF_RELATIVE_URL".war ]; then
-#    echo "Downloading ETF. This may take a while..."
-#    get de/interactive_instruments/etf/etf-webapp etf-webapp-[0-9\.]+.war "$ETF_WEBAPP_VERSION" "$appServerDeplPath/$ETF_RELATIVE_URL".war
-#fi
-
+#unzip -o ui.zip -d "$ETF_DIR"
 
 chmod 770 -R "$ETF_DIR"/td
 
