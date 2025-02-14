@@ -156,10 +156,10 @@ RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid 
 RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
 
 # Copy the Apache configuration and enable correct Apache modules
-COPY inspire/apache_proxy.conf /etc/apache2/sites-available/proxy_1.conf
+COPY inspire/apache_proxy.conf /etc/apache2/sites-available/apache_proxy.conf
 COPY inspire/httpd.conf /etc/apache2/httpd.conf
 RUN a2enmod proxy proxy_http ssl
-RUN a2ensite proxy_1.conf
+RUN a2ensite apache_proxy.conf
 RUN a2dissite 000-default.conf
 
 # Set up directories for jetty (inspire-validator app)
