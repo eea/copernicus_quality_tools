@@ -1,3 +1,13 @@
+# --- First Stage: Build Jetty for INSPIRE validator ---
+FROM ubuntu:focal AS jetty-builder
+RUN JETTY_VERSION=9.4.56.v20240826 && JETTY_HOME=/usr/local/jetty \
+    && mkdir -p ${JETTY_HOME} \
+    && apt-get update && apt-get install -y --no-install-recommends wget unzip \
+    && wget --no-check-certificate https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz \
+    && tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 \
+    && rm /tmp/jetty.tar.gz
+
+# --- Second Stage: Build the remainder of the image ---    
 FROM ubuntu:focal
 
 LABEL author=gisat.cz
@@ -28,48 +38,26 @@ ENV HTTPS_PROXY_PASSWORD=none
 ENV JETTY_VERSION=9.4.56.v20240826
 ENV JETTY_HOME=/usr/local/jetty
 
+COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
+
 # Build the initial environment with python packages.
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get -y update \
-    && apt-get -y upgrade \
     && apt-get install -y --no-install-recommends \
-    wget \
-    unzip \
-    time \
-    gnupg2 \
-    gdal-bin \
-    python3 \
-    python3-pip \
-    python3-gdal \
-    python3-psycopg2 \
-    && pip3 install numpy \
-    && pip3 install boto3 \
-    && pip3 install checksumdir \
-    && pip3 install scikit-image \
-    && pip3 install requests \
-    && pip3 install reportlab==3.6.13 \
-    && pip3 install bottle \
-    && pip3 install supervisor
-
-# Install INSPIRE validator, squid proxy and apache reverse proxy
-RUN apt-get install -y --no-install-recommends \
-    openjdk-11-jre \
-    curl \
-    nano \
-    tini \
-    net-tools \
-    lsof \
-    squid \
-    openssl \
-    apache2 \
-    jq \
+    wget curl jq unzip time gnupg2 gdal-bin \
+    python3 python3-pip python3-gdal python3-psycopg2 \
+    openjdk-11-jre tini squid openssl apache2 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install jetty for the INSPIRE validator
-RUN mkdir -p "$JETTY_HOME"
+# Install python packages.
+RUN pip3 install --no-cache-dir \
+    numpy boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13
+
+# Install jetty for the INSPIRE validator.
+#RUN mkdir -p "$JETTY_HOME"
 
 # Download and unpack Jetty
-RUN wget https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz && \
+RUN JETTY_VERSION=9.4.56.v20240826 JETTY_HOME=/usr/local/jetty wget https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz && \
 tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 && \
 rm /tmp/jetty.tar.gz
 
@@ -107,6 +95,7 @@ RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_too
     && psql --file=/usr/local/src/init_qc_tool_db.sql \
     && /etc/init.d/postgresql stop
 USER root
+RUN rm -rf /var/lib/apt/lists/* /usr/local/src/init_qc_tool_db.sql
 
 # Install qc tool.
 RUN cd /usr/local/src \
@@ -156,10 +145,10 @@ RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid 
 RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
 
 # Copy the Apache configuration and enable correct Apache modules
-COPY inspire/apache_proxy.conf /etc/apache2/sites-available/apache_proxy.conf
+COPY inspire/apache_proxy.conf /etc/apache2/sites-available/proxy_1.conf
 COPY inspire/httpd.conf /etc/apache2/httpd.conf
 RUN a2enmod proxy proxy_http ssl
-RUN a2ensite apache_proxy.conf
+RUN a2ensite proxy_1.conf
 RUN a2dissite 000-default.conf
 
 # Set up directories for jetty (inspire-validator app)
