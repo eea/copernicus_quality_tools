@@ -130,6 +130,7 @@ RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF
 
 # Copy INSPIRE validator resources and prepare directories
 COPY inspire/docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
 
 # Copy the Squid configuration, ensure correct permissions and create required directories.
 COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
