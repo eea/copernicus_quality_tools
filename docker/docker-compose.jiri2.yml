@@ -6,12 +6,15 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - VERSION
+        - VERSION:inspire
+        - DOCKER_TAG:inspire
 
-    image: eeacms/copernicus-qctool-frontend:latest
+    image: eeacms/copernicus-qctool-frontend:inspire
     ports:
       - 8000:8000
     environment:
+      - DOCKER_TAG=inspire
+      - VERSION=inspire
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
@@ -21,23 +24,26 @@ services:
     networks:
       - qc_tool_network
     volumes:
-      - /mnt/c/gisat/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /mnt/c/gisat/qc_tool/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
-      - /mnt/c/gisat/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
-      - /mnt/c/gisat/qc_tool/qc_tool_work:/mnt/qc_tool_work
-      - /mnt/c/gisat/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
-      - /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_work:/mnt/qc_tool_work
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
+      #- /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
       args:
-        - VERSION
+        - VERSION:inspire
+        - DOCKER_TAG:inspire
 
-    image: eeacms/copernicus-qctool-worker
+    image: eeacms/copernicus-qctool-worker:inspire
     shm_size: 1gb
     environment:
+      - DOCKER_TAG=inspire
+      - VERSION=inspire
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
@@ -46,10 +52,10 @@ services:
     networks:
       - qc_tool_network
     volumes:
-      - /mnt/c/gisat/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /mnt/c/gisat/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
-      - /mnt/c/gisat/qc_tool/qc_tool_work:/mnt/qc_tool_work
-      - /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_work:/mnt/qc_tool_work
+      #- /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
 networks:
   qc_tool_network:
