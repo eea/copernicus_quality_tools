@@ -1,20 +1,15 @@
-version: '3'
-
 services:
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - VERSION:inspire
-        - DOCKER_TAG:inspire
+        - VERSION
 
     image: eeacms/copernicus-qctool-frontend:inspire
     ports:
       - 8000:8000
     environment:
-      - DOCKER_TAG=inspire
-      - VERSION=inspire
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
@@ -29,24 +24,22 @@ services:
       - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
       - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_work:/mnt/qc_tool_work
       - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
-      #- /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
       args:
-        - VERSION:inspire
-        - DOCKER_TAG:inspire
+        - VERSION
 
     image: eeacms/copernicus-qctool-worker:inspire
     shm_size: 1gb
     environment:
-      - DOCKER_TAG=inspire
-      - VERSION=inspire
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work
     networks:
@@ -55,7 +48,7 @@ services:
       - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
       - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
       - /mnt/c/users/jkadlec/gisat/qc_tool/qc_tool_work:/mnt/qc_tool_work
-      #- /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
 networks:
   qc_tool_network:

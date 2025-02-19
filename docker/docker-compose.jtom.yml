@@ -1,13 +1,10 @@
-version: '3'
-
 services:
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - VERSION:inspire
-        - DOCKER_TAG:inspire
+        - VERSION
 
     image: eeacms/copernicus-qctool-frontend:latest
     ports:
@@ -28,23 +25,22 @@ services:
       - /home/jtomicek/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
       - /home/jtomicek/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
       - /home/jtomicek/copernicus_quality_tools/qc_tool_submission:/mnt/qc_tool_submission
-      #- /home/jtomicek/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /home/jtomicek/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
       args:
-        - VERSION:inspire
-        - DOCKER_TAG:inspire
+        - VERSION
 
     image: eeacms/copernicus-qctool-worker
     shm_size: 1gb
     environment:
-      - VERSION=inspire
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
+      - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work
     networks:
@@ -53,7 +49,7 @@ services:
       - /home/jtomicek/copernicus_quality_tools/qc_tool_boundary:/mnt/qc_tool_boundary
       - /home/jtomicek/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
       - /home/jtomicek/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
-      #- /home/jtomicek/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /home/jtomicek/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
 networks:
   qc_tool_network:

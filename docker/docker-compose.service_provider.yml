@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   frontend:
     image: eeacms/copernicus-qctool-frontend:2.1.2
@@ -31,7 +29,7 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_volume/work
-      - INSPIRE_SERVICE_URL=https://sdi.eea.europa.eu/validator/v2/
+      - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
     networks:
       - qc_tool_network
     volumes:
