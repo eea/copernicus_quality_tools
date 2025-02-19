@@ -50,8 +50,9 @@ RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install python packages.
-RUN pip3 install --no-cache-dir \
-    numpy boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13
+RUN pip3 install --no-cache-dir --upgrade numpy \
+    && pip3 install --no-cache-dir \
+    boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13
 
 # Install jetty for the INSPIRE validator.
 #RUN mkdir -p "$JETTY_HOME"
