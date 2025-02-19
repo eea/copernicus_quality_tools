@@ -1,3 +1,13 @@
+# --- First Stage: Build Jetty for INSPIRE validator ---
+FROM ubuntu:focal AS jetty-builder
+RUN JETTY_VERSION=9.4.56.v20240826 && JETTY_HOME=/usr/local/jetty \
+    && mkdir -p ${JETTY_HOME} \
+    && apt-get update && apt-get install -y --no-install-recommends wget unzip \
+    && wget --no-check-certificate https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz \
+    && tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 \
+    && rm /tmp/jetty.tar.gz
+
+# --- Second Stage: Build the remainder of the image ---    
 FROM ubuntu:focal
 
 LABEL author=gisat.cz
@@ -8,27 +18,48 @@ ARG VERSION
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
 ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
-# Build the initial environment.
+# Set environment variables for INSPIRE validator
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ETF_DIR=/etf
+ENV ETF_LOG_DIR=/etf/logs
+
+ENV ETF_DL_TESTPROJECTS_DIR_NAME=inspire-ets-repository
+ENV ETF_DL_TESTPROJECTS_OVERWRITE_EXISTING=true
+ENV MAX_MEM=max
+ENV HTTP_PROXY_HOST=localhost
+ENV HTTP_PROXY_PORT=3128
+ENV HTTP_PROXY_USERNAME=none
+ENV HTTP_PROXY_PASSWORD=none
+ENV HTTPS_PROXY_HOST=none
+ENV HTTPS_PROXY_PORT=3129
+ENV HTTPS_PROXY_USERNAME=none
+ENV HTTPS_PROXY_PASSWORD=none
+# Set the Jetty version for INSPIRE validator.
+ENV JETTY_VERSION=9.4.56.v20240826
+ENV JETTY_HOME=/usr/local/jetty
+
+COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
+
+# Build the initial environment with python packages.
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get -y update \
-    && apt-get -y upgrade \
-    && apt-get -y install wget unzip time gnupg2
+    && apt-get install -y --no-install-recommends \
+    wget curl jq unzip time gnupg2 gdal-bin \
+    python3 python3-pip python3-gdal python3-psycopg2 \
+    openjdk-11-jre tini squid openssl apache2 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install python and bootstrap pip.
-RUN cd /usr/local/src \
-    && apt-get -y install python3 python3-distutils \
-    && wget --no-verbose https://bootstrap.pypa.io/get-pip.py \
-    && python3 get-pip.py
+# Install python packages.
+RUN pip3 install --no-cache-dir \
+    numpy boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13
 
-# Install environment.
-RUN apt-get -y install gdal-bin python3-gdal \
-    && apt-get -y install python3-psycopg2 \
-    && pip3 install numpy \
-    && pip3 install boto3 \
-    && pip3 install checksumdir \
-    && pip3 install scikit-image reportlab==3.6.13 requests \
-    && pip3 install bottle \
-    && pip3 install supervisor
+# Install jetty for the INSPIRE validator.
+#RUN mkdir -p "$JETTY_HOME"
+
+# Download and unpack Jetty
+RUN JETTY_VERSION=9.4.56.v20240826 JETTY_HOME=/usr/local/jetty wget https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz && \
+tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 && \
+rm /tmp/jetty.tar.gz
 
 # Copy supervisor config file.
 COPY ./supervisord.conf /etc
@@ -64,6 +95,7 @@ RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_too
     && psql --file=/usr/local/src/init_qc_tool_db.sql \
     && /etc/init.d/postgresql stop
 USER root
+RUN rm -rf /var/lib/apt/lists/* /usr/local/src/init_qc_tool_db.sql
 
 # Install qc tool.
 RUN cd /usr/local/src \
@@ -72,6 +104,65 @@ RUN cd /usr/local/src \
     && rm ./${VERSION}.zip \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
+
+# Download and extract the INSPIRE Validator WAR file and the ui.zip file
+RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
+    && ETF_DL_TESTPROJECTS_ZIP=https://github.com/inspire-eu-validation/ets-repository/archive/v${INSPIRE_VALIDATOR_VERSION}.zip \
+    && wget --no-verbose -O /tmp/inspire-validator.zip \
+    https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip \
+    && unzip -q /tmp/inspire-validator.zip -d /tmp \
+    && mv /tmp/validator.war /usr/local/jetty/webapps/validator.war \
+    && mv /tmp/ui.zip ui.zip \
+    && wget -q ${ETF_DL_TESTPROJECTS_ZIP} -O projects.zip \
+    && mkdir -p ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
+    && unzip -o projects.zip -d ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
+    && rm -rf projects.zip /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
+    && echo ${INSPIRE_VALIDATOR_VERSION} >/etc/inspire-validator-version.txt
+
+# Download the INSPIRE registry resources
+RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
+    && mkdir -p /tmp/inspire-registry-resources \
+    && wget --no-verbose -O /tmp/inspire-registry-resources.zip \
+    https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-registry-resources.zip \
+    && unzip -q /tmp/inspire-registry-resources.zip -d /tmp/inspire-registry-resources \
+    && mkdir -p ${ETF_DIR}/inspire-registry-resources \
+    && mv /tmp/inspire-registry-resources ${ETF_DIR}/inspire-registry-resources/
+
+# Copy INSPIRE validator resources and prepare directories
+COPY inspire/docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+
+# Copy the Squid configuration, ensure correct permissions and create required directories.
+COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
+RUN chmod 644 /etc/squid/squid.conf
+RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
+    && cd /var/spool/squid \
+    && chown -R proxy:proxy /var/spool/squid /var/log/squid /var/run/squid \
+    && chmod -R 755 /var/run/squid /var/log/squid /var/spool/squid \
+    && touch /var/log/squid/access.log /var/log/squid/cache.log \
+    && chown proxy:proxy /var/log/squid/*.log
+
+# Initialize Squid cache
+RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
+
+# Copy the Apache configuration and enable correct Apache modules
+COPY inspire/apache_proxy.conf /etc/apache2/sites-available/proxy_1.conf
+COPY inspire/httpd.conf /etc/apache2/httpd.conf
+RUN a2enmod proxy proxy_http ssl
+RUN a2ensite proxy_1.conf
+RUN a2dissite 000-default.conf
+
+# Set up directories for jetty (inspire-validator app)
+RUN mkdir -p $ETF_DIR $ETF_LOG_DIR /run/tini && \
+    touch /run/tini/tini-ready
+RUN mkdir /tmp/jetty
+WORKDIR /usr/local/jetty
+
+#REMEMBER the installed INSPIRE validator version and save it to a test file
+RUN echo "$INSPIRE_VALIDATOR_VERSION" >/etc/inspire_validator_version.txt
+
+# Run entrypoint for the inspire validator
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # Expose the port of job scheduler.
 EXPOSE 8000

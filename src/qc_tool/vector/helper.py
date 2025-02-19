@@ -23,13 +23,14 @@ from qc_tool.common import FAILED_ITEMS_LIMIT
 from qc_tool.common import CONFIG
 
 
-# INSPIRE_SERVICE_URL = "https://inspire.ec.europa.eu/validator/"
-# INSPIRE_SERVICE_URL = "https://sdi.eea.europa.eu/validator/v2/"
 INSPIRE_TEST_SUITE_NAME = "INSPIRE data sets and data set series interoperability metadata"
 INSPIRE_SERVER_TIMEOUT = 60
 INSPIRE_TEST_RUN_TIMEOUT = 360
 INSPIRE_POLL_INTERVAL = 40
 INSPIRE_MAX_RETRIES = 3
+INSPIRE_SERVICE_STATUS_MAX_RETRIES = 7
+INSPIRE_SERVICE_STATUS_RETRY_INTERVAL = 60
+INSPIRE_SERVICE_LOCAL_PORT = 8080
 
 PARTITION_MAX_VERTICES = 50000
 
@@ -343,6 +344,45 @@ class LayerDefsBuilder():
 class InspireServiceClient():
     """This class contains methods for communicating with the INSPIRE validator service API.
     """
+    @staticmethod
+    def is_local_validator_url(validator_url):
+        # return s true if the url is e.g localhost:8080/validator/v2
+        return str(INSPIRE_SERVICE_LOCAL_PORT) in validator_url
+
+    @staticmethod
+    def get_github_validator_version():
+        github_url = "https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest"
+        try:
+            resp_json = requests.get(github_url).json()
+            git_tag = resp_json["tag_name"]
+            # Remove the initial "v as in v2024.3 from the tag name"
+            if git_tag.startswith("v"):
+                git_tag = git_tag[1:]
+            return git_tag.strip()
+        except BaseException as e:
+            return None
+
+    def get_local_validator_version():
+        version_textfile_path = Path("/etc/inspire-validator-version.txt")
+        local_version = ""
+        if version_textfile_path.exists():
+            local_version = version_textfile_path.read_text()
+            if local_version.startswith("v"):
+                local_version = local_version[1:]
+        return local_version.strip()
+
+    @staticmethod
+    def get_service_status():
+        """
+        Verifies that the INSPIRE service API is up and running by calling /validator/v2/status endpoint.
+        :return: 200 (ok) if OK and up, 502 (service unavailable) if not up.
+        """
+        try:
+            r = requests.get(CONFIG["inspire_service_url"] + "status", timeout=1)
+            r.raise_for_status()
+            return r.status_code
+        except Exception as ex:
+            return 502 # SERVICE UNAVAILABLE
 
     @staticmethod
     def retrieve_test_suite_id():
@@ -554,8 +594,36 @@ def locate_metadata_file(layer_filepath):
 
 
 def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0):
+    # Step 0, check the service version and status. only proceed if the service is up.
+    
+
+    if InspireServiceClient.is_local_validator_url(CONFIG["inspire_service_url"]):
+        status.info("Using built-in validator at {:s}.".format(CONFIG["inspire_service_url"]))
+        local_validator_version = InspireServiceClient.get_local_validator_version()
+        github_validator_version = InspireServiceClient.get_github_validator_version()
+        if str(local_validator_version) == str(github_validator_version):
+            status.info("Installed validator version: {:s}.".format(local_validator_version))
+        else:
+            status.info("Installed validator version {:s} is not up-to date, Latest online version is {:s}.".format(
+                local_validator_version, github_validator_version
+            ))
+    else:
+         status.info("Using online validator service {:s}.".format(CONFIG["inspire_service_url"]))
+
+    for status_check_retry_no in range(0, INSPIRE_SERVICE_STATUS_MAX_RETRIES):
+        service_status = InspireServiceClient.get_service_status()
+        if service_status == 200:
+            break
+        else:
+            print(f"inspire service_status, retry {status_check_retry_no}, status={service_status}")
+            time.sleep(INSPIRE_SERVICE_STATUS_RETRY_INTERVAL) # wait for 60 seconds until next retry.
+
+    if service_status != 200:
+        error_message = f'Service {CONFIG["inspire_service_url"]} has not responded after {status_check_retry_no} retries.'
+        status.failed("Unable to validate metadata of {:s}: {:s}.".format(xml_filepath.name, error_message))
+        return
+
     # Step 1, Retrieve the predefined test suite from the service. The predefined test suite has a unique test suite ID.
-    status.info("Using validator service {:s}.".format(CONFIG["inspire_service_url"]))
     test_suite_id, test_suite_message = InspireServiceClient.retrieve_test_suite_id()
 
     if test_suite_id is None:
@@ -594,7 +662,7 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
     elif result_status == "FAILED":
         status.failed(
             "Metadata of {:s} did not pass INSPIRE validation. See report for details.".format(xml_filepath.name))
-    elif result_status == "UNDEFINED":
+    elif result_status in ["UNDEFINED"]:
         # Ocassionally the test run ends with undefined status when executed for the first time.
         # In case of undefined status, retry uploading the xml file to the service and starting a new test run.
         if retry_no < INSPIRE_MAX_RETRIES:
