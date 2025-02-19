@@ -16,7 +16,7 @@ LABEL description="QC tool environment, worker service."
 ARG VERSION
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
-ENV VERSION=${VERSION:-${DOCKER_TAG:-inspire}}
+ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
 # Set environment variables for INSPIRE validator
 ENV DEBIAN_FRONTEND=noninteractive

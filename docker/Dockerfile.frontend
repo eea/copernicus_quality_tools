@@ -9,7 +9,7 @@ LABEL description="QC tool environment, frontend service."
 ARG VERSION
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
-ENV VERSION=${VERSION:-${DOCKER_TAG:-inspire}}
+ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
 
 # Build the initial environment.
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
