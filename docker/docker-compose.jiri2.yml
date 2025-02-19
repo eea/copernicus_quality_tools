@@ -6,7 +6,7 @@ services:
       args:
         - VERSION
 
-    image: eeacms/copernicus-qctool-frontend:inspire
+    image: eeacms/copernicus-qctool-frontend:latest
     ports:
       - 8000:8000
     environment:
@@ -33,7 +33,7 @@ services:
       args:
         - VERSION
 
-    image: eeacms/copernicus-qctool-worker:inspire
+    image: eeacms/copernicus-qctool-worker:latest
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS

@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   frontend:
     build:
@@ -35,7 +33,7 @@ services:
       args:
         - VERSION
 
-    image: eeacms/copernicus-qctool-worker
+    image: eeacms/copernicus-qctool-worker:latest
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS=/usr/local/src/copernicus_quality_tools/product_definitions

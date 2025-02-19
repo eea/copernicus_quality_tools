@@ -35,7 +35,7 @@ services:
       args:
         - VERSION
 
-    image: eeacms/copernicus-qctool-worker
+    image: eeacms/copernicus-qctool-worker:latest
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS
