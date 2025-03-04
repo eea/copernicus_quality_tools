@@ -73,7 +73,7 @@
         "layers": [
           "raster"
         ],
-        "datatype": "byte"
+        "datatype": "UInt16"
       }
     },
     {

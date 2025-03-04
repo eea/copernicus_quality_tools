@@ -14,7 +14,7 @@ import osgeo.gdal as gdal
 
 REFERENCE_FILES_DIR = "/home/jtomicek/copernicus_quality_tools/qc_tool_boundary/boundaries/raster/"
 BOUNDARY_MOSAIC = "/home/jtomicek/Documents/qctool_eea39_boundary_update/eea_r_3035_20_m_copernicus-buffer_p_2012-2018_v03_r00/Boundary_EEA39_03035_020m.tif"
-RESULTS_DIR = "/home/jtomicek/Documents/qctool_eea39_boundary_update/results_dir"
+RESULTS_DIR = "/home/jtomicek/Documents/qctool_eea39_boundary_update/results"
 REFERENCE_FILES_REGEX = "^mask_eea38uk_010m_"
 
 
@@ -75,6 +75,8 @@ def main(reference_files_dir, boundary_mosaic, results_dir, reference_files_rege
     else:
         target_pixel_size_str = f"{int(target_pixel_size)}m"
 
+    print(target_pixel_size, target_pixel_size_str)
+
     # get list of reference boundary layers
     ref_boundary_layers = dir_recursive_search(reference_files_dir, regexp=reference_files_regex)
 
@@ -85,6 +87,8 @@ def main(reference_files_dir, boundary_mosaic, results_dir, reference_files_rege
         boundary_tile_extent = get_raster_extent(ref_boundary_layer)
 
         boundary_tile_code = os.path.basename(ref_boundary_layer).split("_")[-1].rstrip(".tif")
+        if str(boundary_tile_code).lower() != "eu":
+            continue
 
         result_file_path = os.path.join(results_dir, f"mask_eea38uk_{target_pixel_size_str}_{boundary_tile_code}.tif")
         if os.path.isfile(result_file_path):
