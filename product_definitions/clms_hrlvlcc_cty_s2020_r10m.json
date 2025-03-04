@@ -909,7 +909,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
-        "datatype": "byte"
+        "datatype": "UInt16"
       }
     },
     {
