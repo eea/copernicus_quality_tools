@@ -103,10 +103,13 @@ def get_qc_tool_version():
     return None
 
 def locate_product_definition(product_ident):
+    # The product ident is case insensitive.
+    # The product definition is a json file and file name is the same as the product ident.
     for product_dir in CONFIG["product_dirs"]:
-        filepath = product_dir.joinpath("{:s}.json".format(product_ident))
-        if filepath.is_file():
-            return filepath
+        product_filepaths = product_dir.glob("*.json")
+        for product_filepath in product_filepaths:
+            if product_filepath.stem.lower() == product_ident.lower():
+                return product_filepath
     raise QCException("Product definition {:s} has not been found.".format(product_ident))
 
 def load_product_definition(product_ident):
@@ -129,6 +132,17 @@ def get_product_descriptions():
                 product_description = product_definition["description"]
                 product_descriptions[product_ident] = product_description
     return product_descriptions
+
+def get_product_definitions():
+    product_definitions = []
+    # We iterate the dirs in reverse order.
+    # In case of identical product ident, the earlier product overrides the later one.
+    for product_dir in reversed(CONFIG["product_dirs"]):
+        for filepath in product_dir.iterdir():
+            if filepath.is_file() and PRODUCT_FILENAME_REGEX.match(filepath.name) is not None:
+                product_ident = filepath.stem
+                product_definitions.append(product_ident)
+    return product_definitions
 
 def compose_job_dir(job_uuid):
     job_subdir_tpl = "job_{:s}"
@@ -154,7 +168,18 @@ def copy_product_definition_to_job(job_uuid, product_ident):
     copyfile(str(src_filepath), str(dst_filepath))
 
 def load_product_definition_from_job(job_uuid, product_ident):
-    filepath = compose_job_dir(job_uuid).joinpath("{:s}.json".format(product_ident))
+    # look for the product definition in the job directory.
+    # the product definition is a json file and file name is the same as the product ident.
+    # the product ident is case insensitive.
+    job_dir = compose_job_dir(job_uuid)
+    json_filepaths = job_dir.glob("*.json")
+    for json_filepath in json_filepaths:
+        if json_filepath.stem.lower() == product_ident.lower():
+            filepath = json_filepath
+            break
+    else:
+        raise QCException("Product definition file {:s}.json has not been found in the job working directory.".format(product_ident))
+
     data = filepath.read_text()
     product_definition = json.loads(data)
     product_definition["product_ident"] = product_ident
