@@ -13,7 +13,7 @@ from traceback import format_exc
 from signal import signal, alarm, SIGALRM
 from time import time
 
-from qc_tool.common import get_qc_tool_version
+from qc_tool.common import get_qc_tool_version, validate_skip_steps
 from qc_tool.common import CONFIG
 from qc_tool.common import copy_product_definition_to_job
 from qc_tool.common import HASH_ALGORITHM
@@ -90,16 +90,6 @@ def dump_full_table(connection_manager, table_name, output_dir):
     run(args)
     return gpkg_filepath.name
 
-def validate_skip_steps(skip_steps, product_definition):
-    validated_skip_steps = set()
-    for skip_step in skip_steps:
-        if not (1 <= skip_step <= len(product_definition["steps"])):
-            raise QCException("Skip step {:d} is out of range.".format(skip_step))
-        if skip_step in validated_skip_steps:
-            raise QCException("Duplicit skip step {:d}.".format(skip_step))
-        if product_definition["steps"][skip_step - 1]["required"]:
-            raise QCException("Required step {:d} can not be skipped.".format(skip_step))
-        validated_skip_steps.add(skip_step)
 
 def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s3_params=None):
 
