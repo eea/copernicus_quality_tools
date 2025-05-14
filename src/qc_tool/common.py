@@ -119,6 +119,23 @@ def load_product_definition(product_ident):
     product_definition["product_ident"] = product_ident
     return product_definition
 
+
+def validate_skip_steps(skip_steps, product_definition):
+    validated_skip_steps = set()
+    unskippable_steps = set()
+    for skip_step in skip_steps:
+        if not (1 <= skip_step <= len(product_definition["steps"])):
+            raise QCException("Skip step {:d} is out of range.".format(skip_step))
+        if skip_step in validated_skip_steps:
+            raise QCException("Duplicit skip step {:d}.".format(skip_step))
+        if product_definition["steps"][skip_step - 1]["required"]:
+            unskippable_steps.add(skip_step)
+        validated_skip_steps.add(skip_step)
+    if len(unskippable_steps) > 0:
+        raise QCException("The following steps are required and can not be skipped: {:s}.".format(
+            ", ".join([str(s) for s in unskippable_steps])))
+
+
 def get_product_descriptions():
     product_descriptions = {}
     # We iterate the dirs in reverse order.
