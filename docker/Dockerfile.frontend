@@ -19,9 +19,7 @@ RUN echo "$VERSION" >/etc/qc_tool_version.txt \
 
 # Install python and bootstrap pip
 RUN cd /usr/local/src \
-    && apt-get -y install python3 python3-distutils \
-    && wget --no-verbose https://bootstrap.pypa.io/get-pip.py \
-    && python3 get-pip.py
+    && apt-get -y install python3 python3-pip
     
 # Install boto3 and checksumdir.
 RUN pip3 install boto3 checksumdir

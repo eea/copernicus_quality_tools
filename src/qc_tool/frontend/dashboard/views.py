@@ -34,7 +34,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 import qc_tool.frontend.dashboard.models as models
-from qc_tool.common import auth_worker
+from qc_tool.common import QCException, auth_worker, get_product_definitions, validate_skip_steps
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
@@ -304,11 +304,34 @@ def api_create_job(request):
         return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
     delivery_id = body_json.get("delivery_id")
     product_ident = body_json.get("product_ident")
-    skip_steps = body_json.get("skip_steps", None)
 
+    # Validate product ident
+    if not product_ident:
+        return JsonResponse({"status": "error", "message":"missing parameter: product_ident"}, status=400)
+
+    valid_product_idents = get_product_definitions()
+    valid_lowercase_product_idents = [prod.lower() for prod in valid_product_idents]
+    if not product_ident.lower() in valid_lowercase_product_idents:
+        return JsonResponse({"status": "error", "message": f"product_ident {product_ident} is not valid"}, status=400)
+
+    # Validate skip steps
     # Handle case when skip_steps parameter is empty string
+    product_definition_json = locate_product_definition(product_ident)
+    with open(product_definition_json, "r") as f:
+        product_definition = json.load(f)
+
+    skip_steps = body_json.get("skip_steps", None)
     if skip_steps == "":
         skip_steps = None
+
+    if skip_steps is None:
+        skip_steps_list = list()
+    else:
+        skip_steps_list = [int(i) for i in skip_steps.split(",")]
+    try:
+        validate_skip_steps(skip_steps_list, product_definition)
+    except QCException as ex:
+        return JsonResponse({"status": "error", "message": str(ex)}, status=400)
 
     # Update delivery status in the frontend database.
     try:
