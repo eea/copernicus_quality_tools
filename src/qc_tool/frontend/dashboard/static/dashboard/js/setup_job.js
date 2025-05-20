@@ -140,6 +140,21 @@ function select_all() {
 
 function create_job() {
 
+    // Validate if the user has selected a product.
+    if ($("#select_product").val() == "Select product ...") {
+        var dlg_err = BootstrapDialog.show({
+            title: "Error",
+            message: "Please select a product.",
+            buttons: [{
+                label: "OK",
+                cssClass: "btn-default",
+                action: function(dialog) {
+                    dialog.close();
+                }
+            }]
+        });
+        return;
+
     $('#modal-spinner').modal('show');
 
     // retrieve the checkboxes from tbl_check_details table.
