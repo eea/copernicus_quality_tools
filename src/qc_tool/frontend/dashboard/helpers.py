@@ -67,7 +67,10 @@ def find_product_description(product_ident):
     """
     description = "Unknown"
     product_descriptions = get_product_descriptions()
-    case_insensitive_product_ident = product_ident.lower()
+    if product_ident:
+        case_insensitive_product_ident = product_ident.lower()
+    else:
+        case_insensitive_product_ident = None
     if case_insensitive_product_ident in product_descriptions:
         description = product_descriptions[case_insensitive_product_ident]
     return description

@@ -96,6 +96,9 @@ $(document).ready(function() {
 
     $("#tbl_check_details").hide();
     var selected_product_ident = document.getElementById("preselected_product").value;
+    if (selected_product_ident == "Select product ...") {
+        selected_product_ident = "None";
+    }
     if (selected_product_ident != "None") {
         display_product_info(selected_product_ident);
         $("#tbl_check_details").show();
@@ -154,6 +157,7 @@ function create_job() {
             }]
         });
         return;
+    }
 
     $('#modal-spinner').modal('show');
 
@@ -216,4 +220,4 @@ function create_job() {
             });
         }
     });
-}
+};
