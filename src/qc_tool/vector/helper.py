@@ -601,7 +601,10 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
         status.info("Using built-in validator at {:s}.".format(CONFIG["inspire_service_url"]))
         local_validator_version = InspireServiceClient.get_local_validator_version()
         github_validator_version = InspireServiceClient.get_github_validator_version()
-        if str(local_validator_version) == str(github_validator_version):
+        if github_validator_version is None:
+            status.info("Installed validator version: {:s}.".format(local_validator_version))
+            status.info("QC TOOL was unable to check if installed version of INSPIRE validator is up-to-date!")
+        elif str(local_validator_version) == str(github_validator_version):
             status.info("Installed validator version: {:s}.".format(local_validator_version))
         else:
             status.info("Installed validator version {:s} is not up-to date, Latest online version is {:s}.".format(
