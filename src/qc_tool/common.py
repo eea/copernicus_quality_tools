@@ -143,7 +143,7 @@ def get_product_descriptions():
     for product_dir in reversed(CONFIG["product_dirs"]):
         for filepath in product_dir.iterdir():
             if PRODUCT_FILENAME_REGEX.match(filepath.name) is not None:
-                product_ident = filepath.stem
+                product_ident = filepath.stem.lower() # case insensitive
                 product_definition = filepath.read_text()
                 product_definition = json.loads(product_definition)
                 product_description = product_definition["description"]

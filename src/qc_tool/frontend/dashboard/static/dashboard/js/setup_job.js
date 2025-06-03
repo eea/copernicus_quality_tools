@@ -96,6 +96,9 @@ $(document).ready(function() {
 
     $("#tbl_check_details").hide();
     var selected_product_ident = document.getElementById("preselected_product").value;
+    if (selected_product_ident == "Select product ...") {
+        selected_product_ident = "None";
+    }
     if (selected_product_ident != "None") {
         display_product_info(selected_product_ident);
         $("#tbl_check_details").show();
@@ -139,6 +142,22 @@ function select_all() {
 
 
 function create_job() {
+
+    // Validate if the user has selected a product.
+    if ($("#select_product").val() == "Select product ...") {
+        var dlg_err = BootstrapDialog.show({
+            title: "Error",
+            message: "Please select a product.",
+            buttons: [{
+                label: "OK",
+                cssClass: "btn-default",
+                action: function(dialog) {
+                    dialog.close();
+                }
+            }]
+        });
+        return;
+    }
 
     $('#modal-spinner').modal('show');
 
@@ -201,4 +220,4 @@ function create_job() {
             });
         }
     });
-}
+};
