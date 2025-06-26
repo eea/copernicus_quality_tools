@@ -11,7 +11,7 @@
       "parameters": {
         "reference_year": "2021",
         "formats": [".gdb", ".gpkg"],
-        "layer_names": {"change": "^clms_ua_lcuc_c2018-2021_v010ha_(?P<aoi_code>[0-9a-zA-Z]{6})[0-9]{1}_[a-zA-Z]*_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"},
+        "layer_names": {"change": "^clms_ua_lcuc_c2018-2021_v010ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"},
          "aoi_codes": [
           "el001l",
           "cz009l",
