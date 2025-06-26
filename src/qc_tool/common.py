@@ -167,7 +167,13 @@ def compose_job_dir(job_uuid):
     job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
     return job_dir
 
+def format_uuid(uuid_str):
+    if len(uuid_str) == 32:
+        return f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:]}"
+    return uuid_str  # Assume it's already formatted or invalid
+
 def compose_job_stdout_filepath(job_uuid):
+    job_uuid = format_uuid(job_uuid)
     return CONFIG["work_dir"].joinpath(("job.{:s}.stdout").format(job_uuid))
 
 def compose_job_log_filepath(job_uuid):
