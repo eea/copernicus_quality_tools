@@ -770,7 +770,7 @@
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "boundary_ua2018_eea38.gpkg"
+        "boundary_source": "boundary_ua2018_eea38_revised.gpkg"
       }
     },
     {
