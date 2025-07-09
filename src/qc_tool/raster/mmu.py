@@ -275,12 +275,16 @@ def run_check(params, status):
     # The optional 'check_neighbours' parameter indicates whether to check MMU rules also on raster borders using neighbouring tiles.
     # If 'check_neighbours' parameter is True, then also 'boundary_source' optional parameter has to be set.
     check_neighbours = params.get("check_neighbours", False)
+    s3_info = params.get("s3", False)
     if check_neighbours:
         if "boundary_source" in params:
             boundary_source = params["boundary_source"]
         else:
             status.aborted("If the optional parameter 'check_neighbours' is turned on, "
                           "the optional parameter 'boundary_source' must also be set.")
+            return
+        if not s3_info:
+            status.failed("The MMU check for this product requires access to neighboring tiles and is therefore only applicable for S3 deliveries.")
             return
 
         # find absolute path to the boundary source file
@@ -305,7 +309,6 @@ def run_check(params, status):
         if not neighbouring_tiles_aoi_codes:
             status.info("Tile {aoi} does not have any neighbouring tiles specified in {bs}".format(
                 aoi=params.get("aoi_code"), bs=str(boundary_source)))
-
         for neighbouring_tile_aoi_code in neighbouring_tiles_aoi_codes:
 
             key_prefix = params["s3"]["key_prefix"].replace(params["aoi_code"].upper(), neighbouring_tile_aoi_code.upper()) # TODO: osetrit lower/upper case nejak obecne!!!
