@@ -1,0 +1,167 @@
+{
+  "description": "HRL Dominant Leaf Type Change 2024 (20m): DOM-GP",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": 1
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": 1,
+      "parameters": {
+        "layer_names": {
+          "raster": "^clms_hrlvlcc_dltc_c2021-2024_r20m_(gp|GP)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}"
+        },
+        "epsg_codes": [
+          "32620"
+        ],
+        "extensions": [
+          ".tif"
+        ],
+        "reference_year": "2024"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.attribute",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "attribute_regexes": [
+          "value",
+          "count",
+          "area_km2",
+          "area_perc",
+          "class_name"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "epsg": 32620
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "pixelsize": 20
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "compression": [
+          "LZW"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "validcodes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          10,
+          12,
+          255
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.tile",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "max_blocksize": 1024
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.color",
+      "required": 0,
+      "parameters": {
+        "layers": [
+          "raster"
+        ],
+        "colors": {
+          "0": [
+            255,
+            255,
+            255
+          ],
+          "1": [
+            20,
+            255,
+            20
+          ],
+          "2": [
+            0,
+            150,
+            0
+          ],
+          "3": [
+            255,
+            0,
+            0
+          ],
+          "4": [
+            255,
+            128,
+            0
+          ],
+          "10": [
+            191,
+            191,
+            191
+          ],
+          "255": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  ]
+}
