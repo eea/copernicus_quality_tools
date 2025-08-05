@@ -29,7 +29,6 @@ def run_check(params, status):
     raster_cell_area = abs(raster_geotransform[1] * raster_geotransform[5])
     raster_area_sum = float(raster_area_pixel_count) * float(raster_cell_area)
 
-
     # Vector layer - total area of compared features
     vector_layer_alias = params["vector_layer"]
     vector_layer_def = params["layer_defs"][vector_layer_alias]
@@ -48,7 +47,13 @@ def run_check(params, status):
     cursor.execute(sql, (params["vector_codes"],))
 
     # Get result area sum
-    vector_area_sum = float(cursor.fetchone()[0])
+    vector_area_sum = cursor.fetchone()[0]
+
+    if vector_area_sum is None and raster_area_sum == 0:
+        status.info("There is no valid vector feature and area sum of raster layer is 0.")
+        return
+
+    vector_area_sum = float(vector_area_sum)
 
     # Comparison of vector_area_sum and raster_area_sum
     area_difference = ((raster_area_sum - vector_area_sum) / vector_area_sum) * 100.0
