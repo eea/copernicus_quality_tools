@@ -34,6 +34,8 @@ INSPIRE_SERVICE_LOCAL_PORT = 8080
 
 PARTITION_MAX_VERTICES = 50000
 
+NEIGHBOUR_LENGTH_TOLERANCE = 0.001  # tolerance for neighbour when two points are considered as the same point.
+
 
 log = logging.getLogger(__name__)
 
@@ -1069,6 +1071,7 @@ class NeighbourTable():
     def __init__(self, partitioned_layer):
         self.partitioned_layer = partitioned_layer
         self.neighbour_table_name = "neighbour_{:s}".format(partitioned_layer.pg_layer_name)
+        self.neighbour_length_tolerance = NEIGHBOUR_LENGTH_TOLERANCE
 
     @property
     def connection(self):
@@ -1081,6 +1084,7 @@ class NeighbourTable():
                    " (fida integer NOT NULL,\n"
                    "  fidb integer NOT NULL,\n"
                    "  dim smallint NOT NULL,\n"
+                   "  geom geometry NOT NULL,\n"
                    " PRIMARY KEY (fida, fidb));")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
@@ -1093,7 +1097,8 @@ class NeighbourTable():
 
     def _fill(self):
         sql_params = {"feature_table_name": self.partitioned_layer.feature_table_name,
-                      "neighbour_table_name": self.neighbour_table_name}
+                      "neighbour_table_name": self.neighbour_table_name,
+                      "neighbour_length_tolerance": self.neighbour_length_tolerance}
         with self.connection.cursor() as cursor:
             # Insert neighbouring pairs.
             sql = ("WITH\n"
@@ -1106,18 +1111,18 @@ class NeighbourTable():
                    "   INNER JOIN {feature_table_name} AS tb ON ta.geom && tb.geom\n"
                    "   WHERE\n"
                    "    ta.fid < tb.fid)\n"
-                   "INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
-                   "SELECT fida, fidb, max(ST_Dimension(geom)) AS dim\n"
+                   "INSERT INTO {neighbour_table_name} (fida, fidb, dim, geom)\n"
+                   "SELECT fida, fidb, max(ST_Dimension(geom)) AS dim, geom\n"
                    "FROM intersections\n"
                    "WHERE NOT ST_IsEmpty(geom)\n"
-                   "GROUP BY fida, fidb\n"
-                   "HAVING max(ST_Dimension(geom)) >= 1;")
+                   "GROUP BY fida, fidb, geom\n"
+                   "HAVING max(ST_Dimension(geom)) >= 1 AND ST_Length(geom) > {neighbour_length_tolerance};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
             # Insert inverted pairs.
-            sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
-                   "SELECT fidb, fida, dim\n"
+            sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim, geom)\n"
+                   "SELECT fidb, fida, dim, geom\n"
                    "FROM {neighbour_table_name};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
