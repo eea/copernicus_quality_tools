@@ -34,6 +34,8 @@ INSPIRE_SERVICE_LOCAL_PORT = 8080
 
 PARTITION_MAX_VERTICES = 50000
 
+NEIGHBOUR_LENGTH_TOLERANCE = 0.001  # tolerance for neighbour when two points are considered as the same point.
+
 
 log = logging.getLogger(__name__)
 
@@ -1069,6 +1071,7 @@ class NeighbourTable():
     def __init__(self, partitioned_layer):
         self.partitioned_layer = partitioned_layer
         self.neighbour_table_name = "neighbour_{:s}".format(partitioned_layer.pg_layer_name)
+        self.neighbour_length_tolerance = NEIGHBOUR_LENGTH_TOLERANCE
 
     @property
     def connection(self):
@@ -1093,7 +1096,8 @@ class NeighbourTable():
 
     def _fill(self):
         sql_params = {"feature_table_name": self.partitioned_layer.feature_table_name,
-                      "neighbour_table_name": self.neighbour_table_name}
+                      "neighbour_table_name": self.neighbour_table_name,
+                      "neighbour_length_tolerance": self.neighbour_length_tolerance}
         with self.connection.cursor() as cursor:
             # Insert neighbouring pairs.
             sql = ("WITH\n"
@@ -1111,7 +1115,7 @@ class NeighbourTable():
                    "FROM intersections\n"
                    "WHERE NOT ST_IsEmpty(geom)\n"
                    "GROUP BY fida, fidb\n"
-                   "HAVING max(ST_Dimension(geom)) >= 1;")
+                   "HAVING max(ST_Dimension(geom)) >= 1 AND max(ST_Length(geom)) > {neighbour_length_tolerance};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
