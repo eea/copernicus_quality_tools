@@ -1,5 +1,5 @@
 # --- First Stage: Build Jetty for INSPIRE validator ---
-FROM ubuntu:focal AS jetty-builder
+FROM ubuntu:jammy AS jetty-builder
 RUN JETTY_VERSION=9.4.56.v20240826 && JETTY_HOME=/usr/local/jetty \
     && mkdir -p ${JETTY_HOME} \
     && apt-get update && apt-get install -y --no-install-recommends wget unzip \
@@ -8,7 +8,7 @@ RUN JETTY_VERSION=9.4.56.v20240826 && JETTY_HOME=/usr/local/jetty \
     && rm /tmp/jetty.tar.gz
 
 # --- Second Stage: Build the remainder of the image ---    
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
@@ -71,7 +71,7 @@ EXPOSE 9001
 # Install postgresql version 14 & postgis version 3.
 #
 # Create the file postgresql apt repository configuration.
-RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt focal-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt jammy-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 
 # Import the repository signing key:
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
