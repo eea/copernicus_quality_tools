@@ -1,7 +1,7 @@
 # Dockerfile for building web console.
 # It utilizes django.
 
-FROM ubuntu:jammy
+FROM ubuntu:focal
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, frontend service."
