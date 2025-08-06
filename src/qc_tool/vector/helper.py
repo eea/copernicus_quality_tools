@@ -1084,7 +1084,6 @@ class NeighbourTable():
                    " (fida integer NOT NULL,\n"
                    "  fidb integer NOT NULL,\n"
                    "  dim smallint NOT NULL,\n"
-                   "  geom geometry NOT NULL,\n"
                    " PRIMARY KEY (fida, fidb));")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
@@ -1111,18 +1110,18 @@ class NeighbourTable():
                    "   INNER JOIN {feature_table_name} AS tb ON ta.geom && tb.geom\n"
                    "   WHERE\n"
                    "    ta.fid < tb.fid)\n"
-                   "INSERT INTO {neighbour_table_name} (fida, fidb, dim, geom)\n"
-                   "SELECT fida, fidb, max(ST_Dimension(geom)) AS dim, geom\n"
+                   "INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
+                   "SELECT fida, fidb, max(ST_Dimension(geom)) AS dim\n"
                    "FROM intersections\n"
                    "WHERE NOT ST_IsEmpty(geom)\n"
-                   "GROUP BY fida, fidb, geom\n"
-                   "HAVING max(ST_Dimension(geom)) >= 1 AND ST_Length(geom) > {neighbour_length_tolerance};")
+                   "GROUP BY fida, fidb\n"
+                   "HAVING max(ST_Dimension(geom)) >= 1 AND max(ST_Length(geom)) > {neighbour_length_tolerance};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
             # Insert inverted pairs.
-            sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim, geom)\n"
-                   "SELECT fidb, fida, dim, geom\n"
+            sql = ("INSERT INTO {neighbour_table_name} (fida, fidb, dim)\n"
+                   "SELECT fidb, fida, dim\n"
                    "FROM {neighbour_table_name};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
