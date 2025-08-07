@@ -27,6 +27,17 @@ def run_check(params, status):
     for layer_def in do_layers(params):
         log.debug("Started overlap check for the layer {:s}.".format(layer_def["pg_layer_name"]))
 
+        # Check for number of polygons in vector layer
+        cursor = params["connection_manager"].get_connection().cursor()
+        sql_params = {"layer_name": layer_def["pg_layer_name"]}
+        sql = "SELECT EXISTS (SELECT 1 FROM {layer_name});"
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+        any_polygon_in_vector = cursor.fetchone()[0]
+        if not any_polygon_in_vector:
+            status.info("There is no polygon to check in the vector layer.")
+            return
+
         # Prepare support data.
         partitioned_layer = PartitionedLayer(cursor.connection, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
         neighbour_table = NeighbourTable(partitioned_layer)
