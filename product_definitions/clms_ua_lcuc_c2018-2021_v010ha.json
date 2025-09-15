@@ -10,9 +10,14 @@
       "required": true,
       "parameters": {
         "reference_year": "2021",
-        "formats": [".gdb", ".gpkg"],
-        "layer_names": {"change": "^clms_ua_lcuc_c2018-2021_v010ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"},
-         "aoi_codes": [
+        "formats": [
+          ".gdb",
+          ".gpkg"
+        ],
+        "layer_names": {
+          "change": "^clms_ua_lcuc_c2018-2021_v010ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
+        },
+        "aoi_codes": [
           "el001l",
           "cz009l",
           "cz018l",
@@ -755,7 +760,79 @@
           "tr077l",
           "de537l",
           "de537l",
-          "de004l"
+          "de004l",
+          "be012l",
+          "be013l",
+          "be014l",
+          "be015l",
+          "ch012l",
+          "cy002l",
+          "de080l",
+          "de104l",
+          "de123l",
+          "el010l",
+          "el011l",
+          "el012l",
+          "el013l",
+          "el014l",
+          "es036l",
+          "es042l",
+          "es045l",
+          "es049l",
+          "es051l",
+          "es056l",
+          "es058l",
+          "es086l",
+          "fr070l",
+          "fr072l",
+          "fr078l",
+          "uk001l",
+          "uk002l",
+          "uk003l",
+          "uk004l",
+          "uk006l",
+          "uk007l",
+          "uk008l",
+          "uk009l",
+          "uk010l",
+          "uk011l",
+          "uk012l",
+          "uk013l",
+          "uk014l",
+          "uk016l",
+          "uk017l",
+          "uk018l",
+          "uk019l",
+          "uk023l",
+          "uk024l",
+          "uk025l",
+          "uk026l",
+          "uk027l",
+          "uk029l",
+          "uk033l",
+          "uk050l",
+          "uk056l",
+          "uk515l",
+          "uk516l",
+          "uk517l",
+          "uk518l",
+          "uk520l",
+          "uk528l",
+          "uk539l",
+          "uk546l",
+          "uk550l",
+          "uk551l",
+          "uk552l",
+          "uk553l",
+          "uk557l",
+          "uk558l",
+          "uk559l",
+          "uk560l",
+          "uk562l",
+          "uk566l",
+          "uk568l",
+          "uk569l",
+          "uk571l"
         ],
         "epsg_codes": [
           "03035"
@@ -771,27 +848,36 @@
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
-        "layers": ["change"],
-        "required": {"country": "string",
-                     "fua_name": "string",
-                     "fua_code": "string",
-                     "code_2018": "string",
-                     "class_2018": "string",
-                     "code_2021": "string",
-                     "class_2021": "string",
-                     "prod_date": "string",
-                     "identifier": "string",
-                     "comment": "string",
-                     "perimeter": "real",
-                     "area": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "layers": [
+          "change"
+        ],
+        "required": {
+          "country": "string",
+          "fua_name": "string",
+          "fua_code": "string",
+          "code_2018": "string",
+          "class_2018": "string",
+          "code_2021": "string",
+          "class_2021": "string",
+          "prod_date": "string",
+          "identifier": "string",
+          "comment": "string",
+          "perimeter": "real",
+          "area": "real"
+        },
+        "ignored": [
+          "shape_area",
+          "shape_length"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "change"
+        ],
         "epsg": 3035,
         "auto_identify_epsg": true
       }
@@ -804,47 +890,111 @@
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "change"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
-        "layers": ["change"],
-        "unique_keys": ["identifier"]
+        "layers": [
+          "change"
+        ],
+        "unique_keys": [
+          "identifier"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
-        "layers": ["change"],
-        "column_defs": [["code_2018", ["11100", "11210", "11220", "11230", "11240", "11300",
-                                       "12100", "12210", "12220", "12230", "12300", "12400",
-                                       "13100", "13300", "13400",
-                                       "14100", "14200",
-                                       "21000", "22000", "23000", "24000", "25000",
-                                       "31000", "32000", "33000",
-                                       "40000",
-                                       "50000",
-                                       "91000", "92000"]],
-                        ["code_2021", ["11100", "11210", "11220", "11230", "11240", "11300",
-                                       "12100", "12210", "12220", "12230", "12300", "12400",
-                                       "13100", "13300", "13400",
-                                       "14110", "14120", "14130", "14200",
-                                       "21000", "22000", "23000", "24000", "25000",
-                                       "31000", "32000", "33000",
-                                       "40000",
-                                       "50000",
-                                       "91000", "92000"]]]
+        "layers": [
+          "change"
+        ],
+        "column_defs": [
+          [
+            "code_2018",
+            [
+              "11100",
+              "11210",
+              "11220",
+              "11230",
+              "11240",
+              "11300",
+              "12100",
+              "12210",
+              "12220",
+              "12230",
+              "12300",
+              "12400",
+              "13100",
+              "13300",
+              "13400",
+              "14100",
+              "14200",
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000",
+              "91000",
+              "92000"
+            ]
+          ],
+          [
+            "code_2021",
+            [
+              "11100",
+              "11210",
+              "11220",
+              "11230",
+              "11240",
+              "11300",
+              "12100",
+              "12210",
+              "12220",
+              "12230",
+              "12300",
+              "12400",
+              "13100",
+              "13300",
+              "13400",
+              "14110",
+              "14120",
+              "14130",
+              "14200",
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000",
+              "91000",
+              "92000"
+            ]
+          ]
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.change",
       "required": false,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "change"
+        ],
         "initial_code_column_name": "code_2018",
         "final_code_column_name": "code_2021"
       }
@@ -853,49 +1003,251 @@
       "check_ident": "qc_tool.vector.non_probable",
       "required": false,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "change"
+        ],
         "initial_code_column_name": "code_2018",
         "final_code_column_name": "code_2021",
-        "changes": [["11100", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11210", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11230", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11240", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["11300", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12100", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12210", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12220",                                              ["31000", "32000", "33000", "40000", "50000"]],
-                    ["12230",                                              ["31000", "32000", "33000", "40000", "50000"]],
-                    ["12300", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["12400", ["21000", "22000", "23000", "24000", "25000", "31000", "32000", "33000", "40000", "50000"]],
-                    ["21000",                                                                         ["40000", "50000"]],
-                    ["22000",                                                                         ["40000", "50000"]],
-                    ["23000",                                                                         ["40000", "50000"]],
-                    ["24000",                                                                         ["40000", "50000"]],
-                    ["25000",                                                                         ["40000", "50000"]],
-                    ["31000",                                                                         ["40000", "50000"]],
-                    ["32000",                                                                         ["40000", "50000"]],
-                    ["33000",                                                                         ["40000", "50000"]]]
+        "changes": [
+          [
+            "11100",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "11210",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "11230",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "11240",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "11300",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "12100",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "12210",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "12220",
+            [
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "12230",
+            [
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "12300",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "12400",
+            [
+              "21000",
+              "22000",
+              "23000",
+              "24000",
+              "25000",
+              "31000",
+              "32000",
+              "33000",
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "21000",
+            [
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "22000",
+            [
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "23000",
+            [
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "24000",
+            [
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "25000",
+            [
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "31000",
+            [
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "32000",
+            [
+              "40000",
+              "50000"
+            ]
+          ],
+          [
+            "33000",
+            [
+              "40000",
+              "50000"
+            ]
+          ]
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "change"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "change"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.area",
       "required": false,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "change"
+        ],
         "area_column_name": "area",
         "unit": 1,
         "tolerance": 0.5
@@ -905,38 +1257,57 @@
       "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
-        "layers": ["change"],
+        "layers": [
+          "change"
+        ],
         "complex_change": null,
-        "general_where": [" (layer.code_2021 LIKE '1%' AND layer.area >= 1000)",
-                          "OR",
-                          " (layer.code_2021 SIMILAR TO '[2-5]%' AND layer.area >= 2500)"],
-        "exception_where": [" layer.code_2018 LIKE '122%'",
-                            "OR",
-                            " layer.code_2021 LIKE '122%'",
-                            "OR",
-                            " (layer.comment IS NOT NULL",
-                            "  AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',",
-                            "                                       'Area size exception (inside Urban Atlas FUA boundary)']))"],
-        "warning_where": ["FALSE"]
+        "general_where": [
+          " (layer.code_2021 LIKE '1%' AND layer.area >= 1000)",
+          "OR",
+          " (layer.code_2021 SIMILAR TO '[2-5]%' AND layer.area >= 2500)"
+        ],
+        "exception_where": [
+          " layer.code_2018 LIKE '122%'",
+          "OR",
+          " layer.code_2021 LIKE '122%'",
+          "OR",
+          " (layer.comment IS NOT NULL",
+          "  AND has_comment(layer.comment, ARRAY['Area size exception (at Urban Atlas FUA boundary)',",
+          "                                       'Area size exception (inside Urban Atlas FUA boundary)']))"
+        ],
+        "warning_where": [
+          "FALSE"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["change"]
+        "layers": [
+          "change"
+        ]
       }
     },
     {
       "check_ident": "qc_tool.vector.neighbour",
       "required": false,
       "parameters": {
-        "layers": ["change"],
-        "code_column_names": ["code_2018", "code_2021"],
-        "exception_where": ["FALSE"],
-        "error_where": [" layer.code_2018 NOT LIKE '122%'",
-                        "AND",
-                        " layer.code_2021 NOT LIKE '122%'"]
+        "layers": [
+          "change"
+        ],
+        "code_column_names": [
+          "code_2018",
+          "code_2021"
+        ],
+        "exception_where": [
+          "FALSE"
+        ],
+        "error_where": [
+          " layer.code_2018 NOT LIKE '122%'",
+          "AND",
+          " layer.code_2021 NOT LIKE '122%'"
+        ]
       }
     }
   ]
