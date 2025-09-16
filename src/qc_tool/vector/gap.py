@@ -51,7 +51,8 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"gap_table": gap_table.gap_table_name,
                       "gap_warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "gap_area_tolerance": str(GAP_AREA_TOLERANCE)}
+                      "gap_area_tolerance": str(GAP_AREA_TOLERANCE),
+                      "gap_width_tolerance": str(GAP_WIDTH_TOLERANCE)}
         with params["connection_manager"].get_connection().cursor() as cursor:
             # Create table of warning items.
             sql = ("CREATE TABLE {gap_warning_table} AS\n"
@@ -60,7 +61,7 @@ def run_check(params, status):
                    "AND (\n"
                    "  ST_XMAX(geom) - ST_XMIN(geom) > {gap_width_tolerance}\n"
                    "  AND ST_YMAX(geom) - ST_YMIN(geom) > {gap_width_tolerance}\n"
-                   ")")
+                   ");")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
