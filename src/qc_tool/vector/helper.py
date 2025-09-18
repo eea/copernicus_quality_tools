@@ -1314,12 +1314,13 @@ class MarginalProperty():
                       "exterior_table": self.exterior_table.exterior_table_name}
         with self.connection.cursor() as cursor:
             sql = ("UPDATE {meta_table} AS meta\n"
-                   "SET is_marginal = EXISTS (SELECT\n"
-                   "                          FROM {feature_table} AS f\n"
-                   "                          INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
-                   "                          WHERE\n"
-                   "                           f.fid = meta.fid\n"
-                   "                           AND ST_Dimension(ST_Intersection(f.geom, e.geom)) >= 1);")
+                "SET is_marginal = EXISTS (\n"
+                "    SELECT 1\n"
+                "    FROM {feature_table} AS f\n"
+                "    INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
+                "    WHERE f.fid = meta.fid\n"
+                "      AND ST_Relate(f.geom, e.geom, 'T********')\n"
+                ");")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
@@ -1575,13 +1576,14 @@ class GapTable():
                       "interior_table": self.interior_table.interior_table_name}
         sql_execute_params = {"partition_id": partition_id}
         with self.connection.cursor() as cursor:
+
             sql = ("WITH\n"
                    " par AS (SELECT geom\n"
                    "         FROM {interior_table}\n"
                    "         WHERE partition_id = %(partition_id)s),\n"
                    " sub AS (SELECT\n"
                    "          gt.fid AS orig_fid,\n"
-                   "          ST_Difference(gt.geom, par.geom) AS sgeom\n"
+                   "          ST_Difference(ST_Buffer(gt.geom, 0), ST_Buffer(par.geom, 0)) AS sgeom\n"
                    "         FROM\n"
                    "          {gap_table} AS gt\n"
                    "          INNER JOIN par ON gt.geom && par.geom),\n"
@@ -1590,6 +1592,43 @@ class GapTable():
                    "         FROM sub)\n"
                    "DELETE FROM {gap_table}\n"
                    "WHERE fid IN (SELECT orig_fid FROM sub);")
+
+            # more complex sql, to handle exceptional cases of invalid geometries introduced by partitioning.
+            sql = """
+WITH
+ par AS (
+   SELECT ST_MakeValid(ST_SnapToGrid(geom, 0.000001)) AS geom
+   FROM {interior_table}
+   WHERE partition_id = %(partition_id)s
+ ),
+ gt_valid AS (
+   SELECT fid, ST_MakeValid(ST_SnapToGrid(geom, 0.000001)) AS geom
+   FROM {gap_table}
+   WHERE ST_IsValid(geom) OR geom IS NOT NULL
+ ),
+ sub AS (
+   SELECT
+     gt_valid.fid AS orig_fid,
+     ST_CollectionExtract(
+       ST_MakeValid(
+         ST_Difference(gt_valid.geom, par.geom)
+       ),
+       3
+     ) AS sgeom
+   FROM gt_valid
+   INNER JOIN par ON gt_valid.geom && par.geom
+   WHERE NOT ST_IsEmpty(gt_valid.geom)
+ ),
+ ins AS (
+   INSERT INTO {gap_table} (geom)
+   SELECT polygon_dump(sgeom)
+   FROM sub
+   WHERE NOT ST_IsEmpty(sgeom)
+ )
+DELETE FROM {gap_table}
+WHERE fid IN (SELECT orig_fid FROM sub);
+"""
+            
             sql = sql.format(**sql_params)
             cursor.execute(sql, sql_execute_params)
             return cursor.rowcount
