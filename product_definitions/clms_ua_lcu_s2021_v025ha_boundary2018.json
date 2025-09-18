@@ -18,6 +18,9 @@
           "reference": "^clms_ua_lcu_s2021_v025ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
         },
         "aoi_codes": [
+          "de080l",
+          "de104l",
+          "de123l",
           "el001l",
           "cz009l",
           "cz018l",
