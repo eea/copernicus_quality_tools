@@ -1314,12 +1314,13 @@ class MarginalProperty():
                       "exterior_table": self.exterior_table.exterior_table_name}
         with self.connection.cursor() as cursor:
             sql = ("UPDATE {meta_table} AS meta\n"
-                   "SET is_marginal = EXISTS (SELECT\n"
-                   "                          FROM {feature_table} AS f\n"
-                   "                          INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
-                   "                          WHERE\n"
-                   "                           f.fid = meta.fid\n"
-                   "                           AND ST_Dimension(ST_Intersection(f.geom, e.geom)) >= 1);")
+                "SET is_marginal = EXISTS (\n"
+                "    SELECT 1\n"
+                "    FROM {feature_table} AS f\n"
+                "    INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
+                "    WHERE f.fid = meta.fid\n"
+                "      AND ST_Relate(f.geom, e.geom, 'T********')\n"
+                ");")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
