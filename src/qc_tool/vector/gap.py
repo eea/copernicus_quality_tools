@@ -9,7 +9,7 @@ DESCRIPTION = "There is no gap in the AOI."
 IS_SYSTEM = False
 TOLERANCE = 0.01
 GAP_AREA_TOLERANCE = 0.000001
-GAP_WIDTH_TOLERANCE = 0.000001 # 0.001 mm
+GAP_WIDTH_TOLERANCE = 0.00001 # 0.001 mm
 
 
 log = logging.getLogger(__name__)
@@ -58,6 +58,7 @@ def run_check(params, status):
             sql = ("CREATE TABLE {gap_warning_table} AS\n"
                    "SELECT geom FROM {gap_table}\n"
                    "WHERE ST_AREA(geom) > {gap_area_tolerance}\n"
+                   "AND ST_MinimumClearance(geom) > {gap_width_tolerance}\n"
                    "AND (\n"
                    "  ST_XMAX(geom) - ST_XMIN(geom) > {gap_width_tolerance}\n"
                    "  AND ST_YMAX(geom) - ST_YMIN(geom) > {gap_width_tolerance}\n"

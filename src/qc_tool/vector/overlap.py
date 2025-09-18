@@ -7,6 +7,7 @@ import logging
 DESCRIPTION = "There is no couple of overlapping polygons."
 IS_SYSTEM = False
 
+OVERLAP_TOLERANCE = 0 # 0.00001 # 0.01 mm
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,8 @@ def run_check(params, status):
                       "neighbour_table": neighbour_table.neighbour_table_name,
                       "overlap_detail_table": "s{:02d}_{:s}_detail".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "overlap_suspect_table": "s{:02d}_{:s}_suspect".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"])}
+                      "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "overlap_tolerance": str(OVERLAP_TOLERANCE)}
 
         # FIXME:
         # It may happen during partitioning, that the splitted geometries may get shifted a bit.
@@ -76,6 +78,26 @@ def run_check(params, status):
                    "FROM {overlap_suspect_table}\n"
                    "INNER JOIN {layer_name} AS layer_a ON {overlap_suspect_table}.fida = layer_a.{fid_name}\n"
                    "INNER JOIN {layer_name} AS layer_b ON {overlap_suspect_table}.fidb = layer_b.{fid_name});\n")
+
+            # This version of overlap detail table is more robust, it has a tolerance for overlap width.
+            if OVERLAP_TOLERANCE > 0:
+                sql = ("""
+                CREATE TABLE {overlap_detail_table} AS
+                WITH inters AS (
+                SELECT fida,
+                        fidb,
+                        (ST_Dump(ST_Intersection(layer_a.geom, layer_b.geom))).geom AS geom
+                FROM {overlap_suspect_table}
+                INNER JOIN {layer_name} AS layer_a
+                    ON {overlap_suspect_table}.fida = layer_a.{fid_name}
+                INNER JOIN {layer_name} AS layer_b
+                    ON {overlap_suspect_table}.fidb = layer_b.{fid_name}
+                )
+                SELECT *
+                FROM inters
+                WHERE ST_Perimeter(ST_OrientedEnvelope(geom)) > 0
+                AND ST_Area(ST_OrientedEnvelope(geom)) / NULLIF(ST_Perimeter(ST_OrientedEnvelope(geom)), 0) > 0.0001;
+                """)
 
             sql = sql.format(**sql_params)
             log.debug("SQL QUERY:")
