@@ -1575,6 +1575,7 @@ class GapTable():
                       "interior_table": self.interior_table.interior_table_name}
         sql_execute_params = {"partition_id": partition_id}
         with self.connection.cursor() as cursor:
+
             sql = ("WITH\n"
                    " par AS (SELECT geom\n"
                    "         FROM {interior_table}\n"
@@ -1590,6 +1591,43 @@ class GapTable():
                    "         FROM sub)\n"
                    "DELETE FROM {gap_table}\n"
                    "WHERE fid IN (SELECT orig_fid FROM sub);")
+
+            # more complex sql, to handle exceptional cases of invalid geometries introduced by partitioning.
+            sql = """
+WITH
+ par AS (
+   SELECT ST_MakeValid(ST_SnapToGrid(geom, 0.000001)) AS geom
+   FROM {interior_table}
+   WHERE partition_id = %(partition_id)s
+ ),
+ gt_valid AS (
+   SELECT fid, ST_MakeValid(ST_SnapToGrid(geom, 0.000001)) AS geom
+   FROM {gap_table}
+   WHERE ST_IsValid(geom) OR geom IS NOT NULL
+ ),
+ sub AS (
+   SELECT
+     gt_valid.fid AS orig_fid,
+     ST_CollectionExtract(
+       ST_MakeValid(
+         ST_Difference(gt_valid.geom, par.geom)
+       ),
+       3
+     ) AS sgeom
+   FROM gt_valid
+   INNER JOIN par ON gt_valid.geom && par.geom
+   WHERE NOT ST_IsEmpty(gt_valid.geom)
+ ),
+ ins AS (
+   INSERT INTO {gap_table} (geom)
+   SELECT polygon_dump(sgeom)
+   FROM sub
+   WHERE NOT ST_IsEmpty(sgeom)
+ )
+DELETE FROM {gap_table}
+WHERE fid IN (SELECT orig_fid FROM sub);
+"""
+            
             sql = sql.format(**sql_params)
             cursor.execute(sql, sql_execute_params)
             return cursor.rowcount
