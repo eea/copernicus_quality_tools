@@ -1581,7 +1581,7 @@ class GapTable():
                    "         WHERE partition_id = %(partition_id)s),\n"
                    " sub AS (SELECT\n"
                    "          gt.fid AS orig_fid,\n"
-                   "          ST_Difference(gt.geom, par.geom) AS sgeom\n"
+                   "          ST_Difference(ST_Buffer(gt.geom, 0), ST_Buffer(par.geom, 0)) AS sgeom\n"
                    "         FROM\n"
                    "          {gap_table} AS gt\n"
                    "          INNER JOIN par ON gt.geom && par.geom),\n"
