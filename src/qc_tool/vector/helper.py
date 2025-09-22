@@ -1312,16 +1312,28 @@ class MarginalProperty():
         sql_params = {"meta_table": self.meta_table.meta_table_name,
                       "feature_table": self.partitioned_layer.feature_table_name,
                       "exterior_table": self.exterior_table.exterior_table_name}
-        with self.connection.cursor() as cursor:
-            sql = ("UPDATE {meta_table} AS meta\n"
-                "SET is_marginal = EXISTS (\n"
-                "    SELECT 1\n"
-                "    FROM {feature_table} AS f\n"
-                "    INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
-                "    WHERE f.fid = meta.fid\n"
-                "    AND ST_Dimension(ST_Intersection(f.geom, e.geom)) >= 1);")
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
+        try:
+            with self.connection.cursor() as cursor:
+                sql = ("UPDATE {meta_table} AS meta\n"
+                    "SET is_marginal = EXISTS (\n"
+                    "    SELECT 1\n"
+                    "    FROM {feature_table} AS f\n"
+                    "    INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
+                    "    WHERE f.fid = meta.fid\n"
+                    "    AND ST_Dimension(ST_Intersection(f.geom, e.geom)) >= 1);")
+                sql = sql.format(**sql_params)
+                cursor.execute(sql)
+        except Exception as e:
+            with self.connection.cursor() as cursor:
+                sql = ("UPDATE {meta_table} AS meta\n"
+                    "SET is_marginal = EXISTS (\n"
+                    "    SELECT 1\n"
+                    "    FROM {feature_table} AS f\n"
+                    "    INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
+                    "    WHERE f.fid = meta.fid\n"
+                    "    AND ST_Intersects(f.geom, e.geom));")
+                sql = sql.format(**sql_params)
+                cursor.execute(sql)
 
     def make(self):
         if self.is_made():
