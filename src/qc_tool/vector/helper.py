@@ -1319,7 +1319,7 @@ class MarginalProperty():
                 "    FROM {feature_table} AS f\n"
                 "    INNER JOIN {exterior_table} AS e ON f.geom && e.geom\n"
                 "    WHERE f.fid = meta.fid\n"
-                "      AND ST_Relate(f.geom, e.geom, 'T********')\n"
+                "      AND ST_Intersects(f.geom, e.geom)\n"
                 ");")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
