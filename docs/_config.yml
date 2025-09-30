@@ -1,6 +1,5 @@
 title: Copernicus Quality Tools
-description: Documentation for CLMS QC Tool
-theme: just-the-docs
+description: Documentation for CLMS QC Tools
 
 # Tell Pages to use the remote theme
 remote_theme: just-the-docs/just-the-docs
