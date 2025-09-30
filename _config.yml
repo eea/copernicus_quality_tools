@@ -1,0 +1,4 @@
+title: My Project Wiki
+theme: minima
+plugins:
+  - jekyll-sitemap
