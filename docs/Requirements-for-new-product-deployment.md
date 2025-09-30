@@ -1,3 +1,8 @@
+---
+title: Requirements for new product deployment
+nav_order: 2
+---
+
 To ensure a smooth validation of a product, the QC Tool must first be configured. The preparatory work consists of setting up the QC workflow (JSON recipes), ensuring that all required test routines are present and functional, and verifying that the tool is ready to handle the defined product specifications and expected data volumes. The requirements outlined below provide the technical, logistical, and validation context necessary for configuring the QC Tool, implementing the product-specific checks, and integrating the product into the operational workflow.
 
 Requirements for New Product Deployment in the CLMS QC Tool:
