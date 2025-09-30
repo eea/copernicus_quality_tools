@@ -1,4 +1,19 @@
-title: My Project Wiki
-theme: minima
+title: Copernicus Quality Tools
+description: Documentation for CLMS QC Tool
+theme: just-the-docs
+
+# Tell Pages to use the remote theme
+remote_theme: just-the-docs/just-the-docs
+
+# Optional: enable search
+search_enabled: true
+
+# URL settings (replace with your repo)
+url: https://eea.github.io
+baseurl: /copernicus_quality_tools
+
+# Navigation structure
+nav_order: 1
+
 plugins:
   - jekyll-sitemap
