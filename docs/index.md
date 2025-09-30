@@ -1,3 +1,8 @@
+---
+title: Home
+nav_order: 1
+---
+
 # CLMS QC Tool Documentation
 
 QC Tool is an online tool designed to quality-check map layers to be submitted to the EEA. All map layers published by the EEA need to follow certain common specifications and formats. QC Tool can check that the map layers conform to those technical standards and therefore it facilitates the process of acceptance of new map layers/products by the EEA and minimises the number of times when layers need to be returned to the producer in order to be corrected before final acceptance. 
