@@ -26,7 +26,7 @@ services:
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_work:/mnt/qc_tool_work
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
-      - /mnt/c/Users/jkadlec/gisat/src/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/Users/jkadlec/gisat/src2/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   worker:
     build:
