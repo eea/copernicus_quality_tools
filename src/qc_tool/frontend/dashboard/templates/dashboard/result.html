@@ -79,9 +79,9 @@
                         that might cause system errors in later checks.
                     </div>
                     {% endif %}
-                    {% ifequal job_report.status "error" %}
+                    {% if job_report.status == "error" %}
                     <div class="alert alert-danger">SYSTEM ERROR: {{job_report.error_message}}</div>
-                    {% endifequal %}
+                    {% endif %}
                 </div></div>
 
 
