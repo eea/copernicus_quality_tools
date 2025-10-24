@@ -184,6 +184,29 @@ def find_gpkg_layers(unzip_dir, status):
         ds = None
     return gpkg_layer_infos
 
+# TODO: update!@
+def find_fgb_layers(unzip_dir, status):
+    from osgeo import ogr
+
+    # Find .gpkg files.
+    fgb_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".fgb"]
+    fgb_layer_infos = []
+
+    for fgb_filepath in fgb_filepaths:
+        # Open FlatGeobuf.
+        ds = ogr.Open(str(fgb_filepath))
+        if ds is None:
+            status.aborted("Can not open FlatGeobuf file {:s}.".format(fgb_filepath.name))
+            return []
+
+        for layer_index in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(layer_index)
+            layer_name = layer.GetName()
+            fgb_layer_infos.append({"src_layer_name": layer_name, "src_filepath": fgb_filepath})
+        ds = None
+    return fgb_layer_infos
+
 
 def find_documents(unzip_dir, regex):
     document_filepaths = [path for path in unzip_dir.glob("**/*") if path.is_file()]
