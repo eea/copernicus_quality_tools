@@ -1,0 +1,31 @@
+FROM ubuntu:focal
+
+LABEL author=gisat.cz
+LABEL description="QC tool environment, worker service."
+
+
+
+# Set environment variables for INSPIRE validator
+ENV DEBIAN_FRONTEND=noninteractive
+
+
+RUN echo "$VERSION" >/etc/qc_tool_version.txt \
+    && apt-get -y update \
+    && apt-get install -y --no-install-recommends \
+       software-properties-common build-essential cmake git wget curl unzip time jq \
+       gnupg2 ca-certificates python3 python3-pip python3-dev python3-psycopg2 \
+       openjdk-11-jre tini squid openssl apache2 \
+       libsqlite3-dev libproj-dev libgeos-dev libtiff-dev libcurl4-gnutls-dev \
+       libzstd-dev libdeflate-dev \
+    \
+    # Build and install GDAL 3.8.4 from source (internal Arrow/Parquet)
+    && git clone --branch v3.8.4 --depth 1 https://github.com/OSGeo/gdal.git /tmp/gdal \
+    && cd /tmp/gdal && mkdir build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+       -DGDAL_USE_ARROW=OFF -DGDAL_USE_PARQUET=OFF \
+    && make -j$(nproc) && make install && ldconfig \
+    \
+    # Clean up build files to reduce image size
+    && cd / && rm -rf /tmp/gdal /var/lib/apt/lists/* \
+    && apt-get clean
+

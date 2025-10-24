@@ -35,6 +35,7 @@ RUN cd /usr/local/src \
     && rm ./${VERSION}.zip \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && cd copernicus_quality_tools/src/qc_tool/frontend \
+    && pip3 install django==4.2.25 pytz==2023.3 \
     && mkdir /var/lib/qc_tool
 EXPOSE 8000
 

@@ -1,0 +1,388 @@
+---
+title: Vector Checks
+parent: Checks
+nav_order: 1
+---
+# Vector Checks
+
+<div class="contents" data-depth="1">
+
+List of vector checks:
+
+</div>
+
+QC tool does not take tolerance into account during spatial relationship
+operations such as overlaps, gaps, touches. The aim is to make the
+deliveries portable across the tools without any hassle.
+
+## vector.unzip
+
+### Delivery can be unzipped
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/unzip.py).
+
+The check can not be skipped. The result values of the check are: `ok`,
+`aborted`.
+
+The check verifies that the delivery has been uploaded to QC tool as a
+valid ZIP file and the ZIP file can be successfully unzipped.
+
+## vector.naming
+
+### Naming is in accord with specification
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/naming.py).
+
+The check can not be skipped.
+
+The result values of the check are: ok, aborted.
+
+The delivery must contain all prescribed layers, see dedicated page
+\[\[Symbolic layer names\]\].
+
+If the delivery is supplied in the geodatabase format, there should be
+only one geodatabase in the zip file. The directory of the geodatabase
+may be located anywhere in the directory hierarchy, eg. all examples are
+valid: `clc2012_mt.gdb`, `mt/clc2012_mt.gdb`, `2012/mt/clc2012_mt.gdb`.
+Each feature class inside the geodatabase corresponds to one layer.
+
+If the delivery is supplied in the shapefile format, there may be
+multiple shapefiles in the zip file. Each shapefile corresponds to one
+layer. The shapefiles may be located anywhere in the directory
+hierarchy, eg. all examples are valid: `rpz_du025a_lclu2012_v1_1.shp`,
+`du025a/rpz_du025a_lclu2012_v1_1.shp`,
+`shapefiles/rpz_du025a_lclu2012_v1_1.shp`.
+
+The naming conventions are case-insensitive, eg. both
+`rpz_du025a_lclu2012_v1_1.shp` and `RPZ_DU025A_LCLU2012_v1_1.SHP` are
+valid names.
+
+## vector.attribute
+
+### Attribute table check
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/attribute.py).
+
+`objectid` and `fid` attributes reserves special treatment. These are
+internal attributes operated by the tools. User is not allowed to
+intervene such operations. Therefore, such attributes are considered not
+being part of user defined attributes. Because of this, this check
+ignores `objectid` and `fid`.
+
+`objectid` is specific to geodatabase format. objectid values are
+preserved throughout checks so that user can actually identify a feature
+by the value. Wherever `fid` is mentioned, it is an alias for this
+`objectid`.
+
+Shapefile format supports no internal object identifier. However, when
+the feature is read from the file, a tool attaches internal `fid`
+attribute to the feature and set its value to ordinal number.
+
+There are special attributes `shape_area` and `shape_length`. Such
+attributes are specific to ArcGIS tool. The tool defines them
+automatically and the tool even sets their values on the fly. While the
+attributes do really exist at user level, they are parts of user defined
+fields. In accord, this specification does refer such attributes.
+
+The check verifies that particular layer defines exactly the attributes
+specified. There must be no missing nor extra attribute present in the
+layer.
+
+The check ignores any geometry columns.
+
+## vector.epsg
+
+### CRS (Projection) check
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/epsg.py).
+
+Each layer in the delivery must have a coordinate reference system (CRS)
+assigned. The CRS definition must include a valid EPSG code. For
+geodatabase deliveries, the CRS definition and EPSG code must be
+specified in the feature dataset definition. For shapefile deliveries,
+the CRS definition must be in the `.prj` file and must contain an
+`AUTHORITY` clause with EPSG code.
+
+Shapefiles created in ArcGIS do not always have the EPSG authority in
+the `.prj` file. To add a valid EPSG code to the `.prj` file, use GDAL
+software (`gdal_translate` or qgis).
+
+Product specific sets of allowed EPSG codes are described below.
+
+## vector.import2pg
+
+### Data can be imported into database.
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/import2pg.py).
+
+## vector.unique
+
+### Unique attribute check
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/unique.py).
+
+Attributes described below can contain only unique values. In addition,
+NULL values are not allowed.
+
+## vector.enum
+
+### Valid codes
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/enum.py).
+
+The values representing Land use / land cover (LULC) code must belong to
+a pre-defined set of valid codes. Empty text or NULL values are not
+allowed.
+
+## vector.change
+
+### Distinct codes in change layer
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/change.py).
+
+The check is applicable to change layers only. Change layers are
+currently parts of CORINE Land Cover, Coastal Zones, Urban Atlas and
+Natura 2000 products.
+
+Features having the same code in initial year and reference year are
+reported as errors.
+
+Corine Land Cover products have slight difference while they take into
+account technical change. The feature is a member of technical change if
+it has `chtype` attribute set to `T`. Such features are then reported as
+an exception instead of an error.
+
+## vector.non\_probable\_changes
+
+### Non-probable changes
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/non_probable.py).
+
+The check is applicable to the Urban Atlas change layer product only.
+
+The check reports features where the class change can be found in the
+list of non-probable changes. Such features are reported as warning
+features. The check is informative and always results in `ok` status.
+
+## vector.nodata
+
+### If a feature has nodata set, then all dependent attributes must have specific value.
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/nodata.py).
+
+## vector.singlepart
+
+### Singlepart polygon check
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/singlepart.py).
+
+The QC tool does not allow multi-part geometries.
+
+All layers in all vector products:
+
+  - feature satisfying general requirements:
+      - feature is a single-part polygon; a single-part polygon may
+        contain holes, but may not contain multiple exterior rings.
+
+Reference:
+
+  - OGC Simple feature access specification,
+    <http://www.opengeospatial.org/standards/sfa>,
+      - chapter 6.1.11 Polygon,
+      - chapter 6.1.13 MultiSurface.
+
+## vector.geometry
+
+### Geometries are valid
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/geometry.py).
+
+  - feature satisfying general requirements:
+      - Feature with valid geometries as defined by Open Geospatial
+        Consortium's OpenGIS specification. See
+        <https://postgis.net/docs/using_postgis_dbmanagement.html#OGC_Validity>
+  - For each feature with invalid geometry, the invalid geometry reason
+    (i.e. self-intersection) and invalid geometry location can be found
+    in the attachment error table.
+  - NOTE: Ring self-intersections, while considered valid by ArcGIS, are
+    also reported as errors by the QC tool.
+
+## vector.area
+
+### Calculated area and value in the column `area` coincide (are within specified tolerance).
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/area.py).
+
+## vector.gap
+
+### There is no gap in the AOI
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/gap.py).
+
+There must be no area inside AOI not being covered by some of the layer
+features. Areas inside AOI not covered by any of the features (gaps) are
+reported as error features created for the purpose.
+
+## vector.mmu
+
+### Minimum mapping unit
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mmu.py).
+
+`Boundary` for the purpose of vector minimum mapping unit (MMU)
+requirements means virtual geometry which is created as union of all
+features of chosen status layer. If the layer being checked represents
+status layer, then the chosen status layer is the same layer. If the
+layer being checked represents change layer, then the chosen layer is
+specified by parameter denoting some status layer. Such boundary
+definition applies to all products below.
+
+## vector.mxmu
+
+### Maximum mapping unit
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mxmu.py).
+
+`Area` refers to the value in the `area` attribute.
+
+Applicable to `HRL Small Woody Features: Vector Raster 5m` only.
+
+## vector.mmw
+
+### Minimum mapping width
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mmw.py).
+
+All features not satisfying any requirements specified below are
+considered warning features. This way, as there is no error feature, the
+check always results in `ok` status.
+
+vector.mxmw ----------
+
+### Maximum mapping width
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mxmw.py).
+
+Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
+
+If a negative buffer applied on a geometry leaves empty geometry, such
+corresponding feature is reported as warning.
+
+## vector.mml
+
+### Minimum mapping length
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mml.py).
+
+Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
+
+Medial axis is generated for every geometry. If the length of the axis
+is less or equal than 50 m, such corresponding feature is reported as
+warning.
+
+## vector.overlap
+
+### No overlapping polygons
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/overlap.py).
+
+There must be no feature having any part of its interior common with any
+other feature (aka overlaps).
+
+NOTE: The result of vector.overlap check may show presence of
+overlapping polygons, although ArcGIS did not find any overlaps. This
+mismatch is caused by ArcGIS tolerance setting. If your data does not
+pass the QC tool vector.overlap check, please apply Integrate (data
+management) tool in ArcGIS on the data with XY tolerance = 1 mm. This
+will adjust coordinates of adjacent polygon pairs and make your data
+pass through QC tool's overlapping polygon checks
+
+## vector.neighbour
+
+### No neighbouring polygons with the same code
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/neighbour.py).
+
+Every two neighbouring features in the same layer must be of distinct
+class. However, there are slight differences across products.
+
+## vector.layer\_area
+
+### Vector and raster layer area comparison
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/layer_area.py).
+
+Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
+
+Vector and raster layer have similar area. Difference of `> 0.5 %`
+results in error. Difference between `0.05 %` and `0.5%` results in
+warning.
+
+## vector.compactness
+
+### Linear and patchy features have appropriate compactness coefficient.
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/compactness.py).
+
+Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
+
+Linear feature having compactness coefficient greater than 0.75 is
+reported as error. Compactness of patchy features must be greater than
+0.75.
+
+## vector.inspire
+
+### Metadata
+
+The check definition can be found
+[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/inspire.py).
+
+EEA-MSGI has been developed by EEA to meet needs and demands for
+interoperability of metadata. EEA’s standard for metadata is a profile
+of the ISO 19115 standard for geographic metadata and contains more
+elements than the minimum required to comply the INSPIRE metadata
+regulation. Detailed conceptual specifications on EEA-MSGI and other
+relevant information on metadata can be found online at
+<http://www.eionet.europa.eu/gis>.
+
+INSPIRE compliancy of the XML document is checked using the European
+Commission [INSPIRE Validator API
+v2](http://inspire.ec.europa.eu/validator/) for conformance class:
+<span class="title-ref">INSPIRE Profile based on EN ISO 19115 and EN ISO
+19119</span>.
+
+The metadata document must be compliant with specifications: ISO TC 211,
+ISO 19115 and the EEA Metadata Standard for Geographic Information
+(EEA-MSGI).
+
+All vector deliveries must contain an INSPIRE compliant XML metadata
+document.
+
+  - geodatabase deliveries: one XML document per delivery named
+    `<geodatabase_directory>.xml` where `geodatabase_directory` is the
+    name of the geodatabase, e.g. `clc2012_mt.xml`;
+  - shapefile deliveries: one XML document per each shapefile layer,
+    e.g. `DK001L2_KOBENHAVN_UA2012.xml`, `DK001L2_KOBENHAVN_UA2006.xml`;

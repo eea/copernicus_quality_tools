@@ -44,25 +44,59 @@ COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && apt-get -y update \
     && apt-get install -y --no-install-recommends \
-    build-essential \
-    wget curl jq unzip time gnupg2 gdal-bin \
-    python3 python3-pip python3-dev python3-gdal python3-psycopg2 \
-    openjdk-11-jre tini squid openssl apache2 \
-    libfreetype6-dev \
-    libjpeg-dev \
-    libpng-dev \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install python packages.
-RUN pip3 install --break-system-packages --no-cache-dir \
-    boto3==1.40.45 \
-    checksumdir==1.3.0 \
-    scikit-image==0.22.0 \
-    requests==2.32.5 \
-    bottle==0.13.4 \
-    supervisor==4.3.0 \
-    reportlab==3.6.13
+        software-properties-common build-essential cmake git wget curl unzip time jq \
+        gnupg2 ca-certificates python3 python3-pip python3-dev python3-psycopg2 \
+        openjdk-11-jre tini squid openssl apache2 \
+        libsqlite3-dev libspatialite-dev \
+        libproj-dev libgeos-dev libgeos++-dev \
+        libtiff-dev libjpeg-dev libpng-dev \
+        libpq-dev libzstd-dev libgeotiff-dev \
+        swig \
+    # Clean up build files to reduce image size
+    && cd / && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
     
+    # Build and install GDAL 3.8.4 from source
+    # -------------------------------------------------------------
+# 2. Download and build GDAL from source
+# -------------------------------------------------------------
+WORKDIR /tmp
+
+# download GDAL 3.8.4 source
+RUN wget https://github.com/OSGeo/gdal/releases/download/v3.8.4/gdal-3.8.4.tar.gz && \
+    tar -xzf gdal-3.8.4.tar.gz && \
+    cd gdal-3.8.4 && \
+    mkdir build && cd build && \
+    cmake .. \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DGDAL_USE_TIFF=ON \
+      -DGDAL_USE_PNG=ON \
+      -DGDAL_USE_JPEG=ON \
+      -DGDAL_USE_ZSTD=ON \
+      -DGDAL_USE_POSTGRESQL=ON \
+      -DGDAL_USE_SQLITE3=ON \
+      -DGDAL_USE_SPATIALITE=ON \
+      -DGDAL_USE_GEOTIFF_INTERNAL=OFF \
+      -DGDAL_ENABLE_DRIVER_GPKG=ON \
+      -DGDAL_ENABLE_DRIVER_FLATGEOBUF=ON \
+      -DGDAL_ENABLE_DRIVER_GTiff=ON \
+      -DGDAL_ENABLE_DRIVER_PostgreSQL=ON \
+      -DGDAL_ENABLE_DRIVER_ESRI_Shapefile=ON \
+      -DBUILD_PYTHON_BINDINGS=ON \
+      -DPython_EXECUTABLE=/usr/bin/python3 \
+      && make -j$(nproc) && make install && ldconfig
+
+WORKDIR /
+# -------------------------------------------------------------
+# Install python packages.
+RUN pip3 install --no-cache-dir --upgrade numpy \
+    # Note: If numpy depends on gdal for installation, you should put 'pip3 install numpy' 
+    # before the 'python3 setup.py install' step, or simply install numpy first 
+    # as you have done, and ensure all GDAL-related Python packages are installed 
+    # after the GDAL library and its bindings are installed.
+    && pip3 install --no-cache-dir \
+    boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13
 
 # Install jetty for the INSPIRE validator.
 #RUN mkdir -p "$JETTY_HOME"
