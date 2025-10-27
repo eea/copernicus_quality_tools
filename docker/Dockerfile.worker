@@ -56,13 +56,21 @@ RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && cd / && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
     
-    # Build and install GDAL 3.8.4 from source
-    # -------------------------------------------------------------
-# 2. Download and build GDAL from source
 # -------------------------------------------------------------
+# --- Add Apache Arrow + Parquet dev packages (GeoParquet support) ---
+RUN apt-get update && apt-get install -y -q software-properties-common lsb-release wget \
+ && wget https://apache.jfrog.io/artifactory/arrow/ubuntu/apache-arrow-apt-source-latest-focal.deb \
+ && apt install -y ./apache-arrow-apt-source-latest-focal.deb \
+ && rm apache-arrow-apt-source-latest-focal.deb \
+ && apt-get update && apt-get install -y \
+        libarrow-dev libparquet-dev \
+ && rm -rf /var/lib/apt/lists/* \
+ && apt-get clean
+
+
 WORKDIR /tmp
 
-# download GDAL 3.8.4 source
+# download and build GDAL 3.8.4 source
 RUN wget https://github.com/OSGeo/gdal/releases/download/v3.8.4/gdal-3.8.4.tar.gz && \
     tar -xzf gdal-3.8.4.tar.gz && \
     cd gdal-3.8.4 && \
@@ -78,6 +86,8 @@ RUN wget https://github.com/OSGeo/gdal/releases/download/v3.8.4/gdal-3.8.4.tar.g
       -DGDAL_USE_SQLITE3=ON \
       -DGDAL_USE_SPATIALITE=ON \
       -DGDAL_USE_GEOTIFF_INTERNAL=OFF \
+      -DGDAL_USE_ARROW=ON \
+      -DGDAL_USE_PARQUET=ON \
       -DGDAL_ENABLE_DRIVER_GPKG=ON \
       -DGDAL_ENABLE_DRIVER_FLATGEOBUF=ON \
       -DGDAL_ENABLE_DRIVER_GTiff=ON \
@@ -86,6 +96,7 @@ RUN wget https://github.com/OSGeo/gdal/releases/download/v3.8.4/gdal-3.8.4.tar.g
       -DBUILD_PYTHON_BINDINGS=ON \
       -DPython_EXECUTABLE=/usr/bin/python3 \
       && make -j$(nproc) && make install && ldconfig
+
 
 WORKDIR /
 # -------------------------------------------------------------
