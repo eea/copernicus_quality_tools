@@ -136,7 +136,7 @@ RUN apt-get update
 
 # During install tzdata package needs timezone having been set already.
 ENV TZ=UTC
-RUN apt-get -y install postgresql-14-postgis-3
+RUN apt-get -y install postgresql-17-postgis-3
 
 # Configure the qc tool database.
 #
@@ -145,8 +145,8 @@ RUN apt-get -y install postgresql-14-postgis-3
 # when connecting to 127.0.0.1.
 USER postgres
 COPY ./init_qc_tool_db.sql /usr/local/src
-RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/14/main/pg_hba.conf \
-    && echo "listen_addresses='*'" >>/etc/postgresql/14/main/postgresql.conf \
+RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/17/main/pg_hba.conf \
+    && echo "listen_addresses='*'" >>/etc/postgresql/17/main/postgresql.conf \
     && /etc/init.d/postgresql start \
     && psql --file=/usr/local/src/init_qc_tool_db.sql \
     && /etc/init.d/postgresql stop
