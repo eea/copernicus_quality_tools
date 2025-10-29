@@ -16,6 +16,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import find_gpkg_layers
     from qc_tool.vector.helper import find_shp_layers
     from qc_tool.vector.helper import find_fgb_layers
+    from qc_tool.vector.helper import find_geoparquet_layers
     from qc_tool.vector.helper import find_documents
 
 
@@ -43,8 +44,13 @@ def run_check(params, status):
     if ".fgb" in params["formats"]:
         fgb_layer_infos = find_fgb_layers(params["unzip_dir"], status)
 
+    # Find Geoparquet (.parquet) layers.
+    geoparquet_layer_infos = []
+    if ".parquet" in params["formats"]:
+        geoparquet_layer_infos = find_geoparquet_layers(params["unzip_dir"], status)
+
     # Check if delivery contains any vector layers.
-    if len(shp_layer_infos) + len(gdb_layer_infos) + len(gpkg_layer_infos) + len(fgb_layer_infos) == 0:
+    if len(shp_layer_infos) + len(gdb_layer_infos) + len(gpkg_layer_infos) + len(fgb_layer_infos) + len(geoparquet_layer_infos) == 0:
         status.aborted("No {:s} vector layers were found in the delivery.".format(" or ".join(params["formats"])))
         return
 
@@ -79,6 +85,11 @@ def run_check(params, status):
     if ".fgb" in params["formats"]:
         for fgb_layer_info in fgb_layer_infos:
             builder.add_layer_info(fgb_layer_info["src_filepath"], fgb_layer_info["src_layer_name"])
+
+    # Read all Geoparquet layer infos into the builder.
+    if ".parquet" in params["formats"]:
+        for geoparquet_layer_info in geoparquet_layer_infos:
+            builder.add_layer_info(geoparquet_layer_info["src_filepath"], geoparquet_layer_info["src_layer_name"])
 
     # If no layer_names parameter is specified then pass on all vector layers to other checks.
     if "layer_names" not in params:

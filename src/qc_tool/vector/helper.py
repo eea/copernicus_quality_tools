@@ -184,7 +184,6 @@ def find_gpkg_layers(unzip_dir, status):
         ds = None
     return gpkg_layer_infos
 
-# TODO: update!@
 def find_fgb_layers(unzip_dir, status):
     from osgeo import ogr
 
@@ -206,6 +205,28 @@ def find_fgb_layers(unzip_dir, status):
             fgb_layer_infos.append({"src_layer_name": layer_name, "src_filepath": fgb_filepath})
         ds = None
     return fgb_layer_infos
+
+def find_geoparquet_layers(unzip_dir, status):
+    from osgeo import ogr
+
+    # Find .gpkg files.
+    geoparquet_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".parquet"]
+    geoparquet_layer_infos = []
+
+    for geoparquet_filepath in geoparquet_filepaths:
+        # Open Geoparquet file.
+        ds = ogr.Open(str(geoparquet_filepath))
+        if ds is None:
+            status.aborted("Can not open Geoparquet file {:s}.".format(geoparquet_filepath.name))
+            return []
+
+        for layer_index in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(layer_index)
+            layer_name = layer.GetName()
+            geoparquet_layer_infos.append({"src_layer_name": layer_name, "src_filepath": geoparquet_filepath})
+        ds = None
+    return geoparquet_layer_infos
 
 
 def find_documents(unzip_dir, regex):
