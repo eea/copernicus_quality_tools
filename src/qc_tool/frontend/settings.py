@@ -148,6 +148,8 @@ SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
 # Logo display setting.
 SHOW_LOGO = CONFIG["show_logo"]
 
+LOGIN_REDIRECT_URL = '/'
+
 CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
 LOGGING = {
     'version': 1,
