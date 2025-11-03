@@ -44,7 +44,12 @@ def run_check(params, status):
             metadata_dir = metadata_dirs[0]
 
         # Verify if there is one INSPIRE metadata file to check.
-        xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
+        # The XML file name is derived from the layer file name or from the layer name.
+        xml_name_source = params.get("xml_name_source", "layer_filepath")
+        if xml_name_source == "layer_name":
+            xml_filepath = locate_xml_file(metadata_dir, layer_def["src_layer_name"])
+        else:
+            xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
         if xml_filepath is None:
             status.failed("The delivery does not contain the expected metadata file '{:s}/{:s}.xml'".format(
                 metadata_dir.stem, layer_def["src_filepath"].stem))
