@@ -627,7 +627,12 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         """
 
     # Filter items by current user (except for superuser)
-    if not user.is_superuser:
+    is_clc_admin = user.groups.filter(name='clc_admin').exists()
+    if is_clc_admin:
+        # CLC admins can see all clc2024 deliveries
+        sql_total += f" AND d.product_ident = 'clc2024'"
+        sql +=  f" AND d.product_ident = 'clc2024'"
+    elif not user.is_superuser:
         sql_total += f" AND d.user_id = {user.id}"
         sql +=  f" AND user_id = {user.id}"
 
