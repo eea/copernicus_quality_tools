@@ -26,7 +26,7 @@ from qc_tool.common import CONFIG
 INSPIRE_TEST_SUITE_NAME = "INSPIRE data sets and data set series interoperability metadata"
 INSPIRE_SERVER_TIMEOUT = 60
 INSPIRE_TEST_RUN_TIMEOUT = 360
-INSPIRE_POLL_INTERVAL = 40
+INSPIRE_POLL_INTERVAL = 5
 INSPIRE_MAX_RETRIES = 3
 INSPIRE_SERVICE_STATUS_MAX_RETRIES = 10
 INSPIRE_SERVICE_STATUS_RETRY_INTERVAL = 60
@@ -629,11 +629,15 @@ class InspireServiceClient():
             return repr(ex)
 
 
-def locate_metadata_file(layer_filepath):
+def locate_metadata_file(layer_filepath, layer_name=None):
     # XML metadata file can be LAYER.xml or LAYER.shp.xml or metadata/LAYER.xml or metadata/LAYER.shp.xml
-    for xml_filepath in [layer_filepath.parent.joinpath("Metadata", layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath("metadata", layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath(layer_filepath.stem + ".xml")]:
+    if layer_name:
+        xml_name = layer_name + ".xml"
+    else:
+        xml_name = layer_filepath.stem + ".xml"
+    for xml_filepath in [layer_filepath.parent.joinpath("Metadata", xml_name),
+                         layer_filepath.parent.joinpath("metadata", xml_name),
+                         layer_filepath.parent.joinpath(xml_name)]:
         if xml_filepath.exists():
             return xml_filepath
     return None
