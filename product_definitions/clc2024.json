@@ -82,7 +82,7 @@
           "uk_je",
           "xk"
         ],
-        "boundary_source": "clc/boundary_clc_{aoi_code}.shp"
+        "boundary_source": "clc2024/boundary_clc_{aoi_code}.gpkg"
       }
     },
     {
@@ -212,7 +212,8 @@
           "initial",
           "change",
           "solar"
-        ]
+        ],
+        "xml_name_source": "layer_name"
       }
     },
     {
