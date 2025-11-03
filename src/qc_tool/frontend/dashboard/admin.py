@@ -9,6 +9,7 @@ from qc_tool.frontend.dashboard.models import Job
 
 from qc_tool.frontend.dashboard.models import ApiUser
 from qc_tool.frontend.dashboard.models import S3Info
+from qc_tool.frontend.dashboard.models import UserProfile
 
 # Define an inline admin descriptor for ApiUser model
 # which acts a bit like a singleton
@@ -17,9 +18,15 @@ class ApiUserInline(admin.StackedInline):
     can_delete = False
     verbose_name_plural = "apiuser"
 
+# Define an inline admin descriptor for UserProfile model
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = "userprofile"
+
 # Define a new User admin
 class UserAdmin(BaseUserAdmin):
-    inlines = [ApiUserInline]
+    inlines = [ApiUserInline, UserProfileInline]
 
 
 # Register your models here.

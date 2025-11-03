@@ -47,6 +47,11 @@ class ApiUser(models.Model):
     api_key = models.CharField(max_length=100)
 
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    country = models.CharField(max_length=100, blank=True, null=True)
+
+
 class S3Info(models.Model):
     host = models.CharField(max_length=200)
     access_key = models.CharField(max_length=100)
