@@ -32,6 +32,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = ['https://qc-copernicus.eea.europa.eu', 'http://localhost', 'http://127.0.0.1']
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Application definition
