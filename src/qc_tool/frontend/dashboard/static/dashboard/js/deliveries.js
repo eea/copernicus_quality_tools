@@ -103,7 +103,7 @@ function actionsFormatter(value, row) {
     }
 
     // "Submit to EEA" button visibility is controlled by the SUBMISSION_ENABLED setting.
-    if (SUBMISSION_ENABLED && !IS_TEST_GROUP) {
+    if (SUBMISSION_ENABLED && USER_CAN_SUBMIT) {
         if (row.date_submitted) {
             btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
             btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';

@@ -149,6 +149,12 @@
     <script type="text/javascript">var IS_TEST_GROUP = false;</script>
     {% endif %}
 
+    {% if user_can_submit %}
+    <script type="text/javascript">var USER_CAN_SUBMIT = true;</script>
+    {% else %}
+    <script type="text/javascript">var USER_CAN_SUBMIT = false;</script>
+    {% endif %}
+
     <script type="text/javascript">
     {% if update_job_statuses %}
     var UPDATE_JOB_STATUSES = true;
@@ -156,6 +162,7 @@
     {% else %}
     var UPDATE_JOB_STATUSES = false;
     {% endif %}
+    var GROUP_NAME = "{{ group_name }}";
     var job_statuses = {"Not checked": "Not checked", "waiting": "waiting", "running": "running", "ok": "ok", "failed": "failed", "error": "error"};
     </script>
 
