@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+import io
 import logging
 import os
 import sys
@@ -10,6 +11,8 @@ import traceback
 from pathlib import Path
 from zipfile import ZipFile
 import json
+
+import openpyxl
 
 from django.conf import settings
 from django.contrib import messages
@@ -640,7 +643,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
     # Special case of filtering for country_manager group
     is_clc_admin = user.groups.filter(name='clc_admin').exists()
     is_country_manager = user.groups.filter(name='country_manager').exists()
-    my_country = user.userprofile.country
+    my_country = getattr(user.userprofile, "country", None)
     if is_country_manager:
         # Country managers can see all deliveries from their country
         sql += f" AND up.country = '{my_country}'"
@@ -717,6 +720,62 @@ def get_deliveries_json(request):
                                    order=order, filter=filter, search=search)
 
     return JsonResponse({"total": total, "rows": data})
+
+
+@login_required
+def export_deliveries_excel(request):
+    """
+    Exports deliveries (filtered/sorted like get_deliveries_json)
+    into an Excel (.xlsx) file and returns it as a download.
+    """
+    # Same parameters as JSON endpoint
+    offset = int(request.GET.get("offset", 0))
+    limit = int(request.GET.get("limit", 1000))  # larger limit for export
+    sort = request.GET.get("sort", "id")
+    order = request.GET.get("order", "desc")
+    filter = request.GET.get("filter", "")
+    search = request.GET.get("search", "")
+
+    # Get data using your existing query function
+    _, data = query_deliveries(
+        request.user,
+        offset=offset,
+        limit=limit,
+        sort=sort,
+        order=order,
+        filter="",
+        search=""
+    )
+    # Create a new Excel workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Deliveries"
+
+    if not data:
+        ws.append(["No data found"])
+    else:
+        # Write header
+        headers = list(data[0].keys())
+        ws.append(headers)
+        # Write rows
+        for row in data:
+            ws.append([row.get(col, "") for col in headers])
+
+    # Adjust column widths
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 60)
+
+    # Save workbook to in-memory buffer
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = "attachment; filename=deliveries.xlsx"
+    return response
 
 
 @csrf_exempt
