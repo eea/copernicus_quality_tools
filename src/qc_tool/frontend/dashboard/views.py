@@ -641,7 +641,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         """
 
     # Special case of filtering for country_manager group
-    is_clc_admin = user.groups.filter(name='clc_admin').exists()
+    is_product_admin = user.groups.filter(name='product_admin').exists()
     is_country_manager = user.groups.filter(name='country_manager').exists()
     my_country = getattr(user.userprofile, "country", None)
     if is_country_manager:
@@ -657,10 +657,11 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         """
 
 
-    elif is_clc_admin:
-        # CLC admins can see all clc2024 deliveries
-        sql_total += f" AND d.product_ident = 'clc2024'"
-        sql +=  f" AND d.product_ident = 'clc2024'"
+    elif is_product_admin:
+        # Product admins can see all deliveries from their product family
+        my_product_family = getattr(user.userprofile, "product_family", "clc2024")
+        sql_total += f" AND d.product_ident = '{my_product_family}'"
+        sql +=  f" AND d.product_ident = '{my_product_family}'"
     elif not user.is_superuser:
         sql_total += f" AND d.user_id = {user.id}"
         sql +=  f" AND d.user_id = {user.id}"

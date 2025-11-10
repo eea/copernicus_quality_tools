@@ -50,6 +50,7 @@ class ApiUser(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     country = models.CharField(max_length=100, blank=True, null=True)
+    product_family = models.CharField(max_length=50, blank=True, null=True)
 
 
 class S3Info(models.Model):
