@@ -640,11 +640,17 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         WHERE d.is_deleted != 1
         """
 
-    # Special case of filtering for country_manager group
-    is_product_admin = user.groups.filter(name='product_admin').exists()
+    # Special case of filtering for country_manager and product_admin groups
     is_country_manager = user.groups.filter(name='country_manager').exists()
-    my_country = getattr(user.userprofile, "country", None)
+    is_product_admin = user.groups.filter(name='product_admin').exists()
+
     if is_country_manager:
+        # Get the country of the current user (country manager)
+        if hasattr(user, "userprofile"):
+            my_country = getattr(user.userprofile, "country", None)
+        else:
+            my_country = None
+
         # Country managers can see all deliveries from their country
         sql += f" AND up.country = '{my_country}'"
         sql_total = f"""
@@ -656,13 +662,18 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         AND up.country = '{my_country}'
         """
 
-
     elif is_product_admin:
         # Product admins can see all deliveries from their product family
-        my_product_family = getattr(user.userprofile, "product_family", "clc2024")
-        sql_total += f" AND d.product_ident = '{my_product_family}'"
-        sql +=  f" AND d.product_ident = '{my_product_family}'"
+        # Default product family is clc2024
+        if hasattr(user, "userprofile"):
+            my_product = getattr(user.userprofile, "product_family", "clc2024")
+        else:
+            my_product = "clc2024"
+        sql_total += f" AND d.product_ident = '{my_product}'"
+        sql +=  f" AND d.product_ident = '{my_product}'"
+
     elif not user.is_superuser:
+        # Regular users can see only their own deliveries
         sql_total += f" AND d.user_id = {user.id}"
         sql +=  f" AND d.user_id = {user.id}"
 
