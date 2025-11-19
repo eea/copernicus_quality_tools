@@ -860,7 +860,7 @@
       "required": false,
       "parameters": {
         "layers": ["raster"],
-        "validcodes": [[1, 1000], 65535]
+        "validcodes": [[3, 1000], 65535]
       }
     },
     {
