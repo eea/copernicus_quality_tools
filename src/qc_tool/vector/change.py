@@ -23,14 +23,23 @@ def run_check(params, status):
                       "general_table": "s{:02d}_{:s}_general".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "technical_change_flag": TECHNICAL_CHANGE_FLAG}
+                      "technical_change_flag": params.get("technical_change_flag", TECHNICAL_CHANGE_FLAG),
+                      "change_column_name": params.get("change_column_name", ""),
+                      "change_value_separator": params.get("change_value_separator", "")}
 
         # Create table of general items.
         sql = ("CREATE TABLE {general_table} AS\n"
                "SELECT {fid_name}\n"
                "FROM {layer_name}\n"
                "WHERE\n"
-               " {initial_code_column_name} != {final_code_column_name};")
+               " {initial_code_column_name} != {final_code_column_name}")
+
+        # Additional condition for the consistency of change column, if provided
+        if sql_params["change_column_name"] != "" and sql_params["change_value_separator"] != "":
+            sql += " AND {change_column_name} = {initial_code_column_name} || '{change_value_separator}' || {final_code_column_name}"
+
+        # Final formatting of the sql query.
+        sql += ";"
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
