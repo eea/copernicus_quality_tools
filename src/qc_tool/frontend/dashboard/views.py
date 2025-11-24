@@ -624,9 +624,9 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         ON d.user_id = u.id
         LEFT JOIN dashboard_userprofile up
         ON d.user_id = up.user_id
-        WHERE d.is_deleted != 1
+        WHERE d.is_deleted = FALSE
         """
-    sql_total = "SELECT COUNT (id) FROM dashboard_delivery d WHERE d.is_deleted != 1"
+    sql_total = "SELECT COUNT (id) FROM dashboard_delivery d WHERE d.is_deleted = FALSE"
 
     # special case of sql_total query for job status filter
     if "j.job_status" in filter_sql:
@@ -637,7 +637,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
             SELECT job_uuid FROM dashboard_job j
             WHERE j.delivery_id = d.id
             ORDER BY j.date_created DESC LIMIT 1)
-        WHERE d.is_deleted != 1
+        WHERE d.is_deleted = FALSE
         """
 
     # Special case of filtering for country_manager and product_admin groups
@@ -658,7 +658,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         FROM dashboard_delivery d
         LEFT JOIN dashboard_userprofile up
         ON d.user_id = up.user_id
-        WHERE d.is_deleted != 1
+        WHERE d.is_deleted = FALSE
         AND up.country = '{my_country}'
         """
 
@@ -1156,10 +1156,10 @@ def get_product_descriptions_dropdown(request):
     :return: dictionary of the product descriptions
     """
     if request.user.is_superuser:
-        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted != 1 AND user_id={} GROUP BY product_description"
+        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted = FALSE AND user_id={} GROUP BY product_description"
                .format(request.user.id))
     else:
-        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted != 1 AND user_id={} GROUP BY product_description"
+        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted = FALSE AND user_id={} GROUP BY product_description"
                .format(request.user.id))
     with connection.cursor() as cursor:
         # fetch query results
