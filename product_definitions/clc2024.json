@@ -581,7 +581,10 @@
         ],
         "initial_code_column_name": "code_18",
         "final_code_column_name": "code_24",
-        "chtype_column_name": "chtype"
+        "chtype_column_name": "chtype",
+        "technical_change_flag": "T",
+        "change_column_name": "change",
+        "change_value_separator": "-"
       }
     },
     {
@@ -593,7 +596,10 @@
         ],
         "initial_code_column_name": "code_18s",
         "final_code_column_name": "code_24s",
-        "chtype_column_name": "chtype"
+        "chtype_column_name": "chtype",
+        "technical_change_flag": "T",
+        "change_column_name": "change",
+        "change_value_separator": "-"
       }
     },
     {
@@ -643,6 +649,9 @@
           "reference",
           "initial"
         ],
+        "boundary_tolerance": 50.0,
+        "gap_area_tolerance": 0.01,
+        "gap_width_tolerance": 0.0001,
         "du_column_name": null
       }
     },
@@ -736,7 +745,8 @@
           "initial",
           "change",
           "solar"
-        ]
+        ],
+        "overlap_area_tolerance": 0.01
       }
     },
     {
