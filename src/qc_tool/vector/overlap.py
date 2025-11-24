@@ -7,7 +7,7 @@ import logging
 DESCRIPTION = "There is no couple of overlapping polygons."
 IS_SYSTEM = False
 
-OVERLAP_TOLERANCE = 0 # 0.00001 # 0.01 mm
+DEFAULT_OVERLAP_AREA_TOLERANCE = 1e-6 # square metres
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +23,10 @@ def run_check(params, status):
         if params["skip_vector_checks"]:
             status.info("The delivery has been excluded from vector.overlap check because the vector data source does not contain a single object of interest.")
             return
+
+    # overlap_area_tolerance optional parameter - to allow higher tolerance for overlaps
+    # e.g to ignore very small overlaps due to floating-point precision errors (area in m2)
+    overlap_area_tolerance = params.get("overlap_area_tolerance", DEFAULT_OVERLAP_AREA_TOLERANCE)
 
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
@@ -50,7 +54,8 @@ def run_check(params, status):
                       "overlap_detail_table": "s{:02d}_{:s}_detail".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "overlap_suspect_table": "s{:02d}_{:s}_suspect".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "overlap_tolerance": str(OVERLAP_TOLERANCE)}
+                      "overlap_exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "overlap_area_tolerance": str(overlap_area_tolerance)}
 
         # FIXME:
         # It may happen during partitioning, that the splitted geometries may get shifted a bit.
@@ -79,8 +84,35 @@ def run_check(params, status):
                    "INNER JOIN {layer_name} AS layer_a ON {overlap_suspect_table}.fida = layer_a.{fid_name}\n"
                    "INNER JOIN {layer_name} AS layer_b ON {overlap_suspect_table}.fidb = layer_b.{fid_name});\n")
 
-            # This version of overlap detail table is more robust, it has a tolerance for overlap width.
-            if OVERLAP_TOLERANCE > 0:
+            # Overlap exception - overlaps with area smaller than tolerance are reported as exceptions, not errors.
+            if overlap_area_tolerance > 0:
+                sql = ("""
+                CREATE TABLE {overlap_exception_table} AS
+                WITH inters AS (
+                SELECT fida,
+                        fidb,
+                        (ST_Dump(ST_Intersection(layer_a.geom, layer_b.geom))).geom AS geom
+                FROM {overlap_suspect_table}
+                INNER JOIN {layer_name} AS layer_a
+                    ON {overlap_suspect_table}.fida = layer_a.{fid_name}
+                INNER JOIN {layer_name} AS layer_b
+                    ON {overlap_suspect_table}.fidb = layer_b.{fid_name}
+                )
+                SELECT *
+                FROM inters
+                WHERE ST_Dimension(geom) = 2 AND ST_Area(geom) <= {overlap_area_tolerance}
+                """)
+                sql = sql.format(**sql_params)
+                cursor.execute(sql)
+                if cursor.rowcount > 0:
+                    # Report overlap exception table.
+                    status.add_full_table(sql_params["overlap_exception_table"])
+                    # Report exception items.
+                    status.info("Layer {:s} has {:s} overlap exceptions with area < {:s} tolerance."
+                                .format(layer_def["pg_layer_name"], str(cursor.rowcount), str(overlap_area_tolerance)))
+
+            # This version of overlap detail table is more robust.
+            if overlap_area_tolerance > 0:
                 sql = ("""
                 CREATE TABLE {overlap_detail_table} AS
                 WITH inters AS (
@@ -95,13 +127,11 @@ def run_check(params, status):
                 )
                 SELECT *
                 FROM inters
-                WHERE ST_Perimeter(ST_OrientedEnvelope(geom)) > 0
-                AND ST_Area(ST_OrientedEnvelope(geom)) / NULLIF(ST_Perimeter(ST_OrientedEnvelope(geom)), 0) > 0.0001;
+                WHERE ST_Area(geom) > {overlap_area_tolerance}
                 """)
 
+            # Now look for overlap errors (or overlaps or overlaps larger than tolerance).
             sql = sql.format(**sql_params)
-            log.debug("SQL QUERY:")
-            log.debug(sql)
             cursor.execute(sql)
             if cursor.rowcount > 0:
                 # Report overlap detail table.
