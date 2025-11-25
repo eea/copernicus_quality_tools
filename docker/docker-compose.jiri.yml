@@ -22,8 +22,8 @@ services:
       - qc_tool_network
     volumes:
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
-      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_uploads/uploads:/mnt/qc_tool_uploads/uploads
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_incoming/incoming:/mnt/qc_tool_incoming/incoming
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_work:/mnt/qc_tool_work
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_submission:/mnt/qc_tool_submission
       - /mnt/c/Users/jkadlec/gisat/src3/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
@@ -44,11 +44,12 @@ services:
       - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work
+      - LEAVE_SCHEMA=yes
     networks:
       - qc_tool_network
     volumes:
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/Users/jkadlec/qc_tool/qc_tool_incoming/incoming:/mnt/qc_tool_incoming/incoming
       - /mnt/c/Users/jkadlec/qc_tool/qc_tool_work:/mnt/qc_tool_work
       - /mnt/c/Users/jkadlec/gisat/src3/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
