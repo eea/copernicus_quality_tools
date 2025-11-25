@@ -616,7 +616,7 @@
           "reference",
           "initial"
         ],
-        "boundary_tolerance": 50.0,
+        "boundary_tolerance": 25.0,
         "gap_area_tolerance": 0.01,
         "gap_width_tolerance": 0.0001,
         "du_column_name": null
