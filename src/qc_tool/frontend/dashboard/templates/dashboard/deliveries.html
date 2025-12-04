@@ -70,6 +70,11 @@
                             <span>&nbsp;&nbsp;</span>
                             API Key:
                             <input type="text" value="{{ api_key }}" class="field left" size=30 readonly="readonly">
+                            <span>&nbsp;&nbsp;</span>
+                            <button id="btn-export" class="btn btn-info">
+                                <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                                Export
+                            </button>
                         </div>
                         <table id="tbl-deliveries" class="table table-striped table-vcenter" data-checkbox-header="true" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="id" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="server" data-filter-control="true">
                             <thead>
@@ -149,6 +154,12 @@
     <script type="text/javascript">var IS_TEST_GROUP = false;</script>
     {% endif %}
 
+    {% if user_can_submit %}
+    <script type="text/javascript">var USER_CAN_SUBMIT = true;</script>
+    {% else %}
+    <script type="text/javascript">var USER_CAN_SUBMIT = false;</script>
+    {% endif %}
+
     <script type="text/javascript">
     {% if update_job_statuses %}
     var UPDATE_JOB_STATUSES = true;
@@ -156,6 +167,7 @@
     {% else %}
     var UPDATE_JOB_STATUSES = false;
     {% endif %}
+    var GROUP_NAME = "{{ group_name }}";
     var job_statuses = {"Not checked": "Not checked", "waiting": "waiting", "running": "running", "ok": "ok", "failed": "failed", "error": "error"};
     </script>
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+import io
 import logging
 import os
 import sys
@@ -10,6 +11,8 @@ import traceback
 from pathlib import Path
 from zipfile import ZipFile
 import json
+
+import openpyxl
 
 from django.conf import settings
 from django.contrib import messages
@@ -464,6 +467,13 @@ def deliveries(request):
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
     is_test_group = request.user.groups.filter(name='test_group').exists()
+    
+    # Determine if the user can submit deliveries based on their group.
+    group_name = request.user.groups.first().name if request.user.groups.exists() else "no_group"
+    if group_name in ['country_user', 'test_group', 'guest_group']:
+        user_can_submit = False
+    else:
+        user_can_submit = True
 
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
@@ -472,7 +482,8 @@ def deliveries(request):
                                                          "api_key": api_key,
                                                          "update_job_statuses": update_job_statuses,
                                                          "update_job_statuses_interval": update_job_statuses_interval,
-                                                         "is_test_group": is_test_group})
+                                                         "is_test_group": is_test_group,
+                                                         "user_can_submit": user_can_submit})
 
 
 @login_required
@@ -601,7 +612,8 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         d.s3_id,
         j.job_uuid AS last_job_uuid,
         j.worker_url AS last_job_worker_url,
-        j.date_created, j.date_started, j.job_status as last_job_status
+        j.date_created, j.date_started, j.job_status as last_job_status,
+        up.country AS user_country
         FROM dashboard_delivery d
         LEFT JOIN dashboard_job j
         ON j.job_uuid = (
@@ -610,6 +622,8 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
           ORDER BY j.date_created DESC LIMIT 1)
         INNER JOIN auth_user u
         ON d.user_id = u.id
+        LEFT JOIN dashboard_userprofile up
+        ON d.user_id = up.user_id
         WHERE d.is_deleted != 1
         """
     sql_total = "SELECT COUNT (id) FROM dashboard_delivery d WHERE d.is_deleted != 1"
@@ -626,10 +640,42 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         WHERE d.is_deleted != 1
         """
 
-    # Filter items by current user (except for superuser)
-    if not user.is_superuser:
+    # Special case of filtering for country_manager and product_admin groups
+    is_country_manager = user.groups.filter(name='country_manager').exists()
+    is_product_admin = user.groups.filter(name='product_admin').exists()
+
+    if is_country_manager:
+        # Get the country of the current user (country manager)
+        if hasattr(user, "userprofile"):
+            my_country = getattr(user.userprofile, "country", None)
+        else:
+            my_country = None
+
+        # Country managers can see all deliveries from their country
+        sql += f" AND up.country = '{my_country}'"
+        sql_total = f"""
+        SELECT COUNT(d.id)
+        FROM dashboard_delivery d
+        LEFT JOIN dashboard_userprofile up
+        ON d.user_id = up.user_id
+        WHERE d.is_deleted != 1
+        AND up.country = '{my_country}'
+        """
+
+    elif is_product_admin:
+        # Product admins can see all deliveries from their product family
+        # Default product family is clc2024
+        if hasattr(user, "userprofile"):
+            my_product = getattr(user.userprofile, "product_family", "clc2024")
+        else:
+            my_product = "clc2024"
+        sql_total += f" AND d.product_ident = '{my_product}'"
+        sql +=  f" AND d.product_ident = '{my_product}'"
+
+    elif not user.is_superuser:
+        # Regular users can see only their own deliveries
         sql_total += f" AND d.user_id = {user.id}"
-        sql +=  f" AND user_id = {user.id}"
+        sql +=  f" AND d.user_id = {user.id}"
 
     # Add filter expression and search expressions to sql queries
     sql_total += filter_sql
@@ -686,6 +732,62 @@ def get_deliveries_json(request):
                                    order=order, filter=filter, search=search)
 
     return JsonResponse({"total": total, "rows": data})
+
+
+@login_required
+def export_deliveries_excel(request):
+    """
+    Exports deliveries (filtered/sorted like get_deliveries_json)
+    into an Excel (.xlsx) file and returns it as a download.
+    """
+    # Same parameters as JSON endpoint
+    offset = int(request.GET.get("offset", 0))
+    limit = int(request.GET.get("limit", 1000))  # larger limit for export
+    sort = request.GET.get("sort", "id")
+    order = request.GET.get("order", "desc")
+    filter = request.GET.get("filter", "")
+    search = request.GET.get("search", "")
+
+    # Get data using your existing query function
+    _, data = query_deliveries(
+        request.user,
+        offset=offset,
+        limit=limit,
+        sort=sort,
+        order=order,
+        filter="",
+        search=""
+    )
+    # Create a new Excel workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Deliveries"
+
+    if not data:
+        ws.append(["No data found"])
+    else:
+        # Write header
+        headers = list(data[0].keys())
+        ws.append(headers)
+        # Write rows
+        for row in data:
+            ws.append([row.get(col, "") for col in headers])
+
+    # Adjust column widths
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 60)
+
+    # Save workbook to in-memory buffer
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = "attachment; filename=deliveries.xlsx"
+    return response
 
 
 @csrf_exempt

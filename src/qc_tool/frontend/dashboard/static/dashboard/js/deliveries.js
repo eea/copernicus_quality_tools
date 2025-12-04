@@ -103,7 +103,7 @@ function actionsFormatter(value, row) {
     }
 
     // "Submit to EEA" button visibility is controlled by the SUBMISSION_ENABLED setting.
-    if (SUBMISSION_ENABLED && !IS_TEST_GROUP) {
+    if (SUBMISSION_ENABLED && USER_CAN_SUBMIT) {
         if (row.date_submitted) {
             btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
             btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';
@@ -435,6 +435,25 @@ $(document).ready(function() {
             return row.filename
         });
         delete_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
+    });
+
+    $("#btn-export").click(function() {
+        const baseUrl = "/data/delivery/export/";
+        const search = $("input.form-control.search-input").val(); // existing search input
+        const filter = ""; // you can later capture filter JSON from bootstrap-table
+        const sort = $("#tbl-deliveries").bootstrapTable("getOptions").sortName;
+        const order = $("#tbl-deliveries").bootstrapTable("getOptions").sortOrder;
+
+        // Construct query string
+        const query = $.param({
+            search: search,
+            filter: filter,
+            sort: sort,
+            order: order
+        });
+
+        // Trigger Excel download
+        window.location = `${baseUrl}?${query}`;
     });
 
     // Start the timer to auto-refresh status of running jobs. Check for updates every 5 seconds.

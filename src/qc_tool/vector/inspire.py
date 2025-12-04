@@ -8,13 +8,17 @@ IS_SYSTEM = False
 METADATA_DIRNAME = "metadata"
 
 
-def locate_xml_file(metadata_folder_path, layer_filepath):
+def locate_xml_file(metadata_folder_path, layer_filepath, layer_name=None):
     # The INSPIRE XML file can be LAYER.xml or LAYER_metadata.xml.
-    for xml_filepath in [metadata_folder_path.joinpath(layer_filepath.stem + ".xml"),
-                         metadata_folder_path.joinpath(layer_filepath.stem + "_metadata.xml")]:
+    if layer_name:
+        xml_names = [layer_name + "_metadata.xml", layer_name + ".xml"]
+    else:
+        xml_names = [layer_filepath.stem + "_metadata.xml", layer_filepath.stem + ".xml"]
+    for xml_name in xml_names:
+        xml_filepath = metadata_folder_path.joinpath(xml_name)
         if xml_filepath.exists():
             return xml_filepath
-    return None
+    return xml_filepath
 
 
 def run_check(params, status):
@@ -34,7 +38,6 @@ def run_check(params, status):
         metadata_dirs = [d for d in params["unzip_dir"].glob('**/*')
                          if d.is_dir() and str(d).lower().endswith(METADATA_DIRNAME)]
         if len(metadata_dirs) == 0:
-            status.info("The delivery does not contain the expected '{:s}' folder. The native delivery folder will be used instead.".format(METADATA_DIRNAME))
             metadata_dir = params["unzip_dir"]
         elif len(metadata_dirs) > 1:
             status.failed("Multiple folders named '{:s}' were found in the delivery.",
@@ -44,11 +47,20 @@ def run_check(params, status):
             metadata_dir = metadata_dirs[0]
 
         # Verify if there is one INSPIRE metadata file to check.
-        xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
+        # The XML file name is derived from the layer file name or from the layer name.
+        xml_name_source = params.get("xml_name_source", "layer_filepath")
+        if xml_name_source == "layer_name":
+            xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"], layer_def["src_layer_name"])
+        else:
+            xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
         if xml_filepath is None:
-            status.failed("The delivery does not contain the expected metadata file '{:s}/{:s}.xml'".format(
+            status.failed("The delivery does not contain the expected metadata file '{:s}.xml'".format(
                 metadata_dir.stem, layer_def["src_filepath"].stem))
-            return
+            continue
+        if not xml_filepath.exists():
+            status.failed("The delivery does not contain the expected metadata file '{}.xml'".format(
+                xml_filepath.stem))
+            continue
 
         # Validate the xml file using INSPIRE validator service
         export_prefix = "s{:02d}_{:s}_inspire".format(params["step_nr"], layer_def["src_filepath"].stem)

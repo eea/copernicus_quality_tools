@@ -26,7 +26,7 @@ from qc_tool.common import CONFIG
 INSPIRE_TEST_SUITE_NAME = "INSPIRE data sets and data set series interoperability metadata"
 INSPIRE_SERVER_TIMEOUT = 60
 INSPIRE_TEST_RUN_TIMEOUT = 360
-INSPIRE_POLL_INTERVAL = 40
+INSPIRE_POLL_INTERVAL = 5
 INSPIRE_MAX_RETRIES = 3
 INSPIRE_SERVICE_STATUS_MAX_RETRIES = 10
 INSPIRE_SERVICE_STATUS_RETRY_INTERVAL = 60
@@ -183,6 +183,50 @@ def find_gpkg_layers(unzip_dir, status):
             gpkg_layer_infos.append({"src_layer_name": layer_name, "src_filepath": gpkg_filepath})
         ds = None
     return gpkg_layer_infos
+
+def find_fgb_layers(unzip_dir, status):
+    from osgeo import ogr
+
+    # Find .gpkg files.
+    fgb_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".fgb"]
+    fgb_layer_infos = []
+
+    for fgb_filepath in fgb_filepaths:
+        # Open FlatGeobuf.
+        ds = ogr.Open(str(fgb_filepath))
+        if ds is None:
+            status.aborted("Can not open FlatGeobuf file {:s}.".format(fgb_filepath.name))
+            return []
+
+        for layer_index in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(layer_index)
+            layer_name = layer.GetName()
+            fgb_layer_infos.append({"src_layer_name": layer_name, "src_filepath": fgb_filepath})
+        ds = None
+    return fgb_layer_infos
+
+def find_geoparquet_layers(unzip_dir, status):
+    from osgeo import ogr
+
+    # Find .gpkg files.
+    geoparquet_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".parquet"]
+    geoparquet_layer_infos = []
+
+    for geoparquet_filepath in geoparquet_filepaths:
+        # Open Geoparquet file.
+        ds = ogr.Open(str(geoparquet_filepath))
+        if ds is None:
+            status.aborted("Can not open Geoparquet file {:s}.".format(geoparquet_filepath.name))
+            return []
+
+        for layer_index in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(layer_index)
+            layer_name = layer.GetName()
+            geoparquet_layer_infos.append({"src_layer_name": layer_name, "src_filepath": geoparquet_filepath})
+        ds = None
+    return geoparquet_layer_infos
 
 
 def find_documents(unzip_dir, regex):
@@ -585,11 +629,15 @@ class InspireServiceClient():
             return repr(ex)
 
 
-def locate_metadata_file(layer_filepath):
+def locate_metadata_file(layer_filepath, layer_name=None):
     # XML metadata file can be LAYER.xml or LAYER.shp.xml or metadata/LAYER.xml or metadata/LAYER.shp.xml
-    for xml_filepath in [layer_filepath.parent.joinpath("Metadata", layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath("metadata", layer_filepath.stem + ".xml"),
-                         layer_filepath.parent.joinpath(layer_filepath.stem + ".xml")]:
+    if layer_name:
+        xml_name = layer_name + ".xml"
+    else:
+        xml_name = layer_filepath.stem + ".xml"
+    for xml_filepath in [layer_filepath.parent.joinpath("Metadata", xml_name),
+                         layer_filepath.parent.joinpath("metadata", xml_name),
+                         layer_filepath.parent.joinpath(xml_name)]:
         if xml_filepath.exists():
             return xml_filepath
     return None

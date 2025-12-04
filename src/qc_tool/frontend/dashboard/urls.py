@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/submit-delivery-to-eea", views.api_submit_delivery_to_eea, name="api_submit_delivery_to_eea"),
 
     path("data/delivery/list/", views.get_deliveries_json, name="deliveries_json"),
+    path("data/delivery/export/", views.export_deliveries_excel, name="export_deliveries_excel"),
     path("data/job_history/<delivery_id>/", views.get_job_history_json, name="job_history_json"),
     path("data/delivery/file/<delivery_id>/", views.download_delivery_file, name="download_delivery_file"),
 

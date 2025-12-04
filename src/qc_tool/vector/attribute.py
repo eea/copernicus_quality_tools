@@ -46,15 +46,29 @@ def run_check(params, status):
         layer = ds.GetLayerByName(layer_def["src_layer_name"])
         required_attrs = {attr_name.lower(): attr_type_name.lower()
                          for attr_name, attr_type_name in params["required"].items()}
+        if "lengths" in params.keys():
+            attr_lengths = {attr_name.lower(): attr_len for attr_name, attr_len in params["lengths"].items()}
+        else:
+            attr_lengths = {}
         ignored_attrs = params["ignored"].copy()
         extra_attrs = {}
         bad_type_attrs = {}
+        bad_attr_lengths = {}
         for field_defn in layer.schema:
             field_name = field_defn.name.lower()
             field_type = field_defn.GetType()
+            field_length = field_defn.GetWidth()
+
+            if field_name in attr_lengths:
+                if field_length <= attr_lengths[field_name]:
+                    del attr_lengths[field_name]
+                else:
+                    bad_attr_lengths.update({field_name: str(field_length)})
+
             if field_name in ignored_attrs:
                 # Ignored attribute.
                 ignored_attrs.remove(field_name)
+
             elif field_name in required_attrs:
                 # Required attribute.
                 if field_type not in OGR_TYPES:
@@ -87,3 +101,9 @@ def run_check(params, status):
                            .format(layer_def["src_layer_name"],
                                    ", ".join("{:s}({:s})".format(attr_name, bad_type_attrs[attr_name])
                                              for attr_name in sorted(bad_type_attrs.keys()))))
+
+        if len(bad_attr_lengths) > 0:
+            status.failed("Layer {:s} has attributes with bad length: {:s}."
+                          .format(layer_def["src_layer_name"],
+                                  ", ".join("{:s}({:s})".format(attr_name, bad_attr_lengths[attr_name])
+                                            for attr_name in sorted(bad_attr_lengths.keys()))))
