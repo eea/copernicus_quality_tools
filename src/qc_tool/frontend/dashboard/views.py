@@ -1302,11 +1302,6 @@ def get_combined_job_log(request, job_uuid):
 def download_delivery_file(request, delivery_id):
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    # Authorization check.q
-    if not request.user.is_superuser:
-        if delivery.user != request.user:
-            raise PermissionDenied("You are not authorized to view uploaded file for delivery id={:d}."
-                                   .format(int(delivery_id)))
     # File existence check.
     if delivery.is_deleted:
         raise Http404("Uploaded file for delivery id={:d} has been deleted by the user.".format(int(delivery_id)))
