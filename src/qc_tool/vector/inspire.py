@@ -63,5 +63,5 @@ def run_check(params, status):
             continue
 
         # Validate the xml file using INSPIRE validator service
-        export_prefix = "s{:02d}_{:s}_inspire".format(params["step_nr"], layer_def["src_filepath"].stem)
+        export_prefix = "s{:02d}_{:s}_{:s}_inspire".format(params["step_nr"], layer_def["src_filepath"].stem, layer_def["src_layer_name"])
         do_inspire_check(xml_filepath, export_prefix, params["output_dir"], status)
