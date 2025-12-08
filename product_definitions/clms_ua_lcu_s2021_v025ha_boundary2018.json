@@ -773,7 +773,7 @@
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "boundary_ua2018_eea38_revised.gpkg"
+        "boundary_source": "boundary_ua2018_eea38_v3.gpkg"
       }
     },
     {
@@ -871,7 +871,6 @@
               "22000",
               "23000",
               "24000",
-              "25000",
               "31000",
               "32000",
               "33000",

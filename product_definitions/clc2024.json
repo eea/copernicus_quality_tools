@@ -605,7 +605,8 @@
         ],
         "area_column_name": "shape_area",
         "unit": 1,
-        "tolerance": 0.001
+        "tolerance": 0.1,
+        "tolerance_percent": true
       }
     },
     {

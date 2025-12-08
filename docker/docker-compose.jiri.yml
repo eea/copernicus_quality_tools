@@ -18,6 +18,7 @@ services:
       - WORK_DIR=/mnt/qc_tool_work
       - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
+      - CASE_INSENSITIVE_USERNAMES=yes
     networks:
       - qc_tool_network
     volumes:

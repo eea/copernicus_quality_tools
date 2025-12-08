@@ -152,6 +152,12 @@ SHOW_LOGO = CONFIG["show_logo"]
 
 LOGIN_REDIRECT_URL = '/'
 
+# case-insensitive username authentication backend
+if CONFIG["case_insensitive_usernames"]:
+    AUTHENTICATION_BACKENDS = [
+        'qc_tool.frontend.dashboard.auth_backends.CaseInsensitiveBackend',
+    ]
+
 CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
 LOGGING = {
     'version': 1,
