@@ -155,7 +155,9 @@
         "formats": [
           ".gdb",
           ".gpkg",
-          ".shp"
+          ".shp",
+          ".fgb",
+          ".parquet"
         ],
         "layer_names": {
           "vector": "^swf_2018_vec_(?P<aoi_code>[0-9a-zA-Z]{2,6})_(?P<epsg_code>[0-9]{5})"
@@ -199,7 +201,14 @@
         "required": {"code": "integer",
                      "area": "real",
                      "class_name": "string"},
-        "ignored": ["shape_length", "shape_area"]
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
       }
     },
     {

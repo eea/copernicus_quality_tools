@@ -9,7 +9,7 @@
       "check_ident": "qc_tool.vector.naming",
       "required": true,
       "parameters": {
-        "formats": [".gdb", ".gpkg", ".shp"],
+        "formats": [".gdb", ".gpkg", ".shp", ".fgb", ".parquet"],
         "layer_names": {
           "n2k": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"
         },
@@ -40,7 +40,14 @@
                      "nodata_12": "integer",
                      "changecode": "string",
                      "area_ha": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
       }
     },
     {

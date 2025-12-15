@@ -12,7 +12,9 @@
         "reference_year": "2018",
         "formats": [
           ".gdb",
-          ".gpkg"
+          ".gpkg",
+          ".fgb",
+          ".parquet"
         ],
         "layer_names": {
           "reference": "^clms_ua_lcu_s2018_v025ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
@@ -817,7 +819,7 @@
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "boundary_ua2018_eea38_v3.gpkg"
+        "boundary_source": "boundary_ua2018_eea38_revised.gpkg"
       }
     },
     {
@@ -841,7 +843,11 @@
         },
         "ignored": [
           "shape_area",
-          "shape_length"
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
         ]
       }
     },

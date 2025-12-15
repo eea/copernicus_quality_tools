@@ -12,7 +12,9 @@
         "reference_year": "2021",
         "formats": [
           ".gdb",
-          ".gpkg"
+          ".gpkg",
+          ".fgb",
+          ".parquet"
         ],
         "layer_names": {
           "reference": "^clms_ua_lcu_s2021_v025ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
@@ -817,7 +819,7 @@
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "boundary_ua2021_eea39_v3.gpkg"
+        "boundary_source": "boundary_ua2021_eea39_revised.gpkg"
       }
     },
     {
@@ -841,7 +843,11 @@
         },
         "ignored": [
           "shape_area",
-          "shape_length"
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
         ]
       }
     },
@@ -915,6 +921,7 @@
               "22000",
               "23000",
               "24000",
+              "25000",
               "31000",
               "32000",
               "33000",

@@ -10,7 +10,12 @@
       "required": true,
       "parameters": {
         "reference_year": "2018",
-        "formats": [".gdb", ".gpkg"],
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".fgb",
+          ".parquet"
+        ],
         "layer_names": {
           "change": "(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9]{1})_.*_Change_2012_2018$"
         },
@@ -38,7 +43,14 @@
                      "comment": "string",
                      "perimeter": "real",
                      "area": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
       }
     },
     {
