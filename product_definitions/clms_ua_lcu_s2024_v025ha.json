@@ -12,7 +12,9 @@
         "reference_year": "2024",
         "formats": [
           ".gdb",
-          ".gpkg"
+          ".gpkg",
+          ".fgb",
+          ".parquet"
         ],
         "layer_names": {
           "reference": "^clms_ua_lcu_s2024_v025ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
@@ -817,7 +819,7 @@
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "boundary_ua2021_eea39_revised.gpkg"
+        "boundary_source": "boundary_ua2024_eea39_v1.gpkg"
       }
     },
     {
@@ -841,7 +843,9 @@
         },
         "ignored": [
           "shape_area",
-          "shape_length"
+          "shape_length",
+          "fid",
+          "objectid"
         ]
       }
     },
@@ -915,7 +919,6 @@
               "22000",
               "23000",
               "24000",
-              "25000",
               "31000",
               "32000",
               "33000",
