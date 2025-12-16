@@ -123,7 +123,9 @@
         "formats": [
           ".gdb",
           ".gpkg",
-          ".shp"
+          ".shp",
+          ".fgb",
+          ".parquet"
         ],
         "layer_names": {
           "vector": "^swf_2015_vec_(?P<country_code>[a-z]{2})_0?3035_0*(?P<aoi_code>[0-9]+)_"
@@ -156,7 +158,14 @@
         "required": {"code": "string",
                      "area": "real",
                      "class_name": "string"},
-        "ignored": ["shape_length", "shape_area"]
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
       }
     },
     {

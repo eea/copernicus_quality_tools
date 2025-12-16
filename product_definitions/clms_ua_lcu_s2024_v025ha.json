@@ -819,7 +819,7 @@
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
         "excessive_layers_allowed": false,
-        "boundary_source": "boundary_ua2024_eea39_v1.gpkg"
+        "boundary_source": "boundary_ua2021_eea39_revised.gpkg"
       }
     },
     {
@@ -844,8 +844,10 @@
         "ignored": [
           "shape_area",
           "shape_length",
-          "fid",
-          "objectid"
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
         ]
       }
     },
@@ -919,6 +921,7 @@
               "22000",
               "23000",
               "24000",
+              "25000",
               "31000",
               "32000",
               "33000",
