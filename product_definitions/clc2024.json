@@ -453,6 +453,13 @@
               "523",
               "999"
             ]
+          ],
+          [
+            "chtype",
+            [
+              "R",
+              "T"
+            ]
           ]
         ]
       }
@@ -470,7 +477,6 @@
             [
               "111",
               "112",
-              "121",
               "122",
               "123",
               "124",
@@ -513,60 +519,21 @@
               "522",
               "523",
               "999",
-              "2111",
+              "1211",
               "1212"
             ]
           ],
           [
             "code_24s",
             [
-              "111",
-              "112",
-              "121",
-              "122",
-              "123",
-              "124",
-              "131",
-              "132",
-              "133",
-              "141",
-              "142",
-              "211",
-              "212",
-              "213",
-              "221",
-              "222",
-              "223",
-              "231",
-              "241",
-              "242",
-              "243",
-              "244",
-              "311",
-              "312",
-              "313",
-              "321",
-              "322",
-              "323",
-              "324",
-              "331",
-              "332",
-              "333",
-              "334",
-              "335",
-              "411",
-              "412",
-              "421",
-              "422",
-              "423",
-              "511",
-              "512",
-              "521",
-              "522",
-              "523",
-              "999",
-              "2111",
               "1212"
+            ]
+          ],
+          [
+            "chtype",
+            [
+              "R",
+              "T"
             ]
           ]
         ]
@@ -581,7 +548,10 @@
         ],
         "initial_code_column_name": "code_18",
         "final_code_column_name": "code_24",
-        "chtype_column_name": "chtype"
+        "chtype_column_name": "chtype",
+        "technical_change_flag": "T",
+        "change_column_name": "change",
+        "change_value_separator": "-"
       }
     },
     {
@@ -593,7 +563,10 @@
         ],
         "initial_code_column_name": "code_18s",
         "final_code_column_name": "code_24s",
-        "chtype_column_name": "chtype"
+        "chtype_column_name": "chtype",
+        "technical_change_flag": "T",
+        "change_column_name": "change",
+        "change_value_separator": "-"
       }
     },
     {
@@ -632,7 +605,8 @@
         ],
         "area_column_name": "shape_area",
         "unit": 1,
-        "tolerance": 0.001
+        "tolerance": 0.1,
+        "tolerance_percent": true
       }
     },
     {
@@ -643,6 +617,9 @@
           "reference",
           "initial"
         ],
+        "boundary_tolerance": 25.0,
+        "gap_area_tolerance": 0.01,
+        "gap_width_tolerance": 0.0001,
         "du_column_name": null
       }
     },
@@ -736,7 +713,8 @@
           "initial",
           "change",
           "solar"
-        ]
+        ],
+        "overlap_area_tolerance": 0.01
       }
     },
     {
