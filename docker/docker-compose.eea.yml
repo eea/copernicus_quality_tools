@@ -1,4 +1,16 @@
 services:
+  userdb:
+    image: postgres:14
+    container_name: qc_tool_userdb
+    restart: always
+    environment:
+      POSTGRES_DB: qc_tool
+      POSTGRES_USER: qc_user
+      POSTGRES_PASSWORD: qc_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - qc_tool_network
   frontend:
     image: eeacms/copernicus-qctool-frontend:2.3.1rc3
     ports:
@@ -9,7 +21,13 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - WORK_DIR=/mnt/qc_tool_work/work
       - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
-      - FRONTEND_DB_PATH=/mnt/qc_tool_frontend/frontend.sqlite3
+      - DB_ENGINE=postgres
+      - POSTGRES_HOST=qc_tool_userdb
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=qc_tool
+      - POSTGRES_USER=qc_user
+      - POSTGRES_PASSWORD=qc_password
+      - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
       - API_URL=https://qc-copernicus.eea.europa.eu/api
       - UPDATE_JOB_STATUSES=yes
       - UPDATE_JOB_STATUSES_INTERVAL=30000
@@ -52,6 +70,8 @@ volumes:
   qc_tool_submission:
     driver: local
   qc_tool_work:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:
