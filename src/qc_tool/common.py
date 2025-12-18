@@ -461,6 +461,9 @@ def setup_config():
         "INSPIRE_SERVICE_URL", INSPIRE_SERVICE_URL_DEFAULT
     )
 
+    # Maintenance mode
+    config["maintenance_mode"] = environ.get("MAINTENANCE_MODE", "no") == "yes"
+
     return config
 
 CONFIG = setup_config()

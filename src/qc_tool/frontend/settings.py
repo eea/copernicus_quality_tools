@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'qc_tool.frontend.dashboard.middleware.MaintenanceModeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -149,6 +150,9 @@ SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
 
 # Logo display setting.
 SHOW_LOGO = CONFIG["show_logo"]
+
+# Maintenance mode setting.
+MAINTENANCE_MODE = CONFIG["maintenance_mode"]
 
 LOGIN_REDIRECT_URL = '/'
 

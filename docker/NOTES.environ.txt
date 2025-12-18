@@ -39,6 +39,7 @@ Service qc_tool_frontend
   * WORKER_ALIVE_TIMEOUT, timeout in seconds to wait for job status response from worker (5 seconds);
   * REFRESH_JOB_STATUSES_BACKGROUND, instructs the frontend server to refresh running job statuses in a background thread;
   * REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL, interval to refresh job statuses on frontend server in background thread (60 seconds);
+  * MAINTENANCE_MODE, sets the frontend to maintenance mode (no URLs accessible - can be used for live DB migration);
 
 
 Service qc_tool_worker
