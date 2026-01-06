@@ -1,6 +1,20 @@
-version: '3'
-
 services:
+  
+  userdb:
+    image: postgres:14
+    container_name: qc_tool_userdb
+    restart: always
+    environment:
+      POSTGRES_DB: qc_tool
+      POSTGRES_USER: qc_user
+      POSTGRES_PASSWORD: qc_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - qc_tool_network
+    ports:
+      - "5432:5432"   # optional: only needed if you want access from host
+  
   frontend:
     build:
       context: .
@@ -17,8 +31,13 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
       - WORK_DIR=/mnt/qc_tool_work
       - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
+      - DB_ENGINE=postgres
+      - POSTGRES_HOST=qc_tool_userdb
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=qc_tool
+      - POSTGRES_USER=qc_user
+      - POSTGRES_PASSWORD=qc_password
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
-      - CASE_INSENSITIVE_USERNAMES=yes
     networks:
       - qc_tool_network
     volumes:
@@ -57,3 +76,6 @@ services:
 networks:
   qc_tool_network:
     driver: bridge
+
+volumes:
+  postgres_data:

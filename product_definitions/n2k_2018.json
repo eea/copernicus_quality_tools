@@ -10,7 +10,12 @@
       "required": true,
       "parameters": {
         "reference_year": "2018",
-        "formats": [".gdb", ".gpkg"],
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".fgb",
+          ".parquet"
+        ],
         "layer_names": {
           "status2018": "^n2k_(?P<delivery_unit_id>du[0-9]{3}[a-z]{1})_Status2018_lclu_v[0-9]+_[0-9]{8}$"
         },
@@ -32,7 +37,14 @@
                      "nodata_18": "integer",
                      "comment_18": "string",
                      "area_ha": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
       }
     },
     {

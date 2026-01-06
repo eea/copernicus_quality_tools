@@ -29,7 +29,8 @@ RUN pip3 install \
     pytz \
     boto3==1.37.38 \
     checksumdir==1.2.0 \
-    openpyxl==3.1.2
+    openpyxl==3.1.2 \
+    psycopg2-binary==2.9.6
 
 # Install qc tool, frontend application.
 RUN cd /usr/local/src \

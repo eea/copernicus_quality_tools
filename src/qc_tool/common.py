@@ -379,6 +379,7 @@ def setup_config():
     * UPDATE_JOB_STATUSES;
     * UPDATE_JOB_STATUSES_INTERVAL;
     * WORKER_ALIVE_TIMEOUT;
+    * CASE_INSENSITIVE_USERNAMES;
 
 
     Environment variables consumed by worker:
@@ -419,6 +420,7 @@ def setup_config():
         config["submission_dir"] = None
     else:
         config["submission_dir"] = Path(config["submission_dir"])
+    config["case_insensitive_usernames"] = environ.get("CASE_INSENSITIVE_USERNAMES", "no") == "yes"
 
     # Parameters consumed by worker.
     config["pull_job_url"] = environ.get("PULL_JOB_URL", "http://qc_tool_frontend:8000/pull_job")
@@ -458,6 +460,9 @@ def setup_config():
     config["inspire_service_url"] = environ.get(
         "INSPIRE_SERVICE_URL", INSPIRE_SERVICE_URL_DEFAULT
     )
+
+    # Maintenance mode
+    config["maintenance_mode"] = environ.get("MAINTENANCE_MODE", "no") == "yes"
 
     return config
 

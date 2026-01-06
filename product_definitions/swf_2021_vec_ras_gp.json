@@ -870,7 +870,12 @@
       "required": true,
       "parameters": {
         "reference_year": "2021",
-        "formats": [".gpkg"],
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".fgb",
+          ".parquet"
+        ],
         "layer_names": {
           "vector": "^clms_hrlslf_swf_s2021_vec_(?P<aoi_code>[0-9a-zA-Z]{2})_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
         },
@@ -895,8 +900,12 @@
           "class_name": "string"
         },
         "ignored": [
+          "shape_area",
           "shape_length",
-          "shape_area"
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
         ]
       }
     },

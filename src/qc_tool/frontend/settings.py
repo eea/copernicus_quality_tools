@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'qc_tool.frontend.dashboard.middleware.MaintenanceModeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -88,11 +89,25 @@ WSGI_APPLICATION = 'wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': str(CONFIG["frontend_db_path"])
+DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite")
+
+if DB_ENGINE == "postgres":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': environ.get("POSTGRES_DB", "qc_tool_frontend"),
+            'USER': environ.get("POSTGRES_USER", "qc_tool_user"),
+            'PASSWORD': environ.get("POSTGRES_PASSWORD", "qc_tool_password"),
+            'HOST': environ.get("POSTGRES_HOST", "qc_tool_userdb"),
+            'PORT': environ.get("POSTGRES_PORT", "5432"),
+        }
     }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': str(CONFIG["frontend_db_path"])
+        }
 }
 
 
@@ -150,7 +165,16 @@ SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
 # Logo display setting.
 SHOW_LOGO = CONFIG["show_logo"]
 
+# Maintenance mode setting.
+MAINTENANCE_MODE = CONFIG["maintenance_mode"]
+
 LOGIN_REDIRECT_URL = '/'
+
+# case-insensitive username authentication backend
+if CONFIG["case_insensitive_usernames"]:
+    AUTHENTICATION_BACKENDS = [
+        'qc_tool.frontend.dashboard.auth_backends.CaseInsensitiveBackend',
+    ]
 
 CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
 LOGGING = {

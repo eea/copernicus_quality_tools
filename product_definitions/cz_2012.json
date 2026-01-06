@@ -10,7 +10,12 @@
       "required": true,
       "parameters": {
         "reference_year": "2012",
-        "formats": [".gdb", ".gpkg"],
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".fgb",
+          ".parquet"
+        ],
         "layer_names": {
           "status": "^cz_2012_(?P<aoi_code>[a-z0-9]+)_3035_"
         },
@@ -33,7 +38,14 @@
                      "nodata_12": "integer",
                      "comment_12": "string",
                      "area_ha": "real"},
-        "ignored": ["shape_area", "shape_length"]
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
       }
     },
     {

@@ -105,7 +105,7 @@ class Delivery(models.Model):
 
     user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
     filename = models.CharField(max_length=500)
-    size_bytes = models.IntegerField()
+    size_bytes = models.BigIntegerField()
     date_uploaded = models.DateTimeField(default=timezone.now)
     date_submitted = models.DateTimeField(blank=True, null=True)
     product_ident = models.CharField(max_length=64, default=None, blank=True, null=True)
