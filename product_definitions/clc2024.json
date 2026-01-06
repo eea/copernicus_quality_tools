@@ -210,6 +210,15 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.document",
+      "required": false,
+      "parameters": {
+        "documents": {
+            "working unit metadata": "clc2024_{aoi_code}_wumeta.pdf"
+          }
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
