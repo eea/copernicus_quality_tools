@@ -79,6 +79,12 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
             s3.Bucket(bucketname).download_file(obj.key, local_filepath)
             downloaded_filenames.append(obj_name)
 
+            # Unzip if needed
+            if local_filepath.suffix == ".zip":
+                with ZipFile(str(local_filepath)) as zip_file:
+                    zip_file.extractall(path=str(s3_local_dir))
+                local_filepath.unlink()
+
         if downloaded_filenames:
             if not status.params.get("hash"):
                 downloaded_files_hash = dirhash(s3_local_dir, HASH_ALGORITHM)
