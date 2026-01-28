@@ -21,6 +21,7 @@ from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
 from qc_tool.common import CONFIG
+from qc_tool.worker.dispatch import make_signature
 
 
 INSPIRE_TEST_SUITE_NAME = "INSPIRE data sets and data set series interoperability metadata"
@@ -83,8 +84,16 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
             if local_filepath.suffix == ".zip":
                 with ZipFile(str(local_filepath)) as zip_file:
                     zip_file.extractall(path=str(s3_local_dir))
+                zip_hash = make_signature(str(local_filepath), HASH_ALGORITHM)
+                # Add the zip file hash to status properties
+                status.set_status_property("hash", zip_hash)
+                status.set_status_property("hash_files", [local_filepath.name])
                 local_filepath.unlink()
+                if not status.params.get("unzip_dir"):
+                    status.add_params({"unzip_dir": s3_local_dir})
+                return # only one zip file is expected and hash is already set
 
+        # in the case of a non-zip s3 delivery, hash is made from all downloaded files
         if downloaded_filenames:
             if not status.params.get("hash"):
                 downloaded_files_hash = dirhash(s3_local_dir, HASH_ALGORITHM)
