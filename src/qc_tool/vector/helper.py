@@ -84,7 +84,7 @@ def do_s3_download(host, access_key, secret_key, bucketname, pattern, s3_local_d
             if local_filepath.suffix == ".zip":
                 with ZipFile(str(local_filepath)) as zip_file:
                     zip_file.extractall(path=str(s3_local_dir))
-                zip_hash = make_signature(str(local_filepath), HASH_ALGORITHM)
+                zip_hash = make_signature(str(local_filepath))
                 # Add the zip file hash to status properties
                 status.set_status_property("hash", zip_hash)
                 status.set_status_property("hash_files", [local_filepath.name])
