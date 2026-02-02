@@ -1,0 +1,56 @@
+name: Docker Compose CI
+
+on:
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "dev" ]
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-20.04
+    
+    defaults:
+      run:
+        working-directory: ./docker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose -f docker-compose.service_provider.yml build
+
+      - name: Start services
+        run: docker compose -f docker-compose.service_provider.yml up -d
+
+      # 4. Wait for the API to be "Live" before testing
+      - name: Wait for API Ready
+        run: |
+          echo "Waiting for API to respond..."
+          # This loops until the endpoint returns a 200 OK or we hit 30 seconds
+          for i in {1..30}; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/delivery-list | grep "200"; then
+              echo "API is up!"
+              break
+            fi
+            echo "Still waiting..."
+            sleep 1
+          done
+
+      # 5. Call the specific endpoint
+      - name: Test API Endpoint
+        run: |
+          echo "Fetching delivery list..."
+          curl -v http://localhost:8000/api/delivery-list
+
+      # 6. Keep running for the remainder of the 5 minutes
+      - name: Stay alive
+        run: |
+          echo "Testing complete. Keeping services up for remainder of 5 minutes..."
+          sleep 300
+          docker compose -f docker-compose.service_provider.yml ps
+
+      - name: Stop services
+        if: always()
+        run: docker compose -f docker-compose.service_provider.yml down
