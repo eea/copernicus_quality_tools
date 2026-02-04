@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 import logging
 import re
 import time
@@ -11,6 +10,7 @@ from math import floor
 from zipfile import ZipFile
 import boto3
 from pathlib import Path
+import PyPDF2
 
 import psycopg2
 import psycopg2.errorcodes
@@ -242,6 +242,28 @@ def find_geoparquet_layers(unzip_dir, status):
             geoparquet_layer_infos.append({"src_layer_name": layer_name, "src_filepath": geoparquet_filepath})
         ds = None
     return geoparquet_layer_infos
+
+def find_pdfs(unzip_dir, status):
+
+    # Find .gpkg files.
+    pdf_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".pdf"]
+    pdf_file_infos = []
+
+    for pdf_filepath in pdf_filepaths:
+
+        # Try to open PDF file...
+        try:
+            with open(pdf_filepath, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                # Try to read first page
+                _ = reader.pages[0]
+        except Exception as e:
+            status.aborted("Can not open PDF file {:s}.".format(pdf_filepath.name))
+            return []
+
+        pdf_file_infos.append({"src_filepath": pdf_filepath, "src_filename":pdf_filepath.name})
+    return pdf_file_infos
 
 
 def find_documents(unzip_dir, regex):

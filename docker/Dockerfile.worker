@@ -56,7 +56,7 @@ RUN echo "$VERSION" >/etc/qc_tool_version.txt \
     && cd / && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     # numpy must be installed before GDAL python bindings are built
-    &&  pip3 install --no-cache-dir numpy
+    &&  pip3 install --no-cache-dir numpy PyPDF2
     
 # -------------------------------------------------------------
 # --- Add Apache Arrow + Parquet dev packages (GeoParquet support) ---
