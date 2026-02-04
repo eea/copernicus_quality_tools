@@ -13,6 +13,3 @@ baseurl: /copernicus_quality_tools
 
 # Navigation structure
 nav_order: 1
-
-plugins:
-  - jekyll-sitemap
