@@ -214,7 +214,7 @@
       "required": false,
       "parameters": {
         "documents": {
-            "working unit metadata": "clc2024_{aoi_code}_wumeta.pdf"
+            "working unit metadata": "wu.*pdf"
           }
       }
     },
@@ -627,8 +627,8 @@
           "initial"
         ],
         "boundary_tolerance": 25.0,
-        "gap_area_tolerance": 0.01,
-        "gap_width_tolerance": 0.0001,
+        "gap_area_tolerance": 0.1,
+        "gap_width_tolerance": 0.01,
         "du_column_name": null
       }
     },
@@ -637,7 +637,25 @@
       "required": false,
       "parameters": {
         "layers": [
-          "initial",
+          "initial"
+        ],
+        "complex_change": null,
+        "general_where": [
+          "layer.shape_area >= 250000"
+        ],
+        "exception_where": [
+          "meta.is_marginal"
+        ],
+        "warning_where": [
+          "layer.shape_area >= 1"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": [
           "reference"
         ],
         "complex_change": null,
@@ -671,7 +689,7 @@
           "meta.cc_area IS NOT NULL AND meta.cc_area >= 50000"
         ],
         "warning_where": [
-          "FALSE"
+          "layer.shape_area >= 5000"
         ]
       }
     },
@@ -723,7 +741,7 @@
           "change",
           "solar"
         ],
-        "overlap_area_tolerance": 0.01
+        "overlap_area_tolerance": 0.1
       }
     },
     {

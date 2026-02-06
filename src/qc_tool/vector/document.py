@@ -2,16 +2,20 @@
 # -*- coding: utf-8 -*-
 
 
-DESCRIPTION = "Delivery contains a pdf document."
+DESCRIPTION = "Delivery contains pdf document(s)."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
     from qc_tool.vector.helper import find_documents
 
+    document_filepaths = []
     # Find supplementary documents, e.g. {clc2024_{aoi_code}_wumeta.pdf.
     for document_alias, document_regex in params.get("documents", {}).items():
         document_regex_with_aoi = document_regex.replace("{aoi_code}", params.get("aoi_code", ""))
         document_filepaths = find_documents(params["unzip_dir"], document_regex_with_aoi)
         if not document_filepaths:
-            status.failed("The delivery does not contain the expected document '{:s}'.".format(document_regex_with_aoi))
+            status.failed("The delivery does not contain the working unit metadata document(s) '*wu*.pdf'.")
+            return
+    status.info(f"The delivery contains {len(document_filepaths)} working unit metadata document(s).")
+
