@@ -666,7 +666,7 @@
           "meta.is_marginal"
         ],
         "warning_where": [
-          "FALSE"
+          "layer.shape_area >= 220000"
         ]
       }
     },
@@ -794,8 +794,11 @@
         "exception_where": [
           "layer.chtype = 'T'"
         ],
-        "error_where": [
+        "warning_where": [
           "TRUE"
+        ],
+        "error_where": [
+          "FALSE"
         ]
       }
     },
