@@ -17,7 +17,7 @@
           ".parquet"
         ],
         "layer_names": {
-          "reference": "^clms_ua_lcu_s2024_v025ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z_]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
+          "reference": "^clms_ua_lcu_s2024_v025ha_(?P<aoi_code>[0-9a-z]{6})[0-9]{1}_(?P<fua_name>[a-z\\-]+)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
         },
         "aoi_codes": [
           "it022l",
@@ -814,10 +814,6 @@
         "epsg_codes": [
           "03035"
         ],
-        "documents": {
-          "map.pdf": "_map.pdf$",
-          "delivery_report.pdf": "_delivery_report.pdf$"
-        },
         "excessive_layers_allowed": false,
         "boundary_source": "boundary_ua2024_eea39_v1.gpkg"
       }
