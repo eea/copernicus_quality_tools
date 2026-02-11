@@ -50,10 +50,12 @@ def make_signature(filepath):
             h.update(buf)
     return h.hexdigest()
 
-def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fid_name, output_dir):
+def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fid_name, output_dir, src_filename_stem=None):
     (dsn, schema) = connection_manager.get_dsn_schema()
     conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
     gpkg_filepath = output_dir.joinpath("{:s}.gpkg".format(error_table_name))
+    if src_filename_stem is not None:
+        gpkg_filepath = output_dir.joinpath("{:s}_{:s}.gpkg".format(src_filename_stem, error_table_name))
 
     # Export error features into geopackage.
     sql_params = {"fid_name": pg_fid_name,
@@ -74,11 +76,13 @@ def dump_error_table(connection_manager, error_table_name, src_table_name, pg_fi
     run(args)
     return gpkg_filepath.name
 
-def dump_full_table(connection_manager, table_name, output_dir):
+def dump_full_table(connection_manager, table_name, output_dir, src_filename_stem=None):
     connection = connection_manager.get_connection()
     (dsn, schema) = connection_manager.get_dsn_schema()
     conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
     gpkg_filepath = output_dir.joinpath("{:s}.gpkg".format(table_name))
+    if src_filename_stem is not None:
+        gpkg_filepath = output_dir.joinpath("{:s}_{:s}.gpkg".format(src_filename_stem, table_name))
 
     # Export features into geopackage.
     args = ["ogr2ogr",
@@ -202,14 +206,16 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                                                            error_table_name,
                                                            src_table_name,
                                                            pg_fid_name,
-                                                           jobdir_manager.output_dir)
+                                                           jobdir_manager.output_dir,
+                                                           filepath.stem)
                     step_result["attachment_filenames"].append(attachment_filename)
 
                 # Export full tables.
                 for table_name in check_status.full_table_names:
                     attachment_filename = dump_full_table(job_params["connection_manager"],
                                                           table_name,
-                                                          jobdir_manager.output_dir)
+                                                          jobdir_manager.output_dir,
+                                                          filepath.stem)
                     step_result["attachment_filenames"].append(attachment_filename)
 
                 # Update job status properties.
