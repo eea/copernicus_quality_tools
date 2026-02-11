@@ -161,9 +161,12 @@ function toggle_select_button() {
         $("#btn-qc-multi").prop("disabled", true);
         $("#btn-delete-multi").text("Delete all selected");
         $("#btn-delete-multi").prop("disabled", true);
+        $("#btn-submit-multi").text("Submit all selected");
+        $("#btn-submit-multi").prop("disabled", true);
         if (IS_TEST_GROUP) {
             $("#btn-qc-multi").prop("title", "As a test user account you are not allowed to run QC.");
             $("#btn-delete-multi").prop("title", "As a test user account you are not allowed to delete deliveries.");
+            $("#btn-submit-multi").prop("title", "As a test user account you are not allowed to submit deliveries.");
         }
     } else {
         if (IS_TEST_GROUP) {
@@ -174,12 +177,17 @@ function toggle_select_button() {
             $("#btn-delete-multi").text("Delete all selected");
             $("#btn-delete-multi").prop("disabled", true);
             $("#btn-delete-multi").prop("title", "As a test user account you are not allowed to delete deliveries.");
+            $("#btn-submit-multi").text("Submit all selected");
+            $("#btn-submit-multi").prop("disabled", true);
+            $("#btn-submit-multi").prop("title", "As a test user account you are not allowed to submit deliveries.");
         }
         else {
             $("#btn-qc-multi").text("QC all selected (" + numChecked + ")");
             $("#btn-qc-multi").prop("disabled", false);
             $("#btn-delete-multi").text("Delete all selected (" + numChecked + ")");
             $("#btn-delete-multi").prop("disabled", false);
+            $("#btn-submit-multi").text("Submit all selected (" + numChecked + ")");
+            $("#btn-submit-multi").prop("disabled", false);
         }
 
     }
@@ -319,6 +327,80 @@ function submit_eea_function(id, filename) {
     });
 }
 
+
+function submit_eea_batch_function(delivery_ids, filenames) {
+    var msg_title = "Are you sure you want to submit the delivery to EEA?";
+
+    // number of deliveries to submit
+    console.log(delivery_ids);
+    console.log(filenames);
+    var num_deliveries = delivery_ids.toString().split(",").length;
+
+    if (num_deliveries > 1) {
+        msg_title = "Are you sure you want to submit " + num_deliveries + " deliveries to EEA?";
+    }
+    if (num_deliveries > 10) {
+        msg_filenames = filenames.split(",").slice(0, 10).join("<br>") + "<br> ...and " + (num_deliveries - 10) + " others.";
+    } else if (num_deliveries > 0) {
+        msg_filenames = filenames.split(",").slice(0, 10).join("<br>");
+    }
+    var dlg_ok = BootstrapDialog.show({
+        type: BootstrapDialog.TYPE_DANGER,
+        title: msg_title,
+        message: msg_filenames, //filenames.replace(/,/g, "<br>"), //replaces all commas by newline.
+        buttons: [{
+            label: "Yes",
+            cssClass: "btn-default",
+            action: function(dialog) {
+                data = {"ids": delivery_ids};
+                $.ajax({
+                    type: "POST",
+                    url: "/delivery/submit_eea_batch/",
+                    data: data,
+                    dataType: "json",
+                    success: function(result) {
+                        if (result.status === "error") {
+                            var dlg_err = BootstrapDialog.show({
+                                type: BootstrapDialog.TYPE_WARNING,
+                                title: "Cannot submit deliveries.",
+                                message: "Error submitting deliveries. " + result.message,
+                                buttons: [{
+                                    label: "OK",
+                                    cssClass: "btn-default",
+                                    action: function(dialog) {dialog.close();}
+                                }]
+                            });
+                        }
+                        $('#tbl-deliveries').bootstrapTable('refresh');
+                        dialog.close();
+                    },
+                    error: function(result)  {
+                        var error_message = "Unspecified error.";
+                            if (result.hasOwnProperty("responseJSON")) {
+                                error_message = result.responseJSON.message;
+                            }
+                            var dlg_err = BootstrapDialog.show({
+                                type: BootstrapDialog.TYPE_WARNING,
+                                title: "Error",
+                                message: error_message,
+                                buttons: [{
+                                    label: "OK",
+                                    cssClass: "btn-default",
+                                    action: function(dialog) {dialog.close();}
+                                }]
+                            });
+                    }
+                });
+            }
+        }, {
+            label: "No",
+            cssClass: "btn-default",
+            action: function(dialog) {dialog.close();}
+        }]
+    });
+}
+
+
 function update_job_statuses() {
     // Refreshes rows in the deliveries table with 'running' or 'waiting' status.
 
@@ -435,6 +517,25 @@ $(document).ready(function() {
             return row.filename
         });
         delete_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
+    });
+
+    // "Submit all selected" button is clicked
+    $('#btn-submit-multi').on('click', function() {
+        console.log("Submit all selected button clicked!");
+        if ($("#tbl-deliveries").bootstrapTable("getSelections").length === 0) {
+            alert("Please select at least one delivery.");
+            toggle_select_button();
+            return;
+        }
+        // TODO - if some of the selected deliveries are not in "ok" status, show a warning message and ask user to confirm submission.
+
+        var selected_delivery_ids = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+            return row.id
+        });
+        var selected_delivery_filenames = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+            return row.filename
+        });
+        submit_eea_batch_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
     });
 
     $("#btn-export").click(function() {

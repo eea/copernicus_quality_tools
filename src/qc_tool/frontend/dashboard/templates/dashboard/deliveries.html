@@ -61,15 +61,19 @@
                                 Delete all selected
                             </button>
                             <span>&nbsp;&nbsp;</span>
+                            <button id="btn-submit-multi" onclick="" class="btn btn-success mr-10" disabled>
+                                Submit all selected
+                            </button>
+                            <span>&nbsp;&nbsp;</span>
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-version" onclick="" class="btn btn-basic mr-10">
                                 <span class="glyphicon glyphicon-basic" aria-hidden="true"></span>
-                                Boundary version: {{ boundary_version }}
+                                Boundary: {{ boundary_version }}
                             </button>
                             <span>&nbsp;&nbsp;</span>
                             <span>&nbsp;&nbsp;</span>
                             API Key:
-                            <input type="text" value="{{ api_key }}" class="field left" size=30 readonly="readonly">
+                            <input type="text" value="{{ api_key }}" class="field left" size=25 readonly="readonly">
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-export" class="btn btn-info">
                                 <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>

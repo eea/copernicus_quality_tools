@@ -1078,6 +1078,61 @@ def submit_delivery_to_eea(request):
         return JsonResponse({"status":"ok",
                              "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
 
+
+@csrf_exempt
+def submit_deliveries_to_eea_batch(request):
+    if request.method == "POST":
+        delivery_ids = request.POST.get("ids").split(",")
+        filenames = request.POST.get("filenames").split(",")
+
+        submitted_ids = []
+        failed_ids = []
+        for delivery_id, filename in zip(delivery_ids, filenames):
+
+            # Check if delivery with given ID exists.
+            try:
+                d = models.Delivery.objects.get(id=delivery_id)
+            except ObjectDoesNotExist:
+                response = JsonResponse({"status": "error",
+                                        "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
+                response.status_code = 404
+                return response
+
+            try:
+                logger.debug("delivery_submit_eea id=" + str(delivery_id))
+
+                job = d.get_submittable_job()
+                if job is None:
+                    message = "Delivery {:s} cannot be submitted to EEA. Status is not OK.)".format(d.filename)
+                    response = JsonResponse({"status": "error", "message": message})
+                    response.status_code = 400
+                    return response
+                submission_date = timezone.now()
+
+                if d.s3:
+                    submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
+                else:
+                    zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+                    submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
+
+                d.submit()
+                d.submission_date = submission_date
+                d.save()
+                submitted_ids.append(delivery_id)
+            except BaseException as e:
+                d.date_submitted = None
+                d.save()
+                failed_ids.append(delivery_id)
+                error_message = "ERROR submitting delivery to EEA. file {:s}. exception {:s}".format(filename, str(e))
+                logger.error(error_message)
+
+            if len(submitted_ids) == 0:
+                return JsonResponse({"status": "error", "message": "None of the deliveries could be submitted to EEA."}, status=500)
+            return JsonResponse({"status":"ok",
+                                "message": "{0}/{1} Deliveries successfully submitted to EEA.".format(len(submitted_ids), len(delivery_ids))})
+
+
+
 def api_submit_delivery_to_eea(request):
 
     # Verify api key
