@@ -32,12 +32,10 @@ def run_check(params, status):
     for layer_alias, layer_regex in params["document_names"].items():
         builder.extract_layer_def(layer_regex, layer_alias)
 
-
-    # TODO: decide how to deal with excesive layers
-    # # Check excessive layers.
-    # excessive_layers_allowed = params.get("excessive_layers_allowed", False)
-    # if not excessive_layers_allowed:
-    #     builder.check_excessive_layers()
+    # Check excessive layers.
+    excessive_layers_allowed = params.get("excessive_layers_allowed", False)
+    if not excessive_layers_allowed:
+        builder.check_excessive_layers()
 
     # Extract AOI code and compare it to pre-defined list.
     aoi_code = None
