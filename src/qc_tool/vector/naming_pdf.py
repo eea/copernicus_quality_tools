@@ -57,9 +57,13 @@ def run_check(params, status):
         name_epsg = extract_epsg_code(builder.layer_defs, params["document_names"], params["epsg_codes"], status,
                                       compare_epsg_codes=compare_epsg_codes)
 
-    checked_pdf_file_names = "', '". join([product["src_layer_name"] for alias, product in builder.layer_defs.items()])
-    status.info(f"PDF file names: '{checked_pdf_file_names}' have been successfully checked.")
-    status.info(f"AOI code detected from PDF file names: {aoi_code}")
-    status.info(f"EPSG code detected from PDF file names: {name_epsg}")
+    
+    pdf_filename_list = [product["src_layer_name"] for alias, product in builder.layer_defs.items()]
+    expected_pdf_count = len(params["document_names"])
+    if len(pdf_filename_list) != expected_pdf_count:
+        checked_pdf_file_names = "', '". join(pdf_filename_list)
+        status.info(f"PDF file names: '{checked_pdf_file_names}' have been successfully checked.")
+        status.info(f"AOI code detected from PDF file names: {aoi_code}")
+        status.info(f"EPSG code detected from PDF file names: {name_epsg}")
 
 
