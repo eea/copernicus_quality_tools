@@ -903,7 +903,7 @@ class Test_gap(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
         self.assertEqual([], self.cursor.fetchall())
 
     def test_tolerance_finds_gaps(self):
@@ -913,7 +913,7 @@ class Test_gap(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
         self.assertEqual(1, len(self.cursor.fetchall()))
         self.assertIn("has 1 gaps", status.messages[0])
 
@@ -926,17 +926,17 @@ class Test_gap(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
         self.assertEqual([], self.cursor.fetchall())
 
-    def test_gap_warning(self):
+    def test_gap_error(self):
         from qc_tool.vector.gap import run_check
         self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         self.assertIn("gap", status.messages[0])
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
         self.assertEqual([('POLYGON((2 2,2 5,5 5,5 2,2 2),(3 3,4 3,4 4,3 4,3 3))',)], self.cursor.fetchall())
 
 
@@ -968,10 +968,10 @@ class Test_gap_du(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
         self.assertListEqual([], self.cursor.fetchall())
 
-    def test_gap_warning(self):
+    def test_gap_error(self):
         from qc_tool.vector.gap import run_check
         self.cursor.execute("INSERT INTO reference VALUES (1, 'A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (2, 'A', ST_MakeEnvelope(2, 2, 5, 5, 4326));")
@@ -980,7 +980,7 @@ class Test_gap_du(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
         self.assertIn("gap", status.messages[0])
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_warning;")
+        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
         self.assertListEqual([('POLYGON((8 8,8 9,9 9,9 8,8 8))',)], self.cursor.fetchall())
 
     def test_du_warning(self):

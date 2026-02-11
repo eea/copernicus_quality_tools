@@ -58,7 +58,7 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"gap_table": gap_table.gap_table_name,
                       "gap_exception_table": "s{:02d}_{:s}_gap_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "gap_warning_table": "s{:02d}_{:s}_gap_warning".format(params["step_nr"], layer_def["pg_layer_name"]),
+                      "gap_error_table": "s{:02d}_{:s}_gap_error".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "gap_area_tolerance": str(gap_area_tolerance),
                       "gap_width_tolerance": str(gap_width_tolerance)}
         with params["connection_manager"].get_connection().cursor() as cursor:
@@ -82,7 +82,7 @@ def run_check(params, status):
                     status.add_full_table(sql_params["gap_exception_table"])
 
             # Create table of warning items.
-            sql = ("CREATE TABLE {gap_warning_table} AS\n"
+            sql = ("CREATE TABLE {gap_error_table} AS\n"
                    "SELECT geom FROM {gap_table}\n"
                    "WHERE ST_AREA(geom) > {gap_area_tolerance}\n"
                    "AND ST_MinimumClearance(geom) > {gap_width_tolerance}\n"
@@ -96,7 +96,7 @@ def run_check(params, status):
             # Report warning items.
             if cursor.rowcount > 0:
                 status.failed("Layer {:s} has {:d} gaps.".format(layer_def["pg_layer_name"], cursor.rowcount))
-                status.add_full_table(sql_params["gap_warning_table"])
+                status.add_full_table(sql_params["gap_error_table"])
 
         if params["du_column_name"] is not None:
             sql_params = {"fid_column": layer_def["pg_fid_name"],

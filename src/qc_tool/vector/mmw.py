@@ -13,6 +13,17 @@ def run_check(params, status):
     cursor = params["connection_manager"].get_connection().cursor()
 
     for layer_def in do_layers(params):
+        
+        # Check for number of polygons in vector layer
+        sql_params = {"layer_name": layer_def["pg_layer_name"]}
+        sql = "SELECT EXISTS (SELECT 1 FROM {layer_name});"
+        sql = sql.format(**sql_params)
+        cursor.execute(sql)
+        any_polygon_in_vector = cursor.fetchone()[0]
+        if not any_polygon_in_vector:
+            status.info("There is no polygon to check in the {:s} layer.".format(layer_def["pg_layer_name"]))
+            continue
+
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],

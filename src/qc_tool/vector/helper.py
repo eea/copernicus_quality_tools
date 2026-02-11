@@ -1201,6 +1201,7 @@ class NeighbourTable():
                    "WHERE NOT ST_IsEmpty(geom)\n"
                    "GROUP BY fida, fidb\n"
                    "HAVING max(ST_Dimension(geom)) >= 1 AND max(ST_Length(geom)) > {neighbour_length_tolerance};")
+            
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
@@ -1463,6 +1464,73 @@ class ComplexChangeProperty():
         with self.connection.cursor() as cursor:
             cursor.execute(sql)
 
+
+    def _fill_cluster_new(self, cc_id_column_name, code_column_name):
+        sql_params = {
+            "neighbour_table_name": self.neighbour_table.neighbour_table_name,
+            "meta_table_name": self.meta_table.meta_table_name,
+            "pg_layer_name": self.partitioned_layer.pg_layer_name,
+            "pg_fid_name": self.partitioned_layer.pg_fid_name,
+            "cc_id_column_name": cc_id_column_name,
+            "code_column_name": code_column_name
+        }
+
+        # We only need fida < fidb because your table is symmetrical.
+        # This prevents processing the same pair twice.
+        sql = ("SELECT nb.fida, nb.fidb\n"
+               " FROM {neighbour_table_name} AS nb\n"
+               " INNER JOIN {pg_layer_name} AS la ON nb.fida = la.{pg_fid_name}\n"
+               " INNER JOIN {pg_layer_name} AS lb ON nb.fidb = lb.{pg_fid_name}\n"
+               " WHERE nb.fida < nb.fidb\n"
+               " AND la.{code_column_name} = lb.{code_column_name};").format(**sql_params)
+
+        parent = {}
+
+        def find(i):
+            if parent[i] == i:
+                return i
+            # Path compression: makes future lookups nearly O(1)
+            parent[i] = find(parent[i])
+            return parent[i]
+
+        def union(i, j):
+            if i not in parent: parent[i] = i
+            if j not in parent: parent[j] = j
+            root_i = find(i)
+            root_j = find(j)
+            if root_i != root_j:
+                # Use smaller ID as root to satisfy your requirement
+                if root_i < root_j:
+                    parent[root_j] = root_i
+                else:
+                    parent[root_i] = root_j
+
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql)
+            for fida, fidb in cursor.fetchall():
+                union(fida, fidb)
+
+            if not parent:
+                return
+
+            # Flatten the structure so everyone points to the absolute root
+            fid_cc_idx = {fid: find(fid) for fid in parent}
+
+            # Bulk update to meta table
+            # Using a single UPDATE with a VALUES list is much faster than a loop
+            values_str = ",".join(cursor.mogrify("(%s,%s)", (f, c)).decode('utf-8') 
+                                 for f, c in fid_cc_idx.items())
+            
+            update_sql = (
+                "UPDATE {meta_table_name} AS m \n"
+                "SET {cc_id_column_name} = v.cc_id \n"
+                "FROM (VALUES {values}) AS v(fid, cc_id) \n"
+                "WHERE m.fid = v.fid;"
+            ).format(values=values_str, **sql_params)
+            
+            cursor.execute(update_sql)
+
+
     def _fill_cluster(self, cc_id_column_name, code_column_name):
         # Complex change is a cluster consisting of neighbouring features having the same code.
         # For the purpose of related algorithms every cluster is identified by the smallest fid
@@ -1488,8 +1556,6 @@ class ComplexChangeProperty():
                "  INNER JOIN {pg_layer_name} AS other ON nb.fidb = other.{pg_fid_name}\n"
                " WHERE\n"
                "  layer.{code_column_name} = other.{code_column_name}\n"
-               "  AND layer.{initial_code_column_name} != layer.{final_code_column_name}"
-               "  AND other.{initial_code_column_name} != other.{final_code_column_name}"
                " GROUP BY layer.{pg_fid_name}\n"
                " ORDER BY layer.{pg_fid_name};")
         sql = sql.format(**sql_params)
@@ -1548,8 +1614,8 @@ class ComplexChangeProperty():
             self._prepare_meta_table()
 
             # Fill clusters for initial year and for final year.
-            self._fill_cluster("cc_id_initial", self.initial_code_column_name)
-            self._fill_cluster("cc_id_final", self.final_code_column_name)
+            self._fill_cluster_new("cc_id_initial", self.initial_code_column_name)
+            self._fill_cluster_new("cc_id_final", self.final_code_column_name)
 
             # Fill complex change area by greater of initial year and final year.
             self._fill_area("cc_id_initial")
