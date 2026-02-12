@@ -166,8 +166,8 @@ function toggle_select_button() {
     if (numChecked === 0) {
         $("#btn-qc-multi, #btn-delete-multi, #btn-submit-multi").prop("disabled", true);
         $("#btn-qc-multi").text("QC all selected");
-        $("#btn-delete-multi").text("Delete all selected");
-        $("#btn-submit-multi").text("Submit all selected");
+        $("#btn-delete-multi").text("Delete selected");
+        $("#btn-submit-multi").text("Submit selected");
 
         if (IS_TEST_GROUP) {
             $("#btn-qc-multi").prop("title", "As a test user account you are not allowed to run QC.");
@@ -181,10 +181,10 @@ function toggle_select_button() {
         } else {
             // Enable and update text for QC and Delete
             $("#btn-qc-multi").prop("disabled", false).text("QC all selected (" + numChecked + ")");
-            $("#btn-delete-multi").prop("disabled", false).text("Delete all selected (" + numChecked + ")");
+            $("#btn-delete-multi").prop("disabled", false).text("Delete selected (" + numChecked + ")");
             
             // Logic for Submit: Enable only if there is at least one submittable row
-            $("#btn-submit-multi").text("Submit all selected (" + numCheckedSubmittable + ")");
+            $("#btn-submit-multi").text("Submit selected (" + numCheckedSubmittable + ")");
             $("#btn-submit-multi").prop("disabled", numCheckedSubmittable === 0);
         }
     }
@@ -505,9 +505,9 @@ $(document).ready(function() {
         $(location).attr("href","/setup_job?deliveries=" + selected_delivery_ids.join(","));
     })
 
-    // "Delete all selected" button is clicked
+    // "Delete selected" button is clicked
     $('#btn-delete-multi').on('click', function() {
-        console.log("Delete all selected button clicked!");
+        console.log("Delete selected button clicked!");
         if ($("#tbl-deliveries").bootstrapTable("getSelections").length === 0) {
             alert("Please select at least one delivery.");
             toggle_select_button();
@@ -522,9 +522,9 @@ $(document).ready(function() {
         delete_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
     });
 
-    // "Submit all selected" button is clicked
+    // "Submit selected" button is clicked
     $('#btn-submit-multi').on('click', function() {
-        console.log("Submit all selected button clicked!");
+        console.log("Submit selected button clicked!");
         var submittableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(function(row) {
             return row.last_job_status === "ok";
         });
