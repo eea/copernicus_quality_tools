@@ -1079,58 +1079,74 @@ def submit_delivery_to_eea(request):
                              "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
 
 
+from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
+
 @csrf_exempt
 def submit_deliveries_to_eea_batch(request):
-    if request.method == "POST":
-        delivery_ids = request.POST.get("ids").split(",")
-        filenames = request.POST.get("filenames").split(",")
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-        submitted_ids = []
-        failed_ids = []
-        for delivery_id, filename in zip(delivery_ids, filenames):
+    # Use .get('ids', '') to avoid errors if the key is missing
+    id_str = request.POST.get("ids", "")
+    if not id_str:
+        return JsonResponse({"status": "error", "message": "No IDs provided"}, status=400)
 
-            # Check if delivery with given ID exists.
-            try:
-                d = models.Delivery.objects.get(id=delivery_id)
-            except ObjectDoesNotExist:
-                response = JsonResponse({"status": "error",
-                                        "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
-                response.status_code = 404
-                return response
+    delivery_ids = id_str.split(",")
+    # Filenames could technically be pulled from the DB once you have the ID, 
+    # but we'll keep your zip logic for now.
+    filenames = request.POST.get("filenames", "").split(",")
 
-            try:
-                logger.debug("delivery_submit_eea id=" + str(delivery_id))
+    submitted_ids = []
+    failed_details = [] # Store reasons for failure
 
-                job = d.get_submittable_job()
-                if job is None:
-                    message = "Delivery {:s} cannot be submitted to EEA. Status is not OK.)".format(d.filename)
-                    response = JsonResponse({"status": "error", "message": message})
-                    response.status_code = 400
-                    return response
-                submission_date = timezone.now()
+    for delivery_id, filename in zip(delivery_ids, filenames):
+        try:
+            d = models.Delivery.objects.get(id=delivery_id)
+            
+            # Check status logic
+            job = d.get_submittable_job()
+            if job is None:
+                failed_details.append(f"{filename}: Status not OK")
+                continue # Move to the next delivery, don't stop the whole process
 
-                if d.s3:
-                    submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
-                else:
-                    zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
-                    submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
+            submission_date = timezone.now()
 
-                d.submit()
-                d.submission_date = submission_date
-                d.save()
-                submitted_ids.append(delivery_id)
-            except BaseException as e:
-                d.date_submitted = None
-                d.save()
-                failed_ids.append(delivery_id)
-                error_message = "ERROR submitting delivery to EEA. file {:s}. exception {:s}".format(filename, str(e))
-                logger.error(error_message)
+            # Submission execution
+            if d.s3:
+                submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
+            else:
+                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+                submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
 
-            if len(submitted_ids) == 0:
-                return JsonResponse({"status": "error", "message": "None of the deliveries could be submitted to EEA."}, status=500)
-            return JsonResponse({"status":"ok",
-                                "message": "{0}/{1} Deliveries successfully submitted to EEA.".format(len(submitted_ids), len(delivery_ids))})
+            # Update record
+            d.submit()
+            d.submission_date = submission_date
+            d.save()
+            submitted_ids.append(delivery_id)
 
+        except ObjectDoesNotExist:
+            failed_details.append(f"ID {delivery_id}: Not found")
+        except Exception as e:
+            logger.error(f"ERROR submitting delivery {delivery_id}: {str(e)}")
+            failed_details.append(f"{filename}: System error")
+
+    # --- Final Response Logic ---
+    total_requested = len(delivery_ids)
+    total_submitted = len(submitted_ids)
+
+    if total_submitted == 0:
+        return JsonResponse({
+            "status": "error", 
+            "message": "None of the deliveries could be submitted.",
+            "details": failed_details
+        }, status=400)
+
+    return JsonResponse({
+        "status": "ok",
+        "message": f"{total_submitted}/{total_requested} deliveries successfully submitted.",
+        "failed": failed_details
+    })
 
 
 def api_submit_delivery_to_eea(request):
