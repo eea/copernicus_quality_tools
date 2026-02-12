@@ -9,6 +9,7 @@ import shutil
 import time
 import traceback
 from pathlib import Path
+import uuid
 from zipfile import ZipFile
 import json
 
@@ -769,9 +770,15 @@ def export_deliveries_excel(request):
         # Write header
         headers = list(data[0].keys())
         ws.append(headers)
-        # Write rows
+        # Write rows in compatible format (e.g. convert UUIDs to strings)
         for row in data:
-            ws.append([row.get(col, "") for col in headers])
+            formatted_row = []
+            for col in headers:
+                value = row.get(col, "")
+                if isinstance(value, uuid.UUID):
+                    value = str(value)
+                formatted_row.append(value)
+            ws.append(formatted_row)
 
     # Adjust column widths
     for col in ws.columns:
