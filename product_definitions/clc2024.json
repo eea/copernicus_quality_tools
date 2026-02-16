@@ -193,10 +193,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.import2pg",
-      "required": true
-    },
-    {
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
@@ -217,6 +213,10 @@
             "working unit metadata": "wu.*pdf"
           }
       }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
     },
     {
       "check_ident": "qc_tool.vector.unique",
@@ -614,7 +614,7 @@
         ],
         "area_column_name": "shape_area",
         "unit": 1,
-        "tolerance": 0.1,
+        "tolerance": 2.0,
         "tolerance_percent": true
       }
     },

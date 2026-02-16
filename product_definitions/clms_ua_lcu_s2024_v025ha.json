@@ -859,10 +859,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.vector.import2pg",
-      "required": true
-    },
-    {
       "check_ident": "qc_tool.vector.inspire",
       "required": false,
       "parameters": {
@@ -870,6 +866,10 @@
           "reference"
         ]
       }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
     },
     {
       "check_ident": "qc_tool.vector.unique",
