@@ -1,0 +1,264 @@
+{
+  "description": "Protected Areas 2021 status",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2021",
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".fgb",
+          ".parquet"
+        ],
+        "layer_names": {
+          "status2021": "^clms_pa_lcuc_s2021_(?P<aoi_code>[0-9a-z]{6})_(?P<du_name>[a-z]+)_v05ha_eu27_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}$"
+        },
+        "aoi_codes": [
+          "du0001", "du0002", "du0003", "du0004", "du0005", "du0006", "du0007", "du0008", "du0009", "du0010", "du0011",
+          "du0012", "du0013", "du0014", "du0015", "du0016", "du0017", "du0018", "du0019", "du0020", "du0021", "du0022",
+          "du0023", "du0024", "du0025", "du0026", "du0027", "du0028", "du0029", "du0030", "du0031", "du0032", "du0033",
+          "du0034", "du0035", "du0036", "du0037", "du0038"],
+        "excessive_layers_allowed": false,
+        "boundary_source": "boundary_pa.gpkg"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["status2021"],
+        "required": {"uid": "string",
+                     "du_id": "string",
+                     "code_1_21": "integer",
+                     "code_2_21": "integer",
+                     "code_3_21": "integer",
+                     "code_4_21": "integer",
+                     "nodata_21": "integer",
+                     "comment_21": "string",
+                     "area_ha": "real"},
+        "ignored": [
+          "objectid",
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["status2021"],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "unique_keys": ["uid"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "column_defs": [["nodata_21", [0, 1]],
+                        ["code_1_21", [0, 1, 2, 3, 4, 5, 6, 7, 8]],
+                        ["code_2_21", [0,
+                                       11, 12, 13, 14,
+                                       21, 22, 23,
+                                       31, 32, 33, 34, 35, 36,
+                                       41, 42,
+                                       51, 52, 53,
+                                       61, 62, 63,
+                                       71, 72,
+                                       81, 82, 83, 84]],
+                        ["code_3_21", [0,
+                                       111, 112,
+                                       121, 122, 123, 124,
+                                       131, 132,
+                                       140,
+                                       211, 212,
+                                       221, 222,
+                                       231, 232, 233, 234,
+                                       311, 312,
+                                       321, 322,
+                                       331, 332,
+                                       340,
+                                       350,
+                                       360,
+                                       410,
+                                       421, 422,
+                                       510,
+                                       520,
+                                       530,
+                                       610,
+                                       621, 622,
+                                       631, 632, 633,
+                                       711, 712,
+                                       721, 722, 723,
+                                       811, 812, 813,
+                                       821, 822, 823, 824,
+                                       831, 832, 833,
+                                       841, 842]],
+                        ["code_4_21", [0,
+                                       1110, 1120,
+                                       1210, 1220, 1230, 1240,
+                                       1310, 1320,
+                                       1400,
+                                       2110, 2120,
+                                       2210, 2220,
+                                       2310, 2320, 2330, 2340,
+                                       3110, 3120,
+                                       3210, 3220,
+                                       3310, 3320,
+                                       3400,
+                                       3500,
+                                       3600,
+                                       4100,
+                                       4211, 4212, 4220,
+                                       5100,
+                                       5200,
+                                       5300,
+                                       6100,
+                                       6210, 6220,
+                                       6311, 6312, 6320, 6331, 6332,
+                                       7110, 7121, 7122,
+                                       7210, 7220, 7230,
+                                       8110, 8120, 8130,
+                                       8210, 8220, 8230, 8240,
+                                       8310, 8320, 8330,
+                                       8410, 8420
+                        ]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.nodata",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "nodata_column_name": "nodata_21",
+        "nodata_value": 1,
+        "dep_column_names": ["code_1_21", "code_2_21", "code_3_21", "code_4_21"],
+        "dep_value": 0
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "area_column_name": "area_ha",
+        "unit": 10000,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "du_column_name": "du_id"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "complex_change": null,
+        "general_where": [" layer.area_ha >= 0.5"],
+        "exception_where": [" (meta.is_marginal",
+                            "  AND layer.area_ha >= 0.1)",
+                            "OR",
+                            " (layer.code_4_21 IN (1210, 1220, 8110, 8120)",
+                            "  AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_4_21 IN (1210, 1220, 8110, 8120))",
+                            "  AND layer.area_ha >= 0.1)",
+                            "OR",
+                            " (layer.code_1_21 = 1",
+                            "  AND layer.code_4_21 NOT IN (1210, 1220, 8110, 8120)",
+                            "  AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_4_21 IN (1210, 1220))",
+                            "  AND layer.area_ha >= 0.25)",
+                            "OR",
+                            " (layer.code_1_21 > 1",
+                            "  AND EXISTS (SELECT FROM neighbours(meta.fid) WHERE code_4_21 IN (1210, 1220, 8110, 8120))",
+                            "  AND layer.area_ha >= 0.05)",
+                            "OR",
+                            " (layer.comment_21 IS NOT NULL",
+                            "  AND has_comment(layer.comment_21, ARRAY['Area size exception (at Natura2000 AoI boundary)',",
+                            "                                          'Area size exception (inside Natura2000 AoI boundary)',",
+                            "                                          'Splitted change',",
+                            "                                          'Areas related to change',",
+                            "                                          'Different water level',",
+                            "                                          'Flooded area',",
+                            "                                          'Braided River']))"],
+        "warning_where": ["FALSE"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "mmw": 10.0,
+        "general_where": "layer.code_4_21 NOT IN (1210, 1220, 8110, 8120)",
+        "exception_where": "FALSE"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"],
+        "code_column_names": ["code_4_21"],
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["status2021"]
+      }
+    }
+  ]
+}
