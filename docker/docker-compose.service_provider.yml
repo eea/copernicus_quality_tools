@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: eeacms/copernicus-qctool-frontend:2.3.3
+    image: eeacms/copernicus-qctool-frontend:2.3.4rc1
     ports:
       - 8000:8000
     environment:
@@ -15,13 +15,14 @@ services:
       - WORKER_ALIVE_TIMEOUT=5
       - REFRESH_JOB_STATUSES_BACKGROUND=yes
       - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
+      - CSRF_TRUSTED_ORIGINS="https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1"
     networks:
       - qc_tool_network
     volumes:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.3.3
+    image: eeacms/copernicus-qctool-worker:2.3.4rc1
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS

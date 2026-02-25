@@ -38,6 +38,7 @@ services:
       - POSTGRES_USER=qc_user
       - POSTGRES_PASSWORD=qc_password
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
+      - CSRF_TRUSTED_ORIGINS="https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1"
     networks:
       - qc_tool_network
     volumes:

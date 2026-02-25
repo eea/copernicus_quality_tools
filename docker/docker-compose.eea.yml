@@ -12,7 +12,7 @@ services:
     networks:
       - qc_tool_network
   frontend:
-    image: eeacms/copernicus-qctool-frontend:2.3.3
+    image: eeacms/copernicus-qctool-frontend:2.3.4rc1
     ports:
       - 8000:8000
     environment:
@@ -35,6 +35,8 @@ services:
       - REFRESH_JOB_STATUSES_BACKGROUND=yes
       - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
       - MAINTENANCE_MODE=no
+      - CASE_INSENSITIVE_USERNAMES=yes
+      - CSRF_TRUSTED_ORIGINS="https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1"
     networks:
       - qc_tool_network
     volumes:
@@ -45,7 +47,7 @@ services:
       - qc_tool_frontend:/mnt/qc_tool_frontend
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.3.3
+    image: eeacms/copernicus-qctool-worker:2.3.4rc1
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS

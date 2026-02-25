@@ -32,7 +32,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-CSRF_TRUSTED_ORIGINS = ['https://qc-copernicus.eea.europa.eu', 'http://localhost', 'http://127.0.0.1']
+# CSRF_TRUSTED_ORIGINS = ['https://qc-copernicus.eea.europa.eu', 'http://localhost', 'http://127.0.0.1']
+# CSRF_TRUSTED_ORIGINS from environment variable.
+# Get the string from environment, default to empty string if not found
+# Split by comma and filter out any empty strings
+env_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in env_origins.split(',') if origin.strip()]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
