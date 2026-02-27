@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: qc-tool-frontend
+  labels:
+    app: qc-tool-frontend
+spec:
+  containers:
+    - name: frontend
+      image: eeacms/copernicus-qctool-frontend:2.3.5rc1
+      ports:
+        - containerPort: 8001  # Change from 8000 to 8001
+      env:
+        - name: BOUNDARY_DIR
+          value: "/mnt/qc_tool_volume/boundaries"
+        - name: INCOMING_DIR
+          value: "/mnt/qc_tool_volume/incoming"
+        - name: WORK_DIR
+          value: "/mnt/qc_tool_volume/work"
+        - name: SUBMISSION_DIR
+          value: "/mnt/qc_tool_volume/submission"
+        - name: FRONTEND_DB_PATH
+          value: "/mnt/qc_tool_volume/frontend.sqlite3"
+        - name: UPDATE_JOB_STATUSES
+          value: "yes"
+        - name: UPDATE_JOB_STATUSES_INTERVAL
+          value: "30000"
+        - name: WORKER_ALIVE_TIMEOUT
+          value: "5"
+        - name: REFRESH_JOB_STATUSES_BACKGROUND
+          value: "yes"
+        - name: REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL
+          value: "60"
+        - name: CSRF_TRUSTED_ORIGINS
+          value: "https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1"
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: qc-tool-worker
+  labels:
+    app: qc-tool-worker
+spec:
+  volumes:
+    - name: squid-conf-volume
+      configMap:
+        name: squid-config-fixed  # Matches the metadata.name above
+  containers:
+    - name: worker
+      image: eeacms/copernicus-qctool-worker:2.3.5rc1
+      resources:
+        limits:
+          memory: "1Gi"  # The "Trap" for the OOM
+      volumeMounts:
+        - name: squid-conf-volume
+          mountPath: /etc/squid/squid.conf  # This overwrites the file in the image
+          subPath: squid.conf              # Required to overwrite a single file
+      env:
+        - name: MAX_MEM
+          value: "1024" # Tell the script to use 1GB instead of calculating from Host
+        - name: PULL_JOB_URL
+          value: "http://localhost:8000/pull_job"
+        - name: INSPIRE_SERVICE_URL
+          value: "http://localhost:8080/validator/v2/"
+        - name: BOUNDARY_DIR
+          value: "/mnt/qc_tool_volume/boundaries"
+        - name: INCOMING_DIR
+          value: "/mnt/qc_tool_volume/incoming"
+        - name: WORK_DIR
+          value: "/mnt/qc_tool_volume/work"
+        - name: INSPIRE_SERVICE_URL
+          value: "http://localhost:8080/validator/v2/"
+        # ... Add other envs from your compose here ...

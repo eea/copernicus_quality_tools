@@ -5,6 +5,8 @@
 # -curl
 # -wget
 
+wgetRcFile="/etc/wgetrc"
+
 cp /etc/hosts /etc/squid_hosts
 echo "127.0.0.1 inspire.ec.europa.eu" >> /etc/squid_hosts
 
@@ -18,6 +20,10 @@ rm -rf /var/run/apache2/apache2.pid
 # service squid start
 # service squid restart
 
+# update squid.conf with the value of SQUID_CACHE_MEM_MB environment variable
+# Inject the Squid Cache variable into the config
+sed "s/cache_mem .*/cache_mem ${SQUID_CACHE_MEM_MB} MB/" /etc/squid/squid.conf.template > /etc/squid/squid.conf
+chown proxy:proxy /etc/squid/squid.conf
 
 javaHttpProxyOpts=""
 if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]]; then
@@ -49,12 +55,12 @@ set -x
 
 max_mem_kb=0
 xms_xmx=""
-if [[ -n "$MAX_MEM" && "$MAX_MEM" != "max" && "$MAX_MEM" != "0" ]]; then
+if [[ -n "$JAVA_MAX_MEM" && "$JAVA_MAX_MEM" != "max" && "$JAVA_MAX_MEM" != "0" ]]; then
   re='^[0-9]+$'
-  if ! [[ $MAX_MEM =~ $re ]] ; then
-     echo "MAX_MEM: Not a number" >&2; exit 1
+  if ! [[ $JAVA_MAX_MEM =~ $re ]] ; then
+     echo "JAVA_MAX_MEM: Not a number" >&2; exit 1
   fi
-  max_mem_kb=$(($MAX_MEM*1024))
+  max_mem_kb=$(($JAVA_MAX_MEM*1024))
   xms_xmx="-Xms1g -Xmx${max_mem_kb}k"
 else
   # in KB
@@ -112,7 +118,7 @@ chmod 775 -R "$ETF_DIR"/testdata
 touch "$ETF_DIR"/logs/etf.log
 chmod 775 "$ETF_DIR"/logs/etf.log
 
-chown -fR $appServerUserGroup $ETF_DIR
+chown -fR ${appServerUserGroup:-proxy:proxy} $ETF_DIR
 
 
 exec "$@"

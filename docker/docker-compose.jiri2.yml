@@ -42,6 +42,8 @@ services:
       - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work
+      - JAVA_MAX_MEM=1536
+      - SQUID_CACHE_MEM_MB=256
     networks:
       - qc_tool_network
     volumes:
