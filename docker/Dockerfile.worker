@@ -1,11 +1,19 @@
 # --- First Stage: Build Jetty for INSPIRE validator ---
-FROM ubuntu:noble AS jetty-builder
+FROM ubuntu:focal AS jetty-builder
 RUN JETTY_VERSION=9.4.56.v20240826 && JETTY_HOME=/usr/local/jetty \
     && mkdir -p ${JETTY_HOME} \
-    && apt-get update && apt-get install -y --no-install-recommends wget unzip \
+    && apt-get update && apt-get install -y --no-install-recommends wget unzip build-essential curl libssl-dev \
     && wget --no-check-certificate https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz \
     && tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 \
     && rm /tmp/jetty.tar.gz
+
+# -------------------------------------------------------------
+# Build squid from source - version 5.9
+# Stage 1: Build Squid 5.9 from source
+RUN curl -O http://www.squid-cache.org/Versions/v5/squid-5.9.tar.gz && \
+    tar -xzf squid-5.9.tar.gz && cd squid-5.9 && \
+    ./configure --prefix=/usr --localstatedir=/var --libexecdir=/usr/lib/squid --srcdir=. --with-default-user=proxy --with-gnutls && \
+    make -j$(nproc) && make install
 
 # --- Second Stage: Build the remainder of the image ---    
 FROM ubuntu:focal
@@ -39,6 +47,11 @@ ENV JETTY_VERSION=9.4.56.v20240826
 ENV JETTY_HOME=/usr/local/jetty
 
 COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
+
+# Copy the Squid binaries from the builder stage.
+COPY --from=builder /usr/sbin/squid /usr/sbin/squid
+COPY --from=builder /usr/lib/squid /usr/lib/squid
+COPY --from=builder /etc/squid /etc/squid
 
 # Build the initial environment with python packages.
 RUN echo "$VERSION" >/etc/qc_tool_version.txt \

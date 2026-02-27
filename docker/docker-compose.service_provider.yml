@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: eeacms/copernicus-qctool-frontend:2.3.4
+    image: eeacms/copernicus-qctool-frontend:2.3.5rc1
     ports:
       - 8000:8000
     environment:
@@ -22,7 +22,7 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.3.4
+    image: eeacms/copernicus-qctool-worker:2.3.5rc1
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS
@@ -31,6 +31,7 @@ services:
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_volume/work
       - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
+      - MAX_MEM=1536
     networks:
       - qc_tool_network
     volumes:
