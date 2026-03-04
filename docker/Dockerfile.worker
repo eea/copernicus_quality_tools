@@ -222,8 +222,7 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Copy the Squid configuration 
 # and ensure correct permissions and create required directories.
-COPY inspire/squid_ubuntu_stress.conf /etc/squid/squid.conf
-#COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
+COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
 
 RUN chmod 644 /etc/squid/squid.conf
 RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
