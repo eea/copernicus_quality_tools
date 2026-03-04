@@ -20,11 +20,6 @@ rm -rf /var/run/apache2/apache2.pid
 # service squid start
 # service squid restart
 
-# update squid.conf with the value of SQUID_CACHE_MEM_MB environment variable
-# Inject the Squid Cache variable into the config
-sed "s/cache_mem .*/cache_mem ${SQUID_CACHE_MEM_MB} MB/" /etc/squid/squid.conf.template > /etc/squid/squid.conf
-chown proxy:proxy /etc/squid/squid.conf
-
 javaHttpProxyOpts=""
 if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]]; then
   if [[ -n "$HTTP_PROXY_USERNAME" && "$HTTP_PROXY_USERNAME" != "none" ]]; then

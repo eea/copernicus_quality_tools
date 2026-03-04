@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: qc-worker-repro
+spec:
+  containers:
+    - name: worker
+      image: eeacms/copernicus-qctool-worker:2.3.5
+      resources:
+        limits:
+          memory: "6Gi"  # This is the "Wall" SQuID will hit
+      env:
+        - name: MAX_MEM
+          value: "2048"
+        - name: PULL_JOB_URL
+          value: "http://localhost:8000/pull_job"
+        - name: INSPIRE_SERVICE_URL
+          value: "http://localhost:8080/validator/v2/"

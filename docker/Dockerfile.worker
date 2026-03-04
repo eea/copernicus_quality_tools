@@ -220,9 +220,10 @@ RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF
 COPY inspire/docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
-# Copy the Squid configuration, inject SQUID_CACHE_MEM_MB environment variable, 
-# andensure correct permissions and create required directories.
-COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf.template
+# Copy the Squid configuration 
+# and ensure correct permissions and create required directories.
+COPY inspire/squid_ubuntu_stress.conf /etc/squid/squid.conf
+#COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
 
 RUN chmod 644 /etc/squid/squid.conf
 RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
@@ -233,13 +234,7 @@ RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid 
     && chown proxy:proxy /var/log/squid/*.log
 
 # Initialize Squid cache
-# RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
-
-# Initialize the squid cache and set permissions.
-RUN cp /etc/squid/squid.conf.template /etc/squid/squid.conf && \
-    sed -i "s/cache_mem .*/cache_mem 256 MB/" /etc/squid/squid.conf && \
-    squid -N -z && \
-    chown -R proxy:proxy /var/spool/squid
+RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
 
 # Copy the Apache configuration and enable correct Apache modules
 COPY inspire/apache_proxy.conf /etc/apache2/sites-available/proxy_1.conf
@@ -259,6 +254,13 @@ RUN echo "$INSPIRE_VALIDATOR_VERSION" >/etc/inspire_validator_version.txt
 
 # Run entrypoint for the inspire validator
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Optional service start entrypoints for supervisord. 
+# These scripts check environment variables to decide whether to start the actual service or sleep indefinitely.
+COPY ./start_optional_postgres.sh /usr/local/bin/start_optional_postgres.sh
+RUN chmod +x /usr/local/bin/start_optional_postgres.sh
+COPY ./start_optional_service.sh /usr/local/bin/start_optional_service.sh
+RUN chmod +x /usr/local/bin/start_optional_service.sh
 
 COPY ./supervisord.conf /etc/supervisord.conf
 
