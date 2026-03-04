@@ -1448,7 +1448,8 @@ def pull_job(request):
             return HttpResponse(status=401)
     except:
         return HttpResponse(status=400)
-    worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], WORKER_PORT)
+    worker_port = CONFIG.get("worker_port", WORKER_PORT)
+    worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], worker_port)
     job = models.pull_job(worker_url)
     if job is None:
         response = None

@@ -22,8 +22,6 @@ import bottle
 
 from qc_tool.common import CONFIG
 from qc_tool.common import get_worker_token
-from qc_tool.common import WORKER_PORT
-from qc_tool.common import WORKER_ADDR
 
 
 QUERY_INTERVAL = 10
@@ -219,7 +217,7 @@ def main():
 
     # Run the web.
     log.debug("Starting web server...")
-    bottle.run(host=WORKER_ADDR, port=WORKER_PORT)
+    bottle.run(host=CONFIG["worker_addr"], port=CONFIG["worker_port"])
 
 
 if __name__ == "__main__":

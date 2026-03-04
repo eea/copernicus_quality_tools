@@ -40,6 +40,8 @@ Service qc_tool_frontend
   * REFRESH_JOB_STATUSES_BACKGROUND, instructs the frontend server to refresh running job statuses in a background thread;
   * REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL, interval to refresh job statuses on frontend server in background thread (60 seconds);
   * MAINTENANCE_MODE, sets the frontend to maintenance mode (no URLs accessible - can be used for live DB migration);
+  * WORKER_ADDR, the internal (inside-container) address of the worker, default '0.0.0.0';
+  * WORKER_PORT, the internal (inside-container) port of the worker, default 8000;
 
 
 Service qc_tool_worker
@@ -56,6 +58,8 @@ Service qc_tool_worker
   * PG_DATABASE, informs the job which database name it should use when connecting to postgresql server;
   * SHOW_LOGO, informs the worker to put Copernicus logo in pdf report;
   * INSPIRE_SERVICE_URL, informs the worker to connect to a custom local instance of the INSPIRE validator service;
+  * WORKER_ADDR, the internal (inside-container) address of the worker, default '0.0.0.0';
+  * WORKER_PORT, the internal (inside-container) port of the worker, default 8000;
 
 
 Debugging parameters

@@ -464,6 +464,10 @@ def setup_config():
     # Maintenance mode
     config["maintenance_mode"] = environ.get("MAINTENANCE_MODE", "no") == "yes"
 
+    # Worker port and worker address.
+    config["worker_port"] = int(environ.get("WORKER_PORT", WORKER_PORT))
+    config["worker_addr"] = environ.get("WORKER_ADDR", WORKER_ADDR)
+
     return config
 
 CONFIG = setup_config()
