@@ -55,6 +55,9 @@ ENV JETTY_HOME=/usr/local/jetty
 ENV JAVA_MAX_MEM=1536
 ENV SQUID_CACHE_MEM_MB=256
 
+# Limit squid resident memory usage.
+ENV MALLOC_ARENA_MAX=2
+
 COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
 
 # Copy the Squid binaries from the builder stage.
@@ -222,7 +225,7 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Copy the Squid configuration 
 # and ensure correct permissions and create required directories.
-COPY inspire/squid_ubuntu_stress2.conf /etc/squid/squid.conf
+COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
 
 RUN chmod 644 /etc/squid/squid.conf
 RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
