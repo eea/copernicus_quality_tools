@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: eeacms/copernicus-qctool-frontend:2.3.5
+    image: eeacms/copernicus-qctool-frontend:2.3.6rc1
     ports:
       - 8000:8000
     environment:
@@ -22,7 +22,7 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.3.5
+    image: eeacms/copernicus-qctool-worker:2.3.6rc1
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS
@@ -33,6 +33,8 @@ services:
       - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
       - JAVA_MAX_MEM=1536
       - SQUID_CACHE_MEM_MB=256
+      - RUN_INSPIRE_VALIDATOR=yes
+      - RUN_POSTGRES=yes
     networks:
       - qc_tool_network
     volumes:
