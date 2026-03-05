@@ -3,16 +3,16 @@ FROM ubuntu:focal AS jetty-builder
 RUN JETTY_VERSION=9.4.56.v20240826 && JETTY_HOME=/usr/local/jetty \
     && mkdir -p ${JETTY_HOME} \
     && apt-get update && apt-get install -y --no-install-recommends wget unzip build-essential curl libssl-dev \
-    libgnutls28-dev pkg-config \
+    libgnutls28-dev pkg-config ca-certificates \
     && wget --no-check-certificate https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz \
     && tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 \
     && rm /tmp/jetty.tar.gz
 
 # -------------------------------------------------------------
-# Build squid from source - version 5.9
-# Stage 1: Build Squid 5.9 from source
-RUN curl -O http://www.squid-cache.org/Versions/v5/squid-5.9.tar.gz && \
-    tar -xzf squid-5.9.tar.gz && cd squid-5.9 && \
+# Build squid from source - version 7.4
+# Stage 1: Build Squid 7.4 from source
+RUN curl -L -O https://github.com/squid-cache/squid/releases/download/SQUID_7_4/squid-7.4.tar.gz && \
+    tar -xzf squid-7.4.tar.gz && cd squid-7.4 && \
     ./configure --prefix=/usr \
             --sysconfdir=/etc/squid \
             --localstatedir=/var \
@@ -54,6 +54,9 @@ ENV JETTY_VERSION=9.4.56.v20240826
 ENV JETTY_HOME=/usr/local/jetty
 ENV JAVA_MAX_MEM=1536
 ENV SQUID_CACHE_MEM_MB=256
+ENV MALLOC_ARENA_MAX=2
+
+# Limit squid resident memory usage.
 ENV MALLOC_ARENA_MAX=2
 
 COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
@@ -223,7 +226,7 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Copy the Squid configuration 
 # and ensure correct permissions and create required directories.
-COPY inspire/squid_ubuntu_stress.conf /etc/squid/squid.conf
+COPY inspire/squid_ubuntu.conf /etc/squid/squid.conf
 
 RUN chmod 644 /etc/squid/squid.conf
 RUN mkdir -p /var/log/supervisor /var/spool/squid /var/log/squid /var/run/squid \
