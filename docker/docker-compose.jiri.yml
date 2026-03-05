@@ -48,7 +48,6 @@ services:
       - WORK_DIR=/mnt/qc_tool_work
       - LEAVE_SCHEMA=yes
       - JAVA_MAX_MEM=1536
-      - SQUID_CACHE_MEM_MB=512
       - RUN_INSPIRE_VALIDATOR=yes
       - RUN_POSTGRES=yes
     networks:
