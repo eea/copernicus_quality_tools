@@ -5,13 +5,15 @@ metadata:
 spec:
   containers:
     - name: worker
-      image: eeacms/copernicus-qctool-worker:2.3.5
+      image: eeacms/copernicus-qctool-worker:2.3.6rc5
       resources:
         limits:
-          memory: "6Gi"  # This is the "Wall" SQuID will hit
+          memory: "2Gi"  # This is the "Wall" SQuID will hit
       env:
-        - name: MAX_MEM
-          value: "2048"
+        - name: JAVA_MAX_MEM
+          value: "1500"
+        - name: RUN_INSPIRE_VALIDATOR
+          value: "no"
         - name: PULL_JOB_URL
           value: "http://localhost:8000/pull_job"
         - name: INSPIRE_SERVICE_URL

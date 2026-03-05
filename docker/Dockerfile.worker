@@ -54,6 +54,7 @@ ENV JETTY_VERSION=9.4.56.v20240826
 ENV JETTY_HOME=/usr/local/jetty
 ENV JAVA_MAX_MEM=1536
 ENV SQUID_CACHE_MEM_MB=256
+ENV MALLOC_ARENA_MAX=2
 
 COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
 
