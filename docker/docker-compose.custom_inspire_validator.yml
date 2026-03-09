@@ -1,0 +1,58 @@
+services:
+  custom-inspire-validator:
+    image: docker.pkg.github.com/inspire-mif/helpdesk-validator/inspire-validator:2025.1.1
+    networks:
+      - qc_tool_network
+    volumes:
+      - inspire_validator_volume:/etf
+    ports:
+      - "8090:8090"
+  frontend:
+    image: eeacms/copernicus-qctool-frontend:2.3.6
+    ports:
+      - 8000:8000
+    environment:
+      - PRODUCT_DIRS
+      - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
+      - INCOMING_DIR=/mnt/qc_tool_volume/incoming
+      - WORK_DIR=/mnt/qc_tool_volume/work
+      - SUBMISSION_DIR=
+      - FRONTEND_DB_PATH=/mnt/qc_tool_volume/frontend.sqlite3
+      - UPDATE_JOB_STATUSES=yes
+      - UPDATE_JOB_STATUSES_INTERVAL=30000
+      - WORKER_ALIVE_TIMEOUT=5
+      - REFRESH_JOB_STATUSES_BACKGROUND=yes
+      - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
+      - CSRF_TRUSTED_ORIGINS="https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1"
+    networks:
+      - qc_tool_network
+    volumes:
+      - qc_tool_volume:/mnt/qc_tool_volume
+
+  worker:
+    image: eeacms/copernicus-qctool-worker:2.3.6
+    shm_size: 1gb
+    environment:
+      - PRODUCT_DIRS
+      - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
+      - INCOMING_DIR=/mnt/qc_tool_volume/incoming
+      - PULL_JOB_URL=http://frontend:8000/pull_job
+      - WORK_DIR=/mnt/qc_tool_volume/work
+      - INSPIRE_SERVICE_URL=http://custom-inspire-validator:8090/validator/v2/
+      - JAVA_MAX_MEM=1536
+      - RUN_INSPIRE_VALIDATOR=no
+      - RUN_POSTGRES=yes
+    networks:
+      - qc_tool_network
+    volumes:
+      - qc_tool_volume:/mnt/qc_tool_volume
+
+volumes:
+  qc_tool_volume:
+    driver: local
+  inspire_validator_volume:
+    driver: local
+
+networks:
+  qc_tool_network:
+    driver: bridge
