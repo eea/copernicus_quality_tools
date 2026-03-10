@@ -1,12 +1,10 @@
 services:
-  custom-inspire-validator:
-    image: docker.pkg.github.com/inspire-mif/helpdesk-validator/inspire-validator:2025.1.1
+  qc-tool-inspire-validator:
+    image: ghcr.io/inspire-mif/helpdesk-validator/inspire-validator:2025.1.1
     networks:
       - qc_tool_network
-    volumes:
-      - inspire_validator_volume:/etf
     ports:
-      - "8090:8090"
+      - "8080:8080"
   frontend:
     image: eeacms/copernicus-qctool-frontend:2.3.6
     ports:
@@ -38,7 +36,7 @@ services:
       - INCOMING_DIR=/mnt/qc_tool_volume/incoming
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_volume/work
-      - INSPIRE_SERVICE_URL=http://custom-inspire-validator:8090/validator/v2/
+      - INSPIRE_SERVICE_URL=http://qc-tool-inspire-validator:8080/validator/v2/
       - JAVA_MAX_MEM=1536
       - RUN_INSPIRE_VALIDATOR=no
       - RUN_POSTGRES=yes
@@ -49,8 +47,6 @@ services:
 
 volumes:
   qc_tool_volume:
-    driver: local
-  inspire_validator_volume:
     driver: local
 
 networks:
