@@ -50,6 +50,8 @@ services:
       - JAVA_MAX_MEM=1536
       - RUN_INSPIRE_VALIDATOR=yes
       - RUN_POSTGRES=yes
+    extra_hosts:
+      - inspire.ec.europa.eu:127.0.0.1
     networks:
       - qc_tool_network
     volumes:
