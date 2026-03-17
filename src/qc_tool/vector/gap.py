@@ -20,7 +20,16 @@ def run_check(params, status):
     from qc_tool.vector.helper import GapTable
     from qc_tool.vector.helper import get_failed_items_message
     from qc_tool.vector.helper import PartitionedLayer
+    from qc_tool.vector.gap_bufferzone import run_check as run_gap_bufferzone_check
 
+    # special parameter for buffer zone width - to report gaps in the buffer zone
+    # as exceptions, not errors. This is used e.g for clc2024
+    boundary_buffer_zone_width = params.get("boundary_buffer_zone_width", 0.0)
+    if boundary_buffer_zone_width > 0.0:
+        # Run gap buffer zone check.
+        run_gap_bufferzone_check(params, status)
+        return
+    
     if "boundary" not in params["layer_defs"]:
         status.cancelled("Check cancelled due to boundary not being available.")
         return
