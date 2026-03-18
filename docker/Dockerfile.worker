@@ -143,7 +143,8 @@ WORKDIR /
 # -------------------------------------------------------------
 # Install python packages (except NumPy which was installed earlier).
 RUN pip3 install --no-cache-dir \
-    boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13
+    boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13 \
+    saxonche lxml
 
 # Install jetty for the INSPIRE validator.
 #RUN mkdir -p "$JETTY_HOME"
