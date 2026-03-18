@@ -25,12 +25,17 @@ def locate_xml_file(metadata_folder_path, layer_filepath, layer_name=None):
 def run_check(params, status):
     from qc_tool.vector.helper import do_inspire_check
     from qc_tool.vector.helper import do_layers
+    from qc_tool.common import CONFIG
 
     # Check if the current delivery is excluded from vector checks
     if "skip_vector_checks" in params:
         if params["skip_vector_checks"]:
             status.info("The delivery has been excluded from vector.inspire check because the vector data source does not contain a single object of interest.")
             return
+        
+    use_lightweight_validator = CONFIG.get("use_lightweight_validator", False)
+    if use_lightweight_validator:
+        status.info("Using built-in geonetwork-based lightweight validator instead of INSPIRE validator service.")
 
     for layer_def in do_layers(params):
 
@@ -65,4 +70,4 @@ def run_check(params, status):
 
         # Validate the xml file using INSPIRE validator service
         export_prefix = "s{:02d}_{:s}_{:s}_inspire".format(params["step_nr"], layer_def["src_filepath"].stem, layer_def["src_layer_name"])
-        do_inspire_check(xml_filepath, export_prefix, params["output_dir"], status)
+        do_inspire_check(xml_filepath, export_prefix, params["output_dir"], status, lightweight_validator=use_lightweight_validator)
