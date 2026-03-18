@@ -461,6 +461,10 @@ def setup_config():
         "INSPIRE_SERVICE_URL", INSPIRE_SERVICE_URL_DEFAULT
     )
 
+    # Use built-in geonetwork-based lightweight validator instead of INSPIRE validator service.
+    config["use_lightweight_validator"] = environ.get(
+        "USE_LIGHTWEIGHT_VALIDATOR", "no") == "yes"
+
     # Maintenance mode
     config["maintenance_mode"] = environ.get("MAINTENANCE_MODE", "no") == "yes"
 

@@ -681,6 +681,24 @@ def locate_metadata_file(layer_filepath, layer_name=None):
 
 
 def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0):
+    use_lightweight_validator = CONFIG.get("use_lightweight_validator", False)
+    if use_lightweight_validator:
+        import subprocess
+        status.info("Using built-in geonetwork-based lightweight validator.")
+        report_filepath = output_dir.joinpath(export_prefix + "_report.txt")
+        result = subprocess.run(
+            ["geonetwork-validate", "--xml", str(xml_filepath)],
+            capture_output=True,
+            text=True,
+        )
+        report_content = result.stdout + result.stderr
+        report_filepath.write_text(report_content, encoding="utf-8")
+        status.add_attachment(report_filepath.name)
+        if "[INVALID]" in report_content:
+            status.failed("Metadata of {:s} did not pass INSPIRE validation. See report for details.".format(xml_filepath.name))
+        else:
+            status.ok("Metadata of {:s} is valid.".format(xml_filepath.name))
+        return
     # Step 0, check the service version and status. only proceed if the service is up.
     
 
