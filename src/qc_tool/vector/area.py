@@ -18,6 +18,9 @@ def run_check(params, status):
 
     cursor = params["connection_manager"].get_connection().cursor()
 
+    # Area tolerance - set as a percentage of the area value, or as an absolute value.
+    tolerance_percent = params.get("tolerance_percent", False)
+
     for layer_def in do_layers(params):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
@@ -28,10 +31,16 @@ def run_check(params, status):
                               "tolerance": params["tolerance"]}
 
         # Create table of error items.
-        sql = ("CREATE TABLE {error_table} AS"
-               " SELECT {fid_name}"
-               " FROM {layer_name}"
-               " WHERE abs({area_column_name} - ST_Area(geom) / %(unit)s) > %(tolerance)s;")
+        if tolerance_percent:
+            sql = ("CREATE TABLE {error_table} AS"
+                " SELECT {fid_name}"
+                " FROM {layer_name}"
+                " WHERE abs({area_column_name} - ST_Area(geom) / %(unit)s) / {area_column_name} * 100 > %(tolerance)s;")
+        else:
+            sql = ("CREATE TABLE {error_table} AS"
+                " SELECT {fid_name}"
+                " FROM {layer_name}"
+                " WHERE abs({area_column_name} - ST_Area(geom) / %(unit)s) > %(tolerance)s;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, sql_execute_params)
 
