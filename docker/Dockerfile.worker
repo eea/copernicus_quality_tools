@@ -144,7 +144,8 @@ WORKDIR /
 # Install python packages (except NumPy which was installed earlier).
 RUN pip3 install --no-cache-dir \
     boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13 \
-    saxonche lxml
+    saxonche lxml \
+    git+https://github.com/Gisat/envi-geonetwork-validator.git
 
 # Install jetty for the INSPIRE validator.
 #RUN mkdir -p "$JETTY_HOME"
