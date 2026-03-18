@@ -10,15 +10,16 @@ METADATA_DIRNAME = "metadata"
 
 def locate_xml_file(metadata_folder_path, layer_filepath, layer_name=None):
     # The INSPIRE XML file can be LAYER.xml or LAYER_metadata.xml.
+    # Search in metadata_folder_path and all subdirectories.
     if layer_name:
         xml_names = [layer_name + "_metadata.xml", layer_name + ".xml"]
     else:
         xml_names = [layer_filepath.stem + "_metadata.xml", layer_filepath.stem + ".xml"]
     for xml_name in xml_names:
-        xml_filepath = metadata_folder_path.joinpath(xml_name)
-        if xml_filepath.exists():
-            return xml_filepath
-    return xml_filepath
+        matches = list(metadata_folder_path.rglob(xml_name))
+        if matches:
+            return matches[0]
+    return None
 
 
 def run_check(params, status):
