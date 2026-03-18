@@ -33,7 +33,8 @@ services:
       - WORK_DIR=/mnt/qc_tool_volume/work
       - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
       - JAVA_MAX_MEM=1536
-      - RUN_INSPIRE_VALIDATOR=yes
+      - RUN_INSPIRE_VALIDATOR=no
+      - USE_LIGHTWEIGHT_VALIDATOR=yes
       - RUN_POSTGRES=yes
     networks:
       - qc_tool_network

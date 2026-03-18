@@ -58,6 +58,7 @@ services:
       - WORK_DIR=/mnt/qc_tool_work/work
       - JAVA_MAX_MEM=1536
       - RUN_INSPIRE_VALIDATOR=yes
+      - USE_LIGHTWEIGHT_VALIDATOR=no
       - RUN_POSTGRES=yes
     networks:
       - qc_tool_network

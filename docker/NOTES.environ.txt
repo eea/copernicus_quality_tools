@@ -61,6 +61,7 @@ Service qc_tool_worker
   * WORKER_PORT, the internal (inside-container) port of the worker, default 8000;
   * INSPIRE_SERVICE_URL, by default the builtin validator http://localhost:8080/validator/v2/ is used, informs the worker to connect to a custom local instance of the INSPIRE validator service;
   * RUN_INSPIRE_VALIDATOR, default yes to turn on builtin validator, set to "no" to completely turn off the builtin validator;
+  * USE_LIGHTWEIGHT_VALIDATOR, default no, set to "yes" to use a builting geonetwork-based implementation of the metadata validator (RUN_INSPIRE_VALIDATOR should be set to "no" in that case);
   * RUN_POSTGRES, default yes, set to "no" if postgres/postgis engine should be turned off;
 
 
