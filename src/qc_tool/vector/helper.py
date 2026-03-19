@@ -772,7 +772,14 @@ def do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no=0
         # Ocassionally the test run ends with undefined status when executed for the first time.
         # In case of undefined status, retry uploading the xml file to the service and starting a new test run.
         if retry_no < INSPIRE_MAX_RETRIES:
-            do_inspire_check(xml_filepath, export_prefix, output_dir, status, retry_no+1)
+            do_inspire_check(
+                xml_filepath,
+                export_prefix,
+                output_dir,
+                status,
+                retry_no + 1,
+                lightweight_validator=lightweight_validator,
+            )
         else:
             status.failed(
                 "Metadata of {:s} could not be validated, validation service is busy.".format(xml_filepath.name))
