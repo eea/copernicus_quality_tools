@@ -20,6 +20,11 @@ def locate_xml_file(metadata_folder_path, layer_filepath):
 def run_check(params, status):
     from qc_tool.vector.helper import do_inspire_check
     from qc_tool.raster.helper import do_raster_layers
+    from qc_tool.common import CONFIG
+
+    use_lightweight_validator = CONFIG.get("use_lightweight_validator", False)
+    if use_lightweight_validator:
+        status.info("Using built-in geonetwork-based lightweight validator instead of INSPIRE validator service.")
 
     for layer_def in do_raster_layers(params):
 
@@ -46,4 +51,10 @@ def run_check(params, status):
 
         # Validate the xml file using INSPIRE validator service
         export_prefix = "s{:02d}_{:s}_inspire".format(params["step_nr"], layer_def["src_filepath"].stem)
-        do_inspire_check(xml_filepath, export_prefix, params["output_dir"], status)
+        do_inspire_check(
+            xml_filepath,
+            export_prefix,
+            params["output_dir"],
+            status,
+            lightweight_validator=use_lightweight_validator,
+        )
