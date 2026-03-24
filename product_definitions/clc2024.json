@@ -560,7 +560,8 @@
         "chtype_column_name": "chtype",
         "technical_change_flag": "T",
         "change_column_name": "change",
-        "change_value_separator": "-"
+        "change_value_separator": "-",
+        "change_column_value_exception": "121-121"
       }
     },
     {
