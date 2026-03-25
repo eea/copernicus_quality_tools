@@ -133,7 +133,7 @@
         ],
         "nodata_value": 255,
         "check_neighbours": 0,
-        "boundary_source": "boundary_eea39.gpkg"
+        "boundary_source": "boundary_eea38uk.gpkg"
       }
     },
     {
