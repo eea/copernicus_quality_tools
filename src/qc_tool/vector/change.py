@@ -25,7 +25,8 @@ def run_check(params, status):
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "technical_change_flag": params.get("technical_change_flag", TECHNICAL_CHANGE_FLAG),
                       "change_column_name": params.get("change_column_name", ""),
-                      "change_value_separator": params.get("change_value_separator", "")}
+                      "change_value_separator": params.get("change_value_separator", ""),
+                      "change_column_value_exception": params.get("change_column_value_exception", "")}
 
         # Create table of general items.
         sql = ("CREATE TABLE {general_table} AS\n"
@@ -51,10 +52,11 @@ def run_check(params, status):
                " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
                "WHERE\n"
                " gen.{fid_name} IS NULL\n")
-        if sql_params["chtype_column_name"] != "":
-            sql += " AND layer.{chtype_column_name} = '{technical_change_flag}';"
+        if sql_params["chtype_column_name"] != "" and sql_params["technical_change_flag"] != "" and sql_params["change_column_value_exception"] != "":
+            sql += " AND (layer.{chtype_column_name} = '{technical_change_flag}' OR layer.{change_column_name} = '{change_column_value_exception}');"
         else:
             sql += " AND FALSE;"
+        
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
