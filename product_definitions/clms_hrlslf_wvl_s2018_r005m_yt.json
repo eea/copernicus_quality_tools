@@ -1,0 +1,140 @@
+{
+  "description": "HRL Small Woody Features 2018, Revised Woody Vegetation Layer: DOM-YT",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "layer_names": {
+          "wvl_005m": "clms_hrlslf_wvl_s2018_r5m_(?P<aoi_code>yt)_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
+        },
+        "extensions": [
+          ".tif"
+        ],
+        "aoi_codes": [
+          "yt"
+         ],
+        "epsg_codes": [
+          "32738"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ],
+        "auto_identify_epsg": true,
+        "epsg": 32738
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ],
+        "pixelsize": 5
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ],
+        "compression": [
+          "LZW"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ],
+        "validcodes": [
+          0,
+          1,
+          254,
+          255
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.tile",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ],
+        "max_blocksize": 1024
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.color",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "wvl_005m"
+        ],
+        "colors": {
+          "0": [
+            240,
+            240,
+            240
+          ],
+          "1": [
+            117,
+            221,
+            0
+          ],
+          "255": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  ]
+}
