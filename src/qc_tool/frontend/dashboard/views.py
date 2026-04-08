@@ -1630,6 +1630,10 @@ def resumable_upload(request):
 
 @login_required
 def change_password(request):
+    # Check if user is in test_group or guest_group - they cannot change password
+    if request.user.groups.filter(name__in=['test_group', 'guest_group']).exists():
+        raise PermissionDenied("Users in test_group or guest_group cannot change their password.")
+    
     if request.method == 'POST':
         form = PasswordChangeForm(request.user, data=request.POST)
         if form.is_valid():
