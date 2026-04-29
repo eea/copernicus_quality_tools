@@ -156,6 +156,34 @@ def find_shp_layers(unzip_dir, status):
         shp_layer_infos.append({"src_filepath": shp_filepath, "src_layer_name": shp_layer.GetName()})
     return shp_layer_infos
 
+def find_csv_layers(unzip_dir, status):
+    """
+    Finds all .shp layers anywhere in the directory hierarchy under unzip_dir.
+    """
+    # from osgeo import ogr
+    from osgeo.gdal import OpenEx
+
+    csv_filepaths = [path for path in unzip_dir.glob("**/*")
+                     if path.is_file() and path.suffix.lower() == ".csv"]
+
+    csv_layer_infos = []
+    for csv_filepath in csv_filepaths:
+        try:
+            # ds = ogr.Open(str(csv_filepath))
+            ds = OpenEx(csv_filepath, 0, open_options=["AUTODETECT_TYPE=YES"])
+        except:
+            status.aborted("Can not open csv file {:s}".format(csv_filepath.name))
+            continue
+        if ds is None:
+            status.aborted("Can not open csv file {:s}".format(csv_filepath.name))
+            continue
+        csv_layer = ds.GetLayer()
+        if csv_layer is None:
+            status.aborted("CSV file {:s} does not contain any layer.".format(csv_filepath.name))
+            continue
+        csv_layer_infos.append({"src_filepath": csv_filepath, "src_layer_name": csv_layer.GetName()})
+    return csv_layer_infos
+
 
 def find_gdb_layers(unzip_dir, status):
     from osgeo import ogr
