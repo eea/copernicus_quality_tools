@@ -1,0 +1,103 @@
+{
+  "description": "HRL Small Woody Features change 2018 - 2021, 100m raster",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.raster.naming",
+      "required": true,
+      "parameters": {
+        "layer_names":{
+          "swfc_100m": "^clms_hrlslf_swfc_c2018-2021_r100m_(?P<aoi_code>[a-zA-Z]{2})_(?P<epsgcode>[0-9]{5})_(?P<version>v[0-9]{2})_r[0-9]{2}_(?P<revision>[0-9]{2})"
+        },
+        "aoi_codes": ["*", "EU"],
+        "extensions": [".tif"],
+        "reference_year": "2018-2021"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.epsg",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "auto_identify_epsg": true,
+        "epsg": 3035
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.pixel_size",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "pixelsize": 100
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.origin",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.bit_depth",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "datatype": "byte"
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.compress",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "compression": ["LZW"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.value",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "validcodes": [0, 1, 2, 201, 202, 203, 254, 255]
+
+      }
+    },
+    {
+      "check_ident": "qc_tool.raster.gap",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "mask": "swf_2018",
+        "outside_area_code": 255
+      }
+    },
+        {
+      "check_ident": "qc_tool.raster.color",
+      "required": false,
+      "parameters": {
+        "layers": ["swfc_100m"],
+        "colors": {
+          "0":[240, 240, 240],
+          "1":[20, 255, 0],
+          "2": [255, 0, 0],
+          "201": [188, 130, 67],
+          "202": [121, 83, 43],
+          "203": [88, 61, 31],
+          "254":[153, 153, 153],
+          "255":[0, 0, 0]
+        }
+      }
+    }
+  ]
+}
