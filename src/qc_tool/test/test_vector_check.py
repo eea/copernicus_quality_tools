@@ -3,6 +3,7 @@
 
 from unittest import expectedFailure
 from unittest import skipIf
+from unittest.mock import patch
 
 from osgeo import gdal
 from osgeo import osr
@@ -1600,3 +1601,35 @@ class Test_inspire(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertIn("s01_inspire_bad_inspire_report.html", status.attachment_filenames)
         self.assertIn("s01_inspire_bad_inspire_log.txt", status.attachment_filenames)
+
+
+class Test_inspire_xml_lookup(VectorCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.tmp_dir = self.params["jobdir_manager"].tmp_dir
+        self.unzip_dir = self.tmp_dir.joinpath("v_unzip.d")
+        self.unzip_dir.mkdir(parents=True, exist_ok=True)
+        self.params["unzip_dir"] = self.unzip_dir
+        self.params["output_dir"] = self.params["jobdir_manager"].output_dir
+        self.params["layers"] = ["reference"]
+        self.params["step_nr"] = 1
+
+    def test_fallback_to_layer_name_xml(self):
+        from qc_tool.vector.inspire import run_check
+
+        metadata_xml = self.unzip_dir.joinpath("clc24_fr_myt.xml")
+        metadata_xml.write_text("<xml/>", encoding="utf-8")
+        self.params["layer_defs"] = {
+            "reference": {
+                "src_filepath": self.unzip_dir.joinpath("clc2024_fr_myt.gdb"),
+                "src_layer_name": "clc24_fr_myt",
+            }
+        }
+
+        status = self.status_class()
+        with patch("qc_tool.vector.helper.do_inspire_check") as mock_inspire_check:
+            run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, mock_inspire_check.call_count)
+        self.assertEqual(metadata_xml, mock_inspire_check.call_args[0][0])
