@@ -23,7 +23,7 @@ services:
       - qc_tool_volume:/mnt/qc_tool_volume
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.4.2rc2
+    image: eeacms/copernicus-qctool-worker:2.4.2
     shm_size: 1gb
     environment:
       - PRODUCT_DIRS
