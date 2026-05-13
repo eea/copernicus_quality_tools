@@ -1633,3 +1633,43 @@ class Test_inspire_xml_lookup(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         self.assertEqual(1, mock_inspire_check.call_count)
         self.assertEqual(metadata_xml, mock_inspire_check.call_args[0][0])
+
+    def test_case_insensitive_layer_name_xml_lookup(self):
+        from qc_tool.vector.inspire import run_check
+
+        metadata_xml = self.unzip_dir.joinpath("clc24_fr_myt.xml")
+        metadata_xml.write_text("<xml/>", encoding="utf-8")
+        self.params["layer_defs"] = {
+            "reference": {
+                "src_filepath": self.unzip_dir.joinpath("clc2024_fr_myt.gdb"),
+                "src_layer_name": "CLC24_FR_MYT",
+            }
+        }
+
+        status = self.status_class()
+        with patch("qc_tool.vector.helper.do_inspire_check") as mock_inspire_check:
+            run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, mock_inspire_check.call_count)
+        self.assertEqual(metadata_xml, mock_inspire_check.call_args[0][0])
+
+    def test_case_insensitive_xml_name_and_extension_lookup(self):
+        from qc_tool.vector.inspire import run_check
+
+        metadata_xml = self.unzip_dir.joinpath("CLC24_fr_myt.XML")
+        metadata_xml.write_text("<xml/>", encoding="utf-8")
+        self.params["layer_defs"] = {
+            "reference": {
+                "src_filepath": self.unzip_dir.joinpath("clc2024_fr_myt.gdb"),
+                "src_layer_name": "clc24_fr_myt",
+            }
+        }
+
+        status = self.status_class()
+        with patch("qc_tool.vector.helper.do_inspire_check") as mock_inspire_check:
+            run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual(1, mock_inspire_check.call_count)
+        self.assertEqual(metadata_xml, mock_inspire_check.call_args[0][0])

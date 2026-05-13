@@ -15,10 +15,27 @@ def locate_xml_file(metadata_folder_path, layer_filepath, layer_name=None):
         xml_names = [layer_name + "_metadata.xml", layer_name + ".xml"]
     else:
         xml_names = [layer_filepath.stem + "_metadata.xml", layer_filepath.stem + ".xml"]
+
+    xml_files_by_name_lower = None
     for xml_name in xml_names:
         matches = list(metadata_folder_path.rglob(xml_name))
         if matches:
             return matches[0]
+
+        # Linux filesystems are case-sensitive; allow case-insensitive lookup
+        # so layer name casing does not break metadata discovery.
+        if xml_files_by_name_lower is None:
+            xml_files_by_name_lower = {}
+            all_xml_files = sorted(
+                [p for p in metadata_folder_path.glob("**/*") if p.is_file() and p.suffix.lower() == ".xml"],
+                key=lambda p: str(p).lower(),
+            )
+            for xml_file in all_xml_files:
+                xml_files_by_name_lower.setdefault(xml_file.name.lower(), xml_file)
+
+        xml_file = xml_files_by_name_lower.get(xml_name.lower())
+        if xml_file:
+            return xml_file
     return None
 
 
