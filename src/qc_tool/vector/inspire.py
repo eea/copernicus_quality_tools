@@ -15,11 +15,43 @@ def locate_xml_file(metadata_folder_path, layer_filepath, layer_name=None):
         xml_names = [layer_name + "_metadata.xml", layer_name + ".xml"]
     else:
         xml_names = [layer_filepath.stem + "_metadata.xml", layer_filepath.stem + ".xml"]
+
+    xml_files_by_name_lower = None
     for xml_name in xml_names:
         matches = list(metadata_folder_path.rglob(xml_name))
         if matches:
             return matches[0]
+
+        # Linux filesystems are case-sensitive; allow case-insensitive lookup
+        # so layer name casing does not break metadata discovery.
+        if xml_files_by_name_lower is None:
+            xml_files_by_name_lower = {}
+            all_xml_files = sorted(
+                [p for p in metadata_folder_path.glob("**/*") if p.is_file() and p.suffix.lower() == ".xml"],
+                key=lambda p: str(p).lower(),
+            )
+            for xml_file in all_xml_files:
+                xml_files_by_name_lower.setdefault(xml_file.name.lower(), xml_file)
+
+        xml_file = xml_files_by_name_lower.get(xml_name.lower())
+        if xml_file:
+            return xml_file
     return None
+
+
+def get_expected_xml_names(layer_filepath, layer_name=None):
+    # Expected INSPIRE metadata names can be either <name>.xml or <name>_metadata.xml.
+    stems = []
+    if layer_name:
+        stems.append(layer_name)
+    if layer_filepath.stem not in stems:
+        stems.append(layer_filepath.stem)
+
+    expected = []
+    for stem in stems:
+        expected.append(stem + ".xml")
+        expected.append(stem + "_metadata.xml")
+    return expected
 
 
 def run_check(params, status):
@@ -54,20 +86,23 @@ def run_check(params, status):
 
         # Verify if there is one INSPIRE metadata file to check.
         # The XML file name is derived from the layer file name or from the layer name.
+        layer_name = layer_def.get("src_layer_name", layer_def["src_filepath"].stem)
         xml_name_source = params.get("xml_name_source", "layer_filepath")
         if xml_name_source == "layer_name":
-            xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"], layer_def["src_layer_name"])
+            xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"], layer_name)
+            if xml_filepath is None:
+                xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
         else:
             xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"])
+            if xml_filepath is None:
+                # Backward-compatible fallback: many products name XML by layer name.
+                xml_filepath = locate_xml_file(metadata_dir, layer_def["src_filepath"], layer_name)
         if xml_filepath is None:
-            status.failed("The delivery does not contain the expected metadata file '{:s}.xml'".format(
-                metadata_dir.stem, layer_def["src_filepath"].stem))
-            continue
-        if not xml_filepath.exists():
-            status.failed("The delivery does not contain the expected metadata file '{}.xml'".format(
-                xml_filepath.stem))
+            expected_xml_names = get_expected_xml_names(layer_def["src_filepath"], layer_name)
+            status.failed("The delivery does not contain expected metadata file. Looked for: {:s}".format(
+                ", ".join(expected_xml_names)))
             continue
 
         # Validate the xml file using INSPIRE validator service
-        export_prefix = "s{:02d}_{:s}_{:s}_inspire".format(params["step_nr"], layer_def["src_filepath"].stem, layer_def["src_layer_name"])
+        export_prefix = "s{:02d}_{:s}_{:s}_inspire".format(params["step_nr"], layer_def["src_filepath"].stem, layer_name)
         do_inspire_check(xml_filepath, export_prefix, params["output_dir"], status, lightweight_validator=use_lightweight_validator)

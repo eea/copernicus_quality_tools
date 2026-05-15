@@ -48,8 +48,8 @@ services:
       - WORK_DIR=/mnt/qc_tool_work
       - LEAVE_SCHEMA=yes
       - JAVA_MAX_MEM=1536
-      - RUN_INSPIRE_VALIDATOR=no
-      - USE_LIGHTWEIGHT_VALIDATOR=yes
+      - RUN_INSPIRE_VALIDATOR=yes
+      - USE_LIGHTWEIGHT_VALIDATOR=no
       - RUN_POSTGRES=yes
     networks:
       - qc_tool_network
