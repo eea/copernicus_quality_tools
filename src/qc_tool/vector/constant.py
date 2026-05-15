@@ -44,7 +44,7 @@ def run_check(params, status):
                     "The column {:s}.{:s} does not have a constant value; "
                     "features with differing {:s}: {:s}.".format(
                         layer_def["pg_layer_name"],
-                        unique_key,
+                        constant_key,
                         layer_def["fid_display_name"],
                         failed_items_message
                     )
