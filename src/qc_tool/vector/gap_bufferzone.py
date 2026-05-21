@@ -78,7 +78,8 @@ def run_check(params, status):
 
         gap_table = GapTable(partitioned_layer,
                              params["layer_defs"]["boundary"]["pg_layer_name"],
-                             params["du_column_name"])
+                             params["du_column_name"],
+                             use_snapping=False) # snapping is not used for gap detection, as it is very slow.
         gap_table.make()
 
         # Prepare parameters used in sql clauses.
