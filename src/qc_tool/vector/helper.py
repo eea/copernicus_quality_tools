@@ -1678,12 +1678,13 @@ class ComplexChangeProperty():
 
 
 class GapTable():
-    def __init__(self, partitioned_layer, boundary_layer_name, du_column_name):
+    def __init__(self, partitioned_layer, boundary_layer_name, du_column_name, use_snapping=True):
         self.partitioned_layer = partitioned_layer
         self.interior_table = _InteriorTable(partitioned_layer)
         self.boundary_layer_name = boundary_layer_name
         self.du_column_name = du_column_name
         self.gap_table_name = "gap_{:s}".format(partitioned_layer.pg_layer_name)
+        self.use_snapping = use_snapping
 
     @property
     def connection(self):
@@ -1783,31 +1784,33 @@ class GapTable():
             cursor.execute(sql, sql_execute_params)
             return cursor.rowcount
 
-    def _subtract_partition(self, partition_id):
+    def _subtract_partition(self, partition_id, use_snapping=True):
         """Subtracts interior of the partition from the gap table."""
         sql_params = {"gap_table": self.gap_table_name,
                       "interior_table": self.interior_table.interior_table_name}
         sql_execute_params = {"partition_id": partition_id}
         with self.connection.cursor() as cursor:
 
-            sql = ("WITH\n"
-                   " par AS (SELECT geom\n"
-                   "         FROM {interior_table}\n"
-                   "         WHERE partition_id = %(partition_id)s),\n"
-                   " sub AS (SELECT\n"
-                   "          gt.fid AS orig_fid,\n"
-                   "          ST_Difference(ST_Buffer(gt.geom, 0), ST_Buffer(par.geom, 0)) AS sgeom\n"
-                   "         FROM\n"
-                   "          {gap_table} AS gt\n"
-                   "          INNER JOIN par ON gt.geom && par.geom),\n"
-                   " ins AS (INSERT INTO {gap_table} (geom)\n"
-                   "         SELECT polygon_dump(sgeom)\n"
-                   "         FROM sub)\n"
-                   "DELETE FROM {gap_table}\n"
-                   "WHERE fid IN (SELECT orig_fid FROM sub);")
-
-            # more complex sql, to handle exceptional cases of invalid geometries introduced by partitioning.
-            sql = """
+            if not use_snapping:
+                # simpler (and potentially faster) sql, but might detect false gaps.
+                sql = ("WITH\n"
+                    " par AS (SELECT geom\n"
+                    "         FROM {interior_table}\n"
+                    "         WHERE partition_id = %(partition_id)s),\n"
+                    " sub AS (SELECT\n"
+                    "          gt.fid AS orig_fid,\n"
+                    "          ST_Difference(ST_Buffer(gt.geom, 0), ST_Buffer(par.geom, 0)) AS sgeom\n"
+                    "         FROM\n"
+                    "          {gap_table} AS gt\n"
+                    "          INNER JOIN par ON gt.geom && par.geom),\n"
+                    " ins AS (INSERT INTO {gap_table} (geom)\n"
+                    "         SELECT polygon_dump(sgeom)\n"
+                    "         FROM sub)\n"
+                    "DELETE FROM {gap_table}\n"
+                    "WHERE fid IN (SELECT orig_fid FROM sub);")
+            else:
+                # Snapping is used to prevent false gaps. note, this may be very slow on complex geometries.
+                sql = """
 WITH
  par AS (
    SELECT ST_MakeValid(ST_SnapToGrid(geom, 0.000001)) AS geom
@@ -1859,7 +1862,7 @@ WHERE fid IN (SELECT orig_fid FROM sub);
                     print("splitcount", split_count)
                     if split_count <= 0:
                         break
-                self._subtract_partition(partition_id)
+                self._subtract_partition(partition_id, self.use_snapping)
             sql = "VACUUM ANALYZE {gap_table};"
             sql = sql.format(**sql_params)
             cursor.execute(sql)
