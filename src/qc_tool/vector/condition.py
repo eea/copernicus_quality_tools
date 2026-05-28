@@ -76,9 +76,9 @@ def run_check(params, status):
         log.debug("Started condition check for the layer {:s}.".format(layer_def["pg_layer_name"]))
 
         conditions = params["conditions"]
-        for column_name, condition in conditions.items():
+        for condition in conditions:
             error_where = convert_rule_to_sql_violation(condition)
-            log.debug("Started condition check for the column {:s}.".format(column_name))
+            log.debug("Started condition check for the condition {:s}.".format(condition))
 
             # Prepare parameters used in sql clauses.
             sql_params = {"layer_name": layer_def["pg_layer_name"],
