@@ -76,7 +76,7 @@ def run_check(params, status):
         log.debug("Started condition check for the layer {:s}.".format(layer_def["pg_layer_name"]))
 
         conditions = params["conditions"]
-        for condition in conditions:
+        for condition_no, condition in enumerate(conditions):
             error_where = convert_rule_to_sql_violation(condition)
             log.debug("Started condition check for the condition {:s}.".format(condition))
 
@@ -86,7 +86,7 @@ def run_check(params, status):
                           "error_where": error_where}
 
             # Create table of error items.
-            error_table = "s{:02d}_{:s}_condition_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"], column_name)
+            error_table = "s{:02d}_{:s}_condition_{:02d}_error".format(params["step_nr"], layer_def["pg_layer_name"], condition_no + 1)
             sql = ("CREATE TABLE {error_table} ({fid_name} integer PRIMARY KEY);")
             sql = sql.format(error_table=error_table, **sql_params)
             cursor.execute(sql)
