@@ -23,13 +23,12 @@ def run_check(params, status):
     for layer_def in do_layers(params):
         log.debug("Started condition check for the layer {:s}.".format(layer_def["pg_layer_name"]))
         conditions = params["error_wheres"]
-        for column_name, error_where in conditions.items():
-            log.debug("Started condition check for the column {:s}.".format(column_name))
+        for error_where in conditions:
+            log.debug("Started condition check for  {:s}.".format(error_where))
 
             # Prepare parameters used in sql clauses.
             sql_params = {"layer_name": layer_def["pg_layer_name"],
                           "fid_name": layer_def["pg_fid_name"],
-                          "column_name": column_name,
                           "error_where": error_where}
 
             # Create table of error items.
@@ -48,8 +47,8 @@ def run_check(params, status):
             # Report error items.
             items_message = get_failed_items_message(cursor, error_table, layer_def["pg_fid_name"])
             if items_message is not None:
-                status.failed("Layer {:s}, column {:s} has error rows violating the condition: '{:s}': {:s}."
-                            .format(layer_def["pg_layer_name"], column_name, error_where, items_message))
+                status.failed("Layer {:s} violates the condition  '{:s}' in rows: {:s}."
+                            .format(layer_def["pg_layer_name"], error_where, items_message))
                 status.add_error_table(error_table, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         log.info("Condition check for the layer {:s} has been finished.".format(layer_def["pg_layer_name"]))
