@@ -1468,6 +1468,56 @@ class Test_change_technical(VectorCheckTestCase):
         self.assertListEqual([(2,), (4,)], cursor.fetchall())
 
 
+class Test_condition(VectorCheckTestCase):
+    """Test the vector condition checks."""
+    def setUp(self):
+        super().setUp()
+        self.params.update({"layer_defs": {"layer_0": {"pg_layer_name": "mytable",
+                                                       "pg_fid_name": "fid",
+                                                       "fid_display_name": "row number"}},
+                            "layers": ["layer_0"],
+                            "conditions": [
+                                "if S1PIX=0 then DOSTUPNOSTS2 is NULL",
+                                "if S1PIX=0 then MON_B_HM= 1; if S1PIX>0 then MON_B_HM= 0",
+                                "if VYHODNOCENIRES_HM = 0 then HM_KOD=0; if VYHODNOCENIRES_HM = 0 then HM_TYP=0; if VYHODNOCENIRES_HM = 1 then HM_KOD>0; if VYHODNOCENIRES_HM =1 then HM_TYP>0",
+                                "if S1PIX<=12 then INDIKATORAP_HM= 1; if S1PIX>12 then INDIKATORAP_HM= 0"
+                            ],
+
+                            "step_nr": 1})
+
+    def test_dostupnosts2_ok(self):
+        from qc_tool.vector.change import run_check
+        self.params["conditions"] = ["if S1PIX=0 then DOSTUPNOSTS2 is NULL"]
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE mytable (fid integer, S1PIX integer, DOSTUPNOSTS2 integer);")
+        cursor.execute("INSERT INTO mytable VALUES (1, 0, NULL),"
+                                                 " (2, 1, 12),"
+                                                 " (3, NULL, NULL);")
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("ok", status.status)
+        
+    def test_dostupnosts2_failed(self):
+        from qc_tool.vector.change import run_check
+
+        # Isolate this test to only run the first rule
+        self.params["conditions"] = ["if S1PIX=0 then DOSTUPNOSTS2 is NULL"]
+        
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("DROP TABLE IF EXISTS mytable;")
+        cursor.execute("CREATE TABLE mytable (fid integer, S1PIX integer, DOSTUPNOSTS2 integer);")
+        cursor.execute("""
+            INSERT INTO mytable VALUES 
+            (1, 0, 12);       -- Violates the rule (S1PIX=0 and NOT NULL)
+        """)
+
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("failed", status.status)
+        self.assertEqual(1, len(status.messages))
+
+    
+
 class Test_layer_area(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
