@@ -58,6 +58,7 @@ def run_check(params, status):
         if str(layer_def["src_filepath"]).lower().endswith(".csv"):
             ogr2ogr_params += ["-oo", "SEPARATOR=SEMICOLON"]
             ogr2ogr_params += ["-oo", "AUTODETECT_TYPE=YES"]
+            ogr2ogr_params += ["-oo", "EMPTY_STRING_AS_NULL=YES"]
         
         # Run ogr2ogr command with the arguments defined above.
         pc = run(ogr2ogr_params)
