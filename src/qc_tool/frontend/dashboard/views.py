@@ -1481,7 +1481,7 @@ def merge_uploaded_chunks(chunk_paths, target_filepath):
             stored_chunk_file = open(str(stored_chunk_filepath), "rb")
             target_file.write(stored_chunk_file.read())
             stored_chunk_file.close()
-            stored_chunk_filepath.unlink(missing_ok=True)
+            stored_chunk_filepath.unlink()
     target_file.close()
     logger.debug("Uploaded file saved to: " + str(target_filepath))
 
