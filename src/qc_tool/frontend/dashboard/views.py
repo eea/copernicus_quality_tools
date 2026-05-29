@@ -802,7 +802,9 @@ def resumable_upload_page(request):
     """
     Resumable file upload demo.
     """
-    return render(request, 'dashboard/resumable_upload.html')
+    return render(request, 'dashboard/resumable_upload.html', {
+        'resumable_simultaneous_uploads': settings.RESUMABLE_SIMULTANEOUS_UPLOADS
+    })
 
 
 @csrf_exempt
@@ -1479,7 +1481,7 @@ def merge_uploaded_chunks(chunk_paths, target_filepath):
             stored_chunk_file = open(str(stored_chunk_filepath), "rb")
             target_file.write(stored_chunk_file.read())
             stored_chunk_file.close()
-            stored_chunk_filepath.unlink()
+            stored_chunk_filepath.unlink(missing_ok=True)
     target_file.close()
     logger.debug("Uploaded file saved to: " + str(target_filepath))
 

@@ -136,10 +136,11 @@
 
 
       <script>
+        var resumable_simultaneous_uploads = {{ resumable_simultaneous_uploads }};
         var r = new Resumable({
             target:'/resumable_upload/',
             chunkSize:5*1024*1024,
-            simultaneousUploads:4,
+            simultaneousUploads:resumable_simultaneous_uploads,
             testChunks:true,
             throttleProgressCallbacks:1,
             fileType: ['zip']

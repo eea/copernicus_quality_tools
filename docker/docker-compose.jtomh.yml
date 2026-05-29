@@ -17,6 +17,7 @@ services:
       - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
       - CSRF_TRUSTED_ORIGINS="https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1"
+      - RESUMABLE_SIMULTANEOUS_UPLOADS=4
     networks:
       - qc_tool_network
     volumes:

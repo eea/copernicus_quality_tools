@@ -17,6 +17,7 @@ services:
       - REFRESH_JOB_STATUSES_BACKGROUND=yes
       - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
       - CSRF_TRUSTED_ORIGINS="https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1"
+      - RESUMABLE_SIMULTANEOUS_UPLOADS=4
     networks:
       - qc_tool_network
     volumes:

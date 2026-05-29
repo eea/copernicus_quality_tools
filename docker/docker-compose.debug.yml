@@ -22,6 +22,7 @@ services:
       - UPDATE_JOB_STATUSES_INTERVAL=20000
       - WORKER_ALIVE_TIMEOUT=5
       - REFRESH_JOB_STATUSES_BACKGROUND=yes
+      - RESUMABLE_SIMULTANEOUS_UPLOADS=4
     networks:
       - qc_tool_network
     volumes:
