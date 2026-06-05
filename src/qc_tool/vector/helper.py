@@ -397,6 +397,25 @@ def extract_epsg_code(layer_defs, layer_regexes, expected_epsg_codes, status, co
     # Set aoi_code as a global parameter.
     return epsg_code
 
+# Extract DELIVERY code and compare it to pre-defined list.
+def extract_name_info(layer_defs, layer_regexes, status):
+    layer_name_infos = []
+    for layer_alias, layer_def in layer_defs.items():
+        layer_name = layer_def["src_layer_name"]
+        layer_regex = layer_regexes[layer_alias]
+        mobj = re.match(layer_regex, layer_name.lower())
+        if mobj is None:
+            status.aborted("Layer {:s} has illegal name: {:s}.".format(layer_alias, layer_name))
+            continue
+        try:
+            name_info = mobj.group("name_info")
+        except IndexError:
+            status.aborted("Layer {:s} does not contain NAME INFOs.".format(layer_name))
+            continue
+
+    # Set delivery_code as a global parameter.
+    return name_info
+
 
 class LayerDefsBuilder():
     """
