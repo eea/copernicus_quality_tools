@@ -29,6 +29,11 @@ def run_check(params, status):
                 allowed_code = eval(allowed_codes[0])
                 allowed_codes = [allowed_code, allowed_code.upper(), allowed_code.lower()] # TODO: overit jak je to s datovymi typy
 
+            null_allowed = False
+            if None in allowed_codes:
+                null_allowed = True
+                allowed_codes.remove(None)
+
             # Prepare clause excluding features with non-null value of specific column.
             if "exclude_column_name" in params:
                 exclude_clause = "AND {:s} IS NULL".format(params["exclude_column_name"])
@@ -43,13 +48,21 @@ def run_check(params, status):
                           "error_table": "s{:02d}_{:s}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"], column_name)}
 
             # Create table of error items.
-            sql = ("CREATE TABLE {error_table} AS"
-                   " SELECT {fid_name}"
-                   " FROM {layer_name}"
-                   " WHERE"
-                   "  ({column_name} IS NULL"
-                   "   OR {column_name} NOT IN %s)"
-                   "  {exclude_clause};")
+            if null_allowed:
+                sql = ("CREATE TABLE {error_table} AS"
+                       " SELECT {fid_name}"
+                       " FROM {layer_name}"
+                       " WHERE"
+                       "  ({column_name} NOT IN %s)"
+                       "  {exclude_clause};")
+            else:
+                sql = ("CREATE TABLE {error_table} AS"
+                       " SELECT {fid_name}"
+                       " FROM {layer_name}"
+                       " WHERE"
+                       "  ({column_name} IS NULL"
+                       "   OR {column_name} NOT IN %s)"
+                       "  {exclude_clause};")
             sql = sql.format(**sql_params)
             cursor.execute(sql, [tuple(allowed_codes)])
 

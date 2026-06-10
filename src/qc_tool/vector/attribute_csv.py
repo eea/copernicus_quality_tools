@@ -46,7 +46,7 @@ def run_check(params, status):
 
     for layer_def in do_layers(params):
         # ds = ogr.Open(str(layer_def["src_filepath"]))
-        ds = OpenEx(str(layer_def["src_filepath"]), 0, open_options=["AUTODETECT_TYPE=YES"])
+        ds = OpenEx(str(layer_def["src_filepath"]), 0, open_options=["AUTODETECT_TYPE=YES", "SEPARATOR=SEMICOLON"])
         layer = ds.GetLayerByName(layer_def["src_layer_name"])
         required_attrs = {attr_name.lower(): attr_type_name.lower()
                          for attr_name, attr_type_name in params["required"].items()}
