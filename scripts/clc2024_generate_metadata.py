@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+from datetime import datetime, timezone
 import fiona
 from pyproj import CRS, Transformer
 
@@ -26,6 +27,8 @@ clc_layers = [lyr for lyr in layers if lyr.startswith("clc24_")]
 if not clc_layers:
     raise ValueError("No layer starting with 'clc24_' found in the GPKG.")
 
+if len(clc_layers) > 1:
+    print(f"WARNING: multiple clc24_* layers found {clc_layers}, using the first one.")
 layer_name = clc_layers[0]
 print(f"Detected layer: {layer_name}")
 
@@ -52,12 +55,9 @@ if epsg is None:
 # --------------------------------------------------
 transformer = Transformer.from_crs(src_crs, CRS.from_epsg(4326), always_xy=True)
 
-west, south = transformer.transform(minx, miny)
-east, north = transformer.transform(maxx, maxy)
-
-# Ensure correct ordering
-west, east = min(west, east), max(west, east)
-south, north = min(south, north), max(south, north)
+# transform_bounds densifies the bbox edges, giving a correct WGS84
+# envelope for projected CRS (corner-only transforms can underestimate it)
+west, south, east, north = transformer.transform_bounds(minx, miny, maxx, maxy)
 
 print("Bounding box:", west, south, east, north)
 print("EPSG:", epsg)
@@ -168,7 +168,7 @@ xml_template_reference = """<?xml version="1.0" encoding="UTF-8"?>
     </gmd:CI_ResponsibleParty>
   </gmd:contact>
   <gmd:dateStamp>
-    <gco:DateTime>2025-12-12T13:51:51.01022Z</gco:DateTime>
+    <gco:DateTime>{date_stamp}</gco:DateTime>
   </gmd:dateStamp>
   <gmd:metadataStandardName>
     <gco:CharacterString>ISO 19115/19139</gco:CharacterString>
@@ -210,7 +210,7 @@ xml_template_reference = """<?xml version="1.0" encoding="UTF-8"?>
           <gmd:identifier>
             <gmd:MD_Identifier>
               <gmd:code>
-                <gco:CharacterString>copernicus-{aoicode_lower}_v_32633_100_m_clc-2024_p_2024_v01_r01</gco:CharacterString>
+                <gco:CharacterString>copernicus-{aoicode_lower}_v_{epsg_code}_100_m_clc-2024_p_2024_v01_r01</gco:CharacterString>
               </gmd:code>
             </gmd:MD_Identifier>
           </gmd:identifier>
@@ -723,7 +723,7 @@ xml_template_initial = """<?xml version="1.0" encoding="UTF-8"?>
     </gmd:CI_ResponsibleParty>
   </gmd:contact>
   <gmd:dateStamp xmlns:geonet="http://www.fao.org/geonetwork">
-    <gco:DateTime>2025-12-12T13:49:17.228113Z</gco:DateTime>
+    <gco:DateTime>{date_stamp}</gco:DateTime>
   </gmd:dateStamp>
   <gmd:metadataStandardName xmlns:geonet="http://www.fao.org/geonetwork">
     <gco:CharacterString>ISO 19115/19139</gco:CharacterString>
@@ -765,7 +765,7 @@ xml_template_initial = """<?xml version="1.0" encoding="UTF-8"?>
           <gmd:identifier>
             <gmd:MD_Identifier>
               <gmd:code>
-                <gco:CharacterString>copernicus-{country_code}_v_32633_100_m_clc-2018_p_2017-2018_v01_r01</gco:CharacterString>
+                <gco:CharacterString>copernicus-{country_code}_v_{epsg_code}_100_m_clc-2018_p_2017-2018_v01_r01</gco:CharacterString>
               </gmd:code>
             </gmd:MD_Identifier>
           </gmd:identifier>
@@ -845,7 +845,7 @@ xml_template_initial = """<?xml version="1.0" encoding="UTF-8"?>
       <gmd:descriptiveKeywords>
         <gmd:MD_Keywords>
           <gmd:keyword>
-            <gmx:Anchor xlink:href="http://www.naturalearthdata.com/ne_admin#Country/MLT">{country_name}</gmx:Anchor>
+            <gmx:Anchor xlink:href="http://www.naturalearthdata.com/ne_admin#Country">{country_name}</gmx:Anchor>
           </gmd:keyword>
           <gmd:keyword>
             <gmx:Anchor xlink:href="http://www.naturalearthdata.com/ne_admin#Country">Countries</gmx:Anchor>
@@ -1245,7 +1245,7 @@ Free, full and open access to this data set is made on the conditions that:
 xml_template_change = """<?xml version="1.0" encoding="UTF-8"?>
 <gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:srv="http://www.isotc211.org/2005/srv" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gts="http://www.isotc211.org/2005/gts" xmlns:gsr="http://www.isotc211.org/2005/gsr" xmlns:gmi="http://www.isotc211.org/2005/gmi" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://schemas.opengis.net/csw/2.0.2/profiles/apiso/1.0.0/apiso.xsd">
   <gmd:fileIdentifier>
-    <gco:CharacterString>7da3de99-1e20-4499-944e-13c539bbc9f1</gco:CharacterString>
+    <gco:CharacterString>{file_uuid}</gco:CharacterString>
   </gmd:fileIdentifier>
   <gmd:language>
     <gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2/" codeListValue="eng" />
@@ -1278,7 +1278,7 @@ xml_template_change = """<?xml version="1.0" encoding="UTF-8"?>
     </gmd:CI_ResponsibleParty>
   </gmd:contact>
   <gmd:dateStamp>
-    <gco:DateTime>2025-12-12T13:33:11.656995Z</gco:DateTime>
+    <gco:DateTime>{date_stamp}</gco:DateTime>
   </gmd:dateStamp>
   <gmd:metadataStandardName>
     <gco:CharacterString>ISO 19115/19139</gco:CharacterString>
@@ -1320,7 +1320,7 @@ xml_template_change = """<?xml version="1.0" encoding="UTF-8"?>
           <gmd:identifier>
             <gmd:MD_Identifier>
               <gmd:code>
-                <gco:CharacterString>copernicus-{aoicode_lower}_v_32633_100_m_cha1824_p_2018-2024_v01_r01</gco:CharacterString>
+                <gco:CharacterString>copernicus-{aoicode_lower}_v_{epsg_code}_100_m_cha1824_p_2018-2024_v01_r01</gco:CharacterString>
               </gmd:code>
             </gmd:MD_Identifier>
           </gmd:identifier>
@@ -1655,16 +1655,16 @@ Free, full and open access to this data set is made on the conditions that:
           <gmd:geographicElement>
             <gmd:EX_GeographicBoundingBox>
               <gmd:westBoundLongitude>
-                <gco:Decimal>14.1834251</gco:Decimal>
+                <gco:Decimal>{west}</gco:Decimal>
               </gmd:westBoundLongitude>
               <gmd:eastBoundLongitude>
-                <gco:Decimal>14.5764915</gco:Decimal>
+                <gco:Decimal>{east}</gco:Decimal>
               </gmd:eastBoundLongitude>
               <gmd:southBoundLatitude>
-                <gco:Decimal>35.7862571</gco:Decimal>
+                <gco:Decimal>{south}</gco:Decimal>
               </gmd:southBoundLatitude>
               <gmd:northBoundLatitude>
-                <gco:Decimal>36.0821531</gco:Decimal>
+                <gco:Decimal>{north}</gco:Decimal>
               </gmd:northBoundLatitude>
             </gmd:EX_GeographicBoundingBox>
           </gmd:geographicElement>
@@ -1801,7 +1801,7 @@ Free, full and open access to this data set is made on the conditions that:
 xml_template_solar = """<?xml version="1.0" encoding="UTF-8"?>
 <gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:srv="http://www.isotc211.org/2005/srv" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gts="http://www.isotc211.org/2005/gts" xmlns:gsr="http://www.isotc211.org/2005/gsr" xmlns:gmi="http://www.isotc211.org/2005/gmi" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://schemas.opengis.net/csw/2.0.2/profiles/apiso/1.0.0/apiso.xsd">
   <gmd:fileIdentifier>
-    <gco:CharacterString>b15a3ad7-15a1-4d44-b144-8dbb1eb94b0e</gco:CharacterString>
+    <gco:CharacterString>{file_uuid}</gco:CharacterString>
   </gmd:fileIdentifier>
   <gmd:language>
     <gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2/" codeListValue="eng" />
@@ -1834,7 +1834,7 @@ xml_template_solar = """<?xml version="1.0" encoding="UTF-8"?>
     </gmd:CI_ResponsibleParty>
   </gmd:contact>
   <gmd:dateStamp>
-    <gco:DateTime>2025-12-12T13:38:01.364692Z</gco:DateTime>
+    <gco:DateTime>{date_stamp}</gco:DateTime>
   </gmd:dateStamp>
   <gmd:metadataStandardName>
     <gco:CharacterString>ISO 19115/19139</gco:CharacterString>
@@ -1858,7 +1858,7 @@ xml_template_solar = """<?xml version="1.0" encoding="UTF-8"?>
       <gmd:citation>
         <gmd:CI_Citation>
           <gmd:title>
-            <gco:CharacterString>CORINE Land Cover Change-Solar 2018-2024 (vector), {country_name} ({aoicode}) - National Data Extract, 6-yearly - version2025_v01_r01, Nov 2025</gco:CharacterString>
+            <gco:CharacterString>CORINE Land Cover Change-Solar 2018-2024 (vector), {country_name} ({aoicode}) - National Data Extract, 6-yearly - version 2025_v01_r01, Nov 2025</gco:CharacterString>
           </gmd:title>
           <gmd:date>
             <gmd:CI_Date>
@@ -1876,7 +1876,7 @@ xml_template_solar = """<?xml version="1.0" encoding="UTF-8"?>
           <gmd:identifier>
             <gmd:MD_Identifier>
               <gmd:code>
-                <gco:CharacterString>copernicus-{aoicode_lower}_v_32633_100_m_sol1824_p_2018-2024_v01_r01</gco:CharacterString>
+                <gco:CharacterString>copernicus-{aoicode_lower}_v_{epsg_code}_100_m_sol1824_p_2018-2024_v01_r01</gco:CharacterString>
               </gmd:code>
             </gmd:MD_Identifier>
           </gmd:identifier>
@@ -2214,16 +2214,16 @@ Free, full and open access to this data set is made on the conditions that:
           <gmd:geographicElement>
             <gmd:EX_GeographicBoundingBox>
               <gmd:westBoundLongitude>
-                <gco:Decimal>14.1834251</gco:Decimal>
+                <gco:Decimal>{west}</gco:Decimal>
               </gmd:westBoundLongitude>
               <gmd:eastBoundLongitude>
-                <gco:Decimal>14.5764915</gco:Decimal>
+                <gco:Decimal>{east}</gco:Decimal>
               </gmd:eastBoundLongitude>
               <gmd:southBoundLatitude>
-                <gco:Decimal>35.7862571</gco:Decimal>
+                <gco:Decimal>{south}</gco:Decimal>
               </gmd:southBoundLatitude>
               <gmd:northBoundLatitude>
-                <gco:Decimal>36.0821531</gco:Decimal>
+                <gco:Decimal>{north}</gco:Decimal>
               </gmd:northBoundLatitude>
             </gmd:EX_GeographicBoundingBox>
           </gmd:geographicElement>
@@ -2359,6 +2359,7 @@ Free, full and open access to this data set is made on the conditions that:
 
 # ---------------------------------------------------------------------
 file_uuid = str(uuid.uuid4())
+date_stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 if gpkg_path.lower().endswith(".gpkg"):
     format_name = "GPKG"
 else:
@@ -2379,7 +2380,8 @@ xml_filled = xml_template_reference.format(
     country_code=aoicode,
     aoicode=aoicode,
     aoicode_lower=aoicode.lower(),
-    format_name=format_name
+    format_name=format_name,
+    date_stamp=date_stamp
 )
 output_path = os.path.join(script_dir, f"clc24_{aoicode}.xml")
 with open(output_path, "w", encoding="utf-8") as f:
@@ -2400,16 +2402,18 @@ xml_filled_initial = xml_template_initial.format(
     country_code=aoicode,
     aoicode=aoicode,
     aoicode_lower=aoicode.lower(),
-    format_name=format_name
+    format_name=format_name,
+    date_stamp=date_stamp
 )
 output_path = os.path.join(script_dir, f"clc18_{aoicode}.xml")
 with open(output_path, "w", encoding="utf-8") as f:
-    f.write(xml_filled)
+    f.write(xml_filled_initial)
 print(f"\nMetadata written to: {output_path}")
 
 # XML template for change cha1824_xx.xml
+file_uuid_change = str(uuid.uuid4())
 xml_filled_change = xml_template_change.format(
-    file_uuid=file_uuid,
+    file_uuid=file_uuid_change,
     email=email,
     epsg_code=epsg,
     west=west,
@@ -2420,7 +2424,8 @@ xml_filled_change = xml_template_change.format(
     country_code=aoicode,
     aoicode=aoicode,
     aoicode_lower=aoicode.lower(),
-    format_name=format_name
+    format_name=format_name,
+    date_stamp=date_stamp
 )
 output_path = os.path.join(script_dir, f"cha1824_{aoicode}.xml")
 with open(output_path, "w", encoding="utf-8") as f:
@@ -2428,8 +2433,9 @@ with open(output_path, "w", encoding="utf-8") as f:
 print(f"\nMetadata written to: {output_path}")
 
 # XML template for solar sol1824_xx.xml
+file_uuid_solar = str(uuid.uuid4())
 xml_filled_solar = xml_template_solar.format(
-    file_uuid=file_uuid,
+    file_uuid=file_uuid_solar,
     email=email,
     epsg_code=epsg,
     west=west,
@@ -2440,7 +2446,8 @@ xml_filled_solar = xml_template_solar.format(
     country_code=aoicode,
     aoicode=aoicode,
     aoicode_lower=aoicode.lower(),
-    format_name=format_name
+    format_name=format_name,
+    date_stamp=date_stamp
 )
 output_path = os.path.join(script_dir, f"sol1824_{aoicode}.xml")
 with open(output_path, "w", encoding="utf-8") as f:
