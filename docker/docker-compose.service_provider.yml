@@ -1,7 +1,6 @@
 services:
   frontend:
     image: eeacms/copernicus-qctool-frontend:2.4.3rc4
-    
     ports:
       - 8000:8000
     environment:
