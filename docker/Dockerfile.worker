@@ -199,28 +199,28 @@ RUN cd /usr/local/src \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
-# Download and extract the INSPIRE Validator WAR file and the ui.zip file
 RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
-    && ETF_DL_TESTPROJECTS_ZIP=https://github.com/inspire-eu-validation/ets-repository/archive/v${INSPIRE_VALIDATOR_VERSION}.zip \
-    && wget --no-verbose -O /tmp/inspire-validator.zip \
-    https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip \
-    && unzip -q /tmp/inspire-validator.zip -d /tmp \
-    && mv /tmp/validator.war /usr/local/jetty/webapps/validator.war \
-    && mv /tmp/ui.zip ui.zip \
-    && wget -q ${ETF_DL_TESTPROJECTS_ZIP} -O projects.zip \
-    && mkdir -p ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
-    && unzip -o projects.zip -d ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
-    && rm -rf projects.zip /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
-    && echo ${INSPIRE_VALIDATOR_VERSION} >/etc/inspire-validator-version.txt
+     && ETF_DL_TESTPROJECTS_VERSION=$(echo "${INSPIRE_VALIDATOR_VERSION}" | cut -d. -f1,2) \
+     && ETF_DL_TESTPROJECTS_ZIP="https://github.com/inspire-eu-validation/ets-repository/archive/refs/heads/v${ETF_DL_TESTPROJECTS_VERSION}.zip" \
+     && wget --no-verbose -O /tmp/inspire-validator.zip https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip \
+     && unzip -q /tmp/inspire-validator.zip -d /tmp \
+     && mv /tmp/validator.war /usr/local/jetty/webapps/validator.war \
+     && mv /tmp/ui.zip ui.zip \
+     && wget -q "${ETF_DL_TESTPROJECTS_ZIP}" -O projects.zip \
+     && mkdir -p ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
+     && unzip -o projects.zip -d ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
+     && rm -rf projects.zip /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
+     && echo ${INSPIRE_VALIDATOR_VERSION} >/etc/inspire-validator-version.txt
 
 # Download the INSPIRE registry resources
 RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
-    && mkdir -p /tmp/inspire-registry-resources \
-    && wget --no-verbose -O /tmp/inspire-registry-resources.zip \
-    https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-registry-resources.zip \
-    && unzip -q /tmp/inspire-registry-resources.zip -d /tmp/inspire-registry-resources \
-    && mkdir -p ${ETF_DIR}/inspire-registry-resources \
-    && mv /tmp/inspire-registry-resources ${ETF_DIR}/inspire-registry-resources/
+     && RESOURCE_VERSION=$(echo "${INSPIRE_VALIDATOR_VERSION}" | cut -d. -f1,2) \
+     && mkdir -p /tmp/inspire-registry-resources \
+     && wget --no-verbose -O /tmp/inspire-registry-resources.zip \
+     https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${RESOURCE_VERSION}/inspire-registry-resources.zip \
+     && unzip -q /tmp/inspire-registry-resources.zip -d /tmp/inspire-registry-resources \
+     && mkdir -p ${ETF_DIR}/inspire-registry-resources \
+     && mv /tmp/inspire-registry-resources ${ETF_DIR}/inspire-registry-resources/
 
 # Copy INSPIRE validator resources and prepare directories
 COPY inspire/docker-entrypoint.sh /
