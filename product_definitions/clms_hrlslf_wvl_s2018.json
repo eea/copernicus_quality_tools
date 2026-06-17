@@ -140,7 +140,7 @@
         "layers": [
           "wvl_005m"
         ],
-        "mask": "swf_2018",
+        "mask": "eea38uk_100km",
         "outside_area_code": 255
       }
     },

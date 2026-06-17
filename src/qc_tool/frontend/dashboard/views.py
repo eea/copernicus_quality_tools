@@ -802,7 +802,9 @@ def resumable_upload_page(request):
     """
     Resumable file upload demo.
     """
-    return render(request, 'dashboard/resumable_upload.html')
+    return render(request, 'dashboard/resumable_upload.html', {
+        'resumable_simultaneous_uploads': settings.RESUMABLE_SIMULTANEOUS_UPLOADS
+    })
 
 
 @csrf_exempt

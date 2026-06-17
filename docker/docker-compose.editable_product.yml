@@ -12,6 +12,7 @@ services:
       - WORK_DIR=/mnt/qc_tool_volume/work
       - SUBMISSION_DIR=/mnt/qc_tool_volume/submission
       - FRONTEND_DB_PATH=/var/lib/qc_tool/frontend.sqlite3
+      - RESUMABLE_SIMULTANEOUS_UPLOADS=4
     networks:
       - qc_tool_network
     volumes:

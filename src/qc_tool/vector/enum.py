@@ -16,9 +16,23 @@ def run_check(params, status):
             status.info("The delivery has been excluded from vector.enum check because the vector data source does not contain a single object of interest.")
             return
 
+    # get name info if extracted
+    if "name_info" in params:
+        name_info = params["name_info"]
+
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
+
         for column_name, allowed_codes in params["column_defs"]:
+
+            if isinstance(allowed_codes[0], str) and "name_info" in allowed_codes[0]:
+                allowed_code = eval(allowed_codes[0])
+                allowed_codes = [allowed_code, allowed_code.upper(), allowed_code.lower()] # TODO: overit jak je to s datovymi typy
+
+            null_allowed = False
+            if None in allowed_codes:
+                null_allowed = True
+                allowed_codes.remove(None)
 
             # Prepare clause excluding features with non-null value of specific column.
             if "exclude_column_name" in params:
@@ -34,13 +48,21 @@ def run_check(params, status):
                           "error_table": "s{:02d}_{:s}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"], column_name)}
 
             # Create table of error items.
-            sql = ("CREATE TABLE {error_table} AS"
-                   " SELECT {fid_name}"
-                   " FROM {layer_name}"
-                   " WHERE"
-                   "  ({column_name} IS NULL"
-                   "   OR {column_name} NOT IN %s)"
-                   "  {exclude_clause};")
+            if null_allowed:
+                sql = ("CREATE TABLE {error_table} AS"
+                       " SELECT {fid_name}"
+                       " FROM {layer_name}"
+                       " WHERE"
+                       "  ({column_name} NOT IN %s)"
+                       "  {exclude_clause};")
+            else:
+                sql = ("CREATE TABLE {error_table} AS"
+                       " SELECT {fid_name}"
+                       " FROM {layer_name}"
+                       " WHERE"
+                       "  ({column_name} IS NULL"
+                       "   OR {column_name} NOT IN %s)"
+                       "  {exclude_clause};")
             sql = sql.format(**sql_params)
             cursor.execute(sql, [tuple(allowed_codes)])
 

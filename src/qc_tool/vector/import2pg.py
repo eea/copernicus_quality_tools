@@ -29,7 +29,7 @@ def run_check(params, status):
         pg_layer_name = layer_def["layer_alias"]
 
         if "detected_epsg" in params:
-            pc = run(["ogr2ogr",
+            ogr2ogr_params = ["ogr2ogr",
                       "-overwrite",
                       "-f", "PostgreSQL",
                       "-lco", "GEOMETRY_NAME=geom",
@@ -40,9 +40,9 @@ def run_check(params, status):
                       "-a_srs", "EPSG:{:d}".format(params["detected_epsg"]),
                       "PG:{:s}".format(dsn),
                       str(layer_def["src_filepath"]),
-                      src_layer_name])
+                      src_layer_name]
         else:
-            pc = run(["ogr2ogr",
+            ogr2ogr_params = ["ogr2ogr",
                       "-overwrite",
                       "-f", "PostgreSQL",
                       "-lco", "GEOMETRY_NAME=geom",
@@ -52,7 +52,17 @@ def run_check(params, status):
                       "-nln", pg_layer_name,
                       "PG:{:s}".format(dsn),
                       str(layer_def["src_filepath"]),
-                      src_layer_name])
+                      src_layer_name]
+            
+        # Special import options for CSV layers.
+        if str(layer_def["src_filepath"]).lower().endswith(".csv"):
+            ogr2ogr_params += ["-oo", "SEPARATOR=SEMICOLON"]
+            ogr2ogr_params += ["-oo", "AUTODETECT_TYPE=YES"]
+            ogr2ogr_params += ["-oo", "EMPTY_STRING_AS_NULL=YES"]
+        
+        # Run ogr2ogr command with the arguments defined above.
+        pc = run(ogr2ogr_params)
+        
         if pc.returncode != 0:
             status.aborted("Failed to import layer {:s} into PostGIS.".format(src_layer_name))
         else:

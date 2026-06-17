@@ -12,6 +12,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import check_gdb_filename
     from qc_tool.vector.helper import extract_aoi_code
     from qc_tool.vector.helper import extract_epsg_code
+    from qc_tool.vector.helper import extract_name_info
     from qc_tool.vector.helper import find_gdb_layers
     from qc_tool.vector.helper import find_gpkg_layers
     from qc_tool.vector.helper import find_shp_layers
@@ -143,6 +144,12 @@ def run_check(params, status):
         name_epsg = extract_epsg_code(builder.layer_defs, params["layer_names"], params["epsg_codes"], status,
                                       compare_epsg_codes=compare_epsg_codes)
         status.add_params({"name_epsg": name_epsg})
+
+    # Extract NAME INFO if required.
+    if "extract_name_info" in params and params["extract_name_info"] is True:
+        name_info = extract_name_info(builder.layer_defs, params["layer_names"], status)
+        status.add_params({"name_info": name_info})
+        status.info(str(status.params["name_info"]))
 
     # Check geodatabase name. If set, the aoi_code in the geodatabase name should match aoi_code from the layers.
     if "gdb_filename_regex" in params:

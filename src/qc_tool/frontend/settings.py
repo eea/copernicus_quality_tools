@@ -175,6 +175,9 @@ SHOW_LOGO = CONFIG["show_logo"]
 # Maintenance mode setting.
 MAINTENANCE_MODE = CONFIG["maintenance_mode"]
 
+# Resumable uploads simultaneous uploads setting.
+RESUMABLE_SIMULTANEOUS_UPLOADS = int(os.environ.get("RESUMABLE_SIMULTANEOUS_UPLOADS", 4))
+
 LOGIN_REDIRECT_URL = '/'
 
 # case-insensitive username authentication backend
