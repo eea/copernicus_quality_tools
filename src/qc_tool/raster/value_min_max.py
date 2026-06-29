@@ -1,3 +1,10 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+
+DESCRIPTION = "Pixels have values within a specified range."
+IS_SYSTEM = False
+
 def run_check(params, status):
     import osgeo.gdal as gdal
     from qc_tool.raster.helper import do_raster_layers
