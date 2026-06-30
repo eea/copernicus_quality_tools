@@ -1067,7 +1067,7 @@ def submit_delivery_to_eea(request):
             if d.s3:
                 submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
             else:
-                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(d.user.username).joinpath(d.filename)
                 submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
 
 
