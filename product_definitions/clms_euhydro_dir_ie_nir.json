@@ -15,9 +15,6 @@
         "aoi_codes": [
           "ie_nir"
         ],
-        "epsg_codes": [
-          "03035"
-        ],
         "extensions": [
           ".tif"
         ],
