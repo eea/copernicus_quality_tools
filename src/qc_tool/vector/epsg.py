@@ -29,6 +29,18 @@ def run_check(params, status):
             srs.AutoIdentifyEPSG()
             authority_name = srs.GetAuthorityName(None)
             authority_code = srs.GetAuthorityCode(None)
+
+            # --- FIX FOR COMPOUNDCRS ---
+            # If root lookup fails but it's a compound coordinate system, 
+            # extract the horizontal component and check its authority instead.
+            if authority_name is None and srs.IsCompound():
+                horiz_srs = srs.GetHorizontalCRS()
+                if horiz_srs is not None:
+                    horiz_srs.AutoIdentifyEPSG()
+                    authority_name = horiz_srs.GetAuthorityName(None)
+                    authority_code = horiz_srs.GetAuthorityCode(None)
+            # ---------------------------
+
             if authority_name == "EPSG":
                 # Compare epsg code using the root-level epsg authority in the srs WKT of the layer.
                 try:
