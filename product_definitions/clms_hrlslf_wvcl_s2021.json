@@ -1,5 +1,5 @@
 {
-  "description": "HRL Small Woody Features 2018, Revised Woody Vegetation Layer, EEA38",
+  "description": "HRL Small Woody Features 2021, Woody Vegetation Confidence Layer, EEA38",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
@@ -9,14 +9,15 @@
       "check_ident": "qc_tool.raster.naming",
       "required": true,
       "parameters": {
-        "reference_year": "2018",
+        "reference_year": "2021",
         "layer_names": {
-          "wvl_005m": "clms_hrlslf_wvl_s2018_r5m_(?P<aoi_code>[0-9a-zA-Z]{6})_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
+          "wvl_5m": "clms_hrlslf_wvcl_s2021_r5m_(?P<aoi_code>gf|gp|mq|re|yt|e[0-9]{1-2}n[0-9]{2})_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}_[0-9]{8}"
         },
         "extensions": [
           ".tif"
         ],
         "aoi_codes": [
+          "e9n27",
           "e09n27",
           "e10n25",
           "e11n25",
@@ -914,7 +915,12 @@
           "e72n23",
           "e72n24",
           "e72n25",
-          "e73n22"
+          "e73n22",
+          "gf",
+          "gp",
+          "mq",
+          "re",
+          "yt"
         ],
         "epsg_codes": [
           "03035"
@@ -926,7 +932,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ]
       }
     },
@@ -935,10 +941,11 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ],
         "auto_identify_epsg": true,
-        "epsg": 3035
+        "epsg": 3035,
+        "extra_epsg_codes": {"re": 3034, "yt": 3034, "gf": 2972, "gp": 2972, "mq": 2972}
       }
     },
     {
@@ -946,7 +953,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ],
         "pixelsize": 5
       }
@@ -956,8 +963,9 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
-        ]
+          "wvcl_5m"
+        ],
+        "skip_aoi_codes": ["gf", "gp", "mq", "re", "yt"]
       }
     },
     {
@@ -965,7 +973,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ],
         "datatype": "byte"
       }
@@ -975,7 +983,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ],
         "compression": [
           "LZW"
@@ -987,11 +995,10 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ],
         "validcodes": [
-          0,
-          1,
+          [0,100],
           255
         ]
       }
@@ -1001,7 +1008,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ],
         "max_blocksize": 1024
       }
@@ -1011,36 +1018,20 @@
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
+          "wvcl_5m"
         ],
         "mask": "eea38uk_100km",
-        "outside_area_code": 255
+        "outside_area_code": 255,
+        "skip_aoi_codes": ["gf", "gp", "mq", "re", "yt"]
       }
     },
     {
-      "check_ident": "qc_tool.raster.color",
+      "check_ident": "qc_tool.raster.cog",
       "required": false,
       "parameters": {
         "layers": [
-          "wvl_005m"
-        ],
-        "colors": {
-          "0": [
-            240,
-            240,
-            240
-          ],
-          "1": [
-            117,
-            221,
-            0
-          ],
-          "255": [
-            0,
-            0,
-            0
-          ]
-        }
+          "wvcl_5m"
+        ]
       }
     }
   ]

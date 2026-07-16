@@ -10,6 +10,12 @@ def run_check(params, status):
     import osgeo.gdal as gdal
     from qc_tool.raster.helper import do_raster_layers
 
+    aoi_code = params.get("aoi_code")
+    skip_aoi_codes = params.get("skip_aoi_codes", [])
+    if aoi_code in skip_aoi_codes:
+        status.info("Check was skipped for aoi code {:s}.".format(aoi_code))
+        return
+
     grid_size = params.get("grid_size", 1000)
 
     for layer_def in do_raster_layers(params):
