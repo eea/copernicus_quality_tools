@@ -20,8 +20,12 @@ def run_check(params, status):
     from qc_tool.raster.helper import write_progress
     from qc_tool.raster.helper import write_percent
 
-
     aoi_code = params["aoi_code"].lower()
+    skip_aoi_codes = params.get("skip_aoi_codes", [])
+    if aoi_code in [c.lower() for c in skip_aoi_codes]:
+        status.info("Check was skipped for aoi code {:s}.".format(aoi_code))
+        return
+
     gap_value_ds = params["outside_area_code"]
     du_column_name = params.get("du_column_name", None)
     mask_align_grid = params.get("mask_align_grid", MASK_ALIGN_GRID)
