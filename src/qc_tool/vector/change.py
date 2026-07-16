@@ -52,8 +52,13 @@ def run_check(params, status):
                " LEFT JOIN {general_table} AS gen ON layer.{fid_name} = gen.{fid_name}\n"
                "WHERE\n"
                " gen.{fid_name} IS NULL\n")
-        if sql_params["chtype_column_name"] != "" and sql_params["technical_change_flag"] != "" and sql_params["change_column_value_exception"] != "":
-            sql += " AND (layer.{chtype_column_name} = '{technical_change_flag}' OR layer.{change_column_name} = '{change_column_value_exception}');"
+        exception_conditions = []
+        if sql_params["chtype_column_name"] != "" and sql_params["technical_change_flag"] != "":
+            exception_conditions.append("layer.{chtype_column_name} = '{technical_change_flag}'")
+        if sql_params["change_column_name"] != "" and sql_params["change_column_value_exception"] != "":
+            exception_conditions.append("layer.{change_column_name} = '{change_column_value_exception}'")
+        if exception_conditions:
+            sql += " AND ({:s});".format(" OR ".join(exception_conditions))
         else:
             sql += " AND FALSE;"
         
