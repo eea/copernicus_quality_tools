@@ -945,7 +945,7 @@
         ],
         "auto_identify_epsg": true,
         "epsg": 3035,
-        "extra_epsg_codes": {"re": 3034, "yt": 3034, "gf": 2972, "gp": 2972, "mq": 2972}
+        "extra_epsg_codes": {"re": 32740, "yt": 32738, "gf": 32622, "gp": 32620, "mq": 32620}
       }
     },
     {
