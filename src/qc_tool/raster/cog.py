@@ -12,6 +12,8 @@ def run_check(params, status):
 
     from qc_tool.raster.helper import do_raster_layers
 
+    strict = params.get("strict", False)
+
     for layer_def in do_raster_layers(params):
 
         status.info("Using GDAL COG validator.")
@@ -48,3 +50,24 @@ def run_check(params, status):
         if "is a valid cloud optimized GeoTIFF" in cog_validation_output:
             status.info(
                 "The raster {:s} is a valid cloud optimized GeoTIFF.".format(str(layer_def["src_layer_name"])))
+
+        if strict:
+            COG_MAX_HEADER_BYTES = 1024 * 1024  # 1 MB
+
+            # Check header size reported by validate_cloud_optimized_geotiff.py.
+            header_size_regex = r"The size of all IFD headers is (\d+) bytes"
+            m = re.search(header_size_regex, cog_validation_output)
+            if m:
+                header_size = int(m.group(1))
+                if header_size >= COG_MAX_HEADER_BYTES:
+                    status.failed(
+                        "header size {:d} is bigger than allowed header size of 1MB.".format(header_size))
+
+            # Additional header size check using cog_header.py.
+            from qc_tool.raster.cog_header import analyze as analyze_cog_header
+            cog_header_result = analyze_cog_header(str(layer_def["src_filepath"]))
+            if cog_header_result is not None:
+                cog_header_size = cog_header_result["header_bytes"]
+                if cog_header_size >= COG_MAX_HEADER_BYTES:
+                    status.failed(
+                        "header size {:d} is bigger than allowed header size of 1MB.".format(cog_header_size))
