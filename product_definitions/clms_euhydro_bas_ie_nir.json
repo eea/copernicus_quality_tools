@@ -29,6 +29,29 @@
         },
         "gpkg_filename_regex": "^clms_euhydro_bas_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
       }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7"
+        ],
+        "required": {
+          "fid": "integer",
+          "id": "string",
+          "remark": "string",
+          "area_ha": "real",
+          "shape_area": "real",
+          "shape_length": "real",
+          "code_24": "string"
+        },
+        "lengths": {
+          "id": 18,
+          "code_24": 3,
+          "remark": 20},
+        "ignored": ["objectid"]
+      }
     }
   ]
 }
