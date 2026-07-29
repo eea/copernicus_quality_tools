@@ -1,0 +1,144 @@
+{
+  "description": "EU Hydro Hydro-WBO vector (Ireland)",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2026",
+        "formats": [
+          ".gpkg",
+          ".fgb"
+        ],
+        "layer_names": {
+          "vector": "^clms_euhydro_wbo_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
+        },
+        "aoi_codes": [
+          "ie_nir"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["vector"],
+        "required": {
+          "OBJECT_ID": "string",
+          "INSPIRE_ID": "string",
+          "HYBAS_ID": "string",
+          "WBO_TYPE": "string",
+          "NAME": "string",
+          "AREA_SKM": "real",
+          "ALTITUDE_M": "real",
+          "PERIMET_KM": "integer",
+          "LAKOUT": "integer",
+          "LAKIN": "integer",
+          "SOURCE": "string"
+        },
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["vector"],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "unique_keys": ["FID"]
+      }},
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "column_defs": [
+          ["WBO_TYPE", [
+            "River",
+            "Lake/Reservoir"
+          ]],
+          ["SOURCE", [
+            "Adapted from EU-Hydro v1.3 InlandWater",
+            "Adapted from EU-Hydro v1.3 Transit_p",
+            "Adapted from CLMS Riparian Zones 2018",
+            "Adapted from OSM",
+            "Adapted from CLMS CLCplus 2023",
+            "EU-Hydro v1.3 InlandWater partially updated with WaW18, CLCplus23, HydroSHEDS OpenWater v2, DLR watermask"
+          ]]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "complex_change": null,
+        "general_where": ["ST_Area(layer.geom) >= 5000"],
+        "exception_where": ["FALSE"],
+        "warning_where": ["FALSE"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mmw": 10.0,
+        "general_where": "FALSE",
+        "exception_where": "layer.wbo_type LIKE 'Lake/Reservoir'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    }
+  ]
+}
