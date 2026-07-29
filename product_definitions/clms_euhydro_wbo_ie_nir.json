@@ -124,6 +124,14 @@
       }
     },
     {
+      "check_ident": "qc_tool.vector.mmu_island",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mmu": 5000
+      }
+    },
+    {
       "check_ident": "qc_tool.vector.mmw",
       "required": false,
       "parameters": {
