@@ -85,6 +85,17 @@ def run_check(params, status):
                 # Extra attribute.
                 extra_attrs.update({field_name: OGR_TYPES[field_type]})
 
+        # For formats like .gpkg the FID column is not exposed in layer.schema.
+        # If the FID column name is still listed in required_attrs, resolve it here.
+        fid_column = layer.GetFIDColumn().lower()
+        if fid_column and fid_column in required_attrs:
+            # The FID column is always an integer; verify the required type matches.
+            if required_attrs[fid_column] == "integer":
+                del required_attrs[fid_column]
+            else:
+                bad_type_attrs.update({fid_column: "integer"})
+                del required_attrs[fid_column]
+
         # The attributes remaining in required_attrs are missing.
         if len(required_attrs) > 0:
             status.aborted("Layer {:s} has missing attributes: {:s}."
