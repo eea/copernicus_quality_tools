@@ -54,6 +54,19 @@ def run_check(params, status):
         extra_attrs = {}
         bad_type_attrs = {}
         bad_attr_lengths = {}
+
+        # Handle the FID column (e.g. "fid" in GPKG) which is not part of layer.schema.
+        fid_column_name = layer.GetFIDColumn()
+        if fid_column_name:
+            fid_col_lower = fid_column_name.lower()
+            if fid_col_lower in ignored_attrs:
+                ignored_attrs.remove(fid_col_lower)
+            elif fid_col_lower in required_attrs:
+                if required_attrs[fid_col_lower] == "integer":
+                    del required_attrs[fid_col_lower]
+                else:
+                    bad_type_attrs[fid_col_lower] = "integer"
+
         for field_defn in layer.schema:
             field_name = field_defn.name.lower()
             field_type = field_defn.GetType()
