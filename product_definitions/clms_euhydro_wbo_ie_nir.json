@@ -28,6 +28,7 @@
       "parameters": {
         "layers": ["vector"],
         "required": {
+          "FID": "integer",
           "OBJECT_ID": "string",
           "INSPIRE_ID": "string",
           "HYBAS_ID": "string",
