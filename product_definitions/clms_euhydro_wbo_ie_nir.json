@@ -15,7 +15,7 @@
           ".fgb"
         ],
         "layer_names": {
-          "vector": "^clms_euhydro_wbo_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
+          "wbo": "^clms_euhydro_wbo_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
         },
         "aoi_codes": [
           "ie_nir"
@@ -26,7 +26,7 @@
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
-        "layers": ["vector"],
+        "layers": ["wbo"],
         "required": {
           "FID": "integer",
           "OBJECT_ID": "string",
@@ -55,7 +55,7 @@
       "check_ident": "qc_tool.vector.epsg",
       "required": true,
       "parameters": {
-        "layers": ["vector"],
+        "layers": ["wbo"],
         "epsg": 3035,
         "auto_identify_epsg": false
       }
@@ -65,24 +65,17 @@
       "required": true
     },
     {
-      "check_ident": "qc_tool.vector.inspire",
-      "required": false,
-      "parameters": {
-        "layers": ["vector"]
-      }
-    },
-    {
       "check_ident": "qc_tool.vector.unique",
       "required": false,
       "parameters": {
-        "layers": ["vector"],
+        "layers": ["wbo"],
         "unique_keys": ["FID"]
       }},
     {
       "check_ident": "qc_tool.vector.enum",
       "required": false,
       "parameters": {
-        "layers": ["vector"],
+        "layers": ["wbo"],
         "column_defs": [
           ["WBO_TYPE", [
             "River",
@@ -103,21 +96,21 @@
       "check_ident": "qc_tool.vector.singlepart",
       "required": false,
       "parameters": {
-        "layers": ["vector"]
+        "layers": ["wbo"]
       }
     },
     {
       "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
-        "layers": ["vector"]
+        "layers": ["wbo"]
       }
     },
     {
       "check_ident": "qc_tool.vector.mmu",
       "required": false,
       "parameters": {
-        "layers": ["vector"],
+        "layers": ["wbo"],
         "complex_change": null,
         "general_where": ["ST_Area(layer.geom) >= 5000"],
         "exception_where": ["FALSE"],
@@ -128,7 +121,7 @@
       "check_ident": "qc_tool.vector.mmu_island",
       "required": false,
       "parameters": {
-        "layers": ["vector"],
+        "layers": ["wbo"],
         "mmu": 5000
       }
     },
@@ -136,7 +129,7 @@
       "check_ident": "qc_tool.vector.mmw",
       "required": false,
       "parameters": {
-        "layers": ["vector"],
+        "layers": ["wbo"],
         "mmw": 10.0,
         "general_where": "FALSE",
         "exception_where": "layer.wbo_type LIKE 'Lake/Reservoir'"
@@ -146,7 +139,7 @@
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
-        "layers": ["vector"]
+        "layers": ["wbo"]
       }
     }
   ]
