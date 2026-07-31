@@ -1,5 +1,5 @@
 {
-  "description": "EU Hydro Hydro-NET vector (Ireland)",
+  "description": "EU Hydro Hydro-ART vector (Ireland)",
   "steps": [
     {
       "check_ident": "qc_tool.raster.unzip",
@@ -14,10 +14,10 @@
           ".gpkg", ".fgb"
         ],
         "layer_names": {
-          "NODES": "net_nodes_(?P<aoi_code>ie_nir)",
-          "NODES_CARTO": "net_nodes_carto_(?P<aoi_code>ie_nir)",
-          "STREAMS": "net_streams_(?P<aoi_code>ie_nir)",
-          "STREAMS_CARTO": "net_streams_carto_(?P<aoi_code>ie_nir)"
+          "WATERCOURSE_LINE": "art_artificial_watercourse_line_(?P<aoi_code>ie_nir)",
+          "WATERCOURSE_POLYGON": "art_artificial_watercourse_polygon_(?P<aoi_code>ie_nir)",
+          "LONGITUDINAL_STRUCTURE": "art_longitudinal_connectivity_structure_(?P<aoi_code>ie_nir)",
+          "LATERAL_STRUCTURE": "art_coastal_protection_lateral_connectivity_structure_(?P<aoi_code>ie_nir)"
         },
         "gpkg_filename_regex": "^clms_euhydro_net_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
       }
@@ -27,14 +27,10 @@
       "required": true,
       "parameters": {
         "layers": [
-          "NODES"
+          "WATERCOURSE_LINE"
         ],
         "required": {
-          "node_id": "integer",
-          "node_id_up": "string",
-          "node_id_down": "integer",
-          "branch": "integer",
-          "branch_id": "string"
+          "fid": "integer"
         },
         "ignored": ["objectid"]
       }
@@ -44,15 +40,10 @@
       "required": true,
       "parameters": {
         "layers": [
-          "NODES_CARTO"
+          "WATERCOURSE_POLYGON"
         ],
         "required": {
-          "node_id": "integer",
-          "node_id_up": "string",
-          "node_id_down": "integer",
-          "branch": "integer",
-          "branch_id": "string",
-          "carto": "string"
+          "fid": "integer"
         },
         "ignored": ["objectid"]
       }
@@ -62,30 +53,10 @@
       "required": true,
       "parameters": {
         "layers": [
-          "STREAMS"
+          "LONGITUDINAL_STRUCTURE"
         ],
         "required": {
-          "strm_id": "integer",
-          "strm_dn": "integer",
-          "strm_up": "string",
-          "grid_code": "integer",
-          "hybas_id": "string",
-          "main_bas": "integer",
-          "node_id_up": "integer",
-          "node_id_down": "integer",
-          "length_km": "real",
-          "up_cells": "real",
-          "upstream_km": "real",
-          "upland_skm": "real",
-          "dist_up_km": "real",
-          "dist_dn_km": "real",
-          "ord_stra": "integer",
-          "ord_shre": "integer",
-          "ord_hack": "integer",
-          "ord_hack_id": "integer",
-          "branch": "integer",
-          "main_link": "integer",
-          "link_strm_id": "string"
+          "fid": "integer"
         },
         "ignored": ["objectid"]
       }
@@ -95,31 +66,10 @@
       "required": true,
       "parameters": {
         "layers": [
-          "STREAMS_CARTO"
+          "LATERAL_STRUCTURE"
         ],
         "required": {
-          "strm_id": "integer",
-          "strm_dn": "integer",
-          "strm_up": "string",
-          "grid_code": "integer",
-          "hybas_id": "string",
-          "main_bas": "integer",
-          "node_id_up": "integer",
-          "node_id_down": "integer",
-          "length_km": "real",
-          "up_cells": "real",
-          "upstream_km": "real",
-          "upland_skm": "real",
-          "dist_up_km": "real",
-          "dist_dn_km": "real",
-          "ord_stra": "integer",
-          "ord_shre": "integer",
-          "ord_hack": "integer",
-          "ord_hack_id": "integer",
-          "branch": "integer",
-          "main_link": "integer",
-          "link_strm_id": "string",
-          "carto": "string"
+          "fid": "integer"
         },
         "ignored": ["objectid"]
       }
@@ -129,7 +79,7 @@
       "check_ident": "qc_tool.vector.geometry_type",
       "required": true,
       "parameters": {
-        "layers": ["NODES", "NODES_CARTO"],
+        "layers": ["LONGITUDINAL_STRUCTURE"],
         "geometry_type": "POINT"
       }
     },
@@ -137,7 +87,7 @@
       "check_ident": "qc_tool.vector.geometry_type",
       "required": true,
       "parameters": {
-        "layers": ["STREAMS", "STREAMS_CARTO"],
+        "layers": ["WATERCOURSE_LINE", "LATERAL_STRUCTURE"],
         "geometry_type": ["LINESTRING", "MULTILINESTRING"]
       }
     },
@@ -146,7 +96,7 @@
       "required": true,
       "parameters": {
         "layers": [
-          "NODES", "NODES_CARTO", "STREAMS", "STREAMS_CARTO"
+          "WATERCOURSE_LINE", "LONGITUDINAL_STRUCTURE", "LATERAL_STRUCTURE"
         ],
         "epsg": 3035,
         "auto_identify_epsg": false
@@ -161,7 +111,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "NODES", "NODES_CARTO"
+          "LONGITUDINAL_STRUCTURE"
         ],
         "unique_keys": ["node_id"]
       }
@@ -171,7 +121,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "STREAMS", "STREAMS_CARTO"
+          "WATERCOURSE_LINE", "LATERAL_STRUCTURE"
         ],
         "unique_keys": ["strm_id"]
       }
@@ -181,7 +131,7 @@
       "required": false,
       "parameters": {
         "layers": [
-          "NODES_CARTO", "STREAMS_CARTO"
+          "LONGITUDINAL_STRUCTURE", "WATERCOURSE_LINE", "LATERAL_STRUCTURE"
         ],
         "column_defs": [
           ["carto", [
@@ -194,14 +144,14 @@
       "check_ident": "qc_tool.vector.geometry",
       "required": false,
       "parameters": {
-        "layers": ["STREAMS", "STREAMS_CARTO", "NODES", "NODES_CARTO"]
+        "layers": ["WATERCOURSE_LINE", "LATERAL_STRUCTURE", "LONGITUDINAL_STRUCTURE"]
       }
     },
     {
       "check_ident": "qc_tool.vector.mml",
       "required": false,
       "parameters": {
-        "layers": ["STREAMS", "STREAMS_CARTO"],
+        "layers": ["WATERCOURSE_LINE", "LATERAL_STRUCTURE"],
         "mml": 10.0,
         "line_geometry": true,
         "warning_where": "ST_Length(geom) < 10.0"
