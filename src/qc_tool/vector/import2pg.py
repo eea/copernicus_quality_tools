@@ -28,6 +28,14 @@ def run_check(params, status):
         src_layer_name = layer_def["src_layer_name"]
         pg_layer_name = layer_def["layer_alias"]
 
+        # Only promote to MULTIPOLYGON when the source layer is polygon-based.
+        _src_ds = ogr.Open(str(layer_def["src_filepath"]), OF_READONLY)
+        _src_layer = _src_ds.GetLayerByName(src_layer_name)
+        _flat_geom_type = ogr.GT_Flatten(_src_layer.GetGeomType())
+        _is_polygon = _flat_geom_type in (ogr.wkbPolygon, ogr.wkbMultiPolygon)
+        _nlt_args = ["-nlt", "MULTIPOLYGON"] if _is_polygon else []
+        _src_ds = None
+
         if "detected_epsg" in params:
             ogr2ogr_params = ["ogr2ogr",
                       "-overwrite",
@@ -35,7 +43,7 @@ def run_check(params, status):
                       "-lco", "GEOMETRY_NAME=geom",
                       "-lco", "SCHEMA={:s}".format(schema),
                       "-lco", "PRECISION=NO",
-                      "-nlt", "MULTIPOLYGON",
+                      ] + _nlt_args + [
                       "-nln", pg_layer_name,
                       "-a_srs", "EPSG:{:d}".format(params["detected_epsg"]),
                       "PG:{:s}".format(dsn),
@@ -48,7 +56,7 @@ def run_check(params, status):
                       "-lco", "GEOMETRY_NAME=geom",
                       "-lco", "SCHEMA={:s}".format(schema),
                       "-lco", "PRECISION=NO",
-                      "-nlt", "MULTIPOLYGON",
+                      ] + _nlt_args + [
                       "-nln", pg_layer_name,
                       "PG:{:s}".format(dsn),
                       str(layer_def["src_filepath"]),
