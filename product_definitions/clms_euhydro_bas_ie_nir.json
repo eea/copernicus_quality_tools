@@ -14,18 +14,18 @@
           ".gpkg", ".fgb"
         ],
         "layer_names": {
-          "BAS_L2": "bas_l2",
-          "BAS_L2_CARTO": "bas_l2_carto",
-          "BAS_L3": "bas_l3",
-          "BAS_L3_CARTO": "bas_l3_carto",
-          "BAS_L4": "bas_l4",
-          "BAS_L4_CARTO": "bas_l4_carto",
-          "BAS_L5": "bas_l5",
-          "BAS_L5_CARTO": "bas_l5_carto",
-          "BAS_L6": "bas_l6",
-          "BAS_L6_CARTO": "bas_l6_carto",
-          "BAS_L7": "bas_l7",
-          "BAS_L7_CARTO": "bas_l7_carto"
+          "BAS_L2": "bas_l2_(?P<aoi_code>ie_nir)",
+          "BAS_L2_CARTO": "bas_l2_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L3": "bas_l3_(?P<aoi_code>ie_nir)",
+          "BAS_L3_CARTO": "bas_l3_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L4": "bas_l4_(?P<aoi_code>ie_nir)",
+          "BAS_L4_CARTO": "bas_l4_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L5": "bas_l5_(?P<aoi_code>ie_nir)",
+          "BAS_L5_CARTO": "bas_l5_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L6": "bas_l6_(?P<aoi_code>ie_nir)",
+          "BAS_L6_CARTO": "bas_l6_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L7": "bas_l7_(?P<aoi_code>ie_nir)",
+          "BAS_L7_CARTO": "bas_l7_carto_(?P<aoi_code>ie_nir)"
         },
         "gpkg_filename_regex": "^clms_euhydro_bas_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
       }
@@ -38,19 +38,112 @@
           "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7"
         ],
         "required": {
-          "fid": "integer",
-          "id": "string",
-          "remark": "string",
-          "area_ha": "real",
-          "shape_area": "real",
-          "shape_length": "real",
-          "code_24": "string"
+          "hybas_id": "string",
+          "next_down": "string",
+          "sub_area_skm": "real",
+          "upland_skm": "real",
+          "dist_dn_km": "real",
+          "ord_stra": "integer",
+          "ord_shre": "integer",
+          "ord_hack": "integer",
+          "ord_hack_id": "integer",
+          "grid_code": "integer",
+          "strm_id": "integer"
+          
         },
-        "lengths": {
-          "id": 18,
-          "code_24": 3,
-          "remark": 20},
-        "ignored": ["objectid"]
+        "ignored": ["objectid", "dist_up_km"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "required": {
+          "hybas_id": "string",
+          "next_down": "string",
+          "sub_area_skm": "real",
+          "upland_skm": "real",
+          "dist_dn_km": "real",
+          "ord_stra": "integer",
+          "ord_shre": "integer",
+          "ord_hack": "integer",
+          "ord_hack_id": "integer",
+          "grid_code": "integer",
+          "strm_id": "integer",
+          "carto": "string"
+        },
+        "ignored": ["objectid", "dist_up_km"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7",
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7",
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "unique_keys": ["hybas_id", "strm_id", "grid_code"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "column_defs": [
+          ["carto", [
+            "YES", "NO"
+          ]]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7",
+                   "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_multipart",
+      "required": false,
+      "parameters": {
+        "layers": ["BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7", 
+                   "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"],
+        "mmu": 5000.0
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7", 
+                   "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"],
+        "mmw": 10.0,
+        "general_where": "FALSE"
       }
     }
   ]
