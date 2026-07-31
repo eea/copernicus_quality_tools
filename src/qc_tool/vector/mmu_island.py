@@ -39,7 +39,7 @@ def run_check(params, status):
                "  ST_Dump(layer.geom) AS dp,"
                "  ST_DumpRings((dp).geom) AS ring"
                " WHERE (ring).path[1] > 0"
-               "  AND ST_Area(ST_MakePolygon((ring).geom)) < {mmu};")
+               "  AND ST_Area(ST_BuildArea((ring).geom)) < {mmu};")
         sql = sql.format(**sql_params)
         cursor.execute(sql)
 
@@ -54,13 +54,13 @@ def run_check(params, status):
             sql = ("CREATE TABLE {detail_table} AS"
                    " SELECT"
                    "  layer.{fid_name},"
-                   "  ST_SetSRID(ST_MakePolygon((ring).geom), ST_SRID(layer.geom)) AS geom,"
-                   "  ST_Area(ST_MakePolygon((ring).geom)) AS area"
+                   "  ST_SetSRID(ST_BuildArea((ring).geom), ST_SRID(layer.geom)) AS geom,"
+                   "  ST_Area(ST_BuildArea((ring).geom)) AS area"
                    " FROM {layer_name} AS layer,"
                    "  ST_Dump(layer.geom) AS dp,"
                    "  ST_DumpRings((dp).geom) AS ring"
                    " WHERE (ring).path[1] > 0"
-                   "  AND ST_Area(ST_MakePolygon((ring).geom)) < {mmu};")
+                   "  AND ST_Area(ST_BuildArea((ring).geom)) < {mmu};")
             sql = sql.format(**sql_params)
             cursor.execute(sql)
 
