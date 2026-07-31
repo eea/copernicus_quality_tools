@@ -1,0 +1,240 @@
+{
+  "description": "EU Hydro Hydro-NET vector (Ireland)",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2026",
+        "formats": [
+          ".gpkg", ".fgb"
+        ],
+        "layer_names": {
+          "NODES": "net_nodes_(?P<aoi_code>ie_nir)",
+          "NODES_CARTO": "net_nodes_carto_(?P<aoi_code>ie_nir)",
+          "STREAMS": "net_streams_(?P<aoi_code>ie_nir)",
+          "STREAMS_CARTO": "net_streams_carto_(?P<aoi_code>ie_nir)"
+        },
+        "gpkg_filename_regex": "^clms_euhydro_net_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "NODES", "NODES_CARTO"
+        ],
+        "required": {
+          "hybas_id": "string",
+          "next_down": "string",
+          "sub_area_skm": "real",
+          "upland_skm": "real",
+          "dist_dn_km": "real",
+          "ord_stra": "integer",
+          "ord_shre": "integer",
+          "ord_hack": "integer",
+          "ord_hack_id": "integer",
+          "grid_code": "integer",
+          "strm_id": "integer"
+          
+        },
+        "ignored": ["objectid", "dist_up_km"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "STREAMS"
+        ],
+        "required": {
+          "strm_id": "integer",
+          "strm_dn": "integer",
+          "strm_up": "string",
+          "grid_code": "integer",
+          "hybas_id": "string",
+          "main_bas": "integer",
+          "node_id_up": "integer",
+          "node_id_dn": "integer",
+          "length_km": "real",
+          "up_cells": "real",
+          "upstream_km": "real",
+          "upland_skm": "real",
+          "dist_up_km": "real",
+          "dist_dn_km": "real",
+          "ord_stra": "integer",
+          "ord_shre": "integer",
+          "ord_hack": "integer",
+          "ord_hack_id": "integer",
+          "branch": "integer",
+          "main_link": "integer",
+          "link_strm_id": "string"
+        },
+        "ignored": ["objectid"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "STREAMS_CARTO"
+        ],
+        "required": {
+          "strm_id": "integer",
+          "strm_dn": "integer",
+          "strm_up": "string",
+          "grid_code": "integer",
+          "hybas_id": "string",
+          "main_bas": "integer",
+          "node_id_up": "integer",
+          "node_id_dn": "integer",
+          "length_km": "real",
+          "up_cells": "real",
+          "upstream_km": "real",
+          "upland_skm": "real",
+          "dist_up_km": "real",
+          "dist_dn_km": "real",
+          "ord_stra": "integer",
+          "ord_shre": "integer",
+          "ord_hack": "integer",
+          "ord_hack_id": "integer",
+          "branch": "integer",
+          "main_link": "integer",
+          "link_strm_id": "string",
+          "carto": "string"
+        },
+        "ignored": ["objectid"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "NODES"
+        ],
+        "required": {
+          "node_id": "integer",
+          "node_id_up": "string",
+          "node_id_down": "integer",
+          "branch": "integer",
+          "branch_id": "string"
+        },
+        "ignored": ["objectid"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "NODES_CARTO"
+        ],
+        "required": {
+          "node_id": "integer",
+          "node_id_up": "string",
+          "node_id_down": "integer",
+          "branch": "integer",
+          "branch_id": "string",
+          "carto": "string"
+        },
+        "ignored": ["objectid"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry_type",
+      "required": true,
+      "parameters": {
+        "layers": ["NODES", "NODES_CARTO"],
+        "geometry_type": "POINT"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry_type",
+      "required": true,
+      "parameters": {
+        "layers": ["STREAMS", "STREAMS_CARTO"],
+        "geometry_type": "LINESTRING"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["NODES", "NODES_CARTO", "STREAMS", "STREAMS_CARTO"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "STREAMS", "STREAMS_CARTO", "NODES", "NODES_CARTO"
+        ],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "STREAMS", "STREAMS_CARTO"
+        ],
+        "unique_keys": ["strm_id"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "NODES", "NODES_CARTO"
+        ],
+        "unique_keys": ["node_id"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "STREAMS_CARTO", "NODES_CARTO"
+        ],
+        "column_defs": [
+          ["carto", [
+            "YES", "NO"
+          ]]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["STREAMS", "STREAMS_CARTO", "NODES", "NODES_CARTO"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mml",
+      "required": false,
+      "parameters": {
+        "layers": ["STREAMS", "STREAMS_CARTO"],
+        "mml": 10.0,
+        "line_geometry": true
+      }
+    }
+  ]
+}
