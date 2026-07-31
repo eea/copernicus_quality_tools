@@ -11,6 +11,50 @@ from qc_tool.common import TEST_DATA_DIR
 from qc_tool.test.helper import RasterCheckTestCase
 
 
+class Test_unzip(RasterCheckTestCase):
+    def setUp(self):
+        super().setUp()
+        self.params["tmp_dir"] = self.jobdir_manager.tmp_dir
+
+    def test_windows_incompatible_zip(self):
+        from qc_tool.raster.unzip import run_check
+
+        # This fixture contains one duplicated 5 MiB upload chunk. Python can
+        # recover it, but the Windows built-in ZIP extractor cannot.
+        self.params["filepath"] = TEST_DATA_DIR.joinpath(
+            "vector", "hrl", "damaged_zip", "CLMS_HRLSLF_S2018_E50N22_jktest.zip"
+        )
+        status = self.status_class()
+
+        run_check(self.params, status)
+
+        self.assertEqual("aborted", status.status)
+        self.assertIn("ZIP archive validation failed", status.messages[0])
+        self.assertIn("5242880 extra bytes", status.messages[0])
+        self.assertIn("Windows built-in ZIP extractor", status.messages[0])
+        self.assertNotIn("unzip_dir", status.params)
+        self.assertFalse(self.params["tmp_dir"].joinpath("r_unzip.d").exists())
+
+    def test_windows_compatible_zip(self):
+        from qc_tool.raster.unzip import run_check
+
+        # This HRL archive is the valid control fixture: it must pass the same
+        # validator pipeline and then be extracted by the existing code path.
+        self.params["filepath"] = TEST_DATA_DIR.joinpath(
+            "vector", "hrl", "undamaged_zip", "CLMS_HRLSLF_S2018_E73N22_R01.zip"
+        )
+        status = self.status_class()
+
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertIn("unzip_dir", status.params)
+        expected_raster = status.params["unzip_dir"].joinpath(
+            "E73N22", "CLMS_HRLSLF_WVL_S2018_R5m_E73N22_03035_V01_R01_20260605.tif"
+        )
+        self.assertTrue(expected_raster.is_file())
+
+
 class Test_naming(RasterCheckTestCase):
     def test(self):
         from qc_tool.raster.naming import run_check

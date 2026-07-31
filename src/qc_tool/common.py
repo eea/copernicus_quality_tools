@@ -4,6 +4,7 @@
 import json
 import re
 import socket
+import subprocess
 import xml.etree.ElementTree as ET
 from importlib import import_module
 from os import environ
@@ -68,9 +69,41 @@ INSPIRE_SERVICE_URL_DEFAULT = "http://localhost:8080/validator/v2/"
 
 CONFIG = None
 
-
+# Exception definition
 class QCException(Exception):
     pass
+
+
+def validate_zip_archive(zip_filepath):
+
+    # Verify that a ZIP archive is structurally ok before extracting it.
+    zip_filepath = Path(zip_filepath)
+
+    # Info-ZIP tests member CRCs and archive structure.
+    result = subprocess.run(
+        ["unzip", "-tqq", "--", str(zip_filepath)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode == 0:
+        return
+
+    # Collapse stdout/stderr into a stable, single-line QC message and avoid
+    # exposing the server-side path when reporting the validation failure.
+    output = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part.strip())
+    detail = " ".join(output.split())
+    detail = detail.replace(str(zip_filepath), zip_filepath.name)
+    if not detail:
+        detail = "unzip validation returned exit status {:d}".format(result.returncode)
+
+    raise QCException(
+        "ZIP archive validation failed: {:s}. The archive is not compatible with strict ZIP extractors "
+        "such as the Windows built-in ZIP extractor.".format(detail)
+    )
+
 
 def get_timeout(job_time_limit_hours=JOB_TIME_LIMIT_HOURS):
     return {"hours": int(round(job_time_limit_hours)),
