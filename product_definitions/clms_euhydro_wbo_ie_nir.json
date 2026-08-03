@@ -36,7 +36,7 @@
           "NAME": "string",
           "AREA_SKM": "real",
           "ALTITUDE_M": "real",
-          "PERIMET_KM": "integer",
+          "PERIMET_KM": "real",
           "LAKOUT": "integer",
           "LAKIN": "integer",
           "SOURCE": "string"

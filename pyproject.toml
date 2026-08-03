@@ -1,0 +1,11 @@
+[project]
+name = "copernicus-quality-tools"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fiona>=1.10.1",
+    "geopandas>=1.1.4",
+    "requests>=2.34.2",
+]
