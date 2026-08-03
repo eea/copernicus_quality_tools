@@ -27,11 +27,7 @@ def run_check(params, status):
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "mmu": mmu}
 
-        # Create table of error items: features containing at least one interior ring (island)
-        # whose area is smaller than MMU.
-        # ST_Dump handles both Polygon and MultiPolygon by decomposing into individual polygons.
-        # ST_DumpRings returns all rings; path[1] == 0 is the exterior ring, path[1] > 0 are interior rings.
-        # ST_MakePolygon converts the ring linestring to a polygon so ST_Area can be computed.
+        # Create table of error items: features with an area smaller than MMU.
         sql = ("CREATE TABLE {error_table} AS"
                " SELECT DISTINCT layer.{fid_name}, ST_Area(geom) AS area"
                " FROM {layer_name} AS layer"
@@ -42,6 +38,6 @@ def run_check(params, status):
         # Report error items.
         items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
         if items_message is not None:
-            status.failed("Layer {:s} has features with an interior ring smaller than MMU with {:s}: {:s}."
+            status.failed("Layer {:s} has features with an area smaller than MMU with {:s}: {:s}."
                          .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
             status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])

@@ -23,11 +23,10 @@ def run_check(params, status):
 
         # Create table of warning items.
         if line_geometry:
-            sql = ("CREATE TABLE {warning_table} AS\n"
+            sql = ("CREATE TABLE error_table} AS\n"
                    "SELECT {fid_name}\n"
                    "FROM {layer_name} AS layer\n"
-                   "WHERE {warning_where}\n"
-                   " AND ST_Length(geom) < %(mml)s;")
+                   "WHERE ST_Length(geom) < %(mml)s;")
         else:
             sql = ("CREATE TABLE {warning_table} AS\n"
                    "SELECT {fid_name}\n"
