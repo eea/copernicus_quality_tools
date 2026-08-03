@@ -146,6 +146,7 @@
           "y_coord_waterway": "real",
           "hydro_id": "string",
           "inspire_id": "string",
+          "admin_unit": "string",
           "beglifever": "datetime",
           "updat_when": "datetime",
           "updat_by": "string",
@@ -177,6 +178,7 @@
           "structure_lenght": "real",
           "structure_height": "real",
           "structure_width": "real",
+          "length_m": "real",
           "purpose": "string",
           "structure_id": "string",
           "inspire_id": "string",
@@ -338,7 +340,7 @@
             "Hydropower", "Flood protection", "Drinking water", "Irrigation", "Recreation", "Industry", "Navigation", "Other", "Unknown", "obsolete", null
           ]],
           ["height_class", [
-            "< 0.5", "0.5 to 1", "1 to 2", "2 to 5", "5 to 10", "10 to 15", null
+            "< 0.5", "0.5 to 1", "1 to 2", "2 to 5", "5 to 10", "10 to 15", "> 15", null
           ]]
         ]
       }
