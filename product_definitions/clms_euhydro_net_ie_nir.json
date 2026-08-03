@@ -204,7 +204,7 @@
         "layers": ["STREAMS"],
         "mml": 10.0,
         "line_geometry": true,
-        "error_where": "ST_Length(geom) < 10.0"
+        "error_where": "ST_Length(geom) < 15.0"
       }
     }
   ]

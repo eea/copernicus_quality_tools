@@ -133,7 +133,7 @@
       "parameters": {
         "layers": ["BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7", 
                    "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"],
-        "mmu": 5000.0
+        "mmu": 100.0
       }
     },
     {
