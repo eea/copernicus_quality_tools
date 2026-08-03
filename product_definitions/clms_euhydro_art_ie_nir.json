@@ -30,41 +30,41 @@
           "WATERCOURSE_LINE"
         ],
         "required": {
-          "fid": "integer",
-          "rex": "string",
-          "nametext": "string",
-          "nametext_1": "string",
-          "nametext2": "string",
-          "nametext2_1": "string",
-          "nametxtint": "string",
-          "type": "string",
-          "hyp": "integer",
-          "loc": "integer",
-          "nvs": "integer",
-          "ldv": "integer",
-          "fun": "integer",
-          "tid": "integer",
-          "beglifever": "datetime",
-          "endlifever": "datetime",
-          "updat_when": "datetime",
-          "updat_by": "string",
-          "cyear_wise": "string",
-          "inspire_id": "string",
-          "object_id": "string",
-          "hydroid_nat": "string",
-          "hydroidnam_wise": "string",
-          "nhi": "string",
-          "ten": "integer",
-          "wch_nat": "integer",
-          "monot_z": "integer",
-          "wd7_nat": "integer",
-          "wd8_nat": "integer",
-          "data_source": "string",
-          "len": "real",
-          "comment": "string",
-          "hybas_id": "string"
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "NAMETEXT_1": "string",
+          "NAMETEXT2": "string",
+          "NAMETEXT2_1": "string",
+          "NAMETXTINT": "string",
+          "TYPE": "string",
+          "HYP": "integer",
+          "LOC": "integer",
+          "NVS": "integer",
+          "LDV": "integer",
+          "FUN": "integer",
+          "TID": "integer",
+          "BEGLIFEVER": "datetime",
+          "ENDLIFEVER": "datetime",
+          "UPDAT_WHEN": "datetime",
+          "UPDAT_BY": "string",
+          "CYEAR_WISE": "string",
+          "INSPIRE_ID": "string",
+          "OBJECT_ID": "string",
+          "HYDROID_NAT": "string",
+          "HYDROIDNAM_WISE": "string",
+          "NHI": "string",
+          "TEN": "integer",
+          "WCH_NAT": "integer",
+          "MONOT_Z": "integer",
+          "WD7_NAT": "integer",
+          "WD8_NAT": "integer",
+          "DATA_SOURCE": "string",
+          "LEN": "real",
+          "COMMENT": "string",
+          "HYBAS_ID": "string"
         },
-        "ignored": ["objectid"],
+        "ignored": ["OBJECTID"],
         "allow_datetime_datatype": true,
         "continue_on_error": true
       }
@@ -77,38 +77,38 @@
           "WATERCOURSE_POLYGON"
         ],
         "required": {
-          "fid": "integer",
-          "rex": "string",
-          "nametext": "string",
-          "nametext_1": "string",
-          "nametext2": "string",
-          "nametext2_1": "string",
-          "nametxtint": "string",
-          "type": "string",
-          "hyp": "integer",
-          "loc": "integer",
-          "nvs": "integer",
-          "fun": "integer",
-          "tid": "integer",
-          "beglifever": "datetime",
-          "endlifever": "datetime",
-          "updat_when": "datetime",
-          "cyear_wise": "string",
-          "inspire_id": "string",
-          "object_id": "string",
-          "hydroid_nat": "string",
-          "nhi": "string",
-          "wch_nat": "integer",
-          "wd7_nat": "integer",
-          "wd8_nat": "integer",
-          "data_source": "string",
-          "comment": "string",
-          "area": "real",
-          "geom_length": "real",
-          "geom_area": "real",
-          "hybas_id": "string"
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "NAMETEXT_1": "string",
+          "NAMETEXT2": "string",
+          "NAMETEXT2_1": "string",
+          "NAMETXTINT": "string",
+          "TYPE": "string",
+          "HYP": "integer",
+          "LOC": "integer",
+          "NVS": "integer",
+          "FUN": "integer",
+          "TID": "integer",
+          "BEGLIFEVER": "datetime",
+          "ENDLIFEVER": "datetime",
+          "UPDAT_WHEN": "datetime",
+          "CYEAR_WISE": "string",
+          "INSPIRE_ID": "string",
+          "OBJECT_ID": "string",
+          "HYDROID_NAT": "string",
+          "NHI": "string",
+          "WCH_NAT": "integer",
+          "WD7_NAT": "integer",
+          "WD8_NAT": "integer",
+          "DATA_SOURCE": "string",
+          "COMMENT": "string",
+          "AREA": "real",
+          "GEOM_LENGTH": "real",
+          "GEOM_AREA": "real",
+          "HYBAS_ID": "string"
         },
-        "ignored": ["objectid"],
+        "ignored": ["OBJECTID"],
         "allow_datetime_datatype": true,
         "continue_on_error": true
       }
@@ -122,38 +122,38 @@
           "LONGITUDINAL_STRUCTURE"
         ],
         "required": {
-          "fid": "integer",
-          "rex": "string",
-          "nametext": "string",
-          "basin_name": "string",
-          "hybas_id": "string",
-          "river_name": "string",
-          "strm_id": "string",
-          "type": "integer",
-          "dgiwg_id": "string",
-          "sub_type_cross": "integer",
-          "condition": "integer",
-          "purpose": "string",
-          "height": "real",
-          "height_class": "string",
-          "barrier_height": "real",
-          "barrier_width": "real",
-          "reservoir_capacity": "real",
-          "constr_year": "string",
-          "x_coord_source": "real",
-          "y_coord_source": "real",
-          "x_coord_waterway": "real",
-          "y_coord_waterway": "real",
-          "hydro_id": "string",
-          "inspire_id": "string",
-          "admin_unit": "string",
-          "beglifever": "datetime",
-          "updat_when": "datetime",
-          "updat_by": "string",
-          "data_source": "string",
-          "comment": "string"
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "BASIN_NAME": "string",
+          "HYBAS_ID": "string",
+          "RIVER_NAME": "string",
+          "STRM_ID": "string",
+          "TYPE": "integer",
+          "DGIWG_ID": "string",
+          "SUB_TYPE_CROSS": "integer",
+          "CONDITION": "integer",
+          "PURPOSE": "string",
+          "HEIGHT": "real",
+          "HEIGHT_CLASS": "string",
+          "BARRIER_HEIGHT": "real",
+          "BARRIER_WIDTH": "real",
+          "RESERVOIR_CAPACITY": "real",
+          "CONSTR_YEAR": "string",
+          "X_COORD_SOURCE": "real",
+          "Y_COORD_SOURCE": "real",
+          "X_COORD_WATERWAY": "real",
+          "Y_COORD_WATERWAY": "real",
+          "HYDRO_ID": "string",
+          "INSPIRE_ID": "string",
+          "ADMIN_UNIT": "string",
+          "BEGLIFEVER": "datetime",
+          "UPDAT_WHEN": "datetime",
+          "UPDAT_BY": "string",
+          "DATA_SOURCE": "string",
+          "COMMENT": "string"
         },
-        "ignored": ["objectid"],
+        "ignored": ["OBJECTID"],
         "allow_datetime_datatype": true,
         "continue_on_error": true
       }
@@ -166,30 +166,30 @@
           "LATERAL_STRUCTURE"
         ],
         "required": {
-          "fid": "integer",
-          "rex": "string",
-          "nametext": "string",
-          "nametext_1": "string",
-          "type": "string",
-          "river_name": "string",
-          "basin_name": "string",
-          "hybas_id": "string",
-          "constr_year": "string",
-          "structure_lenght": "real",
-          "structure_height": "real",
-          "structure_width": "real",
-          "length_m": "real",
-          "purpose": "string",
-          "structure_id": "string",
-          "inspire_id": "string",
-          "beglifever": "datetime",
-          "material": "string",
-          "data_source": "string",
-          "comment": "string",
-          "coastal_pro": "integer",
-          "lat_con_str": "integer"
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "NAMETEXT_1": "string",
+          "TYPE": "string",
+          "RIVER_NAME": "string",
+          "BASIN_NAME": "string",
+          "HYBAS_ID": "string",
+          "CONSTR_YEAR": "string",
+          "STRUCTURE_LENGHT": "real",
+          "STRUCTURE_HEIGHT": "real",
+          "STRUCTURE_WIDTH": "real",
+          "LENGTH_M": "real",
+          "PURPOSE": "string",
+          "STRUCTURE_ID": "string",
+          "INSPIRE_ID": "string",
+          "BEGLIFEVER": "datetime",
+          "MATERIAL": "string",
+          "DATA_SOURCE": "string",
+          "COMMENT": "string",
+          "COASTAL_PRO": "integer",
+          "LAT_CON_STR": "integer"
         },
-        "ignored": ["objectid"],
+        "ignored": ["OBJECTID"],
         "allow_datetime_datatype": true,
         "continue_on_error": true
       }
@@ -240,7 +240,7 @@
         "layers": [
           "WATERCOURSE_POLYGON", "WATERCOURSE_LINE", "LONGITUDINAL_STRUCTURE", "LATERAL_STRUCTURE"
         ],
-        "unique_keys": ["fid"]
+        "unique_keys": ["FID"]
       }
     },
     {
@@ -251,34 +251,34 @@
           "WATERCOURSE_LINE"
         ],
         "column_defs": [
-          ["type", [
+          ["TYPE", [
             "BH020", "BH030", null
           ]],
-          ["hyp", [
+          ["HYP", [
             1, 2, 3, 4, null
           ]],
-          ["loc", [
+          ["LOC", [
             40, 44, 45, null
           ]],
-          ["nvs", [
+          ["NVS", [
             1, 2, 3, 4, 5, null
           ]],
-          ["ldv", [
+          ["LDV", [
             1, 2, 3,null
           ]],
-          ["fun", [
+          ["FUN", [
             1, 2, 6, null
           ]],
-          ["tid", [
+          ["TID", [
             1, 2, null
           ]],
-          ["ten", [
+          ["TEN", [
             1, 2, null
           ]],
-          ["wch_nat", [
+          ["WCH_NAT", [
             1, 2, 3, 4, 5, 9, null
           ]],
-          ["monot_z", [
+          ["MONOT_Z", [
             0, 1, null
           ]]
         ]
@@ -292,25 +292,25 @@
           "WATERCOURSE_POLYGON"
         ],
         "column_defs": [
-          ["type", [
+          ["TYPE", [
             "BH020", "BH030", null
           ]],
-          ["hyp", [
+          ["HYP", [
             1, 2, 3, 4, null
           ]],
-          ["loc", [
+          ["LOC", [
             40, 44, 45, null
           ]],
-          ["nvs", [
+          ["NVS", [
             1, 2, 3, 4, 5, null
           ]],
-          ["fun", [
+          ["FUN", [
             1, 2, 6, null
           ]],
-          ["tid", [
+          ["TID", [
             1, 2, null
           ]],
-          ["wch_nat", [
+          ["WCH_NAT", [
             1, 2, 3, 4, 5, 9, null
           ]]    
         ]
@@ -324,22 +324,22 @@
           "LONGITUDINAL_STRUCTURE"
         ],
         "column_defs": [
-          ["type", [
+          ["TYPE", [
             1, 2, 3, 4, 5, 6, 7
           ]],
-          ["dgiwg_id", [
+          ["DGIWG_ID", [
             "BI020", "BI030", "BI039", null
           ]],
-          ["sub_type_cross", [
+          ["SUB_TYPE_CROSS", [
             1, 2, 3, 4, null
           ]],
-          ["condition", [
+          ["CONDITION", [
             1, 2, 3, 4, 5
           ]],
-          ["purpose", [
+          ["PURPOSE", [
             "Hydropower", "Flood protection", "Drinking water", "Irrigation", "Recreation", "Industry", "Navigation", "Other", "Unknown", "obsolete", null
           ]],
-          ["height_class", [
+          ["HEIGHT_CLASS", [
             "< 0.5", "0.5 to 1", "1 to 2", "2 to 5", "5 to 10", "10 to 15", "> 15", null
           ]]
         ]
@@ -353,10 +353,10 @@
           "LATERAL_STRUCTURE"
         ],
         "column_defs": [
-          ["coastal_pro", [
+          ["COASTAL_PRO", [
             1, null
           ]],
-          ["lat_con_str", [
+          ["LAT_CON_STR", [
             1, null
           ]]
         ]
