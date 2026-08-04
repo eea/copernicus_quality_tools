@@ -20,7 +20,7 @@ services:
         target: /var/lib/postgresql/data
 
   frontend:
-    image: "eeacms/copernicus-qctool-frontend:${QC_TOOL_IMAGE_TAG:-2.4.6}"
+    image: "eeacms/copernicus-qctool-frontend:${QC_TOOL_IMAGE_TAG:-2.4.7}"
     # Published QC Tool images are currently linux/amd64-only. Docker Desktop
     # uses emulation on ARM hosts; the variable allows future native images.
     platform: "${QC_TOOL_PLATFORM:-linux/amd64}"
@@ -93,7 +93,7 @@ services:
           create_host_path: false
 
   worker:
-    image: "eeacms/copernicus-qctool-worker:${QC_TOOL_IMAGE_TAG:-2.4.6}"
+    image: "eeacms/copernicus-qctool-worker:${QC_TOOL_IMAGE_TAG:-2.4.7}"
     platform: "${QC_TOOL_PLATFORM:-linux/amd64}"
     pull_policy: missing
     shm_size: "1gb"
