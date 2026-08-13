@@ -36,7 +36,7 @@
           "NAME": "string",
           "AREA_SKM": "real",
           "ALTITUDE_M": "real",
-          "PERIMET_KM": "real",
+          "PERIMET_KM": "integer",
           "LAKOUT": "integer",
           "LAKIN": "integer",
           "SOURCE": "string"
@@ -132,7 +132,7 @@
         "layers": ["wbo"],
         "mmw": 10.0,
         "general_where": "FALSE",
-        "exception_where": "layer.wbo_type LIKE 'Lake/Reservoir'"
+        "exception_where": "layer.WBO_TYPE LIKE 'Lake/Reservoir'"
       }
     },
     {

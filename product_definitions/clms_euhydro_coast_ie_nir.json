@@ -74,6 +74,14 @@
       "parameters": {
         "layers": ["coast"]
       }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_island",
+      "required": false,
+      "parameters": {
+        "layers": ["coast"],
+        "mmu": 5000.0
+      }
     }
   ]
 }

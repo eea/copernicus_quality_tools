@@ -31,13 +31,13 @@
           "NODES"
         ],
         "required": {
-          "node_id": "integer",
-          "node_id_up": "string",
-          "node_id_down": "integer",
-          "branch": "integer",
-          "branch_id": "string"
+          "NODE_ID": "integer",
+          "NODE_ID_UP": "string",
+          "NODE_ID_DOWN": "integer",
+          "BRANCH": "integer",
+          "BRANCH_ID": "string"
         },
-        "ignored": ["objectid"]
+        "ignored": ["OBJECTID"]
       }
     },
     {
@@ -48,14 +48,14 @@
           "NODES_CARTO"
         ],
         "required": {
-          "node_id": "integer",
-          "node_id_up": "string",
-          "node_id_down": "integer",
-          "branch": "integer",
-          "branch_id": "string",
-          "carto": "string"
+          "NODE_ID": "integer",
+          "NODE_ID_UP": "string",
+          "NODE_ID_DOWN": "integer",
+          "BRANCH": "integer",
+          "BRANCH_ID": "string",
+          "CARTO": "string"
         },
-        "ignored": ["objectid"]
+        "ignored": ["OBJECTID"]
       }
     },
     {
@@ -66,29 +66,29 @@
           "STREAMS"
         ],
         "required": {
-          "strm_id": "integer",
-          "strm_dn": "integer",
-          "strm_up": "string",
-          "grid_code": "integer",
-          "hybas_id": "string",
-          "main_bas": "integer",
-          "node_id_up": "integer",
-          "node_id_dn": "integer",
-          "length_km": "real",
-          "up_cells": "real",
-          "upstream_km": "real",
-          "upland_skm": "real",
-          "dist_up_km": "real",
-          "dist_dn_km": "real",
-          "ord_stra": "integer",
-          "ord_shre": "integer",
-          "ord_hack": "integer",
-          "ord_hack_id": "integer",
-          "branch": "integer",
-          "main_link": "integer",
-          "link_strm_id": "string"
+          "STRM_ID": "integer",
+          "STRM_DN": "integer",
+          "STRM_UP": "string",
+          "GRID_CODE": "integer",
+          "HYBAS_ID": "string",
+          "MAIN_BAS": "integer",
+          "NODE_ID_UP": "integer",
+          "NODE_ID_DN": "integer",
+          "LENGTH_KM": "real",
+          "UP_CELLS": "real",
+          "UPSTREAM_KM": "real",
+          "UPLAND_SKM": "real",
+          "DIST_UP_KM": "real",
+          "DIST_DN_KM": "real",
+          "ORD_STRA": "integer",
+          "ORD_SHRE": "integer",
+          "ORD_HACK": "integer",
+          "ORD_HACK_ID": "integer",
+          "BRANCH": "integer",
+          "MAIN_LINK": "integer",
+          "LINK_STRM_ID": "string"
         },
-        "ignored": ["objectid"]
+        "ignored": ["OBJECTID"]
       }
     },
     {
@@ -99,30 +99,30 @@
           "STREAMS_CARTO"
         ],
         "required": {
-          "strm_id": "integer",
-          "strm_dn": "integer",
-          "strm_up": "string",
-          "grid_code": "integer",
-          "hybas_id": "string",
-          "main_bas": "integer",
-          "node_id_up": "integer",
-          "node_id_dn": "integer",
-          "length_km": "real",
-          "up_cells": "real",
-          "upstream_km": "real",
-          "upland_skm": "real",
-          "dist_up_km": "real",
-          "dist_dn_km": "real",
-          "ord_stra": "integer",
-          "ord_shre": "integer",
-          "ord_hack": "integer",
-          "ord_hack_id": "integer",
-          "branch": "integer",
-          "main_link": "integer",
-          "link_strm_id": "string",
-          "carto": "string"
+          "STRM_ID": "integer",
+          "STRM_DN": "integer",
+          "STRM_UP": "string",
+          "GRID_CODE": "integer",
+          "HYBAS_ID": "string",
+          "MAIN_BAS": "integer",
+          "NODE_ID_UP": "integer",
+          "NODE_ID_DN": "integer",
+          "LENGTH_KM": "real",
+          "UP_CELLS": "real",
+          "UPSTREAM_KM": "real",
+          "UPLAND_SKM": "real",
+          "DIST_UP_KM": "real",
+          "DIST_DN_KM": "real",
+          "ORD_STRA": "integer",
+          "ORD_SHRE": "integer",
+          "ORD_HACK": "integer",
+          "ORD_HACK_ID": "integer",
+          "BRANCH": "integer",
+          "MAIN_LINK": "integer",
+          "LINK_STRM_ID": "string",
+          "CARTO": "string"
         },
-        "ignored": ["objectid"]
+        "ignored": ["OBJECTID"]
       }
     },
     
@@ -164,7 +164,7 @@
         "layers": [
           "NODES", "NODES_CARTO"
         ],
-        "unique_keys": ["node_id"]
+        "unique_keys": ["NODE_ID"]
       }
     },
     {
@@ -174,7 +174,7 @@
         "layers": [
           "STREAMS", "STREAMS_CARTO"
         ],
-        "unique_keys": ["strm_id"]
+        "unique_keys": ["STRM_ID"]
       }
     },
     {
@@ -185,7 +185,7 @@
           "NODES_CARTO", "STREAMS_CARTO"
         ],
         "column_defs": [
-          ["carto", [
+          ["CARTO", [
             "YES", "NO"
           ]]
         ]
@@ -205,7 +205,7 @@
         "layers": ["STREAMS"],
         "mml": 10.0,
         "line_geometry": true,
-        "error_where": "ST_Length(geom) < 10.0"
+        "error_where": "ST_Length(geom) < 15.0"
       }
     }
   ]
