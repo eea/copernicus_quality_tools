@@ -69,19 +69,37 @@ def main(products_dir) -> None:
         if product_layer_prefix not in results:
             results[product_layer_prefix] = []
 
+
+        # if product_layer_prefix != "clms_euhydro_acc":
+        #     continue
+
         if "layer_names" in values_new:
             sample_product_name = values_new["layer_names"].lstrip("^").rstrip("$")
 
         # print("sample_product_name orig", sample_product_name)
 
+        if product_layer_prefix.startswith("clms_ua"):
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})[0-9]{1}', "at001l3")
+
+
+
         # replace aoi code
         if "aoi_codes" in values_new:
+
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z]{6})', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[a-zA-Z]{2})', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})[0-9]{1}', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z]{2})', values_new["aoi_codes"])
-            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z\-]+)', values_new["aoi_codes"])
-            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z_]+)', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z\-]+)', "wien")
+            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z_]+)', "wien")
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z_]+)', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>gf|gp|mq|re|yt|e[0-9]{2}n[0-9]{2})', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})', values_new["aoi_codes"])
+
+        sample_product_name = sample_product_name.replace('(?P<du_name>[a-z]+)', "blacksea")
+
+        # print("sample_product_name with aoi", sample_product_name)
+
 
         # replace AOI code for FUA regions
         sample_product_name = sample_product_name.replace('(?P<aoi_code>gf)', "gf")
@@ -95,13 +113,16 @@ def main(products_dir) -> None:
         sample_product_name = sample_product_name.replace('(mq|MQ', "mq")
         sample_product_name = sample_product_name.replace('(re|RE)', "re")
         sample_product_name = sample_product_name.replace('(yt|YT)', "yt")
+        sample_product_name = sample_product_name.replace('(mf|MF)', "mf")
 
         # replace epsg code
         if "epsg_codes" in values_new:
             sample_product_name = sample_product_name.replace('(?P<epsg_code>[0-9]{5})', values_new["epsg_codes"])
+            sample_product_name = sample_product_name.replace('(?P<epsgcode>[0-9]{5})', values_new["epsg_codes"])
 
         # replace version
         sample_product_name = sample_product_name.replace('v[0-9]{2}', version)
+        sample_product_name = sample_product_name.replace('v[0-9]{1}_[0-9]{1}', "v1_1")
 
         # replace revision
         sample_product_name = sample_product_name.replace('r[0-9]{2}', revision)
@@ -109,11 +130,14 @@ def main(products_dir) -> None:
         # replace release date
         sample_product_name = sample_product_name.replace('_[0-9]{8}', "20250101")
 
+
         # add extension
         if "extensions" in values_new:
             sample_product_name += values_new["extensions"]
         if "formats" in values_new:
             sample_product_name += values_new["formats"]
+
+        # print("sample_product_name with final", sample_product_name)
 
         results[product_layer_prefix].append(sample_product_name)
 
@@ -129,6 +153,8 @@ def main(products_dir) -> None:
             elif "_re" in sample_name:
                 pass
             elif "_yt" in sample_name:
+                pass
+            elif "_mf" in sample_name:
                 pass
             else:
                 sample_names_aoi_fixed.append(sample_name)
@@ -157,12 +183,7 @@ def main(products_dir) -> None:
         else:
             sample_names_aoi_year_fixed.append(sample_name)
 
-
-
-
-
-
-        print(prod, sample_names_aoi_year_fixed)
+        print(prod, list(set(sample_names_aoi_year_fixed)))
 
         # print("sample_product_name new", sample_product_name)
 
