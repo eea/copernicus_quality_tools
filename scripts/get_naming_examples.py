@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+import parseo
+
 
 TARGET_KEYS = [
     "layer_names",
@@ -80,7 +82,8 @@ def main(products_dir) -> None:
 
         if product_layer_prefix.startswith("clms_ua"):
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})[0-9]{1}', "at001l3")
-
+            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z\-]+)', "wien")
+            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z_]+)', "wien")
 
 
         # replace aoi code
@@ -90,8 +93,7 @@ def main(products_dir) -> None:
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[a-zA-Z]{2})', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})[0-9]{1}', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z]{2})', values_new["aoi_codes"])
-            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z\-]+)', "wien")
-            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z_]+)', "wien")
+
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z_]+)', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>gf|gp|mq|re|yt|e[0-9]{2}n[0-9]{2})', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})', values_new["aoi_codes"])
@@ -183,12 +185,26 @@ def main(products_dir) -> None:
         else:
             sample_names_aoi_year_fixed.append(sample_name)
 
-        print(prod, list(set(sample_names_aoi_year_fixed)))
+        # print(prod, list(set(sample_names_aoi_year_fixed)))
+
+        # now run parseo to auto-parse each of the example names.
+        for sample_name in list(set(sample_names_aoi_year_fixed)):
+            # print("sample_name", sample_name)
+            # run parseo
+
+            try:
+                parsed = parseo.parse_auto(sample_name, ignore_case=True)
+                print(sample_name, "OK")
+            except Exception as e:
+                print(sample_name, "FAILED")
+                #print("Error parsing sample_name", sample_name, e)
 
         # print("sample_product_name new", sample_product_name)
 
 if __name__ == "__main__":
-    products_dir = "/home/jtomicek/GISAT/GitHub/copernicus_quality_tools/product_definitions/"
+    #products_dir = "/mnt/c/users/jkadlec/gisat/src3/copernicus_quality_tools/product_definitions/"
+    products_dir = r"C:\Users\jkadlec\gisat\src3\copernicus_quality_tools\product_definitions"
+
     main(products_dir)
 
 
