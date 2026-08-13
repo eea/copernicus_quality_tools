@@ -1,6 +1,7 @@
 
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict
 
@@ -14,6 +15,7 @@ TARGET_KEYS = [
     "extensions",
     "reference_year",
     "formats",
+    "gpkg_filename_regex"
 ]
 
 
@@ -78,12 +80,15 @@ def main(products_dir) -> None:
         if "layer_names" in values_new:
             sample_product_name = values_new["layer_names"].lstrip("^").rstrip("$")
 
+        if "gpkg_filename_regex" in values_new:
+            sample_product_name = values_new["gpkg_filename_regex"].lstrip("^").rstrip("$")
+
         # print("sample_product_name orig", sample_product_name)
 
         if product_layer_prefix.startswith("clms_ua"):
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})[0-9]{1}', "at001l3")
-            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z\-]+)', "wien")
-            sample_product_name = sample_product_name.replace('(?P<fua_name>[a-z_]+)', "wien")
+            sample_product_name = sample_product_name.replace(r'(?P<fua_name>[a-z\-]+)', "wien")
+            sample_product_name = sample_product_name.replace(r'(?P<fua_name>[a-z_]+)', "wien")
 
 
         # replace aoi code
@@ -130,7 +135,7 @@ def main(products_dir) -> None:
         sample_product_name = sample_product_name.replace('r[0-9]{2}', revision)
 
         # replace release date
-        sample_product_name = sample_product_name.replace('_[0-9]{8}', "20250101")
+        sample_product_name = sample_product_name.replace('_[0-9]{8}', "_20250101")
 
 
         # add extension
@@ -142,6 +147,9 @@ def main(products_dir) -> None:
         # print("sample_product_name with final", sample_product_name)
 
         results[product_layer_prefix].append(sample_product_name)
+
+    passed_examples = []
+    failed_examples = []
 
     for prod, sample_names in results.items():
         # filter sample names
@@ -188,22 +196,36 @@ def main(products_dir) -> None:
         # print(prod, list(set(sample_names_aoi_year_fixed)))
 
         # now run parseo to auto-parse each of the example names.
+
         for sample_name in list(set(sample_names_aoi_year_fixed)):
             # print("sample_name", sample_name)
             # run parseo
 
             try:
                 parsed = parseo.parse_auto(sample_name, ignore_case=True)
-                print(sample_name, "OK")
+                parseo_family = parsed.match_family
+                print(prod, sample_name, "OK", parseo_family)
+                passed_examples.append((prod, sample_name))
+                #parseo.parse()
             except Exception as e:
-                print(sample_name, "FAILED")
+                print(prod, sample_name, "FAILED")
+                failed_examples.append((prod, sample_name))
                 #print("Error parsing sample_name", sample_name, e)
 
-        # print("sample_product_name new", sample_product_name)
+    # print("sample_product_name new", sample_product_name)
+    if len(failed_examples) == 0:
+        print(f"ALL EXAMPLES PASSED: {len(passed_examples)} total examples.")
+    else:
+        print(f"FAILED EXAMPLES: {len(failed_examples)}")
+
+    for prod, sample_name in failed_examples:
+        print(prod, sample_name)
 
 if __name__ == "__main__":
     #products_dir = "/mnt/c/users/jkadlec/gisat/src3/copernicus_quality_tools/product_definitions/"
     products_dir = r"C:\Users\jkadlec\gisat\src3\copernicus_quality_tools\product_definitions"
+    products_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent.joinpath("product_definitions")
+    print("products_dir", products_dir)
 
     main(products_dir)
 
