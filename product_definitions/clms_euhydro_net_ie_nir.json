@@ -19,7 +19,8 @@
           "STREAMS": "net_streams_(?P<aoi_code>ie_nir)",
           "STREAMS_CARTO": "net_streams_carto_(?P<aoi_code>ie_nir)"
         },
-        "gpkg_filename_regex": "^clms_euhydro_net_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
+        "gpkg_filename_regex": "^clms_euhydro_net_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}",
+        "aoi_codes": ["ie_nir"]
       }
     },
     {

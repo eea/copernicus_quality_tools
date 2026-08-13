@@ -27,7 +27,8 @@
           "BAS_L7": "bas_l7_(?P<aoi_code>ie_nir)",
           "BAS_L7_CARTO": "bas_l7_carto_(?P<aoi_code>ie_nir)"
         },
-        "gpkg_filename_regex": "^clms_euhydro_bas_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
+        "gpkg_filename_regex": "^clms_euhydro_bas_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}",
+        "aoi_codes": ["ie_nir"]
       }
     },
     {
