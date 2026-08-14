@@ -1,3 +1,15 @@
+# Local development stack. Run from the repository root with:
+#   docker compose -f docker/compose.local.yaml up --build
+#
+# Python, templates, static assets, and product definitions are bind-mounted
+# from this checkout. Django reloads frontend changes automatically; worker QC
+# modules are loaded by each new job. Restart the worker after editing its
+# long-lived scheduler:
+#   docker compose -f docker/compose.local.yaml restart worker
+#
+# Add docker/compose.local.debug.yaml to the command to enable the frontend
+# debugpy listener used by .vscode/launch.json.
+
 name: copernicus-quality-tools-local
 
 services:
@@ -20,11 +32,16 @@ services:
         target: /var/lib/postgresql/data
 
   frontend:
-    image: "eeacms/copernicus-qctool-frontend:${QC_TOOL_IMAGE_TAG:-2.4.7}"
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.local
+      args:
+        VERSION: "${QC_TOOL_IMAGE_TAG:-2.4.7}"
+        DEBUGPY_VERSION: "${QC_TOOL_DEBUGPY_VERSION:-1.8.12}"
     # Published QC Tool images are currently linux/amd64-only. Docker Desktop
     # uses emulation on ARM hosts; the variable allows future native images.
     platform: "${QC_TOOL_PLATFORM:-linux/amd64}"
-    pull_policy: missing
+    init: true
     depends_on:
       userdb:
         condition: service_healthy
@@ -36,6 +53,10 @@ services:
         host_ip: 127.0.0.1
         protocol: tcp
     environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      QC_TOOL_DEBUG: "no"
+      QC_TOOL_DEBUG_PORT: "5678"
       PRODUCT_DIRS: /usr/local/src/copernicus_quality_tools/product_definitions
       BOUNDARY_DIR: /mnt/qc_tool_boundary/boundaries
       INCOMING_DIR: /mnt/qc_tool_incoming/incoming
@@ -96,34 +117,42 @@ services:
     image: "eeacms/copernicus-qctool-worker:${QC_TOOL_IMAGE_TAG:-2.4.7}"
     platform: "${QC_TOOL_PLATFORM:-linux/amd64}"
     pull_policy: missing
+    init: true
     shm_size: "1gb"
     depends_on:
       frontend:
         condition: service_healthy
         restart: true
     environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
       PRODUCT_DIRS: /usr/local/src/copernicus_quality_tools/product_definitions
       BOUNDARY_DIR: /mnt/qc_tool_boundary/boundaries
       INCOMING_DIR: /mnt/qc_tool_incoming/incoming
       WORK_DIR: /mnt/qc_tool_work/work
       PULL_JOB_URL: http://frontend:8000/pull_job
       INSPIRE_SERVICE_URL: http://localhost:8080/validator/v2/
-      JAVA_MAX_MEM: "1536"
-      RUN_INSPIRE_VALIDATOR: "yes"
-      USE_LIGHTWEIGHT_VALIDATOR: "no"
+      # Lightweight validation keeps the local feedback loop fast. Set these
+      # two QC_TOOL_* variables to yes/no respectively for the full validator.
+      RUN_INSPIRE_VALIDATOR: "${QC_TOOL_RUN_INSPIRE_VALIDATOR:-no}"
+      USE_LIGHTWEIGHT_VALIDATOR: "${QC_TOOL_USE_LIGHTWEIGHT_VALIDATOR:-yes}"
       RUN_POSTGRES: "yes"
-      LEAVE_SCHEMA: "${LEAVE_SCHEMA:-no}"
-      LEAVE_JOBDIR: "${LEAVE_JOBDIR:-no}"
+      # Preserve temporary job data in development unless explicitly disabled.
+      LEAVE_SCHEMA: "${LEAVE_SCHEMA:-yes}"
+      LEAVE_JOBDIR: "${LEAVE_JOBDIR:-yes}"
     healthcheck:
       test:
         - CMD-SHELL
         - >-
           curl -fsS http://localhost:8000/max_slots.json >/dev/null &&
-          curl -fsS http://localhost:8080/validator/v2/status >/dev/null
+          pg_isready -q -h 127.0.0.1 -p 5432 -U qc_job -d qc_tool_db &&
+          { [ "$$RUN_INSPIRE_VALIDATOR" = "no" ] ||
+          curl -fsS http://localhost:8080/validator/v2/status >/dev/null; }
       interval: 10s
       timeout: 5s
       retries: 30
-      # The full INSPIRE validator can take several minutes under emulation.
+      # A successful lightweight check becomes healthy during start_period;
+      # the longer allowance is for opt-in full validation under emulation.
       start_period: 180s
     volumes:
       - type: volume

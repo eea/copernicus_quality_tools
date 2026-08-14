@@ -1,46 +1,27 @@
 How to run tests for check functions
 ------------------------------------
 
-Build docker image:
+Start the local stack from the repository root. The worker includes the native
+geospatial dependencies and embedded PostGIS required by the check tests:
 
-docker build --file=Dockerfile.worker --tag=qc_tool_worker .
+docker compose -f docker/compose.local.yaml up -d --build --wait
 
-Run container with postgis service:
+Run all tests without calling the external INSPIRE service:
 
-docker run --rm \
- --interactive --tty \
- --publish 15432:5432 \
- --name=qc_tool_postgis \
- --user=postgres \
- eeacms/copernicus-qctool-worker \
- /usr/lib/postgresql/17/bin/postgres -D /var/lib/postgresql/17/main -c config_file=/etc/postgresql/17/main/postgresql.conf
+docker compose -f docker/compose.local.yaml exec \
+  -e SKIP_INSPIRE_CHECK=yes \
+  worker \
+  python3 -m unittest discover \
+  -s /usr/local/src/copernicus_quality_tools/src/qc_tool/test \
+  -t /usr/local/src/copernicus_quality_tools/src
 
-Switch to other terminal.
+Run a specific test module:
 
-Setup QC_TOOL_HOME to your development source files, eg.
-
-QC_TOOL_HOME=/home/igor/src/copernicus_quality_tools
-
-Run all tests:
-
-docker run --rm \
-  --interactive --tty \
-  --name=qc_tool_test \
-  --link=qc_tool_postgis \
-  --env=PG_HOST=qc_tool_postgis \
-  --env=SKIP_INSPIRE_CHECK=no \
-  --volume=$QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  eeacms/copernicus-qctool-worker \
-  python3 -m unittest discover qc_tool.test
-
-Run specific tests:
-
-docker run --rm \
-  --interactive --tty \
-  --name=qc_tool_test \
-  --link=qc_tool_postgis \
-  --env=PG_HOST=qc_tool_postgis \
-  --env=SKIP_INSPIRE_CHECK=yes \
-  --volume=$QC_TOOL_HOME:/usr/local/src/copernicus_quality_tools \
-  eeacms/copernicus-qctool-worker \
+docker compose -f docker/compose.local.yaml exec \
+  -e SKIP_INSPIRE_CHECK=yes \
+  worker \
   python3 -m unittest qc_tool.test.test_vector_check
+
+Set SKIP_INSPIRE_CHECK=no when the INSPIRE behavior itself is under test. The
+local stack uses the lightweight validator by default; see README.md for the
+full-validator startup command.

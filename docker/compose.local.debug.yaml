@@ -1,0 +1,13 @@
+# Debug-only additions for compose.local.yaml. This keeps port 5678 free during
+# normal development.
+
+services:
+  frontend:
+    ports:
+      - name: frontend-debugpy
+        target: 5678
+        published: "${QC_TOOL_DEBUG_PORT:-5678}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    environment:
+      QC_TOOL_DEBUG: "yes"
