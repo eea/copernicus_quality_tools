@@ -11,6 +11,47 @@ Tool Python code from a local checkout.
 
 Run all commands from the repository root.
 
+## Configure the development environment
+
+Docker Compose reads development settings from the shell and from a `.env`
+file in the repository root. `QC_TOOL_BOUNDARY_PATH` is required; the other
+variables have development defaults.
+
+Obtain a compatible package through the
+[project boundary guide](https://github.com/eea/copernicus_quality_tools/wiki/Boundaries).
+The default image's [2.4.7 release](https://github.com/eea/copernicus_quality_tools/releases/tag/2.4.7)
+also provides a Boundary Package download link. Unpack the package, then create
+`.env` and set its absolute host path:
+
+```dotenv
+QC_TOOL_BOUNDARY_PATH="/absolute/path/to/boundary_package"
+```
+
+The package directory must contain the `raster` and `vector` directories
+directly:
+
+```text
+boundary_package/
+├── raster/
+└── vector/
+```
+
+Paths containing spaces must remain quoted in `.env`. The file is ignored by
+Git, so machine-specific paths and local overrides are not committed. You can
+also set the variable in the shell for a single command:
+
+```bash
+QC_TOOL_BOUNDARY_PATH="/absolute/path/to/boundary_package" \
+docker compose -f docker/compose.local.yaml up --build
+```
+
+Compose reports an error if `QC_TOOL_BOUNDARY_PATH` is unset. Check the
+configuration before startup with:
+
+```bash
+docker compose -f docker/compose.local.yaml config --quiet
+```
+
 ## Start the development stack
 
 ```bash
@@ -146,8 +187,9 @@ docker compose -f docker/compose.local.yaml exec \
 
 ## Data and cleanup
 
-The Django database, uploads, shared work files, submissions, and boundaries use
-named volumes. A normal shutdown preserves them:
+The boundary package is bind-mounted from `QC_TOOL_BOUNDARY_PATH`. The Django
+database, uploads, shared work files, and submissions use named volumes. A
+normal shutdown preserves all of them:
 
 ```bash
 docker compose -f docker/compose.local.yaml down
@@ -156,23 +198,31 @@ docker compose -f docker/compose.local.yaml down
 Retained worker PostGIS schemas last only until the worker container is
 recreated. Job files in the work volume survive recreation.
 
-To delete all local QC Tool volumes and start from an empty environment:
+To delete all local QC Tool named volumes and start with empty application
+data:
 
 ```bash
 docker compose -f docker/compose.local.yaml down --volumes
 ```
 
 This final command permanently deletes the local database, uploads, work files,
-submissions, and boundaries.
+and submissions. It does not delete the bind-mounted boundary package. The
+boundary mount is writable, so uploading a package through the frontend
+replaces files in the host directory referenced by `QC_TOOL_BOUNDARY_PATH`.
 
 ## Useful configuration
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
+| `QC_TOOL_BOUNDARY_PATH` | None (required) | Absolute host path to an unpacked boundary package containing `raster/` and `vector/`. |
 | `QC_TOOL_PORT` | `8000` | Frontend host port. |
 | `QC_TOOL_DEBUG_PORT` | `5678` | Debugpy host port when using the debug override. |
+| `QC_TOOL_DEBUGPY_VERSION` | `1.8.12` | Debugpy version installed in the local frontend image. |
 | `QC_TOOL_PLATFORM` | `linux/amd64` | Container platform for published images. |
 | `QC_TOOL_IMAGE_TAG` | `2.4.7` | Published frontend base and worker image tag. |
+| `QC_TOOL_POSTGRES_DB` | `qc_tool` | Django PostgreSQL database name. |
+| `QC_TOOL_POSTGRES_USER` | `qc_user` | Django PostgreSQL user. |
+| `QC_TOOL_POSTGRES_PASSWORD` | `qc_password` | Django PostgreSQL password. |
 | `QC_TOOL_RUN_INSPIRE_VALIDATOR` | `no` | Start the complete bundled validator. |
 | `QC_TOOL_USE_LIGHTWEIGHT_VALIDATOR` | `yes` | Use lightweight metadata validation. |
 | `LEAVE_JOBDIR` | `yes` | Retain temporary job directories. |

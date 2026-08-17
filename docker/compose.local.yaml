@@ -9,6 +9,10 @@
 #
 # Add docker/compose.local.debug.yaml to the command to enable the frontend
 # debugpy listener used by .vscode/launch.json.
+# Set QC_TOOL_BOUNDARY_PATH to the host directory containing the boundary
+# package's raster/ and vector/ directories.
+# check https://github.com/eea/copernicus_quality_tools/wiki/Boundaries
+# and example - https://github.com/eea/copernicus_quality_tools/releases/tag/2.4.7 (where boundaries are stored on GDrive)
 
 name: copernicus-quality-tools-local
 
@@ -89,9 +93,11 @@ services:
       retries: 12
       start_period: 30s
     volumes:
-      - type: volume
-        source: qc_tool_boundary
-        target: /mnt/qc_tool_boundary
+      - type: bind
+        source: "${QC_TOOL_BOUNDARY_PATH:?Set QC_TOOL_BOUNDARY_PATH to the boundary package directory}"
+        target: /mnt/qc_tool_boundary/boundaries
+        bind:
+          create_host_path: false
       - type: volume
         source: qc_tool_incoming
         target: /mnt/qc_tool_incoming
@@ -155,9 +161,11 @@ services:
       # the longer allowance is for opt-in full validation under emulation.
       start_period: 180s
     volumes:
-      - type: volume
-        source: qc_tool_boundary
-        target: /mnt/qc_tool_boundary
+      - type: bind
+        source: "${QC_TOOL_BOUNDARY_PATH:?Set QC_TOOL_BOUNDARY_PATH to the boundary package directory}"
+        target: /mnt/qc_tool_boundary/boundaries
+        bind:
+          create_host_path: false
       - type: volume
         source: qc_tool_incoming
         target: /mnt/qc_tool_incoming
@@ -173,7 +181,6 @@ services:
 
 volumes:
   postgres_data:
-  qc_tool_boundary:
   qc_tool_frontend:
   qc_tool_incoming:
   qc_tool_submission:
