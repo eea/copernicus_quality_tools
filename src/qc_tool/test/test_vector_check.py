@@ -94,8 +94,25 @@ class Test_naming_rpz(VectorCheckTestCase):
         self.assertEqual("rpz_DU007T_lclu2012_v01", status.params["layer_defs"]["rpz"]["src_layer_name"])
         self.assertEqual("boundary_rpz.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_rpz", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertEqual("007", status.params["aoi_code"])
+        self.assertEqual("007", status.status_properties["aoi_code"])
         self.assertIn("reference_year", status.status_properties)
         self.assertEqual("2012", status.status_properties["reference_year"])
+
+    def test_extracts_aoi_code_without_an_allowlist(self):
+        from qc_tool.vector.naming import run_check
+
+        self.params.update({
+            "layer_names": {"rpz": "^rpz_du(?P<aoi_code>[0-9]{3})[a-z]_lclu2012_v[0-9]{2}$"},
+            "formats": [".shp"],
+        })
+        status = self.status_class()
+
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual("007", status.params["aoi_code"])
+        self.assertEqual("007", status.status_properties["aoi_code"])
 
 
 class Test_naming_n2k(VectorCheckTestCase):
@@ -147,6 +164,34 @@ class Test_naming_n2k(VectorCheckTestCase):
         self.assertEqual("aborted", status.status)
 
 
+class Test_naming_pdf(VectorCheckTestCase):
+    @patch("qc_tool.vector.helper.find_pdfs")
+    def test_publishes_aoi_code_as_job_metadata(self, find_pdfs):
+        find_pdfs.return_value = [
+            {"src_filepath": self.params["jobdir_manager"].tmp_dir.joinpath("map.pdf"),
+             "src_filename": "map_mt001l_3035.pdf"},
+            {"src_filepath": self.params["jobdir_manager"].tmp_dir.joinpath("report.pdf"),
+             "src_filename": "report_mt001l_3035.pdf"},
+        ]
+        params = {
+            "unzip_dir": self.params["jobdir_manager"].tmp_dir,
+            "document_names": {
+                "map": r"^map_(?P<aoi_code>[a-z0-9]+)_(?P<epsg_code>[0-9]+)\.pdf$",
+                "report": r"^report_(?P<aoi_code>[a-z0-9]+)_(?P<epsg_code>[0-9]+)\.pdf$",
+            },
+            "aoi_codes": ["mt001l"],
+            "epsg_codes": ["3035"],
+        }
+        status = self.status_class()
+
+        from qc_tool.vector.naming_pdf import run_check
+        run_check(params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual("mt001l", status.params["aoi_code"])
+        self.assertEqual("mt001l", status.status_properties["aoi_code"])
+
+
 class Test_naming_clc(VectorCheckTestCase):
     def setUp(self):
         super().setUp()
@@ -187,6 +232,18 @@ class Test_naming_clc(VectorCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
+
+    def test_mismatched_gdb_aoi_is_not_published(self):
+        from qc_tool.vector.naming import run_check
+
+        self.params["gdb_filename_regex"] = "^clc2012_(?P<aoi_code>m)t.gdb$"
+        status = self.status_class()
+
+        run_check(self.params, status)
+
+        self.assertEqual("aborted", status.status)
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertIsNone(status.status_properties["aoi_code"])
 
 
 class Test_naming_ua_gdb(VectorCheckTestCase):
@@ -266,6 +323,20 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
         self.assertEqual("EE003L1_NARVA_UA2012", status.params["layer_defs"]["reference"]["src_layer_name"])
         self.assertIn("reference_year", status.status_properties)
         self.assertEqual("2012", status.status_properties["reference_year"])
+
+    def test_named_aoi_capture_without_allowlist_is_canonicalized(self):
+        from qc_tool.vector.naming import run_check
+
+        self.params["layer_names"]["reference"] = (
+            r"(?P<aoi_code>[A-Z]{2}[0-9]{3}L[0-9])_.*_ua2012$"
+        )
+        status = self.status_class()
+
+        run_check(self.params, status)
+
+        self.assertEqual("ok", status.status)
+        self.assertEqual("EE003L1", status.params["aoi_code"])
+        self.assertEqual("ee003l1", status.status_properties["aoi_code"])
 
     def test_found_document(self):
         from qc_tool.vector.naming import run_check

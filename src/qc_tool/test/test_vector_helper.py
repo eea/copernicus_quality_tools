@@ -2,7 +2,130 @@
 # -*- coding: utf-8 -*-
 
 
+from pathlib import Path
+from unittest import TestCase
+
 from qc_tool.test.helper import VectorCheckTestCase
+
+
+class Test_extract_aoi_code(TestCase):
+    def test_ambiguous_aoi_codes_are_not_returned(self):
+        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        layer_defs = {
+            "first": {"src_layer_name": "layer_mt"},
+            "second": {"src_layer_name": "layer_cz"},
+        }
+        layer_regexes = {
+            "first": r"^layer_(?P<aoi_code>[a-z]+)$",
+            "second": r"^layer_(?P<aoi_code>[a-z]+)$",
+        }
+        status = CheckStatus()
+
+        aoi_code = extract_aoi_code(layer_defs, layer_regexes, ["mt", "cz"], status)
+
+        self.assertIsNone(aoi_code)
+        self.assertEqual("aborted", status.status)
+
+    def test_allowlist_invalid_aoi_code_is_not_returned(self):
+        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        aoi_code = extract_aoi_code(
+            {"layer": {"src_layer_name": "layer_xx"}},
+            {"layer": r"^layer_(?P<aoi_code>[a-z]+)$"},
+            ["mt", "cz"],
+            status,
+        )
+
+        self.assertIsNone(aoi_code)
+        self.assertEqual("aborted", status.status)
+
+
+class Test_publish_aoi_code(TestCase):
+    def test_equivalent_numeric_codes_preserve_first_representation(self):
+        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        aoi_code = publish_aoi_code({"aoi_code": "007"}, status, "7")
+
+        self.assertEqual("007", aoi_code)
+        self.assertEqual("007", status.params["aoi_code"])
+        self.assertEqual("007", status.status_properties["aoi_code"])
+        self.assertEqual("ok", status.status)
+
+    def test_reporting_code_is_case_normalized(self):
+        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        aoi_code = publish_aoi_code({}, status, "EE003L1")
+
+        self.assertEqual("EE003L1", aoi_code)
+        self.assertEqual("EE003L1", status.params["aoi_code"])
+        self.assertEqual("ee003l1", status.status_properties["aoi_code"])
+
+    def test_conflicting_codes_clear_reporting_metadata(self):
+        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        aoi_code = publish_aoi_code({"aoi_code": "mt"}, status, "cz")
+
+        self.assertIsNone(aoi_code)
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertTrue(status.params["_aoi_code_conflict"])
+        self.assertIsNone(status.status_properties["aoi_code"])
+        self.assertEqual("aborted", status.status)
+
+    def test_failed_later_extraction_clears_previous_code(self):
+        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        aoi_code = publish_aoi_code({"aoi_code": "mt"}, status, None)
+
+        self.assertIsNone(aoi_code)
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertTrue(status.params["_aoi_code_conflict"])
+        self.assertIsNone(status.status_properties["aoi_code"])
+
+
+class Test_check_gdb_filename(TestCase):
+    def test_mismatched_aoi_code_aborts(self):
+        from qc_tool.vector.helper import check_gdb_filename
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        check_gdb_filename(Path("clc2012_cz.gdb"), r"^clc2012_(?P<aoi_code>.+)\.gdb$", "mt", status)
+
+        self.assertEqual("aborted", status.status)
+        self.assertIn("does not match", status.messages[0])
+
+    def test_aoi_code_comparison_is_case_insensitive(self):
+        from qc_tool.vector.helper import check_gdb_filename
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        result = check_gdb_filename(
+            Path("clc2012_MT.gdb"),
+            r"^clc2012_(?P<aoi_code>.+)\.gdb$",
+            "mt",
+            status,
+        )
+
+        self.assertTrue(result)
+        self.assertEqual("ok", status.status)
 
 
 class Test_table_exists(VectorCheckTestCase):

@@ -52,6 +52,7 @@ class Test_Raster(ProductTestCase):
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
+        self.assertEqual("eu", job_result["aoi_code"])
 
     def test_gra_2018_010m(self):
         """High resolution grassland (GRA) - 10m"""

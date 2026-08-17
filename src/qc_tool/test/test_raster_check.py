@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from shutil import copyfile
 from unittest import skipIf
 from osgeo import gdal
 from osgeo import osr
@@ -70,6 +71,7 @@ class Test_naming(RasterCheckTestCase):
         run_check(params, status)
         self.assertEqual("ok", status.status)
         self.assertEqual("eu", status.params["aoi_code"])
+        self.assertEqual("eu", status.status_properties["aoi_code"])
         self.assertEqual("2018", status.status_properties["reference_year"])
         self.assertEqual("fty_2018_100m_eu_03035_v0_1.tif", status.params["raster_layer_defs"]["layer_1"]["src_layer_name"])
 
@@ -137,6 +139,8 @@ class Test_naming(RasterCheckTestCase):
         run_check(params, status)
         self.assertEqual("aborted", status.status)
         self.assertIn("Layer test_raster1.tif has illegal AOI code raster1.", status.messages)
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertNotIn("aoi_code", status.status_properties)
 
     def test_reference_year(self):
         from qc_tool.raster.naming import run_check
@@ -274,8 +278,16 @@ class Test_gap(RasterCheckTestCase):
 
     def setUp(self):
         super().setUp()
-        self.mask_filepath = self.jobdir_manager.tmp_dir.joinpath("boundaries", "raster", "mask_default_010m_aoi01.tif")
+        self.boundary_dir = self.jobdir_manager.tmp_dir.joinpath("boundaries")
+        self.mask_filepath = self.boundary_dir.joinpath("raster", "mask_default_010m_aoi01.tif")
         self.layer_filepath = self.jobdir_manager.tmp_dir.joinpath("raster_010m_aoi01.tif")
+
+        # Vector masks are resolved below <boundary_dir>/vector. Keep the
+        # checked-in GeoPackage immutable and copy it into this test's job dir.
+        vector_boundary_dir = self.boundary_dir.joinpath("vector")
+        vector_boundary_dir.mkdir(parents=True)
+        vector_aoi_source = TEST_DATA_DIR.joinpath("boundaries", "raster", "aoi_ua_building_heights.gpkg")
+        copyfile(vector_aoi_source, vector_boundary_dir.joinpath(vector_aoi_source.name))
 
         layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "complete_raster_100m_testaoi.tif")
         layer_filepath2 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "incomplete_raster_100m_testaoi.tif")
@@ -342,6 +354,8 @@ class Test_gap(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
+        self.assertTrue(status.params["_aoi_spatially_validated"])
+        self.assertTrue(status.status_properties["_aoi_spatially_validated"])
 
     def test_bigger_than_mask(self):
         mask = [[0, 1, 1, 1, 0],
@@ -373,6 +387,8 @@ class Test_gap(RasterCheckTestCase):
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual("ok", status.status)
+        self.assertTrue(status.params["_aoi_spatially_validated"])
+        self.assertTrue(status.status_properties["_aoi_spatially_validated"])
 
     def test_outside_mask(self):
         # Prepare mask.
@@ -401,7 +417,11 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("aborted", status.status)
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertIsNone(status.status_properties["aoi_code"])
+        self.assertFalse(status.params["_aoi_spatially_validated"])
+        self.assertFalse(status.status_properties["_aoi_spatially_validated"])
 
     def test_intersects_mask_upper_left(self):
         # Prepare mask.
@@ -430,7 +450,10 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+        self.assertTrue(status.params["_aoi_spatially_validated"])
+        self.assertTrue(status.status_properties["_aoi_spatially_validated"])
+        self.assertNotIn("aoi_code", status.params)
 
     def test_intersects_mask_lower_right(self):
         # Prepare mask.
@@ -459,7 +482,11 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("aborted", status.status)
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertIsNone(status.status_properties["aoi_code"])
+        self.assertFalse(status.params["_aoi_spatially_validated"])
+        self.assertFalse(status.status_properties["_aoi_spatially_validated"])
 
     def test_gaps_found(self):
         from qc_tool.raster.gap import run_check
@@ -489,13 +516,16 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertEqual(0, len(status.messages))
+        self.assertTrue(status.params["_aoi_spatially_validated"])
+        self.assertTrue(status.status_properties["_aoi_spatially_validated"])
+        self.assertNotIn("aoi_code", status.params)
 
 
     def test_vector_aoi_not_intersect(self):
@@ -509,13 +539,18 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
         self.assertIn("does not intersect any AOI polygon with CodeCITY=city001 from boundary aoi_ua_building_heights.gpkg", status.messages[0])
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertIsNone(status.status_properties["aoi_code"])
+        self.assertFalse(status.params["_aoi_spatially_validated"])
+        self.assertFalse(status.status_properties["_aoi_spatially_validated"])
 
 
     def test_vector_aoi_incomplete(self):
@@ -530,13 +565,16 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
         status = self.status_class()
         run_check(self.params, status)
         self.assertIn("has 136 gap pixels in the mapped area.", status.messages[0])
+        self.assertTrue(status.params["_aoi_spatially_validated"])
+        self.assertTrue(status.status_properties["_aoi_spatially_validated"])
+        self.assertNotIn("aoi_code", status.params)
         self.assertIn("s01_raster_for_vector_aoi_nok01_gap_warning.tif", status.attachment_filenames)
         self.assertTrue(self.params["output_dir"].joinpath(status.attachment_filenames[0]).exists())
 
