@@ -12,6 +12,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import extract_aoi_code
     from qc_tool.vector.helper import extract_epsg_code
     from qc_tool.vector.helper import find_pdfs
+    from qc_tool.vector.helper import publish_aoi_code
 
 
     # Find PDF (.pdf) layers.
@@ -39,15 +40,18 @@ def run_check(params, status):
 
     # Extract AOI code and compare it to pre-defined list.
     aoi_code = None
-    if "aoi_codes" in params and len(params["aoi_codes"]) > 0:
-        if params["aoi_codes"][0] == "*":
+    aoi_codes = params.get("aoi_codes", [])
+    has_aoi_capture = any("(?P<aoi_code>" in regex for regex in params["document_names"].values())
+    if aoi_codes or has_aoi_capture:
+        if not aoi_codes or aoi_codes[0] == "*":
             preserve_aoicode_case = True
             compare_aoi_codes = False
         else:
             preserve_aoicode_case = False
             compare_aoi_codes = True
-        aoi_code = extract_aoi_code(builder.layer_defs, params["document_names"], params["aoi_codes"], status,
+        aoi_code = extract_aoi_code(builder.layer_defs, params["document_names"], aoi_codes, status,
                                     preserve_aoicode_case=preserve_aoicode_case, compare_aoi_codes=compare_aoi_codes)
+        aoi_code = publish_aoi_code(params, status, aoi_code)
 
 
     # Extract EPSG code and compare it to pre-defined list.
@@ -65,5 +69,3 @@ def run_check(params, status):
         status.info(f"PDF file names: '{checked_pdf_file_names}' have been successfully checked.")
         status.info(f"AOI code detected from PDF file names: {aoi_code}")
         status.info(f"EPSG code detected from PDF file names: {name_epsg}")
-
-

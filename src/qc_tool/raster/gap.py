@@ -7,6 +7,19 @@ IS_SYSTEM = False
 
 MASK_ALIGN_GRID = 1000
 
+
+def _set_aoi_spatial_validation(status, is_valid, message=None):
+    """Publish the result of comparing raster pixels with the selected AOI."""
+    status.add_params({"_aoi_spatially_validated": is_valid})
+    status.set_status_property("_aoi_spatially_validated", is_valid)
+    if is_valid:
+        return
+
+    status.add_params({"aoi_code": None})
+    status.set_status_property("aoi_code", None)
+    status.aborted(message)
+
+
 def run_check(params, status):
     import subprocess
     import numpy
@@ -86,8 +99,8 @@ def run_check(params, status):
         mask_xres = mask_gt[1]
         mask_uly = mask_gt[3]
         mask_yres = mask_gt[5]
-        mask_lrx = ds_ulx + (mask_ds.RasterXSize * mask_xres)
-        mask_lry = ds_uly + (mask_ds.RasterYSize * mask_yres)
+        mask_lrx = mask_ulx + (mask_ds.RasterXSize * mask_xres)
+        mask_lry = mask_uly + (mask_ds.RasterYSize * mask_yres)
 
         # Check if the dataset extent intersects the mask extent.
         if (mask_ulx > ds_lrx or mask_uly < ds_lry or mask_lrx < ds_ulx or mask_lry > ds_uly):
@@ -99,8 +112,8 @@ def run_check(params, status):
                 extent_message = extent_message.format(layer_def["src_layer_name"], mask_ident)
             extent_message += "Raster extent: [{:f} {:f}, {:f} {:f}]".format(ds_ulx, ds_uly, ds_lrx, ds_lry)
             extent_message += "AOI extent: [{:f} {:f}, {:f} {:f}]".format(mask_ulx, mask_uly, mask_lrx, mask_lry)
-            status.failed(extent_message)
-            continue
+            _set_aoi_spatial_validation(status, False, extent_message)
+            return
 
         # Check if the raster and the AOI mask have the same resolution.
         if ds_xres != mask_xres or ds_yres != mask_yres:
@@ -145,6 +158,7 @@ def run_check(params, status):
             gap_value_ds = ds_band.GetNoDataValue()
 
         gap_count_total = 0
+        mapped_pixel_overlap_total = 0
         num_tiles = len(tiles)
         gap_filepaths = []
         for tile_no, tile in enumerate(tiles):
@@ -171,10 +185,12 @@ def run_check(params, status):
                 # Current tile is completely inside the bounds of the checked raster.
                 arr_ds = read_tile(ds, tile, gap_value_ds)
                 arr_gaps = ((arr_mask == 1) * (arr_ds == gap_value_ds))
+                mapped_pixel_overlap_total += int(numpy.sum((arr_mask == 1) * (arr_ds != gap_value_ds)))
             else:
                 # Current tile is partially inside and partially outside the bounds of the checked raster.
                 arr_ds = read_tile(ds, tile, gap_value_ds)
                 arr_gaps = ((arr_mask == 1) * (arr_ds == gap_value_ds))
+                mapped_pixel_overlap_total += int(numpy.sum((arr_mask == 1) * (arr_ds != gap_value_ds)))
 
             # find unmapped pixels inside mask
             gap_count = int(numpy.sum(arr_gaps))
@@ -208,7 +224,15 @@ def run_check(params, status):
 
         # Free memory for checked raster and for mask.
         ds = None
-        ds_mask = None
+        mask_ds = None
+
+        if mapped_pixel_overlap_total == 0:
+            message = ("Layer {:s} has no mapped pixels intersecting AOI {:s}."
+                       .format(layer_def["src_layer_name"], aoi_code))
+            _set_aoi_spatial_validation(status, False, message)
+            return
+
+        _set_aoi_spatial_validation(status, True)
 
         # Generate attachments.
         if gap_count_total > 0:

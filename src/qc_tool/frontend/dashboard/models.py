@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -12,7 +13,11 @@ from django.contrib.auth.models import User
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
+from qc_tool.common import load_job_result
 from qc_tool.frontend.dashboard.helpers import find_product_description
+
+
+logger = logging.getLogger(__name__)
 
 
 def pull_job(worker_url):
@@ -121,11 +126,51 @@ class Job(models.Model):
     def __str__(self):
         return "{0} | {1} | {2}".format(str(self.job_uuid), self.delivery.filename, self.job_status)
 
+    def apply_result_metadata(self, job_result):
+        """Copy supported reporting metadata from a worker result onto this job.
+
+        The method updates the model instance without saving it and returns the
+        names of fields that changed. An absent or malformed value preserves
+        stored metadata; an explicit null clears it as unavailable or ambiguous.
+        """
+        if not isinstance(job_result, dict):
+            return []
+
+        if "aoi_code" not in job_result:
+            return []
+        aoi_code = job_result["aoi_code"]
+        if aoi_code is None:
+            if self.aoi_code is None:
+                return []
+            self.aoi_code = None
+            return ["aoi_code"]
+        if not isinstance(aoi_code, str) or not aoi_code:
+            return []
+        aoi_code = aoi_code.casefold()
+        if len(aoi_code) > 255:
+            return []
+        if self.aoi_code == aoi_code:
+            return []
+
+        self.aoi_code = aoi_code
+        return ["aoi_code"]
+
     def update_status(self, job_status):
         self.job_status = job_status
+        updated_fields = ["job_status"]
         if job_status not in (JOB_WAITING, JOB_RUNNING):
-            self.date_finished = timezone.now()
-        self.save()
+            if self.date_finished is None:
+                self.date_finished = timezone.now()
+                updated_fields.append("date_finished")
+            try:
+                job_result = load_job_result(str(self.job_uuid))
+            except (OSError, ValueError) as exc:
+                # TIMEOUT/LOST jobs may not have a readable result document.
+                # Their status still needs to be persisted.
+                logger.warning("Could not load result metadata for job %s: %s", self.job_uuid, exc)
+            else:
+                updated_fields.extend(self.apply_result_metadata(job_result))
+        self.save(update_fields=updated_fields)
 
     job_uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     delivery = models.ForeignKey(Delivery, on_delete=models.CASCADE)
@@ -135,5 +180,8 @@ class Job(models.Model):
     job_status = models.CharField(max_length=64, default=JOB_WAITING)
     product_ident = models.CharField(max_length=64)
     product_description = models.CharField(max_length=500)
+    aoi_code = models.CharField(max_length=255, default=None, blank=True, null=True,
+                                db_index=True, editable=False,
+                                help_text="Canonical AOI code detected in the delivery job result.")
     skip_steps = models.CharField(max_length=100, default=None, blank=True, null=True)
     worker_url = models.CharField(max_length=500, default=None, blank=True, null=True)
