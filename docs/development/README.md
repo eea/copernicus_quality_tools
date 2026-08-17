@@ -162,8 +162,9 @@ docker compose -f docker/compose.local.yaml up --build
 
 ## Run tests
 
-Start the stack and run the test suite inside the worker, where the required
-native geospatial libraries and PostGIS are available:
+Start the stack, run the core suite inside the worker (where the native
+geospatial libraries are available), and run the Django suite inside the
+frontend:
 
 ```bash
 docker compose -f docker/compose.local.yaml up -d --build --wait
@@ -174,7 +175,16 @@ docker compose -f docker/compose.local.yaml exec \
   python3 -m unittest discover \
   -s /usr/local/src/copernicus_quality_tools/src/qc_tool/test \
   -t /usr/local/src/copernicus_quality_tools/src
+
+docker compose -f docker/compose.local.yaml exec \
+  --workdir /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
+  frontend \
+  python3 manage.py test qc_tool.frontend.dashboard.tests
 ```
+
+The second command runs the Django model and migration tests against a
+temporary PostgreSQL test database. These tests are separate from the worker
+suite and cover reporting metadata such as persisted AOI codes.
 
 Run one module with:
 
