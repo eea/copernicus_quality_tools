@@ -115,6 +115,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                           "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
                           "filename": filepath.name,
                           "report_filename": job_report_filepath.name,
+                          "aoi_code": None,
                           "error_message": None,
                           "qc_tool_version": get_qc_tool_version(),
                           "steps": []}
