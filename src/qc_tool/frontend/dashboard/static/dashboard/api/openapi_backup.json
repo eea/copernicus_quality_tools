@@ -572,6 +572,12 @@
           "hash": {
             "type": "string"
           },
+          "aoi_code": {
+            "type": "string",
+            "nullable": true,
+            "description": "Canonical lowercase AOI code detected from delivery naming; null when unavailable, invalid, or ambiguous.",
+            "example": "mt"
+          },
           "reference_year": {
             "type": "integer",
             "example": 2018
@@ -621,6 +627,12 @@
           },
           "hash": {
             "type": "string"
+          },
+          "aoi_code": {
+            "type": "string",
+            "nullable": true,
+            "description": "Canonical lowercase AOI code detected from delivery naming; null when unavailable, invalid, or ambiguous.",
+            "example": "mt"
           },
           "reference_year": {
             "type": "integer",
