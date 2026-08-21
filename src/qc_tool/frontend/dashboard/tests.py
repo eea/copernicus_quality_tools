@@ -253,6 +253,37 @@ class JobAoiPersistenceTests(TestCase):
             str(second_job.job_uuid): "du001",
         }, api_jobs)
 
+    @patch("qc_tool.frontend.dashboard.views.compile_job_report_data")
+    def test_result_page_displays_product_identifier_and_aoi_code(self, compile_report):
+        job = self.create_job(aoi_code="ee003l")
+        compile_report.return_value = {
+            "job_uuid": str(job.job_uuid),
+            "description": job.product_description,
+            "product_ident": job.product_ident,
+            "aoi_code": job.aoi_code,
+            "reference_year": "2012",
+            "filename": self.delivery.filename,
+            "job_start_date": None,
+            "job_finish_date": None,
+            "status": JOB_OK,
+            "steps": [],
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("show_result", args=[job.job_uuid]))
+
+        self.assertEqual(200, response.status_code)
+        self.assertContains(response, "Product ID")
+        self.assertContains(response, "clc2012")
+        self.assertContains(response, "AOI Code")
+        self.assertContains(response, "ee003l")
+        self.assertContains(response, 'data-toggle="tooltip"')
+        self.assertContains(response, 'aria-label="About AOI Code"')
+        self.assertContains(
+            response,
+            "AOI stands for Area of Interest. The code identifies the geographic area associated with this QC job.",
+        )
+
     def test_delivery_list_endpoints_expose_only_canonical_aoi_code(self):
         self.delivery.product_ident = "clc2012"
         self.delivery.aoi_code = "ee003l"

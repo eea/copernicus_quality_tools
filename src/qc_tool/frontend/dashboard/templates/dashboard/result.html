@@ -41,6 +41,22 @@
                       <dd class="col-sm-10">{{job_report.description}}</dd>
                     </dl>
                     <dl class="row">
+                      <dt class="col-sm-2">Product ID</dt>
+                      <dd class="col-sm-10">{{job_report.product_ident}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">
+                        AOI Code
+                        <button type="button" id="aoi-code-help" class="btn btn-link btn-xs"
+                                data-toggle="tooltip" data-placement="top"
+                                title="AOI stands for Area of Interest. The code identifies the geographic area associated with this QC job."
+                                aria-label="About AOI Code">
+                          <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span>
+                        </button>
+                      </dt>
+                      <dd class="col-sm-10">{{job_report.aoi_code|default:"Not available"}}</dd>
+                    </dl>
+                    <dl class="row">
                       <dt class="col-sm-2">Reference Year</dt>
                       <dd class="col-sm-10">{{job_report.reference_year}}</dd>
                     </dl>
@@ -171,4 +187,9 @@
 
 {% block js %}
     {{ block.super }}
+    <script>
+      $(function () {
+        $('#aoi-code-help').tooltip();
+      });
+    </script>
 {% endblock js %}
