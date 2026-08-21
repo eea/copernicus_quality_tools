@@ -1485,14 +1485,24 @@ def pull_job(request):
 def get_chunk_name(uploaded_filename, chunk_number):
     return uploaded_filename + "_part_{:03d}".format(chunk_number)
 
+
 def merge_uploaded_chunks(chunk_paths, target_filepath):
-    with open(str(target_filepath), "ab+") as target_file:
-        for stored_chunk_filepath in chunk_paths:
-            stored_chunk_file = open(str(stored_chunk_filepath), "rb")
-            target_file.write(stored_chunk_file.read())
-            stored_chunk_file.close()
-            stored_chunk_filepath.unlink()
-    target_file.close()
+    target_filepath = Path(target_filepath)
+    temporary_filepath = target_filepath.with_name(
+        ".{:s}.{:s}.uploading".format(target_filepath.name, uuid.uuid4().hex)
+    )
+    try:
+        with temporary_filepath.open("wb") as target_file:
+            for stored_chunk_filepath in chunk_paths:
+                with Path(stored_chunk_filepath).open("rb") as stored_chunk_file:
+                    shutil.copyfileobj(stored_chunk_file, target_file)
+        temporary_filepath.replace(target_filepath)
+    finally:
+        if temporary_filepath.exists():
+            temporary_filepath.unlink()
+
+    for stored_chunk_filepath in chunk_paths:
+        Path(stored_chunk_filepath).unlink()
     logger.debug("Uploaded file saved to: " + str(target_filepath))
 
 

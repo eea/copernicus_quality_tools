@@ -3,10 +3,13 @@ from __future__ import unicode_literals
 
 from datetime import timedelta
 from json import JSONDecodeError
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import UUID
 
 from django.contrib.auth.models import User
+from django.test import SimpleTestCase
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -20,6 +23,41 @@ from qc_tool.frontend.dashboard.models import ApiUser
 from qc_tool.frontend.dashboard.models import AOI_CODE_MAX_LENGTH
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
+from qc_tool.frontend.dashboard.views import merge_uploaded_chunks
+
+
+class UploadedChunkMergeTests(SimpleTestCase):
+    def test_existing_archive_is_replaced_instead_of_appended(self):
+        with TemporaryDirectory() as directory:
+            directory = Path(directory)
+            target_filepath = directory.joinpath("delivery.zip")
+            target_filepath.write_bytes(b"old archive")
+            chunk_paths = [directory.joinpath("chunk-1"), directory.joinpath("chunk-2")]
+            chunk_paths[0].write_bytes(b"new ")
+            chunk_paths[1].write_bytes(b"archive")
+
+            merge_uploaded_chunks(chunk_paths, target_filepath)
+
+            self.assertEqual(b"new archive", target_filepath.read_bytes())
+            self.assertFalse(any(chunk_filepath.exists() for chunk_filepath in chunk_paths))
+
+    def test_failed_merge_preserves_existing_archive_and_chunks(self):
+        with TemporaryDirectory() as directory:
+            directory = Path(directory)
+            target_filepath = directory.joinpath("delivery.zip")
+            target_filepath.write_bytes(b"existing archive")
+            chunk_filepath = directory.joinpath("chunk-1")
+            chunk_filepath.write_bytes(b"partial upload")
+            missing_chunk_filepath = directory.joinpath("missing-chunk")
+
+            with self.assertRaises(FileNotFoundError):
+                merge_uploaded_chunks(
+                    [chunk_filepath, missing_chunk_filepath], target_filepath
+                )
+
+            self.assertEqual(b"existing archive", target_filepath.read_bytes())
+            self.assertTrue(chunk_filepath.exists())
+            self.assertFalse(any(directory.glob("*.uploading")))
 
 
 class JobAoiPersistenceTests(TestCase):
