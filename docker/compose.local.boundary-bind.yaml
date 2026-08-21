@@ -1,0 +1,22 @@
+services:
+  frontend:
+    environment:
+      BOUNDARY_DIR: /mnt/qc_tool_boundary
+    volumes:
+      - type: bind
+        source: "${QC_TOOL_BOUNDARY_PATH:?Set QC_TOOL_BOUNDARY_PATH to the extracted boundary package directory}"
+        target: /mnt/qc_tool_boundary
+        read_only: true
+        bind:
+          create_host_path: false
+
+  worker:
+    environment:
+      BOUNDARY_DIR: /mnt/qc_tool_boundary
+    volumes:
+      - type: bind
+        source: "${QC_TOOL_BOUNDARY_PATH:?Set QC_TOOL_BOUNDARY_PATH to the extracted boundary package directory}"
+        target: /mnt/qc_tool_boundary
+        read_only: true
+        bind:
+          create_host_path: false

@@ -15,6 +15,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from qc_tool.common import CONFIG
 from qc_tool.common import JOB_FAILED
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
@@ -59,6 +60,82 @@ class UploadedChunkMergeTests(SimpleTestCase):
             self.assertEqual(b"existing archive", target_filepath.read_bytes())
             self.assertTrue(chunk_filepath.exists())
             self.assertFalse(any(directory.glob("*.uploading")))
+
+
+class BoundaryListingTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="boundary-test-user", password="password"
+        )
+        self.client.force_login(self.user)
+
+    def test_lists_supported_files_and_ignores_appledouble_metadata(self):
+        with TemporaryDirectory() as directory:
+            boundary_dir = Path(directory)
+            raster_dir = boundary_dir.joinpath("raster")
+            vector_dir = boundary_dir.joinpath("vector")
+            raster_dir.mkdir()
+            vector_dir.mkdir()
+
+            raster_dir.joinpath("mask.tif").write_bytes(b"raster")
+            raster_dir.joinpath("._mask.tif").write_bytes(b"metadata")
+            raster_dir.joinpath("notes.txt").write_text("not a boundary")
+            vector_dir.joinpath("boundary.shp").write_bytes(b"shape")
+            vector_dir.joinpath("boundary.gpkg").write_bytes(b"geopackage")
+            vector_dir.joinpath("._boundary.gpkg").write_bytes(b"metadata")
+            vector_dir.joinpath("boundary.dbf").write_bytes(b"sidecar")
+            vector_dir.joinpath("directory.gpkg").mkdir()
+
+            with patch.dict(CONFIG, {"boundary_dir": boundary_dir}):
+                raster_response = self.client.get(
+                    reverse("boundaries_json", args=["raster"])
+                )
+                vector_response = self.client.get(
+                    reverse("boundaries_json", args=["vector"])
+                )
+
+            self.assertEqual(200, raster_response.status_code)
+            self.assertEqual(
+                ["mask.tif"],
+                [row["filename"] for row in raster_response.json()],
+            )
+            self.assertTrue(
+                all(row["type"] == "raster" for row in raster_response.json())
+            )
+            self.assertEqual(200, vector_response.status_code)
+            self.assertEqual(
+                {"boundary.shp", "boundary.gpkg"},
+                {row["filename"] for row in vector_response.json()},
+            )
+            self.assertTrue(
+                all(row["type"] == "vector" for row in vector_response.json())
+            )
+
+    def test_unreadable_boundary_does_not_break_listing(self):
+        with TemporaryDirectory() as directory:
+            boundary_dir = Path(directory)
+            raster_dir = boundary_dir.joinpath("raster")
+            raster_dir.mkdir()
+            raster_dir.joinpath("readable.tif").write_bytes(b"raster")
+            raster_dir.joinpath("unreadable.tif").write_bytes(b"raster")
+            original_stat = Path.stat
+
+            def guarded_stat(path, *args, **kwargs):
+                if path.name == "unreadable.tif":
+                    raise PermissionError("unreadable test boundary")
+                return original_stat(path, *args, **kwargs)
+
+            with patch.dict(CONFIG, {"boundary_dir": boundary_dir}), patch.object(
+                Path, "stat", new=guarded_stat
+            ):
+                response = self.client.get(
+                    reverse("boundaries_json", args=["raster"])
+                )
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(
+                ["readable.tif"], [row["filename"] for row in response.json()]
+            )
 
 
 class JobAdminTests(TestCase):

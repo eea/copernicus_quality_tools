@@ -848,29 +848,43 @@ def boundaries(request):
     return render(request, 'dashboard/boundaries.html', {})
 
 
+def _boundary_file_infos(directory, suffixes, boundary_type):
+    boundary_list = []
+    for path in directory.glob("**/*"):
+        if path.name.startswith("._") or path.suffix.lower() not in suffixes:
+            continue
+        try:
+            if not path.is_file():
+                continue
+            size_bytes = path.stat().st_size
+        except OSError as error:
+            logger.warning("Skipping unreadable boundary path %s: %s", path, error)
+            continue
+        boundary_list.append({
+            "filepath": str(path),
+            "filename": path.name,
+            "size_bytes": size_bytes,
+            "type": boundary_type,
+        })
+    return boundary_list
+
+
 @login_required
 def get_boundaries_json(request, boundary_type):
     """
     Returns a list of all boundary aoi files in the active boundary package in json format.
 
     :param request:
-    :return: list of boundary .tif or .shp file infos with name and size in JSON format
+    :return: list of boundary .tif, .shp, or .gpkg file infos with name and size in JSON format
     """
-    boundary_list = []
-
     if boundary_type == "raster":
         raster_dir = CONFIG["boundary_dir"].joinpath("raster")
-        raster_filepaths = [path for path in raster_dir.glob("**/*") if
-                            path.is_file() and path.suffix.lower() == ".tif"]
-        for r in raster_filepaths:
-            boundary_list.append({"filepath": str(r), "filename": r.name, "size_bytes": r.stat().st_size, "type": "raster"})
-
+        boundary_list = _boundary_file_infos(raster_dir, {".tif"}, "raster")
     else:
         vector_dir = CONFIG["boundary_dir"].joinpath("vector")
-        vector_filepaths = [path for path in vector_dir.glob("**/*") if
-                            path.is_file() and path.suffix.lower() == ".shp" or path.suffix.lower() == ".gpkg"]
-        for v in vector_filepaths:
-            boundary_list.append({"filepath": str(v), "filename": v.name, "size_bytes": v.stat().st_size, "type": "vector"})
+        boundary_list = _boundary_file_infos(
+            vector_dir, {".shp", ".gpkg"}, "vector"
+        )
 
     return JsonResponse(boundary_list, safe=False)
 
