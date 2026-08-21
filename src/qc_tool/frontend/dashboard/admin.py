@@ -29,6 +29,26 @@ class UserAdmin(BaseUserAdmin):
     inlines = [ApiUserInline, UserProfileInline]
 
 
+class DeliveryAdmin(admin.ModelAdmin):
+    fields = (
+        "id",
+        "user",
+        "filename",
+        "size_bytes",
+        "date_uploaded",
+        "date_submitted",
+        "product_ident",
+        "product_description",
+        "aoi_code",
+        "is_deleted",
+        "s3",
+    )
+    list_display = fields
+    list_display_links = ("id",)
+    readonly_fields = ("id", "aoi_code")
+    list_select_related = ("user", "s3")
+
+
 class JobAdmin(admin.ModelAdmin):
     fields = (
         "job_uuid",
@@ -50,7 +70,7 @@ class JobAdmin(admin.ModelAdmin):
 
 
 # Register your models here.
-admin.site.register(Delivery)
+admin.site.register(Delivery, DeliveryAdmin)
 admin.site.register(S3Info)
 admin.site.register(Job, JobAdmin)
 

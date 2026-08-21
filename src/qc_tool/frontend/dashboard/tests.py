@@ -25,6 +25,7 @@ from qc_tool.frontend.dashboard.models import ApiUser
 from qc_tool.frontend.dashboard.models import AOI_CODE_MAX_LENGTH
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
+from qc_tool.frontend.dashboard.models import S3Info
 from qc_tool.frontend.dashboard.views import merge_uploaded_chunks
 
 
@@ -136,6 +137,74 @@ class BoundaryListingTests(TestCase):
             self.assertEqual(
                 ["readable.tif"], [row["filename"] for row in response.json()]
             )
+
+
+class DeliveryAdminTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            username="delivery-admin",
+            email="delivery-admin@example.com",
+            password="password",
+        )
+        self.s3 = S3Info.objects.create(
+            host="s3.example.com",
+            access_key="access-key",
+            secret_key="secret-key",
+            bucketname="delivery-bucket",
+            key_prefix="deliveries/",
+        )
+        self.delivery = Delivery.objects.create(
+            user=self.admin_user,
+            filename="admin-delivery.zip",
+            size_bytes=987654321,
+            date_submitted=timezone.now(),
+            product_ident="clc2012",
+            product_description="CORINE Land Cover 2012",
+            aoi_code="ee003l",
+            s3=self.s3,
+        )
+        self.deleted_delivery = Delivery.objects.create(
+            user=self.admin_user,
+            filename="soft-deleted-delivery.zip",
+            size_bytes=1,
+            is_deleted=True,
+        )
+        self.client.force_login(self.admin_user)
+
+    def test_delivery_admin_displays_all_concrete_model_fields(self):
+        model_admin = admin.site._registry[Delivery]
+        field_names = tuple(field.name for field in Delivery._meta.concrete_fields)
+
+        self.assertEqual(("id", "aoi_code"), model_admin.readonly_fields)
+        self.assertEqual(("user", "s3"), model_admin.list_select_related)
+
+        changelist_response = self.client.get(
+            reverse("admin:dashboard_delivery_changelist")
+        )
+
+        self.assertEqual(200, changelist_response.status_code)
+        self.assertEqual(
+            field_names,
+            tuple(model_admin.get_list_display(changelist_response.wsgi_request)),
+        )
+        self.assertContains(changelist_response, self.delivery.filename)
+        self.assertContains(changelist_response, self.deleted_delivery.filename)
+        self.assertContains(changelist_response, self.delivery.product_ident)
+        self.assertContains(changelist_response, self.delivery.product_description)
+        self.assertContains(changelist_response, self.delivery.aoi_code)
+        self.assertContains(changelist_response, str(self.delivery.size_bytes))
+
+        change_response = self.client.get(
+            reverse("admin:dashboard_delivery_change", args=[self.delivery.id])
+        )
+
+        self.assertEqual(200, change_response.status_code)
+        self.assertEqual(
+            field_names,
+            tuple(model_admin.get_fields(change_response.wsgi_request, self.delivery)),
+        )
+        self.assertContains(change_response, self.delivery.filename)
+        self.assertContains(change_response, self.delivery.aoi_code)
 
 
 class JobAdminTests(TestCase):
