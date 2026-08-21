@@ -29,10 +29,30 @@ class UserAdmin(BaseUserAdmin):
     inlines = [ApiUserInline, UserProfileInline]
 
 
+class JobAdmin(admin.ModelAdmin):
+    fields = (
+        "job_uuid",
+        "delivery",
+        "date_created",
+        "date_started",
+        "date_finished",
+        "job_status",
+        "product_ident",
+        "product_description",
+        "aoi_code",
+        "skip_steps",
+        "worker_url",
+    )
+    list_display = fields
+    list_display_links = ("job_uuid",)
+    readonly_fields = ("job_uuid", "aoi_code")
+    list_select_related = ("delivery", "delivery__user")
+
+
 # Register your models here.
 admin.site.register(Delivery)
 admin.site.register(S3Info)
-admin.site.register(Job)
+admin.site.register(Job, JobAdmin)
 
 # Re-register UserAdmin
 admin.site.unregister(User)

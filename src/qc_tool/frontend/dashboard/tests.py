@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import UUID
 
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase
 from django.test import TestCase
@@ -58,6 +59,57 @@ class UploadedChunkMergeTests(SimpleTestCase):
             self.assertEqual(b"existing archive", target_filepath.read_bytes())
             self.assertTrue(chunk_filepath.exists())
             self.assertFalse(any(directory.glob("*.uploading")))
+
+
+class JobAdminTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            username="job-admin",
+            email="job-admin@example.com",
+            password="password",
+        )
+        self.delivery = Delivery.objects.create(
+            filename="admin-delivery.zip",
+            size_bytes=1,
+            user=self.admin_user,
+        )
+        self.job = Job.objects.create(
+            delivery=self.delivery,
+            product_ident="clc2012",
+            product_description="CORINE Land Cover 2012",
+            aoi_code="ee003l",
+        )
+        self.client.force_login(self.admin_user)
+
+    def test_job_admin_displays_all_concrete_model_fields(self):
+        model_admin = admin.site._registry[Job]
+        field_names = tuple(field.name for field in Job._meta.concrete_fields)
+        readonly_field_names = tuple(
+            field.name for field in Job._meta.concrete_fields if not field.editable
+        )
+
+        self.assertEqual(readonly_field_names, model_admin.readonly_fields)
+
+        changelist_response = self.client.get(reverse("admin:dashboard_job_changelist"))
+
+        self.assertEqual(200, changelist_response.status_code)
+        self.assertEqual(
+            field_names,
+            tuple(model_admin.get_list_display(changelist_response.wsgi_request)),
+        )
+        self.assertContains(changelist_response, "ee003l")
+
+        change_response = self.client.get(
+            reverse("admin:dashboard_job_change", args=[self.job.job_uuid])
+        )
+
+        self.assertEqual(200, change_response.status_code)
+        self.assertEqual(
+            field_names,
+            tuple(model_admin.get_fields(change_response.wsgi_request, self.job)),
+        )
+        self.assertContains(change_response, str(self.job.job_uuid))
+        self.assertContains(change_response, "ee003l")
 
 
 class JobAoiPersistenceTests(TestCase):
