@@ -20,9 +20,10 @@ from checksumdir import dirhash
 
 from qc_tool.aoi import aoi_codes_equivalent as _aoi_codes_equivalent
 from qc_tool.aoi import canonicalize_aoi_capture_groups
+from qc_tool.aoi import extract_aoi_code
 from qc_tool.aoi import extract_aoi_code_from_groups
 from qc_tool.aoi import has_aoi_code_capture
-from qc_tool.aoi import normalize_aoi_code
+from qc_tool.aoi import publish_aoi_code
 from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
@@ -333,109 +334,6 @@ def check_gdb_filename(gdb_filepath, gdb_filename_regex, aoi_code, status):
 
         return True
 
-
-def publish_aoi_code(params, status, aoi_code):
-    """Publish one unambiguous AOI code for downstream checks and reporting."""
-    previous_aoi_code = params.get("aoi_code")
-
-    # Once two naming stages disagree, later stages must not silently restore
-    # an arbitrary value.
-    if params.get("_aoi_code_conflict", False):
-        status.add_params({"aoi_code": None, "_aoi_code_conflict": True})
-        status.set_status_property("aoi_code", None)
-        return
-
-    canonical_aoi_code = normalize_aoi_code(aoi_code)
-    if canonical_aoi_code is None:
-        if isinstance(previous_aoi_code, str) and previous_aoi_code:
-            status.add_params({"aoi_code": None, "_aoi_code_conflict": True})
-            status.set_status_property("aoi_code", None)
-        else:
-            status.add_params({"aoi_code": None})
-        return
-
-    if isinstance(previous_aoi_code, str) and previous_aoi_code:
-        if not _aoi_codes_equivalent(previous_aoi_code, aoi_code):
-            status.aborted(
-                "AOI code '{:s}' does not match the previously detected AOI code '{:s}'."
-                .format(aoi_code, previous_aoi_code)
-            )
-            status.add_params({"aoi_code": None, "_aoi_code_conflict": True})
-            status.set_status_property("aoi_code", None)
-            return
-        aoi_code = previous_aoi_code
-
-    canonical_aoi_code = normalize_aoi_code(aoi_code)
-    status.add_params({"aoi_code": aoi_code.strip()})
-    # Keep the product-specific value in params for downstream checks, but
-    # store one canonical boundary-level representation for reporting,
-    # grouping, and filtering.
-    status.set_status_property("aoi_code", canonical_aoi_code)
-    return aoi_code.strip()
-
-
-# Extract AOI code and compare it to pre-defined list.
-def extract_aoi_code(layer_defs, layer_regexes, expected_aoi_codes, status, preserve_aoicode_case=False, compare_aoi_codes=True):
-    layer_aoi_codes = []
-    invalid_aoi_code = False
-    for layer_alias, layer_def in layer_defs.items():
-        layer_name = layer_def["src_layer_name"]
-        groups = layer_def.get("groups")
-        if groups is None:
-            # Compatibility for callers that construct layer definitions
-            # directly instead of using LayerDefsBuilder.
-            layer_regex = layer_regexes[layer_alias]
-            if preserve_aoicode_case:
-                mobj = re.match(layer_regex, layer_name, re.IGNORECASE)
-            else:
-                mobj = re.match(layer_regex, layer_name.lower())
-            if mobj is None:
-                status.aborted("Layer {:s} has illegal name: {:s}.".format(layer_alias, layer_name))
-                invalid_aoi_code = True
-                continue
-            groups = mobj.groupdict()
-        try:
-            groups = canonicalize_aoi_capture_groups(groups)
-        except ValueError:
-            status.aborted("Layer {:s} contains conflicting AOI code captures.".format(layer_name))
-            invalid_aoi_code = True
-            continue
-        aoi_code = groups.get("aoi_code")
-        if aoi_code is None:
-            status.aborted("Layer {:s} does not contain AOI code.".format(layer_name))
-            invalid_aoi_code = True
-            continue
-        if not preserve_aoicode_case:
-            aoi_code = aoi_code.casefold()
-        layer_aoi_codes.append(aoi_code)
-
-        # Compare detected AOI code to pre-defined list.
-        if compare_aoi_codes and not any(
-            _aoi_codes_equivalent(aoi_code, expected_aoi_code)
-            for expected_aoi_code in expected_aoi_codes
-        ):
-            status.aborted("Layer {:s} has illegal AOI code {:s}.".format(layer_name, aoi_code))
-            invalid_aoi_code = True
-            continue
-
-    # Check that AOI code could be detected.
-    if len(set(layer_aoi_codes)) == 0:
-        status.aborted("AOI code could not be detected from any layer name.")
-        return
-
-    # If there are multiple layers, check that all layers have the same AOI code.
-    first_aoi_code = layer_aoi_codes[0]
-    if any(not _aoi_codes_equivalent(first_aoi_code, aoi_code)
-           for aoi_code in layer_aoi_codes[1:]):
-        status.aborted("Layers do not have the same AOI code. Detected AOI codes: {:s}"
-                       .format(",".join(list(layer_aoi_codes))))
-        return
-
-    if invalid_aoi_code:
-        return
-
-    # Set aoi_code as a global parameter.
-    return first_aoi_code
 
 # Extract EPSG code and compare it to pre-defined list.
 def extract_epsg_code(layer_defs, layer_regexes, expected_epsg_codes, status, compare_epsg_codes=True):

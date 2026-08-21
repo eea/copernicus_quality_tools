@@ -13,6 +13,9 @@ from traceback import format_exc
 from signal import signal, alarm, SIGALRM
 from time import time
 
+from qc_tool.aoi import build_aoi_validation_plan
+from qc_tool.aoi import clear_aoi_after_failed_step
+from qc_tool.aoi import validate_after_step
 from qc_tool.common import get_qc_tool_version, validate_skip_steps
 from qc_tool.common import CONFIG
 from qc_tool.common import copy_product_definition_to_job
@@ -138,6 +141,9 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
             job_params["filepath"] = filepath
             job_params["boundary_dir"] = CONFIG["boundary_dir"]
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
+            job_params["aoi_validation_plan"] = build_aoi_validation_plan(
+                product_definition
+            )
             job_params["s3"] = {}
 
             # Add S3 job params if specified.
@@ -182,6 +188,13 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                 try:
                     start = time()
                     check_module.run_check(step_params, check_status)
+                    effective_params = {}
+                    effective_params.update(step_params)
+                    effective_params.update(check_status.status_properties)
+                    effective_params.update(check_status.params)
+                    validate_after_step(
+                        step_def["check_ident"], effective_params, check_status
+                    )
                     stop = time()
                     task_runtime = stop - start
                     if check_status.status == "aborted" and task_runtime > task_timeout["seconds"]:
@@ -189,6 +202,9 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                                              "(the implemented timeout is {to} seconds).".format(
                             to=str(task_timeout["seconds"])))
                 except TimedOutExc as e:
+                    clear_aoi_after_failed_step(
+                        step_def["check_ident"], step_params, check_status
+                    )
                     if step_params["check_is_required"]:
                         check_status.aborted("The check has failed due to a timeout "
                                                "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
@@ -196,6 +212,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                     else:
                         check_status.failed("The check has failed due to a timeout "
                                              "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
+                finally:
+                    alarm(0)
 
                 step_result["status"] = check_status.status
                 step_result["messages"] = check_status.messages

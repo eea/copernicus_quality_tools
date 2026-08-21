@@ -366,6 +366,7 @@ class JobAoiPersistenceTests(TestCase):
             {"aoi_code": None},
             {"aoi_code": ""},
             {"aoi_code": 123},
+            {"aoi_code": ["mt", "cz"]},
             {"aoi_code": "x" * (AOI_CODE_MAX_LENGTH + 1)},
         )
         for result in invalid_results:

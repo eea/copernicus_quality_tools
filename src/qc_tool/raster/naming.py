@@ -11,11 +11,11 @@ IS_SYSTEM = False
 
 def run_check(params, status):
     import osgeo.gdal as gdal
+    from qc_tool.aoi import extract_aoi_code
     from qc_tool.aoi import has_aoi_code_capture
+    from qc_tool.aoi import publish_aoi_code
     from qc_tool.vector.helper import LayerDefsBuilder
-    from qc_tool.vector.helper import extract_aoi_code
     from qc_tool.vector.helper import extract_epsg_code
-    from qc_tool.vector.helper import publish_aoi_code
 
     # Fix reference year.
     if "reference_year" in params:

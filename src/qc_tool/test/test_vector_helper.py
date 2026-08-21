@@ -26,7 +26,7 @@ class Test_extract_aoi_code(TestCase):
         self.assertEqual("ok", status.status)
 
     def test_reuses_groups_extracted_by_layer_defs_builder(self):
-        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.aoi import extract_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()
@@ -50,8 +50,8 @@ class Test_extract_aoi_code(TestCase):
         self.assertEqual("ok", status.status)
 
     def test_one_conflicting_layer_prevents_aoi_publication(self):
-        from qc_tool.vector.helper import extract_aoi_code
-        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.aoi import extract_aoi_code
+        from qc_tool.aoi import publish_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         layer_defs = {
@@ -77,10 +77,10 @@ class Test_extract_aoi_code(TestCase):
         self.assertIsNone(aoi_code)
         self.assertEqual("aborted", status.status)
         self.assertIsNone(status.params["aoi_code"])
-        self.assertNotIn("aoi_code", status.status_properties)
+        self.assertIsNone(status.status_properties["aoi_code"])
 
     def test_legacy_delivery_unit_group_is_treated_as_aoi_code(self):
-        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.aoi import extract_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()
@@ -98,7 +98,7 @@ class Test_extract_aoi_code(TestCase):
         self.assertEqual("ok", status.status)
 
     def test_ambiguous_aoi_codes_are_not_returned(self):
-        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.aoi import extract_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         layer_defs = {
@@ -117,7 +117,7 @@ class Test_extract_aoi_code(TestCase):
         self.assertEqual("aborted", status.status)
 
     def test_allowlist_invalid_aoi_code_is_not_returned(self):
-        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.aoi import extract_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()
@@ -134,8 +134,43 @@ class Test_extract_aoi_code(TestCase):
 
 
 class Test_publish_aoi_code(TestCase):
+    def test_spatial_product_defers_reporting_until_boundary_validation(self):
+        from qc_tool.aoi import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+        params = {
+            "aoi_validation_plan": {
+                "media": ("vector",),
+            },
+        }
+
+        aoi_code = publish_aoi_code(params, status, "EE003L1")
+
+        self.assertEqual("EE003L1", aoi_code)
+        self.assertEqual("EE003L1", status.params["aoi_code"])
+        self.assertIsNone(status.status_properties["aoi_code"])
+
+    def test_late_equivalent_naming_keeps_completed_spatial_aoi(self):
+        from qc_tool.aoi import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+        params = {
+            "aoi_code": "EE003L1",
+            "_aoi_validated_media": ("raster",),
+            "aoi_validation_plan": {
+                "media": ("raster",),
+            },
+        }
+
+        aoi_code = publish_aoi_code(params, status, "ee003l")
+
+        self.assertEqual("EE003L1", aoi_code)
+        self.assertEqual("ee003l", status.status_properties["aoi_code"])
+
     def test_equivalent_numeric_codes_preserve_first_representation(self):
-        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.aoi import publish_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()
@@ -148,7 +183,7 @@ class Test_publish_aoi_code(TestCase):
         self.assertEqual("ok", status.status)
 
     def test_reporting_code_is_case_normalized(self):
-        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.aoi import publish_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()
@@ -160,7 +195,7 @@ class Test_publish_aoi_code(TestCase):
         self.assertEqual("ee003l", status.status_properties["aoi_code"])
 
     def test_n2k_and_rpz_codes_use_the_same_reporting_value(self):
-        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.aoi import publish_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()
@@ -173,7 +208,7 @@ class Test_publish_aoi_code(TestCase):
         self.assertEqual("ok", status.status)
 
     def test_conflicting_codes_clear_reporting_metadata(self):
-        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.aoi import publish_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()
@@ -187,7 +222,7 @@ class Test_publish_aoi_code(TestCase):
         self.assertEqual("aborted", status.status)
 
     def test_failed_later_extraction_clears_previous_code(self):
-        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.aoi import publish_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
 
         status = CheckStatus()

@@ -15,6 +15,7 @@ def run_check(params, status):
 
     from qc_tool.raster.helper import do_raster_layers
     from qc_tool.raster.helper import find_tiles
+    from qc_tool.raster.helper import get_aoi_mask_filepath
     from qc_tool.raster.helper import rasterize_mask
     from qc_tool.raster.helper import read_tile
     from qc_tool.raster.helper import write_progress
@@ -68,7 +69,9 @@ def run_check(params, status):
             mask_file = rasterize_mask(mask_vector_filepath, int(ds_xres), params["du_column_name"], aoi_code,
                                        mask_align_grid, ds_ulx, ds_uly, params["output_dir"])
         else:
-            mask_file = raster_boundary_dir.joinpath("mask_{:s}_{:03d}m_{:s}.tif".format(mask_ident, int(ds_xres), aoi_code))
+            mask_file = get_aoi_mask_filepath(
+                raster_boundary_dir, mask_ident, ds_xres, aoi_code
+            )
 
         if not mask_file.exists():
             status.failed("Check cancelled due to boundary mask file {:s} not available.".format(mask_file.name))
@@ -86,8 +89,8 @@ def run_check(params, status):
         mask_xres = mask_gt[1]
         mask_uly = mask_gt[3]
         mask_yres = mask_gt[5]
-        mask_lrx = ds_ulx + (mask_ds.RasterXSize * mask_xres)
-        mask_lry = ds_uly + (mask_ds.RasterYSize * mask_yres)
+        mask_lrx = mask_ulx + (mask_ds.RasterXSize * mask_xres)
+        mask_lry = mask_uly + (mask_ds.RasterYSize * mask_yres)
 
         # Check if the dataset extent intersects the mask extent.
         if (mask_ulx > ds_lrx or mask_uly < ds_lry or mask_lrx < ds_ulx or mask_lry > ds_uly):

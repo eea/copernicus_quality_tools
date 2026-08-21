@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from shutil import copyfile
 from unittest import skipIf
 from osgeo import gdal
 from osgeo import osr
@@ -139,7 +140,7 @@ class Test_naming(RasterCheckTestCase):
         self.assertEqual("aborted", status.status)
         self.assertIn("Layer test_raster1.tif has illegal AOI code raster1.", status.messages)
         self.assertIsNone(status.params["aoi_code"])
-        self.assertNotIn("aoi_code", status.status_properties)
+        self.assertIsNone(status.status_properties["aoi_code"])
 
     def test_reference_year(self):
         from qc_tool.raster.naming import run_check
@@ -277,8 +278,20 @@ class Test_gap(RasterCheckTestCase):
 
     def setUp(self):
         super().setUp()
-        self.mask_filepath = self.jobdir_manager.tmp_dir.joinpath("boundaries", "raster", "mask_default_010m_aoi01.tif")
+        self.boundary_dir = self.jobdir_manager.tmp_dir.joinpath("boundaries")
+        self.mask_filepath = self.boundary_dir.joinpath(
+            "raster", "mask_default_010m_aoi01.tif"
+        )
         self.layer_filepath = self.jobdir_manager.tmp_dir.joinpath("raster_010m_aoi01.tif")
+
+        vector_boundary_dir = self.boundary_dir.joinpath("vector")
+        vector_boundary_dir.mkdir(parents=True)
+        copyfile(
+            TEST_DATA_DIR.joinpath(
+                "boundaries", "raster", "aoi_ua_building_heights.gpkg"
+            ),
+            vector_boundary_dir.joinpath("aoi_ua_building_heights.gpkg"),
+        )
 
         layer_filepath1 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "complete_raster_100m_testaoi.tif")
         layer_filepath2 = TEST_DATA_DIR.joinpath("raster", "checks", "gap", "incomplete_raster_100m_testaoi.tif")
@@ -404,7 +417,8 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("does not intersect", status.messages[0])
 
     def test_intersects_mask_upper_left(self):
         # Prepare mask.
@@ -433,7 +447,8 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("gap pixels", status.messages[0])
 
     def test_intersects_mask_lower_right(self):
         # Prepare mask.
@@ -462,7 +477,8 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("gap pixels", status.messages[0])
 
     def test_gaps_found(self):
         from qc_tool.raster.gap import run_check
@@ -492,7 +508,7 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
@@ -512,7 +528,7 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
@@ -533,7 +549,7 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
