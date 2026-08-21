@@ -43,10 +43,17 @@ class DeliveryAdmin(admin.ModelAdmin):
         "is_deleted",
         "s3",
     )
-    list_display = fields
+    _is_deleted_index = fields.index("is_deleted")
+    list_display = (
+        fields[:_is_deleted_index] + ("active",) + fields[_is_deleted_index + 1:]
+    )
     list_display_links = ("id",)
     readonly_fields = ("id", "aoi_code")
     list_select_related = ("user", "s3")
+
+    @admin.display(boolean=True, description="Active")
+    def active(self, obj):
+        return not obj.is_deleted
 
 
 class JobAdmin(admin.ModelAdmin):

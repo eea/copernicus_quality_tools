@@ -183,8 +183,12 @@ class DeliveryAdminTests(TestCase):
         )
 
         self.assertEqual(200, changelist_response.status_code)
+        list_display = tuple(
+            "active" if field_name == "is_deleted" else field_name
+            for field_name in field_names
+        )
         self.assertEqual(
-            field_names,
+            list_display,
             tuple(model_admin.get_list_display(changelist_response.wsgi_request)),
         )
         self.assertContains(changelist_response, self.delivery.filename)
@@ -205,6 +209,19 @@ class DeliveryAdminTests(TestCase):
         )
         self.assertContains(change_response, self.delivery.filename)
         self.assertContains(change_response, self.delivery.aoi_code)
+
+    def test_delivery_admin_displays_positive_active_state_icons(self):
+        model_admin = admin.site._registry[Delivery]
+
+        self.assertIs(True, model_admin.active(self.delivery))
+        self.assertIs(False, model_admin.active(self.deleted_delivery))
+
+        response = self.client.get(reverse("admin:dashboard_delivery_changelist"))
+
+        self.assertEqual(200, response.status_code)
+        self.assertContains(response, "Active")
+        self.assertContains(response, "icon-yes.svg", count=1)
+        self.assertContains(response, "icon-no.svg", count=1)
 
 
 class JobAdminTests(TestCase):
