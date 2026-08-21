@@ -8,6 +8,7 @@ IS_SYSTEM = False
 
 def run_check(params, status):
 
+    from qc_tool.aoi import has_aoi_code_capture
     from qc_tool.vector.helper import LayerDefsBuilder
     from qc_tool.vector.helper import check_gdb_filename
     from qc_tool.vector.helper import extract_aoi_code
@@ -122,7 +123,7 @@ def run_check(params, status):
     # Extract AOI code and compare it to pre-defined list.
     aoi_code = None
     aoi_codes = params.get("aoi_codes", [])
-    has_aoi_capture = any("(?P<aoi_code>" in regex for regex in params["layer_names"].values())
+    has_aoi_capture = any(has_aoi_code_capture(regex) for regex in params["layer_names"].values())
     detect_aoi_code = bool(aoi_codes) or has_aoi_capture
     if detect_aoi_code:
         if not aoi_codes or aoi_codes[0] == "*":

@@ -122,7 +122,7 @@ class Test_naming_n2k(VectorCheckTestCase):
         self.params.update({"tmp_dir": self.params["jobdir_manager"].tmp_dir,
                             "filepath": TEST_DATA_DIR.joinpath("vector", "n2k", "n2k_example_cz_correct.zip"),
                             "formats": [".shp"],
-                            "layer_names": {"n2k": "^n2k_du[0-9]{3}[a-z]_lclu_v[0-9]+_[0-9]{8}$"},
+                            "layer_names": {"n2k": "^n2k_(?P<delivery_unit_id>du[0-9]{3}[a-z])_lclu_v[0-9]+_[0-9]{8}$"},
                             "boundary_source": "boundary_n2k.shp",
                             "boundary_dir": TEST_DATA_DIR.joinpath("boundaries")})
         status = self.status_class()
@@ -139,6 +139,8 @@ class Test_naming_n2k(VectorCheckTestCase):
         self.assertEqual("n2k_du001z_lclu_v99_20190108", status.params["layer_defs"]["n2k"]["src_layer_name"])
         self.assertEqual("boundary_n2k.shp", status.params["layer_defs"]["boundary"]["src_filepath"].name)
         self.assertEqual("boundary_n2k", status.params["layer_defs"]["boundary"]["src_layer_name"])
+        self.assertEqual("du001z", status.params["aoi_code"])
+        self.assertEqual("du001", status.status_properties["aoi_code"])
 
     def test_reference_year(self):
         from qc_tool.vector.naming import run_check
@@ -336,7 +338,7 @@ class Test_naming_ua_gpkg(VectorCheckTestCase):
 
         self.assertEqual("ok", status.status)
         self.assertEqual("EE003L1", status.params["aoi_code"])
-        self.assertEqual("ee003l1", status.status_properties["aoi_code"])
+        self.assertEqual("ee003l", status.status_properties["aoi_code"])
 
     def test_found_document(self):
         from qc_tool.vector.naming import run_check

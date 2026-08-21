@@ -9,6 +9,94 @@ from qc_tool.test.helper import VectorCheckTestCase
 
 
 class Test_extract_aoi_code(TestCase):
+    def test_layer_defs_builder_canonicalizes_input_alias_key(self):
+        from qc_tool.vector.helper import LayerDefsBuilder
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+        builder = LayerDefsBuilder(status)
+        builder.add_layer_info(Path("delivery.gpkg"), "n2k_DU001A")
+
+        builder.extract_layer_def(
+            r"^n2k_(?P<delivery_unit_id>du[0-9]{3}[a-z])$",
+            "layer",
+        )
+
+        self.assertEqual({"aoi_code": "DU001A"}, builder.layer_defs["layer"]["groups"])
+        self.assertEqual("ok", status.status)
+
+    def test_reuses_groups_extracted_by_layer_defs_builder(self):
+        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+        layer_defs = {
+            "layer": {
+                "src_layer_name": "already-validated-name",
+                "groups": {"delivery_unit_id": "DU001A"},
+            },
+        }
+
+        aoi_code = extract_aoi_code(
+            layer_defs,
+            {"layer": r"^this-regex-must-not-be-run$"},
+            [],
+            status,
+            preserve_aoicode_case=True,
+            compare_aoi_codes=False,
+        )
+
+        self.assertEqual("DU001A", aoi_code)
+        self.assertEqual("ok", status.status)
+
+    def test_one_conflicting_layer_prevents_aoi_publication(self):
+        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        layer_defs = {
+            "conflicting": {"src_layer_name": "layer_mt_du001a"},
+            "valid": {"src_layer_name": "layer_mt"},
+        }
+        layer_regexes = {
+            "conflicting": r"^layer_(?P<aoi_code>[a-z]+)_(?P<delivery_unit_id>du[0-9]{3}[a-z])$",
+            "valid": r"^layer_(?P<aoi_code>[a-z]+)$",
+        }
+        status = CheckStatus()
+
+        aoi_code = extract_aoi_code(
+            layer_defs,
+            layer_regexes,
+            [],
+            status,
+            preserve_aoicode_case=True,
+            compare_aoi_codes=False,
+        )
+        publish_aoi_code({}, status, aoi_code)
+
+        self.assertIsNone(aoi_code)
+        self.assertEqual("aborted", status.status)
+        self.assertIsNone(status.params["aoi_code"])
+        self.assertNotIn("aoi_code", status.status_properties)
+
+    def test_legacy_delivery_unit_group_is_treated_as_aoi_code(self):
+        from qc_tool.vector.helper import extract_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        aoi_code = extract_aoi_code(
+            {"layer": {"src_layer_name": "n2k_DU001A"}},
+            {"layer": r"^n2k_(?P<delivery_unit_id>du[0-9]{3}[a-z])$"},
+            [],
+            status,
+            preserve_aoicode_case=True,
+            compare_aoi_codes=False,
+        )
+
+        self.assertEqual("DU001A", aoi_code)
+        self.assertEqual("ok", status.status)
+
     def test_ambiguous_aoi_codes_are_not_returned(self):
         from qc_tool.vector.helper import extract_aoi_code
         from qc_tool.worker.dispatch import CheckStatus
@@ -69,7 +157,20 @@ class Test_publish_aoi_code(TestCase):
 
         self.assertEqual("EE003L1", aoi_code)
         self.assertEqual("EE003L1", status.params["aoi_code"])
-        self.assertEqual("ee003l1", status.status_properties["aoi_code"])
+        self.assertEqual("ee003l", status.status_properties["aoi_code"])
+
+    def test_n2k_and_rpz_codes_use_the_same_reporting_value(self):
+        from qc_tool.vector.helper import publish_aoi_code
+        from qc_tool.worker.dispatch import CheckStatus
+
+        status = CheckStatus()
+
+        aoi_code = publish_aoi_code({"aoi_code": "DU001A"}, status, "du001")
+
+        self.assertEqual("DU001A", aoi_code)
+        self.assertEqual("DU001A", status.params["aoi_code"])
+        self.assertEqual("du001", status.status_properties["aoi_code"])
+        self.assertEqual("ok", status.status)
 
     def test_conflicting_codes_clear_reporting_metadata(self):
         from qc_tool.vector.helper import publish_aoi_code

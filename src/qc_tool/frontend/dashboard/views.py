@@ -25,6 +25,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import FileSystemStorage
 from django.db import connection
+from django.db import transaction
 from django.forms.models import model_to_dict
 from django.http import FileResponse
 from django.http import Http404
@@ -585,6 +586,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         "last_job_status": "j.job_status",
         "last_job_uuid": "j.job_uuid",
         "last_job_worker_url": "j.worker_url",
+        "aoi_code": "d.aoi_code",
         "username": "u.username",
         "user": "u.username"}
 
@@ -610,7 +612,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
     sql = """
         SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
         d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
-        d.s3_id,
+        d.s3_id, d.aoi_code,
         j.job_uuid AS last_job_uuid,
         j.worker_url AS last_job_worker_url,
         j.date_created, j.date_started, j.job_status as last_job_status,
@@ -620,7 +622,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         ON j.job_uuid = (
           SELECT job_uuid FROM dashboard_job j
           WHERE j.delivery_id = d.id
-          ORDER BY j.date_created DESC LIMIT 1)
+          ORDER BY j.date_created DESC, j.job_uuid DESC LIMIT 1)
         INNER JOIN auth_user u
         ON d.user_id = u.id
         LEFT JOIN dashboard_userprofile up
@@ -637,7 +639,7 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
             ON j.job_uuid = (
             SELECT job_uuid FROM dashboard_job j
             WHERE j.delivery_id = d.id
-            ORDER BY j.date_created DESC LIMIT 1)
+            ORDER BY j.date_created DESC, j.job_uuid DESC LIMIT 1)
         WHERE d.is_deleted = FALSE
         """
 
@@ -1007,31 +1009,39 @@ def job_delete(request):
 
         logger.debug("job_delete uuids={:s}".format(uuids))
 
-        job_uuids = uuids.split(",")
-        num_deleted = 0
+        job_uuids = list(dict.fromkeys(uuids.split(",")))
+        with transaction.atomic():
+            # Lock in the same Delivery -> Job order used by status updates.
+            # Locking the jobs also closes the race with pull_job(), whose
+            # conditional UPDATE may claim a waiting job concurrently.
+            delivery_ids = list(models.Job.objects.filter(job_uuid__in=job_uuids)
+                                .values_list("delivery_id", flat=True).distinct())
+            deliveries = list(models.Delivery.objects.select_for_update()
+                              .filter(pk__in=delivery_ids).order_by("pk"))
+            deliveries_by_id = {delivery.pk: delivery for delivery in deliveries}
+            jobs = list(models.Job.objects.select_for_update()
+                        .filter(job_uuid__in=job_uuids).order_by("job_uuid"))
+            if len(jobs) != len(job_uuids):
+                raise Http404("One or more QC jobs do not exist.")
 
-        # Job status validation.
-        for job_uuid in job_uuids:
+            for job in jobs:
+                delivery = deliveries_by_id[job.delivery_id]
+                if not request.user.is_superuser and request.user.id != delivery.user_id:
+                    raise PermissionDenied(
+                        "User {:s} is not authorized to delete job {:s}"
+                        .format(request.user.username, str(job.job_uuid))
+                    )
+                if job.job_status == JOB_RUNNING:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Job {:s} cannot be deleted. QC job is currently running."
+                                   .format(str(job.job_uuid)),
+                    })
 
-            # Existence validation.
-            job = get_object_or_404(models.Job, pk=str(job_uuid))
-
-            # User validation.
-            if not request.user.is_superuser:
-                if request.user.id != job.delivery.user.id:
-                    return PermissionDenied("User {:s} is not authorized to delete job {:s}"
-                                            .format(request.user.username, job_uuid))
-
-            # Job status validation.
-            running_jobs = models.Job.objects.filter(job_uuid=str(job_uuid)).filter(job_status=JOB_RUNNING)
-            if len(running_jobs) > 0:
-                return JsonResponse({"status": "error",
-                                     "message": "Job {:s} cannot be deleted. QC job is currently running."
-                                                .format(job_uuid)})
-        deleted_jobs = []
-        for job_uuid in job_uuids:
-            models.Job.objects.filter(job_uuid=str(job_uuid)).delete()
-            deleted_jobs.append(job_uuid)
+            models.Job.objects.filter(job_uuid__in=job_uuids).delete()
+            for delivery in deliveries:
+                delivery.sync_from_latest_job()
+        deleted_jobs = list(job_uuids)
         return JsonResponse({"status":"ok", "message": "{:d} jobs deleted successfully."
                             .format(len(deleted_jobs))})
 
