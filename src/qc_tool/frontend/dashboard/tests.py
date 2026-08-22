@@ -2,14 +2,17 @@
 from __future__ import unicode_literals
 
 from datetime import timedelta
+from io import BytesIO
 from json import JSONDecodeError
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import UUID
+from zipfile import ZipFile
 
 from django.contrib import admin
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
 from django.test import TestCase
 from django.urls import reverse
@@ -137,6 +140,74 @@ class BoundaryListingTests(TestCase):
             self.assertEqual(
                 ["readable.tif"], [row["filename"] for row in response.json()]
             )
+
+
+class BoundaryUploadTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="boundary-upload-test-user", password="password"
+        )
+        self.client.force_login(self.user)
+
+    @staticmethod
+    def _boundary_package():
+        archive = BytesIO()
+        with ZipFile(archive, "w") as zip_file:
+            zip_file.writestr("raster/mask.tif", b"raster")
+            zip_file.writestr("vector/boundary.gpkg", b"vector")
+        return SimpleUploadedFile(
+            "boundaries.zip", archive.getvalue(), content_type="application/zip"
+        )
+
+    def test_first_upload_creates_missing_boundary_directory(self):
+        with TemporaryDirectory() as directory:
+            boundary_dir = Path(directory).joinpath("boundaries")
+
+            with patch.dict(CONFIG, {"boundary_dir": boundary_dir}):
+                response = self.client.post(
+                    reverse("boundaries_upload"),
+                    {"file": self._boundary_package()},
+                )
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(
+                {
+                    "is_valid": True,
+                    "name": "boundaries.zip",
+                    "url": "boundaries.zip",
+                },
+                response.json(),
+            )
+            self.assertTrue(boundary_dir.is_dir())
+            self.assertEqual(
+                b"raster", boundary_dir.joinpath("raster", "mask.tif").read_bytes()
+            )
+            self.assertEqual(
+                b"vector",
+                boundary_dir.joinpath("vector", "boundary.gpkg").read_bytes(),
+            )
+
+    def test_non_directory_boundary_path_returns_actionable_error(self):
+        with TemporaryDirectory() as directory:
+            boundary_path = Path(directory).joinpath("boundaries")
+            boundary_path.write_text("keep this file")
+
+            with patch.dict(CONFIG, {"boundary_dir": boundary_path}):
+                response = self.client.post(
+                    reverse("boundaries_upload"),
+                    {"file": self._boundary_package()},
+                )
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertFalse(data["is_valid"])
+            self.assertIsNone(data["name"])
+            self.assertIsNone(data["url"])
+            self.assertIsInstance(data["message"], str)
+            self.assertIn("not an accessible directory", data["message"])
+            self.assertIn("recreate the frontend and worker", data["message"])
+            self.assertNotIn("Traceback", data["message"])
+            self.assertEqual("keep this file", boundary_path.read_text())
 
 
 class DeliveryAdminTests(TestCase):

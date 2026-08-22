@@ -4,10 +4,8 @@
 import io
 import logging
 import os
-import sys
 import shutil
 import time
-import traceback
 from pathlib import Path
 import uuid
 from zipfile import ZipFile
@@ -899,6 +897,17 @@ def boundaries_upload(request):
         boundary_upload_path = Path(CONFIG["boundary_dir"])
 
         if request.method == 'POST' and request.FILES["file"]:
+            storage_error_message = (
+                "Boundary storage path '{}' is not an accessible directory. "
+                "Check BOUNDARY_DIR and recreate the frontend and worker "
+                "containers after changing boundary mounts."
+            ).format(boundary_upload_path)
+            try:
+                boundary_upload_path.mkdir(parents=True, exist_ok=True)
+            except OSError as error:
+                raise OSError(storage_error_message) from error
+            if not boundary_upload_path.is_dir():
+                raise NotADirectoryError(storage_error_message)
 
             # retrieve file info from uploaded zip file
             myfile = request.FILES["file"]
@@ -933,15 +942,12 @@ def boundaries_upload(request):
                     'url': myfile.name}
             return JsonResponse(data)
 
-    except BaseException as e:
-        logger.debug("upload exception!")
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        msg = traceback.format_exception(exc_type, exc_value, exc_traceback)
-        logger.debug(msg)
+    except BaseException as error:
+        logger.exception("Boundary package upload failed")
         data = {'is_valid': False,
                 'name': None,
                 'url': None,
-                'message': msg}
+                'message': "Boundary upload failed: {}".format(error)}
 
         return JsonResponse(data)
 
