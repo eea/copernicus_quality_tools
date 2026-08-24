@@ -1,11 +1,18 @@
 #!/bin/bash
 
+set -e
+
 # Requires:
 # -unzip
 # -curl
 # -wget
 
-wgetRcFile="/etc/wgetrc"
+# Keep optional proxy credentials in a process-private runtime file rather than
+# appending them to the image's global, commonly readable wget configuration.
+wgetRcFile="/run/qc-tool-wgetrc"
+umask 077
+: > "$wgetRcFile"
+export WGETRC="$wgetRcFile"
 
 cp /etc/hosts /etc/squid_hosts
 echo "127.0.0.1 inspire.ec.europa.eu" >> /etc/squid_hosts
@@ -46,8 +53,6 @@ if [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
   fi
 fi
 
-set -x
-
 max_mem_kb=0
 xms_xmx=""
 if [[ -n "$JAVA_MAX_MEM" && "$JAVA_MAX_MEM" != "max" && "$JAVA_MAX_MEM" != "0" ]]; then
@@ -76,9 +81,9 @@ if [[ $max_mem_kb -lt 1048576 ]]; then
   exit 1;
 fi
 
-JAVA_OPTIONS="-server $xms_xmx $javaHttpProxyOpts $javaHttpsProxyOpts -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=1044"
+JAVA_OPTIONS="-server $xms_xmx $javaHttpProxyOpts $javaHttpsProxyOpts"
 export JAVA_OPTIONS
-echo "Using JAVA_OPTIONS: ${JAVA_OPTIONS}"
+echo "Configured Java memory and proxy options."
 
 mkdir -p "$ETF_DIR"/bak
 mkdir -p "$ETF_DIR"/td
@@ -95,25 +100,16 @@ mkdir -p "$ETF_DIR"/config
 
 #unzip -o ui.zip -d "$ETF_DIR"
 
-chmod 770 -R "$ETF_DIR"/td
-
-chmod 775 -R "$ETF_DIR"/ds/obj
-chmod 770 -R "$ETF_DIR"/ds/db/repo
-chmod 770 -R "$ETF_DIR"/ds/db/data
-chmod 770 -R "$ETF_DIR"/ds/appendices
-chmod 775 -R "$ETF_DIR"/ds/attachments
-
-chmod 777 -R "$ETF_DIR"/projects
-chmod 777 -R "$ETF_DIR"/config
-
-chmod 775 -R "$ETF_DIR"/http_uploads
-chmod 775 -R "$ETF_DIR"/bak
-chmod 775 -R "$ETF_DIR"/testdata
-
 touch "$ETF_DIR"/logs/etf.log
-chmod 775 "$ETF_DIR"/logs/etf.log
 
-chown -fR ${appServerUserGroup:-proxy:proxy} $ETF_DIR
+# These trees hold executable configuration and untrusted validator data.
+# Keep them inaccessible to unrelated container users and never make data
+# files executable. ``find`` does not follow symlinks, which avoids chmod-ing
+# a target outside ETF_DIR if a stale writable tree contains one.
+appServerUserGroup=${appServerUserGroup:-proxy:proxy}
+chown -fhR "$appServerUserGroup" "$ETF_DIR"
+find "$ETF_DIR" -xdev -type d -exec chmod 0770 {} +
+find "$ETF_DIR" -xdev -type f -exec chmod 0660 {} +
 
 
 exec "$@"

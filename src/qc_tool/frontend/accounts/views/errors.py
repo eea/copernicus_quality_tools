@@ -2,6 +2,8 @@ import logging
 
 from django.shortcuts import render
 
+from qc_tool.frontend.accounts.http import prevent_private_response_caching
+
 
 logger = logging.getLogger(__name__)
 
@@ -14,4 +16,6 @@ def permission_denied(request, exception):
         getattr(request.user, "pk", None),
         request.path,
     )
-    return render(request, "accounts/errors/403.html", status=403)
+    return prevent_private_response_caching(
+        render(request, "accounts/errors/403.html", status=403)
+    )

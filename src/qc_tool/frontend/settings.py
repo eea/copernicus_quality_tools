@@ -11,8 +11,11 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 
+import math
 import os.path
 from os import environ
+
+from django.core.exceptions import ImproperlyConfigured
 
 from qc_tool.common import CONFIG
 
@@ -21,24 +24,115 @@ from qc_tool.common import CONFIG
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
+def _environment_boolean(name, default=False):
+    value = environ.get(name)
+    if value is None:
+        return default
+    normalized = value.strip().casefold()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ImproperlyConfigured(f"{name} must be a boolean value")
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '+a8^8cw3%v-+qm8&+4nylx0mkn4tu_7548+#7orp%z5)vxk^r&'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def _environment_list(name, default=()):
+    value = environ.get(name)
+    if value is None:
+        return list(default)
+    return [item.strip() for item in value.split(",") if item.strip()]
 
-ALLOWED_HOSTS = ['*']
+
+def _environment_float(name, default, *, minimum, maximum):
+    try:
+        value = float(environ.get(name, default))
+    except (TypeError, ValueError) as exc:
+        raise ImproperlyConfigured(f"{name} must be a number") from exc
+    if not math.isfinite(value) or not minimum <= value <= maximum:
+        raise ImproperlyConfigured(
+            f"{name} must be between {minimum} and {maximum}"
+        )
+    return value
+
+
+def _environment_integer(name, default, *, minimum, maximum):
+    try:
+        value = int(environ.get(name, default))
+    except (TypeError, ValueError) as exc:
+        raise ImproperlyConfigured(f"{name} must be an integer") from exc
+    if not minimum <= value <= maximum:
+        raise ImproperlyConfigured(
+            f"{name} must be between {minimum} and {maximum}"
+        )
+    return value
+
+
+DEPLOYMENT_ENVIRONMENT = environ.get(
+    "QC_TOOL_ENVIRONMENT",
+    "development",
+).strip().casefold()
+IS_SECURE_ENVIRONMENT = DEPLOYMENT_ENVIRONMENT not in {"development", "test"}
+
+DEBUG = _environment_boolean("DJANGO_DEBUG", not IS_SECURE_ENVIRONMENT)
+if IS_SECURE_ENVIRONMENT and DEBUG:
+    raise ImproperlyConfigured("DJANGO_DEBUG cannot be enabled in a secure environment")
+
+SECRET_KEY = environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if IS_SECURE_ENVIRONMENT:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY is required outside development and tests"
+        )
+    SECRET_KEY = "development-only-qc-tool-secret-key-do-not-use-in-production"
+
+ALLOWED_HOSTS = _environment_list(
+    "DJANGO_ALLOWED_HOSTS",
+    ("localhost", "127.0.0.1", "[::1]", "testserver"),
+)
+if IS_SECURE_ENVIRONMENT and (not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS):
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS must explicitly list production hosts"
+    )
 
 # CSRF_TRUSTED_ORIGINS = ['https://qc-copernicus.eea.europa.eu', 'http://localhost', 'http://127.0.0.1']
 # CSRF_TRUSTED_ORIGINS from environment variable.
 # Get the string from environment, default to empty string if not found
 # Split by comma and filter out any empty strings
-env_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = _environment_list("CSRF_TRUSTED_ORIGINS")
 
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in env_origins.split(',') if origin.strip()]
+# Browser-cookie defaults are secure in every non-development environment.
+# HTTPS redirect/proxy/HSTS values remain explicit because they must match the
+# deployment's trusted TLS-termination topology to avoid redirect loops.
+SESSION_COOKIE_SECURE = _environment_boolean(
+    "DJANGO_SESSION_COOKIE_SECURE",
+    IS_SECURE_ENVIRONMENT,
+)
+CSRF_COOKIE_SECURE = _environment_boolean(
+    "DJANGO_CSRF_COOKIE_SECURE",
+    IS_SECURE_ENVIRONMENT,
+)
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+SECURE_SSL_REDIRECT = _environment_boolean("DJANGO_SECURE_SSL_REDIRECT", False)
+SECURE_HSTS_SECONDS = _environment_integer(
+    "DJANGO_SECURE_HSTS_SECONDS",
+    0,
+    minimum=0,
+    maximum=10 * 365 * 24 * 60 * 60,
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _environment_boolean(
+    "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS",
+    False,
+)
+SECURE_HSTS_PRELOAD = _environment_boolean("DJANGO_SECURE_HSTS_PRELOAD", False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+if _environment_boolean("DJANGO_TRUST_PROXY_SSL_HEADER", False):
+    # Enable only when a trusted proxy strips the client header and sets it.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Keep CSRF enforcement enabled while allowing session-backed data routes to
 # return the same machine-readable authentication errors as their route policy.
@@ -60,12 +154,16 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'qc_tool.frontend.dashboard.middleware.MaintenanceModeMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'qc_tool.frontend.dashboard.middleware.MaintenanceModeMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Default-deny authentication for future views that have not been
+    # explicitly classified by the dashboard route-policy registry.
+    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -105,12 +203,19 @@ WSGI_APPLICATION = 'qc_tool.frontend.wsgi.application'
 DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite")
 
 if DB_ENGINE == "postgres":
+    database_password = environ.get("POSTGRES_PASSWORD")
+    if not database_password:
+        if IS_SECURE_ENVIRONMENT:
+            raise ImproperlyConfigured(
+                "POSTGRES_PASSWORD is required for PostgreSQL in a secure environment"
+            )
+        database_password = "qc_tool_password"
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': environ.get("POSTGRES_DB", "qc_tool_frontend"),
             'USER': environ.get("POSTGRES_USER", "qc_tool_user"),
-            'PASSWORD': environ.get("POSTGRES_PASSWORD", "qc_tool_password"),
+            'PASSWORD': database_password,
             'HOST': environ.get("POSTGRES_HOST", "qc_tool_userdb"),
             'PORT': environ.get("POSTGRES_PORT", "5432"),
         }
@@ -142,10 +247,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# for development do not use complex validators
-AUTH_PASSWORD_VALIDATORS = []
-
-
 # Internationalization
 # https://docs.djangoproject.com/en/2.0/topics/i18n/
 
@@ -155,8 +256,6 @@ TIME_ZONE = 'Europe/Prague'
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = False
 
 
@@ -164,13 +263,34 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = environ.get(
+    "DJANGO_STATIC_ROOT",
+    (
+        "/var/lib/qc_tool/static"
+        if IS_SECURE_ENVIRONMENT
+        else str(CONFIG["work_dir"].joinpath("frontend-static"))
+    ),
+)
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if IS_SECURE_ENVIRONMENT
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
+    },
+}
 
 # Media or user-uploaded files.
 # The directory contains uploaded deliveries.
 # Such directory must be accessible by Frontend container and all Worker containers.
 MEDIA_ROOT = str(CONFIG["incoming_dir"])
 MEDIA_URL = '/media/'
+FILE_UPLOAD_PERMISSIONS = 0o640
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
 
 # Submission feature setting.
 SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
@@ -182,7 +302,35 @@ SHOW_LOGO = CONFIG["show_logo"]
 MAINTENANCE_MODE = CONFIG["maintenance_mode"]
 
 # Resumable uploads simultaneous uploads setting.
-RESUMABLE_SIMULTANEOUS_UPLOADS = int(os.environ.get("RESUMABLE_SIMULTANEOUS_UPLOADS", 4))
+RESUMABLE_SIMULTANEOUS_UPLOADS = _environment_integer(
+    "RESUMABLE_SIMULTANEOUS_UPLOADS",
+    4,
+    minimum=1,
+    maximum=32,
+)
+
+# API-provided S3 endpoints are disabled unless an administrator explicitly
+# allowlists exact HTTPS origins. Timeouts and the single-page object cap keep
+# registration requests bounded even when an allowed service is unhealthy.
+S3_ALLOWED_ENDPOINTS = tuple(_environment_list("S3_ALLOWED_ENDPOINTS"))
+S3_CONNECT_TIMEOUT_SECONDS = _environment_float(
+    "S3_CONNECT_TIMEOUT_SECONDS",
+    3,
+    minimum=0.1,
+    maximum=30,
+)
+S3_READ_TIMEOUT_SECONDS = _environment_float(
+    "S3_READ_TIMEOUT_SECONDS",
+    10,
+    minimum=0.1,
+    maximum=120,
+)
+S3_MAX_LISTED_OBJECTS = _environment_integer(
+    "S3_MAX_LISTED_OBJECTS",
+    1000,
+    minimum=1,
+    maximum=1000,
+)
 
 # Use named routes so authentication redirects remain stable if URL prefixes
 # change. Login/logout themselves are handled by Django's built-in auth views.

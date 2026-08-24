@@ -42,7 +42,9 @@ sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up -
 
 (5) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000.
 
-(6) For initial signing in use user name `guest` and password `guest`.
+(6) Create the first administrator through Django's `createsuperuser` command,
+or use your deployment's identity/bootstrap process. Never configure a shared
+or predictable password in production.
 
 (7) To upgrade to a new release, run:
 ```
@@ -67,9 +69,10 @@ You are free to copy the database to other persistent location, however you must
 
 # Demo installation
 
-The service is publicly available at: https://qc-copernicus.eea.europa.eu/ Demo login is user: guest, password: guest.
+The demonstration service is publicly available at:
+https://qc-copernicus.eea.europa.eu/. Access credentials are managed by the
+service operator and are intentionally not stored in this repository.
 
 # Product definitions
 
 QA check configurations for Copernicus products are defined in the [product_definitions](product_definitions) directory. Each product definition .json file contains a list of parametrized checks. For QC tool setup with editable product definitions, see instructions in [docker/NOTES.product_definitions](docker/NOTES.product_definitions.md).
-

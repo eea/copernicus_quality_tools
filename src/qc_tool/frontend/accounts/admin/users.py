@@ -8,6 +8,7 @@ from django.db.models import Prefetch
 from qc_tool.frontend.accounts.admin.filters import RoleListFilter
 from qc_tool.frontend.accounts.admin.products import UserProductGrantInline
 from qc_tool.frontend.accounts.admin.regions import UserRegionGrantInline
+from qc_tool.frontend.accounts.authentication.api_keys import is_api_key_digest
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import ApiUser
 from qc_tool.frontend.accounts.models import UserProfile
@@ -19,11 +20,26 @@ from qc_tool.frontend.accounts.services.role_permissions import (
 
 
 class ApiUserInline(admin.StackedInline):
+    """Expose credential status and revocation without exposing its digest."""
+
     model = ApiUser
-    can_delete = False
-    extra = 1
+    fields = ("credential_status",)
+    readonly_fields = ("credential_status",)
+    exclude = ("api_key",)
+    can_delete = True
+    extra = 0
     max_num = 1
     verbose_name_plural = "API credentials"
+
+    @admin.display(description="Status")
+    def credential_status(self, credential):
+        if is_api_key_digest(credential.api_key):
+            return "Configured (the secret is stored as a one-way digest)"
+        return "Revoked legacy credential (delete this record)"
+
+    def has_add_permission(self, request, obj=None):
+        # Credentials must be issued through the one-time self-service view.
+        return False
 
 
 class UserProfileInline(admin.StackedInline):
@@ -215,10 +231,14 @@ class AccountUserAdmin(BaseUserAdmin):
         return allowed
 
     def has_delete_permission(self, request, obj=None):
-        allowed = super().has_delete_permission(request, obj)
-        if obj is not None and obj.is_superuser and not request.user.is_superuser:
-            return False
-        return allowed
+        """Protect delivery and QC history from Django's cascading delete.
+
+        Administrators should deactivate an account with ``is_active``.  A
+        deliberate archival/deletion workflow can be added later once domain
+        retention rules and ownership reassignment are explicit.
+        """
+
+        return False
 
     @admin.display(description="Roles")
     def role_names(self, user):

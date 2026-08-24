@@ -24,7 +24,7 @@ class UserProductGrant(models.Model):
         ordering = ("product_ident", "pk")
         constraints = (
             models.CheckConstraint(
-                check=~models.Q(product_ident=""),
+                condition=~models.Q(product_ident=""),
                 name="accounts_product_key_not_empty",
             ),
             models.UniqueConstraint(

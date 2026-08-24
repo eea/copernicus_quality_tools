@@ -23,6 +23,8 @@ class RouteAwareCsrfFailureTests(TestCase):
             },
         )
         self.assertEqual(response.headers["X-Login-URL"], login_url)
+        self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+        self.assertIn("Cookie", response.headers["Vary"])
 
     def test_authenticated_private_session_data_failure_uses_csrf_json(self):
         user = get_user_model().objects.create_superuser(
@@ -45,6 +47,8 @@ class RouteAwareCsrfFailureTests(TestCase):
                 ),
             },
         )
+        self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+        self.assertIn("Cookie", response.headers["Vary"])
 
     def test_page_form_failure_retains_djangos_html_response(self):
         response = self.client.post(reverse("announcement"))
@@ -59,6 +63,6 @@ class RouteAwareCsrfFailureTests(TestCase):
         self.assertEqual(response.headers["Content-Type"], "application/json")
         self.assertEqual(
             response.headers["WWW-Authenticate"],
-            'ApiKey realm="QC Tool API"',
+            'Bearer realm="QC Tool API"',
         )
         self.assertNotEqual(response.json().get("code"), "csrf_failed")

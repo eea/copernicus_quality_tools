@@ -40,6 +40,10 @@ Service qc_tool_frontend
   * REFRESH_JOB_STATUSES_BACKGROUND, instructs the frontend server to refresh running job statuses in a background thread;
   * REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL, interval to refresh job statuses on frontend server in background thread (60 seconds);
   * MAINTENANCE_MODE, sets the frontend to maintenance mode (no URLs accessible - can be used for live DB migration);
+  * S3_ALLOWED_ENDPOINTS, comma-separated exact HTTPS origins that the frontend and worker may contact for S3 deliveries; empty disables S3 registration and download;
+  * S3_CONNECT_TIMEOUT_SECONDS, per-attempt S3 connection timeout between 0.1 and 30 seconds (default 3);
+  * S3_READ_TIMEOUT_SECONDS, per-attempt S3 response timeout between 0.1 and 120 seconds (default 10);
+  * S3_MAX_LISTED_OBJECTS, maximum objects inspected by one S3 registration request, from 1 to 1000 (default 1000);
   * WORKER_ADDR, the internal (inside-container) address of the worker, default '0.0.0.0';
   * WORKER_PORT, the internal (inside-container) port of the worker, default 8000;
 
@@ -59,10 +63,23 @@ Service qc_tool_worker
   * SHOW_LOGO, informs the worker to put Copernicus logo in pdf report;
   * WORKER_ADDR, the internal (inside-container) address of the worker, default '0.0.0.0';
   * WORKER_PORT, the internal (inside-container) port of the worker, default 8000;
+  * S3_ALLOWED_ENDPOINTS, the same exact HTTPS-origin allowlist used by the frontend; it must also be present in the worker environment;
+  * S3_CONNECT_TIMEOUT_SECONDS, per-attempt worker S3 connection timeout (default 3);
+  * S3_READ_TIMEOUT_SECONDS, per-attempt worker S3 response timeout (default 30);
+  * S3_MAX_LISTED_OBJECTS, maximum objects downloaded for one delivery, from 1 to 1000 (default 1000);
+  * S3_MAX_DOWNLOAD_BYTES, maximum declared and streamed bytes downloaded for one S3 delivery (default 53687091200);
   * INSPIRE_SERVICE_URL, by default the builtin validator http://localhost:8080/validator/v2/ is used, informs the worker to connect to a custom local instance of the INSPIRE validator service;
   * RUN_INSPIRE_VALIDATOR, default yes to turn on builtin validator, set to "no" to completely turn off the builtin validator;
   * USE_LIGHTWEIGHT_VALIDATOR, default no, set to "yes" to use a builting geonetwork-based implementation of the metadata validator (RUN_INSPIRE_VALIDATOR should be set to "no" in that case);
   * RUN_POSTGRES, default yes, set to "no" if postgres/postgis engine should be turned off;
+  * DELIVERY_ARCHIVE_MAX_ARCHIVE_BYTES, maximum compressed delivery ZIP size accepted by the worker (default 53687091200);
+  * DELIVERY_ARCHIVE_MAX_MEMBERS, maximum number of entries in a delivery ZIP (default 25000);
+  * DELIVERY_ARCHIVE_MAX_MEMBER_BYTES, maximum expanded size of one ZIP entry (default 53687091200);
+  * DELIVERY_ARCHIVE_MAX_UNCOMPRESSED_BYTES, maximum total expanded ZIP size (default 107374182400);
+  * DELIVERY_ARCHIVE_MAX_COMPRESSION_RATIO, maximum declared and observed expansion ratio (default 100);
+  * DELIVERY_ARCHIVE_MAX_PATH_BYTES, maximum UTF-8 byte length of a ZIP member path (default 1024);
+  * DELIVERY_ARCHIVE_MAX_COMPONENT_BYTES, maximum UTF-8 byte length of one path component (default 255);
+  * DELIVERY_ARCHIVE_MAX_PATH_DEPTH, maximum directory depth inside a ZIP (default 32);
 
 
   * INSPIRE_SERVICE_URL, default using built-in validator , set to another url when using external validator;

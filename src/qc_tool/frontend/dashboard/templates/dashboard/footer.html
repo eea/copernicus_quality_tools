@@ -1,3 +1,4 @@
+{% load static %}
 <div class="container-fluid" id="section-footer" xmlns="http://www.w3.org/1999/html">
     <div class="container">
         <div class="row text-center">
@@ -5,11 +6,11 @@
             <div class="col-md-4">
                 <div class="row text-center">
                     <a href="https://copernicus.eu">
-                        <img src="{{ STATIC_URL }}dashboard/img/copernicus_eu_logo.svg" style="float:left; padding-left: 20px; margin-top: -20px; margin-bottom:10px; height:50px" />
+                        <img src="{% static 'dashboard/img/copernicus_eu_logo.svg' %}" style="float:left; padding-left: 20px; margin-top: -20px; margin-bottom:10px; height:50px" />
                     </a>
 
-                    <a href="http://eea.europa.eu">
-                        <img src="{{ STATIC_URL }}dashboard/img/logo_eea_square.png" style="float:right; padding-left:20px; margin-top: -20px; margin-bottom:10px; height:50px" />
+                    <a href="https://eea.europa.eu">
+                        <img src="{% static 'dashboard/img/logo_eea_square.png' %}" style="float:right; padding-left:20px; margin-top: -20px; margin-bottom:10px; height:50px" />
                     </a>
                 </div>
 

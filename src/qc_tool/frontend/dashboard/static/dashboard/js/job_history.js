@@ -28,25 +28,38 @@ function dateFormatter(value, row) {
    }
 }
 
+
+function textDialogMessage(value) {
+    return $('<div>').text(String(value));
+}
+
+
+function jobListDialogMessage(jobUuids) {
+    var values = String(jobUuids).split(',').slice(0, 10);
+    var $message = $('<div>');
+    values.forEach(function (value) {
+        $('<div>').text(value).appendTo($message);
+    });
+    var total = String(jobUuids).split(',').length;
+    if (total > values.length) {
+        $('<div>').text('...and ' + (total - values.length) + ' others.').appendTo($message);
+    }
+    return $message;
+}
+
 function delete_job_function(job_uuids) {
     var msg_title = "Are you sure you want to delete the job history?";
 
     // number of jobs to delete
-    console.log(job_uuids);
     var num_jobs = job_uuids.toString().split(",").length;
 
     if (num_jobs > 1) {
         msg_title = "Are you sure you want to delete " + num_jobs + " job history logs?";
     }
-    if (num_jobs > 10) {
-        msg_jobs = job_uuids.split(",").slice(0, 10).join("<br>") + "<br> ...and " + (num_jobs - 10) + " others.";
-    } else if (num_jobs > 0) {
-        msg_jobs = job_uuids.split(",").slice(0, 10).join("<br>");
-    }
     var dlg_ok = BootstrapDialog.show({
         type: BootstrapDialog.TYPE_DANGER,
         title: msg_title,
-        message: msg_jobs,
+        message: jobListDialogMessage(job_uuids),
         buttons: [{
             label: "Yes",
             cssClass: "btn-default",
@@ -62,7 +75,9 @@ function delete_job_function(job_uuids) {
                             var dlg_err = BootstrapDialog.show({
                                 type: BootstrapDialog.TYPE_WARNING,
                                 title: "Cannot delete jobs.",
-                                message: "Error deleting job history. " + result.message,
+                                message: textDialogMessage(
+                                    "Error deleting job history. " + result.message
+                                ),
                                 buttons: [{
                                     label: "OK",
                                     cssClass: "btn-default",
@@ -98,10 +113,15 @@ function delete_job_function(job_uuids) {
 
 function statusFormatter(value, row, index) {
     var resultUrl = job_result_url_template.replace(
-        '__JOB_UUID__',
-        row.job_uuid
+        job_uuid_url_placeholder,
+        encodeURIComponent(String(row.job_uuid))
     );
-    return ['<a class="like" href="', resultUrl, '" title="Show results">', value, '</a>'].join('');
+    return $('<a>', {
+        'class': 'like',
+        'href': resultUrl,
+        'title': 'Show results',
+        'text': String(value)
+    }).prop('outerHTML');
 }
 
 
@@ -119,75 +139,6 @@ function toggle_select_button() {
         $("#btn-delete-multi").prop("disabled", false);
     }
 }
-
-
-function delete_function(job_uuids) {
-    var msg_title = "Are you sure you want to delete the job history log?";
-
-    // number of deliveries to delete
-    console.log(job_uuids);
-    var num_jobs = job_uuids.toString().split(",").length;
-
-    if (num_jobs > 1) {
-        msg_title = "Are you sure you want to delete " + num_deliveries + " job history logs?";
-    }
-    if (num_jobs > 10) {
-        msg_jobs = job_uuids.split(",").slice(0, 10).join("<br>") + "<br> ...and " + (num_jobs - 10) + " others.";
-    } else if (num_jobs > 0) {
-        msg_jobs = job_uuids.split(",").slice(0, 10).join("<br>");
-    }
-    var dlg_ok = BootstrapDialog.show({
-        type: BootstrapDialog.TYPE_DANGER,
-        title: msg_title,
-        message: msg_jobs,
-        buttons: [{
-            label: "Yes",
-            cssClass: "btn-default",
-            action: function(dialog) {
-                data = {"ids": job_uuids};
-                $.ajax({
-                    type: "POST",
-                    url: job_delete_url,
-                    data: data,
-                    dataType: "json",
-                    success: function(result) {
-                        if (result.status === "error") {
-                            var dlg_err = BootstrapDialog.show({
-                                type: BootstrapDialog.TYPE_WARNING,
-                                title: "Cannot delete jobs.",
-                                message: "Error deleting jobs. " + result.message,
-                                buttons: [{
-                                    label: "OK",
-                                    cssClass: "btn-default",
-                                    action: function(dialog) {dialog.close();}
-                                }]
-                            });
-                        }
-                        $('#tbl-history').bootstrapTable('refresh');
-                        dialog.close();
-                    },
-                    error: function(result)  {
-                         var dlg_err = BootstrapDialog.show({
-                            type: BootstrapDialog.TYPE_WARNING,
-                            title: "Error",
-                            message: "Error deleting jobs.",
-                            buttons: [{
-                                label: "OK",
-                                cssClass: "btn-default",
-                                action: function(dialog) {dialog.close();}
-                            }]
-                        });
-                    }
-                });
-            }
-        }, {
-            label: "No",
-            cssClass: "btn-default",
-            action: function(dialog) {dialog.close();}
-        }]
-    });
-}
-
 
 
 $(document).ready(function() {

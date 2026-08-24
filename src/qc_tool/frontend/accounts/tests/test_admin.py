@@ -11,6 +11,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.admin.role_permissions import synchronize_admin_role
+from qc_tool.frontend.accounts.admin.users import ApiUserInline
 from qc_tool.frontend.accounts.authorization.access import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.authorization.roles import Role
@@ -81,6 +82,16 @@ class AccountAdminConfigurationTests(SimpleTestCase):
             "Legacy product family",
         )
 
+    def test_api_inline_never_exposes_or_edits_the_stored_digest(self):
+        inline = ApiUserInline(get_user_model(), admin.site)
+
+        self.assertEqual(inline.fields, ("credential_status",))
+        self.assertEqual(inline.readonly_fields, ("credential_status",))
+        self.assertEqual(inline.exclude, ("api_key",))
+        self.assertTrue(inline.can_delete)
+        self.assertEqual(inline.extra, 0)
+        self.assertFalse(inline.has_add_permission(RequestFactory().get("/")))
+
 
 class AdminRoleTests(TestCase):
     def setUp(self):
@@ -106,6 +117,7 @@ class AdminRoleTests(TestCase):
                 UserProductGrant,
             )
             for action in ("add", "change", "delete", "view")
+            if not (model is self.user_model and action == "delete")
         }
         granted_permissions = set(
             self.admin_group.permissions.values_list(
@@ -115,6 +127,23 @@ class AdminRoleTests(TestCase):
         )
 
         self.assertTrue(expected_permissions.issubset(granted_permissions))
+        self.assertNotIn(
+            (self.user_model._meta.app_label, "delete_user"),
+            granted_permissions,
+        )
+
+    def test_user_deletion_is_unavailable_in_admin(self):
+        target = self.user_model.objects.create_user(username="retained-user")
+        Delivery.objects.create(
+            user=target,
+            filename="retained.zip",
+            size_bytes=1,
+        )
+
+        self.assertFalse(self.user_admin.has_delete_permission(self.request))
+        self.assertFalse(
+            self.user_admin.has_delete_permission(self.request, target)
+        )
 
     def test_admin_membership_controls_staff_access(self):
         user = self.user_model.objects.create_user(
@@ -315,10 +344,10 @@ class AdminRoleTests(TestCase):
                 "password2": "sufficient-password",
                 "groups": [str(product_manager.pk)],
                 "user_permissions": [str(qc_permission.pk)],
-                "apiuser-TOTAL_FORMS": "1",
+                "apiuser-TOTAL_FORMS": "0",
                 "apiuser-INITIAL_FORMS": "0",
                 "apiuser-MIN_NUM_FORMS": "0",
-                "apiuser-MAX_NUM_FORMS": "1",
+                "apiuser-MAX_NUM_FORMS": "0",
                 "userprofile-TOTAL_FORMS": "1",
                 "userprofile-INITIAL_FORMS": "0",
                 "userprofile-MIN_NUM_FORMS": "0",
@@ -345,6 +374,20 @@ class AdminRoleTests(TestCase):
             set(created.user_permissions.values_list("codename", flat=True)),
             {AccountPermission.RUN_QC.value},
         )
+
+    def test_admin_user_page_shows_status_without_rendering_digest(self):
+        target = self.user_model.objects.create_user(username="api-target")
+        stored_digest = "sha256$" + ("b" * 64)
+        ApiUser.objects.create(user=target, api_key=stored_digest)
+        self.client.force_login(self.request.user)
+
+        response = self.client.get(
+            reverse("admin:auth_user_change", args=(target.pk,))
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Configured")
+        self.assertNotContains(response, stored_digest)
 
     def test_canonical_groups_cannot_be_renamed_or_deleted_in_admin(self):
         group_admin = admin.site._registry[Group]
@@ -479,10 +522,10 @@ class RegionGrantAdminTests(TestCase):
 
     def inline_management_data(self, *, region_total, region_initial):
         return {
-            "apiuser-TOTAL_FORMS": "1",
+            "apiuser-TOTAL_FORMS": "0",
             "apiuser-INITIAL_FORMS": "0",
             "apiuser-MIN_NUM_FORMS": "0",
-            "apiuser-MAX_NUM_FORMS": "1",
+            "apiuser-MAX_NUM_FORMS": "0",
             "userprofile-TOTAL_FORMS": "1",
             "userprofile-INITIAL_FORMS": "0",
             "userprofile-MIN_NUM_FORMS": "0",
@@ -646,10 +689,10 @@ class ProductGrantAdminTests(TestCase):
 
     def inline_management_data(self, *, product_total, product_initial):
         return {
-            "apiuser-TOTAL_FORMS": "1",
+            "apiuser-TOTAL_FORMS": "0",
             "apiuser-INITIAL_FORMS": "0",
             "apiuser-MIN_NUM_FORMS": "0",
-            "apiuser-MAX_NUM_FORMS": "1",
+            "apiuser-MAX_NUM_FORMS": "0",
             "userprofile-TOTAL_FORMS": "1",
             "userprofile-INITIAL_FORMS": "0",
             "userprofile-MIN_NUM_FORMS": "0",

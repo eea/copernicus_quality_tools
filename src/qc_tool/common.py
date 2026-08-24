@@ -2,18 +2,30 @@
 
 
 import json
+import logging
+import os
 import re
 import socket
+import stat
 import subprocess
 import xml.etree.ElementTree as ET
 from importlib import import_module
 from os import environ
 from pathlib import Path
+from secrets import compare_digest
+from secrets import token_urlsafe
 from shutil import copyfile
 from urllib.error import URLError
-from urllib.parse import urljoin
-from urllib.request import urlopen
-from uuid import uuid4
+from urllib.request import build_opener
+from urllib.request import HTTPRedirectHandler
+from urllib.request import ProxyHandler
+from urllib.request import Request
+
+from qc_tool.worker_auth import build_worker_authorization
+from qc_tool.worker_auth import InvalidWorkerUrl
+from qc_tool.worker_auth import worker_job_status_url
+from qc_tool.product_security import UnsafeProductDefinition
+from qc_tool.product_security import validate_executable_product_configuration
 
 
 QC_TOOL_HOME = Path(__file__).parents[2]
@@ -59,6 +71,7 @@ FAILED_ITEMS_LIMIT = 10
 JOB_TIME_LIMIT_HOURS = 24
 
 UNKNOWN_REFERENCE_YEAR_LABEL = "ury"
+INVALID_PRODUCT_DESCRIPTION = "description unavailable (invalid definition)"
 
 UPDATE_JOB_STATUSES_INTERVAL = 30000
 WORKER_ALIVE_TIMEOUT = 20
@@ -68,6 +81,27 @@ REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL = 60
 INSPIRE_SERVICE_URL_DEFAULT = "http://localhost:8080/validator/v2/"
 
 CONFIG = None
+logger = logging.getLogger(__name__)
+WORKER_STATUS_MAX_RESPONSE_BYTES = 8 * 1024
+
+
+class _RejectWorkerRedirects(HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        request,
+        file_pointer,
+        code,
+        message,
+        headers,
+        new_url,
+    ):
+        return None
+
+
+_worker_status_opener = build_opener(
+    ProxyHandler({}),
+    _RejectWorkerRedirects(),
+)
 
 # Exception definition
 class QCException(Exception):
@@ -115,19 +149,67 @@ def create_worker_token():
     path = CONFIG["work_dir"].joinpath(WORKER_TOKEN_FILENAME)
     Path(CONFIG["work_dir"]).mkdir(parents=True, exist_ok=True)
 
-    if not path.exists():
-        path.write_text(str(uuid4()))
+    token = token_urlsafe(32)
+    staging_path = path.with_name(f".{path.name}.{token_urlsafe(12)}.tmp")
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(staging_path, flags, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as token_file:
+            token_file.write(token)
+            token_file.flush()
+            os.fsync(token_file.fileno())
+        try:
+            os.link(staging_path, path, follow_symlinks=False)
+        except FileExistsError:
+            # Another process completed token creation first.
+            pass
+    finally:
+        staging_path.unlink(missing_ok=True)
+
 
 def get_worker_token():
     path = CONFIG["work_dir"].joinpath(WORKER_TOKEN_FILENAME)
-    if not path.exists():
-        create_worker_token()
-    stored_token = path.read_text()
+    create_worker_token()
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = None
+    try:
+        descriptor = os.open(path, flags)
+        file_stat = os.fstat(descriptor)
+        if not stat.S_ISREG(file_stat.st_mode):
+            raise QCException("Worker token path is not a regular file.")
+        os.fchmod(descriptor, 0o600)
+        token_file = os.fdopen(descriptor, "r", encoding="utf-8")
+        descriptor = None
+        with token_file:
+            stored_token = token_file.read(4097).strip()
+    except QCException:
+        if descriptor is not None:
+            os.close(descriptor)
+        raise
+    except (OSError, UnicodeError) as exc:
+        if descriptor is not None:
+            os.close(descriptor)
+        raise QCException("Worker token file cannot be read safely.") from exc
+
+    if not stored_token:
+        raise QCException("Worker token file is empty.")
+    if len(stored_token) > 4096:
+        raise QCException("Worker token file is unexpectedly large.")
     return stored_token
 
 def auth_worker(token):
-    stored_token = get_worker_token()
-    return token == stored_token
+    if not isinstance(token, str):
+        return False
+    try:
+        stored_token = get_worker_token()
+    except (OSError, QCException):
+        return False
+    return compare_digest(token, stored_token)
 
 def get_qc_tool_version():
     filepath = QC_TOOL_VERSION_FILEPATH
@@ -148,7 +230,15 @@ def locate_product_definition(product_ident):
 def load_product_definition(product_ident):
     filepath = locate_product_definition(product_ident)
     data = filepath.read_text()
-    product_definition = json.loads(data)
+    try:
+        product_definition = json.loads(data)
+        validate_executable_product_configuration(product_definition)
+    except (json.JSONDecodeError, UnsafeProductDefinition) as exc:
+        raise QCException(
+            "Product definition {:s} is invalid or unsafe.".format(
+                product_ident
+            )
+        ) from exc
     product_definition["product_ident"] = product_ident
     return product_definition
 
@@ -170,17 +260,41 @@ def validate_skip_steps(skip_steps, product_definition):
 
 
 def get_product_descriptions():
+    """Return the available product catalog without one bad file hiding all.
+
+    Product identifiers are canonical lowercase filename stems. Earlier
+    configured directories retain precedence. Invalid definitions remain
+    visible with a stable diagnostic label so operators can repair them while
+    the rest of the catalog continues to work.
+    """
+
     product_descriptions = {}
     # We iterate the dirs in reverse order.
     # In case of identical product ident, the earlier product overrides the later one.
     for product_dir in reversed(CONFIG["product_dirs"]):
         for filepath in product_dir.iterdir():
-            if PRODUCT_FILENAME_REGEX.match(filepath.name) is not None:
-                product_ident = filepath.stem.lower() # case insensitive
-                product_definition = filepath.read_text()
-                product_definition = json.loads(product_definition)
+            if (
+                not filepath.is_file()
+                or PRODUCT_FILENAME_REGEX.match(filepath.name) is None
+            ):
+                continue
+            product_ident = filepath.stem.lower()
+            try:
+                product_definition = json.loads(filepath.read_text())
                 product_description = product_definition["description"]
-                product_descriptions[product_ident] = product_description
+                if (
+                    not isinstance(product_description, str)
+                    or not product_description.strip()
+                ):
+                    raise ValueError("description must be a non-empty string")
+            except (OSError, UnicodeError, ValueError, KeyError, TypeError) as exc:
+                logger.warning(
+                    "Invalid product definition %s: %s",
+                    filepath,
+                    exc,
+                )
+                product_description = INVALID_PRODUCT_DESCRIPTION
+            product_descriptions[product_ident] = product_description
     return product_descriptions
 
 def get_product_definitions():
@@ -367,22 +481,44 @@ def load_job_status(job_uuid):
 def check_running_job(job_uuid, worker_url, timeout):
     job_status = None
     worker_info = None
-    url = urljoin(worker_url, "/jobs/{:s}.json".format(job_uuid))
     try:
-        with urlopen(url, timeout=float(timeout)) as resp:
+        url = worker_job_status_url(
+            worker_url,
+            job_uuid,
+            expected_port=CONFIG["worker_port"],
+        )
+        request = Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "Authorization": build_worker_authorization(
+                    get_worker_token()
+                ),
+            },
+            method="GET",
+        )
+        with _worker_status_opener.open(
+            request,
+            timeout=float(timeout),
+        ) as resp:
             if resp.status != 200:
                 # Bad request or timeout.
                 # This situation might be the case of worker timeout / worker unreachable.
                 job_status = load_job_status(job_uuid)
                 if job_status == JOB_ERROR:
                     return JOB_TIMEOUT
-            worker_info = json.loads(resp.read())
-    except (TimeoutError, socket.timeout) as ex:
+            response_body = resp.read(WORKER_STATUS_MAX_RESPONSE_BYTES + 1)
+            if len(response_body) > WORKER_STATUS_MAX_RESPONSE_BYTES:
+                raise ValueError("worker response is too large")
+            worker_info = json.loads(response_body)
+            if worker_info is not None and not isinstance(worker_info, dict):
+                raise ValueError("worker response has an invalid shape")
+    except (TimeoutError, socket.timeout):
         # This situation might be the case of worker timeout / worker not responding.
         job_status = load_job_status(job_uuid)
         if job_status == JOB_ERROR:
             return JOB_TIMEOUT
-    except URLError as ex:
+    except (InvalidWorkerUrl, OSError, QCException, URLError, ValueError):
         # Cannot connect to worker, maybe the job had already finished and then the worker was shutdown.
         job_status = load_job_status(job_uuid)
         if job_status == JOB_ERROR:

@@ -20,7 +20,12 @@ services:
         target: /var/lib/postgresql/data
 
   frontend:
-    image: "eeacms/copernicus-qctool-frontend:${QC_TOOL_IMAGE_TAG:-2.4.6}"
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VERSION: "${QC_TOOL_SOURCE_VERSION:-master}"
+    image: "copernicus-qctool-frontend-local:${QC_TOOL_IMAGE_TAG:-dev}"
     # Published QC Tool images are currently linux/amd64-only. Docker Desktop
     # uses emulation on ARM hosts; the variable allows future native images.
     platform: "${QC_TOOL_PLATFORM:-linux/amd64}"
@@ -57,6 +62,17 @@ services:
       CASE_INSENSITIVE_USERNAMES: "yes"
       CSRF_TRUSTED_ORIGINS: "http://localhost:${QC_TOOL_PORT:-8000},http://127.0.0.1:${QC_TOOL_PORT:-8000}"
       RESUMABLE_SIMULTANEOUS_UPLOADS: "4"
+      S3_ALLOWED_ENDPOINTS: "${S3_ALLOWED_ENDPOINTS:-}"
+      S3_CONNECT_TIMEOUT_SECONDS: "${S3_CONNECT_TIMEOUT_SECONDS:-3}"
+      S3_READ_TIMEOUT_SECONDS: "${S3_READ_TIMEOUT_SECONDS:-10}"
+      S3_MAX_LISTED_OBJECTS: "${S3_MAX_LISTED_OBJECTS:-1000}"
+      QC_TOOL_ENVIRONMENT: development
+      DJANGO_DEBUG: "yes"
+      DJANGO_SECRET_KEY: development-only-compose-secret
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,frontend,testserver"
+      DJANGO_STATIC_ROOT: /var/lib/qc_tool/static
+      QC_TOOL_BOOTSTRAP_DEMO_USERS: "yes"
+      QC_TOOL_DEV_SERVER: "yes"
     healthcheck:
       test:
         - CMD
@@ -114,11 +130,16 @@ services:
       RUN_POSTGRES: "yes"
       LEAVE_SCHEMA: "${LEAVE_SCHEMA:-no}"
       LEAVE_JOBDIR: "${LEAVE_JOBDIR:-no}"
+      S3_ALLOWED_ENDPOINTS: "${S3_ALLOWED_ENDPOINTS:-}"
+      S3_CONNECT_TIMEOUT_SECONDS: "${S3_CONNECT_TIMEOUT_SECONDS:-3}"
+      S3_READ_TIMEOUT_SECONDS: "${S3_READ_TIMEOUT_SECONDS:-10}"
+      S3_MAX_LISTED_OBJECTS: "${S3_MAX_LISTED_OBJECTS:-1000}"
+      S3_MAX_DOWNLOAD_BYTES: "${S3_MAX_DOWNLOAD_BYTES:-53687091200}"
     healthcheck:
       test:
         - CMD-SHELL
         - >-
-          curl -fsS http://localhost:8000/max_slots.json >/dev/null &&
+          curl -fsS http://localhost:8000/health >/dev/null &&
           curl -fsS http://localhost:8080/validator/v2/status >/dev/null
       interval: 10s
       timeout: 5s

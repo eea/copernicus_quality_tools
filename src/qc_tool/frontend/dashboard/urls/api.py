@@ -42,17 +42,17 @@ urlpatterns = [
         name="api_create_job",
     ),
     protected_path(
-        "api/job-result/<job_uuid>",
+        "api/job-result/<uuid:job_uuid>",
         views.api_job_result,
         name="api_job_result",
     ),
     protected_path(
-        "api/job-result-pdf/<job_uuid>",
+        "api/job-result-pdf/<uuid:job_uuid>",
         views.api_job_result_pdf,
         name="api_job_result_pdf",
     ),
     protected_path(
-        "api/job-history/<delivery_id>",
+        "api/job-history/<int:delivery_id>",
         views.api_job_history,
         name="api_job_history",
     ),

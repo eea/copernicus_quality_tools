@@ -4,11 +4,10 @@
 import io
 import logging
 import os
-import shutil
 import time
 from pathlib import Path
+from pathlib import PurePosixPath
 import uuid
-from zipfile import ZipFile
 import json
 
 import openpyxl
@@ -16,7 +15,6 @@ import openpyxl
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
-from django.core.files.storage import FileSystemStorage
 from django.db import connection
 from django.db import transaction
 from django.forms.models import model_to_dict
@@ -30,47 +28,95 @@ from django.shortcuts import render
 from django.utils import timezone
 
 import qc_tool.frontend.dashboard.models as models
-from qc_tool.frontend.accounts.authentication.api_keys import get_or_create_api_key
+from qc_tool.frontend.accounts.authentication.api_keys import has_api_key
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization import access_for_request
-from qc_tool.common import QCException, get_product_definitions, validate_skip_steps
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
-from qc_tool.common import compose_attachment_filepath
 from qc_tool.common import compose_job_log_filepath
 from qc_tool.common import compose_job_stdout_filepath
 from qc_tool.common import compile_job_form_data
 from qc_tool.common import compile_job_report_data
-from qc_tool.common import get_job_report_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import WORKER_PORT
 from qc_tool.frontend.dashboard.access import can_view_job
+from qc_tool.frontend.dashboard.access import can_view_delivery
 from qc_tool.frontend.dashboard.access import delivery_action_capabilities
 from qc_tool.frontend.dashboard.access import require_delivery_view
 from qc_tool.frontend.dashboard.access import require_job_view
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
-from qc_tool.frontend.dashboard.helpers import find_s3_delivery
-from qc_tool.frontend.dashboard.helpers import get_s3_delivery_size
 from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.helpers import get_boundary_version
+from qc_tool.frontend.dashboard.services.boundaries import BoundaryPackageError
+from qc_tool.frontend.dashboard.services.boundaries import replace_boundary_package
+from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
+from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
+from qc_tool.frontend.dashboard.services.artifacts import open_job_attachment
+from qc_tool.frontend.dashboard.services.artifacts import open_job_report
+from qc_tool.frontend.dashboard.services.artifacts import open_regular_artifact
+from qc_tool.frontend.dashboard.services.artifacts import read_text_artifact
+from qc_tool.frontend.dashboard.services.configuration import AnnouncementStorageError
+from qc_tool.frontend.dashboard.services.configuration import read_announcement
+from qc_tool.frontend.dashboard.services.configuration import write_announcement
+from qc_tool.frontend.dashboard.services.exports import spreadsheet_cell_value
+from qc_tool.frontend.dashboard.services.api import JsonRequestError
+from qc_tool.frontend.dashboard.services.api import read_json_object
+from qc_tool.frontend.dashboard.services.jobs import JobRequestError
+from qc_tool.frontend.dashboard.services.jobs import parse_batch_job_creation_request
+from qc_tool.frontend.dashboard.services.jobs import parse_job_creation_request
+from qc_tool.frontend.dashboard.services.jobs import positive_identifier
+from qc_tool.frontend.dashboard.services.jobs import serialize_job_history
+from qc_tool.frontend.dashboard.services.uploads import DeliveryUploadPathError
+from qc_tool.frontend.dashboard.services.uploads import ResumableUploadDescriptor
+from qc_tool.frontend.dashboard.services.uploads import ResumableUploadError
+from qc_tool.frontend.dashboard.services.uploads import assemble_chunks
+from qc_tool.frontend.dashboard.services.uploads import is_chunk_stored
+from qc_tool.frontend.dashboard.services.uploads import is_upload_complete
+from qc_tool.frontend.dashboard.services.uploads import prepare_resumable_paths
+from qc_tool.frontend.dashboard.services.uploads import remove_published_upload
+from qc_tool.frontend.dashboard.services.uploads import remove_user_delivery_upload
+from qc_tool.frontend.dashboard.services.uploads import resolve_user_delivery_upload
+from qc_tool.frontend.dashboard.services.uploads import store_chunk
+from qc_tool.frontend.dashboard.services.s3 import inspect_s3_delivery
+from qc_tool.frontend.dashboard.services.s3 import parse_s3_registration
+from qc_tool.frontend.dashboard.services.s3 import S3RegistrationError
+from qc_tool.frontend.dashboard.services.requests import IdentifierListError
+from qc_tool.frontend.dashboard.services.requests import parse_positive_identifier_list
+from qc_tool.frontend.dashboard.services.requests import parse_uuid_identifier_list
+from qc_tool.worker_auth import InvalidWorkerUrl
+from qc_tool.worker_auth import worker_origin_from_remote_address
 
 logger = logging.getLogger(__name__)
 
 CHECK_RUNNING_JOB_DELAY = 10
+MAX_DELIVERY_PAGE_SIZE = 1_000
+MAX_DELIVERY_OFFSET = 10_000_000
 
-UPLOADED_CHUNK_PROCESSING_DELAY = 1
+
+API_JSON_MAX_BODY_BYTES = 16 * 1024
+
+
+def _json_request_error_response(error):
+    return JsonResponse(
+        {
+            "status": "error",
+            "code": error.code,
+            "message": error.message,
+        },
+        status=error.status_code,
+    )
 
 def api_homepage(request):
-    return render(request, 'dashboard/swagger-ui.html',
-                  {
-                    "api_url": CONFIG["api_url"],
-                    "schema_url": "openapi-schema"
-                  })
+    return render(
+        request,
+        "dashboard/api_docs.html",
+        {"api_url": CONFIG["api_url"]},
+    )
 
 def api_openapi_json(request):
     api_url = CONFIG["api_url"]
@@ -83,21 +129,25 @@ def api_openapi_json(request):
 def api_register_delivery(request):
     user = request.api_user
 
-    # Get request body parameters
     try:
-        body = request.body.decode("utf-8")
-        body_json = json.loads(body)
-    except:
-        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+        body_json = read_json_object(
+            request,
+            maximum_bytes=API_JSON_MAX_BODY_BYTES,
+        )
+    except JsonRequestError as exc:
+        return _json_request_error_response(exc)
 
-    target_filepath = Path(body_json.get("uploaded_file"))
-
-    if not target_filepath:
-        return JsonResponse({"status": "error", "message":"missing parameter: uploaded_file"}, status=400)
-    if not target_filepath.exists():
-        return JsonResponse({"status": "error", "message": f"uploaded_file does not exist."}, status=404)
-    if not target_filepath.name.endswith(".zip"):
-        return JsonResponse({"status": "error", "message": f"uploaded_file does not have .zip extension."}, status=400)
+    try:
+        target_filepath = resolve_user_delivery_upload(
+            body_json.get("uploaded_file"),
+            media_root=settings.MEDIA_ROOT,
+            username=user.username,
+        )
+    except DeliveryUploadPathError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=exc.status_code,
+        )
     # Assign product description based on product ident.
     # Typically, the product ident is used as the zip filename prefix.
     product_ident = guess_product_ident(target_filepath)
@@ -107,7 +157,6 @@ def api_register_delivery(request):
     # Register the uploaded file as a new delivery in the database.
     d = models.Delivery()
     d.filename = target_filepath.name
-    d.filepath = target_filepath.parent
     d.size_bytes = target_filepath.stat().st_size
     d.product_ident = product_ident
     d.product_description = product_description
@@ -122,71 +171,61 @@ def api_register_delivery(request):
 def api_register_delivery_s3(request):
     user = request.api_user
 
-    # Get request body parameters
     try:
-        body = request.body.decode("utf-8")
-        body_json = json.loads(body)
-    except:
-        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+        body_json = read_json_object(
+            request,
+            maximum_bytes=API_JSON_MAX_BODY_BYTES,
+        )
+    except JsonRequestError as exc:
+        return _json_request_error_response(exc)
 
-    host = body_json.get("host")
-    if not host:
-        return JsonResponse({"status": "error", "message":"missing parameter: host"}, status=400)
-
-    access_key = body_json.get("access_key")
-    if not access_key:
-        return JsonResponse({"status": "error", "message":"missing parameter: access_key"}, status=400)
-
-    secret_key = body_json.get("secret_key")
-    if not secret_key:
-        return JsonResponse({"status": "error", "message":"missing parameter: secret_key"}, status=400)
-
-    bucketname = body_json.get("bucketname")
-    if not bucketname:
-        return JsonResponse({"status": "error", "message":"missing parameter: bucketname"}, status=400)
-
-    key_prefix = body_json.get("key_prefix")
-    if not key_prefix:
-        return JsonResponse({"status": "error", "message":"missing parameter: key_prefix"}, status=400)
-
-    # Try to find delivery files in S3
-    delivery_filename = find_s3_delivery(host, access_key, secret_key, bucketname, key_prefix)
-    if not delivery_filename["delivery_filename"]:
-        return JsonResponse({"status": "error", "message": delivery_filename["message"]}, status=400)
-
-    delivery_filename = delivery_filename["delivery_filename"]
-
-    if not delivery_filename:
-        return JsonResponse({"status": "error", "message":"s3-key prefix does not match the delivery unambiguously"}, status=400)
-
-    # Get size of the S3 object
-    delivery_size = get_s3_delivery_size(host, access_key, secret_key, bucketname, key_prefix)
+    try:
+        registration = parse_s3_registration(
+            body_json,
+            allowed_endpoints=settings.S3_ALLOWED_ENDPOINTS,
+        )
+        delivery = inspect_s3_delivery(
+            registration,
+            connect_timeout=settings.S3_CONNECT_TIMEOUT_SECONDS,
+            read_timeout=settings.S3_READ_TIMEOUT_SECONDS,
+            maximum_objects=settings.S3_MAX_LISTED_OBJECTS,
+        )
+    except S3RegistrationError as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": exc.code,
+                "message": exc.message,
+            },
+            status=exc.status_code,
+        )
 
     # Assign product description based on product ident.
     # Typically, the product ident should be contained in a user-defined filename pattern.
+    delivery_filename = PurePosixPath(delivery.filename).name
     product_ident = guess_product_ident(Path(delivery_filename))
     logger.debug(product_ident)
     product_description = find_product_description(product_ident)
 
     # Register the S3 delivery as a new delivery in the database.
-    d = models.Delivery()
-    d.filename = Path(delivery_filename).name
-    d.filepath = None
-    d.size_bytes = delivery_size
-    d.product_ident = product_ident
-    d.product_description = product_description
-    d.date_uploaded = timezone.now()
-    d.user = user
-    d.is_deleted = False
-    s3 = models.S3Info()
-    s3.host = host
-    s3.access_key = access_key
-    s3.secret_key = secret_key
-    s3.bucketname = bucketname
-    s3.key_prefix = key_prefix
-    s3.save()
-    d.s3=s3
-    d.save()
+    with transaction.atomic():
+        s3 = models.S3Info.objects.create(
+            host=registration.endpoint,
+            access_key=registration.access_key,
+            secret_key=registration.secret_key,
+            bucketname=registration.bucket_name,
+            key_prefix=registration.key_prefix,
+        )
+        d = models.Delivery.objects.create(
+            filename=delivery_filename,
+            size_bytes=delivery.size_bytes,
+            product_ident=product_ident,
+            product_description=product_description,
+            date_uploaded=timezone.now(),
+            user=user,
+            is_deleted=False,
+            s3=s3,
+        )
     logger.debug("Delivery object saved successfully to database.")
     response_data = {"status": "ok", "message": "S3 delivery successfully registered", "delivery_id": d.id}
     return JsonResponse(response_data, safe=False)
@@ -204,18 +243,18 @@ def api_delivery_list(request):
 
     # Retrieve query parameters (offset, limit).
     # Offset and limit must be positive numbers.
-    try:
-        offset = int(request.GET.get("offset", 0))
-    except ValueError:
-        offset = 0
-    try:
-        limit = int(request.GET.get("limit", 20))
-    except ValueError:
-        limit = 20
-    if offset < 0:
-        offset = 0
-    if limit < 0:
-        limit = 0
+    offset = _bounded_query_integer(
+        request.GET.get("offset"),
+        default=0,
+        minimum=0,
+        maximum=MAX_DELIVERY_OFFSET,
+    )
+    limit = _bounded_query_integer(
+        request.GET.get("limit"),
+        default=20,
+        minimum=1,
+        maximum=MAX_DELIVERY_PAGE_SIZE,
+    )
 
     sort = request.GET.get("sort", "id")
     order = request.GET.get("order", "desc")
@@ -263,117 +302,97 @@ def api_product_info(request, product_ident):
     return JsonResponse(response_data, safe=False)
 
 def api_create_job(request):
-    user = request.api_user
-
-    # Get request body parameters
     try:
-        body = request.body.decode("utf-8")
-        body_json = json.loads(body)
-    except:
-        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
-    delivery_id = body_json.get("delivery_id")
-    product_ident = body_json.get("product_ident")
-
-    # Validate product ident
-    if not product_ident:
-        return JsonResponse({"status": "error", "message":"missing parameter: product_ident"}, status=400)
-
-    valid_product_idents = get_product_definitions()
-    valid_lowercase_product_idents = [prod.lower() for prod in valid_product_idents]
-    if not product_ident.lower() in valid_lowercase_product_idents:
-        return JsonResponse({"status": "error", "message": f"product_ident {product_ident} is not valid"}, status=400)
-
-    # Validate skip steps
-    # Handle case when skip_steps parameter is empty string
-    product_definition_json = locate_product_definition(product_ident)
-    with open(product_definition_json, "r") as f:
-        product_definition = json.load(f)
-
-    skip_steps = body_json.get("skip_steps", None)
-    if skip_steps == "":
-        skip_steps = None
-
-    if skip_steps is None:
-        skip_steps_list = list()
-    else:
-        skip_steps_list = [int(i) for i in skip_steps.split(",")]
-    try:
-        validate_skip_steps(skip_steps_list, product_definition)
-    except QCException as ex:
-        return JsonResponse({"status": "error", "message": str(ex)}, status=400)
+        body_json = read_json_object(
+            request,
+            maximum_bytes=API_JSON_MAX_BODY_BYTES,
+        )
+        job_request = parse_job_creation_request(body_json)
+    except JsonRequestError as exc:
+        return _json_request_error_response(exc)
+    except JobRequestError as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": exc.code,
+                "message": exc.message,
+            },
+            status=400,
+        )
 
     # Update delivery status in the frontend database.
     try:
-        d = models.Delivery.objects.get(id=int(delivery_id))
+        d = models.Delivery.objects.get(id=job_request.delivery_id)
     except ObjectDoesNotExist:
-        result = {"status": "error", "message": "delivery with id={} not found.".format(delivery_id)}
+        result = {
+            "status": "error",
+            "message": "delivery with id={} not found.".format(
+                job_request.delivery_id
+            ),
+        }
         return JsonResponse(result, status=404)
 
-    # Check if the delivery belongs to authorized user
-    if d.user != user:
-        result = {"status": "error", "message": "delivery id={} does not belong to user {}.".format(
-            delivery_id, user.username)}
-        return JsonResponse(result, status=401)
+    # Scoped managers may read other users' deliveries, but only an owner or
+    # administrator may mutate one.
+    if not request.api_access.can_manage_user(d.user_id):
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "object_permission_denied",
+                "message": "The account cannot modify this delivery.",
+            },
+            status=403,
+        )
 
-    job_uuid = d.create_job(product_ident, skip_steps)
+    job_uuid = d.create_job(
+        job_request.product_ident,
+        job_request.skip_steps,
+    )
 
     response_data = {"job_uuid": str(job_uuid)}
     result = {"status": "OK", "message": "QC job successfully created", "data": response_data}
     return JsonResponse(result)
 
 def api_job_result(request, job_uuid):
-    user = request.api_user
-
     try:
         job = models.Job.objects.get(job_uuid=job_uuid)
     except ObjectDoesNotExist:
         result = {"status": "error", "message": "job with uuid={} does not exist.".format(job_uuid)}
         return JsonResponse(result, status=404)
 
-    if (job.delivery.user != user):
-        result = {"status": "error", "message": "job with uuid={} does not belong to user {}.".format(
-            job_uuid, user.username)}
-        return JsonResponse(result, status=401)
+    if not can_view_job(request.api_access, job):
+        return _api_object_permission_denied("job")
 
     job_report = compile_job_report_data(job_uuid, job.product_ident)
     response_data = {"status": "ok", "message": "job status", "data": job_report}
     return JsonResponse(response_data, safe=False)
 
 def api_job_result_pdf(request, job_uuid):
-    user = request.api_user
-
     try:
         job = models.Job.objects.get(job_uuid=job_uuid)
     except ObjectDoesNotExist:
         result = {"status": "error", "message": "job with uuid={} does not exist.".format(job_uuid)}
         return JsonResponse(result, status=404)
 
-    if (job.delivery.user != user):
-        result = {"status": "error", "message": "job with uuid={} does not belong to user {}.".format(
-            job_uuid, user.username)}
-        return JsonResponse(result, status=401)
+    if not can_view_job(request.api_access, job):
+        return _api_object_permission_denied("job")
 
     try:
-        filepath = get_job_report_filepath(job_uuid)
-    except FileNotFoundError:
-        # There is no result.
+        report_file, report_filename = open_job_report(job_uuid)
+    except ArtifactUnavailable:
         return JsonResponse({"status": "error", "message": "pdf report does not exist"}, status=404)
-    except:
-        return JsonResponse({"status": "error", "message": "pdf report is not available"}, status=404)
-    try:
-        response_pdf = FileResponse(open(str(filepath), "rb"), content_type="application/pdf", as_attachment=True)
-    except FileNotFoundError:
-        # There is no report.
-        return JsonResponse({"status": "error", "message": "pdf report does not exist"}, status=404)
-    return response_pdf
+    return FileResponse(
+        report_file,
+        content_type="application/pdf",
+        as_attachment=True,
+        filename=report_filename,
+    )
 
 
 def api_job_history(request, delivery_id):
     """
     Shows the history of all jobs for a specific delivery in .json format.
     """
-    user = request.api_user
-
     # Check delivery existence
     try:
         delivery = models.Delivery.objects.get(id=int(delivery_id))
@@ -381,14 +400,20 @@ def api_job_history(request, delivery_id):
         result = {"status": "error", "message": "delivery with id={} not found.".format(delivery_id)}
         return JsonResponse(result, status=404)
 
-    # Check if the delivery belongs to authorized user
-    if delivery.user != user:
-        result = {"status": "error", "message": "delivery id={} does not belong to user {}.".format(
-            delivery_id, user.username)}
-        return JsonResponse(result, status=401)
+    if not can_view_delivery(request.api_access, delivery):
+        return _api_object_permission_denied("delivery")
 
-    jobs = models.Job.objects.filter(delivery__filename=delivery.filename, delivery__user=user) \
-        .order_by("-date_created")
+    candidate_jobs = models.Job.objects.filter(
+        delivery__filename=delivery.filename,
+    ).select_related("delivery__user__userprofile")
+    visible_job_ids = [
+        job.pk
+        for job in candidate_jobs
+        if can_view_job(request.api_access, job)
+    ]
+    jobs = models.Job.objects.filter(pk__in=visible_job_ids).order_by(
+        "-date_created"
+    )
     # Ensure job status is up-to-date
     for job in jobs:
         if job.job_status == JOB_RUNNING:
@@ -398,13 +423,22 @@ def api_job_history(request, delivery_id):
                 job.update_status(job_status)
 
     # Remove "-" characters from job uuids
-    job_list = list(jobs.values())
-    for job_info in job_list:
-        job_info["job_uuid"] = str(job_info["job_uuid"]).replace("-", "")
+    job_list = serialize_job_history(jobs, compact_uuid=True)
     result = {"status": "OK",
               "message": "Job history of delivery id={}".format(delivery_id),
               "data": job_list}
     return JsonResponse(result)
+
+
+def _api_object_permission_denied(object_name):
+    return JsonResponse(
+        {
+            "status": "error",
+            "code": "object_permission_denied",
+            "message": f"The account cannot access this {object_name}.",
+        },
+        status=403,
+    )
 
 
 def deliveries(request):
@@ -412,7 +446,7 @@ def deliveries(request):
     Displays the main page with uploaded files and action buttons
     """
 
-    api_key = get_or_create_api_key(request.user)
+    api_key_configured = has_api_key(request.user)
 
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
@@ -421,7 +455,7 @@ def deliveries(request):
                                                          "show_logo": settings.SHOW_LOGO,
                                                          "announcement": get_announcement_message(),
                                                          "boundary_version": get_boundary_version(),
-                                                         "api_key": api_key,
+                                                         "api_key_configured": api_key_configured,
                                                          "update_job_statuses": update_job_statuses,
                                                          "update_job_statuses_interval": update_job_statuses_interval})
 
@@ -432,33 +466,39 @@ def setup_job(request):
     :param delivery_id: The ID of the delivery ZIP file.
     """
 
-    delivery_ids = request.GET.get("deliveries", "").split(",")
-
-    if len(delivery_ids) == 0:
-        raise Http404("No delivery IDs have been specified.")
-
-    # input validation
-    for delivery_id in delivery_ids:
-        try:
-            int(delivery_id)
-        except ValueError:
-            return HttpResponseBadRequest("Deliveries parameter must be comma-separated ID's.")
+    try:
+        delivery_ids = parse_positive_identifier_list(
+            request.GET.get("deliveries"),
+        )
+    except IdentifierListError as exc:
+        return HttpResponseBadRequest(exc.message)
 
     product_infos = get_product_descriptions()
     product_list = [{"product_ident": product_ident, "product_description": product_name}
                     for product_ident, product_name in product_infos.items()]
     product_list = sorted(product_list, key=lambda x: x["product_description"])
 
+    deliveries_by_id = {
+        delivery.id: delivery
+        for delivery in models.Delivery.objects.filter(
+            id__in=delivery_ids,
+            is_deleted=False,
+        ).select_related("user")
+    }
+    if len(deliveries_by_id) != len(delivery_ids):
+        raise Http404("One or more selected deliveries do not exist.")
+
+    account_access = access_for_request(request)
     deliveries = []
     for delivery_id in delivery_ids:
-        delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+        delivery = deliveries_by_id[delivery_id]
 
         # Starting a job for a submitted delivery is not permitted.
         if delivery.date_submitted is not None:
             raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
 
-        if not access_for_request(request).can_manage_user(delivery.user_id):
-            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+        if not account_access.can_manage_user(delivery.user_id):
+            raise PermissionDenied("A selected delivery belongs to another user.")
         deliveries.append(delivery)
 
     # pass in product ident (only for the single delivery case)
@@ -508,6 +548,14 @@ def parse_filter(filter_str, column_lookup):
     return filter_sql, filter_params
 
 
+def _bounded_query_integer(value, *, default, minimum, maximum):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return min(max(parsed, minimum), maximum)
+
+
 def query_deliveries(
     user,
     offset=0,
@@ -518,6 +566,18 @@ def query_deliveries(
     search="",
     include_capabilities=False,
 ):
+    offset = _bounded_query_integer(
+        offset,
+        default=0,
+        minimum=0,
+        maximum=MAX_DELIVERY_OFFSET,
+    )
+    limit = _bounded_query_integer(
+        limit,
+        default=20,
+        minimum=0,
+        maximum=MAX_DELIVERY_PAGE_SIZE,
+    )
     # Retrieve a table of deliveries.
     # If a delivery has one or more jobs, show information about the job with latest date_created.
     column_lookup = {
@@ -537,7 +597,6 @@ def query_deliveries(
         "date_started": "j.date_started",
         "last_job_status": "j.job_status",
         "last_job_uuid": "j.job_uuid",
-        "last_job_worker_url": "j.worker_url",
         "username": "u.username",
         "user": "u.username"}
 
@@ -569,7 +628,6 @@ def query_deliveries(
         d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,
-        j.worker_url AS last_job_worker_url,
         j.date_created, j.date_started, j.job_status as last_job_status,
         up.country AS user_country
         FROM dashboard_delivery d
@@ -676,8 +734,18 @@ def get_deliveries_json(request):
     :param request:
     :return: list of deliveries with associated job information in JSON format
     """
-    offset = int(request.GET.get("offset", 0))
-    limit = int(request.GET.get("limit", 100))
+    offset = _bounded_query_integer(
+        request.GET.get("offset"),
+        default=0,
+        minimum=0,
+        maximum=MAX_DELIVERY_OFFSET,
+    )
+    limit = _bounded_query_integer(
+        request.GET.get("limit"),
+        default=100,
+        minimum=0,
+        maximum=MAX_DELIVERY_PAGE_SIZE,
+    )
     sort = request.GET.get("sort", "id")
     order = request.GET.get("order", "desc")
     filter = request.GET.get("filter", "")
@@ -703,8 +771,18 @@ def export_deliveries_excel(request):
     into an Excel (.xlsx) file and returns it as a download.
     """
     # Same parameters as JSON endpoint
-    offset = int(request.GET.get("offset", 0))
-    limit = int(request.GET.get("limit", 1000))  # larger limit for export
+    offset = _bounded_query_integer(
+        request.GET.get("offset"),
+        default=0,
+        minimum=0,
+        maximum=MAX_DELIVERY_OFFSET,
+    )
+    limit = _bounded_query_integer(
+        request.GET.get("limit"),
+        default=1_000,
+        minimum=0,
+        maximum=MAX_DELIVERY_PAGE_SIZE,
+    )
     sort = request.GET.get("sort", "id")
     order = request.GET.get("order", "desc")
     filter = request.GET.get("filter", "")
@@ -738,7 +816,7 @@ def export_deliveries_excel(request):
                 value = row.get(col, "")
                 if isinstance(value, uuid.UUID):
                     value = str(value)
-                formatted_row.append(value)
+                formatted_row.append(spreadsheet_cell_value(value))
             ws.append(formatted_row)
 
     # Adjust column widths
@@ -772,27 +850,33 @@ def announcement(request):
     Saves or loads an announcement message.
     """
     if request.method == "GET":
-
-        if CONFIG["announcement_path"].is_file():
-            announcement_message = CONFIG["announcement_path"].read_text()
-        else:
+        try:
+            announcement_message = read_announcement(
+                CONFIG["announcement_path"]
+            )
+        except AnnouncementStorageError:
+            logger.warning("Announcement state could not be read safely.")
             announcement_message = ""
 
         return render(request, 'dashboard/announcement.html', {"announcement": announcement_message})
     else:
+        announcement_text = request.POST.get("announcement_text", "")
         try:
-            CONFIG["announcement_path"].write_text(request.POST.get("announcement_text"))
-            announcement_text = request.POST.get("announcement_text")
+            write_announcement(
+                CONFIG["announcement_path"],
+                announcement_text,
+            )
             if announcement_text:
                 result_message = "Announcement has been successfully updated."
             else:
                 result_message = "Announcement has been successfully removed."
             return render(request, 'dashboard/announcement.html',
-                          {"announcement": request.POST.get("announcement_text"),
+                          {"announcement": announcement_text,
                            "result_message": result_message})
-        except BaseException as e:
+        except AnnouncementStorageError:
+            logger.warning("Announcement update was rejected by safe storage.")
             return render(request, 'dashboard/announcement.html',
-                          {"announcement": request.POST.get("announcement_text"),
+                          {"announcement": announcement_text,
                            "error_message": "Error updating announcement."})
 
 
@@ -811,20 +895,44 @@ def get_boundaries_json(request, boundary_type):
     :return: list of boundary .tif or .shp file infos with name and size in JSON format
     """
     boundary_list = []
+    try:
+        generation = resolve_boundary_generation(CONFIG["boundary_dir"])
+    except BoundaryPackageError as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": exc.code,
+                "message": exc.user_message,
+            },
+            status=exc.status_code,
+        )
+
+    if boundary_type not in {"raster", "vector"}:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "invalid_boundary_type",
+                "message": "Boundary type must be raster or vector.",
+            },
+            status=400,
+        )
 
     if boundary_type == "raster":
-        raster_dir = CONFIG["boundary_dir"].joinpath("raster")
+        raster_dir = generation.raster_dir
         raster_filepaths = [path for path in raster_dir.glob("**/*") if
                             path.is_file() and path.suffix.lower() == ".tif"]
         for r in raster_filepaths:
-            boundary_list.append({"filepath": str(r), "filename": r.name, "size_bytes": r.stat().st_size, "type": "raster"})
+            boundary_list.append({"filename": r.name, "size_bytes": r.stat().st_size, "type": "raster"})
 
     else:
-        vector_dir = CONFIG["boundary_dir"].joinpath("vector")
-        vector_filepaths = [path for path in vector_dir.glob("**/*") if
-                            path.is_file() and path.suffix.lower() == ".shp" or path.suffix.lower() == ".gpkg"]
+        vector_dir = generation.vector_dir
+        vector_filepaths = [
+            path
+            for path in vector_dir.glob("**/*")
+            if path.is_file() and path.suffix.lower() in {".shp", ".gpkg"}
+        ]
         for v in vector_filepaths:
-            boundary_list.append({"filepath": str(v), "filename": v.name, "size_bytes": v.stat().st_size, "type": "vector"})
+            boundary_list.append({"filename": v.name, "size_bytes": v.stat().st_size, "type": "vector"})
 
     return JsonResponse(boundary_list, safe=False)
 
@@ -836,65 +944,47 @@ def boundaries_upload_page(request):
 
 
 def boundaries_upload(request):
-    """
-    Uploading boundary package via web console.
-    default location for storing boundary package is CONFIG["boundary_dir"].
-    """
+    """Validate and atomically activate a private boundary package upload."""
+
+    uploaded_file = request.FILES.get("file")
+    if uploaded_file is None:
+        return JsonResponse(
+            {
+                "is_valid": False,
+                "code": "missing_boundary_package",
+                "message": "A boundary package ZIP file is required.",
+            },
+            status=400,
+        )
+
     try:
-        boundary_upload_path = Path(CONFIG["boundary_dir"])
+        result = replace_boundary_package(
+            uploaded_file,
+            CONFIG["boundary_dir"],
+            lock_timeout=30,
+        )
+    except BoundaryPackageError as exc:
+        return JsonResponse(
+            {
+                "is_valid": False,
+                "code": exc.code,
+                "message": exc.user_message,
+            },
+            status=exc.status_code,
+        )
 
-        myfile = request.FILES.get("file")
-        if myfile is None:
-            return JsonResponse(
-                {
-                    'is_valid': False,
-                    'name': None,
-                    'url': None,
-                    'message': 'A boundary package ZIP file is required.',
-                },
-                status=400,
-            )
-
-        # retrieve file info from uploaded zip file
-        logger.info("Processing uploaded boundary ZIP file: {:s}".format(myfile.name))
-
-        # Check if there is an existing boundary package and boundary ZIP file. If found, delete.
-        dst_filepath = boundary_upload_path.joinpath(myfile.name)
-        if dst_filepath.exists():
-            logger.debug("deleting abandoned zip file {:s}".format(str(dst_filepath)))
-            dst_filepath.unlink()
-
-        logger.debug("saving uploaded boundary zip file to {:s}".format(str(dst_filepath)))
-        fs = FileSystemStorage(str(boundary_upload_path))
-        fs.save(myfile.name, myfile)
-        logger.debug("uploaded boundary zip file saved successfully to filesystem.")
-
-        # Delete unzipped boundary files.
-        raster_dir = boundary_upload_path.joinpath("raster")
-        if raster_dir.exists():
-            shutil.rmtree(str(raster_dir))
-
-        vector_dir = boundary_upload_path.joinpath("vector")
-        if vector_dir.exists():
-            shutil.rmtree(str(vector_dir))
-
-        # Unzip the uploaded boundary package.
-        with ZipFile(str(dst_filepath)) as zip_file:
-            zip_file.extractall(path=str(boundary_upload_path))
-
-        data = {'is_valid': True,
-                'name': myfile.name,
-                'url': myfile.name}
-        return JsonResponse(data)
-
-    except Exception:
-        logger.exception("Boundary package upload failed.")
-        data = {'is_valid': False,
-                'name': None,
-                'url': None,
-                'message': 'The boundary package could not be processed.'}
-
-        return JsonResponse(data, status=400)
+    return JsonResponse(
+        {
+            "is_valid": True,
+            "message": "The boundary package was activated successfully.",
+            "package": {
+                "sha256": result.sha256,
+                "archive_size": result.archive_size,
+                "file_count": result.file_count,
+                "uncompressed_size": result.uncompressed_size,
+            },
+        }
+    )
 
 
 
@@ -902,107 +992,156 @@ def delivery_delete(request):
     """
     Deletes a delivery from the database and deleted the associated ZIP file from the filesystem.
     """
-    if request.method == "POST":
-        delivery_ids = request.POST.get("ids").split(",")
-        logger.debug("delivery_delete ids={:s}".format(repr(delivery_ids)))
+    try:
+        delivery_ids = parse_positive_identifier_list(request.POST.get("ids"))
+    except IdentifierListError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=400,
+        )
 
-        # Validate deliveries.
-        for delivery_id in delivery_ids:
+    deliveries_by_id = {
+        delivery.id: delivery
+        for delivery in models.Delivery.objects.filter(
+            id__in=delivery_ids,
+            is_deleted=False,
+        ).select_related("user")
+    }
+    if len(deliveries_by_id) != len(delivery_ids):
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "delivery_not_found",
+                "message": "One or more selected deliveries do not exist.",
+            },
+            status=404,
+        )
 
-            # Validate delivery id.
-            try:
-                int(delivery_id)
-            except ValueError:
-                error_message = "Delivery id {:s} must be an integer.".format(repr(delivery_id))
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 400
-                return response
+    account_access = access_for_request(request)
+    if any(
+        not account_access.can_manage_user(deliveries_by_id[delivery_id].user_id)
+        for delivery_id in delivery_ids
+    ):
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "object_permission_denied",
+                "message": "The account cannot delete one or more selected deliveries.",
+            },
+            status=403,
+        )
 
-            # Get delivery entity.
-            delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+    active_job = models.Job.objects.filter(
+        delivery_id__in=delivery_ids,
+        job_status__in=(JOB_WAITING, JOB_RUNNING),
+    ).values_list("job_status", flat=True).first()
+    if active_job is not None:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "delivery_has_active_job",
+                "message": "A selected delivery has a waiting or running QC job.",
+            },
+            status=409,
+        )
 
-            if not access_for_request(request).can_manage_user(delivery.user_id):
-                error_message = "User {:s} is not authorized to delete delivery {:s}.".format(request.user.username, delivery.filename)
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 403
-                return response
+    for delivery_id in delivery_ids:
+        delivery = deliveries_by_id[delivery_id]
+        if delivery.s3_id:
+            continue
+        try:
+            remove_user_delivery_upload(
+                media_root=settings.MEDIA_ROOT,
+                username=delivery.user.username,
+                filename=delivery.filename,
+            )
+        except DeliveryUploadPathError as exc:
+            return JsonResponse(
+                {"status": "error", "code": exc.code, "message": exc.message},
+                status=exc.status_code,
+            )
 
-            # Abort, if the job is in JOB_WAITING or JOB_RUNNING status.
-            waiting_count = models.Job.objects.filter(delivery__id=delivery.id).filter(job_status=JOB_WAITING).count()
-            if waiting_count > 0:
-                error_message = "Delivery {:s} cannot be deleted. QC job is currently waiting.".format(delivery.filename)
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 400
-                return response
-            running_count = models.Job.objects.filter(delivery__id=delivery.id).filter(job_status=JOB_RUNNING).count()
-            if running_count > 0:
-                error_message = "Delivery {:s} cannot be deleted. QC job is currently running.".format(delivery.filename)
-                response = JsonResponse({"status": "error", "message": error_message})
-                response.status_code = 400
-                return response
-
-        # Delete deliveries.
-        for delivery_id in delivery_ids:
-            # Get delivery entity.
-            delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
-
-            # Delete delivery .zip file on the file system.
-            filepath = Path(settings.MEDIA_ROOT).joinpath(delivery.user.username).joinpath(delivery.filename)
-            if filepath.exists():
-                filepath.unlink()
-
-            # The delivery and its jobs are not actually deleted from the database.
-            # Only delivery.is_deleted attribute is set to True.
-            # This is done in order to preserve the job history.
-            delivery.is_deleted = True
-            delivery.save()
-        return JsonResponse({"status":"ok", "message": "{:d} deliveries have been deleted.".format(len(delivery_ids))})
+    models.Delivery.objects.filter(id__in=delivery_ids).update(is_deleted=True)
+    return JsonResponse(
+        {
+            "status": "ok",
+            "message": "{:d} deliveries have been deleted.".format(
+                len(delivery_ids)
+            ),
+        }
+    )
 
 
 def job_delete(request):
     """
     Deletes the job from the database and associated files from the filesystem.
     """
-    if request.method == "POST":
-        uuids = request.POST.get("uuids")
+    try:
+        job_uuids = parse_uuid_identifier_list(request.POST.get("uuids"))
+    except IdentifierListError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=400,
+        )
 
-        logger.debug("job_delete uuids={:s}".format(uuids))
+    jobs = list(
+        models.Job.objects.filter(job_uuid__in=job_uuids).select_related(
+            "delivery"
+        )
+    )
+    if len(jobs) != len(job_uuids):
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "job_not_found",
+                "message": "One or more selected jobs do not exist.",
+            },
+            status=404,
+        )
 
-        job_uuids = uuids.split(",")
-        num_deleted = 0
+    account_access = access_for_request(request)
+    if any(not account_access.can_manage_user(job.delivery.user_id) for job in jobs):
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "object_permission_denied",
+                "message": "The account cannot delete one or more selected jobs.",
+            },
+            status=403,
+        )
+    if any(job.job_status == JOB_RUNNING for job in jobs):
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "job_is_running",
+                "message": "A running QC job cannot be deleted.",
+            },
+            status=409,
+        )
 
-        # Job status validation.
-        for job_uuid in job_uuids:
-
-            # Existence validation.
-            job = get_object_or_404(models.Job, pk=str(job_uuid))
-
-            if not access_for_request(request).can_manage_user(job.delivery.user_id):
-                raise PermissionDenied(
-                    "User {:s} is not authorized to delete job {:s}".format(
-                        request.user.username,
-                        job_uuid,
-                    )
-                )
-
-            # Job status validation.
-            running_jobs = models.Job.objects.filter(job_uuid=str(job_uuid)).filter(job_status=JOB_RUNNING)
-            if len(running_jobs) > 0:
-                return JsonResponse({"status": "error",
-                                     "message": "Job {:s} cannot be deleted. QC job is currently running."
-                                                .format(job_uuid)})
-        deleted_jobs = []
-        for job_uuid in job_uuids:
-            models.Job.objects.filter(job_uuid=str(job_uuid)).delete()
-            deleted_jobs.append(job_uuid)
-        return JsonResponse({"status":"ok", "message": "{:d} jobs deleted successfully."
-                            .format(len(deleted_jobs))})
+    deleted_count, _details = models.Job.objects.filter(
+        job_uuid__in=job_uuids
+    ).delete()
+    return JsonResponse(
+        {
+            "status": "ok",
+            "message": "{:d} jobs deleted successfully.".format(deleted_count),
+        }
+    )
 
 
 def submit_delivery_to_eea(request):
     if request.method == "POST":
-        delivery_id = request.POST.get("id")
-        filename = request.POST.get("filename")
+        try:
+            delivery_id = parse_positive_identifier_list(
+                request.POST.get("id"),
+                maximum_items=1,
+            )[0]
+        except IdentifierListError as exc:
+            return JsonResponse(
+                {"status": "error", "code": exc.code, "message": exc.message},
+                status=400,
+            )
 
         # Check if delivery with given ID exists.
         try:
@@ -1012,6 +1151,7 @@ def submit_delivery_to_eea(request):
                                      "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
             response.status_code = 404
             return response
+        filename = d.filename
 
         if not access_for_request(request).can_manage_user(d.user_id):
             return JsonResponse(
@@ -1035,7 +1175,11 @@ def submit_delivery_to_eea(request):
             if d.s3:
                 submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
             else:
-                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(d.user.username).joinpath(d.filename)
+                zip_filepath = resolve_user_delivery_upload(
+                    d.filename,
+                    media_root=settings.MEDIA_ROOT,
+                    username=d.user.username,
+                )
                 submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
 
 
@@ -1043,14 +1187,29 @@ def submit_delivery_to_eea(request):
             d.submit()
             d.submission_date = submission_date
             d.save()
-        except BaseException as e:
+        except DeliveryUploadPathError as exc:
             d.date_submitted = None
             d.save()
-            error_message = "ERROR submitting delivery to EEA. file {:s}. exception {:s}".format(filename, str(e))
-            logger.error(error_message)
-            response = JsonResponse({"status": "error", "message": error_message})
-            response.status_code = 500
-            return response
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "code": exc.code,
+                    "message": exc.message,
+                },
+                status=exc.status_code,
+            )
+        except Exception:
+            d.date_submitted = None
+            d.save()
+            logger.exception("Failed to submit delivery id=%s.", d.id)
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "code": "submission_failed",
+                    "message": "The delivery could not be submitted.",
+                },
+                status=500,
+            )
 
         return JsonResponse({"status":"ok",
                              "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
@@ -1060,31 +1219,30 @@ def submit_deliveries_to_eea_batch(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
-    # Use .get('ids', '') to avoid errors if the key is missing
-    id_str = request.POST.get("ids", "")
-    if not id_str:
-        return JsonResponse({"status": "error", "message": "No IDs provided"}, status=400)
-
-    delivery_ids = id_str.split(",")
-    # Filenames could technically be pulled from the DB once you have the ID, 
-    # but we'll keep your zip logic for now.
-    filenames = request.POST.get("filenames", "").split(",")
-
+    try:
+        delivery_ids = parse_positive_identifier_list(request.POST.get("ids"))
+    except IdentifierListError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=400,
+        )
     submitted_ids = []
     failed_details = [] # Store reasons for failure
     account_access = access_for_request(request)
 
-    for delivery_id, filename in zip(delivery_ids, filenames):
+    for delivery_id in delivery_ids:
+        display_name = "Delivery ID {}".format(delivery_id)
         try:
             d = models.Delivery.objects.get(id=delivery_id)
+            display_name = d.filename
             if not account_access.can_manage_user(d.user_id):
-                failed_details.append(f"{filename}: Delivery belongs to another user")
+                failed_details.append(f"{display_name}: Delivery belongs to another user")
                 continue
             
             # Check status logic
             job = d.get_submittable_job()
             if job is None:
-                failed_details.append(f"{filename}: Status not OK")
+                failed_details.append(f"{display_name}: Status not OK")
                 continue # Move to the next delivery, don't stop the whole process
 
             submission_date = timezone.now()
@@ -1093,7 +1251,11 @@ def submit_deliveries_to_eea_batch(request):
             if d.s3:
                 submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
             else:
-                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(d.user.username).joinpath(d.filename)
+                zip_filepath = resolve_user_delivery_upload(
+                    d.filename,
+                    media_root=settings.MEDIA_ROOT,
+                    username=d.user.username,
+                )
                 submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
 
             # Update record
@@ -1104,9 +1266,16 @@ def submit_deliveries_to_eea_batch(request):
 
         except ObjectDoesNotExist:
             failed_details.append(f"ID {delivery_id}: Not found")
-        except Exception as e:
-            logger.error(f"ERROR submitting delivery {delivery_id}: {str(e)}")
-            failed_details.append(f"{filename}: System error")
+        except DeliveryUploadPathError as exc:
+            logger.warning(
+                "Rejected unsafe submission path for delivery id=%s (%s).",
+                delivery_id,
+                exc.code,
+            )
+            failed_details.append(f"{display_name}: Delivery file is unavailable")
+        except Exception:
+            logger.exception("Failed to submit delivery id=%s.", delivery_id)
+            failed_details.append(f"{display_name}: System error")
 
     # --- Final Response Logic ---
     total_requested = len(delivery_ids)
@@ -1127,19 +1296,23 @@ def submit_deliveries_to_eea_batch(request):
 
 
 def api_submit_delivery_to_eea(request):
-    user = request.api_user
-
-    # Get request body parameters
     try:
-        body = request.body.decode("utf-8")
-        body_json = json.loads(body)
-    except:
-        return JsonResponse({"status": "error", "message":"request body is not valid json"}, status=400)
+        body_json = read_json_object(
+            request,
+            maximum_bytes=API_JSON_MAX_BODY_BYTES,
+        )
+        delivery_id = positive_identifier(
+            body_json.get("delivery_id"),
+            "delivery_id",
+        )
+    except JsonRequestError as exc:
+        return _json_request_error_response(exc)
+    except JobRequestError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=400,
+        )
 
-    # Check if delivery with given ID exists.
-    delivery_id = body_json.get("delivery_id")
-    if not delivery_id:
-        return JsonResponse({"status": "error", "message": "missing parameter: delivery_id"}, status=400)
     try:
         d = models.Delivery.objects.get(id=delivery_id)
     except ObjectDoesNotExist:
@@ -1147,13 +1320,14 @@ def api_submit_delivery_to_eea(request):
                                  "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
         response.status_code = 404
         return response
-    if d.user_id != user.id:
+    if not request.api_access.can_manage_user(d.user_id):
         return JsonResponse(
             {
                 "status": "error",
-                "message": f"delivery id={delivery_id} does not belong to user {user.username}",
+                "code": "object_permission_denied",
+                "message": "The account cannot modify this delivery.",
             },
-            status=401,
+            status=403,
         )
     try:
         logger.debug("delivery_submit_eea id=" + str(delivery_id))
@@ -1170,20 +1344,38 @@ def api_submit_delivery_to_eea(request):
         if d.s3:
             submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
         else:
-            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(user.username).joinpath(d.filename)
+            zip_filepath = resolve_user_delivery_upload(
+                d.filename,
+                media_root=settings.MEDIA_ROOT,
+                username=d.user.username,
+            )
             submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
         d.submit()
         d.submission_date = submission_date
         d.save()
 
-    except BaseException as e:
+    except DeliveryUploadPathError as exc:
         d.date_submitted = None
         d.save()
-        error_message = "ERROR submitting delivery to EEA. Delivery ID '{:d}'. exception {:s}".format(d.id, str(e))
-        logger.error(error_message)
-        response = JsonResponse({"status": "error", "message": error_message})
-        response.status_code = 500
-        return response
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=exc.status_code,
+        )
+    except Exception:
+        d.date_submitted = None
+        d.save()
+        logger.exception(
+            "Failed to submit delivery id=%s through the API.",
+            d.id,
+        )
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "submission_failed",
+                "message": "The delivery could not be submitted.",
+            },
+            status=500,
+        )
 
     return JsonResponse({"status": "ok",
                          "message": "Delivery with ID {:d} successfully submitted to EEA.".format(d.id)})
@@ -1206,17 +1398,14 @@ def get_product_descriptions_dropdown(request):
     :param request:
     :return: dictionary of the product descriptions
     """
-    sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted = FALSE AND user_id={} GROUP BY product_description"
-           .format(request.user.id))
-    with connection.cursor() as cursor:
-        # fetch query results
-        cursor.execute(sql)
-        # arrange the results
-        rows = cursor.fetchall()
-        data = []
-        for row in rows:
-            data.append(row[0])
-    product_descriptions = sorted(data)
+    product_descriptions = sorted(
+        models.Delivery.objects.filter(
+            is_deleted=False,
+            user=request.user,
+        )
+        .values_list("product_description", flat=True)
+        .distinct()
+    )
     product_dict = {}
     for item in product_descriptions:
         product_dict[item] = item
@@ -1268,7 +1457,7 @@ def get_job_history_json(request, delivery_id):
                                            CONFIG["worker_alive_timeout"])
             if job_status is not None:
                 job.update_status(job_status)
-    return JsonResponse(list(jobs.values()), safe=False)
+    return JsonResponse(serialize_job_history(jobs), safe=False)
 
 
 def job_history_page(request, delivery_id):
@@ -1324,16 +1513,15 @@ def get_pdf_report(request, job_uuid):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
     try:
-        filepath = get_job_report_filepath(job_uuid)
-    except FileNotFoundError:
-        # There is no result.
+        report_file, report_filename = open_job_report(job_uuid)
+    except ArtifactUnavailable:
         raise Http404()
-    try:
-        response = FileResponse(open(str(filepath), "rb"), content_type="application/pdf", as_attachment=True)
-    except FileNotFoundError:
-        # There is no report.
-        raise Http404()
-    return response
+    return FileResponse(
+        report_file,
+        content_type="application/pdf",
+        as_attachment=True,
+        filename=report_filename,
+    )
 
 
 def get_job_report(request, job_uuid):
@@ -1352,13 +1540,19 @@ def get_combined_job_log(request, job_uuid):
     stdout_log_text = "Loading stdout log .."
     joblog_log_text = "Loading job log .."
     try:
-        stdout_log_text = stdout_filepath.read_text()
-    except FileNotFoundError:
+        stdout_log_text = read_text_artifact(
+            stdout_filepath.parent,
+            stdout_filepath.name,
+        )
+    except ArtifactUnavailable:
         stdout_log_text = "stdout log: no data."
 
     try:
-        joblog_log_text = joblog_filepath.read_text()
-    except FileNotFoundError:
+        joblog_log_text = read_text_artifact(
+            joblog_filepath.parent,
+            joblog_filepath.name,
+        )
+    except ArtifactUnavailable:
         joblog_log_text = "job log: no data."
 
     combined_log = "STDOUT LOG:" + "\n" + stdout_log_text + "DETAILED JOB LOG:" + "\n" + joblog_log_text
@@ -1375,17 +1569,37 @@ def download_delivery_file(request, delivery_id):
 
     # Downloading the delivery Zip file.
     try:
-        delivery_filepath = Path(settings.MEDIA_ROOT).joinpath(delivery.user.username, delivery.filename)
-        return FileResponse(open(str(delivery_filepath), "rb"), content_type="application/zip", as_attachment=True)
-    except FileNotFoundError:
+        delivery_filepath = resolve_user_delivery_upload(
+            delivery.filename,
+            media_root=settings.MEDIA_ROOT,
+            username=delivery.user.username,
+        )
+        delivery_file = open_regular_artifact(
+            delivery_filepath.parent,
+            delivery_filepath.name,
+        )
+    except (ArtifactUnavailable, DeliveryUploadPathError):
         raise Http404()
+    return FileResponse(
+        delivery_file,
+        content_type="application/zip",
+        as_attachment=True,
+        filename=delivery.filename,
+    )
 
 
 def get_attachment(request, job_uuid, attachment_filename):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
-    attachment_filepath = compose_attachment_filepath(job_uuid, attachment_filename)
-    return FileResponse(open(str(attachment_filepath), "rb"), as_attachment=True)
+    try:
+        attachment_file = open_job_attachment(job_uuid, attachment_filename)
+    except ArtifactUnavailable:
+        raise Http404()
+    return FileResponse(
+        attachment_file,
+        as_attachment=True,
+        filename=attachment_filename,
+    )
 
 
 def update_job(request, job_uuid):
@@ -1403,42 +1617,89 @@ def update_job(request, job_uuid):
     return JsonResponse({"id": job.delivery.id, "last_job_uuid": job.job_uuid, "last_job_status": job.job_status})
 
 def create_job(request):
-    delivery_ids = request.POST.get("delivery_ids").split(",")
-    product_ident = request.POST.get("product_ident")
-    skip_steps = request.POST.get("skip_steps")
-    if skip_steps == "":
-        skip_steps = None
+    try:
+        job_request = parse_batch_job_creation_request(request.POST)
+    except JobRequestError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=400,
+        )
 
-    num_created = 0
+    deliveries = {
+        delivery.id: delivery
+        for delivery in models.Delivery.objects.filter(
+            id__in=job_request.delivery_ids,
+            is_deleted=False,
+        ).select_related("user")
+    }
+    missing_ids = [
+        delivery_id
+        for delivery_id in job_request.delivery_ids
+        if delivery_id not in deliveries
+    ]
+    if missing_ids:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "delivery_not_found",
+                "message": "One or more selected deliveries do not exist.",
+            },
+            status=404,
+        )
 
-    for delivery_id in delivery_ids:
-        # Input validation.
-        try:
-            int(delivery_id)
-        except ValueError:
-            return HttpResponseBadRequest("delivery id " + delivery_id + " must be a valid integer id.")
-
-        # Update delivery status in the frontend database.
-        d = models.Delivery.objects.get(id=int(delivery_id))
-        if not access_for_request(request).can_manage_user(d.user_id):
+    account_access = access_for_request(request)
+    for delivery_id in job_request.delivery_ids:
+        if not account_access.can_manage_user(deliveries[delivery_id].user_id):
             raise PermissionDenied(
-                "Delivery id={:d} belongs to another user.".format(int(delivery_id))
+                "A selected delivery belongs to another user."
             )
-        d.create_job(product_ident, skip_steps)
-        num_created += 1
-        logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
 
+    try:
+        with transaction.atomic():
+            for delivery_id in job_request.delivery_ids:
+                delivery = deliveries[delivery_id]
+                delivery.create_job(
+                    job_request.product_ident,
+                    job_request.skip_steps,
+                )
+                logger.debug(
+                    "Delivery %d: job has been submitted.",
+                    delivery.id,
+                )
+    except Exception:
+        logger.exception("A QC job batch could not be created.")
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "job_creation_failed",
+                "message": "The QC jobs could not be created.",
+            },
+            status=500,
+        )
+
+    num_created = len(job_request.delivery_ids)
     if num_created == 1:
-        msg = "QC Job has been set up for execution (product: {:s}).".format(product_ident)
+        msg = "QC Job has been set up for execution (product: {:s}).".format(
+            job_request.product_ident
+        )
     else:
-        msg = "{:d} QC Jobs have been set up for execution (product: {:s}).".format(num_created, product_ident)
+        msg = "{:d} QC Jobs have been set up for execution (product: {:s}).".format(
+            num_created,
+            job_request.product_ident,
+        )
 
     result = {"num_created": num_created, "status": "OK", "message": msg}
     return JsonResponse(result)
 
 def pull_job(request):
     worker_port = CONFIG.get("worker_port", WORKER_PORT)
-    worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], worker_port)
+    try:
+        worker_url = worker_origin_from_remote_address(
+            request.META.get("REMOTE_ADDR"),
+            worker_port,
+        )
+    except InvalidWorkerUrl:
+        return HttpResponseBadRequest("The worker peer address is invalid.")
     job = models.pull_job(worker_url)
     if job is None:
         response = None
@@ -1459,29 +1720,6 @@ def pull_job(request):
     return JsonResponse(response, safe=False)
 
 
-def get_chunk_name(uploaded_filename, chunk_number):
-    return uploaded_filename + "_part_{:03d}".format(chunk_number)
-
-def merge_uploaded_chunks(chunk_paths, target_filepath):
-    with open(str(target_filepath), "ab+") as target_file:
-        for stored_chunk_filepath in chunk_paths:
-            stored_chunk_file = open(str(stored_chunk_filepath), "rb")
-            target_file.write(stored_chunk_file.read())
-            stored_chunk_file.close()
-            stored_chunk_filepath.unlink()
-    target_file.close()
-    logger.debug("Uploaded file saved to: " + str(target_filepath))
-
-
-def remove_old_chunks(chunks_dir):
-    old_chunks = [chunk for chunk in chunks_dir.iterdir() if chunk.is_file()]
-    for old_chunk in old_chunks:
-        try:
-            old_chunk.unlink()
-        except:
-            pass
-
-
 def uploaded_delivery_file_exists(filename, user_id):
     """
     Helper function used by resumable_upload.
@@ -1500,120 +1738,91 @@ def uploaded_delivery_file_exists(filename, user_id):
 
 
 def resumable_upload(request):
-    if request.method == "GET":
-        resumableIdentifier = str(request.GET.get("resumableIdentifier"))
-        resumableFilename = str(request.GET.get("resumableFilename"))
-        resumableChunkNumber = int(request.GET.get("resumableChunkNumber"))
+    parameters = request.GET if request.method == "GET" else request.POST
+    try:
+        descriptor = ResumableUploadDescriptor.from_mapping(parameters)
 
-        if not resumableIdentifier or not resumableFilename or not resumableChunkNumber:
-            # Parameters are missing or invalid
-            return JsonResponse({"status":"error", "message": "Missing or invalid parameters."}, status=500)
-
-        # path where data should be uploaded to
-        user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username, "uploads")
-        if not user_upload_path.exists():
-           logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
-           user_upload_path.mkdir(parents=True)
-
-        # chunk folder path based on the parameters
-        chunks_dir = user_upload_path.joinpath(resumableIdentifier)
-
-        # chunk path based on the parameters
-        chunk_file = chunks_dir.joinpath(get_chunk_name(resumableFilename, resumableChunkNumber))
-        logger.debug('Getting chunk: %s', chunk_file)
-
-        if chunk_file.is_file():
-            # Let resumable.js know this chunk already exists
-            return HttpResponse(status=200)
-        else:
-            # Let resumable.js know this chunk does not exists and needs to be uploaded
+        if request.method == "GET":
+            paths = prepare_resumable_paths(
+                descriptor,
+                media_root=settings.MEDIA_ROOT,
+                username=request.user.username,
+                create=False,
+            )
+            if is_chunk_stored(paths.chunk_path):
+                return HttpResponse(status=200)
             return HttpResponse(status=404)
 
-    if request.method == "POST":
-        resumableTotalChunks = int(request.POST.get('resumableTotalChunks'))
-        resumableChunkNumber = int(request.POST.get('resumableChunkNumber'))
-        resumableFilename = str(request.POST.get('resumableFilename'))
-        resumableIdentifier = str(request.POST.get('resumableIdentifier'))
+        conflict_message = uploaded_delivery_file_exists(
+            descriptor.filename,
+            request.user.id,
+        )
+        if conflict_message:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "code": "delivery_exists",
+                    "message": conflict_message,
+                },
+                status=409,
+            )
 
+        uploaded_chunk = request.FILES.get("file")
+        if uploaded_chunk is None:
+            raise ResumableUploadError(
+                "missing_upload_chunk",
+                "The upload chunk is required.",
+            )
 
-        # Get the chunk data.
-        chunk_data = request.FILES.get("file")
+        paths = prepare_resumable_paths(
+            descriptor,
+            media_root=settings.MEDIA_ROOT,
+            username=request.user.username,
+            create=True,
+        )
+        store_chunk(
+            uploaded_chunk,
+            paths.chunk_path,
+            expected_bytes=descriptor.current_chunk_size,
+        )
+        if is_upload_complete(descriptor, paths):
+            target_filepath = assemble_chunks(descriptor, paths)
+            try:
+                product_ident = guess_product_ident(target_filepath)
+                product_description = find_product_description(product_ident)
+                with transaction.atomic():
+                    models.Delivery.objects.create(
+                        filename=target_filepath.name,
+                        size_bytes=target_filepath.stat().st_size,
+                        product_ident=product_ident,
+                        product_description=product_description,
+                        date_uploaded=timezone.now(),
+                        user=request.user,
+                        is_deleted=False,
+                    )
+            except Exception as exc:
+                try:
+                    remove_published_upload(paths, target_filepath)
+                except ResumableUploadError:
+                    logger.exception(
+                        "Failed to remove an unregistered delivery upload for user_id=%s",
+                        request.user.id,
+                    )
+                raise ResumableUploadError(
+                    "delivery_registration_failed",
+                    "The uploaded delivery could not be registered.",
+                    500,
+                ) from exc
 
-        # Make a temp directory for the uploads if needed.
-        # The upload directory will be located at INCOMING_DIR/<user>/uploads.
-        user_upload_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username, "uploads")
-        if not user_upload_path.exists():
-            logger.info("Creating a directory for user uploads: {:s}.".format(str(user_upload_path)))
-            user_upload_path.mkdir(parents=True, exist_ok=True)
-
-        # Chunk folder path is based on the resumableIdentifier parameter.
-        chunks_dir = user_upload_path.joinpath(resumableIdentifier)
-        if not chunks_dir.is_dir():
-            chunks_dir.mkdir(parents=True, exist_ok=True)
-
-        # If delivery already exists in the DB, return 409 conflict status.
-        if resumableChunkNumber == 1:
-            conflict_message = uploaded_delivery_file_exists(resumableFilename, request.user.id)
-            if conflict_message:
-                remove_old_chunks(chunks_dir)
-                return HttpResponse(conflict_message, status=409)
-
-        # Simulate delay in chunk processing.
-        time.sleep(UPLOADED_CHUNK_PROCESSING_DELAY)
-
-        # Save the chunk data.
-        chunk_name = get_chunk_name(resumableFilename, resumableChunkNumber)
-        chunk_filepath = chunks_dir.joinpath(chunk_name)
-
-        fs = FileSystemStorage(str(chunk_filepath.parent))
-        fs.save(chunk_filepath.name, chunk_data)
-        logger.info("Saved chunk: " + chunk_filepath.name)
-
-        # Check if the upload is complete.
-        chunk_paths = [chunks_dir.joinpath(get_chunk_name(resumableFilename, x)) for x in
-                       range(1, resumableTotalChunks + 1)]
-        upload_complete = all([p.is_file() for p in chunk_paths])
-
-        # Combine all the chunks to create the final file.
-        if upload_complete:
-
-            # If delivery already exists in the DB, return 409 conflict status.
-            conflict_message = uploaded_delivery_file_exists(resumableFilename, request.user.id)
-            if conflict_message:
-                remove_old_chunks(chunks_dir)
-                return HttpResponse(conflict_message, status=409)
-
-            # Uploaded file will be copied to INCOMING_DIR/{USERNAME}/{FILENAME}.
-            user_incoming_path = Path(settings.MEDIA_ROOT).joinpath(request.user.username)
-            if not user_incoming_path.exists():
-                logger.info("Creating a directory for user-incoming files: {:s}.".format(str(user_incoming_path)))
-                user_incoming_path.mkdir(parents=True, exist_ok=True)
-            target_filepath = user_incoming_path.joinpath(resumableFilename)
-            merge_uploaded_chunks(chunk_paths, target_filepath)
-
-            # Assign product description based on product ident.
-            # Typically, the product ident is used as the zip filename prefix.
-            product_ident = guess_product_ident(target_filepath)
-            logger.debug(product_ident)
-            product_description = find_product_description(product_ident)
-
-            # Register the uploaded file as a new delivery in the database.
-            d = models.Delivery()
-            d.filename = target_filepath.name
-            d.filepath = user_incoming_path
-            d.size_bytes = target_filepath.stat().st_size
-            d.product_ident = product_ident
-            d.product_description = product_description
-            d.date_uploaded = timezone.now()
-            d.user = request.user
-            d.is_deleted = False
-            d.save()
-            logger.debug("Delivery object saved successfully to database.")
-
-        return JsonResponse({"status":"ok", "message": "Chunk uploaded successfully."}, status=200)
-
-    else:
-        return JsonResponse({"status":"error", "message": "request method must be 'GET' or 'POST'."}, status=500)
+        return JsonResponse(
+            {"status": "ok", "message": "Chunk uploaded successfully."},
+            status=200,
+        )
+    except ResumableUploadError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=exc.status_code,
+        )
     
 
 def refresh_job_statuses():

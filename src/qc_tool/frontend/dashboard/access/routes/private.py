@@ -66,7 +66,7 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
         AccountPermission.DELETE_DELIVERY,
         "POST",
     ),
-    "update_job": private_session_data(VIEW, "GET"),
+    "update_job": private_session_data(VIEW, "POST"),
     "boundaries_json": private_session_data(MANAGE_CONFIGURATION, "GET"),
     "boundaries_upload_data": private_session_data(
         MANAGE_CONFIGURATION,
@@ -96,7 +96,7 @@ MACHINE_PRIVATE_ROUTE_POLICIES = {
         AccountPermission.SUBMIT_DELIVERY,
         "POST",
     ),
-    "pull_job": private_worker("GET"),
+    "pull_job": private_worker("POST"),
 }
 
 

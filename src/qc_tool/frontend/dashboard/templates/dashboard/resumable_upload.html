@@ -24,8 +24,8 @@
 
                         <div class="resumable-error">
                             Your browser, unfortunately, is not supported by Resumable.js. The library requires support for
-                            <a href="http://www.w3.org/TR/FileAPI/">the HTML5 File API</a> along with
-                            <a href="http://www.w3.org/TR/FileAPI/#normalization-of-params">file slicing</a>.
+                            <a href="https://www.w3.org/TR/FileAPI/">the HTML5 File API</a> along with
+                            <a href="https://www.w3.org/TR/FileAPI/#normalization-of-params">file slicing</a>.
                         </div>
 
                         <div class="resumable-drop">
@@ -90,6 +90,20 @@
         $('.resumable-drop').show();
         r.assignDrop($('.resumable-drop')[0]);
         r.assignBrowse($('.resumable-browse')[0]);
+        function progressElement(file) {
+            return file.qcListItem.find('.resumable-file-progress');
+        }
+        function uploadErrorMessage(rawMessage) {
+            try {
+                var payload = JSON.parse(rawMessage);
+                if (payload && typeof payload.message === 'string') {
+                    return payload.message;
+                }
+            } catch (error) {
+                // Protocol or proxy errors may not contain JSON.
+            }
+            return 'The file could not be uploaded.';
+        }
         // Handle file add event
         r.on('fileAdded', function(file) {
             // Show progress bar
@@ -98,8 +112,14 @@
             $('.resumable-progress .progress-resume-link').hide();
             $('.resumable-progress .progress-pause-link').show();
             // Add the file to the list
-            $('.resumable-list').append('<li class="resumable-file-' + file.uniqueIdentifier + '">Uploading <span class="resumable-file-name"></span> <span class="resumable-file-progress"></span>');
-            $('.resumable-file-' + file.uniqueIdentifier + ' .resumable-file-name').html(file.fileName);
+            file.qcListItem = $('<li>').text('Uploading ');
+            $('<span>', {'class': 'resumable-file-name'})
+                .text(file.fileName)
+                .appendTo(file.qcListItem);
+            file.qcListItem.append(document.createTextNode(' '));
+            $('<span>', {'class': 'resumable-file-progress'})
+                .appendTo(file.qcListItem);
+            $('.resumable-list').append(file.qcListItem);
             // Actually start the upload
             r.upload();
         });
@@ -123,33 +143,37 @@
         });
         r.on('fileSuccess', function(file, message) {
             // Reflect that the file upload has completed
-            $('.resumable-file-' + file.uniqueIdentifier + ' .resumable-file-progress').html('(completed)');
+            progressElement(file).text('(completed)');
         });
         r.on('fileError', function(file, message) {
             if (window.qcAuth.redirectFromPayload(message)) {
                 return;
             }
             // Reflect that the file upload has resulted in error
-            $('.resumable-file-' + file.uniqueIdentifier + ' .resumable-file-progress').html('(file could not be uploaded: ' + message + ')');
+            var safeMessage = uploadErrorMessage(message);
+            progressElement(file).text('(file could not be uploaded: ' + safeMessage + ')');
             console.log(r);
-            var msg = '<tr><td><div class="alert alert-warning">';
-            msg += '<span class="glyphicon glyphicon-warning"></span>';
-            msg += message;
-            msg += '&nbsp;<a class="btn btn-warning btn-pull-right" href="{% url "deliveries" %}">Go Back to my Deliveries</a>';
-            msg += '</div></td></tr>';
-            $('.panel-body').append(msg);
+            var $alert = $('<div>', {'class': 'alert alert-warning'});
+            $('<span>', {'class': 'glyphicon glyphicon-warning'}).appendTo($alert);
+            $alert.append(document.createTextNode(' ' + safeMessage + ' '));
+            $('<a>', {
+                'class': 'btn btn-warning btn-pull-right',
+                'href': '{% url "deliveries" %}',
+                'text': 'Go Back to my Deliveries'
+            }).appendTo($alert);
+            $('.panel-body').append($alert);
             console.log('on fileError!');
         });
         r.on('fileProgress', function(file) {
             // Handle progress for both the file and the overall upload
-            $('.resumable-file-' + file.uniqueIdentifier + ' .resumable-file-progress').html(Math.floor(file.progress() * 100) + '%');
+            progressElement(file).text(Math.floor(file.progress() * 100) + '%');
             if (Math.floor(file.progress() * 100) === 99) {
                 console.log('processing uploaded file ...');
             }
             $('.progress-bar').css({width: Math.floor(r.progress() * 100) + '%'});
         });
         r.on('cancel', function() {
-            $('.resumable-file-progress').html('canceled');
+            $('.resumable-file-progress').text('canceled');
         });
         r.on('uploadStart', function() {
             // Show pause, hide resume

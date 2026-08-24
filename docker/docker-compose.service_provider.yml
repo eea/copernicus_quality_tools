@@ -17,6 +17,15 @@ services:
       - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
       - CSRF_TRUSTED_ORIGINS=https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1
       - RESUMABLE_SIMULTANEOUS_UPLOADS=4
+      - S3_ALLOWED_ENDPOINTS
+      - S3_CONNECT_TIMEOUT_SECONDS
+      - S3_READ_TIMEOUT_SECONDS
+      - S3_MAX_LISTED_OBJECTS
+      - QC_TOOL_ENVIRONMENT=production
+      - DJANGO_SECRET_KEY
+      - DJANGO_ALLOWED_HOSTS=qc-copernicus.eea.europa.eu
+      - DJANGO_SECURE_HSTS_SECONDS=31536000
+      - DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=yes
     networks:
       - qc_tool_network
     volumes:
@@ -36,6 +45,11 @@ services:
       - RUN_INSPIRE_VALIDATOR=no
       - USE_LIGHTWEIGHT_VALIDATOR=yes
       - RUN_POSTGRES=yes
+      - S3_ALLOWED_ENDPOINTS
+      - S3_CONNECT_TIMEOUT_SECONDS
+      - S3_READ_TIMEOUT_SECONDS
+      - S3_MAX_LISTED_OBJECTS
+      - S3_MAX_DOWNLOAD_BYTES
     networks:
       - qc_tool_network
     volumes:

@@ -14,6 +14,7 @@ from qc_tool.frontend.accounts.authorization.permissions import (
     ROLE_PERMISSION_GRANTS,
 )
 from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.models import ApiUser
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserRegionGrant
@@ -121,6 +122,10 @@ class ConsolidatedInitialMigrationTests(TestCase):
                 product_family=product_family,
             )
 
+        ApiUser.objects.create(user=ordinary, api_key="PLAINTEXT-LEGACY-KEY")
+        valid_digest = "sha256$" + ("a" * 64)
+        ApiUser.objects.create(user=superuser, api_key=valid_digest)
+
         existing_region_grant = UserRegionGrant.objects.create(
             user=region_member,
             aoi_code="existing-region",
@@ -149,6 +154,12 @@ class ConsolidatedInitialMigrationTests(TestCase):
         schema_editor = SimpleNamespace(connection=connection)
         initial_migration.bootstrap_accounts(apps, schema_editor)
         initial_migration.bootstrap_accounts(apps, schema_editor)
+
+        self.assertFalse(ApiUser.objects.filter(user=ordinary).exists())
+        self.assertEqual(
+            ApiUser.objects.get(user=superuser).api_key,
+            valid_digest,
+        )
 
         self.assertEqual(
             set(Group.objects.filter(name__in=Role.values()).values_list(

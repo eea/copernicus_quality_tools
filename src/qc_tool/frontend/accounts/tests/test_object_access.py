@@ -99,7 +99,11 @@ class DashboardObjectAccessTests(TestCase):
         return (
             reverse("job_history_json", args=[self.delivery.pk]),
             reverse("job_report_json", args=[self.job.pk]),
-            reverse("update_job", args=[self.job.pk]),
+        )
+
+    def protected_data_requests(self):
+        return tuple(("get", url) for url in self.protected_data_urls()) + (
+            ("post", reverse("update_job", args=[self.job.pk])),
         )
 
     def protected_urls(self):
@@ -113,9 +117,9 @@ class DashboardObjectAccessTests(TestCase):
                 self.assertIn("/accounts/login/", response.url)
 
     def test_anonymous_users_get_json_401_from_object_data_endpoints(self):
-        for url in self.protected_data_urls():
-            with self.subTest(url=url):
-                response = self.client.get(url)
+        for method, url in self.protected_data_requests():
+            with self.subTest(method=method, url=url):
+                response = getattr(self.client, method)(url)
                 self.assertEqual(response.status_code, 401)
                 self.assertEqual(
                     response.json()["code"],
@@ -131,9 +135,9 @@ class DashboardObjectAccessTests(TestCase):
                 self.assertEqual(response.status_code, 403)
                 self.assertTemplateUsed(response, "accounts/errors/403.html")
 
-        for url in self.protected_data_urls():
-            with self.subTest(url=url):
-                response = self.client.get(url)
+        for method, url in self.protected_data_requests():
+            with self.subTest(method=method, url=url):
+                response = getattr(self.client, method)(url)
                 self.assertEqual(response.status_code, 403)
                 self.assertEqual(response.json()["code"], "permission_denied")
 
@@ -158,7 +162,7 @@ class DashboardObjectAccessTests(TestCase):
         for user in allowed_users:
             with self.subTest(username=user.username):
                 self.client.force_login(user)
-                response = self.client.get(
+                response = self.client.post(
                     reverse("update_job", args=[self.job.pk])
                 )
                 self.assertEqual(response.status_code, 200)

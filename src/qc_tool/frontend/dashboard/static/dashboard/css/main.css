@@ -122,3 +122,6 @@ table.overview tr td {
     background-color: #e7e7e7;
     text-decoration: none;
 }
+.api-credential-form {
+    display: inline;
+}

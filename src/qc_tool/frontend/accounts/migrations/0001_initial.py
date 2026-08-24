@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.db import migrations
 from django.db import models
@@ -8,6 +10,7 @@ CANONICAL_ROLES = ("default", "product_manager", "admin")
 LEGACY_PRODUCT_ROLE = "product_admin"
 RETIRED_REGION_ROLES = ("country_manager", "region_manager")
 BATCH_SIZE = 1000
+API_KEY_DIGEST_PATTERN = re.compile(r"sha256\$[0-9a-f]{64}\Z", re.ASCII)
 
 CAPABILITIES = (
     ("view_deliveries", "Can view deliveries"),
@@ -63,6 +66,32 @@ LEGACY_PERMISSION_RENAMES = {
     "view_country_deliveries": "view_region_deliveries",
     "view_country_aggregate_report": "view_region_aggregate_report",
 }
+
+
+def _revoke_legacy_api_credentials(api_user_model, *, using):
+    """Delete plaintext/unsupported credentials during the consolidated migration."""
+
+    invalid_ids = []
+    credentials = api_user_model.objects.using(using).values_list(
+        "pk",
+        "api_key",
+    )
+    for credential_id, stored_value in credentials.iterator(
+        chunk_size=BATCH_SIZE,
+    ):
+        if (
+            not isinstance(stored_value, str)
+            or API_KEY_DIGEST_PATTERN.fullmatch(stored_value) is None
+        ):
+            invalid_ids.append(credential_id)
+        if len(invalid_ids) >= BATCH_SIZE:
+            api_user_model.objects.using(using).filter(
+                pk__in=invalid_ids,
+            ).delete()
+            invalid_ids = []
+
+    if invalid_ids:
+        api_user_model.objects.using(using).filter(pk__in=invalid_ids).delete()
 
 
 def _relation_details(model, field_name):
@@ -338,6 +367,11 @@ def bootstrap_accounts(apps, schema_editor):
     profile_model = apps.get_model("dashboard", "UserProfile")
     region_grant_model = apps.get_model("accounts", "UserRegionGrant")
     product_grant_model = apps.get_model("accounts", "UserProductGrant")
+    api_user_model = apps.get_model("dashboard", "ApiUser")
+
+    # Plaintext credentials from the pre-accounts implementation must never
+    # remain usable. Valid versioned digests survive repeat/idempotent runs.
+    _revoke_legacy_api_credentials(api_user_model, using=using)
 
     permission_by_codename = _ensure_capabilities(
         content_type_model,

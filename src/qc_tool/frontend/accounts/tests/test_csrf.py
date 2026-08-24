@@ -2,6 +2,7 @@ import re
 from tempfile import TemporaryDirectory
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_not_required
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.test import Client
@@ -19,10 +20,12 @@ def empty_view(_request):
     return HttpResponse()
 
 
+@login_not_required
 def csrf_page(request):
     return render(request, "dashboard/base.html")
 
 
+@login_not_required
 @csrf_protect
 def csrf_mutation(_request):
     return HttpResponse("ok")

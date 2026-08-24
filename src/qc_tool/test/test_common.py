@@ -3,7 +3,9 @@
 
 from contextlib import ExitStack
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import TestCase
+from unittest.mock import patch
 from uuid import uuid4
 
 from qc_tool.worker.manager import create_jobdir_manager
@@ -86,10 +88,24 @@ class TestProductDirs(TestCase):
         from qc_tool.common import get_product_descriptions
 
         CONFIG["product_dirs"] = [self.product_dir_1, self.product_dir_2]
-        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "pX": "pXdesc from 1"}, get_product_descriptions())
+        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "px": "pXdesc from 1"}, get_product_descriptions())
 
         CONFIG["product_dirs"] = [self.product_dir_2, self.product_dir_1]
-        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "pX": "pXdesc from 2"}, get_product_descriptions())
+        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "px": "pXdesc from 2"}, get_product_descriptions())
+
+    def test_invalid_definition_does_not_hide_the_healthy_catalog(self):
+        from qc_tool.common import CONFIG
+        from qc_tool.common import get_product_descriptions
+        from qc_tool.common import INVALID_PRODUCT_DESCRIPTION
+
+        self.product_dir_1.joinpath("broken.json").write_text("<<<<<<< HEAD")
+        CONFIG["product_dirs"] = [self.product_dir_1]
+
+        with self.assertLogs("qc_tool.common", level="WARNING"):
+            descriptions = get_product_descriptions()
+
+        self.assertEqual(descriptions["p1"], "p1desc")
+        self.assertEqual(descriptions["broken"], INVALID_PRODUCT_DESCRIPTION)
 
 
 class TestCommonWithConfig(TestCase):
@@ -114,3 +130,64 @@ class TestCommonWithConfig(TestCase):
         job_dir.mkdir(exist_ok=True)
         store_job_result({"job_uuid": job_uuid})
         self.assertDictEqual({"job_uuid": job_uuid}, load_job_result(job_uuid))
+
+
+class TestWorkerToken(TestCase):
+    def setUp(self):
+        from qc_tool.common import CONFIG
+
+        self.original_work_dir = CONFIG["work_dir"]
+        self.temporary_directory = TemporaryDirectory()
+        CONFIG["work_dir"] = Path(self.temporary_directory.name)
+
+    def tearDown(self):
+        from qc_tool.common import CONFIG
+
+        CONFIG["work_dir"] = self.original_work_dir
+        self.temporary_directory.cleanup()
+
+    def test_token_is_created_once_with_private_permissions(self):
+        from qc_tool.common import WORKER_TOKEN_FILENAME
+        from qc_tool.common import get_worker_token
+
+        first = get_worker_token()
+        second = get_worker_token()
+        token_path = Path(self.temporary_directory.name, WORKER_TOKEN_FILENAME)
+
+        self.assertEqual(first, second)
+        self.assertGreaterEqual(len(first), 32)
+        self.assertEqual(token_path.stat().st_mode & 0o777, 0o600)
+
+    def test_existing_token_permissions_are_repaired(self):
+        from qc_tool.common import WORKER_TOKEN_FILENAME
+        from qc_tool.common import get_worker_token
+
+        token_path = Path(self.temporary_directory.name, WORKER_TOKEN_FILENAME)
+        token_path.write_text("existing-token", encoding="utf-8")
+        token_path.chmod(0o644)
+
+        self.assertEqual(get_worker_token(), "existing-token")
+        self.assertEqual(token_path.stat().st_mode & 0o777, 0o600)
+
+    def test_symbolic_link_token_path_is_rejected(self):
+        from qc_tool.common import QCException
+        from qc_tool.common import WORKER_TOKEN_FILENAME
+        from qc_tool.common import get_worker_token
+
+        outside = Path(self.temporary_directory.name, "outside-token")
+        outside.write_text("outside", encoding="utf-8")
+        Path(self.temporary_directory.name, WORKER_TOKEN_FILENAME).symlink_to(outside)
+
+        with self.assertRaises(QCException):
+            get_worker_token()
+
+    @patch("qc_tool.common.compare_digest", return_value=True)
+    def test_authentication_uses_constant_time_comparison(self, compare):
+        from qc_tool.common import auth_worker
+        from qc_tool.common import get_worker_token
+
+        stored = get_worker_token()
+
+        self.assertTrue(auth_worker("presented-token"))
+        compare.assert_called_once_with("presented-token", stored)
+        self.assertFalse(auth_worker(None))

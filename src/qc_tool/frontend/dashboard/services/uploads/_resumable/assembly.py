@@ -1,0 +1,205 @@
+"""Exact-size assembly and no-overwrite publication of completed uploads."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import stat
+
+from .descriptor import ResumableUploadDescriptor
+from .errors import ResumableUploadError
+from .filesystem import copy_regular_file_at
+from .filesystem import open_directory
+from .filesystem import regular_file_exists_at
+from .filesystem import write_once_flags
+from .locks import DEFAULT_LOCK_TIMEOUT, upload_lock
+from .paths import ResumableUploadPaths, expected_chunk_paths
+
+
+def assemble_chunks(
+    descriptor: ResumableUploadDescriptor,
+    paths: ResumableUploadPaths,
+    *,
+    lock_timeout: float = DEFAULT_LOCK_TIMEOUT,
+) -> Path:
+    """Assemble and atomically publish a delivery without overwriting a file."""
+
+    chunk_paths = expected_chunk_paths(descriptor, paths)
+    with upload_lock(paths.chunks_dir, timeout=lock_timeout) as chunks_descriptor:
+        target_directory = open_directory(paths.user_root)
+        try:
+            _reject_existing_target(paths, target_directory)
+            if not all(
+                regular_file_exists_at(chunks_descriptor, path.name)
+                for path in chunk_paths
+            ):
+                raise ResumableUploadError(
+                    "upload_incomplete",
+                    "The upload is not complete.",
+                    409,
+                )
+
+            _discard_stale_assembly(chunks_descriptor)
+            try:
+                _write_assembly(descriptor, chunk_paths, chunks_descriptor)
+                _publish_assembly(
+                    paths,
+                    chunks_descriptor,
+                    target_directory,
+                )
+            finally:
+                _best_effort_unlink(chunks_descriptor, ".assembled")
+
+            _discard_published_chunks(chunks_descriptor, chunk_paths)
+            return paths.target_path
+        finally:
+            os.close(target_directory)
+
+
+def _reject_existing_target(
+    paths: ResumableUploadPaths,
+    target_directory: int,
+) -> None:
+    try:
+        os.stat(
+            paths.target_path.name,
+            dir_fd=target_directory,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise ResumableUploadError(
+            "upload_storage_error",
+            "The delivery destination could not be inspected.",
+            500,
+        ) from exc
+    raise _file_exists()
+
+
+def _file_exists() -> ResumableUploadError:
+    return ResumableUploadError(
+        "delivery_file_exists",
+        "A delivery file with this name already exists.",
+        409,
+    )
+
+
+def _discard_stale_assembly(chunks_descriptor: int) -> None:
+    try:
+        file_status = os.stat(
+            ".assembled",
+            dir_fd=chunks_descriptor,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise ResumableUploadError(
+            "upload_storage_error",
+            "Upload staging could not be inspected.",
+            500,
+        ) from exc
+    if not stat.S_ISREG(file_status.st_mode):
+        raise ResumableUploadError(
+            "unsafe_upload_staging",
+            "Upload staging is not safe.",
+            500,
+        )
+    try:
+        os.unlink(".assembled", dir_fd=chunks_descriptor)
+    except OSError as exc:
+        raise ResumableUploadError(
+            "upload_storage_error",
+            "Upload staging could not be prepared.",
+            500,
+        ) from exc
+
+
+def _write_assembly(descriptor, chunk_paths, chunks_descriptor: int) -> None:
+    try:
+        output_descriptor = os.open(
+            ".assembled",
+            write_once_flags(),
+            0o640,
+            dir_fd=chunks_descriptor,
+        )
+        total_written = 0
+        with os.fdopen(output_descriptor, "wb") as output:
+            for chunk_number, chunk_path in enumerate(chunk_paths, start=1):
+                expected_size = descriptor.expected_size_for_chunk(chunk_number)
+                chunk_written = copy_regular_file_at(
+                    chunks_descriptor,
+                    chunk_path.name,
+                    output,
+                    max_bytes=expected_size,
+                )
+                if chunk_written != expected_size:
+                    raise ResumableUploadError(
+                        "invalid_upload_chunk_size",
+                        "An upload chunk size differs from its declaration.",
+                    )
+                total_written += chunk_written
+            output.flush()
+            os.fsync(output.fileno())
+        if total_written != descriptor.total_size:
+            raise ResumableUploadError(
+                "invalid_upload_size",
+                "The uploaded data size differs from its declaration.",
+            )
+    except ResumableUploadError:
+        raise
+    except OSError as exc:
+        raise ResumableUploadError(
+            "upload_storage_error",
+            "The uploaded delivery could not be assembled.",
+            500,
+        ) from exc
+
+
+def _publish_assembly(paths, chunks_descriptor, target_directory) -> None:
+    try:
+        # A hard link publishes the regular file atomically and fails rather
+        # than replacing an existing destination.
+        os.link(
+            ".assembled",
+            paths.target_path.name,
+            src_dir_fd=chunks_descriptor,
+            dst_dir_fd=target_directory,
+            follow_symlinks=False,
+        )
+        try:
+            os.fsync(target_directory)
+        except OSError:
+            # The delivery is already atomically visible. Some supported
+            # filesystems do not provide directory fsync.
+            pass
+    except FileExistsError as exc:
+        raise _file_exists() from exc
+    except OSError as exc:
+        raise ResumableUploadError(
+            "upload_storage_error",
+            "The uploaded delivery could not be assembled.",
+            500,
+        ) from exc
+
+
+def _best_effort_unlink(directory_descriptor: int, filename: str) -> None:
+    try:
+        os.unlink(filename, dir_fd=directory_descriptor)
+    except OSError:
+        # Publication may already have succeeded. A stale private assembly is
+        # cleaned on the next attempt; it must not create a false failure.
+        pass
+
+
+def _discard_published_chunks(chunks_descriptor, chunk_paths) -> None:
+    for chunk_path in chunk_paths:
+        try:
+            os.unlink(chunk_path.name, dir_fd=chunks_descriptor)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # Publication already succeeded. A private stale chunk is safer
+            # than returning a false failure that the client cannot retry.
+            pass

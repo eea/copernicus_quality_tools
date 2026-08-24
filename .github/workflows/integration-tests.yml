@@ -1,56 +1,90 @@
-name: Integration tests
+name: Frontend integration tests
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: ["dev"]
   pull_request:
-    branches: [ "dev" ]
+    branches: ["dev"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-integration-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-run:
+  frontend:
     runs-on: ubuntu-latest
-    
-    defaults:
-      run:
-        working-directory: ./docker
+    timeout-minutes: 30
+    env:
+      TEST_IMAGE: qc-tool-frontend-ci:${{ github.sha }}
+      SOURCE_VERSION: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
-      - name: Checkout code
+      - name: Check out the proposed source
         uses: actions/checkout@v4
 
-      - name: Build Docker images
-        run: docker compose -f docker-compose.service_provider.yml build
+      - name: Build the supported frontend runtime
+        run: >-
+          docker build
+          --build-arg VERSION="$SOURCE_VERSION"
+          --file docker/Dockerfile.frontend
+          --tag "$TEST_IMAGE"
+          docker
 
-      - name: Start services
-        run: docker compose -f docker-compose.service_provider.yml up -d
-
-      # 4. Wait for the API to be "Live" before testing
-      - name: Wait for API Ready
+      - name: Verify runtime, checks, migrations, static files, and tests
+        shell: bash
         run: |
-          echo "Waiting for API to respond..."
-          # This loops until the endpoint returns a 200 OK or we hit 30 seconds
-          for i in {1..30}; do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/delivery-list | grep "200"; then
-              echo "API is up!"
-              break
-            fi
-            echo "Still waiting..."
-            sleep 1
-          done
+          set -euo pipefail
 
-      # 5. Call the specific endpoint
-      - name: Test API Endpoint
-        run: |
-          echo "Fetching delivery list..."
-          curl -v http://localhost:8000/api/delivery-list
+          run_frontend() {
+            docker run --rm \
+              --volume "$GITHUB_WORKSPACE:/usr/local/src/copernicus_quality_tools:ro" \
+              --env PYTHONPATH=/usr/local/src/copernicus_quality_tools/src \
+              --env QC_TOOL_ENVIRONMENT=test \
+              --env DJANGO_SECRET_KEY=ci-only-secret \
+              --env DJANGO_ALLOWED_HOSTS=testserver,localhost \
+              --env WORK_DIR=/tmp/qc-tool-work \
+              --env FRONTEND_DB_PATH=/tmp/qc-tool-test.sqlite3 \
+              --env INCOMING_DIR=/tmp/qc-tool-incoming \
+              --env BOUNDARY_DIR=/tmp/qc-tool-boundaries \
+              --env PRODUCT_DIRS=/usr/local/src/copernicus_quality_tools/product_definitions \
+              "$TEST_IMAGE" "$@"
+          }
 
-      # 6. Keep running for the remainder of the 5 minutes
-      - name: Stay alive
-        run: |
-          echo "Testing complete. Keeping services up for remainder of 5 minutes..."
-          sleep 300
-          docker compose -f docker-compose.service_provider.yml ps
+          run_frontend python3 -c \
+            'import sys, django; assert sys.version_info[:3] == (3, 12, 14); assert django.get_version() == "5.2.17"'
+          run_frontend python3 -m qc_tool.frontend.manage check
+          run_frontend python3 -m qc_tool.frontend.manage makemigrations \
+            --check --dry-run
+          run_frontend python3 -m qc_tool.frontend.manage collectstatic \
+            --noinput
+          run_frontend python3 -m qc_tool.frontend.manage test \
+            qc_tool.frontend.accounts.tests \
+            qc_tool.frontend.dashboard.tests.test_delivery_access \
+            qc_tool.frontend.dashboard.tests.test_delivery_upload_paths \
+            qc_tool.frontend.dashboard.tests.test_worker_authentication \
+            qc_tool.frontend.dashboard.services.tests \
+            --verbosity 2
 
-      - name: Stop services
-        if: always()
-        run: docker compose -f docker-compose.service_provider.yml down
+      - name: Verify secure deployment settings can pass Django checks
+        run: >-
+          docker run --rm
+          --volume "$GITHUB_WORKSPACE:/usr/local/src/copernicus_quality_tools:ro"
+          --env PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
+          --env QC_TOOL_ENVIRONMENT=production
+          --env DJANGO_SECRET_KEY=ci-production-only-3xJw7pL9vK2qN8mR5tY1uB6cD4eF0gHsZa
+          --env DJANGO_ALLOWED_HOSTS=qc-tool.example.test
+          --env DJANGO_SECURE_SSL_REDIRECT=yes
+          --env DJANGO_TRUST_PROXY_SSL_HEADER=yes
+          --env DJANGO_SECURE_HSTS_SECONDS=31536000
+          --env DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=yes
+          --env DJANGO_SECURE_HSTS_PRELOAD=yes
+          --env WORK_DIR=/tmp/qc-tool-work
+          --env FRONTEND_DB_PATH=/tmp/qc-tool-test.sqlite3
+          --env INCOMING_DIR=/tmp/qc-tool-incoming
+          --env BOUNDARY_DIR=/tmp/qc-tool-boundaries
+          --env PRODUCT_DIRS=/usr/local/src/copernicus_quality_tools/product_definitions
+          "$TEST_IMAGE"
+          python3 -m qc_tool.frontend.manage check --deploy

@@ -81,43 +81,66 @@ function canSubmit(row) {
 }
 
 function disabledAction(label, message) {
-    return ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ' +
-        'title="' + message + '" disabled>' + label + '</button>';
+    return $('<button>', {
+        'class': 'btn btn-sm btn-default',
+        'data-toggle': 'tooltip',
+        'title': message,
+        'disabled': true,
+        'text': label
+    });
 }
 
 function actionsFormatter(value, row) {
-    var buttons = '<div class="btn-group">';
+    var $buttons = $('<div>', {'class': 'btn-group'});
 
     if (CAN_RUN_QC) {
         if (canRunQc(row)) {
-            buttons += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
-            buttons += 'title="Run quality controls for this delivery." href="/setup_job?deliveries=' + row.id + '">QC</a>';
+            $('<a>', {
+                'class': 'btn btn-sm btn-success',
+                'role': 'button',
+                'data-toggle': 'tooltip',
+                'title': 'Run quality controls for this delivery.',
+                'href': '/setup_job?' + $.param({deliveries: row.id}),
+                'text': 'QC'
+            }).appendTo($buttons);
         } else {
-            buttons += disabledAction("QC", "Quality controls are not available for this delivery.");
+            $buttons.append(disabledAction("QC", "Quality controls are not available for this delivery."));
         }
     }
 
     if (CAN_DELETE) {
         if (canDelete(row)) {
-            buttons += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
-            buttons += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
-            buttons += 'Delete</button>';
+            $('<button>', {
+                'class': 'btn btn-sm btn-danger delete-button',
+                'data-toggle': 'tooltip',
+                'title': 'Delete this delivery.',
+                'text': 'Delete'
+            })
+                .attr('data-delivery-id', String(row.id))
+                .attr('data-delivery-filename', String(row.filename || ''))
+                .appendTo($buttons);
         } else {
-            buttons += disabledAction("Delete", "This delivery cannot be deleted.");
+            $buttons.append(disabledAction("Delete", "This delivery cannot be deleted."));
         }
     }
 
     if (SUBMISSION_ENABLED && CAN_SUBMIT) {
         if (canSubmit(row)) {
-            buttons += ' <button onclick="submit_eea_function(' + row.id + ', \'' + row.filename + '\')"';
-            buttons += ' class="btn btn-sm btn-default" data-toggle="tooltip"';
-            buttons += ' title="Send this delivery to EEA for approval.">Submit to EEA</button>';
+            $('<button>', {
+                'class': 'btn btn-sm btn-default submit-delivery-button',
+                'data-toggle': 'tooltip',
+                'title': 'Send this delivery to EEA for approval.',
+                'text': 'Submit to EEA'
+            })
+                .attr('data-delivery-id', String(row.id))
+                .attr('data-delivery-filename', String(row.filename || ''))
+                .appendTo($buttons);
         } else {
-            buttons += disabledAction("Submit to EEA", "This delivery is not ready for submission.");
+            $buttons.append(disabledAction("Submit to EEA", "This delivery is not ready for submission."));
         }
     }
 
-    return buttons + '</div>';
+    return $buttons.prop('outerHTML');
 }
 
 function statusFormatter(value, row, index) {
@@ -136,7 +159,12 @@ function statusFormatter(value, row, index) {
             value = "passed";
         }
     }
-    return ['<a class="like" href="/result/', row.last_job_uuid, '" title="Show results">', value, '</a>'].join('');
+    return $('<a>', {
+        'class': 'like',
+        'href': '/result/' + encodeURIComponent(String(row.last_job_uuid)),
+        'title': 'Show results',
+        'text': String(value)
+    }).prop('outerHTML');
 }
 
 function statusCellStyle(value, row, index) {
@@ -169,6 +197,36 @@ function toggle_select_button() {
 }
 
 
+function textDialogMessage(value) {
+    return $('<div>').text(String(value || ''));
+}
+
+
+function listDialogMessage(values, omittedCount) {
+    var $message = $('<div>');
+    values.forEach(function (value) {
+        $('<div>').text(String(value)).appendTo($message);
+    });
+    if (omittedCount > 0) {
+        $('<div>').text('...and ' + omittedCount + ' others.').appendTo($message);
+    }
+    return $message;
+}
+
+
+function submissionResultMessage(result) {
+    var $message = $('<div>');
+    $('<div>').text(String(result.message || '')).appendTo($message);
+    if (Array.isArray(result.failed) && result.failed.length > 0) {
+        $('<strong>').text('Issues:').appendTo($message);
+        result.failed.forEach(function (issue) {
+            $('<div>').text(String(issue)).appendTo($message);
+        });
+    }
+    return $message;
+}
+
+
 function delete_function(delivery_ids, filenames) {
     var msg_title = "Are you sure you want to delete the delivery ZIP file?";
 
@@ -180,15 +238,15 @@ function delete_function(delivery_ids, filenames) {
     if (num_deliveries > 1) {
         msg_title = "Are you sure you want to delete " + num_deliveries + " delivery ZIP files?";
     }
-    if (num_deliveries > 10) {
-        msg_filenames = filenames.split(",").slice(0, 10).join("<br>") + "<br> ...and " + (num_deliveries - 10) + " others.";
-    } else if (num_deliveries > 0) {
-        msg_filenames = filenames.split(",").slice(0, 10).join("<br>");
-    }
+    var filenameList = filenames.toString().split(',');
+    var msg_filenames = listDialogMessage(
+        filenameList.slice(0, 10),
+        Math.max(filenameList.length - 10, 0)
+    );
     var dlg_ok = BootstrapDialog.show({
         type: BootstrapDialog.TYPE_DANGER,
         title: msg_title,
-        message: msg_filenames, //filenames.replace(/,/g, "<br>"), //replaces all commas by newline.
+        message: msg_filenames,
         buttons: [{
             label: "Yes",
             cssClass: "btn-default",
@@ -204,7 +262,7 @@ function delete_function(delivery_ids, filenames) {
                             var dlg_err = BootstrapDialog.show({
                                 type: BootstrapDialog.TYPE_WARNING,
                                 title: "Cannot delete deliveries.",
-                                message: "Error deleting deliveries. " + result.message,
+                                message: textDialogMessage("Error deleting deliveries. " + result.message),
                                 buttons: [{
                                     label: "OK",
                                     cssClass: "btn-default",
@@ -223,7 +281,7 @@ function delete_function(delivery_ids, filenames) {
                             var dlg_err = BootstrapDialog.show({
                                 type: BootstrapDialog.TYPE_WARNING,
                                 title: "Error",
-                                message: error_message,
+                                message: textDialogMessage(error_message),
                                 buttons: [{
                                     label: "OK",
                                     cssClass: "btn-default",
@@ -245,7 +303,7 @@ function submit_eea_function(id, filename) {
     console.log("clicked submit to EEA!");
     var dlg_ok = BootstrapDialog.show({
         title: "Are you sure you want to submit the delivery to EEA?",
-        message: "Delivery file name: " + filename,
+        message: textDialogMessage("Delivery file name: " + filename),
         buttons: [{
             label: "Yes",
             cssClass: "btn-default",
@@ -263,7 +321,7 @@ function submit_eea_function(id, filename) {
                         console.log("file marked successfully for submission to EEA!");
                         var dlg_success = BootstrapDialog.show({
                             title: "Delivery successfully submitted",
-                            message: result.message,
+                            message: textDialogMessage(result.message),
                             buttons: [{
                                 label: "OK",
                                 cssClass: "btn-default",
@@ -283,7 +341,7 @@ function submit_eea_function(id, filename) {
                       var dlg_err = BootstrapDialog.show({
                             type: BootstrapDialog.TYPE_WARNING,
                             title: "Error submitting delivery to EEA",
-                            message: error_message,
+                            message: textDialogMessage(error_message),
                             buttons: [{
                                 label: "OK",
                                 cssClass: "btn-default",
@@ -314,15 +372,15 @@ function submit_eea_batch_function(delivery_ids, filenames) {
         : "Submit delivery to EEA?";
 
     // Generate preview of filenames
-    var msg_filenames = name_array.slice(0, 10).join("<br>");
-    if (num_deliveries > 10) {
-        msg_filenames += "<br> ...and " + (num_deliveries - 10) + " others.";
-    }
+    var msg_filenames = listDialogMessage(
+        name_array.slice(0, 10),
+        Math.max(num_deliveries - 10, 0)
+    );
 
     BootstrapDialog.show({
         type: BootstrapDialog.TYPE_PRIMARY,
         title: msg_title,
-        message: '<div>' + msg_filenames + '</div>',
+        message: msg_filenames,
         buttons: [{
             label: "Yes, Submit",
             cssClass: "btn-success",
@@ -350,9 +408,7 @@ function submit_eea_batch_function(delivery_ids, filenames) {
                         BootstrapDialog.show({
                             type: result.status === "ok" ? BootstrapDialog.TYPE_SUCCESS : BootstrapDialog.TYPE_WARNING,
                             title: "Submission Result",
-                            message: result.message + (result.failed && result.failed.length > 0 
-                                ? "<br><br><strong>Issues:</strong><br>" + result.failed.join("<br>") 
-                                : ""),
+                            message: submissionResultMessage(result),
                             buttons: [{
                                 label: "OK",
                                 action: function(d) { d.close(); }
@@ -368,7 +424,7 @@ function submit_eea_batch_function(delivery_ids, filenames) {
                         BootstrapDialog.show({
                             type: BootstrapDialog.TYPE_DANGER,
                             title: "System Error",
-                            message: err_msg,
+                            message: textDialogMessage(err_msg),
                             buttons: [{ label: "OK", action: function(d) { d.close(); }}]
                         });
                     }
@@ -393,7 +449,7 @@ function update_job_statuses() {
 
             // sends a request to the server and asks for new status of running or waiting job.
             $.ajax({
-                type: "get",
+                type: "POST",
                 url: delivery_status_url,
                 datatype:"json",
                 success:function(updated_delivery)
@@ -434,6 +490,20 @@ $(document).ready(function() {
        formatNoMatches: function () {
            return 'No deliveries found. Please upload a delivery ZIP file.';
        }
+    });
+
+    $('#tbl-deliveries').on('click', '.delete-button', function () {
+        delete_function(
+            $(this).attr('data-delivery-id'),
+            $(this).attr('data-delivery-filename')
+        );
+    });
+
+    $('#tbl-deliveries').on('click', '.submit-delivery-button', function () {
+        submit_eea_function(
+            $(this).attr('data-delivery-id'),
+            $(this).attr('data-delivery-filename')
+        );
     });
 
 

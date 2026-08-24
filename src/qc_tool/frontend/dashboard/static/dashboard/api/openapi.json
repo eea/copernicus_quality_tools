@@ -21,7 +21,7 @@
           "Registering a new delivery"
         ],
         "requestBody": {
-          "description": "Specify full path of the uploaded file.",
+          "description": "Specify a ZIP filename or full path directly below the authenticated user's incoming directory. Paths belonging to another user and nested paths are rejected.",
           "required": true,
           "content": {
             "application/json": {
@@ -72,7 +72,7 @@
           "Registering a new delivery"
         ],
         "requestBody": {
-          "description": "Specify S3 access credentials and delivery S3 object prefix",
+          "description": "Specify S3 access credentials and a delivery object prefix. The endpoint must be an exact HTTPS origin configured by the QC Tool administrator.",
           "required": true,
           "content": {
             "application/json": {
@@ -80,6 +80,8 @@
                 "properties": {
                   "host": {
                     "type": "string",
+                    "format": "uri",
+                    "description": "Exact allowlisted HTTPS S3 origin; paths, query strings, fragments, and embedded credentials are rejected.",
                     "example": "https://s3.waw3-1.cloudferro.com"
                   },
                   "access_key": {
@@ -583,9 +585,10 @@
   "components": {
     "securitySchemes": {
       "ApiKeyAuth": {
-        "type": "apiKey",
-        "in": "query",
-        "name": "apikey"
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "QC Tool API credential",
+        "description": "Send the one-time-issued credential in the Authorization header. Credentials in query strings are rejected."
       }
     },
     "schemas": {

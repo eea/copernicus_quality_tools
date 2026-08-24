@@ -8,7 +8,6 @@ from datetime import datetime
 from shutil import copyfile
 from shutil import copytree
 from pathlib import Path
-import boto3
 
 from qc_tool.common import CONFIG
 from qc_tool.common import compose_job_dir
@@ -17,6 +16,10 @@ from qc_tool.common import JOB_INPUT_DIRNAME
 from qc_tool.common import JOB_OUTPUT_DIRNAME
 from qc_tool.common import load_job_result
 from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
+from qc_tool.frontend.dashboard.services.boundaries import BoundaryPackageError
+from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
+from qc_tool.frontend.dashboard.services.configuration import AnnouncementStorageError
+from qc_tool.frontend.dashboard.services.configuration import read_announcement
 
 
 logger = logging.getLogger(__name__)
@@ -26,11 +29,9 @@ def get_announcement_message():
     Reads announcement message from the announcement.txt file.
     """
     try:
-        if CONFIG["announcement_path"].is_file():
-            return CONFIG["announcement_path"].read_text()
-        else:
-            return None
-    except:
+        return read_announcement(CONFIG["announcement_path"]) or None
+    except AnnouncementStorageError:
+        logger.warning("Announcement state could not be read safely.")
         return None
 
 def get_boundary_version():
@@ -38,15 +39,15 @@ def get_boundary_version():
     Reads .txt file in boundary/raster folder with format ver_{date}.txt and return datetime string.
     """
     try:
-        boundaries_dir = CONFIG["boundary_dir"]
-        rasterdir_path = Path(boundaries_dir).joinpath('raster')
+        generation = resolve_boundary_generation(CONFIG["boundary_dir"])
+        rasterdir_path = generation.raster_dir
         files_in_rasterpath = os.listdir(rasterdir_path)
         for file_name in files_in_rasterpath:
             if 'ver' in file_name:
                version_str = file_name.split('_')[1].split('.')[0]
                datetime_str = datetime.strptime(version_str,"%d%m%Y").strftime("%d/%m/%Y")
                return datetime_str       
-    except:    
+    except (BoundaryPackageError, OSError, ValueError, IndexError):
         return 'None'
 
 def find_product_description(product_ident):
@@ -77,53 +78,6 @@ def guess_product_ident(delivery_filepath):
         if fn.startswith(product_ident) or fn.endswith(product_ident):
             return product_ident
     return None
-
-def find_s3_delivery(host, access_key, secret_key, bucketname, pattern):
-    """
-    Tries to find the delivery files on S3 storage based on user-defined filename pattern.
-    """
-
-    # Check the S3 storage connection, filter objects by naming pattern
-    try:
-        s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
-        bucket = s3.Bucket(bucketname)
-        objects_filtered = list(bucket.objects.filter(Prefix=pattern))
-        if len(objects_filtered) == 0:
-            return {"delivery_filename": None,
-                    "message": "s3-key prefix does not match any object on S3 storage"}
-        else:
-            s3_deliveries_found = list()
-            for obj in objects_filtered:
-                delivery_file_prefix = os.path.join(os.path.dirname(obj.key), os.path.basename(obj.key).split(os.extsep)[0])
-                s3_deliveries_found.append(delivery_file_prefix)
-            delivery_found = list(set(s3_deliveries_found))
-            if len(delivery_found) > 1:
-                return {"delivery_filename": None,
-                        "message": "s3-key prefix does not match the delivery unambiguously"}
-            else:
-                return {"delivery_filename": delivery_found[0],
-                        "message": "s3 delivery found: '{:s}'".format(delivery_found[0])}
-    except Exception as e:
-        return {"delivery_filename": None,
-                "message": str(e)}
-
-def get_s3_delivery_size(host, access_key, secret_key, bucketname, pattern):
-    """
-    Get the summary size of the S3 delivery objects.
-    """
-    try:
-        s3 = boto3.resource('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=host)
-        bucket = s3.Bucket(bucketname)
-        objects_filtered = list(bucket.objects.filter(Prefix=pattern))
-        if len(objects_filtered) == 0:
-            return None
-        else:
-            s3_dlivery_size = 0
-            for obj in objects_filtered:
-                s3_dlivery_size += obj.size
-            return s3_dlivery_size
-    except:
-        return None
 
 def submit_job(job_uuid, input_filepath, submission_dir, submission_date, is_s3=False):
     # Prepare parameters.

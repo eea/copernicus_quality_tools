@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: qc_tool
       POSTGRES_USER: qc_user
-      POSTGRES_PASSWORD: qc_password
+      POSTGRES_PASSWORD: ${QC_TOOL_POSTGRES_PASSWORD:?Set QC_TOOL_POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -26,7 +26,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=qc_tool
       - POSTGRES_USER=qc_user
-      - POSTGRES_PASSWORD=qc_password
+      - POSTGRES_PASSWORD=${QC_TOOL_POSTGRES_PASSWORD:?Set QC_TOOL_POSTGRES_PASSWORD}
       - FRONTEND_DB_PATH
       - API_URL=https://qc-copernicus.eea.europa.eu/api
       - UPDATE_JOB_STATUSES=yes
@@ -38,6 +38,15 @@ services:
       - CASE_INSENSITIVE_USERNAMES=yes
       - CSRF_TRUSTED_ORIGINS=https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1
       - RESUMABLE_SIMULTANEOUS_UPLOADS=4
+      - S3_ALLOWED_ENDPOINTS
+      - S3_CONNECT_TIMEOUT_SECONDS
+      - S3_READ_TIMEOUT_SECONDS
+      - S3_MAX_LISTED_OBJECTS
+      - QC_TOOL_ENVIRONMENT=production
+      - DJANGO_SECRET_KEY
+      - DJANGO_ALLOWED_HOSTS=qc-copernicus.eea.europa.eu
+      - DJANGO_SECURE_HSTS_SECONDS=31536000
+      - DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=yes
     networks:
       - qc_tool_network
     volumes:
@@ -45,7 +54,7 @@ services:
       - qc_tool_incoming:/mnt/qc_tool_incoming
       - qc_tool_submission:/mnt/qc_tool_submission
       - qc_tool_work:/mnt/qc_tool_work
-      - qc_tool_frontend:/mnt/qc_tool_frontend
+      - qc_tool_frontend:/var/lib/qc_tool
 
   worker:
     image: eeacms/copernicus-qctool-worker:2.4.7rc4
@@ -61,6 +70,11 @@ services:
       - RUN_INSPIRE_VALIDATOR=yes
       - USE_LIGHTWEIGHT_VALIDATOR=no
       - RUN_POSTGRES=yes
+      - S3_ALLOWED_ENDPOINTS
+      - S3_CONNECT_TIMEOUT_SECONDS
+      - S3_READ_TIMEOUT_SECONDS
+      - S3_MAX_LISTED_OBJECTS
+      - S3_MAX_DOWNLOAD_BYTES
     networks:
       - qc_tool_network
     volumes:

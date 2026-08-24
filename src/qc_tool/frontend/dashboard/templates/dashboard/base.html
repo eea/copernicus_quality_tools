@@ -7,13 +7,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{% block title %}CLMS QC-Tool{% endblock title %}</title>
         <meta name="description" content=""/>
-        <meta name="robots" content="{% block robots %}index, follow{% endblock robots %}"/>
+        <meta name="robots" content="{% block robots %}noindex, nofollow, noarchive{% endblock robots %}"/>
         <meta name="keywords" content="eea, copernicus, qc, tool, gis, quality"/>
         <meta name="csrf-token" content="{{ csrf_token }}">
         <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
-        <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}dashboard/css/main.css">
-        <link rel="stylesheet" href="{{ STATIC_URL }}dashboard/css/bootstrap-dialog.min.css" type="text/css" />
-        <link rel="shortcut icon" type="image/png" href="{{ STATIC_URL }}dashboard/img/favicon.ico"/>
+        <link rel="stylesheet" type="text/css" href="{% static 'dashboard/css/main.css' %}">
+        <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-dialog.min.css' %}" type="text/css" />
+        <link rel="shortcut icon" type="image/png" href="{% static 'dashboard/img/favicon.ico' %}"/>
 
         {% block css %}{% endblock css %}
 
@@ -36,8 +36,8 @@
                             </button>
                             {% url 'deliveries' as deliveries_url %}
                             <a class="navbar-brand" href="{{ deliveries_url|default:'/' }}">
-                                <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:45px;margin-top:-13px;float:left" />
-                                <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_medium.png" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
+                                <img src="{% static 'dashboard/img/logo_copernicus_big.png' %}" style="height:45px;margin-top:-13px;float:left" />
+                                <img src="{% static 'dashboard/img/logo_land_monitoring_medium.png' %}" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
                                 <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
                             </a>
                         </div>

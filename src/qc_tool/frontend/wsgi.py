@@ -18,6 +18,5 @@ application = get_wsgi_application()
 # Run refresh_job_statuses service.
 if os.environ.get("REFRESH_JOB_STATUSES_BACKGROUND", "yes") == "yes":
     from qc_tool.frontend.dashboard.views import refresh_job_statuses
-    t = Thread(target=refresh_job_statuses)
-    t.setDaemon(True)
+    t = Thread(target=refresh_job_statuses, daemon=True)
     t.start()

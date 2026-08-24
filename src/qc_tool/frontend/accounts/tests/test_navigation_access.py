@@ -107,6 +107,6 @@ class ApiAuthenticationResponseTests(SimpleTestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
             response["WWW-Authenticate"],
-            'ApiKey realm="QC Tool API"',
+            'Bearer realm="QC Tool API"',
         )
         self.assertEqual(response.json()["status"], "error")

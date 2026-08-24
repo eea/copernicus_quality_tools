@@ -71,8 +71,26 @@
                             </button>
                             <span>&nbsp;&nbsp;</span>
                             <span>&nbsp;&nbsp;</span>
-                            API Key:
-                            <input type="text" value="{{ api_key }}" class="field left" size=25 readonly="readonly">
+                            <span>API credential:</span>
+                            {% if api_key_configured %}
+                            <span class="label label-success">Configured</span>
+                            <form method="post" action="{% url 'api_credential_rotate' %}" class="form-inline api-credential-form"
+                                  onsubmit="return window.confirm('Rotate this API credential? The current credential will stop working immediately.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-default btn-sm">Rotate</button>
+                            </form>
+                            <form method="post" action="{% url 'api_credential_revoke' %}" class="form-inline api-credential-form"
+                                  onsubmit="return window.confirm('Revoke this API credential? API clients using it will stop working immediately.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
+                            </form>
+                            {% else %}
+                            <span class="label label-default">Not configured</span>
+                            <form method="post" action="{% url 'api_credential_rotate' %}" class="form-inline api-credential-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-default btn-sm">Create</button>
+                            </form>
+                            {% endif %}
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-export" class="btn btn-info">
                                 <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
@@ -85,16 +103,15 @@
                                 <th data-checkbox="true" data-formatter="checkboxFormatter"></th>
                                 <th data-field="id" data-sortable="true">ID</th>
                                 <th data-field="type" data-sortable="true">Type</th>
-                                <th data-field="filename" data-filter-control="input" data-sortable="true">Name</th>
-                                <th data-field="filepath" data-visible="false" data-sortable="true">Path</th>
+                                <th data-field="filename" data-filter-control="input" data-sortable="true" data-escape="true">Name</th>
                                 <th data-field="date_uploaded" data-filter-control="input" data-search-on-enter-key="true" data-sortable="true" data-formatter="dateFormatter">Date Uploaded</th>
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
-                                <th data-field="product_description" data-filter-control="select" data-filter-data="url:/data/product_descriptions/" data-sortable="true">Product</th>
+                                <th data-field="product_description" data-filter-control="select" data-filter-data="url:/data/product_descriptions/" data-sortable="true" data-escape="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
                                 {% if account_access.can_view_other_users_deliveries %}
-                                <th data-field="username" data-visible="true" data-sortable="true" >User</th>
+                                <th data-field="username" data-visible="true" data-sortable="true" data-escape="true">User</th>
                                 {% else %}
-                                <th data-field="username" data-visible="false" data-sortable="true" >User</th>
+                                <th data-field="username" data-visible="false" data-sortable="true" data-escape="true">User</th>
                                 {% endif %}
                                 <th data-field="last_job_status" data-filter-control="select" data-filter-data="var:job_statuses" data-search-on-enter-key="true" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">QC Status</th>
                                 {% if submission_enabled %}

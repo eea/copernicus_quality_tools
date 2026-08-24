@@ -9,7 +9,6 @@ from functools import partial
 from importlib import import_module
 from subprocess import run
 from sys import exc_info
-from traceback import format_exc
 from signal import signal, alarm, SIGALRM
 from time import time
 
@@ -32,6 +31,7 @@ from qc_tool.common import get_timeout
 from qc_tool.worker.report import generate_pdf_report
 from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
+from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
 
 
 log = logging.getLogger(__name__)
@@ -104,20 +104,20 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
         validate_skip_steps(skip_steps, product_definition)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
         job_report_filepath = jobdir_manager.job_dir.joinpath(JOB_REPORT_FILENAME_TPL.format(filepath.stem))
+        # Initialize the public result before any fallible setup so finalization
+        # never masks the original failure with an unbound local variable.
+        job_result = {"job_uuid": job_uuid,
+                      "product_ident": product_ident,
+                      "user_name": user_name,
+                      "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
+                      "filename": filepath.name,
+                      "report_filename": job_report_filepath.name,
+                      "error_message": None,
+                      "qc_tool_version": get_qc_tool_version(),
+                      "steps": []}
         try:
             # Make duplicate of product definition in job dir.
             copy_product_definition_to_job(job_uuid, product_ident)
-
-            # Set up initial job result items.
-            job_result = {"job_uuid": job_uuid,
-                          "product_ident": product_ident,
-                          "user_name": user_name,
-                          "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
-                          "filename": filepath.name,
-                          "report_filename": job_report_filepath.name,
-                          "error_message": None,
-                          "qc_tool_version": get_qc_tool_version(),
-                          "steps": []}
 
             if s3_params:
                 # FIXME make correct signature also in case of S3 files.
@@ -129,13 +129,23 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
             # This way we announce that the job has started.
             store_job_result(job_result)
 
+            # Pin one immutable boundary generation for the entire job. A
+            # concurrent upload may publish a newer generation without making
+            # this job mix files from two different snapshots.
+            boundary_generation = resolve_boundary_generation(
+                CONFIG["boundary_dir"]
+            )
+
             # Prepare initial job params.
             job_params = {}
             job_params["connection_manager"] = exit_stack.enter_context(create_connection_manager(job_uuid))
             job_params["tmp_dir"] = jobdir_manager.tmp_dir
             job_params["output_dir"] = jobdir_manager.output_dir
             job_params["filepath"] = filepath
-            job_params["boundary_dir"] = CONFIG["boundary_dir"]
+            job_params["boundary_dir"] = boundary_generation.path
+            job_params["boundary_generation_id"] = (
+                boundary_generation.generation_id
+            )
             job_params["skip_inspire_check"] = CONFIG["skip_inspire_check"]
             job_params["s3"] = {}
 
@@ -149,8 +159,11 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
 
                 # Replace by unzip checks by s3_download checks for s3 deliveries
                 if s3_params and step_def["check_ident"] in ("qc_tool.vector.unzip", "qc_tool.raster.unzip"):
-                    replaced_check_ident = step_def["check_ident"].replace("unzip", "s3_download")
-                    replaced_check_description = "Data can be downloaded from S3" #TODO load description from module
+                    # Remote materialization is an infrastructure trust
+                    # boundary. Keep it in the worker layer so raster/vector
+                    # checks only consume an already validated local payload.
+                    replaced_check_ident = "qc_tool.worker.checks.s3_download"
+                    replaced_check_description = "Data can be downloaded from approved S3 storage"
                     step_def["check_ident"] = replaced_check_ident
                     step_result = {"check_ident": step_def["check_ident"],
                                    "description": replaced_check_description}
@@ -239,7 +252,12 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
             (ex_type, ex_obj, tb_obj) = exc_info()
             if tb_obj is not None:
                 log.exception("Job has been interrupted by an exception.")
-                job_result["error_message"] = format_exc()
+                # Results are exposed through browser and API views. Keep
+                # paths, dependency details and credentials in server logs.
+                job_result["error_message"] = (
+                    "The QC job failed unexpectedly. Contact an administrator "
+                    "and provide the job identifier."
+                )
             job_result["job_finish_date"] = datetime.utcnow().strftime(TIME_FORMAT)
             step_statuses = set(job_step["status"] for job_step in job_result["steps"])
             if job_result["error_message"] is not None:

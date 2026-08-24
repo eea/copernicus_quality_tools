@@ -15,7 +15,9 @@ QC Tool is licensed under the [EUPL, Version 1.2](https://github.com/eea/coperni
 
 ## How to use QC Tool
 
-The service is publicly available at: https://qc-copernicus.eea.europa.eu/ Demo login is user: guest, password: guest.
+The service is publicly available at: https://qc-copernicus.eea.europa.eu/.
+Access credentials are managed by the service operator and are intentionally
+not stored in the documentation.
 
 
 * **User Guide**
@@ -68,5 +70,4 @@ The service is publicly available at: https://qc-copernicus.eea.europa.eu/ Demo 
   *  [[HRL Small Woody Features]]
   *  [[HRL CLC+Backbone]]
   *  [[Urban Atlas 2012 Building Heights]]
-
 

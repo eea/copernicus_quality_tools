@@ -1,46 +1,47 @@
-# Dockerfile for building web console.
-# It utilizes django.
+# Keep debug and release environments on the same reviewed runtime manifest.
+FROM python:3.12.14-slim-trixie@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a
 
-FROM ubuntu:focal
-
-LABEL author=gisat.cz
-LABEL description="QC tool environment, frontend service."
+LABEL author="gisat.cz"
+LABEL description="QC Tool frontend debug service"
 
 ARG VERSION
 
-ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
-ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
+ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    QC_TOOL_ENVIRONMENT=development \
+    VERSION=${VERSION} \
+    TZ=Europe/Prague
 
-# Build the initial environment.
-RUN echo "$VERSION" >/etc/qc_tool_version.txt \
-    && apt-get -y update \
-    && apt-get -y upgrade \
-    && apt-get -y install wget unzip
+RUN test -n "$VERSION" \
+    && echo "$VERSION" >/etc/qc_tool_version.txt \
+    && apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        ca-certificates \
+        tzdata \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install python and bootstrap pip
-RUN cd /usr/local/src \
-    && apt-get -y install python3 python3-distutils \
-    && wget --no-verbose https://bootstrap.pypa.io/get-pip.py \
-    && python3 get-pip.py
-    
-# Install boto3 and checksumdir.
-RUN pip3 install boto3 checksumdir
+COPY requirements.frontend.txt /tmp/requirements.frontend.txt
+RUN python -m pip install --no-cache-dir \
+        -r /tmp/requirements.frontend.txt \
+    && python -m pip install --no-cache-dir \
+        --target /tmp \
+        debugpy==1.8.17
 
-# Install debugpy.
-RUN pip3 install debugpy -t /tmp
+RUN mkdir -p /tmp/qc-tool-source /usr/local/src \
+    && python -c "import os, urllib.request; version = os.environ['VERSION']; urllib.request.urlretrieve('https://github.com/eea/copernicus_quality_tools/archive/' + version + '.zip', '/tmp/qc-tool-source.zip')" \
+    && unzip -q /tmp/qc-tool-source.zip -d /tmp/qc-tool-source \
+    && extracted_dir="$(find /tmp/qc-tool-source -mindepth 1 -maxdepth 1 -type d -print -quit)" \
+    && test -n "$extracted_dir" \
+    && mv "$extracted_dir" /usr/local/src/copernicus_quality_tools \
+    && rm -rf /tmp/qc-tool-source /tmp/qc-tool-source.zip \
+    && mkdir -p /var/lib/qc_tool
 
-# Install qc tool, frontend application.
-RUN cd /usr/local/src \
-    && wget --no-verbose https://github.com/eea/copernicus_quality_tools/archive/${VERSION}.zip \
-    && unzip ./${VERSION}.zip \
-    && rm ./${VERSION}.zip \
-    && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
-    && cd copernicus_quality_tools/src/qc_tool/frontend \
-    && pip3 install -r ./requirements.txt \
-    && mkdir /var/lib/qc_tool
-EXPOSE 8000
+EXPOSE 8000 5678
 
-# Run frontend application.
-COPY ./run_frontend.sh /
-RUN chmod +x /run_frontend.sh
-CMD /run_frontend.sh
+COPY run_frontend.sh /run_frontend.sh
+RUN chmod 0755 /run_frontend.sh
+
+CMD ["/run_frontend.sh"]

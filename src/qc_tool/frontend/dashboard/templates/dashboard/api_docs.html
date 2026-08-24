@@ -1,0 +1,40 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="referrer" content="no-referrer">
+    <title>QC Tool API documentation</title>
+    <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}">
+</head>
+<body>
+<main class="container">
+    <div class="page-header">
+        <h1>QC Tool API</h1>
+    </div>
+
+    <p>
+        The machine-readable OpenAPI document is available as
+        <a href="{% url 'api_openapi_json' %}">openapi.json</a>.
+    </p>
+
+    <h2>Authentication</h2>
+    <p>
+        Private API endpoints require a one-time-issued credential in the HTTP
+        <code>Authorization</code> header:
+    </p>
+    <pre><code>Authorization: Bearer &lt;QC Tool API credential&gt;</code></pre>
+    <p>
+        Sign in to QC Tool to create or rotate your credential. Credentials in
+        URLs and query strings are rejected because URLs are commonly retained
+        in logs and browser history.
+    </p>
+
+    <h2>Example</h2>
+    <pre><code>curl --header 'Authorization: Bearer &lt;credential&gt;' \
+  '{{ api_url }}/delivery-list'</code></pre>
+</main>
+</body>
+</html>

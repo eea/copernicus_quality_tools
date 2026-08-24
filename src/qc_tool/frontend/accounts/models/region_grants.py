@@ -24,7 +24,7 @@ class UserRegionGrant(models.Model):
         ordering = ("aoi_code", "pk")
         constraints = (
             models.CheckConstraint(
-                check=~models.Q(aoi_code=""),
+                condition=~models.Q(aoi_code=""),
                 name="accounts_region_aoi_not_empty",
             ),
             models.UniqueConstraint(

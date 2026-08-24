@@ -6,7 +6,8 @@ $('#tbl-boundaries-raster').bootstrapTable({
     showColumns: false,
     sortName: 'filename',
     sortOrder: 'asc',
-    url: "/data/boundaries/raster/",
+    url: $('#tbl-boundaries-raster').data('url'),
+    escape: true,
     pageSize: 20,
     pageList: [20, 50, 100, 500],
     formatNoMatches: function () {
@@ -22,7 +23,8 @@ $('#tbl-boundaries-vector').bootstrapTable({
     showColumns: false,
     sortName: 'filename',
     sortOrder: 'asc',
-    url: "/data/boundaries/vector/",
+    url: $('#tbl-boundaries-vector').data('url'),
+    escape: true,
     pageSize: 20,
     pageList: [20, 50, 100, 500],
     formatNoMatches: function () {

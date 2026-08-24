@@ -27,40 +27,62 @@ function toggle_select_buttons() {
 }
 
 
-function display_product_info(product_ident) {
-    var detail_url = "/data/job_info/" + product_ident + "/";
-    $.getJSON(detail_url , function(obj) {
-        var steps = obj.job_result.steps
-        $("#tbl_check_details > tbody").html("");
-        $("#error_placeholder").html("");
-        var tbody = ""
-        for (var i = 0; i < steps.length; i++) {
+function configuredUrl(attributeName, placeholder, value) {
+    var template = $('#tool-canvas').attr(attributeName);
+    return template.replace(placeholder, encodeURIComponent(String(value)));
+}
 
-            var check_ident = steps[i].check_ident;
+
+function textDialogMessage(value) {
+    return $('<div>').text(String(value));
+}
+
+
+function updateProductDefinitionLink(productIdent, label) {
+    var url = configuredUrl(
+        'data-product-definition-url-template',
+        '__PRODUCT__',
+        productIdent
+    );
+    $('#product_link_placeholder').empty().append(
+        $('<a>').attr('href', url).text(label)
+    );
+}
+
+
+function display_product_info(product_ident) {
+    var detail_url = configuredUrl(
+        'data-job-info-url-template',
+        '__PRODUCT__',
+        product_ident
+    );
+    $.getJSON(detail_url , function(obj) {
+        var steps = Array.isArray(obj.job_result.steps) ? obj.job_result.steps : [];
+        var $tbody = $("#tbl_check_details > tbody").empty();
+        $("#error_placeholder").empty();
+        for (var i = 0; i < steps.length; i++) {
+            var step = steps[i];
+            var check_ident = String(step.check_ident || '');
             if (check_ident.startsWith("qc_tool.")) {
                 check_ident = check_ident.substring(8);
             }
-            if (!steps[i].system) { // Steps with system check are not shown.
-                tbody += "<tr>";
-                tbody += "<td>" + steps[i].step_nr + "</td>";
-                tbody += "<td>" + check_ident + "</td>";
-                tbody += "<td>" + steps[i].description + "</td>";
-                if (steps[i].layers) {
-                    tbody += "<td>" + steps[i].layers.join(", ") + "</td>";
-                } else {
-                    tbody += "<td></td>";
-                }
-                tbody += '<td><input name="selected_steps[]" type="checkbox" value="' + steps[i].step_nr + '" checked';
-                if (steps[i].required) { // Required steps have checkbox disabled.
-                    tbody += " disabled";
-                }
-                tbody += "></td>";
-                tbody += "</tr>";
+            if (!step.system) { // Steps with system check are not shown.
+                var $row = $('<tr>');
+                $('<td>').text(String(step.step_nr)).appendTo($row);
+                $('<td>').text(check_ident).appendTo($row);
+                $('<td>').text(String(step.description || '')).appendTo($row);
+                $('<td>').text(
+                    Array.isArray(step.layers) ? step.layers.join(', ') : ''
+                ).appendTo($row);
+                var $checkbox = $('<input>', {
+                    name: 'selected_steps[]',
+                    type: 'checkbox',
+                    value: String(step.step_nr)
+                }).prop('checked', true).prop('disabled', Boolean(step.required));
+                $('<td>').append($checkbox).appendTo($row);
+                $row.appendTo($tbody);
             }
         }
-
-        // add html content to the table with checkboxes.
-        $("#tbl_check_details > tbody").html(tbody);
 
         //show table if hidden
         if($("#tbl_check_details").is(":hidden")){
@@ -68,8 +90,7 @@ function display_product_info(product_ident) {
         }
 
         // Update link to product definition.
-        $("#product_link_placeholder").html(
-        '<a href="/data/product_definition/' + product_ident + '/">Product Definition</a>');
+        updateProductDefinitionLink(product_ident, 'Product Definition');
 
         // enable Run QC button
         $("#btn_run").prop("disabled", false);
@@ -82,12 +103,13 @@ function display_product_info(product_ident) {
     })
     .fail(function() {
         $("#tbl_check_details").hide();
-        $("#tbl_check_details > tbody").html("");
-        var product_error_msg = 'Error in configuration of <strong>' + product_ident + '</strong> product!'
-        $("#error_placeholder").html('<div class="alert alert-danger">' + product_error_msg + '</div>');
-        // Update link to product definition.
-        $("#product_link_placeholder").html(
-        '<a href="/data/product_definition/' + product_ident + '/">Show Product Definition</a>');
+        $("#tbl_check_details > tbody").empty();
+        $("#error_placeholder").empty().append(
+            $('<div>', {'class': 'alert alert-danger'}).text(
+                'Error in configuration of ' + product_ident + ' product!'
+            )
+        );
+        updateProductDefinitionLink(product_ident, 'Show Product Definition');
     });
 }
 
@@ -104,8 +126,8 @@ $(document).ready(function() {
         $("#tbl_check_details").show();
     } else {
         $("#tbl_check_details").hide();
-        $("#tbl_check_details > tbody").html("");
-        $("#product_link_placeholder").html("");
+        $("#tbl_check_details > tbody").empty();
+        $("#product_link_placeholder").empty();
         $("#btn_run").prop("disabled", true);
     }
 
@@ -185,7 +207,7 @@ function create_job() {
 
     $.ajax({
         type: "POST",
-        url: "/create_job",
+        url: $('#tool-canvas').attr('data-create-job-url'),
         data: data,
         dataType: "json",
         success: function(result) {
@@ -196,13 +218,16 @@ function create_job() {
             }
             var dlg_ok = BootstrapDialog.show({
                 title: msg_title,
-                message: result.message,
+                message: textDialogMessage(result.message),
                 buttons: [{
                     label: "OK",
                     cssClass: "btn-default",
                     action: function(dialog) {
                         // If the user click OK, then redirect to jobs page for now.
-                        $(location).attr("href","/");
+                    $(location).attr(
+                        'href',
+                        $('#tool-canvas').attr('data-deliveries-url')
+                    );
                     }
                 }]
             });

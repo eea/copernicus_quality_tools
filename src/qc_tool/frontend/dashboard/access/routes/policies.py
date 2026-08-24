@@ -8,6 +8,7 @@ independent details of a private route.
 from dataclasses import dataclass
 from enum import Enum
 
+from django.contrib.auth.decorators import login_not_required
 from django.views.decorators.http import require_http_methods
 
 from qc_tool.frontend.accounts.authentication.decorators import api_key_required
@@ -177,7 +178,15 @@ def _apply_private_policy(policy, method_limited_view):
 
 
 def apply_route_policy(policy, view_func):
-    """Apply a validated route contract before the callback may run."""
+    """Apply a validated route contract before the callback may run.
+
+    Django's global ``LoginRequiredMiddleware`` protects views that are not
+    part of this registry. Registry-managed callbacks opt out of that generic
+    session check because this function applies their declared session,
+    API-credential, or worker-token authenticator instead. The opt-out does
+    not make a private route public; its validated route policy remains the
+    authentication and authorization boundary.
+    """
 
     method_limited_view = require_http_methods(policy.methods)(view_func)
 
@@ -188,5 +197,6 @@ def apply_route_policy(policy, view_func):
     else:
         raise RuntimeError(f"Unsupported route visibility: {policy.visibility!r}")
 
+    protected_view = login_not_required(protected_view)
     protected_view._qc_tool_route_policy = policy
     return protected_view

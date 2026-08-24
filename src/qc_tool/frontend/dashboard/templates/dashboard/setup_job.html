@@ -23,7 +23,13 @@
                 <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
                 {% endif %}
 
-                <div id="tool-canvas">
+                <div
+                    id="tool-canvas"
+                    data-job-info-url-template="{% url 'job_info_json' '__PRODUCT__' %}"
+                    data-product-definition-url-template="{% url 'product_definition_json' '__PRODUCT__' %}"
+                    data-create-job-url="{% url 'create_job' %}"
+                    data-deliveries-url="{% url 'deliveries' %}"
+                >
                     <div class="panel panel-primary">
                         <div class="panel-heading">
                             <div class="panel-title">

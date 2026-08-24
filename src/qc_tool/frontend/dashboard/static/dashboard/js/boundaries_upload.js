@@ -1,75 +1,127 @@
-$(function () {
+(function (window, document) {
+    "use strict";
 
-  var n_selected = 0;
-  var n_uploaded = 0;
-  var $fileUpload = $("#fileupload");
+    var input = document.getElementById("fileupload");
+    var trigger = document.querySelector(".js-upload-files");
+    var progress = document.querySelector("#modal-progress .progress-bar");
+    var resultContainer = document.getElementById("upload-result");
 
-  function showUploadError(message) {
-    var row = '<tr><td><div class="alert alert-danger">';
-    row += '<span class="glyphicon glyphicon-remove"></span> ';
-    row += $("<div>").text(message).html();
-    row += '</div></td></tr>';
-    $("#files_table tbody").prepend(row);
-  }
-
-  /* 1. OPEN THE FILE EXPLORER WINDOW */
-  $(".js-upload-files").click(function () {
-    $("#fileupload").click();
-  });
-
-  /* 2. INITIALIZE THE FILE UPLOAD COMPONENT */
-  $fileUpload.fileupload({
-    dataType: 'json',
-    progressServerRate: 0.3,
-    progressServerDecayExp: 2,
-
-    sequentialUploads: true,  /* 1. SEND THE FILES ONE BY ONE */
-
-    start: function (e) {  /* 2. WHEN THE UPLOADING PROCESS STARTS, SHOW THE MODAL */
-      $("#files_table tbody").html("");
-      $("#modal-progress").modal("show");
-      n_selected = 1;
-      n_uploaded = 0;
-    },
-    stop: function (e) {  /* 3. WHEN THE UPLOADING PROCESS FINALIZE, HIDE THE MODAL */
-      $("#modal-progress").modal("hide");
-    },
-
-    submit: function (e, data) {
-        n_selected += data.files.length;
-    },
-
-    progressall: function (e, data) {  /* 4. UPDATE THE PROGRESS BAR */
-      var progress = parseInt(data.loaded / data.total * 100, 10);
-      var strProgress = progress + "%";
-      $(".progress-bar").css({"width": strProgress});
-      $(".progress-bar").text(strProgress) ;
-      var n_uploaded_display = n_uploaded + 1;
-      $(".modal-title").text("Uploading file " + n_uploaded_display + " / " + n_selected);
-    },
-    done: function (e, data) {  /* 3. PROCESS THE RESPONSE FROM THE SERVER */
-      n_uploaded += 1;
-      if (data.result.is_valid) {
-        var msg = '<tr><td><div class="alert alert-success">'
-        msg += '<span class="glyphicon glyphicon-ok"></span>';
-        msg += ' Boundary package <strong>' + data.result.url + '</strong> uploaded successfully. ';
-        msg += '<a class="btn btn-success btn-pull-right" href="';
-        msg += $fileUpload.data("success-url");
-        msg += '">Go Back to Boundaries</a>';
-        msg += '</div></td></tr>';
-      } else {
-        var msg = '<tr><td><div class="alert alert-danger">';
-        msg += '<span class="glyphicon glyphicon-remove"></span> File <strong>';
-        msg += data.result.message;
-        msg += '</strong></div></td></tr>';
-        console.log(msg);
-      }
-      $("#files_table tbody").prepend(msg);
-    },
-    fail: function (e, data) {
-      var response = data.jqXHR.responseJSON || {};
-      showUploadError(response.message || "The boundary package could not be uploaded.");
+    if (!input || !trigger || !progress || !resultContainer) {
+        return;
     }
-  });
 
-});
+    function showProgress(visible) {
+        trigger.disabled = visible;
+        input.disabled = visible;
+        if (window.jQuery && window.jQuery.fn.modal) {
+            window.jQuery("#modal-progress").modal(visible ? "show" : "hide");
+        }
+    }
+
+    function updateProgress(loaded, total) {
+        var percentage = total > 0 ? Math.round((loaded / total) * 100) : 0;
+        var label = percentage + "%";
+        progress.style.width = label;
+        progress.textContent = label;
+    }
+
+    function showResult(kind, message) {
+        var alert = document.createElement("div");
+        var icon = document.createElement("span");
+
+        resultContainer.replaceChildren();
+        alert.className = "alert alert-" + kind;
+        icon.className = "glyphicon " + (
+            kind === "success" ? "glyphicon-ok" : "glyphicon-remove"
+        );
+        alert.appendChild(icon);
+        alert.appendChild(document.createTextNode(" " + message));
+
+        if (kind === "success") {
+            var link = document.createElement("a");
+            link.className = "btn btn-success btn-pull-right";
+            link.href = input.dataset.successUrl;
+            link.textContent = "Go Back to Boundaries";
+            alert.appendChild(document.createTextNode(" "));
+            alert.appendChild(link);
+        }
+
+        resultContainer.appendChild(alert);
+    }
+
+    function responsePayload(xhr) {
+        if (xhr.response && typeof xhr.response === "object") {
+            return xhr.response;
+        }
+        try {
+            return JSON.parse(xhr.responseText || "{}");
+        } catch (_error) {
+            return {};
+        }
+    }
+
+    function completeUpload(xhr) {
+        showProgress(false);
+        input.value = "";
+
+        if (
+            window.qcAuth &&
+            window.qcAuth.handleUnauthorizedXhr &&
+            window.qcAuth.handleUnauthorizedXhr(xhr)
+        ) {
+            return;
+        }
+
+        var payload = responsePayload(xhr);
+        if (xhr.status >= 200 && xhr.status < 300 && payload.is_valid) {
+            updateProgress(1, 1);
+            showResult("success", payload.message || "Boundary package activated.");
+            return;
+        }
+        showResult(
+            "danger",
+            payload.message || "The boundary package could not be uploaded."
+        );
+    }
+
+    trigger.addEventListener("click", function () {
+        input.click();
+    });
+
+    input.addEventListener("change", function () {
+        if (input.files.length !== 1) {
+            showResult("danger", "Select exactly one boundary package ZIP file.");
+            input.value = "";
+            return;
+        }
+
+        var request = new XMLHttpRequest();
+        var form = new FormData();
+        form.append("file", input.files[0]);
+
+        request.open("POST", input.dataset.url);
+        request.responseType = "json";
+        request.setRequestHeader("Accept", "application/json");
+        if (window.qcCsrf) {
+            request.setRequestHeader("X-CSRFToken", window.qcCsrf.getToken());
+        }
+        request.upload.addEventListener("progress", function (event) {
+            if (event.lengthComputable) {
+                updateProgress(event.loaded, event.total);
+            }
+        });
+        request.addEventListener("load", function () {
+            completeUpload(request);
+        });
+        request.addEventListener("error", function () {
+            showProgress(false);
+            input.value = "";
+            showResult("danger", "The boundary upload connection failed.");
+        });
+
+        resultContainer.replaceChildren();
+        updateProgress(0, 1);
+        showProgress(true);
+        request.send(form);
+    });
+})(window, document);

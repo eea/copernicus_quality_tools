@@ -8,6 +8,7 @@ from django.shortcuts import resolve_url
 
 from qc_tool.frontend.accounts.authorization.access import access_for_request
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
+from qc_tool.frontend.accounts.http import prevent_private_response_caching
 
 
 def account_permission_required(permission):
@@ -16,14 +17,21 @@ def account_permission_required(permission):
     permission = AccountPermission(permission)
 
     def decorator(view_func):
-        @login_required
         @wraps(view_func)
-        def wrapped(request, *args, **kwargs):
+        def authorized(request, *args, **kwargs):
             if not access_for_request(request).allows(permission):
                 raise PermissionDenied(
                     "Your account is not permitted to perform this action."
                 )
             return view_func(request, *args, **kwargs)
+
+        login_view = login_required(authorized)
+
+        @wraps(view_func)
+        def wrapped(request, *args, **kwargs):
+            return prevent_private_response_caching(
+                login_view(request, *args, **kwargs)
+            )
 
         return wrapped
 
@@ -68,17 +76,20 @@ def account_json_permission_required(permission):
                     status=401,
                 )
                 response["X-Login-URL"] = login_url
-                return response
+                return prevent_private_response_caching(response)
 
             if not access.allows(permission):
-                return _json_permission_denied_response()
+                return prevent_private_response_caching(
+                    _json_permission_denied_response()
+                )
 
             try:
-                return view_func(request, *args, **kwargs)
+                response = view_func(request, *args, **kwargs)
             except PermissionDenied:
                 # Object-scope guards inside data views use the same JSON
                 # response contract as the top-level capability check.
-                return _json_permission_denied_response()
+                response = _json_permission_denied_response()
+            return prevent_private_response_caching(response)
 
         return wrapped
 

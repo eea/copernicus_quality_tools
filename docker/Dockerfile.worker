@@ -1,18 +1,37 @@
+# Security-sensitive infrastructure dependencies are pinned and checksum-verified.
+# Update the version and digest together from the upstream release metadata.
+ARG JETTY_VERSION=9.4.58.v20250814
+ARG JETTY_SHA256=84eee992b75b72cf2e49c7d34445f49c18602904e10b42a72aedbebe410074e1
+ARG SQUID_VERSION=7.7
+ARG SQUID_RELEASE_TAG=SQUID_7_7
+ARG SQUID_SHA256=5b05417d681c3cca275bc48ede12ee50a3e7d60cb47fb94522ee3a66022a8c59
+
 # --- First Stage: Build Jetty for INSPIRE validator ---
 FROM ubuntu:focal AS jetty-builder
-RUN JETTY_VERSION=9.4.56.v20240826 && JETTY_HOME=/usr/local/jetty \
-    && mkdir -p ${JETTY_HOME} \
+ARG JETTY_VERSION
+ARG JETTY_SHA256
+ARG SQUID_VERSION
+ARG SQUID_RELEASE_TAG
+ARG SQUID_SHA256
+RUN JETTY_HOME=/usr/local/jetty \
+    && mkdir -p "${JETTY_HOME}" \
     && apt-get update && apt-get install -y --no-install-recommends wget unzip build-essential curl libssl-dev \
     libgnutls28-dev pkg-config ca-certificates \
-    && wget --no-check-certificate https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz \
-    && tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 \
-    && rm /tmp/jetty.tar.gz
+    && curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+        "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz" \
+        --output /tmp/jetty.tar.gz \
+    && echo "${JETTY_SHA256}  /tmp/jetty.tar.gz" | sha256sum --check --strict \
+    && tar -xzf /tmp/jetty.tar.gz -C "${JETTY_HOME}" --strip-components=1 \
+    && rm /tmp/jetty.tar.gz \
+    && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------------------
-# Build squid from source - version 7.4
-# Stage 1: Build Squid 7.4 from source
-RUN curl -L -O https://github.com/squid-cache/squid/releases/download/SQUID_7_4/squid-7.4.tar.gz && \
-    tar -xzf squid-7.4.tar.gz && cd squid-7.4 && \
+# Build the pinned Squid security release from source.
+RUN curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+        "https://github.com/squid-cache/squid/releases/download/${SQUID_RELEASE_TAG}/squid-${SQUID_VERSION}.tar.gz" \
+        --output /tmp/squid.tar.gz && \
+    echo "${SQUID_SHA256}  /tmp/squid.tar.gz" | sha256sum --check --strict && \
+    tar -xzf /tmp/squid.tar.gz -C /tmp && cd "/tmp/squid-${SQUID_VERSION}" && \
     ./configure --prefix=/usr \
             --sysconfdir=/etc/squid \
             --localstatedir=/var \
@@ -20,19 +39,26 @@ RUN curl -L -O https://github.com/squid-cache/squid/releases/download/SQUID_7_4/
             --srcdir=. \
             --with-default-user=proxy \
             --with-gnutls && \
-    make -j$(nproc) && make install
+    make -j"$(nproc)" && make install && \
+    rm -rf /tmp/squid.tar.gz "/tmp/squid-${SQUID_VERSION}"
 
 
 # --- Second Stage: Build the remainder of the image ---    
 FROM ubuntu:focal
+ARG JETTY_VERSION
+ARG INSPIRE_VALIDATOR_VERSION=2026.1.1
+ARG INSPIRE_VALIDATOR_SHA256=091ddeb2c16c96ecdb4257bd49f62c6b1b65d471292579e090e5989b93d1d8f3
+ARG INSPIRE_RESOURCES_VERSION=2026.1
+ARG INSPIRE_RESOURCES_SHA256=5978567ff49c4d7485c2d0a963aada367a63df8631f2559f1bbdc7b673a297ff
+ARG INSPIRE_ETS_SHA256=ea2c3994cc1fef720dabfa1a85f1fc50602032ec7b39ae038489a647f86c5e3b
 
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
 
-ARG VERSION
+ARG VERSION=master
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
-ENV VERSION=${VERSION:-${DOCKER_TAG:-master}}
+ENV VERSION=${VERSION}
 
 # Set environment variables for INSPIRE validator
 ENV DEBIAN_FRONTEND=noninteractive
@@ -43,20 +69,15 @@ ENV ETF_DL_TESTPROJECTS_DIR_NAME=inspire-ets-repository
 ENV ETF_DL_TESTPROJECTS_OVERWRITE_EXISTING=true
 ENV HTTP_PROXY_HOST=localhost
 ENV HTTP_PROXY_PORT=3128
-ENV HTTP_PROXY_USERNAME=none
-ENV HTTP_PROXY_PASSWORD=none
 ENV HTTPS_PROXY_HOST=none
 ENV HTTPS_PROXY_PORT=3129
-ENV HTTPS_PROXY_USERNAME=none
-ENV HTTPS_PROXY_PASSWORD=none
 # Set the Jetty version for INSPIRE validator.
-ENV JETTY_VERSION=9.4.56.v20240826
+ENV JETTY_VERSION=${JETTY_VERSION}
 ENV JETTY_HOME=/usr/local/jetty
+ENV INSPIRE_VALIDATOR_VERSION=${INSPIRE_VALIDATOR_VERSION}
+ENV INSPIRE_RESOURCES_VERSION=${INSPIRE_RESOURCES_VERSION}
 ENV JAVA_MAX_MEM=1536
 ENV SQUID_CACHE_MEM_MB=256
-ENV MALLOC_ARENA_MAX=2
-
-# Limit squid resident memory usage.
 ENV MALLOC_ARENA_MAX=2
 
 COPY --from=jetty-builder /usr/local/jetty /usr/local/jetty
@@ -147,27 +168,17 @@ RUN pip3 install --no-cache-dir \
     saxonche lxml \
     git+https://github.com/Gisat/envi-geonetwork-validator.git
 
-# Install jetty for the INSPIRE validator.
-#RUN mkdir -p "$JETTY_HOME"
-
-# Download and unpack Jetty
-RUN JETTY_VERSION=9.4.56.v20240826 JETTY_HOME=/usr/local/jetty wget https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-distribution/${JETTY_VERSION}/jetty-distribution-${JETTY_VERSION}.tar.gz -O /tmp/jetty.tar.gz && \
-tar -xzf /tmp/jetty.tar.gz -C ${JETTY_HOME} --strip-components=1 && \
-rm /tmp/jetty.tar.gz
-
 # Copy supervisor config file.
 COPY ./supervisord.conf /etc
 
-# Expose the port of supervisor.
-EXPOSE 9001
-
 # Install postgresql version 17 & postgis version 3.
 #
-# Create the file postgresql apt repository configuration.
-RUN sh -c 'echo "deb http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-
-# Import the repository signing key:
-RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+# Configure the archived PostgreSQL repository with HTTPS and a scoped keyring.
+RUN curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+        https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        | gpg --dearmor --output /usr/share/keyrings/postgresql-archive.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/postgresql-archive.gpg] https://apt-archive.postgresql.org/pub/repos/apt focal-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list
 
 # Update the package lists to include PostgreSQL.
 RUN apt-get update
@@ -183,8 +194,8 @@ RUN apt-get -y install postgresql-17-postgis-3
 # when connecting to 127.0.0.1.
 USER postgres
 COPY ./init_qc_tool_db.sql /usr/local/src
-RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  all  trust' /etc/postgresql/17/main/pg_hba.conf \
-    && echo "listen_addresses='*'" >>/etc/postgresql/17/main/postgresql.conf \
+RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_tool_db  qc_job  127.0.0.1/32  trust' /etc/postgresql/17/main/pg_hba.conf \
+    && echo "listen_addresses='127.0.0.1'" >>/etc/postgresql/17/main/postgresql.conf \
     && /etc/init.d/postgresql start \
     && psql --file=/usr/local/src/init_qc_tool_db.sql \
     && /etc/init.d/postgresql stop
@@ -199,28 +210,32 @@ RUN cd /usr/local/src \
     && mv ./copernicus_quality_tools-${VERSION} ./copernicus_quality_tools \
     && echo ${VERSION} >./copernicus_quality_tools/VERSION
 
-RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
-     && ETF_DL_TESTPROJECTS_VERSION=$(echo "${INSPIRE_VALIDATOR_VERSION}" | cut -d. -f1,2) \
-     && ETF_DL_TESTPROJECTS_ZIP="https://github.com/inspire-eu-validation/ets-repository/archive/refs/heads/v${ETF_DL_TESTPROJECTS_VERSION}.zip" \
-     && wget --no-verbose -O /tmp/inspire-validator.zip https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip \
+RUN curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+         "https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip" \
+         --output /tmp/inspire-validator.zip \
+     && echo "${INSPIRE_VALIDATOR_SHA256}  /tmp/inspire-validator.zip" | sha256sum --check --strict \
      && unzip -q /tmp/inspire-validator.zip -d /tmp \
      && mv /tmp/validator.war /usr/local/jetty/webapps/validator.war \
      && mv /tmp/ui.zip ui.zip \
-     && wget -q "${ETF_DL_TESTPROJECTS_ZIP}" -O projects.zip \
+     && curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+         "https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_RESOURCES_VERSION}/ets-repository-${INSPIRE_RESOURCES_VERSION}.zip" \
+         --output projects.zip \
+     && echo "${INSPIRE_ETS_SHA256}  projects.zip" | sha256sum --check --strict \
      && mkdir -p ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
      && unzip -o projects.zip -d ${ETF_DIR}/projects/${ETF_DL_TESTPROJECTS_DIR_NAME} \
      && rm -rf projects.zip /tmp/inspire-validator.zip /tmp/validator.war /tmp/ui.zip \
      && echo ${INSPIRE_VALIDATOR_VERSION} >/etc/inspire-validator-version.txt
 
 # Download the INSPIRE registry resources
-RUN INSPIRE_VALIDATOR_VERSION=$(curl -s https://api.github.com/repos/INSPIRE-MIF/helpdesk-validator/releases/latest | jq -r .tag_name | sed 's/^v//') \
-     && RESOURCE_VERSION=$(echo "${INSPIRE_VALIDATOR_VERSION}" | cut -d. -f1,2) \
-     && mkdir -p /tmp/inspire-registry-resources \
-     && wget --no-verbose -O /tmp/inspire-registry-resources.zip \
-     https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${RESOURCE_VERSION}/inspire-registry-resources.zip \
+RUN mkdir -p /tmp/inspire-registry-resources \
+     && curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+         "https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_RESOURCES_VERSION}/inspire-registry-resources.zip" \
+         --output /tmp/inspire-registry-resources.zip \
+     && echo "${INSPIRE_RESOURCES_SHA256}  /tmp/inspire-registry-resources.zip" | sha256sum --check --strict \
      && unzip -q /tmp/inspire-registry-resources.zip -d /tmp/inspire-registry-resources \
      && mkdir -p ${ETF_DIR}/inspire-registry-resources \
-     && mv /tmp/inspire-registry-resources ${ETF_DIR}/inspire-registry-resources/
+     && mv /tmp/inspire-registry-resources ${ETF_DIR}/inspire-registry-resources/ \
+     && rm /tmp/inspire-registry-resources.zip
 
 # Copy INSPIRE validator resources and prepare directories
 COPY inspire/docker-entrypoint.sh /
@@ -244,9 +259,12 @@ RUN squid -N -z && chown -R proxy:proxy /var/spool/squid
 # Copy the Apache configuration and enable correct Apache modules
 COPY inspire/apache_proxy.conf /etc/apache2/sites-available/proxy_1.conf
 COPY inspire/httpd.conf /etc/apache2/httpd.conf
-RUN a2enmod proxy proxy_http ssl
-RUN a2ensite proxy_1.conf
-RUN a2dissite 000-default.conf
+COPY inspire/apache_security.conf /etc/apache2/conf-available/qc-tool-security.conf
+RUN a2enmod proxy proxy_http ssl \
+    && a2enconf qc-tool-security \
+    && a2ensite proxy_1.conf \
+    && a2dissite 000-default.conf \
+    && sed -i 's/^Listen 80$/Listen 127.0.0.1:80/' /etc/apache2/ports.conf
 
 # Set up directories for jetty (inspire-validator app)
 RUN mkdir -p $ETF_DIR $ETF_LOG_DIR /run/tini && \

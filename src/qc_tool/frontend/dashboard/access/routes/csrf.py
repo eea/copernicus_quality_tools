@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.views.csrf import csrf_failure as django_csrf_failure
 
 from qc_tool.frontend.accounts.authorization.decorators import session_login_url
+from qc_tool.frontend.accounts.http import prevent_private_response_caching
 from qc_tool.frontend.dashboard.access.routes.policies import AuthenticationMode
 from qc_tool.frontend.dashboard.access.routes.policies import DenialResponse
 from qc_tool.frontend.dashboard.access.routes.policies import RoutePolicy
@@ -55,15 +56,17 @@ def csrf_failure(request, reason=""):
             status=401,
         )
         response["X-Login-URL"] = login_url
-        return response
+        return prevent_private_response_caching(response)
 
-    return JsonResponse(
-        {
-            "status": "error",
-            "code": "csrf_failed",
-            "message": (
-                "Security verification failed. Refresh the page and try again."
-            ),
-        },
-        status=403,
+    return prevent_private_response_caching(
+        JsonResponse(
+            {
+                "status": "error",
+                "code": "csrf_failed",
+                "message": (
+                    "Security verification failed. Refresh the page and try again."
+                ),
+            },
+            status=403,
+        )
     )

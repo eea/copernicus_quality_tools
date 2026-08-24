@@ -4,13 +4,15 @@
 from contextlib import closing
 from shutil import rmtree
 
-from pathlib import Path, PurePath
 from psycopg2 import connect
+from psycopg2 import sql
 
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_OUTPUT_DIRNAME
 from qc_tool.common import JOB_TMP_DIRNAME
 from qc_tool.common import compose_job_dir
+from qc_tool.worker.jobs import job_schema_name
+from qc_tool.worker.jobs import normalize_job_uuid
 
 
 def create_connection_manager(job_uuid):
@@ -23,7 +25,7 @@ def create_connection_manager(job_uuid):
     return connection_manager
 
 def create_jobdir_manager(job_uuid):
-    job_dir = compose_job_dir(job_uuid)
+    job_dir = compose_job_dir(normalize_job_uuid(job_uuid))
     jobdir_manager = JobdirManager(job_dir, CONFIG["leave_jobdir"])
     return jobdir_manager
 
@@ -33,10 +35,8 @@ class ConnectionException(Exception):
 
 
 class ConnectionManager():
-    job_schema_name_tpl = "job_{:s}"
-
     def __init__(self, job_uuid, host, port, user, db_name, leave_schema):
-        self.job_uuid = job_uuid
+        self.job_uuid = normalize_job_uuid(job_uuid)
         self.host = host
         self.port = port
         self.user = user
@@ -64,18 +64,26 @@ class ConnectionManager():
         self.connection.autocommit = True
 
     def _create_job_schema(self):
-        job_uuid = self.job_uuid.lower().replace("-", "")
-        job_schema_name = self.job_schema_name_tpl.format(job_uuid)
+        schema_name = job_schema_name(self.job_uuid)
         with closing(self.connection.cursor()) as cursor:
-            cursor.execute("CREATE SCHEMA {:s};".format(job_schema_name))
-            self.job_schema_name = job_schema_name
-            cursor.execute("SET search_path TO {:s}, public;".format(job_schema_name))
+            cursor.execute(
+                sql.SQL("CREATE SCHEMA {};").format(sql.Identifier(schema_name))
+            )
+            self.job_schema_name = schema_name
+            cursor.execute(
+                sql.SQL("SET search_path TO {}, public;").format(
+                    sql.Identifier(schema_name)
+                )
+            )
 
     def _drop_job_schema(self):
         with closing(self.connection.cursor()) as cursor:
-            cursor.execute("DROP SCHEMA {:s} CASCADE;".format(self.job_schema_name))
+            cursor.execute(
+                sql.SQL("DROP SCHEMA {} CASCADE;").format(
+                    sql.Identifier(self.job_schema_name)
+                )
+            )
             self.job_schema_name = None
-            cursor.close()
 
     def get_dsn_schema(self):
         conn = self.get_connection()

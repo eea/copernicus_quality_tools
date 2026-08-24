@@ -46,7 +46,12 @@ def _management_permissions(*, using):
 
 
 def synchronize_admin_role(*, using="default"):
-    """Make the canonical admin group operational and migration-safe."""
+    """Make the canonical admin group operational and migration-safe.
+
+    Hard-deleting a user would cascade into deliveries and QC history.  User
+    lifecycle is therefore managed through ``is_active``; the role keeps CRUD
+    access to account-related child records but never receives ``delete_user``.
+    """
 
     with transaction.atomic(using=using):
         synchronize_role_permissions(using=using)
@@ -54,6 +59,15 @@ def synchronize_admin_role(*, using="default"):
             name=Role.ADMIN.value,
         )
         group.permissions.add(*_management_permissions(using=using))
+
+        user_content_type = ContentType.objects.db_manager(using).get_for_model(
+            get_user_model()
+        )
+        delete_user = Permission.objects.using(using).filter(
+            content_type=user_content_type,
+            codename=f"delete_{get_user_model()._meta.model_name}",
+        )
+        group.permissions.remove(*delete_user)
 
         user_model = get_user_model()
         user_model._default_manager.using(using).filter(

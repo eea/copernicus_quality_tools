@@ -11,7 +11,7 @@ urlpatterns = [
         name="deliveries_json",
     ),
     protected_path(
-        "data/job_history/<delivery_id>/",
+        "data/job_history/<int:delivery_id>/",
         views.get_job_history_json,
         name="job_history_json",
     ),
@@ -51,7 +51,7 @@ urlpatterns = [
         name="product_descriptions_dropdown",
     ),
     protected_path(
-        "data/report/<job_uuid>/report.json",
+        "data/report/<uuid:job_uuid>/report.json",
         views.get_job_report,
         name="job_report_json",
     ),
@@ -62,7 +62,7 @@ urlpatterns = [
     ),
     protected_path("job/delete/", views.job_delete, name="job_delete"),
     protected_path(
-        "job/update/<job_uuid>/",
+        "job/update/<uuid:job_uuid>/",
         views.update_job,
         name="update_job",
     ),

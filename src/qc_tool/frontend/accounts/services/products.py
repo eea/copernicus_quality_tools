@@ -5,13 +5,12 @@ from pathlib import Path
 from django.core.exceptions import ValidationError
 
 from qc_tool.common import CONFIG
+from qc_tool.common import INVALID_PRODUCT_DESCRIPTION
 from qc_tool.common import PRODUCT_FILENAME_REGEX
 from qc_tool.common import get_product_descriptions
 
 
 UNAVAILABLE_PRODUCT_LABEL = "unavailable legacy product"
-INVALID_PRODUCT_DESCRIPTION = "description unavailable (invalid definition)"
-
 logger = logging.getLogger(__name__)
 
 

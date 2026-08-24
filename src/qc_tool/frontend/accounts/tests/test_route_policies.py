@@ -5,6 +5,7 @@ from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
@@ -13,6 +14,7 @@ from django.test import TestCase
 from django.urls import resolve
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.models import ApiUser
 from qc_tool.frontend.dashboard import urls as dashboard_urls
@@ -114,7 +116,7 @@ EXPECTED_POLICIES = {
         JSON,
     ),
     "job_delete": (PRIVATE, SESSION, ("POST",), DELETE, JSON),
-    "update_job": (PRIVATE, SESSION, ("GET",), VIEW, JSON),
+    "update_job": (PRIVATE, SESSION, ("POST",), VIEW, JSON),
     "boundaries_json": (
         PRIVATE,
         SESSION,
@@ -148,7 +150,7 @@ EXPECTED_POLICIES = {
         SUBMIT,
         JSON,
     ),
-    "pull_job": (PRIVATE, WORKER_TOKEN, ("GET",), None, STATUS_ONLY),
+    "pull_job": (PRIVATE, WORKER_TOKEN, ("POST",), None, STATUS_ONLY),
 }
 
 
@@ -179,8 +181,11 @@ def route_url(route_name):
     return reverse(route_name, args=ROUTE_ARGS.get(route_name, ()))
 
 
-def request_route(client, route_name, method, *, query=""):
-    return getattr(client, method.lower())(route_url(route_name) + query)
+def request_route(client, route_name, method, *, query="", headers=None):
+    return getattr(client, method.lower())(
+        route_url(route_name) + query,
+        **(headers or {}),
+    )
 
 
 class RoutePolicyValidationTests(TestCase):
@@ -264,6 +269,26 @@ class RoutePolicyValidationTests(TestCase):
                         denial_response=denial_response,
                     )
 
+    def test_global_middleware_denies_an_unclassified_anonymous_view(self):
+        request = RequestFactory().get("/future-unclassified-view/")
+        request.user = AnonymousUser()
+        middleware = LoginRequiredMiddleware(lambda _request: HttpResponse())
+
+        response = middleware.process_view(
+            request,
+            lambda _request: HttpResponse(),
+            (),
+            {},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        location = urlsplit(response["Location"])
+        self.assertEqual(location.path, reverse("login"))
+        self.assertEqual(
+            parse_qs(location.query),
+            {"next": ["/future-unclassified-view/"]},
+        )
+
 
 class RoutePolicyRegistryTests(TestCase):
     def test_registry_is_an_explicit_policy_for_all_42_dashboard_routes(self):
@@ -313,12 +338,22 @@ class RoutePolicyRegistryTests(TestCase):
                     getattr(pattern_callback, "_qc_tool_route_policy", None),
                     policy,
                 )
+                self.assertIs(
+                    getattr(pattern_callback, "login_required", None),
+                    False,
+                    "The route registry must own authentication before the "
+                    "global session-only middleware runs.",
+                )
 
                 resolved = resolve(route_url(route_name))
                 self.assertEqual(resolved.url_name, route_name)
                 self.assertEqual(
                     getattr(resolved.func, "_qc_tool_route_policy", None),
                     policy,
+                )
+                self.assertIs(
+                    getattr(resolved.func, "login_required", None),
+                    False,
                 )
 
 
@@ -389,18 +424,18 @@ class RoutePolicyAuthorizationOrderTests(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
             response["WWW-Authenticate"],
-            'ApiKey realm="QC Tool API"',
+            'Bearer realm="QC Tool API"',
         )
         view.assert_not_called()
 
     def test_worker_authentication_is_checked_before_view_runs(self):
-        request = self.factory.get("/private/worker/")
+        request = self.factory.post("/private/worker/")
         request.user = AnonymousUser()
         view = Mock(return_value=HttpResponse())
         policy = RoutePolicy(
             visibility=PRIVATE,
             authentication=WORKER_TOKEN,
-            methods=("GET",),
+            methods=("POST",),
             permission=None,
             denial_response=STATUS_ONLY,
         )
@@ -483,7 +518,7 @@ class AnonymousRoutePolicyTests(TestCase):
                 self.assertEqual(response.status_code, 401)
                 self.assertEqual(
                     response["WWW-Authenticate"],
-                    'ApiKey realm="QC Tool API"',
+                    'Bearer realm="QC Tool API"',
                 )
                 self.assertEqual(response.json()["status"], "error")
 
@@ -504,7 +539,7 @@ class AnonymousRoutePolicyTests(TestCase):
                 self.assertEqual(response.status_code, 200)
 
     def test_worker_route_challenges_a_missing_worker_token(self):
-        response = request_route(self.client, "pull_job", "GET")
+        response = request_route(self.client, "pull_job", "POST")
 
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
@@ -526,9 +561,10 @@ class AuthenticatedRoutePolicyTests(TestCase):
         cls.unprivileged.groups.through.objects.filter(
             user_id=cls.unprivileged.pk
         ).delete()
+        cls.unprivileged_api_key = "qct_" + ("U" * 43)
         ApiUser.objects.create(
             user=cls.unprivileged,
-            api_key="ROUTE-POLICY-UNPRIVILEGED",
+            api_key=digest_api_key(cls.unprivileged_api_key),
         )
 
         cls.superuser = get_user_model().objects.create_superuser(
@@ -536,9 +572,10 @@ class AuthenticatedRoutePolicyTests(TestCase):
             email="superuser@example.com",
             password="unused",
         )
+        cls.superuser_api_key = "qct_" + ("S" * 43)
         ApiUser.objects.create(
             user=cls.superuser,
-            api_key="ROUTE-POLICY-SUPERUSER",
+            api_key=digest_api_key(cls.superuser_api_key),
         )
 
     def route_names_for(self, *, authentication=None, denial_response=None):
@@ -584,8 +621,6 @@ class AuthenticatedRoutePolicyTests(TestCase):
                         )
 
     def test_unprivileged_api_principal_gets_json_403(self):
-        query = "?apikey=ROUTE-POLICY-UNPRIVILEGED"
-
         for route_name in self.route_names_for(authentication=API_KEY):
             policy = ROUTE_POLICIES[route_name]
             method = policy.methods[0]
@@ -594,7 +629,11 @@ class AuthenticatedRoutePolicyTests(TestCase):
                     self.client,
                     route_name,
                     method,
-                    query=query,
+                    headers={
+                        "HTTP_AUTHORIZATION": (
+                            f"Bearer {self.unprivileged_api_key}"
+                        )
+                    },
                 )
 
                 self.assertEqual(response.status_code, 403)
@@ -610,17 +649,21 @@ class AuthenticatedRoutePolicyTests(TestCase):
             method = "PATCH"
             self.assertNotIn(method, policy.methods)
             if policy.authentication is API_KEY:
-                query = "?apikey=ROUTE-POLICY-SUPERUSER"
+                headers = {
+                    "HTTP_AUTHORIZATION": f"Bearer {self.superuser_api_key}"
+                }
             elif policy.authentication is WORKER_TOKEN:
-                query = "?token=valid-worker-token"
+                headers = {
+                    "HTTP_AUTHORIZATION": "WorkerToken valid-worker-token"
+                }
             else:
-                query = ""
+                headers = {}
 
             with self.subTest(route_name=route_name):
                 response = request_route(
                     self.client,
                     route_name,
                     method,
-                    query=query,
+                    headers=headers,
                 )
                 self.assertEqual(response.status_code, 405)
