@@ -8,13 +8,17 @@ $('#tbl-history').bootstrapTable({
     showColumns: true,
     sortName: 'name',
     sortOrder: 'desc',
-    url: "/data/job_history/" + delivery_id + "/",
+    url: job_history_url,
     pageSize: 20,
     pageList: [20, 50, 100, 500],
     formatNoMatches: function () {
         return 'No job history available.';
     }
 });
+
+var deleteJobsEnabled = (
+    typeof can_delete_jobs !== 'undefined' && can_delete_jobs
+);
 
 function dateFormatter(value, row) {
    if (value) {
@@ -50,7 +54,7 @@ function delete_job_function(job_uuids) {
                 data = {"uuids": job_uuids};
                 $.ajax({
                     type: "POST",
-                    url: "/job/delete/",
+                    url: job_delete_url,
                     data: data,
                     dataType: "json",
                     success: function(result) {
@@ -93,12 +97,19 @@ function delete_job_function(job_uuids) {
 
 
 function statusFormatter(value, row, index) {
-    return ['<a class="like" href="/result/', row.job_uuid, '" title="Show results">', value, '</a>'].join('');
+    var resultUrl = job_result_url_template.replace(
+        '__JOB_UUID__',
+        row.job_uuid
+    );
+    return ['<a class="like" href="', resultUrl, '" title="Show results">', value, '</a>'].join('');
 }
 
 
 // Enable or disable 'QC all selected' button based on selected rows
 function toggle_select_button() {
+    if (!deleteJobsEnabled) {
+        return;
+    }
     var numChecked = $("#tbl-history").bootstrapTable("getSelections").length;
     if (numChecked === 0) {
         $("#btn-delete-multi").text("Delete all selected");
@@ -136,7 +147,7 @@ function delete_function(job_uuids) {
                 data = {"ids": job_uuids};
                 $.ajax({
                     type: "POST",
-                    url: "/job/delete/",
+                    url: job_delete_url,
                     data: data,
                     dataType: "json",
                     success: function(result) {
@@ -184,45 +195,46 @@ $(document).ready(function() {
     // Set defult tooltip in each table row.
     $('[data-toggle="tooltip"]').tooltip();
 
-    // check one row
-    $('#tbl-history').on('check.bs.table', function (e, row) {
-        toggle_select_button();
-    });
-
-    // check all rows
-    $('#tbl-history').on('check-all.bs.table', function () {
-        toggle_select_button();
-    });
-
-    // uncheck one row
-    $('#tbl-history').on('uncheck.bs.table', function (e, row) {
-        toggle_select_button();
-    });
-
-    // uncheck all rows
-    $('#tbl-history').on('uncheck-all.bs.table', function () {
-        toggle_select_button();
-    });
-
-    $('#tbl-history').on('load-success.bs.table', function () {
-        toggle_select_button();
-    });
-
-
-    // "Delete all selected" button is clicked
-    $('#btn-delete-multi').on('click', function() {
-        console.log("Delete all selected button clicked!");
-        if ($("#tbl-history").bootstrapTable("getSelections").length === 0) {
-            alert("Please select at least one delivery.");
+    if (deleteJobsEnabled) {
+        // check one row
+        $('#tbl-history').on('check.bs.table', function () {
             toggle_select_button();
-            return;
-        }
-        var selected_job_uuids = $.map($("#tbl-history").bootstrapTable('getSelections'), function (row) {
-            return row.job_uuid
         });
-        delete_job_function(selected_job_uuids.join(","));
-    })
 
-    // Start the timer to auto-refresh status of running jobs. Check for updates every 5 seconds.
-    toggle_select_button();
+        // check all rows
+        $('#tbl-history').on('check-all.bs.table', function () {
+            toggle_select_button();
+        });
+
+        // uncheck one row
+        $('#tbl-history').on('uncheck.bs.table', function () {
+            toggle_select_button();
+        });
+
+        // uncheck all rows
+        $('#tbl-history').on('uncheck-all.bs.table', function () {
+            toggle_select_button();
+        });
+
+        $('#tbl-history').on('load-success.bs.table', function () {
+            toggle_select_button();
+        });
+
+        // "Delete all selected" button is clicked
+        $('#btn-delete-multi').on('click', function() {
+            console.log("Delete all selected button clicked!");
+            if ($("#tbl-history").bootstrapTable("getSelections").length === 0) {
+                alert("Please select at least one delivery.");
+                toggle_select_button();
+                return;
+            }
+            var selected_job_uuids = $.map($("#tbl-history").bootstrapTable('getSelections'), function (row) {
+                return row.job_uuid;
+            });
+            delete_job_function(selected_job_uuids.join(","));
+        });
+
+        toggle_select_button();
+    }
+
 });

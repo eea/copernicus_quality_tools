@@ -1,0 +1,30 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Access denied · CLMS QC Tool{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<main class="container-fluid main" style="padding-top: 90px;">
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <div class="panel panel-warning" role="alert">
+                <div class="panel-heading">
+                    <h1 class="panel-title">You do not have access to this page</h1>
+                </div>
+                <div class="panel-body">
+                    <p>
+                        You are signed in, but your account does not have the
+                        required QC Tool permission.
+                    </p>
+                    <p>Please contact a QC Tool administrator if you need access.</p>
+                    {% if account_access.can_view_deliveries %}
+                    <a class="btn btn-primary" href="{% url 'deliveries' %}">
+                        Return to my deliveries
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

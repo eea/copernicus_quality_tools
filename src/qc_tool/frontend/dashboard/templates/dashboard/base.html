@@ -34,7 +34,8 @@
                                 <span class="icon-bar"></span>
                                 <span class="icon-bar"></span>
                             </button>
-                            <a class="navbar-brand" href="/">
+                            {% url 'deliveries' as deliveries_url %}
+                            <a class="navbar-brand" href="{{ deliveries_url|default:'/' }}">
                                 <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:45px;margin-top:-13px;float:left" />
                                 <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_medium.png" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
                                 <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
@@ -43,11 +44,15 @@
                         <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
                             <ul class="nav navbar-nav navbar-right main-menu">
                                 {% block menu %}
-                                {% if account_access.is_administrator %}
+                                {% if account_access.can_manage_configuration %}
                                 <li><a href="{% url 'announcement'%}">
                                     <span class="glyphicon glyphicon-edit"></span> Announcement</a></li>
                                 <li><a href="{% url 'boundaries'%}">
                                     <span class="glyphicon glyphicon-map-marker"></span> Boundaries</a></li>
+                                {% endif %}
+                                {% if account_access.can_access_django_admin %}
+                                <li><a href="{% url 'admin:index' %}">
+                                    <span class="glyphicon glyphicon-user"></span> User administration</a></li>
                                 {% endif %}
                                 <li><a href="https://github.com/eea/copernicus_quality_tools">
                                     <span class="glyphicon glyphicon-cog"></span> Github</a></li>

@@ -1,7 +1,10 @@
 from functools import wraps
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
+from django.shortcuts import resolve_url
 
 from qc_tool.frontend.accounts.authorization.access import access_for_request
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
@@ -27,7 +30,56 @@ def account_permission_required(permission):
     return decorator
 
 
-def administrator_required(view_func):
-    return account_permission_required(
-        AccountPermission.MANAGE_CONFIGURATION
-    )(view_func)
+def session_login_url():
+    """Resolve the configured browser login route."""
+
+    return resolve_url(settings.LOGIN_URL)
+
+
+def _json_permission_denied_response():
+    return JsonResponse(
+        {
+            "status": "error",
+            "code": "permission_denied",
+            "message": "Your account is not permitted to perform this action.",
+        },
+        status=403,
+    )
+
+
+def account_json_permission_required(permission):
+    """Authorize a session-backed data request without returning HTML."""
+
+    permission = AccountPermission(permission)
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped(request, *args, **kwargs):
+            access = access_for_request(request)
+            if not access.is_authenticated:
+                login_url = session_login_url()
+                response = JsonResponse(
+                    {
+                        "status": "error",
+                        "code": "authentication_required",
+                        "message": "Your session has expired. Please sign in again.",
+                        "login_url": login_url,
+                    },
+                    status=401,
+                )
+                response["X-Login-URL"] = login_url
+                return response
+
+            if not access.allows(permission):
+                return _json_permission_denied_response()
+
+            try:
+                return view_func(request, *args, **kwargs)
+            except PermissionDenied:
+                # Object-scope guards inside data views use the same JSON
+                # response contract as the top-level capability check.
+                return _json_permission_denied_response()
+
+        return wrapped
+
+    return decorator

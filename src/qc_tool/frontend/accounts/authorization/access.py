@@ -95,6 +95,14 @@ class AccountAccess:
         return self.allows(AccountPermission.SUBMIT_DELIVERY)
 
     @property
+    def can_manage_configuration(self):
+        return self.allows(AccountPermission.MANAGE_CONFIGURATION)
+
+    @property
+    def can_access_django_admin(self):
+        return self.is_authenticated and self.is_administrator
+
+    @property
     def can_view_region_deliveries(self):
         return bool(
             self.allows(AccountPermission.VIEW_REGION_DELIVERIES)

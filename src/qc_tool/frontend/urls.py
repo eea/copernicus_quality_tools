@@ -22,3 +22,5 @@ urlpatterns = [
     path('', include('qc_tool.frontend.accounts.urls')),
     path('', include('qc_tool.frontend.dashboard.urls')),
 ]
+
+handler403 = "qc_tool.frontend.accounts.views.errors.permission_denied"

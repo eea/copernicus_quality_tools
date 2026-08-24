@@ -25,12 +25,19 @@ class ProtectedMutationRouteTests(TestCase):
         self.assertEqual(Delivery.objects.count(), 0)
         self.assertEqual(Job.objects.count(), 0)
 
-    def test_anonymous_users_are_redirected_before_mutation_handlers_run(self):
+    def test_anonymous_users_get_json_401_before_mutation_handlers_run(self):
         for route_name in self.mutation_routes:
             with self.subTest(route_name=route_name):
                 response = self.client.post(reverse(route_name))
-                self.assertEqual(response.status_code, 302)
-                self.assertIn("/accounts/login/", response.url)
+                self.assertEqual(response.status_code, 401)
+                self.assertEqual(
+                    response.json()["code"],
+                    "authentication_required",
+                )
+                self.assertEqual(
+                    response["X-Login-URL"],
+                    reverse("login"),
+                )
 
         self.assert_no_delivery_or_job_mutation()
 

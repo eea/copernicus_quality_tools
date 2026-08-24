@@ -51,6 +51,8 @@ class AccountAccessTests(TestCase):
         self.assertTrue(access.can_delete)
         self.assertTrue(access.can_submit)
         self.assertTrue(access.can_change_password)
+        self.assertFalse(access.can_manage_configuration)
+        self.assertFalse(access.can_access_django_admin)
         self.assertFalse(
             access.allows(AccountPermission.MANAGE_CONFIGURATION)
         )
@@ -104,6 +106,8 @@ class AccountAccessTests(TestCase):
         self.assertTrue(access.is_administrator)
         self.assertEqual(access.permissions, frozenset(AccountPermission))
         self.assertTrue(access.can_view_other_users_deliveries)
+        self.assertTrue(access.can_manage_configuration)
+        self.assertTrue(access.can_access_django_admin)
         self.assertEqual(access.delivery_list_heading, "All Deliveries")
         self.assertTrue(access.can_manage_user(self.user.pk + 1))
 
@@ -173,6 +177,8 @@ class AccountAccessTests(TestCase):
         self.assertEqual(access.product_idents, frozenset({"clc2024"}))
         self.assertTrue(access.can_view_region_deliveries)
         self.assertTrue(access.can_view_product_aggregate_report)
+        self.assertTrue(access.can_manage_configuration)
+        self.assertFalse(access.can_access_django_admin)
         self.assertTrue(
             access.allows(AccountPermission.MANAGE_CONFIGURATION)
         )

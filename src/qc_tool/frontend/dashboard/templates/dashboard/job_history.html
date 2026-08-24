@@ -39,17 +39,20 @@
                             </dl>
                         </div></div>
 
-
+                        {% if can_delete_jobs %}
                         <div id="runs-toolbar-1">
                             <button id="btn-delete-multi" onclick="" class="btn btn-danger mr-10" disabled>
                                 <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
                                 Delete all selected
                             </button>
                         </div>
-                        <table id="tbl-history" class="table" data-checkbox-header="true" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-show-export="true" data-pagination="true" data-side-pagination="client">
+                        {% endif %}
+                        <table id="tbl-history" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false"{% if can_delete_jobs %} data-checkbox-header="true" data-toolbar="#runs-toolbar-1" data-toolbar-align="left"{% endif %} data-show-filter="false" data-smart-display="true" data-show-export="true" data-pagination="true" data-side-pagination="client">
                             <thead>
                             <tr>
+                                {% if can_delete_jobs %}
                                 <th data-checkbox="true"></th>
+                                {% endif %}
                                 <th data-field="job_uuid" data-sortable="true">UUID</th>
                                 <th data-field="skip_steps" data-sortable="true">Skipped Steps</th>
                                 <th data-field="date_created" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Created</th>
@@ -68,8 +71,7 @@
                     </div>
                 </div>
             </div>
-
-
+            {% if can_delete_jobs %}
             <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -86,6 +88,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 
@@ -95,8 +98,15 @@
 
 {% block js %}
     {{ block.super }}
-    <script type="text/javascript">var delivery_id = {{delivery.id}};</script>
+    <script type="text/javascript">
+        var can_delete_jobs = {{ can_delete_jobs|yesno:"true,false" }};
+        var job_history_url = "{% url 'job_history_json' delivery.id %}";
+        var job_delete_url = "{% url 'job_delete' %}";
+        var job_result_url_template = "{% url 'show_result' '__JOB_UUID__' %}";
+    </script>
+    {% if can_delete_jobs %}
     <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
+    {% endif %}
     <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
     <script src="{% static 'dashboard/js/job_history.js' %}"></script>
 {% endblock js %}

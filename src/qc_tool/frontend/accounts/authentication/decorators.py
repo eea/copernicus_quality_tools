@@ -22,10 +22,12 @@ def api_key_required(view_func=None, *, permission=None):
         def wrapped(request, *args, **kwargs):
             user, message = authenticate_api_request(request)
             if user is None:
-                return JsonResponse(
+                response = JsonResponse(
                     {"status": "error", "message": message},
-                    status=403,
+                    status=401,
                 )
+                response["WWW-Authenticate"] = 'ApiKey realm="QC Tool API"'
+                return response
 
             access = access_for(user)
             if required_permission is not None and not access.allows(

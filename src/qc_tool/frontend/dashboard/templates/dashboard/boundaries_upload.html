@@ -12,8 +12,8 @@
         <div class="row text-left">
 
             <ol class="breadcrumb">
-              <li><a href="/">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
-                <li><a href="/boundaries/">Boundaries</a></li>
+              <li><a href="{% url 'deliveries' %}">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
+                <li><a href="{% url 'boundaries' %}">Boundaries</a></li>
               <li class="active"><a href="">Upload Boundary Package</a></li>
             </ol>
 
@@ -37,7 +37,8 @@
                             {# 2. FILE INPUT TO BE USED BY THE PLUG-IN #}
                             <input id="fileupload" type="file" name="file" accept="application/zip" multiple
                                    style="display: none;"
-                                   data-url="{% url 'boundaries_upload' %}"
+                                   data-url="{% url 'boundaries_upload_data' %}"
+                                   data-success-url="{% url 'boundaries' %}"
                                    data-form-data='{"csrfmiddlewaretoken": "{{ csrf_token }}"}'>
 
                             <div class="modal fade" id="modal-progress" data-backdrop="static" data-keyboard="false">

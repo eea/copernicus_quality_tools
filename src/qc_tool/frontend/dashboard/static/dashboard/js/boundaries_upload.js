@@ -2,6 +2,15 @@ $(function () {
 
   var n_selected = 0;
   var n_uploaded = 0;
+  var $fileUpload = $("#fileupload");
+
+  function showUploadError(message) {
+    var row = '<tr><td><div class="alert alert-danger">';
+    row += '<span class="glyphicon glyphicon-remove"></span> ';
+    row += $("<div>").text(message).html();
+    row += '</div></td></tr>';
+    $("#files_table tbody").prepend(row);
+  }
 
   /* 1. OPEN THE FILE EXPLORER WINDOW */
   $(".js-upload-files").click(function () {
@@ -9,7 +18,7 @@ $(function () {
   });
 
   /* 2. INITIALIZE THE FILE UPLOAD COMPONENT */
-  $("#fileupload").fileupload({
+  $fileUpload.fileupload({
     dataType: 'json',
     progressServerRate: 0.3,
     progressServerDecayExp: 2,
@@ -44,7 +53,9 @@ $(function () {
         var msg = '<tr><td><div class="alert alert-success">'
         msg += '<span class="glyphicon glyphicon-ok"></span>';
         msg += ' Boundary package <strong>' + data.result.url + '</strong> uploaded successfully. ';
-        msg += '<a class="btn btn-success btn-pull-right" href="/boundaries/">Go Back to Boundaries<a>';
+        msg += '<a class="btn btn-success btn-pull-right" href="';
+        msg += $fileUpload.data("success-url");
+        msg += '">Go Back to Boundaries</a>';
         msg += '</div></td></tr>';
       } else {
         var msg = '<tr><td><div class="alert alert-danger">';
@@ -54,6 +65,10 @@ $(function () {
         console.log(msg);
       }
       $("#files_table tbody").prepend(msg);
+    },
+    fail: function (e, data) {
+      var response = data.jqXHR.responseJSON || {};
+      showUploadError(response.message || "The boundary package could not be uploaded.");
     }
   });
 

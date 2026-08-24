@@ -4,10 +4,8 @@
 import io
 import logging
 import os
-import sys
 import shutil
 import time
-import traceback
 from pathlib import Path
 import uuid
 from zipfile import ZipFile
@@ -33,15 +31,9 @@ from django.utils import timezone
 
 import qc_tool.frontend.dashboard.models as models
 from qc_tool.frontend.accounts.authentication.api_keys import get_or_create_api_key
-from qc_tool.frontend.accounts.authentication.decorators import api_key_required
-from qc_tool.frontend.accounts.authorization import AccountPermission
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization import access_for_request
-from qc_tool.frontend.accounts.authorization.decorators import (
-    account_permission_required,
-)
-from qc_tool.frontend.accounts.authorization.decorators import administrator_required
-from qc_tool.common import QCException, auth_worker, get_product_definitions, validate_skip_steps
+from qc_tool.common import QCException, get_product_definitions, validate_skip_steps
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
@@ -88,7 +80,6 @@ def api_openapi_json(request):
         openapi_dict["servers"][0]["url"] = api_url
         return JsonResponse(openapi_dict)
 
-@api_key_required(permission=AccountPermission.UPLOAD_DELIVERY)
 def api_register_delivery(request):
     user = request.api_user
 
@@ -128,7 +119,6 @@ def api_register_delivery(request):
     response_data = {"status": "ok", "message": "delivery successfully registered", "delivery_id": d.id}
     return JsonResponse(response_data, safe=False)
 
-@api_key_required(permission=AccountPermission.UPLOAD_DELIVERY)
 def api_register_delivery_s3(request):
     user = request.api_user
 
@@ -201,7 +191,6 @@ def api_register_delivery_s3(request):
     response_data = {"status": "ok", "message": "S3 delivery successfully registered", "delivery_id": d.id}
     return JsonResponse(response_data, safe=False)
 
-@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_delivery_list(request):
     """
        Returns a list of all deliveries for the current user.
@@ -262,7 +251,6 @@ def api_product_list(request):
     return JsonResponse({"products": product_list})
 
 
-@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_product_info(request, product_ident):
     """
     returns a table of details about the product
@@ -274,7 +262,6 @@ def api_product_info(request, product_ident):
     response_data = {"status": "ok", "message": f"showing available checks for {product_ident}", "data": job_form_data}
     return JsonResponse(response_data, safe=False)
 
-@api_key_required(permission=AccountPermission.RUN_QC)
 def api_create_job(request):
     user = request.api_user
 
@@ -334,7 +321,6 @@ def api_create_job(request):
     result = {"status": "OK", "message": "QC job successfully created", "data": response_data}
     return JsonResponse(result)
 
-@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_job_result(request, job_uuid):
     user = request.api_user
 
@@ -353,7 +339,6 @@ def api_job_result(request, job_uuid):
     response_data = {"status": "ok", "message": "job status", "data": job_report}
     return JsonResponse(response_data, safe=False)
 
-@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_job_result_pdf(request, job_uuid):
     user = request.api_user
 
@@ -383,7 +368,6 @@ def api_job_result_pdf(request, job_uuid):
     return response_pdf
 
 
-@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_job_history(request, delivery_id):
     """
     Shows the history of all jobs for a specific delivery in .json format.
@@ -423,7 +407,6 @@ def api_job_history(request, delivery_id):
     return JsonResponse(result)
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
@@ -443,7 +426,6 @@ def deliveries(request):
                                                          "update_job_statuses_interval": update_job_statuses_interval})
 
 
-@account_permission_required(AccountPermission.RUN_QC)
 def setup_job(request):
     """
     Displays a page for starting a new QA job
@@ -685,7 +667,6 @@ def query_deliveries(
         return total, data
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_deliveries_json(request):
     """
     Returns a list of all deliveries for the current user.
@@ -716,7 +697,6 @@ def get_deliveries_json(request):
     return JsonResponse({"total": total, "rows": data})
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def export_deliveries_excel(request):
     """
     Exports deliveries (filtered/sorted like get_deliveries_json)
@@ -778,7 +758,6 @@ def export_deliveries_excel(request):
     return response
 
 
-@account_permission_required(AccountPermission.UPLOAD_DELIVERY)
 def resumable_upload_page(request):
     """
     Resumable file upload demo.
@@ -788,7 +767,6 @@ def resumable_upload_page(request):
     })
 
 
-@administrator_required
 def announcement(request):
     """
     Saves or loads an announcement message.
@@ -818,7 +796,6 @@ def announcement(request):
                            "error_message": "Error updating announcement."})
 
 
-@administrator_required
 def boundaries(request):
     """
     Returns a list of all boundary aoi files in the active boundary package in html format.
@@ -826,7 +803,6 @@ def boundaries(request):
     return render(request, 'dashboard/boundaries.html', {})
 
 
-@administrator_required
 def get_boundaries_json(request, boundary_type):
     """
     Returns a list of all boundary aoi files in the active boundary package in json format.
@@ -853,7 +829,12 @@ def get_boundaries_json(request, boundary_type):
     return JsonResponse(boundary_list, safe=False)
 
 
-@administrator_required
+def boundaries_upload_page(request):
+    """Render the private boundary-upload page."""
+
+    return render(request, 'dashboard/boundaries_upload.html')
+
+
 def boundaries_upload(request):
     """
     Uploading boundary package via web console.
@@ -862,58 +843,61 @@ def boundaries_upload(request):
     try:
         boundary_upload_path = Path(CONFIG["boundary_dir"])
 
-        if request.method == 'POST' and request.FILES["file"]:
+        myfile = request.FILES.get("file")
+        if myfile is None:
+            return JsonResponse(
+                {
+                    'is_valid': False,
+                    'name': None,
+                    'url': None,
+                    'message': 'A boundary package ZIP file is required.',
+                },
+                status=400,
+            )
 
-            # retrieve file info from uploaded zip file
-            myfile = request.FILES["file"]
-            logger.info("Processing uploaded boundary ZIP file: {:s}".format(myfile.name))
+        # retrieve file info from uploaded zip file
+        logger.info("Processing uploaded boundary ZIP file: {:s}".format(myfile.name))
 
-            # Check if there is an existing boundary package and boundary ZIP file. If found, delete.
-            dst_filepath = boundary_upload_path.joinpath(myfile.name)
-            if dst_filepath.exists():
-                logger.debug("deleting abandoned zip file {:s}".format(str(dst_filepath)))
-                dst_filepath.unlink()
+        # Check if there is an existing boundary package and boundary ZIP file. If found, delete.
+        dst_filepath = boundary_upload_path.joinpath(myfile.name)
+        if dst_filepath.exists():
+            logger.debug("deleting abandoned zip file {:s}".format(str(dst_filepath)))
+            dst_filepath.unlink()
 
-            logger.debug("saving uploaded boundary zip file to {:s}".format(str(dst_filepath)))
-            fs = FileSystemStorage(str(boundary_upload_path))
-            fs.save(myfile.name, myfile)
-            logger.debug("uploaded boundary zip file saved successfully to filesystem.")
+        logger.debug("saving uploaded boundary zip file to {:s}".format(str(dst_filepath)))
+        fs = FileSystemStorage(str(boundary_upload_path))
+        fs.save(myfile.name, myfile)
+        logger.debug("uploaded boundary zip file saved successfully to filesystem.")
 
-            # Delete unzipped boundary files.
-            raster_dir = boundary_upload_path.joinpath("raster")
-            if raster_dir.exists():
-                shutil.rmtree(str(raster_dir))
+        # Delete unzipped boundary files.
+        raster_dir = boundary_upload_path.joinpath("raster")
+        if raster_dir.exists():
+            shutil.rmtree(str(raster_dir))
 
-            vector_dir = boundary_upload_path.joinpath("vector")
-            if vector_dir.exists():
-                shutil.rmtree(str(vector_dir))
+        vector_dir = boundary_upload_path.joinpath("vector")
+        if vector_dir.exists():
+            shutil.rmtree(str(vector_dir))
 
-            # Unzip the uploaded boundary package.
-            with ZipFile(str(dst_filepath)) as zip_file:
-                zip_file.extractall(path=str(boundary_upload_path))
+        # Unzip the uploaded boundary package.
+        with ZipFile(str(dst_filepath)) as zip_file:
+            zip_file.extractall(path=str(boundary_upload_path))
 
-            data = {'is_valid': True,
-                    'name': myfile.name,
-                    'url': myfile.name}
-            return JsonResponse(data)
+        data = {'is_valid': True,
+                'name': myfile.name,
+                'url': myfile.name}
+        return JsonResponse(data)
 
-    except BaseException as e:
-        logger.debug("upload exception!")
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        msg = traceback.format_exception(exc_type, exc_value, exc_traceback)
-        logger.debug(msg)
+    except Exception:
+        logger.exception("Boundary package upload failed.")
         data = {'is_valid': False,
                 'name': None,
                 'url': None,
-                'message': msg}
+                'message': 'The boundary package could not be processed.'}
 
-        return JsonResponse(data)
-
-    return render(request, 'dashboard/boundaries_upload.html')
+        return JsonResponse(data, status=400)
 
 
 
-@account_permission_required(AccountPermission.DELETE_DELIVERY)
 def delivery_delete(request):
     """
     Deletes a delivery from the database and deleted the associated ZIP file from the filesystem.
@@ -975,7 +959,6 @@ def delivery_delete(request):
         return JsonResponse({"status":"ok", "message": "{:d} deliveries have been deleted.".format(len(delivery_ids))})
 
 
-@account_permission_required(AccountPermission.DELETE_DELIVERY)
 def job_delete(request):
     """
     Deletes the job from the database and associated files from the filesystem.
@@ -1016,7 +999,6 @@ def job_delete(request):
                             .format(len(deleted_jobs))})
 
 
-@account_permission_required(AccountPermission.SUBMIT_DELIVERY)
 def submit_delivery_to_eea(request):
     if request.method == "POST":
         delivery_id = request.POST.get("id")
@@ -1074,7 +1056,6 @@ def submit_delivery_to_eea(request):
                              "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
 
 
-@account_permission_required(AccountPermission.SUBMIT_DELIVERY)
 def submit_deliveries_to_eea_batch(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
@@ -1145,7 +1126,6 @@ def submit_deliveries_to_eea_batch(request):
     })
 
 
-@api_key_required(permission=AccountPermission.SUBMIT_DELIVERY)
 def api_submit_delivery_to_eea(request):
     user = request.api_user
 
@@ -1208,7 +1188,6 @@ def api_submit_delivery_to_eea(request):
     return JsonResponse({"status": "ok",
                          "message": "Delivery with ID {:d} successfully submitted to EEA.".format(d.id)})
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_product_list(request):
     """
     returns a list of all product types that are available for checking.
@@ -1221,7 +1200,6 @@ def get_product_list(request):
     product_list = sorted(product_list, key=lambda x: x['description'])
     return JsonResponse({'product_list': product_list})
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_product_descriptions_dropdown(request):
     """
     returns a list of product descriptions for the UI filter dropdown based on current user.
@@ -1254,7 +1232,6 @@ def get_product_definition(request, product_ident):
     except FileNotFoundError:
         raise Http404()
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_job_info(request, product_ident):
     """
     returns a table of details about the product
@@ -1266,7 +1243,6 @@ def get_job_info(request, product_ident):
     return JsonResponse({'job_result': job_report})
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_job_history_json(request, delivery_id):
     """
     Shows the history of all jobs for a specific delivery in .json format.
@@ -1295,18 +1271,28 @@ def get_job_history_json(request, delivery_id):
     return JsonResponse(list(jobs.values()), safe=False)
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def job_history_page(request, delivery_id):
     """
     Shows the history of all jobs for a specific delivery in .json format.
     """
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
-    require_delivery_view(access_for_request(request), delivery)
-    return render(request, 'dashboard/job_history.html', {"delivery": delivery,
-                                                          "show_logo": settings.SHOW_LOGO})
+    account_access = access_for_request(request)
+    require_delivery_view(account_access, delivery)
+    can_delete_jobs = bool(
+        account_access.can_delete
+        and account_access.can_manage_user(delivery.user_id)
+    )
+    return render(
+        request,
+        "dashboard/job_history.html",
+        {
+            "delivery": delivery,
+            "show_logo": settings.SHOW_LOGO,
+            "can_delete_jobs": can_delete_jobs,
+        },
+    )
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
@@ -1334,7 +1320,6 @@ def get_result(request, job_uuid):
                                                      })
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_pdf_report(request, job_uuid):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
@@ -1351,7 +1336,6 @@ def get_pdf_report(request, job_uuid):
     return response
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_job_report(request, job_uuid):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
@@ -1359,7 +1343,6 @@ def get_job_report(request, job_uuid):
     return JsonResponse(job_result, safe=False)
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_combined_job_log(request, job_uuid):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
@@ -1382,7 +1365,6 @@ def get_combined_job_log(request, job_uuid):
     return HttpResponse(combined_log, content_type="text/plain")
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def download_delivery_file(request, delivery_id):
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
     require_delivery_view(access_for_request(request), delivery)
@@ -1399,7 +1381,6 @@ def download_delivery_file(request, delivery_id):
         raise Http404()
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_attachment(request, job_uuid, attachment_filename):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
@@ -1407,7 +1388,6 @@ def get_attachment(request, job_uuid, attachment_filename):
     return FileResponse(open(str(attachment_filepath), "rb"), as_attachment=True)
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def update_job(request, job_uuid):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
@@ -1422,7 +1402,6 @@ def update_job(request, job_uuid):
 
     return JsonResponse({"id": job.delivery.id, "last_job_uuid": job.job_uuid, "last_job_status": job.job_status})
 
-@account_permission_required(AccountPermission.RUN_QC)
 def create_job(request):
     delivery_ids = request.POST.get("delivery_ids").split(",")
     product_ident = request.POST.get("product_ident")
@@ -1458,12 +1437,6 @@ def create_job(request):
     return JsonResponse(result)
 
 def pull_job(request):
-    try:
-        token = request.GET.get("token")
-        if not auth_worker(token):
-            return HttpResponse(status=401)
-    except:
-        return HttpResponse(status=400)
     worker_port = CONFIG.get("worker_port", WORKER_PORT)
     worker_url = "http://{:s}:{:d}/".format(request.META["REMOTE_ADDR"], worker_port)
     job = models.pull_job(worker_url)
@@ -1526,7 +1499,6 @@ def uploaded_delivery_file_exists(filename, user_id):
         return file_exists_message
 
 
-@account_permission_required(AccountPermission.UPLOAD_DELIVERY)
 def resumable_upload(request):
     if request.method == "GET":
         resumableIdentifier = str(request.GET.get("resumableIdentifier"))

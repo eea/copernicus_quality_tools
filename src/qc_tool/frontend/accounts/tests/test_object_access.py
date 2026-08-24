@@ -85,32 +85,57 @@ class DashboardObjectAccessTests(TestCase):
         )
         user.user_permissions.add(permission)
 
-    def protected_urls(self):
+    def protected_browser_urls(self):
         return (
-            reverse("job_history_json", args=[self.delivery.pk]),
             reverse("job_history", args=[self.delivery.pk]),
             reverse("show_result", args=[self.job.pk]),
             reverse("job_report_pdf", args=[self.job.pk]),
-            reverse("job_report_json", args=[self.job.pk]),
             reverse("job_combined_log", args=[self.job.pk]),
             reverse("download_delivery_file", args=[self.delivery.pk]),
             reverse("get_attachment", args=[self.job.pk, "details.txt"]),
+        )
+
+    def protected_data_urls(self):
+        return (
+            reverse("job_history_json", args=[self.delivery.pk]),
+            reverse("job_report_json", args=[self.job.pk]),
             reverse("update_job", args=[self.job.pk]),
         )
 
-    def test_anonymous_users_are_redirected_from_every_object_read(self):
-        for url in self.protected_urls():
+    def protected_urls(self):
+        return self.protected_browser_urls() + self.protected_data_urls()
+
+    def test_anonymous_users_are_redirected_from_browser_object_reads(self):
+        for url in self.protected_browser_urls():
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 302)
                 self.assertIn("/accounts/login/", response.url)
 
+    def test_anonymous_users_get_json_401_from_object_data_endpoints(self):
+        for url in self.protected_data_urls():
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 401)
+                self.assertEqual(
+                    response.json()["code"],
+                    "authentication_required",
+                )
+
     def test_cross_owner_is_denied_before_artifacts_are_read(self):
         self.client.force_login(self.other)
 
-        for url in self.protected_urls():
+        for url in self.protected_browser_urls():
             with self.subTest(url=url):
-                self.assertEqual(self.client.get(url).status_code, 403)
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
+                self.assertTemplateUsed(response, "accounts/errors/403.html")
+
+        for url in self.protected_data_urls():
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(response.json()["code"], "permission_denied")
 
     def test_owner_scoped_users_and_superuser_can_read_job(self):
         region_user = self.create_user(
@@ -137,6 +162,46 @@ class DashboardObjectAccessTests(TestCase):
                     reverse("update_job", args=[self.job.pk])
                 )
                 self.assertEqual(response.status_code, 200)
+                self.client.logout()
+
+    def test_job_history_delete_ui_requires_owner_or_administrator(self):
+        product_manager = self.create_user(
+            "read-only-product-manager",
+            role=Role.PRODUCT_MANAGER,
+            product_idents=("clc2024",),
+        )
+        administrator = self.create_user(
+            "role-administrator",
+            role=Role.ADMIN,
+        )
+
+        scenarios = (
+            (product_manager, False),
+            (self.owner, True),
+            (administrator, True),
+        )
+        url = reverse("job_history", args=[self.delivery.pk])
+
+        for user, can_delete_jobs in scenarios:
+            with self.subTest(username=user.username):
+                self.client.force_login(user)
+                response = self.client.get(url)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertIs(
+                    response.context["can_delete_jobs"],
+                    can_delete_jobs,
+                )
+                if can_delete_jobs:
+                    self.assertContains(response, 'id="btn-delete-multi"')
+                    self.assertContains(response, 'data-checkbox="true"')
+                    self.assertContains(response, 'id="confirm-delete"')
+                    self.assertContains(response, "bootstrap-dialog.min.js")
+                else:
+                    self.assertNotContains(response, 'id="btn-delete-multi"')
+                    self.assertNotContains(response, 'data-checkbox="true"')
+                    self.assertNotContains(response, 'id="confirm-delete"')
+                    self.assertNotContains(response, "bootstrap-dialog.min.js")
                 self.client.logout()
 
     def test_policy_scopes_direct_region_permission_and_product_role(self):

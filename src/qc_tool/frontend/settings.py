@@ -40,6 +40,10 @@ env_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in env_origins.split(',') if origin.strip()]
 
+# Keep CSRF enforcement enabled while allowing session-backed data routes to
+# return the same machine-readable authentication errors as their route policy.
+CSRF_FAILURE_VIEW = "qc_tool.frontend.dashboard.access.routes.csrf.csrf_failure"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Application definition
