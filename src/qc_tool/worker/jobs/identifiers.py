@@ -8,28 +8,16 @@ PostgreSQL identifier.
 
 from pathlib import Path
 import unicodedata
-from uuid import UUID
 
-
-class JobIdentifierError(ValueError):
-    """A worker identifier is malformed or unsafe for local use."""
-
-
-def normalize_job_uuid(value):
-    """Return a canonical UUID string or raise :class:`JobIdentifierError`."""
-
-    if not isinstance(value, str) or not value.isascii():
-        raise JobIdentifierError("job UUID is invalid")
-    try:
-        return str(UUID(value))
-    except (AttributeError, TypeError, ValueError) as exc:
-        raise JobIdentifierError("job UUID is invalid") from exc
+from qc_tool.jobs import compact_job_uuid
+from qc_tool.jobs import JobIdentifierError
+from qc_tool.jobs import normalize_job_uuid
 
 
 def job_schema_name(value):
     """Return the fixed-alphabet PostgreSQL schema name for a job UUID."""
 
-    return "job_{}".format(normalize_job_uuid(value).replace("-", ""))
+    return "job_{}".format(compact_job_uuid(value))
 
 
 def validate_path_component(value, maximum_length, field_name):

@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import patch
+from uuid import UUID
 from uuid import uuid4
 
 from qc_tool.worker.manager import create_jobdir_manager
@@ -118,18 +119,63 @@ class TestCommonWithConfig(TestCase):
 
     def test_compose_job_dir(self):
         from qc_tool.common import compose_job_dir
-        job_dir = compose_job_dir("job_uuid")
-        self.assertEqual(Path(self.work_dir, "job_job_uuid"), job_dir)
+
+        job_uuid = UUID("045f9089-5921-4416-b689-6ba9e6c87f10")
+        expected = Path(
+            self.work_dir,
+            "job_045f908959214416b6896ba9e6c87f10",
+        )
+
+        representations = (
+            job_uuid,
+            str(job_uuid),
+            job_uuid.hex,
+            str(job_uuid).upper(),
+        )
+        for value in representations:
+            with self.subTest(value=value):
+                self.assertEqual(compose_job_dir(value), expected)
+
+    def test_compose_job_paths_reject_invalid_identifiers(self):
+        from qc_tool.common import compose_job_dir
+        from qc_tool.common import compose_job_stdout_filepath
+
+        invalid_values = (
+            None,
+            "",
+            "not-a-uuid",
+            "../outside",
+            "00000000-0000-0000-0000-000000000001/../../outside",
+            "\N{SNOWMAN}",
+        )
+        for value in invalid_values:
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    compose_job_dir(value)
+                with self.assertRaises(ValueError):
+                    compose_job_stdout_filepath(value)
+
+    def test_compose_job_stdout_filepath_accepts_uuid_objects(self):
+        from qc_tool.common import compose_job_stdout_filepath
+
+        job_uuid = UUID("045f9089-5921-4416-b689-6ba9e6c87f10")
+
+        self.assertEqual(
+            compose_job_stdout_filepath(job_uuid),
+            Path(self.work_dir, "job.{}.stdout".format(job_uuid)),
+        )
 
     def test_store_load_job_result(self):
         from qc_tool.common import compose_job_dir
         from qc_tool.common import load_job_result
         from qc_tool.common import store_job_result
-        job_uuid = "job_uuid_valu"
+
+        job_uuid = uuid4()
         job_dir = compose_job_dir(job_uuid)
         job_dir.mkdir(exist_ok=True)
-        store_job_result({"job_uuid": job_uuid})
-        self.assertDictEqual({"job_uuid": job_uuid}, load_job_result(job_uuid))
+        result = {"job_uuid": str(job_uuid)}
+        store_job_result(result)
+        self.assertDictEqual(result, load_job_result(job_uuid))
 
 
 class TestWorkerToken(TestCase):

@@ -21,11 +21,13 @@ from urllib.request import HTTPRedirectHandler
 from urllib.request import ProxyHandler
 from urllib.request import Request
 
+from qc_tool.jobs import compact_job_uuid
+from qc_tool.jobs import normalize_job_uuid
+from qc_tool.product_security import UnsafeProductDefinition
+from qc_tool.product_security import validate_executable_product_configuration
 from qc_tool.worker_auth import build_worker_authorization
 from qc_tool.worker_auth import InvalidWorkerUrl
 from qc_tool.worker_auth import worker_job_status_url
-from qc_tool.product_security import UnsafeProductDefinition
-from qc_tool.product_security import validate_executable_product_configuration
 
 
 QC_TOOL_HOME = Path(__file__).parents[2]
@@ -309,19 +311,21 @@ def get_product_definitions():
     return product_definitions
 
 def compose_job_dir(job_uuid):
-    job_subdir_tpl = "job_{:s}"
-    job_uuid = job_uuid.lower().replace("-", "")
-    job_dir = CONFIG["work_dir"].joinpath("job_{:s}".format(job_uuid))
-    return job_dir
+    """Return the confined working directory for a validated job UUID."""
 
-def format_uuid(uuid_str):
-    if len(uuid_str) == 32:
-        return f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:]}"
-    return uuid_str  # Assume it's already formatted or invalid
+    return CONFIG["work_dir"].joinpath(
+        "job_{:s}".format(compact_job_uuid(job_uuid))
+    )
+
+def format_uuid(job_uuid):
+    """Return a canonical UUID string for legacy callers."""
+
+    return normalize_job_uuid(job_uuid)
 
 def compose_job_stdout_filepath(job_uuid):
-    job_uuid = format_uuid(job_uuid)
-    return CONFIG["work_dir"].joinpath(("job.{:s}.stdout").format(job_uuid))
+    return CONFIG["work_dir"].joinpath(
+        ("job.{:s}.stdout").format(format_uuid(job_uuid))
+    )
 
 def compose_job_log_filepath(job_uuid):
     job_dir = compose_job_dir(job_uuid)
