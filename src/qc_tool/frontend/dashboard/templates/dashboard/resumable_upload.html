@@ -10,6 +10,7 @@
     <meta name="description" content=""/>
     <meta name="robots" content="{% block robots %}index, follow{% endblock robots %}"/>
     <meta name="keywords" content="eea, copernicus, qc, tool, gis, quality"/>
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}dashboard/css/main.css">
     <link rel="stylesheet" href="{{ STATIC_URL }}dashboard/css/bootstrap-dialog.min.css" type="text/css" />
@@ -22,6 +23,7 @@
   <body>
   <div id="wrap">
       <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+      <script src="{% static 'dashboard/js/csrf.js' %}"></script>
       <script src="{% static 'dashboard/js/resumable.js' %}"></script>
 
       <div id="main" class="clear-top">
@@ -43,7 +45,7 @@
                   <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
                       <ul class="nav navbar-nav navbar-right main-menu">
                           {% block menu %}
-                          {% if user.is_superuser %}
+                          {% if account_access.is_administrator %}
                           <li><a href="{% url 'boundaries'%}">
                               <span class="glyphicon glyphicon-cog"></span> Boundaries</a></li>
                           {% endif %}
@@ -139,6 +141,7 @@
         var resumable_simultaneous_uploads = {{ resumable_simultaneous_uploads }};
         var r = new Resumable({
             target:'/resumable_upload/',
+            headers:{'X-CSRFToken': window.qcCsrf.getToken()},
             chunkSize:5*1024*1024,
             simultaneousUploads:resumable_simultaneous_uploads,
             testChunks:true,

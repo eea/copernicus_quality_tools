@@ -3,9 +3,7 @@
 
 import logging
 import os
-import random
 import re
-import string
 from datetime import datetime
 from shutil import copyfile
 from shutil import copytree
@@ -22,14 +20,6 @@ from qc_tool.common import UNKNOWN_REFERENCE_YEAR_LABEL
 
 
 logger = logging.getLogger(__name__)
-
-
-def generate_api_key():
-    """
-    Generates an API key with 25 random characters.
-    """
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=25))
-
 
 def get_announcement_message():
     """

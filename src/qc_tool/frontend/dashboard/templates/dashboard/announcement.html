@@ -39,6 +39,7 @@
                 <!-- Tab panes -->
                 <div class="tab-content">
                     <form method="POST">
+                        {% csrf_token %}
                     <div role="tabpanel" class="tab-pane active" id="recent">
                         <h4>Enter announcement message:</h4>
                         <textarea name="announcement_text" class="form-control">{{ announcement }}</textarea>

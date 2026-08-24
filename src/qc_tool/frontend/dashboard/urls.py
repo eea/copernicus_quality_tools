@@ -55,8 +55,6 @@ urlpatterns = [
     path("attachment/<job_uuid>/<attachment_filename>/", views.get_attachment, name="get_attachment"),
 
     path("announcement/", views.announcement, name="announcement"),
-
-    path("change_password/", views.change_password, name="change_password")
 ]
 
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns

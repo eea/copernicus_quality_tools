@@ -56,70 +56,68 @@ function dateFormatter(value, row) {
 }
 
 function checkboxFormatter(value, row) {
-   if (row.date_submitted !== null) {
-        return {
-            disabled:true,
-            checked: false
-        };
-   } else {
-        return {
-            disabled: false
-        };
-   }
+    return {
+        disabled: !canRunQc(row) && !canDelete(row) && !canSubmit(row),
+        checked: false
+    };
 }
 
 
+function isDeliveryBusy(row) {
+    return row.last_job_status === "waiting" || row.last_job_status === "running";
+}
+
+function canRunQc(row) {
+    return CAN_RUN_QC && row.can_run_qc && !isDeliveryBusy(row) && !row.date_submitted;
+}
+
+function canDelete(row) {
+    return CAN_DELETE && row.can_delete && !isDeliveryBusy(row) && !row.date_submitted;
+}
+
+function canSubmit(row) {
+    return SUBMISSION_ENABLED && CAN_SUBMIT && row.can_submit &&
+        row.last_job_status === "ok" && !row.date_submitted;
+}
+
+function disabledAction(label, message) {
+    return ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ' +
+        'title="' + message + '" disabled>' + label + '</button>';
+}
+
 function actionsFormatter(value, row) {
-    // for example /setup_job/1234
-    var btn_data = '<div class="btn-group">';
+    var buttons = '<div class="btn-group">';
 
-    if (IS_TEST_GROUP || row.last_job_status === "waiting" || row.last_job_status === "running" || row.date_submitted) {
-        // job is running --> QC button disabled, Delete button disabled
-        var tooltip_message = "QC job is currently running.";
-        if (IS_TEST_GROUP) {
-            tooltip_message = "As a test user account you are not allowed to run QC.";
-        }
-        if (row.is_submitted) {
-            tooltip_message = "Delivery has been already submitted to EEA.";
-        }
-        btn_data += "<a class=\"btn btn-sm btn-success\" role=\"button\" disabled data-toggle=\"tooltip\"";
-        btn_data += 'title="Cannot run quality controls for this delivery. ' + tooltip_message;
-        btn_data += '">QC</a>';
-        btn_data += ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ';
-        btn_data += 'title="Cannot delete this delivery. ' + tooltip_message + '" disabled>Delete</button>';
-    } else {
-        // job is not running and delivery is not submitted --> QC button is enabled
-        btn_data += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
-        btn_data += 'title="Run quality controls for this delivery." href="/setup_job?deliveries=' + row.id + '" >QC</a>';
-        if (IS_TEST_GROUP) {
-            btn_data += ' <button class="btn btn-sm btn-default" data-toggle="tooltip" ';
-            btn_data += 'title="Cannot delete this delivery. ' + tooltip_message + '" disabled>Delete</button>';
-        }
-        else {
-            btn_data += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
-            btn_data += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
-            btn_data += 'Delete</button>';
-        }
-    }
-
-    // "Submit to EEA" button visibility is controlled by the SUBMISSION_ENABLED setting.
-    if (SUBMISSION_ENABLED && USER_CAN_SUBMIT) {
-        if (row.date_submitted) {
-            btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip" ';
-            btn_data += 'title="Delivery has already been submitted to EEA.">Submit to EEA</button>';
+    if (CAN_RUN_QC) {
+        if (canRunQc(row)) {
+            buttons += '<a class="btn btn-sm btn-success" role="button" data-toggle="tooltip" ';
+            buttons += 'title="Run quality controls for this delivery." href="/setup_job?deliveries=' + row.id + '">QC</a>';
         } else {
-            if (row.last_job_status === "ok") {
-                btn_data += ' <button onclick="submit_eea_function(' + row.id + ', \'' + row.filename + '\')"';
-                btn_data += ' class="btn btn-sm btn-default data-toggle="tooltip"';
-                btn_data += ' title="Click to send the delivery to EEA for approval.">Submit to EEA</button>';
-            } else {
-                btn_data += ' <button class="btn btn-sm btn-default disabled data-toggle="tooltip"';
-                btn_data += ' title="Delivery cannot be submitted to EEA. QC status is not OK.">Submit to EEA</button>';
-            }
+            buttons += disabledAction("QC", "Quality controls are not available for this delivery.");
         }
     }
-    btn_data += '</div>';
-    return btn_data;
+
+    if (CAN_DELETE) {
+        if (canDelete(row)) {
+            buttons += '<button onclick="delete_function(' + row.id + ', \'' + row.filename + '\')" ';
+            buttons += 'class="btn btn-sm btn-danger delete-button" data-toggle="tooltip" title="Delete this delivery.">';
+            buttons += 'Delete</button>';
+        } else {
+            buttons += disabledAction("Delete", "This delivery cannot be deleted.");
+        }
+    }
+
+    if (SUBMISSION_ENABLED && CAN_SUBMIT) {
+        if (canSubmit(row)) {
+            buttons += ' <button onclick="submit_eea_function(' + row.id + ', \'' + row.filename + '\')"';
+            buttons += ' class="btn btn-sm btn-default" data-toggle="tooltip"';
+            buttons += ' title="Send this delivery to EEA for approval.">Submit to EEA</button>';
+        } else {
+            buttons += disabledAction("Submit to EEA", "This delivery is not ready for submission.");
+        }
+    }
+
+    return buttons + '</div>';
 }
 
 function statusFormatter(value, row, index) {
@@ -153,41 +151,21 @@ function statusCellStyle(value, row, index) {
 }
 
 
-// Enable or disable 'QC all selected' button based on selected rows
 function toggle_select_button() {
     var selectedRows = $("#tbl-deliveries").bootstrapTable("getSelections");
-    var numChecked = selectedRows.length;
+    var qcCount = selectedRows.filter(canRunQc).length;
+    var deleteCount = selectedRows.filter(canDelete).length;
+    var submitCount = selectedRows.filter(canSubmit).length;
 
-    // Filter for rows where status is 'ok'
-    var numCheckedSubmittable = selectedRows.filter(function(row) {
-        return row.last_job_status === "ok";
-    }).length;
-
-    if (numChecked === 0) {
-        $("#btn-qc-multi, #btn-delete-multi, #btn-submit-multi").prop("disabled", true);
-        $("#btn-qc-multi").text("QC all selected");
-        $("#btn-delete-multi").text("Delete selected");
-        $("#btn-submit-multi").text("Submit selected");
-
-        if (IS_TEST_GROUP) {
-            $("#btn-qc-multi").prop("title", "As a test user account you are not allowed to run QC.");
-            $("#btn-delete-multi").prop("title", "As a test user account you are not allowed to delete deliveries.");
-            $("#btn-submit-multi").prop("title", "As a test user account you are not allowed to submit deliveries.");
-        }
-    } else {
-        if (IS_TEST_GROUP) {
-            // Keep disabled if test user, even if rows are selected
-            $("#btn-qc-multi, #btn-delete-multi, #btn-submit-multi").prop("disabled", true);
-        } else {
-            // Enable and update text for QC and Delete
-            $("#btn-qc-multi").prop("disabled", false).text("QC all selected (" + numChecked + ")");
-            $("#btn-delete-multi").prop("disabled", false).text("Delete selected (" + numChecked + ")");
-            
-            // Logic for Submit: Enable only if there is at least one submittable row
-            $("#btn-submit-multi").text("Submit selected (" + numCheckedSubmittable + ")");
-            $("#btn-submit-multi").prop("disabled", numCheckedSubmittable === 0);
-        }
-    }
+    $("#btn-qc-multi")
+        .prop("disabled", qcCount === 0)
+        .text(qcCount ? "QC all selected (" + qcCount + ")" : "QC all selected");
+    $("#btn-delete-multi")
+        .prop("disabled", deleteCount === 0)
+        .text(deleteCount ? "Delete selected (" + deleteCount + ")" : "Delete selected");
+    $("#btn-submit-multi")
+        .prop("disabled", submitCount === 0)
+        .text(submitCount ? "Submit selected (" + submitCount + ")" : "Submit selected");
 }
 
 
@@ -496,10 +474,13 @@ $(document).ready(function() {
     // "QC all selected" button is clicked
     $('#btn-qc-multi').on('click', function() {
         console.log("QC all selected button clicked!");
-        if ($("#tbl-deliveries").bootstrapTable("getSelections").length === 0) {
-            alert("Please select at least one delivery.");
+        var runnableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(canRunQc);
+        if (runnableRows.length === 0) {
+            alert("Please select at least one delivery that can run QC.");
+            toggle_select_button();
+            return;
         }
-        var selected_delivery_ids = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+        var selected_delivery_ids = $.map(runnableRows, function (row) {
             return row.id
         });
         $(location).attr("href","/setup_job?deliveries=" + selected_delivery_ids.join(","));
@@ -508,15 +489,16 @@ $(document).ready(function() {
     // "Delete selected" button is clicked
     $('#btn-delete-multi').on('click', function() {
         console.log("Delete selected button clicked!");
-        if ($("#tbl-deliveries").bootstrapTable("getSelections").length === 0) {
-            alert("Please select at least one delivery.");
+        var deletableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(canDelete);
+        if (deletableRows.length === 0) {
+            alert("Please select at least one delivery that can be deleted.");
             toggle_select_button();
             return;
         }
-        var selected_delivery_ids = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+        var selected_delivery_ids = $.map(deletableRows, function (row) {
             return row.id
         });
-        var selected_delivery_filenames = $.map($("#tbl-deliveries").bootstrapTable('getSelections'), function (row) {
+        var selected_delivery_filenames = $.map(deletableRows, function (row) {
             return row.filename
         });
         delete_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
@@ -525,9 +507,7 @@ $(document).ready(function() {
     // "Submit selected" button is clicked
     $('#btn-submit-multi').on('click', function() {
         console.log("Submit selected button clicked!");
-        var submittableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(function(row) {
-            return row.last_job_status === "ok";
-        });
+        var submittableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(canSubmit);
         var numCheckedSubmittable = submittableRows.length;
         if (numCheckedSubmittable === 0) {
             alert("Please select at least one delivery with 'passed' status.");

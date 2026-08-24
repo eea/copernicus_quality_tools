@@ -1,0 +1,82 @@
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+
+from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.models import UserProfile
+from qc_tool.frontend.accounts.models import UserProductGrant
+from qc_tool.frontend.accounts.models import UserRegionGrant
+from qc_tool.frontend.accounts.services.role_permissions import (
+    synchronize_role_permissions,
+)
+
+
+MANAGED_MODELS = (
+    get_user_model(),
+    Group,
+    UserProfile,
+    ApiUser,
+    UserRegionGrant,
+    UserProductGrant,
+)
+PERMISSION_ACTIONS = ("add", "change", "delete", "view")
+
+
+def _management_permissions(*, using):
+    permissions = []
+    content_types = ContentType.objects.db_manager(using)
+    permission_manager = Permission.objects.using(using)
+
+    for model in MANAGED_MODELS:
+        content_type = content_types.get_for_model(model)
+        codenames = [
+            f"{action}_{model._meta.model_name}" for action in PERMISSION_ACTIONS
+        ]
+        permissions.extend(
+            permission_manager.filter(
+                content_type=content_type,
+                codename__in=codenames,
+            )
+        )
+
+    return permissions
+
+
+def synchronize_admin_role(*, using="default"):
+    """Make the canonical admin group operational and migration-safe."""
+
+    with transaction.atomic(using=using):
+        synchronize_role_permissions(using=using)
+        group, _created = Group.objects.using(using).get_or_create(
+            name=Role.ADMIN.value,
+        )
+        group.permissions.add(*_management_permissions(using=using))
+
+        user_model = get_user_model()
+        user_model._default_manager.using(using).filter(
+            groups=group,
+        ).update(is_staff=True)
+
+    return group
+
+
+def synchronize_user_staff(user, *, using=None):
+    """Derive admin-site access from superuser or admin-group membership."""
+
+    if not user.pk:
+        return False
+
+    using = using or user._state.db or "default"
+    is_admin = user.groups.using(using).filter(name=Role.ADMIN.value).exists()
+    should_be_staff = bool(user.is_superuser or is_admin)
+
+    if user.is_staff != should_be_staff:
+        type(user)._default_manager.using(using).filter(pk=user.pk).update(
+            is_staff=should_be_staff,
+        )
+        user.is_staff = should_be_staff
+
+    return should_be_staff

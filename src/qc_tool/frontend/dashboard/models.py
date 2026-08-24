@@ -5,8 +5,8 @@ from pathlib import Path
 from uuid import uuid4
 
 import django.db.models as models
+from django.conf import settings
 from django.utils import timezone
-from django.contrib.auth.models import User
 
 
 from qc_tool.common import JOB_OK
@@ -43,12 +43,12 @@ def pull_job(worker_url):
 
 
 class ApiUser(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     api_key = models.CharField(max_length=100)
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     country = models.CharField(max_length=100, blank=True, null=True)
     product_family = models.CharField(max_length=50, blank=True, null=True)
 
@@ -103,7 +103,7 @@ class Delivery(models.Model):
     def is_submitted(self):
         return self.date_submitted is not None
 
-    user = models.ForeignKey("auth.User", null=True, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
     filename = models.CharField(max_length=500)
     size_bytes = models.BigIntegerField()
     date_uploaded = models.DateTimeField(default=timezone.now)

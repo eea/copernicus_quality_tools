@@ -10,7 +10,7 @@ import importlib
 import os
 from threading import Thread
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qc_tool.frontend.settings")
 
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()

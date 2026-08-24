@@ -1,0 +1,169 @@
+from dataclasses import dataclass
+from typing import FrozenSet
+from typing import Optional
+
+from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
+from qc_tool.frontend.accounts.authorization.permissions import permissions_for
+from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.authorization.roles import roles_for
+
+
+@dataclass(frozen=True)
+class AccountAccess:
+    """Immutable account facts used by views and templates for one request."""
+
+    user_id: Optional[int]
+    is_authenticated: bool
+    is_administrator: bool
+    roles: FrozenSet[Role]
+    permissions: FrozenSet[AccountPermission]
+    region_codes: FrozenSet[str] = frozenset()
+    product_idents: FrozenSet[str] = frozenset()
+
+    @classmethod
+    def anonymous(cls):
+        return cls(None, False, False, frozenset(), frozenset())
+
+    @classmethod
+    def from_user(cls, user):
+        is_authenticated = bool(
+            getattr(user, "is_authenticated", False)
+            and getattr(user, "is_active", False)
+        )
+        if not is_authenticated:
+            return cls.anonymous()
+
+        roles = roles_for(user)
+        is_administrator = bool(
+            user.is_superuser or Role.ADMIN in roles
+        )
+        region_codes = frozenset(
+            user.region_grants.exclude(aoi_code="").values_list(
+                "aoi_code",
+                flat=True,
+            )
+        )
+        product_idents = frozenset(
+            user.product_grants.exclude(product_ident="").values_list(
+                "product_ident",
+                flat=True,
+            )
+        )
+        return cls(
+            user_id=user.pk,
+            is_authenticated=True,
+            is_administrator=is_administrator,
+            roles=roles,
+            permissions=permissions_for(user),
+            region_codes=region_codes,
+            product_idents=product_idents,
+        )
+
+    @property
+    def is_default_user(self):
+        return Role.DEFAULT in self.roles
+
+    @property
+    def is_region_manager(self):
+        return Role.REGION_MANAGER in self.roles
+
+    @property
+    def is_product_manager(self):
+        return Role.PRODUCT_MANAGER in self.roles
+
+    def allows(self, permission):
+        return AccountPermission(permission) in self.permissions
+
+    @property
+    def can_view_deliveries(self):
+        return self.allows(AccountPermission.VIEW_DELIVERIES)
+
+    @property
+    def can_upload(self):
+        return self.allows(AccountPermission.UPLOAD_DELIVERY)
+
+    @property
+    def can_run_qc(self):
+        return self.allows(AccountPermission.RUN_QC)
+
+    @property
+    def can_delete(self):
+        return self.allows(AccountPermission.DELETE_DELIVERY)
+
+    @property
+    def can_change_password(self):
+        return self.allows(AccountPermission.CHANGE_PASSWORD)
+
+    @property
+    def can_submit(self):
+        return self.allows(AccountPermission.SUBMIT_DELIVERY)
+
+    @property
+    def can_view_region_deliveries(self):
+        return bool(
+            self.allows(AccountPermission.VIEW_REGION_DELIVERIES)
+            and self.region_codes
+        )
+
+    @property
+    def can_view_product_deliveries(self):
+        return bool(
+            self.allows(AccountPermission.VIEW_PRODUCT_DELIVERIES)
+            and self.product_idents
+        )
+
+    @property
+    def can_view_region_aggregate_report(self):
+        return bool(
+            self.allows(AccountPermission.VIEW_REGION_AGGREGATE_REPORT)
+            and self.region_codes
+        )
+
+    @property
+    def can_view_product_aggregate_report(self):
+        return bool(
+            self.allows(AccountPermission.VIEW_PRODUCT_AGGREGATE_REPORT)
+            and self.product_idents
+        )
+
+    @property
+    def can_view_other_users_deliveries(self):
+        return bool(
+            self.is_administrator
+            or self.can_view_region_deliveries
+            or self.can_view_product_deliveries
+        )
+
+    @property
+    def delivery_list_heading(self):
+        if self.is_administrator:
+            return "All Deliveries"
+        if self.can_view_other_users_deliveries:
+            return "Managed Deliveries"
+        return "My Deliveries"
+
+    def can_manage_user(self, owner_id):
+        """Return whether this principal may mutate an owner's resources."""
+
+        return bool(
+            self.is_authenticated
+            and (
+                self.is_administrator
+                or (self.user_id is not None and self.user_id == owner_id)
+            )
+        )
+
+
+def access_for(user):
+    return AccountAccess.from_user(user)
+
+
+def access_for_request(request):
+    """Resolve and cache account policy once for the current request."""
+
+    attribute = "_qc_tool_account_access"
+    access = getattr(request, attribute, None)
+    if access is None:
+        access = access_for(getattr(request, "user", None))
+        setattr(request, attribute, access)
+    return access

@@ -9,6 +9,7 @@
         <meta name="description" content=""/>
         <meta name="robots" content="{% block robots %}index, follow{% endblock robots %}"/>
         <meta name="keywords" content="eea, copernicus, qc, tool, gis, quality"/>
+        <meta name="csrf-token" content="{{ csrf_token }}">
         <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
         <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}dashboard/css/main.css">
         <link rel="stylesheet" href="{{ STATIC_URL }}dashboard/css/bootstrap-dialog.min.css" type="text/css" />
@@ -42,7 +43,7 @@
                         <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
                             <ul class="nav navbar-nav navbar-right main-menu">
                                 {% block menu %}
-                                {% if user.is_superuser %}
+                                {% if account_access.is_administrator %}
                                 <li><a href="{% url 'announcement'%}">
                                     <span class="glyphicon glyphicon-edit"></span> Announcement</a></li>
                                 <li><a href="{% url 'boundaries'%}">
@@ -53,7 +54,7 @@
                                 <li><a href="https://github.com/eea/copernicus_quality_tools/wiki">
                                     <span class="glyphicon glyphicon-question-sign"></span> Documentation</a></li>
                                 {% if user.is_authenticated %}
-                                {% if can_change_password %}
+                                {% if account_access.can_change_password %}
                                 <li><a href="{% url 'change_password' %}?next=/">
                                     <span class="glyphicon glyphicon-change-password"></span> Change password</a></li>
                                 {% endif %}
@@ -73,6 +74,7 @@
 
                 {% block js %}
                     <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/csrf.js' %}"></script>
                     <script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
                     <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
                     <script src="{% static 'dashboard/js/bootstrap-table.min.js' %}"></script>

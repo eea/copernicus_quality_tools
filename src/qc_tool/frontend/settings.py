@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'qc_tool.frontend.accounts.apps.AccountsConfig',
     'qc_tool.frontend.dashboard'
 ]
 
@@ -59,12 +60,13 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'urls'
+ROOT_URLCONF = 'qc_tool.frontend.urls'
 
 TEMPLATES = [
     {
@@ -84,13 +86,13 @@ TEMPLATES = [
                 'django.template.context_processors.static',
                 'qc_tool.frontend.dashboard.context_processors.show_logo',
                 'qc_tool.frontend.dashboard.context_processors.version_processor',
-                'qc_tool.frontend.dashboard.context_processors.can_change_password'
+                'qc_tool.frontend.accounts.context_processors.account_access',
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'wsgi.application'
+WSGI_APPLICATION = 'qc_tool.frontend.wsgi.application'
 
 
 # Database
@@ -183,7 +185,7 @@ LOGIN_REDIRECT_URL = '/'
 # case-insensitive username authentication backend
 if CONFIG["case_insensitive_usernames"]:
     AUTHENTICATION_BACKENDS = [
-        'qc_tool.frontend.dashboard.auth_backends.CaseInsensitiveBackend',
+        'qc_tool.frontend.accounts.authentication.backends.CaseInsensitiveBackend',
     ]
 
 CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)

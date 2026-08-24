@@ -30,40 +30,39 @@
                 <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
                     <li role="presentation" class="active">
                         <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">
-                            {% if user.is_superuser %}All Deliveries{% else %}My Deliveries{% endif %}</a></li>
+                            {{ account_access.delivery_list_heading }}</a></li>
                 </ul>
 
                 <!-- Tab panes -->
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="recent">
                         <div id="runs-toolbar-1">
-                            {% if not is_test_group %}
+                            {% if account_access.can_upload %}
                             <a href="{% url 'file_upload' %}" class="btn btn-primary" role="button">
                                 <span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>
                                 Upload ZIP File(s)
                             </a>
-                            {% else %}
-                            <span data-toggle="tooltip" data-placement="top" title="As a test user you are not allowed to upload ZIP files.">
-                            <a href="{% url 'file_upload' %}" class="btn btn-primary disabled" role="button">
-                                <span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>
-                                Upload ZIP File(s)
-                            </a>
-                            </span>
                             {% endif %}
+                            {% if account_access.can_run_qc %}
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-qc-multi" onclick="" class="btn btn-success mr-10" disabled>
                                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
                                 QC all selected
                             </button>
+                            {% endif %}
+                            {% if account_access.can_delete %}
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-delete-multi" onclick="" class="btn btn-danger mr-10" disabled>
                                 <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
                                 Delete selected
                             </button>
+                            {% endif %}
+                            {% if submission_enabled and account_access.can_submit %}
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-submit-multi" onclick="" class="btn btn-success mr-10" disabled>
                                 Submit selected
                             </button>
+                            {% endif %}
                             <span>&nbsp;&nbsp;</span>
                             <span>&nbsp;&nbsp;</span>
                             <button id="btn-version" onclick="" class="btn btn-basic mr-10">
@@ -92,7 +91,7 @@
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
                                 <th data-field="product_description" data-filter-control="select" data-filter-data="url:/data/product_descriptions/" data-sortable="true">Product</th>
                                 <th data-field="product_ident" data-visible="false" data-sortable="true" >Product Identifier</th>
-                                {% if user.is_superuser %}
+                                {% if account_access.can_view_other_users_deliveries %}
                                 <th data-field="username" data-visible="true" data-sortable="true" >User</th>
                                 {% else %}
                                 <th data-field="username" data-visible="false" data-sortable="true" >User</th>
@@ -101,7 +100,7 @@
                                 {% if submission_enabled %}
                                 <th data-field="date_submitted" data-visible="true" data-search-on-enter-key="true" data-filter-control="input" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
                                 {% endif %}
-                                {% if user.is_superuser %}
+                                {% if account_access.is_administrator %}
                                 <th data-field="is_deleted" data-visible="true" data-sortable="true" >Deleted</th>
                                 {% endif %}
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
@@ -152,26 +151,16 @@
     <script type="text/javascript">var SUBMISSION_ENABLED = false;</script>
     {% endif %}
 
-    {% if is_test_group %}
-    <script type="text/javascript">var IS_TEST_GROUP = true;</script>
-    {% else %}
-    <script type="text/javascript">var IS_TEST_GROUP = false;</script>
-    {% endif %}
-
-    {% if user_can_submit %}
-    <script type="text/javascript">var USER_CAN_SUBMIT = true;</script>
-    {% else %}
-    <script type="text/javascript">var USER_CAN_SUBMIT = false;</script>
-    {% endif %}
-
     <script type="text/javascript">
+    var CAN_RUN_QC = {{ account_access.can_run_qc|yesno:"true,false" }};
+    var CAN_DELETE = {{ account_access.can_delete|yesno:"true,false" }};
+    var CAN_SUBMIT = {{ account_access.can_submit|yesno:"true,false" }};
     {% if update_job_statuses %}
     var UPDATE_JOB_STATUSES = true;
     var UPDATE_JOB_STATUSES_INTERVAL = "{{update_job_statuses_interval}}";
     {% else %}
     var UPDATE_JOB_STATUSES = false;
     {% endif %}
-    var GROUP_NAME = "{{ group_name }}";
     var job_statuses = {"Not checked": "Not checked", "waiting": "waiting", "running": "running", "ok": "ok", "failed": "failed", "error": "error"};
     </script>
 

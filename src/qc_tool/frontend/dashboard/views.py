@@ -16,15 +16,11 @@ import json
 import openpyxl
 
 from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import FileSystemStorage
 from django.db import connection
+from django.db import transaction
 from django.forms.models import model_to_dict
 from django.http import FileResponse
 from django.http import Http404
@@ -33,11 +29,18 @@ from django.http import HttpResponseBadRequest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
-from django.shortcuts import redirect
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 import qc_tool.frontend.dashboard.models as models
+from qc_tool.frontend.accounts.authentication.api_keys import get_or_create_api_key
+from qc_tool.frontend.accounts.authentication.decorators import api_key_required
+from qc_tool.frontend.accounts.authorization import AccountPermission
+from qc_tool.frontend.accounts.authorization import access_for
+from qc_tool.frontend.accounts.authorization import access_for_request
+from qc_tool.frontend.accounts.authorization.decorators import (
+    account_permission_required,
+)
+from qc_tool.frontend.accounts.authorization.decorators import administrator_required
 from qc_tool.common import QCException, auth_worker, get_product_definitions, validate_skip_steps
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
@@ -52,8 +55,11 @@ from qc_tool.common import get_job_report_filepath
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import WORKER_PORT
+from qc_tool.frontend.dashboard.access import can_view_job
+from qc_tool.frontend.dashboard.access import delivery_action_capabilities
+from qc_tool.frontend.dashboard.access import require_delivery_view
+from qc_tool.frontend.dashboard.access import require_job_view
 from qc_tool.frontend.dashboard.helpers import find_product_description
-from qc_tool.frontend.dashboard.helpers import generate_api_key
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import find_s3_delivery
@@ -66,22 +72,6 @@ logger = logging.getLogger(__name__)
 CHECK_RUNNING_JOB_DELAY = 10
 
 UPLOADED_CHUNK_PROCESSING_DELAY = 1
-
-def check_api_key(request):
-    api_key = request.GET.get("apikey")
-    user = None
-    if not api_key:
-        msg = "api key was not provided"
-        return user, msg
-    try:
-        api_user = models.ApiUser.objects.get(api_key=api_key)
-        user = api_user.user
-    except ObjectDoesNotExist:
-        msg = "provided api key does not match any user"
-    if user:
-        msg = "ok"
-    return user, msg
-
 
 def api_homepage(request):
     return render(request, 'dashboard/swagger-ui.html',
@@ -98,11 +88,9 @@ def api_openapi_json(request):
         openapi_dict["servers"][0]["url"] = api_url
         return JsonResponse(openapi_dict)
 
+@api_key_required(permission=AccountPermission.UPLOAD_DELIVERY)
 def api_register_delivery(request):
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     # Get request body parameters
     try:
@@ -140,11 +128,9 @@ def api_register_delivery(request):
     response_data = {"status": "ok", "message": "delivery successfully registered", "delivery_id": d.id}
     return JsonResponse(response_data, safe=False)
 
+@api_key_required(permission=AccountPermission.UPLOAD_DELIVERY)
 def api_register_delivery_s3(request):
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     # Get request body parameters
     try:
@@ -215,6 +201,7 @@ def api_register_delivery_s3(request):
     response_data = {"status": "ok", "message": "S3 delivery successfully registered", "delivery_id": d.id}
     return JsonResponse(response_data, safe=False)
 
+@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_delivery_list(request):
     """
        Returns a list of all deliveries for the current user.
@@ -224,10 +211,7 @@ def api_delivery_list(request):
        :param request:
        :return: list of deliveries with associated job information in JSON format
        """
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     # Retrieve query parameters (offset, limit).
     # Offset and limit must be positive numbers.
@@ -278,6 +262,7 @@ def api_product_list(request):
     return JsonResponse({"products": product_list})
 
 
+@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_product_info(request, product_ident):
     """
     returns a table of details about the product
@@ -285,20 +270,13 @@ def api_product_info(request, product_ident):
     :param product_ident: the name of the product type for example clc
     :return: product details with a list of job steps and their type (system, required, optional)
     """
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
-
     job_form_data = compile_job_form_data(product_ident)
     response_data = {"status": "ok", "message": f"showing available checks for {product_ident}", "data": job_form_data}
     return JsonResponse(response_data, safe=False)
 
+@api_key_required(permission=AccountPermission.RUN_QC)
 def api_create_job(request):
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     # Get request body parameters
     try:
@@ -356,11 +334,9 @@ def api_create_job(request):
     result = {"status": "OK", "message": "QC job successfully created", "data": response_data}
     return JsonResponse(result)
 
+@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_job_result(request, job_uuid):
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     try:
         job = models.Job.objects.get(job_uuid=job_uuid)
@@ -377,11 +353,9 @@ def api_job_result(request, job_uuid):
     response_data = {"status": "ok", "message": "job status", "data": job_report}
     return JsonResponse(response_data, safe=False)
 
+@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_job_result_pdf(request, job_uuid):
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     try:
         job = models.Job.objects.get(job_uuid=job_uuid)
@@ -409,14 +383,12 @@ def api_job_result_pdf(request, job_uuid):
     return response_pdf
 
 
+@api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
 def api_job_history(request, delivery_id):
     """
     Shows the history of all jobs for a specific delivery in .json format.
     """
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     # Check delivery existence
     try:
@@ -451,30 +423,16 @@ def api_job_history(request, delivery_id):
     return JsonResponse(result)
 
 
-@login_required
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
     """
 
-    # ensure current user has a valid api key and generate the key if it does not exist.
-    try:
-        api_key = request.user.apiuser.api_key
-    except ObjectDoesNotExist:
-        api_key = generate_api_key()
-        api_user = models.ApiUser(user=request.user, api_key=api_key)
-        api_user.save()
+    api_key = get_or_create_api_key(request.user)
 
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
-    is_test_group = request.user.groups.filter(name='test_group').exists()
-    
-    # Determine if the user can submit deliveries based on their group.
-    group_name = request.user.groups.first().name if request.user.groups.exists() else "no_group"
-    if group_name in ['country_user', 'test_group', 'guest_group']:
-        user_can_submit = False
-    else:
-        user_can_submit = True
 
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
@@ -482,12 +440,10 @@ def deliveries(request):
                                                          "boundary_version": get_boundary_version(),
                                                          "api_key": api_key,
                                                          "update_job_statuses": update_job_statuses,
-                                                         "update_job_statuses_interval": update_job_statuses_interval,
-                                                         "is_test_group": is_test_group,
-                                                         "user_can_submit": user_can_submit})
+                                                         "update_job_statuses_interval": update_job_statuses_interval})
 
 
-@login_required
+@account_permission_required(AccountPermission.RUN_QC)
 def setup_job(request):
     """
     Displays a page for starting a new QA job
@@ -519,10 +475,8 @@ def setup_job(request):
         if delivery.date_submitted is not None:
             raise PermissionDenied("Starting a new QC job on submitted delivery is not permitted.")
 
-        # Starting a job for another user's delivery is not permitted unless you are a superuser.
-        if not request.user.is_superuser:
-            if delivery.user != request.user:
-                raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+        if not access_for_request(request).can_manage_user(delivery.user_id):
+            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
         deliveries.append(delivery)
 
     # pass in product ident (only for the single delivery case)
@@ -541,30 +495,47 @@ def setup_job(request):
 
 def parse_filter(filter_str, column_lookup):
     filter_sql = ""
+    filter_params = []
     try:
         filter_dict = json.loads(filter_str)
-    except json.JsonDecodeError:
-        logger.warning("Unable to decode filter expression " + filter)
-        return ""
+    except json.JSONDecodeError:
+        logger.warning("Unable to decode filter expression %r", filter_str)
+        return "", []
+
+    if not isinstance(filter_dict, dict):
+        logger.warning("Filter expression must be a JSON object: %r", filter_str)
+        return "", []
 
     for key, val in filter_dict.items():
         filter_column = column_lookup.get(key)
         if not filter_column:
             # ignore any undefined filter columns
             continue
-        if key  == "product_description":
-            filter_sql += (f" AND {filter_column}='{val}'")
+        if key == "product_description":
+            filter_sql += f" AND {filter_column} = %s"
+            filter_params.append(val)
         elif key == "last_job_status":
             if val == "Not checked":
-                filter_sql += (f" AND {filter_column} IS NULL")
+                filter_sql += f" AND {filter_column} IS NULL"
             else:
-                filter_sql += (f" AND {filter_column}='{val}'")
+                filter_sql += f" AND {filter_column} = %s"
+                filter_params.append(val)
         else:
-            filter_sql += (f" AND {filter_column} LIKE '%{val}%'")
-    return filter_sql
+            filter_sql += f" AND {filter_column} LIKE %s"
+            filter_params.append(f"%{val}%")
+    return filter_sql, filter_params
 
 
-def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="", search=""):
+def query_deliveries(
+    user,
+    offset=0,
+    limit=20,
+    sort="id",
+    order="desc",
+    filter="",
+    search="",
+    include_capabilities=False,
+):
     # Retrieve a table of deliveries.
     # If a delivery has one or more jobs, show information about the job with latest date_created.
     column_lookup = {
@@ -598,17 +569,21 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
 
     # Assemble SQL filtering and/or searching
     filter_sql = ""
+    filter_params = []
     if filter:
-        filter_sql = parse_filter(filter, column_lookup)
+        filter_sql, filter_params = parse_filter(filter, column_lookup)
 
     # searching is done on filename column only.
     search_sql = ""
+    search_params = []
     if search:
-        search_sql += (f" AND filename LIKE '%{search}%'")
+        search_sql = " AND d.filename LIKE %s"
+        search_params.append(f"%{search}%")
 
     # Assemble SQL queries
     sql = """
-        SELECT d.id, d.filename, u.username, d.date_uploaded, d.size_bytes,
+        SELECT d.id, d.user_id AS action_owner_id, d.filename, u.username,
+        d.date_uploaded, d.size_bytes,
         d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,
@@ -627,74 +602,67 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
         ON d.user_id = up.user_id
         WHERE d.is_deleted = FALSE
         """
-    sql_total = "SELECT COUNT (id) FROM dashboard_delivery d WHERE d.is_deleted = FALSE"
-
-    # special case of sql_total query for job status filter
-    if "j.job_status" in filter_sql:
-        sql_total = """
-        SELECT COUNT (id) FROM dashboard_delivery d
-        LEFT JOIN dashboard_job j
-            ON j.job_uuid = (
-            SELECT job_uuid FROM dashboard_job j
-            WHERE j.delivery_id = d.id
-            ORDER BY j.date_created DESC LIMIT 1)
-        WHERE d.is_deleted = FALSE
-        """
-
-    # Special case of filtering for country_manager and product_admin groups
-    is_country_manager = user.groups.filter(name='country_manager').exists()
-    is_product_admin = user.groups.filter(name='product_admin').exists()
-
-    if is_country_manager:
-        # Get the country of the current user (country manager)
-        if hasattr(user, "userprofile"):
-            my_country = getattr(user.userprofile, "country", None)
-        else:
-            my_country = None
-
-        # Country managers can see all deliveries from their country
-        sql += f" AND up.country = '{my_country}'"
-        sql_total = f"""
+    sql_total = """
         SELECT COUNT(d.id)
         FROM dashboard_delivery d
+        LEFT JOIN dashboard_job j
+        ON j.job_uuid = (
+          SELECT job_uuid FROM dashboard_job j
+          WHERE j.delivery_id = d.id
+          ORDER BY j.date_created DESC LIMIT 1)
+        INNER JOIN auth_user u
+        ON d.user_id = u.id
         LEFT JOIN dashboard_userprofile up
         ON d.user_id = up.user_id
         WHERE d.is_deleted = FALSE
-        AND up.country = '{my_country}'
         """
 
-    elif is_product_admin:
-        # Product admins can see all deliveries from their product family
-        # Default product family is clc2024
-        if hasattr(user, "userprofile"):
-            my_product = getattr(user.userprofile, "product_family", "clc2024")
-        else:
-            my_product = "clc2024"
-        sql_total += f" AND d.product_ident = '{my_product}'"
-        sql +=  f" AND d.product_ident = '{my_product}'"
+    account_access = access_for(user)
+    visibility_params = []
 
-    elif not user.is_superuser:
-        # Regular users can see only their own deliveries
-        sql_total += f" AND d.user_id = {user.id}"
-        sql +=  f" AND d.user_id = {user.id}"
+    if not account_access.is_administrator:
+        visibility_clauses = ["d.user_id = %s"]
+        visibility_params.append(user.id)
+        if account_access.can_view_region_deliveries:
+            # Compatibility until deliveries reference AOIs directly.
+            region_codes = sorted(account_access.region_codes)
+            placeholders = ", ".join(["%s"] * len(region_codes))
+            visibility_clauses.append(
+                f"up.country IN ({placeholders})"
+            )
+            visibility_params.extend(region_codes)
+        if account_access.can_view_product_deliveries:
+            product_idents = sorted(account_access.product_idents)
+            placeholders = ", ".join(["%s"] * len(product_idents))
+            visibility_clauses.append(
+                f"LOWER(d.product_ident) IN ({placeholders})"
+            )
+            visibility_params.extend(product_idents)
+
+        visibility_sql = " AND ({})".format(
+            " OR ".join(visibility_clauses)
+        )
+        sql += visibility_sql
+        sql_total += visibility_sql
 
     # Add filter expression and search expressions to sql queries
     sql_total += filter_sql
     sql_total += search_sql
     sql += filter_sql
     sql += search_sql
+    query_params = visibility_params + filter_params + search_params
 
     # Add sort, offset and limit to sql query (with assigned or default values)
     sql += f" ORDER BY {sort_column} {order} LIMIT {limit} OFFSET {offset};"
 
     with connection.cursor() as cursor:
         # fetch total rows
-        cursor.execute(sql_total)
+        cursor.execute(sql_total, query_params)
         total_result = cursor.fetchone()
         total = int(total_result[0])
 
         # fetch query results
-        cursor.execute(sql)
+        cursor.execute(sql, query_params)
 
         # arrange the results
         header = [i[0] for i in cursor.description]
@@ -709,10 +677,15 @@ def query_deliveries(user, offset=0, limit=20, sort="id", order="desc", filter="
                 item["type"] = "s3"
             else:
                 item["type"] = "local"
+            owner_id = item.pop("action_owner_id")
+            if include_capabilities:
+                item.update(
+                    delivery_action_capabilities(account_access, owner_id)
+                )
         return total, data
 
 
-@login_required
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_deliveries_json(request):
     """
     Returns a list of all deliveries for the current user.
@@ -729,13 +702,21 @@ def get_deliveries_json(request):
     filter = request.GET.get("filter", "")
     search = request.GET.get("search", "")
 
-    total, data = query_deliveries(request.user, offset=offset, limit=limit, sort=sort, 
-                                   order=order, filter=filter, search=search)
+    total, data = query_deliveries(
+        request.user,
+        offset=offset,
+        limit=limit,
+        sort=sort,
+        order=order,
+        filter=filter,
+        search=search,
+        include_capabilities=True,
+    )
 
     return JsonResponse({"total": total, "rows": data})
 
 
-@login_required
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def export_deliveries_excel(request):
     """
     Exports deliveries (filtered/sorted like get_deliveries_json)
@@ -797,7 +778,7 @@ def export_deliveries_excel(request):
     return response
 
 
-@csrf_exempt
+@account_permission_required(AccountPermission.UPLOAD_DELIVERY)
 def resumable_upload_page(request):
     """
     Resumable file upload demo.
@@ -807,8 +788,7 @@ def resumable_upload_page(request):
     })
 
 
-@csrf_exempt
-@login_required
+@administrator_required
 def announcement(request):
     """
     Saves or loads an announcement message.
@@ -838,7 +818,7 @@ def announcement(request):
                            "error_message": "Error updating announcement."})
 
 
-@login_required
+@administrator_required
 def boundaries(request):
     """
     Returns a list of all boundary aoi files in the active boundary package in html format.
@@ -846,7 +826,7 @@ def boundaries(request):
     return render(request, 'dashboard/boundaries.html', {})
 
 
-@login_required
+@administrator_required
 def get_boundaries_json(request, boundary_type):
     """
     Returns a list of all boundary aoi files in the active boundary package in json format.
@@ -873,7 +853,7 @@ def get_boundaries_json(request, boundary_type):
     return JsonResponse(boundary_list, safe=False)
 
 
-@login_required
+@administrator_required
 def boundaries_upload(request):
     """
     Uploading boundary package via web console.
@@ -933,7 +913,7 @@ def boundaries_upload(request):
 
 
 
-@csrf_exempt
+@account_permission_required(AccountPermission.DELETE_DELIVERY)
 def delivery_delete(request):
     """
     Deletes a delivery from the database and deleted the associated ZIP file from the filesystem.
@@ -957,13 +937,11 @@ def delivery_delete(request):
             # Get delivery entity.
             delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-            # Authorize the user.
-            if not request.user.is_superuser:
-                if request.user.id != delivery.user.id:
-                    error_message = "User {:s} is not authorized to delete delivery {:s}.".format(request.user.username, delivery.filename)
-                    response = JsonResponse({"status": "error", "message": error_message})
-                    response.status_code = 403
-                    return response
+            if not access_for_request(request).can_manage_user(delivery.user_id):
+                error_message = "User {:s} is not authorized to delete delivery {:s}.".format(request.user.username, delivery.filename)
+                response = JsonResponse({"status": "error", "message": error_message})
+                response.status_code = 403
+                return response
 
             # Abort, if the job is in JOB_WAITING or JOB_RUNNING status.
             waiting_count = models.Job.objects.filter(delivery__id=delivery.id).filter(job_status=JOB_WAITING).count()
@@ -985,7 +963,7 @@ def delivery_delete(request):
             delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
             # Delete delivery .zip file on the file system.
-            filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(delivery.filename)
+            filepath = Path(settings.MEDIA_ROOT).joinpath(delivery.user.username).joinpath(delivery.filename)
             if filepath.exists():
                 filepath.unlink()
 
@@ -997,7 +975,7 @@ def delivery_delete(request):
         return JsonResponse({"status":"ok", "message": "{:d} deliveries have been deleted.".format(len(delivery_ids))})
 
 
-@csrf_exempt
+@account_permission_required(AccountPermission.DELETE_DELIVERY)
 def job_delete(request):
     """
     Deletes the job from the database and associated files from the filesystem.
@@ -1016,11 +994,13 @@ def job_delete(request):
             # Existence validation.
             job = get_object_or_404(models.Job, pk=str(job_uuid))
 
-            # User validation.
-            if not request.user.is_superuser:
-                if request.user.id != job.delivery.user.id:
-                    return PermissionDenied("User {:s} is not authorized to delete job {:s}"
-                                            .format(request.user.username, job_uuid))
+            if not access_for_request(request).can_manage_user(job.delivery.user_id):
+                raise PermissionDenied(
+                    "User {:s} is not authorized to delete job {:s}".format(
+                        request.user.username,
+                        job_uuid,
+                    )
+                )
 
             # Job status validation.
             running_jobs = models.Job.objects.filter(job_uuid=str(job_uuid)).filter(job_status=JOB_RUNNING)
@@ -1036,7 +1016,7 @@ def job_delete(request):
                             .format(len(deleted_jobs))})
 
 
-@csrf_exempt
+@account_permission_required(AccountPermission.SUBMIT_DELIVERY)
 def submit_delivery_to_eea(request):
     if request.method == "POST":
         delivery_id = request.POST.get("id")
@@ -1050,6 +1030,12 @@ def submit_delivery_to_eea(request):
                                      "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
             response.status_code = 404
             return response
+
+        if not access_for_request(request).can_manage_user(d.user_id):
+            return JsonResponse(
+                {"status": "error", "message": "Delivery belongs to another user."},
+                status=403,
+            )
 
         try:
             logger.debug("delivery_submit_eea id=" + str(delivery_id))
@@ -1088,10 +1074,7 @@ def submit_delivery_to_eea(request):
                              "message": "Delivery {0} successfully submitted to EEA.".format(filename)})
 
 
-from django.db import transaction
-from django.core.exceptions import ObjectDoesNotExist
-
-@csrf_exempt
+@account_permission_required(AccountPermission.SUBMIT_DELIVERY)
 def submit_deliveries_to_eea_batch(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
@@ -1108,10 +1091,14 @@ def submit_deliveries_to_eea_batch(request):
 
     submitted_ids = []
     failed_details = [] # Store reasons for failure
+    account_access = access_for_request(request)
 
     for delivery_id, filename in zip(delivery_ids, filenames):
         try:
             d = models.Delivery.objects.get(id=delivery_id)
+            if not account_access.can_manage_user(d.user_id):
+                failed_details.append(f"{filename}: Delivery belongs to another user")
+                continue
             
             # Check status logic
             job = d.get_submittable_job()
@@ -1125,7 +1112,7 @@ def submit_deliveries_to_eea_batch(request):
             if d.s3:
                 submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
             else:
-                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+                zip_filepath = Path(settings.MEDIA_ROOT).joinpath(d.user.username).joinpath(d.filename)
                 submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
 
             # Update record
@@ -1158,12 +1145,9 @@ def submit_deliveries_to_eea_batch(request):
     })
 
 
+@api_key_required(permission=AccountPermission.SUBMIT_DELIVERY)
 def api_submit_delivery_to_eea(request):
-
-    # Verify api key
-    user, message = check_api_key(request)
-    if not user:
-        return JsonResponse({"status": "error", "message": message}, status=403)
+    user = request.api_user
 
     # Get request body parameters
     try:
@@ -1183,6 +1167,14 @@ def api_submit_delivery_to_eea(request):
                                  "message": "Delivery id={0} cannot be found in the database.".format(delivery_id)})
         response.status_code = 404
         return response
+    if d.user_id != user.id:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": f"delivery id={delivery_id} does not belong to user {user.username}",
+            },
+            status=401,
+        )
     try:
         logger.debug("delivery_submit_eea id=" + str(delivery_id))
 
@@ -1198,7 +1190,7 @@ def api_submit_delivery_to_eea(request):
         if d.s3:
             submit_job(job.job_uuid, None, CONFIG["submission_dir"], submission_date, is_s3=True)
         else:
-            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(request.user.username).joinpath(d.filename)
+            zip_filepath = Path(settings.MEDIA_ROOT).joinpath(user.username).joinpath(d.filename)
             submit_job(job.job_uuid, zip_filepath, CONFIG["submission_dir"], submission_date, is_s3=False)
         d.submit()
         d.submission_date = submission_date
@@ -1216,7 +1208,7 @@ def api_submit_delivery_to_eea(request):
     return JsonResponse({"status": "ok",
                          "message": "Delivery with ID {:d} successfully submitted to EEA.".format(d.id)})
 
-@login_required
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_product_list(request):
     """
     returns a list of all product types that are available for checking.
@@ -1229,18 +1221,15 @@ def get_product_list(request):
     product_list = sorted(product_list, key=lambda x: x['description'])
     return JsonResponse({'product_list': product_list})
 
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_product_descriptions_dropdown(request):
     """
     returns a list of product descriptions for the UI filter dropdown based on current user.
     :param request:
     :return: dictionary of the product descriptions
     """
-    if request.user.is_superuser:
-        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted = FALSE AND user_id={} GROUP BY product_description"
-               .format(request.user.id))
-    else:
-        sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted = FALSE AND user_id={} GROUP BY product_description"
-               .format(request.user.id))
+    sql = ("SELECT product_description FROM dashboard_delivery WHERE is_deleted = FALSE AND user_id={} GROUP BY product_description"
+           .format(request.user.id))
     with connection.cursor() as cursor:
         # fetch query results
         cursor.execute(sql)
@@ -1265,7 +1254,7 @@ def get_product_definition(request, product_ident):
     except FileNotFoundError:
         raise Http404()
 
-@login_required
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_job_info(request, product_ident):
     """
     returns a table of details about the product
@@ -1277,26 +1266,26 @@ def get_job_info(request, product_ident):
     return JsonResponse({'job_result': job_report})
 
 
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_job_history_json(request, delivery_id):
     """
     Shows the history of all jobs for a specific delivery in .json format.
     """
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
 
-    if not request.user.is_superuser:
-        if delivery.user != request.user:
-            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+    account_access = access_for_request(request)
+    require_delivery_view(account_access, delivery)
 
     # find all jobs with same filename
-    if request.user.is_superuser:
-        # superuser can see all jobs.
-        jobs = models.Job.objects.filter(delivery__filename=delivery.filename) \
-            .order_by("-date_created")
-    else:
-        # regular user can only see their own jobs.
-        jobs = models.Job.objects.filter(delivery__filename=delivery.filename)\
-            .filter(delivery__user=request.user)\
-            .order_by("-date_created")
+    candidate_jobs = models.Job.objects.filter(
+        delivery__filename=delivery.filename
+    ).select_related("delivery__user__userprofile")
+    visible_job_ids = [
+        job.pk for job in candidate_jobs if can_view_job(account_access, job)
+    ]
+    jobs = models.Job.objects.filter(pk__in=visible_job_ids).order_by(
+        "-date_created"
+    )
     for job in jobs:
         if job.job_status == JOB_RUNNING:
             job_status = check_running_job(str(job.job_uuid), job.worker_url,
@@ -1305,22 +1294,25 @@ def get_job_history_json(request, delivery_id):
                 job.update_status(job_status)
     return JsonResponse(list(jobs.values()), safe=False)
 
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def job_history_page(request, delivery_id):
     """
     Shows the history of all jobs for a specific delivery in .json format.
     """
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
-    if not request.user.is_superuser:
-        if delivery.user != request.user:
-            raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
+    require_delivery_view(access_for_request(request), delivery)
     return render(request, 'dashboard/job_history.html', {"delivery": delivery,
                                                           "show_logo": settings.SHOW_LOGO})
-@login_required
+
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_result(request, job_uuid):
     """
     Shows the result page with detailed results of the selected job.
     """
-    job = models.Job.objects.get(job_uuid=job_uuid)
+    job = get_object_or_404(models.Job, job_uuid=job_uuid)
+    require_job_view(access_for_request(request), job)
     delivery = job.delivery
     job_report = compile_job_report_data(job_uuid, job.product_ident)
 
@@ -1341,7 +1333,11 @@ def get_result(request, job_uuid):
                                                      "announcement": get_announcement_message()
                                                      })
 
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_pdf_report(request, job_uuid):
+    job = get_object_or_404(models.Job, job_uuid=job_uuid)
+    require_job_view(access_for_request(request), job)
     try:
         filepath = get_job_report_filepath(job_uuid)
     except FileNotFoundError:
@@ -1354,12 +1350,19 @@ def get_pdf_report(request, job_uuid):
         raise Http404()
     return response
 
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_job_report(request, job_uuid):
-    job = models.Job.objects.get(job_uuid=job_uuid)
+    job = get_object_or_404(models.Job, job_uuid=job_uuid)
+    require_job_view(access_for_request(request), job)
     job_result = compile_job_report_data(job_uuid, job.product_ident)
     return JsonResponse(job_result, safe=False)
 
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_combined_job_log(request, job_uuid):
+    job = get_object_or_404(models.Job, job_uuid=job_uuid)
+    require_job_view(access_for_request(request), job)
     stdout_filepath = compose_job_stdout_filepath(job_uuid)
     joblog_filepath = compose_job_log_filepath(job_uuid)
 
@@ -1378,9 +1381,11 @@ def get_combined_job_log(request, job_uuid):
     combined_log = "STDOUT LOG:" + "\n" + stdout_log_text + "DETAILED JOB LOG:" + "\n" + joblog_log_text
     return HttpResponse(combined_log, content_type="text/plain")
 
-@login_required
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def download_delivery_file(request, delivery_id):
     delivery = get_object_or_404(models.Delivery, pk=int(delivery_id))
+    require_delivery_view(access_for_request(request), delivery)
 
     # File existence check.
     if delivery.is_deleted:
@@ -1393,14 +1398,19 @@ def download_delivery_file(request, delivery_id):
     except FileNotFoundError:
         raise Http404()
 
-@login_required
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def get_attachment(request, job_uuid, attachment_filename):
+    job = get_object_or_404(models.Job, job_uuid=job_uuid)
+    require_job_view(access_for_request(request), job)
     attachment_filepath = compose_attachment_filepath(job_uuid, attachment_filename)
     return FileResponse(open(str(attachment_filepath), "rb"), as_attachment=True)
 
-@login_required
+
+@account_permission_required(AccountPermission.VIEW_DELIVERIES)
 def update_job(request, job_uuid):
-    job = models.Job.objects.get(job_uuid=job_uuid)
+    job = get_object_or_404(models.Job, job_uuid=job_uuid)
+    require_job_view(access_for_request(request), job)
 
     if job.job_status == JOB_RUNNING:
         time_running = (timezone.now() - job.date_started).total_seconds()
@@ -1412,7 +1422,7 @@ def update_job(request, job_uuid):
 
     return JsonResponse({"id": job.delivery.id, "last_job_uuid": job.job_uuid, "last_job_status": job.job_status})
 
-@csrf_exempt
+@account_permission_required(AccountPermission.RUN_QC)
 def create_job(request):
     delivery_ids = request.POST.get("delivery_ids").split(",")
     product_ident = request.POST.get("product_ident")
@@ -1431,6 +1441,10 @@ def create_job(request):
 
         # Update delivery status in the frontend database.
         d = models.Delivery.objects.get(id=int(delivery_id))
+        if not access_for_request(request).can_manage_user(d.user_id):
+            raise PermissionDenied(
+                "Delivery id={:d} belongs to another user.".format(int(delivery_id))
+            )
         d.create_job(product_ident, skip_steps)
         num_created += 1
         logger.debug("Delivery {:d}: job has been submitted.".format(d.id))
@@ -1512,7 +1526,7 @@ def uploaded_delivery_file_exists(filename, user_id):
         return file_exists_message
 
 
-@csrf_exempt
+@account_permission_required(AccountPermission.UPLOAD_DELIVERY)
 def resumable_upload(request):
     if request.method == "GET":
         resumableIdentifier = str(request.GET.get("resumableIdentifier"))
@@ -1629,27 +1643,6 @@ def resumable_upload(request):
     else:
         return JsonResponse({"status":"error", "message": "request method must be 'GET' or 'POST'."}, status=500)
     
-
-@login_required
-def change_password(request):
-    # Check if user is in test_group or guest_group - they cannot change password
-    if request.user.groups.filter(name__in=['test_group', 'guest_group']).exists():
-        raise PermissionDenied("Users in test_group or guest_group cannot change their password.")
-    
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, data=request.POST)
-        if form.is_valid():
-            form.save()
-            update_session_auth_hash(request, form.user) # dont logout the user.
-            messages.success(request, "Password changed.")
-            return redirect("/")
-    else:
-        form = PasswordChangeForm(request.user)
-    data = {
-        'form': form
-    }
-    return render(request, "registration/change_password.html", data)
-
 
 def refresh_job_statuses():
     # This function is running in a background thread, refreshing statuses of running jobs.
