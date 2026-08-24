@@ -1,5 +1,6 @@
 from functools import wraps
 
+from django.http import Http404
 from django.http import JsonResponse
 from django.utils.cache import patch_vary_headers
 from django.views.decorators.csrf import csrf_exempt
@@ -12,6 +13,7 @@ from qc_tool.frontend.accounts.authentication.api_keys import (
 )
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
+from qc_tool.frontend.accounts.http import json_not_found_response
 
 
 _BEARER_CHALLENGE = 'Bearer realm="QC Tool API"'
@@ -82,7 +84,13 @@ def api_key_required(view_func=None, *, permission=None):
 
             request.api_user = authentication.user
             request.api_access = access
-            return _secure_api_response(decorated_view(request, *args, **kwargs))
+            try:
+                response = decorated_view(request, *args, **kwargs)
+            except Http404:
+                # Authenticated API routes never fall back to an HTML error
+                # document or expose object lookup details.
+                response = json_not_found_response()
+            return _secure_api_response(response)
 
         # This endpoint authenticates exclusively with a non-cookie Bearer
         # credential, so browser CSRF tokens are neither needed nor useful.

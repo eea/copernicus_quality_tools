@@ -2,6 +2,7 @@
 
 from functools import wraps
 
+from django.http import Http404
 from django.http import HttpResponse
 from django.utils.cache import patch_vary_headers
 from django.views.decorators.csrf import csrf_exempt
@@ -61,7 +62,11 @@ def worker_token_required(view_func):
         token = _get_worker_token(request)
         if token is None or not auth_worker(token):
             return _authentication_required_response()
-        response = view_func(request, *args, **kwargs)
+        try:
+            response = view_func(request, *args, **kwargs)
+        except Http404:
+            # Preserve the internal worker protocol's status-only contract.
+            response = HttpResponse(status=404)
         return _disable_response_caching(response)
 
     return protected_view

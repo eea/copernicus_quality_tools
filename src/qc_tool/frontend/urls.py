@@ -24,3 +24,4 @@ urlpatterns = [
 ]
 
 handler403 = "qc_tool.frontend.accounts.views.errors.permission_denied"
+handler404 = "qc_tool.frontend.accounts.views.errors.page_not_found"

@@ -1,0 +1,32 @@
+{% extends "dashboard/base.html" %}
+
+{% block robots %}noindex, nofollow, noarchive{% endblock %}
+
+{% block content %}
+<main class="error-page">
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+                <section
+                    class="error-content"
+                    aria-labelledby="error-title"
+                    aria-describedby="error-description"
+                >
+                    <p class="error-code">
+                        {% block error_code %}{% endblock %}
+                    </p>
+                    <h1 id="error-title">
+                        {% block error_title %}{% endblock %}
+                    </h1>
+                    <div id="error-description" class="error-message">
+                        {% block error_message %}{% endblock %}
+                    </div>
+                    <div class="error-actions">
+                        {% block error_actions %}{% endblock %}
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

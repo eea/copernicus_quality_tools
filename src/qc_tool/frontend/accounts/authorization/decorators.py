@@ -3,11 +3,13 @@ from functools import wraps
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from django.http import JsonResponse
 from django.shortcuts import resolve_url
 
 from qc_tool.frontend.accounts.authorization.access import access_for_request
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
+from qc_tool.frontend.accounts.http import json_not_found_response
 from qc_tool.frontend.accounts.http import prevent_private_response_caching
 
 
@@ -85,6 +87,10 @@ def account_json_permission_required(permission):
 
             try:
                 response = view_func(request, *args, **kwargs)
+            except Http404:
+                # Data endpoints keep their JSON contract while suppressing
+                # model, identifier, and filesystem lookup details.
+                response = json_not_found_response()
             except PermissionDenied:
                 # Object-scope guards inside data views use the same JSON
                 # response contract as the top-level capability check.

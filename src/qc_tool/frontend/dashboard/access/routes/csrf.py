@@ -8,21 +8,18 @@ from qc_tool.frontend.accounts.authorization.decorators import session_login_url
 from qc_tool.frontend.accounts.http import prevent_private_response_caching
 from qc_tool.frontend.dashboard.access.routes.policies import AuthenticationMode
 from qc_tool.frontend.dashboard.access.routes.policies import DenialResponse
-from qc_tool.frontend.dashboard.access.routes.policies import RoutePolicy
 from qc_tool.frontend.dashboard.access.routes.policies import RouteVisibility
+from qc_tool.frontend.dashboard.access.routes.request_policy import (
+    policy_for_request,
+)
 
 
 def _uses_session_data_policy(request):
     """Return whether CSRF rejected a private, session-backed data route."""
 
-    resolver_match = getattr(request, "resolver_match", None)
-    policy = getattr(
-        getattr(resolver_match, "func", None),
-        "_qc_tool_route_policy",
-        None,
-    )
+    policy = policy_for_request(request)
     return (
-        isinstance(policy, RoutePolicy)
+        policy is not None
         and policy.visibility is RouteVisibility.PRIVATE
         and policy.authentication is AuthenticationMode.SESSION
         and policy.denial_response is DenialResponse.JSON
