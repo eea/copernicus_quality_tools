@@ -101,3 +101,24 @@ table.overview tr td {
     overflow-y: auto;
     max-height: 80vh;
 }
+
+/* A logout changes server state, so it is a POST form rather than a link. */
+.navbar-nav > li.navbar-logout > form {
+    margin: 0;
+}
+
+.navbar-nav > li.navbar-logout button {
+    display: block;
+    padding: 15px;
+    border: 0;
+    color: #777;
+    background: transparent;
+    line-height: 20px;
+}
+
+.navbar-nav > li.navbar-logout button:hover,
+.navbar-nav > li.navbar-logout button:focus {
+    color: #333;
+    background-color: #e7e7e7;
+    text-decoration: none;
+}

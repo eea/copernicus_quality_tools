@@ -58,8 +58,7 @@
                                 <li><a href="{% url 'change_password' %}?next=/">
                                     <span class="glyphicon glyphicon-change-password"></span> Change password</a></li>
                                 {% endif %}
-                                <li><a href="{% url 'logout' %}?next=/">
-                                    <span class="glyphicon glyphicon-log-out"></span> Sign out ({{ user.get_username }})</a></li>
+                                {% include "accounts/includes/logout_form.html" %}
                                 {% else %}
                                 <li><a href="{% url 'login'%}">
                                     <span class="glyphicon glyphicon-log-in"></span>Sign in</a></li>

@@ -1,0 +1,9 @@
+<li class="navbar-logout">
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">
+            <span class="glyphicon glyphicon-log-out" aria-hidden="true"></span>
+            Sign out ({{ user.get_username }})
+        </button>
+    </form>
+</li>

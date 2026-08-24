@@ -21,6 +21,4 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('qc_tool.frontend.accounts.urls')),
     path('', include('qc_tool.frontend.dashboard.urls')),
-    path('accounts/', include('django.contrib.auth.urls'))
 ]
-
