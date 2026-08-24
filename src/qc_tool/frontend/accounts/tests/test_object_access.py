@@ -112,14 +112,16 @@ class DashboardObjectAccessTests(TestCase):
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 403)
 
-    def test_owner_managers_and_superuser_can_read_job(self):
+    def test_owner_scoped_users_and_superuser_can_read_job(self):
+        region_user = self.create_user(
+            "direct-region-user",
+            role=Role.DEFAULT,
+            region_codes=("CZ",),
+        )
+        self.grant_capability(region_user, "view_region_deliveries")
         allowed_users = (
             self.owner,
-            self.create_user(
-                "region-manager",
-                role=Role.REGION_MANAGER,
-                region_codes=("CZ",),
-            ),
+            region_user,
             self.create_user(
                 "product-manager",
                 role=Role.PRODUCT_MANAGER,
@@ -137,12 +139,13 @@ class DashboardObjectAccessTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.client.logout()
 
-    def test_policy_scopes_region_and_product_roles(self):
-        region_manager = self.create_user(
-            "scoped-region-manager",
-            role=Role.REGION_MANAGER,
+    def test_policy_scopes_direct_region_permission_and_product_role(self):
+        region_user = self.create_user(
+            "direct-scoped-region-user",
+            role=Role.DEFAULT,
             region_codes=("CZ", "DE"),
         )
+        self.grant_capability(region_user, "view_region_deliveries")
         product_manager = self.create_user(
             "scoped-product-manager",
             role=Role.PRODUCT_MANAGER,
@@ -171,16 +174,16 @@ class DashboardObjectAccessTests(TestCase):
         self.assertTrue(can_view_delivery(access_for(self.owner), self.delivery))
         self.assertFalse(can_view_delivery(access_for(self.other), self.delivery))
         self.assertTrue(
-            can_view_delivery(access_for(region_manager), self.delivery)
+            can_view_delivery(access_for(region_user), self.delivery)
         )
         self.assertTrue(
             can_view_delivery(
-                access_for(region_manager),
+                access_for(region_user),
                 second_region_delivery,
             )
         )
         self.assertFalse(
-            can_view_delivery(access_for(region_manager), outside_delivery)
+            can_view_delivery(access_for(region_user), outside_delivery)
         )
         self.assertTrue(can_view_job(access_for(product_manager), self.job))
         self.assertTrue(
@@ -193,7 +196,7 @@ class DashboardObjectAccessTests(TestCase):
             can_view_delivery(access_for(product_manager), outside_delivery)
         )
 
-        _total, rows = query_deliveries(region_manager, limit=100)
+        _total, rows = query_deliveries(region_user, limit=100)
         visible_ids = {row["id"] for row in rows}
         self.assertIn(self.delivery.pk, visible_ids)
         self.assertIn(second_region_delivery.pk, visible_ids)

@@ -5,9 +5,6 @@ from django.test import TestCase
 
 from qc_tool.frontend.accounts.authorization.access import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
-from qc_tool.frontend.accounts.authorization.permissions import (
-    REGION_MANAGER_PERMISSIONS,
-)
 from qc_tool.frontend.accounts.authorization.permissions import DEFAULT_PERMISSIONS
 from qc_tool.frontend.accounts.authorization.permissions import (
     PRODUCT_MANAGER_PERMISSIONS,
@@ -34,6 +31,13 @@ class AccountAccessTests(TestCase):
         ]
         self.user.groups.add(*groups)
 
+    def grant_permissions(self, *permissions):
+        direct_permissions = Permission.objects.filter(
+            content_type=capability_content_type(),
+            codename__in=[permission.value for permission in permissions],
+        )
+        self.user.user_permissions.add(*direct_permissions)
+
     def test_default_role_grants_normal_application_capabilities(self):
         access = access_for(self.user)
 
@@ -51,8 +55,12 @@ class AccountAccessTests(TestCase):
             access.allows(AccountPermission.MANAGE_CONFIGURATION)
         )
 
-    def test_manager_roles_add_scoped_visibility(self):
-        self.add_roles(Role.REGION_MANAGER, Role.PRODUCT_MANAGER)
+    def test_product_role_and_direct_region_permissions_add_scoped_visibility(self):
+        self.add_roles(Role.PRODUCT_MANAGER)
+        self.grant_permissions(
+            AccountPermission.VIEW_REGION_DELIVERIES,
+            AccountPermission.VIEW_REGION_AGGREGATE_REPORT,
+        )
         self.user.groups.add(Group.objects.create(name="unrecognized-role"))
         UserProductGrant.objects.create(
             user=self.user,
@@ -67,18 +75,19 @@ class AccountAccessTests(TestCase):
             frozenset(
                 {
                     Role.DEFAULT,
-                    Role.REGION_MANAGER,
                     Role.PRODUCT_MANAGER,
                 }
             ),
         )
-        self.assertTrue(access.is_region_manager)
         self.assertTrue(access.is_product_manager)
         self.assertEqual(
             access.permissions,
             DEFAULT_PERMISSIONS
-            | REGION_MANAGER_PERMISSIONS
-            | PRODUCT_MANAGER_PERMISSIONS,
+            | PRODUCT_MANAGER_PERMISSIONS
+            | {
+                AccountPermission.VIEW_REGION_DELIVERIES,
+                AccountPermission.VIEW_REGION_AGGREGATE_REPORT,
+            },
         )
         self.assertTrue(access.can_view_region_deliveries)
         self.assertTrue(access.can_view_product_deliveries)
@@ -123,7 +132,7 @@ class AccountAccessTests(TestCase):
         self.assertFalse(access.can_view_other_users_deliveries)
 
     def test_region_scope_permission_does_not_depend_on_default_bundle(self):
-        self.add_roles(Role.REGION_MANAGER)
+        self.grant_permissions(AccountPermission.VIEW_REGION_DELIVERIES)
         UserRegionGrant.objects.create(user=self.user, aoi_code="CZ")
         membership_model = self.user.groups.through
         default_group = Group.objects.get(name=Role.DEFAULT.value)
@@ -136,7 +145,10 @@ class AccountAccessTests(TestCase):
 
         self.assertFalse(access.can_view_deliveries)
         self.assertTrue(access.can_view_region_deliveries)
-        self.assertEqual(access.permissions, REGION_MANAGER_PERMISSIONS)
+        self.assertEqual(
+            access.permissions,
+            frozenset({AccountPermission.VIEW_REGION_DELIVERIES}),
+        )
 
     def test_direct_permissions_add_capabilities_without_manager_groups(self):
         UserProductGrant.objects.create(
@@ -157,7 +169,6 @@ class AccountAccessTests(TestCase):
 
         access = access_for(self.user)
 
-        self.assertFalse(access.is_region_manager)
         self.assertFalse(access.is_product_manager)
         self.assertEqual(access.product_idents, frozenset({"clc2024"}))
         self.assertTrue(access.can_view_region_deliveries)
@@ -187,9 +198,10 @@ class AccountAccessTests(TestCase):
         self.assertFalse(access.can_view_product_aggregate_report)
 
     def test_inactive_user_has_anonymous_access(self):
+        self.grant_permissions(AccountPermission.VIEW_REGION_DELIVERIES)
+        UserRegionGrant.objects.create(user=self.user, aoi_code="CZ")
         self.user.is_active = False
         self.user.save(update_fields=["is_active"])
-        self.add_roles(Role.REGION_MANAGER)
 
         access = access_for(self.user)
 

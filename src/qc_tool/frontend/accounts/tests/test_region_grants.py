@@ -1,19 +1,28 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Permission
 from django.db import IntegrityError
 from django.db import transaction
 from django.test import TestCase
 
 from qc_tool.frontend.accounts.authorization.access import access_for
-from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.models import UserRegionGrant
+from qc_tool.frontend.accounts.services.role_permissions import (
+    capability_content_type,
+)
 
 
 class UserRegionGrantTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="region-user")
-        region_group = Group.objects.get(name=Role.REGION_MANAGER.value)
-        self.user.groups.add(region_group)
+        permissions = Permission.objects.filter(
+            content_type=capability_content_type(),
+            codename__in={
+                AccountPermission.VIEW_REGION_DELIVERIES.value,
+                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.value,
+            },
+        )
+        self.user.user_permissions.add(*permissions)
 
     def test_multiple_grants_are_exposed_as_exact_opaque_codes(self):
         codes = {"CZ-001", "cz-001", " AOI 42 "}

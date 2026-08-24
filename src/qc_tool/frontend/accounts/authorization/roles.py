@@ -7,7 +7,6 @@ class Role(str, Enum):
     """Canonical application roles backed by Django groups."""
 
     DEFAULT = "default"
-    REGION_MANAGER = "region_manager"
     PRODUCT_MANAGER = "product_manager"
     ADMIN = "admin"
 

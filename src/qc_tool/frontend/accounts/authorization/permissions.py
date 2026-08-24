@@ -34,13 +34,6 @@ DEFAULT_PERMISSIONS = frozenset(
     }
 )
 
-REGION_MANAGER_PERMISSIONS = frozenset(
-    {
-        AccountPermission.VIEW_REGION_DELIVERIES,
-        AccountPermission.VIEW_REGION_AGGREGATE_REPORT,
-    }
-)
-
 PRODUCT_MANAGER_PERMISSIONS = frozenset(
     {
         AccountPermission.VIEW_PRODUCT_DELIVERIES,
@@ -50,7 +43,6 @@ PRODUCT_MANAGER_PERMISSIONS = frozenset(
 
 ROLE_PERMISSION_GRANTS = {
     Role.DEFAULT: DEFAULT_PERMISSIONS,
-    Role.REGION_MANAGER: REGION_MANAGER_PERMISSIONS,
     Role.PRODUCT_MANAGER: PRODUCT_MANAGER_PERMISSIONS,
     Role.ADMIN: frozenset(AccountPermission),
 }

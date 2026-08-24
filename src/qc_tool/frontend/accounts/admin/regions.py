@@ -18,7 +18,9 @@ class UserRegionGrantInline(admin.TabularInline):
             field.label = "Exact AOI code"
             field.help_text = (
                 "Pending the AOI catalog PR, codes are stored as opaque "
-                "identifiers without validation or normalization."
+                "identifiers without validation or normalization. A region "
+                "grant scopes access but does not grant it; assign the needed "
+                "Additional QC permissions separately."
             )
         return field
 

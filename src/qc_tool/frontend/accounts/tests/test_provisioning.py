@@ -3,9 +3,11 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.management import CommandError
 from django.core.management import call_command
 from django.test import TestCase
 
+from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserProductGrant
@@ -47,14 +49,14 @@ class UserProvisioningTests(TestCase):
             ).exists()
         )
 
-    def test_service_always_assigns_default_and_requested_roles(self):
+    def test_service_assigns_region_scope_without_granting_region_permissions(self):
         result = provision_user(
             username="service-user",
             password="service-password",
             email="service@example.test",
             country="CZ",
             region_codes=("CZ", "FUA-001"),
-            groups=(Role.REGION_MANAGER.value, Role.PRODUCT_MANAGER.value),
+            groups=(Role.PRODUCT_MANAGER.value,),
         )
 
         self.assertTrue(result.created)
@@ -69,9 +71,18 @@ class UserProvisioningTests(TestCase):
             set(result.user.groups.values_list("name", flat=True)),
             {
                 Role.DEFAULT.value,
-                Role.REGION_MANAGER.value,
                 Role.PRODUCT_MANAGER.value,
             },
+        )
+        self.assertFalse(
+            result.user.has_perm(
+                AccountPermission.VIEW_REGION_DELIVERIES.django_name,
+            )
+        )
+        self.assertFalse(
+            result.user.has_perm(
+                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.django_name,
+            )
         )
 
     @patch(
@@ -129,7 +140,6 @@ class UserProvisioningTests(TestCase):
             username="idempotent-user",
             password="original-password",
             country="CZ",
-            groups=(Role.REGION_MANAGER.value,),
         )
 
         second = provision_user(
@@ -151,10 +161,10 @@ class UserProvisioningTests(TestCase):
         self.assertEqual(first.user.userprofile.country, "CZ")
         self.assertEqual(
             set(first.user.groups.values_list("name", flat=True)),
-            {Role.DEFAULT.value, Role.REGION_MANAGER.value},
+            {Role.DEFAULT.value},
         )
 
-    def test_command_delegates_legacy_country_regions_and_roles_to_service(self):
+    def test_command_delegates_region_scope_and_roles_to_service(self):
         output = StringIO()
         arguments = (
             "--username",
@@ -167,8 +177,6 @@ class UserProvisioningTests(TestCase):
             "SK",
             "--aoi-code",
             "FUA-002",
-            "--group",
-            Role.REGION_MANAGER.value,
             "--group",
             Role.PRODUCT_MANAGER.value,
         )
@@ -186,9 +194,11 @@ class UserProvisioningTests(TestCase):
             set(user.groups.values_list("name", flat=True)),
             {
                 Role.DEFAULT.value,
-                Role.REGION_MANAGER.value,
                 Role.PRODUCT_MANAGER.value,
             },
+        )
+        self.assertFalse(
+            user.has_perm(AccountPermission.VIEW_REGION_DELIVERIES.django_name)
         )
 
         duplicate_output = StringIO()
@@ -197,6 +207,22 @@ class UserProvisioningTests(TestCase):
         self.assertEqual(
             get_user_model().objects.filter(username="command-user").count(),
             1,
+        )
+
+    def test_command_rejects_removed_region_manager_group(self):
+        with self.assertRaises(CommandError):
+            call_command(
+                "create_default_user",
+                "--username",
+                "removed-role-user",
+                "--password",
+                "command-password",
+                "--group",
+                "region_manager",
+            )
+
+        self.assertFalse(
+            get_user_model().objects.filter(username="removed-role-user").exists()
         )
 
     def test_service_rejects_empty_region_codes_atomically(self):

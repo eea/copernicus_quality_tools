@@ -59,7 +59,7 @@ class RolePermissionSynchronizationTests(TestCase):
                 )
 
     def test_sync_is_idempotent_and_preserves_unrelated_permissions(self):
-        region_group = Group.objects.get(name=Role.REGION_MANAGER.value)
+        product_group = Group.objects.get(name=Role.PRODUCT_MANAGER.value)
         unrelated_permission = Permission.objects.exclude(
             content_type=capability_content_type(),
         ).first()
@@ -67,7 +67,7 @@ class RolePermissionSynchronizationTests(TestCase):
             content_type=capability_content_type(),
             codename=AccountPermission.UPLOAD_DELIVERY.value,
         )
-        region_group.permissions.add(
+        product_group.permissions.add(
             unrelated_permission,
             stale_capability,
         )
@@ -76,12 +76,19 @@ class RolePermissionSynchronizationTests(TestCase):
         self.assertTrue(synchronize_role_permissions())
 
         self.assertEqual(
-            self.capability_codenames(Role.REGION_MANAGER),
+            self.capability_codenames(Role.PRODUCT_MANAGER),
             {
                 permission.value
-                for permission in ROLE_PERMISSION_GRANTS[Role.REGION_MANAGER]
+                for permission in ROLE_PERMISSION_GRANTS[Role.PRODUCT_MANAGER]
             },
         )
         self.assertTrue(
-            region_group.permissions.filter(pk=unrelated_permission.pk).exists()
+            product_group.permissions.filter(pk=unrelated_permission.pk).exists()
         )
+
+    def test_sync_does_not_recreate_the_retired_region_role(self):
+        self.assertFalse(Group.objects.filter(name="region_manager").exists())
+
+        self.assertTrue(synchronize_role_permissions())
+
+        self.assertFalse(Group.objects.filter(name="region_manager").exists())

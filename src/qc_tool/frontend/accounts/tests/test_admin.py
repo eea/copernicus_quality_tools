@@ -11,6 +11,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.admin.role_permissions import synchronize_admin_role
+from qc_tool.frontend.accounts.authorization.access import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import AccountCapability
@@ -175,6 +176,7 @@ class AdminRoleTests(TestCase):
 
     def test_role_picker_only_offers_canonical_groups(self):
         Group.objects.create(name="legacy-group")
+        Group.objects.get_or_create(name="region_manager")
         groups_field = self.user_model._meta.get_field("groups")
 
         form_field = self.user_admin.formfield_for_manytomany(
@@ -185,6 +187,10 @@ class AdminRoleTests(TestCase):
         self.assertEqual(
             set(form_field.queryset.values_list("name", flat=True)),
             set(Role.values()),
+        )
+        self.assertNotIn(
+            "region_manager",
+            form_field.queryset.values_list("name", flat=True),
         )
 
     def test_permission_picker_only_offers_qc_capabilities(self):
@@ -211,6 +217,12 @@ class AdminRoleTests(TestCase):
         self.assertEqual(
             set(offered.values_list("codename", flat=True)),
             {permission.value for permission in AccountPermission},
+        )
+        self.assertTrue(
+            {
+                AccountPermission.VIEW_REGION_DELIVERIES.value,
+                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.value,
+            }.issubset(set(offered.values_list("codename", flat=True)))
         )
         self.assertNotIn(unrelated, offered)
 
@@ -486,13 +498,23 @@ class RegionGrantAdminTests(TestCase):
         }
 
     def test_add_view_creates_multiple_exact_grants_with_audit_creator(self):
-        region_manager = Group.objects.get(name=Role.REGION_MANAGER.value)
+        region_permissions = Permission.objects.filter(
+            content_type=ContentType.objects.get_for_model(
+                AccountCapability,
+                for_concrete_model=False,
+            ),
+            codename__in={
+                AccountPermission.VIEW_REGION_DELIVERIES.value,
+                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.value,
+            },
+        )
         url = reverse("admin:auth_user_add")
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Region grants — exact AOI codes")
         self.assertContains(response, "AOI catalog PR")
+        self.assertContains(response, "does not grant it")
         self.assertContains(response, "Legacy delivery region")
 
         response = self.client.post(
@@ -501,7 +523,9 @@ class RegionGrantAdminTests(TestCase):
                 "username": "regional-user",
                 "password1": "sufficient-password",
                 "password2": "sufficient-password",
-                "groups": [str(region_manager.pk)],
+                "user_permissions": [
+                    str(permission.pk) for permission in region_permissions
+                ],
                 "region_grants-0-aoi_code": "AOI-ONE",
                 "region_grants-1-aoi_code": "aoi:two/2",
                 **self.inline_management_data(
@@ -516,7 +540,14 @@ class RegionGrantAdminTests(TestCase):
         user = self.user_model.objects.get(username="regional-user")
         self.assertEqual(
             set(user.groups.values_list("name", flat=True)),
-            {Role.DEFAULT.value, Role.REGION_MANAGER.value},
+            {Role.DEFAULT.value},
+        )
+        self.assertEqual(
+            set(user.user_permissions.values_list("codename", flat=True)),
+            {
+                AccountPermission.VIEW_REGION_DELIVERIES.value,
+                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.value,
+            },
         )
         self.assertEqual(
             list(user.region_grants.values_list("aoi_code", flat=True)),
@@ -526,6 +557,9 @@ class RegionGrantAdminTests(TestCase):
             set(user.region_grants.values_list("created_by_id", flat=True)),
             {self.actor.pk},
         )
+        account_access = access_for(user)
+        self.assertTrue(account_access.can_view_region_deliveries)
+        self.assertTrue(account_access.can_view_region_aggregate_report)
 
     def test_change_view_preserves_creator_and_audits_new_grant(self):
         user = self.user_model.objects.create_user(

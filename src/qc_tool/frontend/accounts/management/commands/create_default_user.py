@@ -28,7 +28,9 @@ class Command(BaseCommand):
             default=[],
             help=(
                 "Assign one exact, opaque AOI code; may be supplied more than "
-                "once. No catalog validation or normalization is performed."
+                "once. No catalog validation or normalization is performed. "
+                "This scopes region access but does not grant region "
+                "permissions."
             ),
         )
         parser.add_argument(

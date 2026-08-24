@@ -28,7 +28,7 @@ class UserRoleSignalTests(TestCase):
     def test_default_role_survives_group_clear_and_remove(self):
         user = get_user_model().objects.create_user(username="protected-user")
         default_group = Group.objects.get(name=Role.DEFAULT.value)
-        manager_group = Group.objects.get(name=Role.REGION_MANAGER.value)
+        manager_group = Group.objects.get(name=Role.PRODUCT_MANAGER.value)
         user.groups.add(manager_group)
 
         user.groups.clear()

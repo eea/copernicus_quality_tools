@@ -64,10 +64,6 @@ class AccountAccess:
         return Role.DEFAULT in self.roles
 
     @property
-    def is_region_manager(self):
-        return Role.REGION_MANAGER in self.roles
-
-    @property
     def is_product_manager(self):
         return Role.PRODUCT_MANAGER in self.roles
 
