@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html>
-<html>
+<html lang="en">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -20,28 +20,44 @@
         {% block js_head %}{% endblock js_head %}
 
     </head>
-    <body>
+    <body class="{% block body_class %}{% endblock body_class %}">
+        {% block skip_links %}{% endblock skip_links %}
         <div id="wrap">
             <div id="main" class="clear-top">
                 <!--<div class="container">-->
-                <nav id="menucontainer" class="navbar navbar-default navbar-fixed-top">
+                <nav id="menucontainer" class="navbar navbar-default navbar-fixed-top" aria-label="Primary navigation">
                     <!--<div class="navbar navbar-default" role="navigation">-->
                     <div class="container-fluid">
                         <div class="navbar-header">
-                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                            <button
+                                type="button"
+                                class="navbar-toggle"
+                                data-toggle="collapse"
+                                data-target="#primary-navigation-menu"
+                                aria-controls="primary-navigation-menu"
+                                aria-expanded="false"
+                            >
                                 <span class="sr-only">Toggle navigation</span>
                                 <span class="icon-bar"></span>
                                 <span class="icon-bar"></span>
                                 <span class="icon-bar"></span>
                             </button>
                             {% url 'deliveries' as deliveries_url %}
-                            <a class="navbar-brand" href="{{ deliveries_url|default:'/' }}">
-                                <img src="{% static 'dashboard/img/logo_copernicus_big.png' %}" style="height:45px;margin-top:-13px;float:left" />
-                                <img src="{% static 'dashboard/img/logo_land_monitoring_medium.png' %}" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
-                                <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
+                            <a class="navbar-brand" href="{% block brand_url %}{{ deliveries_url|default:'/' }}{% endblock brand_url %}">
+                                <img
+                                    class="navbar-brand-logo navbar-brand-logo-copernicus"
+                                    src="{% static 'dashboard/img/logo_copernicus_big.png' %}"
+                                    alt=""
+                                />
+                                <img
+                                    class="navbar-brand-logo navbar-brand-logo-land-monitoring"
+                                    src="{% static 'dashboard/img/logo_land_monitoring_medium.png' %}"
+                                    alt=""
+                                />
+                                <span class="navbar-brand-title">CLMS QC Tool</span>
                             </a>
                         </div>
-                        <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">
+                        <div id="primary-navigation-menu" class="navbar-collapse collapse navbar-menu">
                             <ul class="nav navbar-nav navbar-right main-menu">
                                 {% block menu %}
                                 {% if account_access.can_manage_configuration %}

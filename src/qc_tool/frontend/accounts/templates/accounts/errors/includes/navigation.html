@@ -1,0 +1,39 @@
+{% load static %}
+<li>
+    <a href="https://github.com/eea/copernicus_quality_tools">
+        <svg class="error-icon" aria-hidden="true" focusable="false">
+            <use href="{% static 'accounts/icons/error-ui.svg' %}#github"></use>
+        </svg>
+        GitHub
+    </a>
+</li>
+<li>
+    <a href="https://eea.github.io/copernicus_quality_tools/">
+        <svg class="error-icon" aria-hidden="true" focusable="false">
+            <use href="{% static 'accounts/icons/error-ui.svg' %}#book"></use>
+        </svg>
+        Documentation
+    </a>
+</li>
+{% if user.is_authenticated %}
+    {% if account_access.can_change_password %}
+    <li>
+        <a href="{% url 'change_password' %}?next=/">
+            <svg class="error-icon" aria-hidden="true" focusable="false">
+                <use href="{% static 'accounts/icons/error-ui.svg' %}#key"></use>
+            </svg>
+            Change password
+        </a>
+    </li>
+    {% endif %}
+    {% include "accounts/includes/logout_form.html" with error_page_navigation=True %}
+{% else %}
+    <li>
+        <a href="{% url 'login' %}">
+            <svg class="error-icon" aria-hidden="true" focusable="false">
+                <use href="{% static 'accounts/icons/error-ui.svg' %}#log-in"></use>
+            </svg>
+            Sign in
+        </a>
+    </li>
+{% endif %}

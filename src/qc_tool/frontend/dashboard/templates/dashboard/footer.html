@@ -5,12 +5,20 @@
             <div class="col-md-4"></div>
             <div class="col-md-4">
                 <div class="row text-center">
-                    <a href="https://copernicus.eu">
-                        <img src="{% static 'dashboard/img/copernicus_eu_logo.svg' %}" style="float:left; padding-left: 20px; margin-top: -20px; margin-bottom:10px; height:50px" />
+                    <a href="https://copernicus.eu" aria-label="Copernicus website">
+                        <img
+                            class="footer-logo footer-logo-copernicus"
+                            src="{% static 'dashboard/img/copernicus_eu_logo.svg' %}"
+                            alt=""
+                        />
                     </a>
 
-                    <a href="https://eea.europa.eu">
-                        <img src="{% static 'dashboard/img/logo_eea_square.png' %}" style="float:right; padding-left:20px; margin-top: -20px; margin-bottom:10px; height:50px" />
+                    <a href="https://eea.europa.eu" aria-label="European Environment Agency website">
+                        <img
+                            class="footer-logo footer-logo-eea"
+                            src="{% static 'dashboard/img/logo_eea_square.png' %}"
+                            alt=""
+                        />
                     </a>
                 </div>
 
@@ -18,7 +26,7 @@
             <div class="col-md-4"></div>
         </div>
         <div class="row text-center">
-                    <p>Copyright © 2019-2025 Copernicus Programme</p>
+                    <p>Copyright © 2019-{% now "Y" %} Copernicus Programme</p>
                 </div>
 
     </div>

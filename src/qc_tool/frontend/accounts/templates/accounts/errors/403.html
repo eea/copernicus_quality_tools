@@ -1,21 +1,33 @@
 {% extends "accounts/errors/base.html" %}
+{% load static %}
 
 {% block title %}Access denied · CLMS QC Tool{% endblock %}
 {% block error_code %}403{% endblock %}
 {% block error_title %}You do not have access to this page{% endblock %}
+
+{% block error_illustration %}
+<img
+    src="{% static 'accounts/img/error-403.webp' %}"
+    alt=""
+    width="1163"
+    height="943"
+>
+{% endblock %}
 
 {% block error_message %}
 <p>
     You are signed in, but your account does not have the required QC Tool
     permission.
 </p>
-<p>Please contact a QC Tool administrator if you need access.</p>
+<p>Please go back or contact a QC Tool administrator if you need access.</p>
 {% endblock %}
 
 {% block error_actions %}
 {% if account_access.can_view_deliveries %}
-<a class="btn btn-primary" href="{% url 'deliveries' %}">
-    <span class="glyphicon glyphicon-home" aria-hidden="true"></span>
+<a class="btn btn-primary error-primary-action" href="{% url 'deliveries' %}">
+    <svg class="error-icon" aria-hidden="true" focusable="false">
+        <use href="{% static 'accounts/icons/error-ui.svg' %}#home"></use>
+    </svg>
     Go to homepage
 </a>
 {% endif %}

@@ -1,0 +1,130 @@
+/* Two-column illustration and recovery actions. */
+.error-page {
+    box-sizing: border-box;
+    min-height: calc(100vh - 208px);
+    padding: 76px 24px 68px;
+    background:
+        radial-gradient(circle at 28% 35%, rgba(221, 236, 255, 0.58), transparent 29%),
+        linear-gradient(180deg, #fbfdff 0%, #f7faff 100%);
+}
+
+.error-page-container {
+    max-width: 1128px;
+}
+
+.error-hero {
+    display: flex;
+    min-height: 464px;
+    align-items: center;
+    gap: 82px;
+}
+
+.error-illustration {
+    display: flex;
+    flex: 0 1 47%;
+    align-items: center;
+    justify-content: center;
+}
+
+.error-illustration img {
+    display: block;
+    width: 100%;
+    max-width: 475px;
+    height: auto;
+}
+
+.error-content {
+    flex: 1 1 53%;
+    max-width: 555px;
+    text-align: left;
+}
+
+.error-code {
+    display: inline-flex;
+    min-width: 66px;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0 24px;
+    padding: 7px 17px;
+    border-radius: 999px;
+    color: #075fc4;
+    background: #eaf3ff;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 24px;
+}
+
+.error-content h1 {
+    margin: 0 0 25px;
+    color: #081b3a;
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+}
+
+.error-message {
+    max-width: 535px;
+    color: #35415a;
+    font-size: 18px;
+    line-height: 1.7;
+}
+
+.error-message p {
+    margin: 0 0 20px;
+}
+
+.error-message p:last-child {
+    margin-bottom: 0;
+}
+
+.error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 36px;
+}
+
+.error-actions .btn {
+    display: inline-flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 24px;
+    border-radius: 7px;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 22px;
+    text-decoration: none;
+    transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.error-actions .error-icon {
+    margin-right: 10px;
+}
+
+.error-primary-action.btn-primary {
+    border-color: #0868d7;
+    background: #0868d7;
+    box-shadow: 0 7px 18px rgba(8, 104, 215, 0.18);
+}
+
+.error-primary-action.btn-primary:hover,
+.error-primary-action.btn-primary:focus {
+    border-color: #0757b3;
+    background: #0757b3;
+}
+
+.error-secondary-action {
+    border: 1px solid #d4deeb;
+    color: #1d2d48;
+    background: #fff;
+}
+
+.error-secondary-action:hover,
+.error-secondary-action:focus {
+    border-color: #9fb5d2;
+    color: #075fc4;
+    background: #f7faff;
+}

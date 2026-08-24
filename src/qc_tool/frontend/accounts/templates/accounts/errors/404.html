@@ -1,20 +1,32 @@
 {% extends "accounts/errors/base.html" %}
+{% load static %}
 
 {% block title %}Page not found · CLMS QC Tool{% endblock %}
 {% block error_code %}404{% endblock %}
 {% block error_title %}We couldn’t find that page{% endblock %}
+
+{% block error_illustration %}
+<img
+    src="{% static 'accounts/img/error-404.webp' %}"
+    alt=""
+    width="1163"
+    height="943"
+>
+{% endblock %}
 
 {% block error_message %}
 <p>
     The page may have moved, the address may be incomplete, or the item may
     no longer be available.
 </p>
-<p>Check the address or continue from a known QC Tool page.</p>
+<p>Please check the address or go back to the homepage.</p>
 {% endblock %}
 
 {% block error_actions %}
-<a class="btn btn-primary" href="{% url 'deliveries' %}">
-    <span class="glyphicon glyphicon-home" aria-hidden="true"></span>
+<a class="btn btn-primary error-primary-action" href="{% url 'deliveries' %}">
+    <svg class="error-icon" aria-hidden="true" focusable="false">
+        <use href="{% static 'accounts/icons/error-ui.svg' %}#home"></use>
+    </svg>
     Go to homepage
 </a>
 {% endblock %}

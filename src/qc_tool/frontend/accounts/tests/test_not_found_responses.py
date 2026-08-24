@@ -39,18 +39,13 @@ class NotFoundResponseTests(TestCase):
             "We couldn’t find that page",
             status_code=404,
         )
-        homepage_action = """
-            <a class="btn btn-primary" href="{}">
-                <span class="glyphicon glyphicon-home" aria-hidden="true"></span>
-                Go to homepage
-            </a>
-        """.format(reverse("deliveries"))
         self.assertContains(
             response,
-            homepage_action,
+            'class="btn btn-primary error-primary-action"',
             status_code=404,
-            html=True,
         )
+        self.assertContains(response, "#home", status_code=404)
+        self.assertContains(response, "Go to homepage", status_code=404)
         self.assertNotContains(response, "Go to deliveries", status_code=404)
         self.assertIn(b'<main class="error-page">', response.content)
         self.assertNotIn(b"container-fluid main error-page", response.content)

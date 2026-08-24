@@ -1,32 +1,68 @@
 {% extends "dashboard/base.html" %}
+{% load static %}
 
 {% block robots %}noindex, nofollow, noarchive{% endblock %}
+{% block body_class %}error-layout{% endblock %}
+{% block brand_url %}{% if user.is_authenticated and not account_access.can_view_deliveries %}https://eea.github.io/copernicus_quality_tools/{% else %}{% url 'deliveries' %}{% endif %}{% endblock %}
+{% block skip_links %}
+<a class="error-skip-link" href="#error-title">Skip to error details</a>
+{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'accounts/css/errors/shell.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/errors/hero.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/errors/help.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/errors/responsive.css' %}">
+{% endblock %}
+
+{% block menu %}
+{% include "accounts/errors/includes/navigation.html" %}
+{% endblock %}
 
 {% block content %}
 <main class="error-page">
-    <div class="container">
-        <div class="row">
-            <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
-                <section
-                    class="error-content"
-                    aria-labelledby="error-title"
-                    aria-describedby="error-description"
-                >
-                    <p class="error-code">
-                        {% block error_code %}{% endblock %}
-                    </p>
-                    <h1 id="error-title">
-                        {% block error_title %}{% endblock %}
-                    </h1>
-                    <div id="error-description" class="error-message">
-                        {% block error_message %}{% endblock %}
-                    </div>
-                    <div class="error-actions">
-                        {% block error_actions %}{% endblock %}
-                    </div>
-                </section>
+    <div class="container error-page-container">
+        <section
+            class="error-hero"
+            aria-labelledby="error-title"
+            aria-describedby="error-description"
+        >
+            <div class="error-illustration" aria-hidden="true">
+                {% block error_illustration %}{% endblock %}
             </div>
-        </div>
+
+            <div class="error-content">
+                <p class="error-code">
+                    <span class="sr-only">Error </span>{% block error_code %}{% endblock %}
+                </p>
+                <h1 id="error-title">{% block error_title %}{% endblock %}</h1>
+                <div id="error-description" class="error-message">
+                    {% block error_message %}{% endblock %}
+                </div>
+                <div class="error-actions">
+                    {% block error_actions %}{% endblock %}
+                    <a
+                        class="btn error-secondary-action"
+                        href="{% if account_access.can_view_deliveries or not user.is_authenticated %}{% url 'deliveries' %}{% else %}https://eea.github.io/copernicus_quality_tools/{% endif %}"
+                        data-error-back
+                    >
+                        <svg class="error-icon" aria-hidden="true" focusable="false">
+                            <use href="{% static 'accounts/icons/error-ui.svg' %}#arrow-left"></use>
+                        </svg>
+                        Go back
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        {% include "accounts/errors/includes/help.html" %}
     </div>
 </main>
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+<script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'accounts/js/error-page.js' %}"></script>
 {% endblock %}

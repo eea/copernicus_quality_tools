@@ -1,0 +1,99 @@
+/* Reusable documentation and support panel. */
+.error-help {
+    display: grid;
+    overflow: hidden;
+    grid-template-columns: 1.58fr 0.9fr 1fr;
+    margin-top: 54px;
+    border: 1px solid #d8e4f3;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.error-help-intro,
+.error-help-link {
+    display: flex;
+    min-height: 136px;
+    align-items: center;
+    padding: 25px 30px;
+}
+
+.error-help-intro {
+    gap: 24px;
+}
+
+.error-help-intro h2 {
+    margin: 0 0 8px;
+    color: #10213e;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.error-help-intro p {
+    max-width: 275px;
+    margin: 0;
+    color: #43516a;
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.error-help-icon {
+    display: inline-flex;
+    width: 70px;
+    height: 70px;
+    flex: 0 0 70px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #075fc4;
+    background: #eaf3ff;
+    font-size: 28px;
+}
+
+.error-help-icon-small {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+    font-size: 20px;
+}
+
+.error-help-link {
+    gap: 16px;
+    border-left: 1px solid #d8e4f3;
+    color: #1e2e49;
+    text-decoration: none;
+}
+
+.error-help-link:hover,
+.error-help-link:focus {
+    color: #075fc4;
+    background: #f4f8fe;
+    text-decoration: none;
+}
+
+.error-help-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.error-help-copy strong {
+    color: #075fc4;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.error-help-copy > span {
+    color: #43516a;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.error-help-chevron {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    color: #26446f;
+}
