@@ -1,8 +1,14 @@
+---
+title: Frontend vendor assets
+parent: Development
+nav_order: 4
+---
+
 # Frontend vendor assets
 
 QC Tool serves browser dependencies from its own static-files deployment. This
 avoids runtime trust in a third-party CDN, but it also means maintainers must
-review and update the vendored files deliberately.
+review and update vendored files deliberately.
 
 ## Reviewed compatibility baseline
 
@@ -23,10 +29,11 @@ unversioned URL.
 3. Verify the published integrity value when one is available and record a
    SHA-256 digest here.
 4. Replace the local asset; do not add a runtime CDN dependency.
-5. Run JavaScript syntax checks, Django `collectstatic`, the frontend suite,
-   and a browser smoke test of login, navigation, dialogs, tables, and uploads.
+5. Update the exact-hash regression test.
+6. Run JavaScript syntax checks, Django `collectstatic`, the frontend suite, and
+   a browser smoke test of login, navigation, dialogs, tables, and uploads.
 
 Bootstrap 3 is end-of-life. Version 3.4.1 is the final compatible security
-patch, not a long-term supported dependency. Moving the templates and plugins
-to a supported Bootstrap major version should be a dedicated UI migration with
+patch, not a long-term supported dependency. Moving templates and plugins to a
+supported Bootstrap major version should be a dedicated UI migration with
 browser regression coverage.

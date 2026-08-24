@@ -1,15 +1,22 @@
 title: Copernicus Quality Tools
-description: Documentation for CLMS QC Tools
+description: Developer, operator, administrator, and user documentation for the CLMS QC Tool
 
-# Tell Pages to use the remote theme
 remote_theme: just-the-docs/just-the-docs
-
-# Optional: enable search
 search_enabled: true
+heading_anchors: true
 
-# URL settings (replace with your repo)
 url: https://eea.github.io
 baseurl: /copernicus_quality_tools
 
-# Navigation structure
-nav_order: 1
+aux_links:
+  "QC Tool on GitHub":
+    - "https://github.com/eea/copernicus_quality_tools"
+aux_links_new_tab: true
+
+back_to_top: true
+back_to_top_text: "Back to top"
+
+footer_content: "CLMS QC Tool documentation. Licensed under EUPL-1.2."
+
+plugins:
+  - jekyll-sitemap

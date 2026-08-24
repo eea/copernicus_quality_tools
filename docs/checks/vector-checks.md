@@ -1,5 +1,5 @@
 ---
-title: Vector Checks
+title: Vector checks
 parent: Checks
 nav_order: 1
 ---

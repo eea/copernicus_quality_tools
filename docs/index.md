@@ -3,71 +3,74 @@ title: Home
 nav_order: 1
 ---
 
-# CLMS QC Tool Documentation
+# CLMS QC Tool documentation
 
-QC Tool is an online tool designed to quality-check map layers to be submitted to the EEA. All map layers published by the EEA need to follow certain common specifications and formats. QC Tool can check that the map layers conform to those technical standards and therefore it facilitates the process of acceptance of new map layers/products by the EEA and minimises the number of times when layers need to be returned to the producer in order to be corrected before final acceptance. 
+QC Tool validates Copernicus Land Monitoring Service deliveries against their
+technical specifications. It provides a browser interface and API for
+registering deliveries, queues quality-control jobs, runs those jobs in one or
+more workers, and publishes machine-readable and human-readable results.
 
-QC Tool has been developed and is maintained by the ETC DI partner Gisat s.r.o.
+The software is maintained by Gisat for the European Environment Agency and is
+licensed under [EUPL-1.2](https://github.com/eea/copernicus_quality_tools/blob/dev/LICENSE).
 
-This Help manual provides documentation about the QC Tool and guidance to the users of this online tool.
+## Choose your path
 
-QC Tool is licensed under the [EUPL, Version 1.2](https://github.com/eea/copernicus_quality_tools/blob/rc/LICENSE).
+| I want to… | Start with |
+| --- | --- |
+| Run the repository locally | [Getting started](getting-started/index.md) |
+| Understand the system before changing it | [Architecture](architecture/index.md) |
+| Work on Django, the worker, or shared services | [Development guide](development/index.md) |
+| Deploy or operate QC Tool | [Deployment guide](deployment/index.md) |
+| Upload deliveries and run jobs | [User guide](user-guide/index.md) |
+| Manage users, roles, and scopes | [Administration](user-guide/administration.md) |
+| Automate QC Tool through HTTP | [API guide](user-guide/api.md) |
+| Find a setting or command | [Reference](reference/index.md) |
+| Read the check catalogue | [Checks](checks/index.md) |
 
-## How to use QC Tool
+## Five-minute local start
 
-The service is publicly available at: https://qc-copernicus.eea.europa.eu/.
-Access credentials are managed by the service operator and are intentionally
-not stored in the documentation.
+From the repository root:
 
+```bash
+docker compose -f docker/compose.local.yaml up --build --detach
+docker compose -f docker/compose.local.yaml ps
+```
 
-* **User Guide**
-(This section describes the basic functions of the tool and how to use it.)
+Open <http://localhost:8000/accounts/login/>. The local Compose configuration
+explicitly enables development-only demo users; sign in as `admin` with
+password `admin`. These credentials are refused outside development and test
+environments.
 
-  *  [[Starting the Tool]]
-  *  [[Data Preparation and Upload]]
-  *  [[S3 deliveries]]
-  *  [[Running the Quality Control Jobs]]
-  *  [[Results and Assessment]]
-  *  [[Hash Checksum of a Delivery]]
-  *  [[Requirements for new product deployment]]
-  *  [[Troubleshooting / Known Issues]]
+Follow [Getting started](getting-started/index.md) for prerequisites, startup
+verification, source-editing behavior, shutdown, and troubleshooting.
 
-* **Admin Guide**
-(This section talks about the extended functionality of users signed in as administrators.)
+## System at a glance
 
-  *  [[Admin Functions]]
-  *  [[Boundaries]]
+```mermaid
+flowchart LR
+    Person[Browser user] -->|Django session| Frontend[Django frontend]
+    Client[API client] -->|Bearer credential| Frontend
+    Frontend --> UserDB[(User and job database)]
+    Frontend --> Shared[(Shared delivery, boundary, and work storage)]
+    Worker[QC worker] -->|WorkerToken job polling| Frontend
+    Worker --> Shared
+    Worker --> JobDB[(Worker PostGIS)]
+    Worker --> Validator[INSPIRE validator]
+    Frontend -->|Allowlisted HTTPS| S3[(External S3)]
+    Worker -->|Allowlisted HTTPS| S3
+```
 
-* **Developer Guide**
-(This section explains how to automate running QC tool jobs using the API and how to customize a local QC tool installation)
-  * [[CLMS QC Tool API]]
-  * [[API Endpoints]]
-  * [[INSPIRE validator service]]
-  * [[Collecting JSON reports]]
+The browser, API, and worker use separate authentication mechanisms. Django
+permissions determine application capabilities, while delivery ownership and
+product or region grants determine which records a user can see. Read the
+[authentication and authorization guide](architecture/authentication-and-authorization.md)
+before adding an endpoint.
 
-## Checks
-* [[Vector checks]]
-* [[Raster checks]]
-* [[Boundaries]]
-* [[Terminology]]
-* [[Symbolic layer names]]
-* [[Partitioned layer]]
+## Documentation scope
 
-## Products
-* [[Vector products]]
-  *  [[CORINE Land Cover]]
-  *  [[Natura 2000]]
-  *  [[Riparian Zones]]
-  *  [[Coastal Zones]]
-  *  [[Urban Atlas]]
-  *  [[HRL Small Woody Features]]
+This site documents the current repository. Historical wiki content may still
+be useful for individual products, but it is not the source of truth for
+installation, authentication, deployment, or runtime architecture.
 
-* [[Raster products]]
-  *  [[HRL Imperviousness]]
-  *  [[HRL Tree Cover and Forest]]
-  *  [[HRL Grassland]]
-  *  [[HRL Water and Wetness]]
-  *  [[HRL Small Woody Features]]
-  *  [[HRL CLC+Backbone]]
-  *  [[Urban Atlas 2012 Building Heights]]
-
+The hosted service is available at <https://qc-copernicus.eea.europa.eu/>.
+Accounts are managed by its operator; no credentials are published here.
