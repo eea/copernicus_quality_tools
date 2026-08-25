@@ -14,9 +14,10 @@ from django.test import TestCase
 from django.urls import resolve
 from django.urls import reverse
 
-from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
-from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.dashboard import urls as dashboard_urls
 from qc_tool.frontend.dashboard.access.routes import PRIVATE_ROUTE_POLICIES
 from qc_tool.frontend.dashboard.access.routes import PUBLIC_ROUTE_POLICIES
@@ -562,22 +563,20 @@ class AuthenticatedRoutePolicyTests(TestCase):
         cls.unprivileged.groups.through.objects.filter(
             user_id=cls.unprivileged.pk
         ).delete()
-        cls.unprivileged_api_key = "qct_" + ("U" * 43)
-        ApiUser.objects.create(
-            user=cls.unprivileged,
-            api_key=digest_api_key(cls.unprivileged_api_key),
-        )
+        cls.unprivileged_api_key = issue_personal_access_token(
+            cls.unprivileged,
+            "Route policy tests",
+        ).raw_token
 
         cls.superuser = get_user_model().objects.create_superuser(
             username="route-policy-superuser",
             email="superuser@example.com",
             password="unused",
         )
-        cls.superuser_api_key = "qct_" + ("S" * 43)
-        ApiUser.objects.create(
-            user=cls.superuser,
-            api_key=digest_api_key(cls.superuser_api_key),
-        )
+        cls.superuser_api_key = issue_personal_access_token(
+            cls.superuser,
+            "Route policy tests",
+        ).raw_token
 
     def route_names_for(self, *, authentication=None, denial_response=None):
         return [

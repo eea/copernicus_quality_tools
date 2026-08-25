@@ -11,7 +11,6 @@ from qc_tool.frontend.accounts.authentication.api_keys import (
 from qc_tool.frontend.accounts.authentication.api_keys import (
     authenticate_api_request,
 )
-from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.http import json_not_found_response
 
@@ -64,7 +63,7 @@ def api_key_required(view_func=None, *, permission=None):
             if not authentication.is_authenticated:
                 return _authentication_failure(authentication.error)
 
-            access = access_for(authentication.user)
+            access = authentication.access
             if required_permission is not None and not access.allows(
                 required_permission
             ):
@@ -83,6 +82,7 @@ def api_key_required(view_func=None, *, permission=None):
                 )
 
             request.api_user = authentication.user
+            request.api_token = authentication.token
             request.api_access = access
             try:
                 response = decorated_view(request, *args, **kwargs)

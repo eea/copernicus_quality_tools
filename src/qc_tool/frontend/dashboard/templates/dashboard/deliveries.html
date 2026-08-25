@@ -85,7 +85,7 @@
             <dt>API token</dt>
             <dd>
                 {% if api_key_configured %}Configured{% else %}Not configured{% endif %}
-                {% if account_access.can_manage_api_credential %}<a class="deliveries-summary__manage" href="{% url 'account_settings' %}#api-credential">Manage</a>{% endif %}
+                {% if account_access.can_manage_api_credential %}<a class="deliveries-summary__manage" href="{% url 'account_settings' %}#api-tokens">Manage</a>{% endif %}
             </dd>
         </div>
     </dl>

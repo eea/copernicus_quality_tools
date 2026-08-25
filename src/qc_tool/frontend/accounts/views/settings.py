@@ -7,13 +7,46 @@ from django.shortcuts import render
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 
-from qc_tool.frontend.accounts.authentication.api_keys import has_api_key
 from qc_tool.frontend.accounts.authorization import AccountPermission
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.accounts.authorization.decorators import (
     account_any_permission_required,
 )
 from qc_tool.frontend.accounts.forms import AccountProfileForm
+from qc_tool.frontend.accounts.forms import PersonalApiTokenCreateForm
+from qc_tool.frontend.accounts.services.api_tokens import api_token_presentations
+
+
+def render_account_settings(
+    request,
+    *,
+    profile_form=None,
+    api_token_form=None,
+    status=200,
+):
+    """Render the permission-aware settings page from one reusable context."""
+
+    access = access_for_request(request)
+    if profile_form is None and access.can_manage_own_account:
+        profile_form = AccountProfileForm(instance=request.user)
+    if api_token_form is None and access.can_manage_api_credential:
+        api_token_form = PersonalApiTokenCreateForm(user=request.user)
+
+    api_tokens = (
+        api_token_presentations(request.user)
+        if access.can_manage_api_credential
+        else ()
+    )
+    return render(
+        request,
+        "accounts/settings/index.html",
+        {
+            "profile_form": profile_form,
+            "api_token_form": api_token_form,
+            "api_tokens": api_tokens,
+        },
+        status=status,
+    )
 
 
 @sensitive_post_parameters("first_name", "last_name", "email")
@@ -38,19 +71,7 @@ def account_settings(request):
             profile.save(update_fields=("first_name", "last_name", "email"))
             messages.success(request, "Your profile details were updated.")
             return redirect("account_settings")
-    elif access.can_manage_own_account:
-        profile_form = AccountProfileForm(instance=request.user)
     else:
         profile_form = None
 
-    api_key_configured = bool(
-        access.can_manage_api_credential and has_api_key(request.user)
-    )
-    return render(
-        request,
-        "accounts/settings/index.html",
-        {
-            "profile_form": profile_form,
-            "api_key_configured": api_key_configured,
-        },
-    )
+    return render_account_settings(request, profile_form=profile_form)

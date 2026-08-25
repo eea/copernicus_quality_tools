@@ -14,7 +14,7 @@
     </a>
 </li>
 {% if user.is_authenticated %}
-<li class="dropdown site-nav-user{% if request.resolver_match.url_name == 'account_settings' or request.resolver_match.url_name == 'change_password' or request.resolver_match.url_name == 'password_change' or request.resolver_match.url_name == 'api_credential_rotate' or request.resolver_match.url_name == 'api_credential_revoke' %} site-nav-user--active{% endif %}">
+<li class="dropdown site-nav-user{% if request.resolver_match.url_name == 'account_settings' or request.resolver_match.url_name == 'change_password' or request.resolver_match.url_name == 'password_change' or request.resolver_match.url_name == 'api_token_create' or request.resolver_match.url_name == 'api_token_delete' %} site-nav-user--active{% endif %}">
     <button
         id="profile-menu-button"
         class="site-nav-button dropdown-toggle"

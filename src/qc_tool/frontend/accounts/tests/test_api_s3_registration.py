@@ -6,7 +6,9 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 
-from qc_tool.frontend.accounts.authentication.api_keys import issue_or_rotate_api_key
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import S3Info
 from qc_tool.frontend.dashboard.services.s3 import S3Delivery
@@ -25,7 +27,10 @@ ALLOWED_ENDPOINT = "https://objects.example.com"
 class ApiS3RegistrationSecurityTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="s3-api-owner")
-        self.raw_key = issue_or_rotate_api_key(self.user)
+        self.raw_key = issue_personal_access_token(
+            self.user,
+            "S3 registration tests",
+        ).raw_token
         self.authorization = "Bearer {:s}".format(self.raw_key)
 
     def payload(self, **overrides):

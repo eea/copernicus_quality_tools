@@ -12,11 +12,11 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 
-from qc_tool.frontend.accounts.authentication.api_keys import (
-    issue_or_rotate_api_key,
-)
 from qc_tool.frontend.accounts.authentication.decorators import api_key_required
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.dashboard.authentication import worker_token_required
 
 
@@ -122,7 +122,10 @@ class NotFoundResponseTests(TestCase):
         self.assertEqual(response.json()["code"], "authentication_required")
 
     def test_api_wrapper_returns_json_and_authorization_cache_controls(self):
-        raw_key = issue_or_rotate_api_key(self.user)
+        raw_key = issue_personal_access_token(
+            self.user,
+            "Not-found response test",
+        ).raw_token
 
         @api_key_required(permission=AccountPermission.VIEW_DELIVERIES)
         def missing_resource(_request):

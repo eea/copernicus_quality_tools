@@ -338,17 +338,13 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            'href="{}#api-credential">Manage</a>'.format(
+            'href="{}#api-tokens">Manage</a>'.format(
                 reverse("account_settings")
             ),
         )
         self.assertNotContains(
             response,
-            'action="{}"'.format(reverse("api_credential_rotate")),
-        )
-        self.assertNotContains(
-            response,
-            'action="{}"'.format(reverse("api_credential_revoke")),
+            'action="{}"'.format(reverse("api_token_create")),
         )
         self.assertNotContains(response, 'class="api-credential-form"')
 

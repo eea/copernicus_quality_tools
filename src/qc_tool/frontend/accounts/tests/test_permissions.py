@@ -9,7 +9,6 @@ from django.http import HttpResponse
 from django.test import RequestFactory
 from django.test import TestCase
 
-from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
 from qc_tool.frontend.accounts.authentication.decorators import api_key_required
 from qc_tool.frontend.accounts.authorization.decorators import (
     account_any_permission_required,
@@ -21,7 +20,9 @@ from qc_tool.frontend.accounts.authorization.permissions import AccountPermissio
 from qc_tool.frontend.accounts.authorization.permissions import DEFAULT_PERMISSIONS
 from qc_tool.frontend.accounts.authorization.permissions import permissions_for
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
 )
@@ -182,16 +183,14 @@ class PermissionDecoratorTests(TestCase):
         view = api_key_required(permission=AccountPermission.RUN_QC)(ok_view)
         default_user = self.create_user("default-api")
         administrator = self.create_user("admin-api", role=Role.ADMIN)
-        default_key = api_key("D")
-        admin_key = api_key("A")
-        ApiUser.objects.create(
-            user=default_user,
-            api_key=digest_api_key(default_key),
-        )
-        ApiUser.objects.create(
-            user=administrator,
-            api_key=digest_api_key(admin_key),
-        )
+        default_key = issue_personal_access_token(
+            default_user,
+            "Default decorator test",
+        ).raw_token
+        admin_key = issue_personal_access_token(
+            administrator,
+            "Admin decorator test",
+        ).raw_token
 
         default_response = view(
             self.request_factory.get(
@@ -216,8 +215,10 @@ class PermissionDecoratorTests(TestCase):
         view = api_key_required(permission=AccountPermission.RUN_QC)(ok_view)
         user = self.create_user("ungrouped-api")
         self.remove_canonical_roles(user)
-        raw_key = api_key("U")
-        ApiUser.objects.create(user=user, api_key=digest_api_key(raw_key))
+        raw_key = issue_personal_access_token(
+            user,
+            "Ungrouped decorator test",
+        ).raw_token
 
         response = view(
             self.request_factory.get(
@@ -264,8 +265,10 @@ class PermissionDecoratorTests(TestCase):
     def test_api_query_credentials_are_rejected_even_with_valid_header(self):
         view = api_key_required(permission=AccountPermission.RUN_QC)(ok_view)
         user = self.create_user("query-api")
-        raw_key = api_key("Q")
-        ApiUser.objects.create(user=user, api_key=digest_api_key(raw_key))
+        raw_key = issue_personal_access_token(
+            user,
+            "Query rejection test",
+        ).raw_token
 
         response = view(
             self.request_factory.get(

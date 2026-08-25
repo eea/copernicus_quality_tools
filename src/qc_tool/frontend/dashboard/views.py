@@ -3,7 +3,6 @@
 
 import io
 import logging
-import os
 import time
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -30,13 +29,14 @@ from django.shortcuts import render
 from django.utils import timezone
 
 import qc_tool.frontend.dashboard.models as models
-from qc_tool.frontend.accounts.authentication.api_keys import has_api_key
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization import access_for_request
+from qc_tool.frontend.accounts.services.api_tokens import has_active_api_tokens
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
+from qc_tool.common import QCException
 from qc_tool.common import compose_job_log_filepath
 from qc_tool.common import compose_job_stdout_filepath
 from qc_tool.common import compile_job_form_data
@@ -44,6 +44,7 @@ from qc_tool.common import compile_job_report_data
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import WORKER_PORT
+from qc_tool.jobs import normalize_job_uuid
 from qc_tool.frontend.dashboard.access import can_view_job
 from qc_tool.frontend.dashboard.access import can_view_delivery
 from qc_tool.frontend.dashboard.access import delivery_action_capabilities
@@ -69,6 +70,8 @@ from qc_tool.frontend.dashboard.services.configuration import write_announcement
 from qc_tool.frontend.dashboard.services.deliveries import summarize_deliveries
 from qc_tool.frontend.dashboard.services.exports import spreadsheet_cell_value
 from qc_tool.frontend.dashboard.services.api import JsonRequestError
+from qc_tool.frontend.dashboard.services.api import api_documentation_context
+from qc_tool.frontend.dashboard.services.api import openapi_document
 from qc_tool.frontend.dashboard.services.api import read_json_object
 from qc_tool.frontend.dashboard.services.jobs import JobRequestError
 from qc_tool.frontend.dashboard.services.jobs import parse_batch_job_creation_request
@@ -115,20 +118,18 @@ def _json_request_error_response(error):
         status=error.status_code,
     )
 
+
 def api_homepage(request):
     return render(
         request,
         "dashboard/api_docs.html",
-        {"api_url": CONFIG["api_url"]},
+        api_documentation_context(CONFIG["api_url"]),
     )
 
+
 def api_openapi_json(request):
-    api_url = CONFIG["api_url"]
-    openapi_json_path = os.path.join(settings.BASE_DIR, "frontend", "dashboard", "static", "dashboard", "api", "openapi.json")
-    with open(openapi_json_path, "r") as f:
-        openapi_dict = json.load(f)
-        openapi_dict["servers"][0]["url"] = api_url
-        return JsonResponse(openapi_dict)
+    return JsonResponse(openapi_document(CONFIG["api_url"]))
+
 
 def api_register_delivery(request):
     user = request.api_user
@@ -266,8 +267,16 @@ def api_delivery_list(request):
     filter = ""
     search = ""
 
-    total, data = query_deliveries(user, offset=offset, limit=limit,
-                                   sort=sort, order=order, filter=filter, search=search)
+    total, data = query_deliveries(
+        user,
+        offset=offset,
+        limit=limit,
+        sort=sort,
+        order=order,
+        filter=filter,
+        search=search,
+        account_access=request.api_access,
+    )
     logger.debug("List of deliveries successfully obtained.")
     
     # next_offset is the link to the next page.
@@ -301,7 +310,17 @@ def api_product_info(request, product_ident):
     :param product_ident: the name of the product type for example clc
     :return: product details with a list of job steps and their type (system, required, optional)
     """
-    job_form_data = compile_job_form_data(product_ident)
+    try:
+        job_form_data = compile_job_form_data(product_ident)
+    except (KeyError, OSError, QCException, TypeError, UnicodeError, ValueError):
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "product_not_found",
+                "message": "The requested product is unavailable.",
+            },
+            status=404,
+        )
     response_data = {"status": "ok", "message": f"showing available checks for {product_ident}", "data": job_form_data}
     return JsonResponse(response_data, safe=False)
 
@@ -353,7 +372,7 @@ def api_create_job(request):
         job_request.skip_steps,
     )
 
-    response_data = {"job_uuid": str(job_uuid)}
+    response_data = {"job_uuid": normalize_job_uuid(job_uuid)}
     result = {"status": "OK", "message": "QC job successfully created", "data": response_data}
     return JsonResponse(result)
 
@@ -426,7 +445,8 @@ def api_job_history(request, delivery_id):
             if job_status is not None:
                 job.update_status(job_status)
 
-    # Remove "-" characters from job uuids
+    # Preserve the legacy compact job-history representation. New job creation
+    # responses are canonical so their UUID can be used directly in routes.
     job_list = serialize_job_history(jobs, compact_uuid=True)
     result = {"status": "OK",
               "message": "Job history of delivery id={}".format(delivery_id),
@@ -451,7 +471,7 @@ def deliveries(request):
     """
 
     account_access = access_for_request(request)
-    api_key_configured = has_api_key(request.user)
+    api_key_configured = has_active_api_tokens(request.user)
     delivery_actions_enabled = (
         account_access.can_run_qc
         or account_access.can_delete

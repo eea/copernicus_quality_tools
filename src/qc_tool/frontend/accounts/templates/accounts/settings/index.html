@@ -7,6 +7,7 @@
 
 {% block css %}
 <link rel="stylesheet" href="{% static 'accounts/css/account-settings.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/api-tokens.css' %}">
 {% endblock css %}
 
 {% block content %}
@@ -85,56 +86,189 @@
                 {% endif %}
 
                 {% if account_access.can_manage_api_credential %}
-                <section id="api-credential" class="account-card" aria-labelledby="api-credential-title">
+                <section id="api-tokens" class="account-card account-tokens" aria-labelledby="api-tokens-title">
                     <div class="account-card__heading account-card__heading--status">
                         <div>
-                            <h2 id="api-credential-title">Personal API token</h2>
-                            <p>Use one active Bearer credential for your QC Tool API requests.</p>
+                            <h2 id="api-tokens-title">Personal API tokens</h2>
+                            <p>Create a separate, named token for every application or device.</p>
                         </div>
-                        {% if api_key_configured %}
-                        <span class="account-status account-status--configured">
+                        <span class="account-status{% if api_tokens %} account-status--configured{% endif %}">
+                            {% if api_tokens %}
                             <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>
-                            Configured
-                        </span>
-                        {% else %}
-                        <span class="account-status">Not configured</span>
-                        {% endif %}
-                    </div>
-
-                    <div class="account-credential-notice">
-                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#key"></use></svg>
-                        <p>
-                            {% if api_key_configured %}
-                            The secret cannot be recovered. Rotating it immediately invalidates the current token.
-                            {% else %}
-                            The token will be shown once after it is created. Store it securely.
                             {% endif %}
-                        </p>
+                            {{ api_tokens|length }} active token{{ api_tokens|length|pluralize }}
+                        </span>
                     </div>
 
-                    <div class="account-card__actions account-card__actions--credential">
-                        <form
-                            method="post"
-                            action="{% url 'api_credential_rotate' %}"
-                            data-disable-on-submit
-                            {% if api_key_configured %}data-confirm-submit="Rotate this token? The current token will stop working immediately."{% endif %}
-                        >
-                            {% csrf_token %}
-                            <button class="btn btn-primary btn-qc-primary" type="submit">
-                                {% if api_key_configured %}Rotate token{% else %}Create token{% endif %}
-                            </button>
-                        </form>
-                        {% if api_key_configured %}
-                        <form
-                            method="post"
-                            action="{% url 'api_credential_revoke' %}"
-                            data-confirm-submit="Revoke this token? API clients using it will stop working immediately."
-                        >
-                            {% csrf_token %}
-                            <button class="btn btn-danger btn-qc-danger" type="submit">Revoke token</button>
-                        </form>
-                        {% endif %}
+                    <div class="account-credential-notice account-credential-notice--scope">
+                        <span class="account-credential-notice__icon" aria-hidden="true">
+                            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>
+                        </span>
+                        <div>
+                            <h3>Tokens act with your access</h3>
+                            <p>
+                                A new token copies your current permissions and product and region access.
+                                Reducing your account access limits existing tokens immediately; later access
+                                increases require a new token.
+                            </p>
+                            <a href="{% url 'api_homepage' %}">Read the API documentation</a>
+                        </div>
                     </div>
+
+                    <div class="account-token-create" aria-labelledby="api-token-create-title">
+                        <div class="account-token-create__heading">
+                            <h3 id="api-token-create-title">Create a token</h3>
+                            <p>The secret is displayed only once, so be ready to store it securely.</p>
+                        </div>
+                        <form method="post" action="{% url 'api_token_create' %}" data-disable-on-submit>
+                            {% csrf_token %}
+
+                            {% if api_token_form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {{ api_token_form.non_field_errors }}
+                            </div>
+                            {% endif %}
+
+                            <div class="account-token-create__fields">
+                                <div class="form-group{% if api_token_form.name.errors %} has-error{% endif %}">
+                                    <label for="{{ api_token_form.name.id_for_label }}">{{ api_token_form.name.label }}</label>
+                                    {{ api_token_form.name }}
+                                    {% if api_token_form.name.help_text %}
+                                    <p id="{{ api_token_form.name.auto_id }}_helptext" class="help-block">{{ api_token_form.name.help_text }}</p>
+                                    {% endif %}
+                                    {% if api_token_form.name.errors %}
+                                    <div class="account-field-errors" role="alert">
+                                        {{ api_token_form.name.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group{% if api_token_form.current_password.errors %} has-error{% endif %}">
+                                    <label for="{{ api_token_form.current_password.id_for_label }}">{{ api_token_form.current_password.label }}</label>
+                                    {{ api_token_form.current_password }}
+                                    {% if api_token_form.current_password.help_text %}
+                                    <p id="{{ api_token_form.current_password.auto_id }}_helptext" class="help-block">{{ api_token_form.current_password.help_text }}</p>
+                                    {% endif %}
+                                    {% if api_token_form.current_password.errors %}
+                                    <div class="account-field-errors" role="alert">
+                                        {{ api_token_form.current_password.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="account-card__actions account-token-create__actions">
+                                <button class="btn btn-primary btn-qc-primary" type="submit">
+                                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#plus"></use></svg>
+                                    Create token
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="account-token-list-heading">
+                        <div>
+                            <h3 id="active-api-tokens-title">Active tokens</h3>
+                            <p>Delete tokens you no longer recognise or use.</p>
+                        </div>
+                    </div>
+
+                    {% if api_tokens %}
+                    <ul class="account-token-list" aria-labelledby="active-api-tokens-title">
+                        {% for token in api_tokens %}
+                        <li class="account-token">
+                            <div class="account-token__topline">
+                                <span class="account-token__icon" aria-hidden="true">
+                                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>
+                                </span>
+                                <div class="account-token__identity">
+                                    <h4>{{ token.name }}</h4>
+                                    {% if token.token_hint %}<code>{{ token.token_hint }}</code>{% else %}<span class="account-token__legacy">Legacy token</span>{% endif %}
+                                </div>
+                                <span class="account-token__active">
+                                    <span aria-hidden="true"></span>
+                                    Active
+                                </span>
+                            </div>
+
+                            <dl class="account-token__facts">
+                                <div>
+                                    <dt>Created</dt>
+                                    <dd>{{ token.created_at|date:"j M Y, H:i" }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Last used</dt>
+                                    <dd>{% if token.last_used_at %}{{ token.last_used_at|date:"j M Y, H:i" }}{% else %}Never{% endif %}</dd>
+                                </div>
+                            </dl>
+
+                            <details class="account-token__scope">
+                                <summary>
+                                    View access copied at creation
+                                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-down"></use></svg>
+                                </summary>
+                                <div class="account-token__scope-content">
+                                    <dl class="account-token__scope-list">
+                                        <div>
+                                            <dt>Roles</dt>
+                                            <dd>
+                                                {% if token.is_administrator_snapshot %}Administrator{% elif token.role_labels %}{{ token.role_labels|join:", " }}{% elif token.role_snapshot %}{{ token.role_snapshot|length }} assigned role{{ token.role_snapshot|length|pluralize }}{% else %}No named roles{% endif %}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt>Permissions</dt>
+                                            <dd>
+                                                {% if token.permission_labels %}
+                                                <ul class="account-token__tags">
+                                                    {% for permission in token.permission_labels %}<li>{{ permission }}</li>{% endfor %}
+                                                </ul>
+                                                {% else %}
+                                                {{ token.permission_snapshot|length }} permission{{ token.permission_snapshot|length|pluralize }}
+                                                {% endif %}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt>Regions</dt>
+                                            <dd>
+                                                {% if token.is_administrator_snapshot %}All regions{% elif token.region_codes_snapshot %}{{ token.region_codes_snapshot|join:", " }}{% else %}No additional region access{% endif %}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt>Products</dt>
+                                            <dd>
+                                                {% if token.is_administrator_snapshot %}All products{% elif token.product_idents_snapshot %}{{ token.product_idents_snapshot|join:", " }}{% else %}No additional product access{% endif %}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            </details>
+
+                            <div class="account-token__actions">
+                                <form
+                                    method="post"
+                                    action="{% url 'api_token_delete' token.id %}"
+                                    data-confirm-submit="Delete the token &quot;{{ token.name }}&quot;? Applications using it will lose access immediately."
+                                    data-confirm-title="Delete API token?"
+                                    data-confirm-action="Delete token"
+                                    data-disable-on-submit
+                                >
+                                    {% csrf_token %}
+                                    <button class="btn btn-default btn-qc-danger-outline" type="submit">
+                                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>
+                                        Delete token
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="account-token-empty">
+                        <span class="account-token-empty__icon" aria-hidden="true">
+                            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>
+                        </span>
+                        <h4>No active tokens</h4>
+                        <p>Create a named token above when you are ready to connect an API client.</p>
+                    </div>
+                    {% endif %}
                 </section>
                 {% endif %}
             </div>
@@ -172,6 +306,27 @@
                 {% endif %}
             </aside>
         </div>
+
+        {% if account_access.can_manage_api_credential %}
+        <dialog
+            id="account-confirm-dialog"
+            class="account-confirm-dialog"
+            aria-labelledby="account-confirm-title"
+            aria-describedby="account-confirm-message"
+        >
+            <form method="dialog">
+                <span class="account-confirm-dialog__icon" aria-hidden="true">
+                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>
+                </span>
+                <h2 id="account-confirm-title">Please confirm</h2>
+                <p id="account-confirm-message"></p>
+                <div class="account-confirm-dialog__actions">
+                    <button class="btn btn-default btn-qc-secondary" type="submit" value="cancel" autofocus>Cancel</button>
+                    <button class="btn btn-danger btn-qc-danger" type="submit" value="confirm" data-confirm-dialog-action>Continue</button>
+                </div>
+            </form>
+        </dialog>
+        {% endif %}
     </div>
 </div>
 {% endblock content %}

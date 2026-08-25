@@ -8,9 +8,11 @@ from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
 
-from qc_tool.frontend.accounts.authentication.api_keys import issue_or_rotate_api_key
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 
@@ -46,7 +48,41 @@ class ApiObjectAccessTests(TestCase):
         )
 
     def authorization(self, user):
-        return f"Bearer {issue_or_rotate_api_key(user)}"
+        token_number = user.personal_access_tokens.count() + 1
+        issued = issue_personal_access_token(
+            user,
+            f"Object access test {token_number}",
+        )
+        return f"Bearer {issued.raw_token}"
+
+    def test_delivery_list_uses_token_snapshot_not_later_product_grants(self):
+        issued = issue_personal_access_token(
+            self.manager,
+            "Delivery list scope snapshot",
+        )
+        UserProductGrant.objects.create(
+            user=self.manager,
+            product_ident="later_product",
+        )
+        Delivery.objects.create(
+            user=self.owner,
+            filename="later_product_delivery.zip",
+            size_bytes=10,
+            product_ident="later_product",
+            product_description="Later product",
+        )
+
+        response = self.client.get(
+            reverse("api_delivery_list"),
+            HTTP_AUTHORIZATION=f"Bearer {issued.raw_token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["total"], 1)
+        self.assertEqual(
+            [item["filename"] for item in response.json()["deliveries"]],
+            ["clc2012_delivery.zip"],
+        )
 
     @patch(
         "qc_tool.frontend.dashboard.views.compile_job_report_data",

@@ -2,6 +2,7 @@ import hashlib
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import RequestFactory
 from django.test import TestCase
 
@@ -21,15 +22,23 @@ from qc_tool.frontend.accounts.authentication.api_keys import (
 )
 from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
 from qc_tool.frontend.accounts.authentication.api_keys import generate_api_key
-from qc_tool.frontend.accounts.authentication.api_keys import has_api_key
 from qc_tool.frontend.accounts.authentication.api_keys import (
     is_api_key_digest,
 )
-from qc_tool.frontend.accounts.authentication.api_keys import (
-    issue_or_rotate_api_key,
+from qc_tool.frontend.accounts.authorization.permissions import (
+    AccountPermission,
 )
-from qc_tool.frontend.accounts.authentication.api_keys import revoke_api_key
-from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.models import PersonalAccessToken
+from qc_tool.frontend.accounts.models import UserProductGrant
+from qc_tool.frontend.accounts.services.api_tokens import (
+    delete_personal_access_token,
+)
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
+from qc_tool.frontend.accounts.services.role_permissions import (
+    capability_content_type,
+)
 
 
 def api_key(character="A"):
@@ -43,6 +52,14 @@ class ApiKeyTests(TestCase):
 
     def create_user(self, username, *, is_active=True):
         return self.users.create_user(username=username, is_active=is_active)
+
+    def authenticate_request(self, raw_token):
+        return authenticate_api_request(
+            self.request_factory.get(
+                "/api/resource",
+                HTTP_AUTHORIZATION=f"Bearer {raw_token}",
+            )
+        )
 
     @patch(
         "qc_tool.frontend.accounts.authentication.api_keys.secrets.token_urlsafe",
@@ -78,98 +95,141 @@ class ApiKeyTests(TestCase):
                 with self.assertRaises(ValueError):
                     digest_api_key(value)
 
-    @patch(
-        "qc_tool.frontend.accounts.authentication.api_keys.generate_api_key",
-        side_effect=(api_key("A"), api_key("B")),
-    )
-    def test_issue_then_rotate_overwrites_one_row_and_returns_secret_once(
-        self,
-        generate,
-    ):
-        user = self.create_user("api-user")
+    def test_two_named_tokens_are_independent_and_deleting_one_preserves_other(self):
+        user = self.create_user("multi-token-user")
+        first = issue_personal_access_token(user, "Automation")
+        second = issue_personal_access_token(user, "Desktop client")
 
-        first = issue_or_rotate_api_key(user)
-        credential = ApiUser.objects.get(user=user)
-        first_digest = credential.api_key
-        second = issue_or_rotate_api_key(user)
-        credential.refresh_from_db()
-
-        self.assertEqual(first, api_key("A"))
-        self.assertEqual(second, api_key("B"))
-        self.assertEqual(credential.api_key, digest_api_key(second))
-        self.assertNotEqual(credential.api_key, second)
-        self.assertNotEqual(credential.api_key, first_digest)
-        self.assertEqual(ApiUser.objects.filter(user=user).count(), 1)
-        self.assertIsNone(authenticate_api_key(first))
-        self.assertEqual(authenticate_api_key(second), user)
-        self.assertEqual(generate.call_count, 2)
-
-    def test_issue_rejects_an_unsaved_user(self):
-        user = get_user_model()(username="unsaved")
-
-        with self.assertRaises(ValueError):
-            issue_or_rotate_api_key(user)
-
-    def test_revoke_is_idempotent_and_status_requires_current_digest_format(self):
-        user = self.create_user("revoke-user")
-        raw_key = issue_or_rotate_api_key(user)
-
-        self.assertTrue(has_api_key(user))
-        self.assertTrue(revoke_api_key(user))
-        self.assertFalse(revoke_api_key(user))
-        self.assertFalse(has_api_key(user))
-        self.assertIsNone(authenticate_api_key(raw_key))
-
-        ApiUser.objects.create(user=user, api_key="PLAINTEXT-LEGACY")
-        self.assertFalse(has_api_key(user))
-        self.assertIsNone(authenticate_api_key("PLAINTEXT-LEGACY"))
-
-    def test_authentication_rejects_inactive_and_duplicate_digests(self):
-        active = self.create_user("active-api-user")
-        inactive = self.create_user("inactive-api-user", is_active=False)
-        active_key = api_key("A")
-        inactive_key = api_key("I")
-        duplicate_key = api_key("D")
-        ApiUser.objects.create(user=active, api_key=digest_api_key(active_key))
-        ApiUser.objects.create(
-            user=inactive,
-            api_key=digest_api_key(inactive_key),
+        self.assertNotEqual(first.raw_token, second.raw_token)
+        self.assertEqual(
+            set(
+                PersonalAccessToken.objects.filter(user=user).values_list(
+                    "name",
+                    flat=True,
+                )
+            ),
+            {"Automation", "Desktop client"},
         )
-        duplicate_digest = digest_api_key(duplicate_key)
-        ApiUser.objects.create(
-            user=self.create_user("duplicate-one"),
-            api_key=duplicate_digest,
-        )
-        ApiUser.objects.create(
-            user=self.create_user("duplicate-two"),
-            api_key=duplicate_digest,
+        self.assertEqual(authenticate_api_key(first.raw_token), user)
+        self.assertEqual(authenticate_api_key(second.raw_token), user)
+
+        deleted_name = delete_personal_access_token(user, first.token.pk)
+
+        self.assertEqual(deleted_name, "Automation")
+        self.assertIsNone(authenticate_api_key(first.raw_token))
+        self.assertEqual(authenticate_api_key(second.raw_token), user)
+        self.assertTrue(
+            PersonalAccessToken.objects.filter(pk=second.token.pk).exists()
         )
 
-        self.assertEqual(authenticate_api_key(active_key), active)
-        self.assertIsNone(authenticate_api_key(inactive_key))
-        self.assertIsNone(authenticate_api_key(duplicate_key))
-        self.assertIsNone(authenticate_api_key(""))
-
-    def test_request_authentication_accepts_only_exact_bearer_header(self):
-        user = self.create_user("request-api-user")
-        raw_key = api_key("R")
-        ApiUser.objects.create(user=user, api_key=digest_api_key(raw_key))
-
-        result = authenticate_api_request(
-            self.request_factory.get(
-                "/api/resource",
-                HTTP_AUTHORIZATION=f"Bearer {raw_key}",
-            )
+    def test_revoked_live_permission_immediately_narrows_an_existing_token(self):
+        user = self.create_user("revoked-live-permission")
+        issued = issue_personal_access_token(user, "Before revocation")
+        self.assertIn(
+            AccountPermission.RUN_QC,
+            self.authenticate_request(issued.raw_token).access.permissions,
         )
+
+        user.groups.through.objects.filter(user_id=user.pk).delete()
+        result = self.authenticate_request(issued.raw_token)
 
         self.assertTrue(result.is_authenticated)
         self.assertEqual(result.user, user)
+        self.assertEqual(result.token.pk, issued.token.pk)
+        self.assertNotIn(AccountPermission.RUN_QC, result.access.permissions)
+
+    def test_later_permission_and_scope_grants_do_not_broaden_old_token(self):
+        user = self.create_user("later-grants")
+        user.groups.through.objects.filter(user_id=user.pk).delete()
+        view_permission = Permission.objects.get(
+            content_type=capability_content_type(),
+            codename=AccountPermission.VIEW_DELIVERIES.value,
+        )
+        run_permission = Permission.objects.get(
+            content_type=capability_content_type(),
+            codename=AccountPermission.RUN_QC.value,
+        )
+        user.user_permissions.add(view_permission)
+        UserProductGrant.objects.create(
+            user=user,
+            product_ident="general_raster",
+        )
+        issued = issue_personal_access_token(user, "Narrow snapshot")
+
+        user.user_permissions.add(run_permission)
+        UserProductGrant.objects.create(
+            user=user,
+            product_ident="later_product",
+        )
+        result = self.authenticate_request(issued.raw_token)
+
+        self.assertTrue(result.is_authenticated)
+        self.assertIn(
+            AccountPermission.VIEW_DELIVERIES,
+            result.access.permissions,
+        )
+        self.assertNotIn(AccountPermission.RUN_QC, result.access.permissions)
+        self.assertEqual(result.access.product_idents, {"general_raster"})
+
+    def test_malformed_token_snapshots_authenticate_identity_but_deny_access(self):
+        user = self.create_user("malformed-snapshot")
+        issued = issue_personal_access_token(user, "Corrupt snapshot")
+        PersonalAccessToken.objects.filter(pk=issued.token.pk).update(
+            permission_snapshot={"run_qc": True},
+            role_snapshot=["not-a-role"],
+            region_codes_snapshot=[""],
+            product_idents_snapshot={"general_raster": True},
+        )
+
+        result = self.authenticate_request(issued.raw_token)
+
+        self.assertTrue(result.is_authenticated)
+        self.assertEqual(result.access.permissions, frozenset())
+        self.assertEqual(result.access.roles, frozenset())
+        self.assertEqual(result.access.region_codes, frozenset())
+        self.assertEqual(result.access.product_idents, frozenset())
+        self.assertFalse(result.access.is_administrator)
+
+    def test_authentication_rejects_an_inactive_token_owner(self):
+        user = self.create_user("inactive-api-user")
+        issued = issue_personal_access_token(user, "Inactive owner")
+        user.is_active = False
+        user.save(update_fields=("is_active",))
+
+        self.assertIsNone(authenticate_api_key(issued.raw_token))
+        self.assertEqual(
+            self.authenticate_request(issued.raw_token).error,
+            ApiKeyAuthenticationError.INVALID,
+        )
+
+    def test_successful_authentication_records_last_use_without_exposing_secret(self):
+        user = self.create_user("token-activity")
+        issued = issue_personal_access_token(user, "Activity tracking")
+        self.assertIsNone(issued.token.last_used_at)
+
+        result = self.authenticate_request(issued.raw_token)
+
+        issued.token.refresh_from_db()
+        self.assertTrue(result.is_authenticated)
+        self.assertIsNotNone(issued.token.last_used_at)
+        self.assertNotEqual(issued.token.secret_digest, issued.raw_token)
+
+    def test_request_authentication_accepts_only_exact_bearer_header(self):
+        user = self.create_user("request-api-user")
+        issued = issue_personal_access_token(user, "Request token")
+
+        result = self.authenticate_request(issued.raw_token)
+
+        self.assertTrue(result.is_authenticated)
+        self.assertEqual(result.user, user)
+        self.assertEqual(result.token.pk, issued.token.pk)
+        self.assertIsNotNone(result.access)
         self.assertIsNone(result.error)
 
         lowercase_scheme = authenticate_api_request(
             self.request_factory.get(
                 "/api/resource",
-                HTTP_AUTHORIZATION=f"bEaReR {raw_key}",
+                HTTP_AUTHORIZATION=f"bEaReR {issued.raw_token}",
             )
         )
         self.assertTrue(lowercase_scheme.is_authenticated)
@@ -230,11 +290,6 @@ class ApiKeyTests(TestCase):
                 )
 
     def test_request_authentication_rejects_well_formed_unknown_key(self):
-        result = authenticate_api_request(
-            self.request_factory.get(
-                "/api/resource",
-                HTTP_AUTHORIZATION=f"Bearer {api_key('X')}",
-            )
-        )
+        result = self.authenticate_request(api_key("X"))
 
         self.assertEqual(result.error, ApiKeyAuthenticationError.INVALID)

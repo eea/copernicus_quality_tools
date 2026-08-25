@@ -6,16 +6,18 @@ The raw value is returned only when it is issued and is never stored.
 """
 
 from dataclasses import dataclass
+from datetime import timedelta
 from enum import Enum
 import hashlib
 import re
 import secrets
 
-from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 from django.views.decorators.debug import sensitive_variables
 
-from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.authorization import access_for
+from qc_tool.frontend.accounts.models import PersonalAccessToken
 
 
 API_KEY_PREFIX = "qct_"
@@ -25,6 +27,7 @@ API_KEY_LENGTH = len(API_KEY_PREFIX) + API_KEY_TOKEN_LENGTH
 API_KEY_DIGEST_PREFIX = "sha256$"
 API_KEY_DIGEST_LENGTH = len(API_KEY_DIGEST_PREFIX) + 64
 MAX_AUTHORIZATION_HEADER_LENGTH = 128
+LAST_USED_WRITE_INTERVAL = timedelta(minutes=5)
 
 _RAW_API_KEY_PATTERN = re.compile(
     rf"{re.escape(API_KEY_PREFIX)}[A-Za-z0-9_-]{{{API_KEY_TOKEN_LENGTH}}}\Z",
@@ -50,6 +53,8 @@ class ApiKeyAuthenticationResult:
     """The result of authenticating one request without exposing its secret."""
 
     user: object | None = None
+    token: object | None = None
+    access: object | None = None
     error: ApiKeyAuthenticationError | None = None
 
     @property
@@ -92,74 +97,46 @@ def is_api_key_digest(value):
 
 
 @sensitive_variables("raw_key")
-def issue_or_rotate_api_key(user):
-    """Atomically replace a user's credential and return its raw value once."""
+def authenticate_api_key(raw_key):
+    """Resolve the active user for one valid personal access token.
 
-    if user.pk is None:
-        raise ValueError("API credentials can only be issued to saved users")
+    This compatibility helper deliberately returns only the user. Request
+    authentication uses :func:`authenticate_api_request`, which also returns
+    the token's restricted access snapshot.
+    """
 
-    raw_key = generate_api_key()
-    stored_digest = digest_api_key(raw_key)
-    user_model = get_user_model()
-
-    # Locking the user row serializes initial issuance as well as rotation. A
-    # lock on ApiUser alone cannot protect the case where no credential exists.
-    with transaction.atomic():
-        locked_user = user_model._default_manager.select_for_update().get(
-            pk=user.pk,
-        )
-        ApiUser.objects.update_or_create(
-            user=locked_user,
-            defaults={"api_key": stored_digest},
-        )
-
-    return raw_key
-
-
-def revoke_api_key(user):
-    """Atomically revoke a user's current credential, if one exists."""
-
-    if user.pk is None:
-        return False
-
-    user_model = get_user_model()
-    with transaction.atomic():
-        locked_user = user_model._default_manager.select_for_update().get(
-            pk=user.pk,
-        )
-        deleted, _details = ApiUser.objects.filter(user=locked_user).delete()
-    return deleted > 0
-
-
-def has_api_key(user):
-    """Return whether a user has a credential issued in the current format."""
-
-    if user.pk is None:
-        return False
-    stored_value = (
-        ApiUser.objects.filter(user=user)
-        .values_list("api_key", flat=True)
-        .first()
-    )
-    return is_api_key_digest(stored_value)
+    token = authenticate_personal_access_token(raw_key)
+    return token.user if token is not None else None
 
 
 @sensitive_variables("raw_key")
-def authenticate_api_key(raw_key):
-    """Resolve one active user by exact digest, failing closed on duplicates."""
+def authenticate_personal_access_token(raw_key):
+    """Resolve one active token by exact digest without exposing its secret."""
 
     if not is_valid_api_key(raw_key):
         return None
 
     stored_digest = digest_api_key(raw_key)
-    credentials = list(
-        ApiUser.objects.select_related("user").filter(api_key=stored_digest)[:2]
+    token = (
+        PersonalAccessToken.objects.select_related("user")
+        .filter(secret_digest=stored_digest)
+        .first()
     )
-    if len(credentials) != 1:
+    if token is None or not token.user.is_active:
         return None
+    return token
 
-    user = credentials[0].user
-    return user if user.is_active else None
+
+def _record_token_use(token):
+    """Throttle token activity writes to avoid one database update per call."""
+
+    now = timezone.now()
+    cutoff = now - LAST_USED_WRITE_INTERVAL
+    updated = PersonalAccessToken.objects.filter(pk=token.pk).filter(
+        Q(last_used_at__isnull=True) | Q(last_used_at__lt=cutoff)
+    ).update(last_used_at=now)
+    if updated:
+        token.last_used_at = now
 
 
 @sensitive_variables("authorization", "raw_key")
@@ -200,7 +177,21 @@ def authenticate_api_request(request):
     if error is not None:
         return ApiKeyAuthenticationResult(error=error)
 
-    user = authenticate_api_key(raw_key)
-    if user is None:
+    token = authenticate_personal_access_token(raw_key)
+    if token is None:
         return ApiKeyAuthenticationResult(error=ApiKeyAuthenticationError.INVALID)
-    return ApiKeyAuthenticationResult(user=user)
+
+    live_access = access_for(token.user)
+    restricted_access = live_access.restricted_to_snapshot(
+        permissions=token.permission_snapshot,
+        roles=token.role_snapshot,
+        region_codes=token.region_codes_snapshot,
+        product_idents=token.product_idents_snapshot,
+        is_administrator=token.is_administrator_snapshot,
+    )
+    _record_token_use(token)
+    return ApiKeyAuthenticationResult(
+        user=token.user,
+        token=token,
+        access=restricted_access,
+    )

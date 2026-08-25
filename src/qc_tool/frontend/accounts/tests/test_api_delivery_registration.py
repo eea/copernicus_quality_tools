@@ -7,14 +7,19 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 
-from qc_tool.frontend.accounts.authentication.api_keys import issue_or_rotate_api_key
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.dashboard.models import Delivery
 
 
 class ApiDeliveryRegistrationSecurityTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="api-owner")
-        self.raw_key = issue_or_rotate_api_key(self.user)
+        self.raw_key = issue_personal_access_token(
+            self.user,
+            "Delivery registration tests",
+        ).raw_token
         self.authorization = f"Bearer {self.raw_key}"
         self.temp_dir = TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)

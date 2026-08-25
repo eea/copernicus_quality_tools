@@ -1,6 +1,7 @@
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -14,7 +15,6 @@ from qc_tool.frontend.accounts.authorization.permissions import (
     ROLE_PERMISSION_GRANTS,
 )
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import ApiUser
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserRegionGrant
@@ -26,6 +26,19 @@ from qc_tool.frontend.accounts.services.role_permissions import (
 initial_migration = import_module(
     "qc_tool.frontend.accounts.migrations.0001_initial"
 )
+
+
+class _LegacyAwareApps:
+    """Expose a placeholder for the legacy model removed after bootstrap."""
+
+    def __init__(self, registry):
+        self.registry = registry
+        self.legacy_api_user = object()
+
+    def get_model(self, app_label, model_name):
+        if (app_label, model_name) == ("dashboard", "ApiUser"):
+            return self.legacy_api_user
+        return self.registry.get_model(app_label, model_name)
 
 
 class ConsolidatedInitialMigrationTests(TestCase):
@@ -122,10 +135,6 @@ class ConsolidatedInitialMigrationTests(TestCase):
                 product_family=product_family,
             )
 
-        ApiUser.objects.create(user=ordinary, api_key="PLAINTEXT-LEGACY-KEY")
-        valid_digest = "sha256$" + ("a" * 64)
-        ApiUser.objects.create(user=superuser, api_key=valid_digest)
-
         existing_region_grant = UserRegionGrant.objects.create(
             user=region_member,
             aoi_code="existing-region",
@@ -152,14 +161,24 @@ class ConsolidatedInitialMigrationTests(TestCase):
         }
 
         schema_editor = SimpleNamespace(connection=connection)
-        initial_migration.bootstrap_accounts(apps, schema_editor)
-        initial_migration.bootstrap_accounts(apps, schema_editor)
-
-        self.assertFalse(ApiUser.objects.filter(user=ordinary).exists())
-        self.assertEqual(
-            ApiUser.objects.get(user=superuser).api_key,
-            valid_digest,
-        )
+        migration_apps = _LegacyAwareApps(apps)
+        # The legacy ApiUser table is intentionally removed by dashboard
+        # 0019. Its data upgrade is covered with historical models in
+        # test_personal_access_token_migration; this test remains focused on
+        # the consolidated account-role and scope bootstrap.
+        with patch.object(
+            initial_migration,
+            "_revoke_legacy_api_credentials",
+        ) as revoke_legacy_credentials:
+            initial_migration.bootstrap_accounts(
+                migration_apps,
+                schema_editor,
+            )
+            initial_migration.bootstrap_accounts(
+                migration_apps,
+                schema_editor,
+            )
+        self.assertEqual(revoke_legacy_credentials.call_count, 2)
 
         self.assertEqual(
             set(Group.objects.filter(name__in=Role.values()).values_list(

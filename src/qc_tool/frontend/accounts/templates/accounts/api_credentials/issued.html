@@ -15,16 +15,16 @@
 <div class="credential-issued">
     <section class="account-card credential-issued__card" aria-labelledby="credential-issued-title">
         <span class="credential-issued__icon" aria-hidden="true">
-            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#key"></use></svg>
+            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>
         </span>
         <p class="credential-issued__eyebrow">Created successfully</p>
-        <h1 id="credential-issued-title">Copy your API token now</h1>
+        <h1 id="credential-issued-title">Copy {% if token.name %}“{{ token.name }}” token{% else %}your API token{% endif %} now</h1>
         <p class="credential-issued__intro">
             This is the only time the token will be shown. Store it in a secure secret manager before leaving this page.
         </p>
 
         <div class="credential-issued__warning" role="status">
-            Rotating a token immediately invalidates the previous one. Never put this value in a URL, chat, or source code.
+            This token acts with the access copied from your account. Never put it in a URL, chat, or source code.
         </div>
 
         <div class="form-group credential-issued__value">
@@ -34,7 +34,7 @@
                     id="issued-api-key"
                     class="form-control"
                     type="text"
-                    value="{{ api_key }}"
+                    value="{{ raw_token }}"
                     readonly
                     autocomplete="off"
                     autocapitalize="off"
@@ -55,7 +55,8 @@
         </div>
 
         <div class="account-card__actions credential-issued__actions">
-            <a class="btn btn-primary btn-qc-primary" href="{% url 'account_settings' %}#api-credential">Done</a>
+            <a class="btn btn-primary btn-qc-primary" href="{% url 'account_settings' %}#api-tokens">Done</a>
+            <a class="btn btn-default btn-qc-secondary" href="{% url 'api_homepage' %}">View API documentation</a>
         </div>
     </section>
 </div>

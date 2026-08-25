@@ -171,6 +171,75 @@ class AccountAccess:
             )
         )
 
+    def restricted_to_snapshot(
+        self,
+        *,
+        permissions,
+        roles,
+        region_codes,
+        product_idents,
+        is_administrator,
+    ):
+        """Intersect live access with a fail-closed token access snapshot.
+
+        Revoking a user's current permission or scope narrows every token
+        immediately. Later grants do not silently broaden tokens that were
+        issued before those grants existed.
+        """
+
+        snapshot_permissions = _known_enum_values(
+            permissions,
+            AccountPermission,
+        )
+        snapshot_roles = _known_enum_values(roles, Role)
+        snapshot_regions = _bounded_strings(region_codes, maximum_length=100)
+        snapshot_products = _bounded_strings(
+            product_idents,
+            maximum_length=64,
+        )
+        return AccountAccess(
+            user_id=self.user_id,
+            is_authenticated=self.is_authenticated,
+            is_administrator=bool(
+                is_administrator is True and self.is_administrator
+            ),
+            roles=self.roles.intersection(snapshot_roles),
+            permissions=self.permissions.intersection(snapshot_permissions),
+            region_codes=self.region_codes.intersection(snapshot_regions),
+            product_idents=self.product_idents.intersection(snapshot_products),
+        )
+
+
+def _known_enum_values(values, enum_type):
+    """Parse one bounded JSON list into known enum members or fail closed."""
+
+    if not isinstance(values, list) or len(values) > 100:
+        return frozenset()
+    parsed = set()
+    try:
+        for value in values:
+            if not isinstance(value, str):
+                return frozenset()
+            parsed.add(enum_type(value))
+    except ValueError:
+        return frozenset()
+    return frozenset(parsed)
+
+
+def _bounded_strings(values, *, maximum_length):
+    """Validate bounded scope snapshots before they reach access policy."""
+
+    if not isinstance(values, list) or len(values) > 1_000:
+        return frozenset()
+    if any(
+        not isinstance(value, str)
+        or not value
+        or len(value) > maximum_length
+        for value in values
+    ):
+        return frozenset()
+    return frozenset(values)
+
 
 def access_for(user):
     return AccountAccess.from_user(user)

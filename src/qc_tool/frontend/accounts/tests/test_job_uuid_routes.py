@@ -9,8 +9,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from qc_tool.common import CONFIG
-from qc_tool.frontend.accounts.authentication.api_keys import (
-    issue_or_rotate_api_key,
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
 )
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
@@ -76,7 +76,10 @@ class JobUUIDRouteTests(TestCase):
 
     def test_api_result_accepts_django_uuid_objects(self):
         authorization = "Bearer {}".format(
-            issue_or_rotate_api_key(self.owner),
+            issue_personal_access_token(
+                self.owner,
+                "UUID route test",
+            ).raw_token,
         )
 
         with (

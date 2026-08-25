@@ -182,11 +182,6 @@
   font-weight: 600;
 }
 
-.account-card__actions--credential {
-  flex-wrap: wrap;
-  margin-top: 20px;
-}
-
 .account-status {
   display: inline-flex;
   min-height: 32px;
@@ -221,7 +216,8 @@
   gap: 11px;
 }
 
-.account-credential-notice .ui-icon {
+
+.account-credential-notice > .ui-icon {
   margin-top: 1px;
   color: var(--qc-color-primary);
 }
@@ -230,6 +226,7 @@
   margin: 0;
   line-height: 1.55;
 }
+
 
 .account-facts {
   margin: 18px 0 0;
@@ -366,6 +363,7 @@
 }
 
 .credential-issued__actions {
+  flex-wrap: wrap;
   justify-content: center;
   margin-top: 28px;
 }
@@ -407,6 +405,7 @@
   .account-settings__aside {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
 }
 
 @media (max-width: 560px) {
@@ -435,12 +434,6 @@
     flex-direction: column;
   }
 
-  .account-card__actions--credential,
-  .account-card__actions--credential form,
-  .account-card__actions--credential .btn {
-    width: 100%;
-  }
-
   .credential-issued {
     width: calc(100% - 24px);
     padding-top: 28px;
@@ -457,5 +450,9 @@
   .credential-issued__input-group .btn,
   .credential-issued__actions .btn {
     width: 100%;
+  }
+
+  .credential-issued__actions {
+    flex-direction: column;
   }
 }

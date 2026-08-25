@@ -8,9 +8,8 @@ from django.db.models import Prefetch
 from qc_tool.frontend.accounts.admin.filters import RoleListFilter
 from qc_tool.frontend.accounts.admin.products import UserProductGrantInline
 from qc_tool.frontend.accounts.admin.regions import UserRegionGrantInline
-from qc_tool.frontend.accounts.authentication.api_keys import is_api_key_digest
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.models import UserRegionGrant
@@ -19,23 +18,23 @@ from qc_tool.frontend.accounts.services.role_permissions import (
 )
 
 
-class ApiUserInline(admin.StackedInline):
-    """Expose credential status and revocation without exposing its digest."""
+class PersonalAccessTokenInline(admin.TabularInline):
+    """List and revoke named tokens without exposing stored digests."""
 
-    model = ApiUser
-    fields = ("credential_status",)
-    readonly_fields = ("credential_status",)
-    exclude = ("api_key",)
+    model = PersonalAccessToken
+    fields = ("name", "token_hint", "created_at", "last_used_at")
+    readonly_fields = fields
+    exclude = (
+        "secret_digest",
+        "permission_snapshot",
+        "role_snapshot",
+        "region_codes_snapshot",
+        "product_idents_snapshot",
+        "is_administrator_snapshot",
+    )
     can_delete = True
     extra = 0
-    max_num = 1
-    verbose_name_plural = "API credentials"
-
-    @admin.display(description="Status")
-    def credential_status(self, credential):
-        if is_api_key_digest(credential.api_key):
-            return "Configured (the secret is stored as a one-way digest)"
-        return "Revoked legacy credential (delete this record)"
+    verbose_name_plural = "Personal API tokens (secrets are never stored)"
 
     def has_add_permission(self, request, obj=None):
         # Credentials must be issued through the one-time self-service view.
@@ -70,7 +69,7 @@ class AccountUserAdmin(BaseUserAdmin):
     """Keep all user-related Django Admin composition in accounts."""
 
     inlines = (
-        ApiUserInline,
+        PersonalAccessTokenInline,
         UserProfileInline,
         UserRegionGrantInline,
         UserProductGrantInline,

@@ -1,582 +1,357 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.0.3",
   "info": {
+    "title": "CLMS QC Tool API",
     "version": "1.0.0",
-    "title": "CLMS QC Tool API documentation",
+    "description": "Programmatic access to delivery registration, product metadata, QC jobs, results, and EEA submission. Every operational request is authenticated with a named personal access token (PAT). A token captures its owner's permissions and access grants when it is created. Each request uses the intersection of that issuance snapshot and the owner's current live account access: removing access or deactivating the owner takes effect immediately, while later grants do not silently expand an existing token.",
     "license": {
-      "name": "EUPL"
+      "name": "EUPL-1.2",
+      "url": "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"
     }
   },
   "servers": [
     {
-      "url": "http://localhost:8000/api"
+      "url": "http://localhost:8000/api",
+      "description": "Replaced at runtime with the configured public API URL"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Deliveries",
+      "description": "Register local or S3-backed deliveries and list only the deliveries visible to the token owner."
+    },
+    {
+      "name": "Products",
+      "description": "Discover available product identifiers and the QC steps defined for a product."
+    },
+    {
+      "name": "QC jobs",
+      "description": "Start a QC job and retrieve its status, history, JSON report, or PDF report."
+    },
+    {
+      "name": "Submission",
+      "description": "Submit a successfully checked delivery to the configured EEA destination."
     }
   ],
   "paths": {
     "/register-delivery": {
       "post": {
-        "summary": "Register a new delivery from already uploaded file",
         "operationId": "registerDelivery",
-        "tags": [
-          "Registering a new delivery"
-        ],
+        "tags": ["Deliveries"],
+        "summary": "Register an uploaded ZIP delivery",
+        "description": "Registers a ZIP file that already exists directly inside the token owner's incoming directory. Supply either its filename or its full path. Nested paths, traversal, symlinks, directories, files outside the owner's storage, and non-ZIP files are rejected. Registration creates a database record; it does not upload file bytes.",
+        "x-required-permission-label": "Upload deliveries",
         "requestBody": {
-          "description": "Specify a ZIP filename or full path directly below the authenticated user's incoming directory. Paths belonging to another user and nested paths are rejected.",
           "required": true,
+          "description": "A JSON object identifying one previously uploaded ZIP file. Request bodies are limited to 16 KiB, must be UTF-8 JSON objects, and cannot contain duplicate keys.",
           "content": {
             "application/json": {
-              "schema": {
-                "properties": {
-                  "uploaded_file": {
-                    "type": "string",
-                    "example": "/mnt/qc_tool_incoming/incoming/guest/example_delivery.zip"
-                  }
-                }
-              }
+              "schema": {"$ref": "#/components/schemas/RegisterDeliveryRequest"},
+              "example": {"uploaded_file": "example_delivery.zip"}
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Id of the registered delivery",
+            "description": "The delivery was registered.",
             "content": {
               "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Deliery successfully registered"
-                    },
-                    "delivery_id": {
-                      "type": "integer",
-                      "format": "int64",
-                      "example": 123
-                    }
-                  }
-                }
+                "schema": {"$ref": "#/components/schemas/RegisterDeliveryResponse"},
+                "example": {"status": "ok", "message": "delivery successfully registered", "delivery_id": 123}
               }
             }
-          }
+          },
+          "400": {"$ref": "#/components/responses/ValidationError"},
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/PermissionDenied"},
+          "413": {"$ref": "#/components/responses/RequestTooLarge"}
         }
       }
     },
     "/register-delivery-s3": {
       "post": {
-        "summary": "Register a new delivery from S3 storage",
-        "operationId": "registerDeliveryS3",
-        "tags": [
-          "Registering a new delivery"
-        ],
+        "operationId": "registerDeliveryFromS3",
+        "tags": ["Deliveries"],
+        "summary": "Register an S3-backed delivery",
+        "description": "Validates an S3 delivery and records its location. The endpoint must be an exact HTTPS origin from the server administrator's allowlist. URL paths, query strings, fragments, embedded credentials, redirects to unapproved origins, and an excessive number of listed objects are rejected. S3 credentials are used for the configured storage operation and must never be placed in a URL.",
+        "x-required-permission-label": "Upload deliveries",
         "requestBody": {
-          "description": "Specify S3 access credentials and a delivery object prefix. The endpoint must be an exact HTTPS origin configured by the QC Tool administrator.",
           "required": true,
+          "description": "Connection details and the object prefix for one delivery. Request bodies are limited to 16 KiB and cannot contain duplicate JSON keys.",
           "content": {
             "application/json": {
-              "schema": {
-                "properties": {
-                  "host": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "Exact allowlisted HTTPS S3 origin; paths, query strings, fragments, and embedded credentials are rejected.",
-                    "example": "https://s3.waw3-1.cloudferro.com"
-                  },
-                  "access_key": {
-                    "type": "string",
-                    "example": "dasldkQ123"
-                  },
-                  "secret_key": {
-                    "type": "string",
-                    "example": "35H12refsaadf"
-                  },
-                  "bucketname": {
-                    "type": "string",
-                    "example": "delivery"
-                  },
-                  "key_prefix": {
-                    "type": "string",
-                    "example": "20231127/TCD/CLMS_HRL_VLCC_TCD_S2020_R10m_E49N35_03035_V01_R00"
-                  }
-                }
+              "schema": {"$ref": "#/components/schemas/RegisterS3DeliveryRequest"},
+              "example": {
+                "host": "https://s3.example.invalid",
+                "access_key": "<s3-access-key>",
+                "secret_key": "<s3-secret-key>",
+                "bucketname": "deliveries",
+                "key_prefix": "2026/example-delivery"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Id of the registered delivery",
+            "description": "The S3-backed delivery was validated and registered.",
             "content": {
               "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Deliery successfully registered"
-                    },
-                    "delivery_id": {
-                      "type": "integer",
-                      "format": "int64",
-                      "example": 123
-                    }
-                  }
-                }
+                "schema": {"$ref": "#/components/schemas/RegisterDeliveryResponse"},
+                "example": {"status": "ok", "message": "S3 delivery successfully registered", "delivery_id": 124}
               }
             }
-          }
+          },
+          "400": {"$ref": "#/components/responses/ValidationError"},
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/PermissionDenied"},
+          "413": {"$ref": "#/components/responses/RequestTooLarge"}
         }
       }
     },
     "/delivery-list": {
       "get": {
-        "summary": "List all deliveries",
         "operationId": "listDeliveries",
-        "tags": [
-          "Deliveries"
-        ],
+        "tags": ["Deliveries"],
+        "summary": "List visible deliveries",
+        "description": "Returns active deliveries visible through both the token's issuance snapshot and the owner's current account scope. Ordinary users see their own deliveries. Administrators and accounts with product or region grants may also see deliveries within those grants. Results are paginated; no API filter or free-text search parameter is supported.",
+        "x-required-permission-label": "View deliveries",
         "parameters": [
           {
-            "in": "query",
             "name": "offset",
-            "type": "integer",
-            "default": 0,
-            "description": "The number of items to skip before start of the current page"
+            "in": "query",
+            "required": false,
+            "description": "Number of matching rows to skip. Invalid values use 0; negative values clamp to 0; values above 10,000,000 clamp to that maximum.",
+            "schema": {"type": "integer", "minimum": 0, "maximum": 10000000, "default": 0},
+            "example": 0
           },
           {
-            "in": "query",
             "name": "limit",
-            "type": "integer",
-            "default": 20,
-            "description": "the number of items to return on one page"
+            "in": "query",
+            "required": false,
+            "description": "Maximum rows returned in this page. Invalid values use 20; values clamp to the inclusive range 1–1,000.",
+            "schema": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 20},
+            "example": 20
           },
           {
-            "in": "query",
             "name": "sort",
-            "type": "string",
-            "default": "id",
-            "description": "the property to sort the results by"
+            "in": "query",
+            "required": false,
+            "description": "Delivery property used for ordering. Unknown values safely fall back to id.",
+            "schema": {
+              "type": "string",
+              "enum": ["id", "filename", "date_uploaded", "size_bytes", "product_ident", "product_description", "date_submitted", "last_job_status", "username"],
+              "default": "id"
+            },
+            "example": "date_uploaded"
           },
           {
-            "in": "query",
             "name": "order",
-            "type": "string",
-            "default": "desc",
-            "description": "the sort order (asc or desc)"
+            "in": "query",
+            "required": false,
+            "description": "Sort direction. Any value other than asc or desc safely falls back to desc.",
+            "schema": {"type": "string", "enum": ["asc", "desc"], "default": "desc"},
+            "example": "desc"
           }
         ],
         "responses": {
           "200": {
-            "description": "An array of deliveries",
+            "description": "A page of visible deliveries. next_offset is 0 when there is no subsequent page.",
             "content": {
               "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "total": {
-                      "type": "integer",
-                      "description": "total number of all deliveries for current user."
-                    },
-                    "offset": {
-                      "type": "integer",
-                      "description": "the current offset (number of skipped items before current page)"
-                    },
-                    "limit": {
-                      "type": "integer",
-                      "description": "the current limit (current page size)"
-                    },
-                    "next_offset": {
-                      "type": "integer",
-                      "description": "the offset of the next page (or 0 if we are on last page)"
-                    },
-                    "deliveries": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Delivery"
-                      }
-                    }
-                  }
-                }
+                "schema": {"$ref": "#/components/schemas/DeliveryListResponse"}
               }
             }
           },
-          "default": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/PermissionDenied"}
         }
       }
     },
     "/product-list": {
       "get": {
-        "summary": "List all products that can be checked",
         "operationId": "listProducts",
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
+        "summary": "List available products",
+        "description": "Returns the product identifiers currently available to the QC Tool. Use product_ident exactly as returned when requesting product details or creating a job.",
+        "x-required-permission-label": "View deliveries",
         "responses": {
           "200": {
-            "description": "An array of products",
+            "description": "Products ordered by product identifier.",
             "content": {
               "application/json": {
-                "schema": {
-                  "properties": {
-                    "products": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Product"
-                      }
-                    }
-                  }
-                }
+                "schema": {"$ref": "#/components/schemas/ProductListResponse"}
               }
             }
           },
-          "default": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/PermissionDenied"}
         }
       }
     },
     "/product-info/{product_ident}": {
       "get": {
-        "summary": "Show all QC checks for a product",
-        "operationId": "productInfo",
-        "tags": [
-          "Products"
-        ],
+        "operationId": "getProductInformation",
+        "tags": ["Products"],
+        "summary": "Describe a product's QC checks",
+        "description": "Builds a read-only QC job blueprint for one available product. The response explains the ordered checks, which checks are required, which are system-managed, and any configured layer parameters. It does not create a job.",
+        "x-required-permission-label": "View deliveries",
         "parameters": [
           {
             "name": "product_ident",
             "in": "path",
             "required": true,
-            "description": "The product ident to show information about",
-            "schema": {
-              "type": "string",
-              "example": "cz_2018"
-            }
+            "description": "Exact identifier returned by GET /product-list. URL-encode the value when constructing the path.",
+            "schema": {"type": "string", "maxLength": 64},
+            "example": "clc2012"
           }
         ],
         "responses": {
           "200": {
-            "description": "Expected response to a valid request",
+            "description": "The product's QC job blueprint.",
             "content": {
               "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "showing product info"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/JobTemplate"
-                    }
-                  }
-                }
+                "schema": {"$ref": "#/components/schemas/JobReportEnvelope"}
               }
             }
           },
-          "default": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/PermissionDenied"},
+          "404": {"$ref": "#/components/responses/NotFound"}
         }
       }
     },
     "/create-job": {
       "post": {
-        "summary": "Run a new QC job",
         "operationId": "createJob",
-        "tags": [
-          "Running a new QC job"
-        ],
+        "tags": ["QC jobs"],
+        "summary": "Start a QC job",
+        "description": "Creates one QC job for an existing delivery. The PAT snapshot and token owner must allow Run QC, and the owner must be allowed to manage the delivery owner. product_ident must resolve to an available definition. skip_steps may include only optional step numbers permitted by that definition.",
+        "x-required-permission-label": "Run QC",
         "requestBody": {
-          "description": "Specify delivery_id, product_ident, skip_steps",
           "required": true,
+          "description": "The target delivery, product identifier, and optional comma-separated step numbers. Request bodies are limited to 16 KiB and cannot contain duplicate JSON keys.",
           "content": {
             "application/json": {
-              "schema": {
-                "required": [
-                  "delivery_id",
-                  "product_ident"
-                ],
-                "properties": {
-                  "delivery_id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "product_ident": {
-                    "type": "string",
-                    "example": "cz_2018"
-                  },
-                  "skip_steps": {
-                    "type": "string",
-                    "example": "8,9"
-                  }
-                }
-              }
+              "schema": {"$ref": "#/components/schemas/CreateJobRequest"},
+              "example": {"delivery_id": 123, "product_ident": "clc2012", "skip_steps": "8,9"}
             }
           }
         },
         "responses": {
           "200": {
-            "description": "UUID of the created job",
+            "description": "The job was accepted. data.job_uuid identifies the new job.",
             "content": {
               "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Job successfully created"
-                    },
-                    "job_uuid": {
-                      "type": "string",
-                      "format": "uuid"
-                    }
-                  }
-                }
+                "schema": {"$ref": "#/components/schemas/CreateJobResponse"}
               }
             }
-          }
+          },
+          "400": {"$ref": "#/components/responses/ValidationError"},
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/PermissionDenied"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "413": {"$ref": "#/components/responses/RequestTooLarge"}
         }
       }
     },
     "/job-result/{job_uuid}": {
       "get": {
-        "summary": "Specific job results in json format",
-        "operationId": "jobResult",
-        "tags": [
-          "Job Result"
-        ],
-        "parameters": [
-          {
-            "name": "job_uuid",
-            "in": "path",
-            "required": true,
-            "description": "The uuid to get results of",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "getJobResult",
+        "tags": ["QC jobs"],
+        "summary": "Get a QC job report as JSON",
+        "description": "Returns the compiled report for one visible job, including overall status and the ordered check results. Access is evaluated against the job's delivery using the intersection of the token snapshot and the owner's current ownership, administrator status, product grants, and region grants.",
+        "x-required-permission-label": "View deliveries",
+        "parameters": [{"$ref": "#/components/parameters/JobUuid"}],
         "responses": {
           "200": {
-            "description": "Expected response to a valid request",
+            "description": "The current compiled job report.",
             "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "showing job result in json format"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Job"
-                    }
-                  }
-                }
-              }
+              "application/json": {"schema": {"$ref": "#/components/schemas/JobReportEnvelope"}}
             }
           },
-          "default": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/ObjectPermissionDenied"},
+          "404": {"$ref": "#/components/responses/NotFound"}
         }
       }
     },
     "/job-result-pdf/{job_uuid}": {
       "get": {
-        "summary": "Specific job results in pdf format",
-        "operationId": "jobResultPdf",
-        "tags": [
-          "Job Result PDF"
-        ],
-        "parameters": [
-          {
-            "name": "job_uuid",
-            "in": "path",
-            "required": true,
-            "description": "The uuid to get results of",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "downloadJobResultPdf",
+        "tags": ["QC jobs"],
+        "summary": "Download a QC job report as PDF",
+        "description": "Downloads the generated PDF report for one visible job. A job can exist before its PDF artifact is ready; in that case this endpoint returns JSON with HTTP 404. Successful responses use application/pdf and a download filename.",
+        "x-required-permission-label": "View deliveries",
+        "parameters": [{"$ref": "#/components/parameters/JobUuid"}],
         "responses": {
           "200": {
-            "description": "Expected response to a valid request",
-            "content": {
-              "application/pdf": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
+            "description": "The generated PDF report.",
+            "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}}
           },
-          "default": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/ObjectPermissionDenied"},
+          "404": {"$ref": "#/components/responses/NotFound"}
         }
       }
     },
     "/job-history/{delivery_id}": {
       "get": {
-        "summary": "Specific delivery job history",
-        "operationId": "jobHistory",
-        "tags": [
-          "Job History"
-        ],
+        "operationId": "getDeliveryJobHistory",
+        "tags": ["QC jobs"],
+        "summary": "List a delivery's QC job history",
+        "description": "Returns newest-first jobs associated with the selected delivery's filename and visible to the token owner. Running job states may be refreshed from the worker before the response is returned. Internal worker URLs are never exposed.",
+        "x-required-permission-label": "View deliveries",
         "parameters": [
           {
             "name": "delivery_id",
             "in": "path",
             "required": true,
-            "description": "The delivery_id to get history of",
-            "schema": {
-              "type": "string"
-            }
+            "description": "Positive integer ID from GET /delivery-list.",
+            "schema": {"type": "integer", "minimum": 1},
+            "example": 123
           }
         ],
         "responses": {
           "200": {
-            "description": "Expected response to a valid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "showing job history of specific delivery"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Job"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "description": "The visible job history for this delivery.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/JobHistoryResponse"}}}
           },
-          "default": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/ObjectPermissionDenied"},
+          "404": {"$ref": "#/components/responses/NotFound"}
         }
       }
     },
     "/submit-delivery-to-eea": {
       "post": {
-        "summary": "Submit job reports to EEA",
-        "operationId": "submitDeliveryToEEA",
-        "tags": [
-          "Submission of deliveries to EEA"
-        ],
+        "operationId": "submitDeliveryToEea",
+        "tags": ["Submission"],
+        "summary": "Submit a successful delivery to EEA",
+        "description": "Submits the latest eligible successful QC job for one delivery. Both the PAT snapshot and token owner must allow Submit deliveries, and the owner must be allowed to manage the delivery owner. A delivery without an eligible successful job is rejected without submission.",
+        "x-required-permission-label": "Submit deliveries",
         "requestBody": {
-          "description": "Specify delivery_id",
           "required": true,
+          "description": "The positive delivery ID to submit. Request bodies are limited to 16 KiB and cannot contain duplicate JSON keys.",
           "content": {
             "application/json": {
-              "schema": {
-                "required": [
-                  "delivery_id"
-                ],
-                "properties": {
-                  "delivery_id": {
-                    "type": "integer",
-                    "example": 1
-                  }
-                }
-              }
+              "schema": {"$ref": "#/components/schemas/SubmitDeliveryRequest"},
+              "example": {"delivery_id": 123}
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Delivery has been submitted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Delivery successfully submitted to EEA"
-                    }
-                  }
-                }
-              }
-            }
+            "description": "The delivery was submitted successfully.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/StatusMessage"}}}
+          },
+          "400": {"$ref": "#/components/responses/ValidationError"},
+          "401": {"$ref": "#/components/responses/AuthenticationError"},
+          "403": {"$ref": "#/components/responses/PermissionDenied"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "413": {"$ref": "#/components/responses/RequestTooLarge"},
+          "500": {
+            "description": "Submission failed after validation. The response contains a stable, non-sensitive error message.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
           }
         }
       }
@@ -584,222 +359,282 @@
   },
   "components": {
     "securitySchemes": {
-      "ApiKeyAuth": {
+      "PersonalAccessToken": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "QC Tool API credential",
-        "description": "Send the one-time-issued credential in the Authorization header. Credentials in query strings are rejected."
+        "bearerFormat": "QC Tool personal access token",
+        "description": "Create a named PAT in Profile → Settings. Send it only as `Authorization: Bearer <token>`. The raw value is shown once and only its digest is stored. Delete tokens individually. Effective access is the intersection of the issuance snapshot and the owner's current live access, so revocations apply immediately and later grants require a newly created token. Query-string credentials are rejected."
+      }
+    },
+    "parameters": {
+      "JobUuid": {
+        "name": "job_uuid",
+        "in": "path",
+        "required": true,
+        "description": "Canonical, hyphenated job UUID.",
+        "schema": {"type": "string", "format": "uuid"},
+        "example": "00000000-0000-0000-0000-000000000001"
+      }
+    },
+    "responses": {
+      "AuthenticationError": {
+        "description": "A bearer token is missing, malformed, deleted, or invalid. The response includes a WWW-Authenticate: Bearer challenge.",
+        "headers": {
+          "WWW-Authenticate": {
+            "description": "Bearer authentication challenge.",
+            "schema": {"type": "string", "example": "Bearer realm=\"QC Tool API\""}
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"},
+            "example": {"status": "error", "code": "authentication_required", "message": "A Bearer API credential is required."}
+          }
+        }
+      },
+      "PermissionDenied": {
+        "description": "The PAT is valid, but either its issuance snapshot or its owner's current live access does not include the endpoint permission, or the owner cannot manage the target owner.",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"},
+            "example": {"status": "error", "code": "permission_denied", "message": "The account is not permitted to perform this action."}
+          }
+        }
+      },
+      "ObjectPermissionDenied": {
+        "description": "The PAT has the endpoint permission but the delivery or job is outside its effective object scope.",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"},
+            "example": {"status": "error", "code": "object_permission_denied", "message": "The account cannot access this job."}
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "The request JSON, identifier, path, endpoint, product, optional step selection, or delivery state is invalid.",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"},
+            "example": {"status": "error", "code": "invalid_json", "message": "The request body is not valid JSON."}
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The requested delivery, job, product, or generated artifact is unavailable.",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"},
+            "example": {"status": "error", "code": "not_found", "message": "The requested resource was not found."}
+          }
+        }
+      },
+      "RequestTooLarge": {
+        "description": "The JSON request body exceeds the endpoint's 16 KiB limit.",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"},
+            "example": {"status": "error", "code": "request_body_too_large", "message": "The request body exceeds the allowed size."}
+          }
+        }
       }
     },
     "schemas": {
-      "Delivery": {
-        "required": [
-          "id",
-          "name",
-          "filename",
-          "user",
-          "date_uploaded",
-          "size_bytes"
-        ],
+      "RegisterDeliveryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["uploaded_file"],
         "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "name": {
-            "type": "string"
-          },
-          "tag": {
-            "type": "string"
-          },
-          "filename": {
-            "type": "string"
-          },
-          "user": {
-            "type": "string"
-          },
-          "date_uploaded": {
-            "type": "string"
+          "uploaded_file": {
+            "type": "string",
+            "description": "ZIP filename or exact full path directly below the authenticated owner's incoming directory.",
+            "example": "example_delivery.zip"
           }
         }
+      },
+      "RegisterS3DeliveryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["host", "access_key", "secret_key", "bucketname", "key_prefix"],
+        "properties": {
+          "host": {"type": "string", "format": "uri", "description": "Exact administrator-allowlisted HTTPS S3 origin, without a path, query, fragment, or credentials.", "example": "https://s3.example.invalid"},
+          "access_key": {"type": "string", "writeOnly": true, "description": "S3 access key. Send only over HTTPS and never place it in a URL or log.", "example": "<s3-access-key>"},
+          "secret_key": {"type": "string", "writeOnly": true, "description": "S3 secret key. Send only over HTTPS and never place it in a URL or log.", "example": "<s3-secret-key>"},
+          "bucketname": {"type": "string", "description": "Existing bucket containing the delivery objects.", "example": "deliveries"},
+          "key_prefix": {"type": "string", "description": "Object prefix containing exactly one logical delivery.", "example": "2026/example-delivery"}
+        }
+      },
+      "CreateJobRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["delivery_id", "product_ident"],
+        "properties": {
+          "delivery_id": {"type": "integer", "minimum": 1, "description": "Positive delivery ID returned by GET /delivery-list.", "example": 123},
+          "product_ident": {"type": "string", "maxLength": 64, "description": "Exact identifier returned by GET /product-list.", "example": "clc2012"},
+          "skip_steps": {"type": "string", "maxLength": 100, "nullable": true, "description": "Optional comma-separated, one-based step numbers. Only optional checks may be skipped. Omit or send an empty string to run all checks.", "example": "8,9"}
+        }
+      },
+      "SubmitDeliveryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["delivery_id"],
+        "properties": {
+          "delivery_id": {"type": "integer", "minimum": 1, "description": "Positive delivery ID returned by GET /delivery-list.", "example": 123}
+        }
+      },
+      "StatusMessage": {
+        "type": "object",
+        "required": ["status", "message"],
+        "properties": {
+          "status": {"type": "string", "example": "ok"},
+          "message": {"type": "string", "example": "Operation completed successfully."}
+        }
+      },
+      "RegisterDeliveryResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/StatusMessage"},
+          {"type": "object", "required": ["delivery_id"], "properties": {"delivery_id": {"type": "integer", "minimum": 1, "example": 123}}}
+        ]
+      },
+      "CreateJobResponse": {
+        "type": "object",
+        "required": ["status", "message", "data"],
+        "properties": {
+          "status": {"type": "string", "example": "OK"},
+          "message": {"type": "string", "example": "QC job successfully created"},
+          "data": {
+            "type": "object",
+            "required": ["job_uuid"],
+            "properties": {"job_uuid": {"type": "string", "format": "uuid", "description": "Canonical, hyphenated identifier of the newly created job.", "example": "00000000-0000-0000-0000-000000000001"}}
+          }
+        }
+      },
+      "DeliveryListResponse": {
+        "type": "object",
+        "required": ["status", "message", "total", "offset", "limit", "next_offset", "deliveries"],
+        "properties": {
+          "status": {"type": "string", "example": "ok"},
+          "message": {"type": "string", "example": "list of deliveries successfully obtained"},
+          "total": {"type": "integer", "minimum": 0, "description": "All deliveries visible through this PAT's effective scope."},
+          "offset": {"type": "integer", "minimum": 0},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 1000},
+          "next_offset": {"type": "integer", "minimum": 0, "description": "Offset for the next request, or 0 when the current page is last."},
+          "deliveries": {"type": "array", "items": {"$ref": "#/components/schemas/Delivery"}}
+        }
+      },
+      "Delivery": {
+        "type": "object",
+        "required": ["id", "filename", "username", "date_uploaded", "size_bytes", "type"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "filename": {"type": "string"},
+          "username": {"type": "string", "description": "Owner username."},
+          "date_uploaded": {"type": "string", "format": "date-time"},
+          "size_bytes": {"type": "integer", "minimum": 0},
+          "product_ident": {"type": "string", "nullable": true},
+          "product_description": {"type": "string", "nullable": true},
+          "date_submitted": {"type": "string", "format": "date-time", "nullable": true},
+          "is_deleted": {"type": "boolean", "example": false},
+          "s3_id": {"type": "integer", "nullable": true},
+          "type": {"type": "string", "enum": ["local", "s3"]},
+          "last_job_uuid": {"type": "string", "format": "uuid", "nullable": true},
+          "date_created": {"type": "string", "format": "date-time", "nullable": true},
+          "date_started": {"type": "string", "format": "date-time", "nullable": true},
+          "last_job_status": {"type": "string", "nullable": true},
+          "user_country": {"type": "string", "nullable": true}
+        }
+      },
+      "ProductListResponse": {
+        "type": "object",
+        "required": ["products"],
+        "properties": {"products": {"type": "array", "items": {"$ref": "#/components/schemas/Product"}}}
       },
       "Product": {
-        "required": [
-          "product_ident",
-          "description"
-        ],
+        "type": "object",
+        "required": ["product_ident", "description"],
         "properties": {
-          "product_ident": {
-            "type": "string",
-            "example": "cz_2018"
-          },
-          "description": {
-            "type": "string",
-            "example": "Coastal Zones 2018 status"
-          }
+          "product_ident": {"type": "string", "example": "clc2012"},
+          "description": {"type": "string", "example": "Corine Land Cover 2012"}
         }
       },
-      "JobTemplate": {
+      "JobHistoryResponse": {
+        "type": "object",
+        "required": ["status", "message", "data"],
         "properties": {
-          "job_uuid": {
-            "type": "string",
-            "example": null
-          },
-          "status": {
-            "type": "string",
-            "example": "cz_2018"
-          },
-          "description": {
-            "type": "string",
-            "example": "Coastal Zones 2018 status"
-          },
-          "user_name": {
-            "type": "string"
-          },
-          "job_start_date": {
-            "type": "string",
-            "example": null
-          },
-          "job_finish_date": {
-            "type": "string",
-            "example": null
-          },
-          "filename": {
-            "type": "string"
-          },
-          "hash": {
-            "type": "string"
-          },
-          "reference_year": {
-            "type": "integer",
-            "example": 2018
-          },
-          "error_message": {
-            "type": "string"
-          },
-          "qc_tool_version": {
-            "type": "string"
-          },
-          "steps": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/JobStep"
-            }
-          }
+          "status": {"type": "string", "example": "OK"},
+          "message": {"type": "string", "example": "Job history of delivery id=123"},
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/JobHistoryItem"}}
         }
       },
-      "Job": {
-        "required": [
-          "job_uuid"
-        ],
+      "JobHistoryItem": {
+        "type": "object",
+        "required": ["job_uuid", "delivery_id", "date_created", "job_status", "product_ident", "product_description"],
         "properties": {
-          "job_uuid": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "status": {
-            "type": "string",
-            "example": "cz_2018"
-          },
-          "description": {
-            "type": "string",
-            "example": "Coastal Zones 2018 status"
-          },
-          "user_name": {
-            "type": "string"
-          },
-          "job_start_date": {
-            "type": "string"
-          },
-          "job_finish_date": {
-            "type": "string"
-          },
-          "filename": {
-            "type": "string"
-          },
-          "hash": {
-            "type": "string"
-          },
-          "reference_year": {
-            "type": "integer",
-            "example": 2018
-          },
-          "error_message": {
-            "type": "string"
-          },
-          "qc_tool_version": {
-            "type": "string"
-          },
-          "steps": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/JobStep"
-            }
-          }
+          "job_uuid": {"type": "string", "description": "Compact UUID without hyphens in the history response.", "example": "00000000000000000000000000000001"},
+          "delivery_id": {"type": "integer", "minimum": 1},
+          "date_created": {"type": "string", "format": "date-time"},
+          "date_started": {"type": "string", "format": "date-time", "nullable": true},
+          "date_finished": {"type": "string", "format": "date-time", "nullable": true},
+          "job_status": {"type": "string"},
+          "product_ident": {"type": "string"},
+          "product_description": {"type": "string"},
+          "skip_steps": {"type": "string", "nullable": true}
+        }
+      },
+      "JobReportEnvelope": {
+        "type": "object",
+        "required": ["status", "message", "data"],
+        "properties": {
+          "status": {"type": "string", "example": "ok"},
+          "message": {"type": "string", "example": "job status"},
+          "data": {"$ref": "#/components/schemas/JobReport"}
+        }
+      },
+      "JobReport": {
+        "type": "object",
+        "properties": {
+          "job_uuid": {"type": "string", "format": "uuid", "nullable": true},
+          "status": {"type": "string", "nullable": true},
+          "description": {"type": "string", "nullable": true},
+          "user_name": {"type": "string", "nullable": true},
+          "job_start_date": {"type": "string", "format": "date-time", "nullable": true},
+          "job_finish_date": {"type": "string", "format": "date-time", "nullable": true},
+          "filename": {"type": "string", "nullable": true},
+          "hash": {"type": "string", "nullable": true},
+          "reference_year": {"type": "integer", "nullable": true},
+          "error_message": {"type": "string", "nullable": true},
+          "qc_tool_version": {"type": "string", "nullable": true},
+          "steps": {"type": "array", "items": {"$ref": "#/components/schemas/JobStep"}}
         }
       },
       "JobStep": {
+        "type": "object",
+        "required": ["step_nr", "check_ident", "description", "required", "system"],
         "properties": {
-          "step_nr": {
-            "type": "integer",
-            "example": 1
-          },
-          "check_ident": {
-            "type": "string",
-            "example": "qc_tool.vector.unzip"
-          },
-          "description": {
-            "type": "string",
-            "example": "Delivery file can be unzipped"
-          },
-          "layers": {
-            "type": "array"
-          },
-          "required": {
-            "type": "boolean",
-            "example": true
-          },
-          "system": {
-            "type": "boolean",
-            "example": true
-          },
-          "status": {
-            "type": "string",
-            "example": "ok"
-          },
-          "messages": {
-            "type": "array"
-          },
-          "attachment_filenames": {
-            "type": "array"
-          }
+          "step_nr": {"type": "integer", "minimum": 1},
+          "check_ident": {"type": "string"},
+          "description": {"type": "string"},
+          "layers": {"type": "array", "nullable": true, "items": {}},
+          "required": {"type": "boolean"},
+          "system": {"type": "boolean"},
+          "status": {"type": "string", "nullable": true},
+          "messages": {"type": "array", "nullable": true, "items": {}},
+          "attachment_filenames": {"type": "array", "nullable": true, "items": {"type": "string"}}
         }
       },
       "Error": {
-        "required": [
-          "status",
-          "message"
-        ],
+        "type": "object",
+        "required": ["status", "message"],
         "properties": {
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "example": 400
-          },
-          "message": {
-            "type": "string"
-          }
+          "status": {"type": "string", "example": "error"},
+          "code": {"type": "string", "description": "Stable machine-readable reason when available.", "example": "permission_denied"},
+          "message": {"type": "string", "description": "Safe human-readable explanation."}
         }
       }
     }
   },
-  "security": [
-    {
-      "ApiKeyAuth": []
-    }
-  ],
+  "security": [{"PersonalAccessToken": []}],
   "externalDocs": {
-    "url": "https://github.com/eea/copernicus_quality_tools/wiki/CLMS-QC-Tool-API",
-    "description": "API guide on CLMS QC Tool Wiki"
+    "description": "QC Tool project documentation",
+    "url": "https://github.com/eea/copernicus_quality_tools/wiki"
   }
 }

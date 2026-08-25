@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.models import UserRegionGrant
@@ -18,7 +18,7 @@ MANAGED_MODELS = (
     get_user_model(),
     Group,
     UserProfile,
-    ApiUser,
+    PersonalAccessToken,
     UserRegionGrant,
     UserProductGrant,
 )

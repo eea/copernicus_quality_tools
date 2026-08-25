@@ -1,0 +1,428 @@
+/* Named API-token creation, scope disclosure, and lifecycle controls. */
+.account-credential-notice__icon {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: var(--qc-color-primary);
+  background: #fff;
+}
+
+.account-credential-notice__icon .ui-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.account-credential-notice h3,
+.account-token-create h3,
+.account-token-list-heading h3 {
+  margin: 0 0 5px;
+  color: var(--qc-color-navy);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.account-credential-notice a {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--qc-color-primary);
+  font-weight: 600;
+}
+
+.account-token-create {
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid var(--qc-color-border);
+  border-radius: var(--qc-radius-small);
+  background: var(--qc-color-canvas);
+}
+
+.account-token-create__heading {
+  margin-bottom: 18px;
+}
+
+.account-token-create__heading p,
+.account-token-list-heading p {
+  margin: 0;
+  color: var(--qc-color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.account-token-create__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.account-token-create .form-group {
+  margin-bottom: 0;
+}
+
+.account-token-create__actions {
+  margin-top: 18px;
+}
+
+.account-token-create__actions .btn,
+.account-token__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.account-token-create__actions .ui-icon,
+.account-token__actions .ui-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.account-token-list-heading {
+  margin: 28px 0 13px;
+}
+
+.account-token-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 12px;
+}
+
+.account-token {
+  padding: 18px;
+  border: 1px solid var(--qc-color-border);
+  border-radius: var(--qc-radius-small);
+  background: var(--qc-color-surface);
+}
+
+.account-token__topline {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-token__icon,
+.account-token-empty__icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--qc-color-primary);
+  background: var(--qc-color-primary-soft);
+}
+
+.account-token__icon .ui-icon,
+.account-token-empty__icon .ui-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.account-token__identity {
+  min-width: 0;
+}
+
+.account-token__identity h4 {
+  margin: 0 0 3px;
+  color: var(--qc-color-navy);
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.account-token__identity code {
+  padding: 0;
+  color: var(--qc-color-muted);
+  background: transparent;
+  font-size: 12px;
+}
+
+.account-token__legacy {
+  color: var(--qc-color-muted);
+  font-size: 12px;
+}
+
+.account-token__active {
+  display: inline-flex;
+  align-items: center;
+  color: var(--qc-color-success-dark);
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.account-token__active > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--qc-color-success);
+}
+
+.account-token__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 16px 0 0 54px;
+  gap: 12px;
+}
+
+.account-token__facts div,
+.account-token__scope-list div {
+  min-width: 0;
+}
+
+.account-token__facts dt,
+.account-token__scope-list dt {
+  margin-bottom: 3px;
+  color: var(--qc-color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-token__facts dd,
+.account-token__scope-list dd {
+  margin: 0;
+  color: var(--qc-color-text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.account-token__scope {
+  margin: 16px 0 0 54px;
+  border-top: 1px solid #e7edf6;
+  border-bottom: 1px solid #e7edf6;
+}
+
+.account-token__scope summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  color: var(--qc-color-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+  gap: 12px;
+}
+
+.account-token__scope summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-token__scope summary:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid rgba(8, 104, 215, 0.22);
+  outline-offset: 3px;
+}
+
+.account-token__scope summary .ui-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 150ms ease;
+}
+
+.account-token__scope[open] summary .ui-icon {
+  transform: rotate(180deg);
+}
+
+.account-token__scope-content {
+  padding: 2px 0 14px;
+}
+
+.account-token__scope-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  gap: 12px;
+}
+
+.account-token__tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 5px;
+}
+
+.account-token__tags li {
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #244466;
+  background: #eef4fb;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.account-token__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.account-token__actions form {
+  margin: 0;
+}
+
+.account-token__actions .btn-qc-danger-outline {
+  min-height: 38px;
+  padding: 8px 13px;
+  border-color: #efb5b0;
+  border-radius: var(--qc-radius-small);
+  color: var(--qc-color-danger);
+  background: var(--qc-color-surface);
+  font-weight: 600;
+}
+
+.account-token__actions .btn-qc-danger-outline:hover,
+.account-token__actions .btn-qc-danger-outline:focus {
+  border-color: var(--qc-color-danger);
+  color: var(--qc-color-danger-dark);
+  background: var(--qc-color-danger-soft);
+}
+
+.account-token__actions .btn-qc-danger-outline[disabled] {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.account-token-empty {
+  padding: 26px 18px;
+  border: 1px dashed #b8c9df;
+  border-radius: var(--qc-radius-small);
+  background: var(--qc-color-canvas);
+  text-align: center;
+}
+
+.account-token-empty__icon {
+  margin-bottom: 10px;
+}
+
+.account-token-empty h4 {
+  margin: 0 0 5px;
+  color: var(--qc-color-navy);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.account-token-empty p {
+  margin: 0;
+  color: var(--qc-color-muted);
+  font-size: 13px;
+}
+
+/* Native dialog keeps destructive confirmation keyboard- and screen-reader-safe. */
+.account-confirm-dialog {
+  width: min(calc(100% - 32px), 460px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--qc-radius-card);
+  color: var(--qc-color-text);
+  background: var(--qc-color-surface);
+  box-shadow: 0 24px 70px rgba(8, 27, 58, 0.24);
+}
+
+.account-confirm-dialog::backdrop {
+  background: rgba(8, 27, 58, 0.48);
+  backdrop-filter: blur(2px);
+}
+
+.account-confirm-dialog > form {
+  padding: 26px;
+  text-align: center;
+}
+
+.account-confirm-dialog__icon {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  color: var(--qc-color-danger);
+  background: var(--qc-color-danger-soft);
+}
+
+.account-confirm-dialog__icon .ui-icon {
+  width: 23px;
+  height: 23px;
+}
+
+.account-confirm-dialog h2 {
+  margin: 0 0 8px;
+  color: var(--qc-color-navy);
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.account-confirm-dialog p {
+  margin: 0;
+  color: var(--qc-color-muted);
+  line-height: 1.55;
+}
+
+.account-confirm-dialog__actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+  gap: 10px;
+}
+
+@media (max-width: 800px) {
+  .account-token__scope-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .account-token-create__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-token__topline {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .account-token__active {
+    grid-column: 2;
+  }
+
+  .account-token__facts,
+  .account-token__scope {
+    margin-left: 0;
+  }
+
+  .account-token__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-token__actions,
+  .account-token__actions form,
+  .account-token__actions .btn,
+  .account-token-create__actions .btn {
+    width: 100%;
+  }
+
+  .account-confirm-dialog > form {
+    padding: 23px 18px;
+  }
+
+  .account-confirm-dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .account-confirm-dialog__actions .btn {
+    width: 100%;
+  }
+}

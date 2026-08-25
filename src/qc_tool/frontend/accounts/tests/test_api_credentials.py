@@ -10,11 +10,12 @@ from django.urls import reverse
 from qc_tool.frontend.accounts.authentication.api_keys import (
     authenticate_api_key,
 )
-from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
-from qc_tool.frontend.accounts.authentication.api_keys import has_api_key
-from qc_tool.frontend.accounts.models import ApiUser
 from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
+)
+from qc_tool.frontend.accounts.models import PersonalAccessToken
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
 )
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
@@ -23,48 +24,113 @@ from qc_tool.frontend.accounts.services.role_permissions import (
 
 class ApiCredentialViewTests(TestCase):
     def setUp(self):
+        self.password = "correct horse battery staple"
         self.user = get_user_model().objects.create_user(
             username="credential-owner",
-            password="password",
+            password=self.password,
         )
-        self.rotate_url = reverse("api_credential_rotate")
-        self.revoke_url = reverse("api_credential_revoke")
+        self.create_url = reverse("api_token_create")
 
-    def test_anonymous_user_is_redirected_before_credential_operation(self):
-        response = self.client.post(self.rotate_url)
+    def delete_url(self, token):
+        return reverse("api_token_delete", args=(token.pk,))
+
+    def post_create(self, *, name="Desktop client", password=None, client=None):
+        return (client or self.client).post(
+            self.create_url,
+            {
+                "name": name,
+                "current_password": self.password
+                if password is None
+                else password,
+            },
+        )
+
+    def test_anonymous_user_is_redirected_before_token_operations(self):
+        response = self.post_create()
+        delete_url = reverse("api_token_delete", args=(999,))
+        delete_response = self.client.post(delete_url)
 
         self.assertRedirects(
             response,
-            f"{reverse('login')}?next={self.rotate_url}",
+            f"{reverse('login')}?next={self.create_url}",
             fetch_redirect_response=False,
         )
-        self.assertFalse(ApiUser.objects.filter(user=self.user).exists())
+        self.assertRedirects(
+            delete_response,
+            f"{reverse('login')}?next={delete_url}",
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(
+            PersonalAccessToken.objects.filter(user=self.user).exists()
+        )
 
-    def test_views_are_post_only_and_do_not_mutate_on_get(self):
+    def test_lifecycle_views_are_post_only_and_get_does_not_mutate(self):
+        self.client.force_login(self.user)
+        issued = issue_personal_access_token(self.user, "Existing")
+
+        create_response = self.client.get(self.create_url)
+        delete_response = self.client.get(self.delete_url(issued.token))
+
+        self.assertEqual(create_response.status_code, 405)
+        self.assertEqual(delete_response.status_code, 405)
+        self.assertTrue(
+            PersonalAccessToken.objects.filter(pk=issued.token.pk).exists()
+        )
+
+    def test_creation_requires_the_current_password(self):
         self.client.force_login(self.user)
 
-        for url in (self.rotate_url, self.revoke_url):
-            with self.subTest(url=url):
-                response = self.client.get(url)
-                self.assertEqual(response.status_code, 405)
-        self.assertFalse(ApiUser.objects.filter(user=self.user).exists())
+        for password in ("", "incorrect password"):
+            with self.subTest(password=password):
+                response = self.post_create(password=password)
+                self.assertEqual(response.status_code, 400)
+                self.assertTemplateUsed(
+                    response,
+                    "accounts/settings/index.html",
+                )
+                self.assertContains(response, "Current password", status_code=400)
+                self.assertNotContains(
+                    response,
+                    password or self.password,
+                    status_code=400,
+                )
+                self.assertContains(
+                    response,
+                    'aria-describedby="id_current_password_helptext '
+                    'id_current_password_error"',
+                    status_code=400,
+                )
+                self.assertEqual(
+                    response.content.count(
+                        b'id="id_current_password_error"'
+                    ),
+                    1,
+                )
 
-    def test_rotate_issues_one_time_secret_and_stores_only_digest(self):
+        self.assertFalse(
+            PersonalAccessToken.objects.filter(user=self.user).exists()
+        )
+
+    def test_create_displays_secret_once_and_stores_only_its_digest(self):
         self.client.force_login(self.user)
 
-        response = self.client.post(self.rotate_url)
+        response = self.post_create(name="Delivery automation")
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(
             response,
             "accounts/api_credentials/issued.html",
         )
-        raw_key = response.context["api_key"]
-        stored_value = ApiUser.objects.get(user=self.user).api_key
-        self.assertRegex(raw_key, re.compile(r"qct_[A-Za-z0-9_-]{43}\Z"))
-        self.assertRegex(stored_value, re.compile(r"sha256\$[0-9a-f]{64}\Z"))
-        self.assertNotEqual(stored_value, raw_key)
-        self.assertContains(response, raw_key)
+        raw_token = response.context["raw_token"]
+        token = PersonalAccessToken.objects.get(user=self.user)
+        self.assertRegex(raw_token, re.compile(r"qct_[A-Za-z0-9_-]{43}\Z"))
+        self.assertRegex(
+            token.secret_digest,
+            re.compile(r"sha256\$[0-9a-f]{64}\Z"),
+        )
+        self.assertEqual(token.name, "Delivery automation")
+        self.assertNotEqual(token.secret_digest, raw_token)
+        self.assertContains(response, raw_token)
         self.assertEqual(response["Cache-Control"], "private, no-store")
         self.assertEqual(response["Pragma"], "no-cache")
         self.assertEqual(response["Referrer-Policy"], "no-referrer")
@@ -72,61 +138,110 @@ class ApiCredentialViewTests(TestCase):
             response["X-Robots-Tag"],
             "noindex, nofollow, noarchive",
         )
-        self.assertNotIn(raw_key, self.client.session.values())
+        self.assertNotIn(raw_token, self.client.session.values())
+        self.assertContains(
+            response,
+            "Copy “Delivery automation” token now",
+        )
+        self.assertContains(response, "#api-token")
+        self.assertNotContains(response, "#key")
+        self.assertContains(response, reverse("api_homepage"))
+        self.assertContains(
+            response,
+            f'{reverse("account_settings")}#api-tokens',
+        )
 
-    def test_rotate_immediately_invalidates_previous_credential(self):
+        settings_response = self.client.get(reverse("account_settings"))
+        self.assertNotContains(settings_response, raw_token)
+        self.assertNotContains(settings_response, token.secret_digest)
+
+    def test_user_can_create_multiple_independently_named_tokens(self):
         self.client.force_login(self.user)
-        first = self.client.post(self.rotate_url).context["api_key"]
-        second = self.client.post(self.rotate_url).context["api_key"]
 
+        first_response = self.post_create(name="Automation")
+        second_response = self.post_create(name="Desktop")
+        first = first_response.context["raw_token"]
+        second = second_response.context["raw_token"]
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 200)
         self.assertNotEqual(first, second)
-        self.assertIsNone(authenticate_api_key(first))
+        self.assertEqual(
+            set(
+                PersonalAccessToken.objects.filter(user=self.user).values_list(
+                    "name",
+                    flat=True,
+                )
+            ),
+            {"Automation", "Desktop"},
+        )
+        self.assertEqual(authenticate_api_key(first), self.user)
         self.assertEqual(authenticate_api_key(second), self.user)
-        self.assertEqual(ApiUser.objects.filter(user=self.user).count(), 1)
 
-    def test_revoke_deletes_credential_and_uses_fixed_settings_redirect(self):
+    def test_duplicate_names_are_rejected_case_insensitively(self):
         self.client.force_login(self.user)
-        raw_key = self.client.post(self.rotate_url).context["api_key"]
+        first = self.post_create(name="Desktop")
 
-        response = self.client.post(
-            self.revoke_url,
+        duplicate = self.post_create(name=" desktop ")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(duplicate.status_code, 400)
+        self.assertContains(
+            duplicate,
+            "token names must be unique",
+            status_code=400,
+        )
+        self.assertEqual(
+            PersonalAccessToken.objects.filter(user=self.user).count(),
+            1,
+        )
+
+    def test_delete_is_owner_scoped_and_removes_only_the_selected_token(self):
+        other = get_user_model().objects.create_user(username="other-owner")
+        first = issue_personal_access_token(self.user, "First")
+        second = issue_personal_access_token(self.user, "Second")
+        foreign = issue_personal_access_token(other, "Foreign")
+        self.client.force_login(self.user)
+
+        forged = self.client.post(self.delete_url(foreign.token))
+
+        self.assertEqual(forged.status_code, 404)
+        self.assertTrue(
+            PersonalAccessToken.objects.filter(pk=foreign.token.pk).exists()
+        )
+
+        deleted = self.client.post(
+            self.delete_url(first.token),
             {"next": "https://attacker.example/"},
         )
 
         self.assertRedirects(
-            response,
-            reverse("account_settings"),
+            deleted,
+            f"{reverse('account_settings')}#api-tokens",
             fetch_redirect_response=False,
         )
-        self.assertFalse(has_api_key(self.user))
-        self.assertIsNone(authenticate_api_key(raw_key))
-        self.assertEqual(response["Cache-Control"], "private, no-store")
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertIsNone(authenticate_api_key(first.raw_token))
+        self.assertEqual(authenticate_api_key(second.raw_token), self.user)
+        self.assertEqual(authenticate_api_key(foreign.raw_token), other)
+        self.assertEqual(deleted["Cache-Control"], "private, no-store")
+        self.assertEqual(deleted["Referrer-Policy"], "no-referrer")
 
-    def test_issued_credential_returns_to_account_settings(self):
+    def test_permission_is_checked_before_create_or_delete(self):
+        issued = issue_personal_access_token(self.user, "Protected")
         self.client.force_login(self.user)
-
-        response = self.client.post(self.rotate_url)
-
-        self.assertContains(
-            response,
-            'href="{}#api-credential"'.format(reverse("account_settings")),
-        )
-
-    def test_permission_is_checked_before_issue_or_revoke(self):
-        self.client.force_login(self.user)
-        # Bypass the protected-default-role signal to exercise the decorator's
-        # fail-closed branch without login() saving and re-adding the role.
         self.user.groups.through.objects.filter(user_id=self.user.pk).delete()
         self.user.user_permissions.through.objects.filter(
             user_id=self.user.pk,
         ).delete()
 
-        for url in (self.rotate_url, self.revoke_url):
-            with self.subTest(url=url):
-                response = self.client.post(url)
-                self.assertEqual(response.status_code, 403)
-        self.assertFalse(ApiUser.objects.filter(user=self.user).exists())
+        create_response = self.post_create()
+        delete_response = self.client.post(self.delete_url(issued.token))
+
+        self.assertEqual(create_response.status_code, 403)
+        self.assertEqual(delete_response.status_code, 403)
+        self.assertTrue(
+            PersonalAccessToken.objects.filter(pk=issued.token.pk).exists()
+        )
 
     def test_direct_api_permission_has_a_complete_management_flow(self):
         self.client.force_login(self.user)
@@ -142,67 +257,95 @@ class ApiCredentialViewTests(TestCase):
         )
 
         settings_response = self.client.get(reverse("account_settings"))
-        issued_response = self.client.post(self.rotate_url)
+        issued_response = self.post_create(name="Direct permission")
 
         self.assertEqual(settings_response.status_code, 200)
-        self.assertContains(settings_response, 'id="api-credential"')
+        self.assertContains(settings_response, 'id="api-tokens"')
         self.assertNotContains(settings_response, "Profile details")
         self.assertEqual(issued_response.status_code, 200)
-        self.assertContains(
-            issued_response,
-            'href="{}#api-credential"'.format(reverse("account_settings")),
+        self.assertTrue(
+            PersonalAccessToken.objects.filter(user=self.user).exists()
         )
-        self.assertTrue(has_api_key(self.user))
 
-    def test_settings_get_does_not_lazily_create_or_expose_a_credential(self):
+    def test_settings_lists_safe_named_token_metadata_without_secret_digest(self):
+        escaped_name = '<script>alert("token")</script>'
+        issued = issue_personal_access_token(self.user, escaped_name)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("account_settings"))
+
+        issued.token.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="api-tokens"')
+        self.assertContains(response, "1 active token")
+        self.assertContains(
+            response,
+            "&lt;script&gt;alert(&quot;token&quot;)&lt;/script&gt;",
+        )
+        self.assertNotContains(response, escaped_name)
+        self.assertNotContains(response, issued.raw_token)
+        self.assertNotContains(response, issued.token.secret_digest)
+        self.assertContains(response, issued.token.token_hint)
+        self.assertContains(response, self.delete_url(issued.token))
+        self.assertContains(response, "accounts/css/api-tokens.css")
+        self.assertContains(response, "#api-token")
+        self.assertNotContains(response, "#key")
+        self.assertContains(response, reverse("api_homepage"))
+        self.assertContains(response, "Created")
+        self.assertContains(response, "Last used")
+        self.assertContains(response, "Never")
+        self.assertContains(response, "View access copied at creation")
+        self.assertContains(response, "Run quality checks")
+        self.assertContains(response, "data-confirm-submit")
+        self.assertContains(response, 'id="account-confirm-dialog"')
+
+    def test_settings_get_does_not_lazily_create_a_token(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("account_settings"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(ApiUser.objects.filter(user=self.user).exists())
-        self.assertContains(response, "Not configured")
+        self.assertFalse(
+            PersonalAccessToken.objects.filter(user=self.user).exists()
+        )
+        self.assertContains(response, "0 active tokens")
         self.assertContains(response, "Create token")
+        self.assertContains(response, "Current password")
         self.assertNotContains(response, "qct_")
 
-    def test_settings_shows_only_configured_status_for_existing_credential(self):
-        raw_key = "qct_" + ("S" * 43)
-        stored_digest = digest_api_key(raw_key)
-        ApiUser.objects.create(user=self.user, api_key=stored_digest)
-        self.client.force_login(self.user)
-
-        response = self.client.get(reverse("account_settings"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Configured")
-        self.assertContains(response, "Rotate token")
-        self.assertContains(response, "Revoke token")
-        self.assertNotContains(response, raw_key)
-        self.assertNotContains(response, stored_digest)
-        self.assertEqual(
-            ApiUser.objects.get(user=self.user).api_key,
-            stored_digest,
-        )
-
-    def test_csrf_is_required_for_rotate_and_revoke(self):
+    def test_csrf_is_required_for_create_and_delete(self):
+        token = issue_personal_access_token(self.user, "CSRF protected").token
         csrf_client = Client(enforce_csrf_checks=True)
         csrf_client.force_login(self.user)
 
-        for url in (self.rotate_url, self.revoke_url):
-            with self.subTest(url=url):
-                response = csrf_client.post(url)
-                self.assertEqual(response.status_code, 403)
+        create_response = self.post_create(client=csrf_client)
+        delete_response = csrf_client.post(self.delete_url(token))
 
-    def test_valid_csrf_token_allows_rotation(self):
+        self.assertEqual(create_response.status_code, 403)
+        self.assertEqual(delete_response.status_code, 403)
+        self.assertTrue(
+            PersonalAccessToken.objects.filter(pk=token.pk).exists()
+        )
+
+    def test_valid_csrf_token_allows_creation(self):
         csrf_client = Client(enforce_csrf_checks=True)
         csrf_client.force_login(self.user)
         csrf_token = _get_new_csrf_string()
         csrf_client.cookies["csrftoken"] = csrf_token
 
         response = csrf_client.post(
-            self.rotate_url,
+            self.create_url,
+            {
+                "name": "CSRF-authorized",
+                "current_password": self.password,
+            },
             HTTP_X_CSRFTOKEN=csrf_token,
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(has_api_key(self.user))
+        self.assertTrue(
+            PersonalAccessToken.objects.filter(
+                user=self.user,
+                name="CSRF-authorized",
+            ).exists()
+        )

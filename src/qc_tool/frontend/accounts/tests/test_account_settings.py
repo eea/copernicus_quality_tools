@@ -7,12 +7,14 @@ from django.test import Client
 from django.test import TestCase
 from django.urls import reverse
 
-from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
 from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
 )
 from qc_tool.frontend.accounts.forms import AccountProfileForm
-from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.models import PersonalAccessToken
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
 )
@@ -96,8 +98,9 @@ class AccountSettingsViewTests(TestCase):
         self.assertContains(response, 'name="first_name"')
         self.assertContains(response, 'name="last_name"')
         self.assertContains(response, 'name="email"')
-        self.assertContains(response, 'id="api-credential"')
-        self.assertContains(response, "Not configured")
+        self.assertContains(response, 'id="api-tokens"')
+        self.assertContains(response, "0 active tokens")
+        self.assertContains(response, "No active tokens")
         self.assertContains(response, "Create token")
         self.assertNotContains(response, "qct_")
         self.assertEqual(response["Cache-Control"], "private, no-store")
@@ -224,7 +227,7 @@ class AccountSettingsViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Profile details")
-        self.assertNotContains(response, 'id="api-credential"')
+        self.assertNotContains(response, 'id="api-tokens"')
 
     def test_api_permission_alone_opens_only_token_settings(self):
         self.client.force_login(self.user)
@@ -236,7 +239,7 @@ class AccountSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Profile details")
         self.assertNotContains(response, 'name="first_name"')
-        self.assertContains(response, 'id="api-credential"')
+        self.assertContains(response, 'id="api-tokens"')
         self.assertContains(response, "Create token")
 
     def test_api_only_account_cannot_post_profile_fields(self):
@@ -297,16 +300,17 @@ class AccountSettingsViewTests(TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, "Existing")
 
-    def test_configured_credential_shows_status_without_secret_or_digest(self):
-        raw_key = "qct_" + ("S" * 43)
-        stored_digest = digest_api_key(raw_key)
-        ApiUser.objects.create(user=self.user, api_key=stored_digest)
+    def test_named_token_shows_status_without_secret_or_digest(self):
+        issued = issue_personal_access_token(self.user, "Weather service")
+        stored_digest = PersonalAccessToken.objects.get(
+            pk=issued.token.pk,
+        ).secret_digest
         self.client.force_login(self.user)
 
         response = self.client.get(self.url)
 
-        self.assertContains(response, "Configured")
-        self.assertContains(response, "Rotate token")
-        self.assertContains(response, "Revoke token")
-        self.assertNotContains(response, raw_key)
+        self.assertContains(response, "1 active token")
+        self.assertContains(response, "Weather service")
+        self.assertContains(response, "Delete token")
+        self.assertNotContains(response, issued.raw_token)
         self.assertNotContains(response, stored_digest)
