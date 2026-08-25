@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-from pathlib import Path
 from uuid import uuid4
 
 import django.db.models as models
@@ -9,6 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 
 
+from qc_tool.aoi import AOI_CODE_MAX_LENGTH
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
@@ -99,28 +99,30 @@ class Delivery(models.Model):
         app_label = "dashboard"
         verbose_name = "Delivery"
         verbose_name_plural = "Deliveries"
+        indexes = (
+            models.Index(fields=("aoi_code",), name="dash_delivery_aoi_idx"),
+        )
 
     def __str__(self):
         return "User: {:s} | File: {:s}".format(self.user.username, self.filename)
 
     def create_job(self, product_ident, skip_steps):
+        from qc_tool.frontend.dashboard.services.aoi import create_delivery_job
 
-        job = Job()
-        job.date_created = timezone.now()
-        job.job_status = JOB_WAITING
-        job.product_ident = product_ident
-        job.product_description = find_product_description(product_ident)
-        job.skip_steps = skip_steps
-        job.delivery = self
-        job.save()
-
-        # Also update delivery-level default product ident and product description.
-        self.product_ident = job.product_ident
-        self.product_description = job.product_description
-        self.save()
+        job = create_delivery_job(
+            self,
+            product_ident=product_ident,
+            product_description=find_product_description(product_ident),
+            skip_steps=skip_steps,
+        )
 
         # Return formatted uuid of the newly created job
         return str(job.job_uuid).lower().replace("-", "")
+
+    def sync_from_latest_job(self):
+        from qc_tool.frontend.dashboard.services.aoi import refresh_delivery_projection
+
+        return refresh_delivery_projection(self)
 
     def get_submittable_job(self):
         """Return the latest job only when the delivery is ready to submit.
@@ -156,6 +158,14 @@ class Delivery(models.Model):
     date_submitted = models.DateTimeField(blank=True, null=True)
     product_ident = models.CharField(max_length=64, default=None, blank=True, null=True)
     product_description = models.CharField(max_length=500, default=None, blank=True, null=True)
+    aoi_code = models.CharField(
+        max_length=AOI_CODE_MAX_LENGTH,
+        default=None,
+        blank=True,
+        null=True,
+        editable=False,
+        help_text="Canonical AOI code projected from the latest delivery job.",
+    )
     is_deleted = models.BooleanField(default=False)
     s3 = models.ForeignKey(S3Info, null=True, on_delete=models.CASCADE)
 
@@ -163,15 +173,22 @@ class Delivery(models.Model):
 class Job(models.Model):
     class Meta:
         app_label = "dashboard"
+        indexes = (
+            models.Index(fields=("aoi_code",), name="dash_job_aoi_idx"),
+        )
 
     def __str__(self):
         return "{0} | {1} | {2}".format(str(self.job_uuid), self.delivery.filename, self.job_status)
 
+    def apply_result_metadata(self, job_result):
+        from qc_tool.frontend.dashboard.services.aoi import apply_result_aoi
+
+        return apply_result_aoi(self, job_result)
+
     def update_status(self, job_status):
-        self.job_status = job_status
-        if job_status not in (JOB_WAITING, JOB_RUNNING):
-            self.date_finished = timezone.now()
-        self.save()
+        from qc_tool.frontend.dashboard.services.aoi import update_job_status
+
+        update_job_status(self, job_status)
 
     job_uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     delivery = models.ForeignKey(Delivery, on_delete=models.CASCADE)
@@ -181,5 +198,13 @@ class Job(models.Model):
     job_status = models.CharField(max_length=64, default=JOB_WAITING)
     product_ident = models.CharField(max_length=64)
     product_description = models.CharField(max_length=500)
+    aoi_code = models.CharField(
+        max_length=AOI_CODE_MAX_LENGTH,
+        default=None,
+        blank=True,
+        null=True,
+        editable=False,
+        help_text="Canonical AOI code reported by the delivery job result.",
+    )
     skip_steps = models.CharField(max_length=100, default=None, blank=True, null=True)
     worker_url = models.CharField(max_length=500, default=None, blank=True, null=True)

@@ -84,10 +84,13 @@ from qc_tool.frontend.dashboard.services.api import api_documentation_context
 from qc_tool.frontend.dashboard.services.api import openapi_document
 from qc_tool.frontend.dashboard.services.api import read_json_object
 from qc_tool.frontend.dashboard.services.jobs import JobRequestError
+from qc_tool.frontend.dashboard.services.jobs import JobDeletionError
+from qc_tool.frontend.dashboard.services.jobs import delete_jobs_and_reproject
 from qc_tool.frontend.dashboard.services.jobs import parse_batch_job_creation_request
 from qc_tool.frontend.dashboard.services.jobs import parse_job_creation_request
 from qc_tool.frontend.dashboard.services.jobs import positive_identifier
 from qc_tool.frontend.dashboard.services.jobs import serialize_job_history
+from qc_tool.frontend.dashboard.services.jobs import serialize_job_report
 from qc_tool.frontend.dashboard.services.uploads import DeliveryUploadPathError
 from qc_tool.frontend.dashboard.services.uploads import ResumableUploadDescriptor
 from qc_tool.frontend.dashboard.services.uploads import ResumableUploadError
@@ -396,7 +399,10 @@ def api_job_result(request, job_uuid):
     if not can_view_job(request.api_access, job):
         return _api_object_permission_denied("job")
 
-    job_report = compile_job_report_data(job_uuid, job.product_ident)
+    job_report = serialize_job_report(
+        compile_job_report_data(job_uuid, job.product_ident),
+        job,
+    )
     response_data = {"status": "ok", "message": "job status", "data": job_report}
     return JsonResponse(response_data, safe=False)
 
@@ -718,6 +724,7 @@ def query_deliveries(
         "size_bytes": "d.size_bytes",
         "product_ident": "d.product_ident",
         "product_description": "d.product_description",
+        "aoi_code": "d.aoi_code",
         "date_submitted": "d.date_submitted",
         "is_deleted": "d.is_deleted",
         "product_ident": "d.product_ident",
@@ -754,7 +761,8 @@ def query_deliveries(
     sql = """
         SELECT d.id, d.user_id AS action_owner_id, d.filename, u.username,
         d.date_uploaded, d.size_bytes,
-        d.product_ident, d.product_description, d.date_submitted, d.is_deleted,
+        d.product_ident, d.product_description, d.aoi_code,
+        d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,
         j.date_created, j.date_started, j.job_status as last_job_status,
@@ -793,7 +801,9 @@ def query_deliveries(
         visibility_clauses = ["d.user_id = %s"]
         visibility_params.append(user.id)
         if account_access.can_view_region_deliveries:
-            # Compatibility until deliveries reference AOIs directly.
+            # AOI metadata is uploader-influenced until every product has an
+            # authoritative spatial validator. Keep authorization on the
+            # existing legacy region contract during that trust transition.
             region_codes = sorted(account_access.region_codes)
             placeholders = ", ".join(["%s"] * len(region_codes))
             visibility_clauses.append(
@@ -1238,44 +1248,16 @@ def job_delete(request):
             status=400,
         )
 
-    jobs = list(
-        models.Job.objects.filter(job_uuid__in=job_uuids).select_related(
-            "delivery"
+    try:
+        deleted_count = delete_jobs_and_reproject(
+            job_uuids,
+            access_for_request(request),
         )
-    )
-    if len(jobs) != len(job_uuids):
+    except JobDeletionError as exc:
         return JsonResponse(
-            {
-                "status": "error",
-                "code": "job_not_found",
-                "message": "One or more selected jobs do not exist.",
-            },
-            status=404,
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=exc.status_code,
         )
-
-    account_access = access_for_request(request)
-    if any(not account_access.can_manage_user(job.delivery.user_id) for job in jobs):
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "object_permission_denied",
-                "message": "The account cannot delete one or more selected jobs.",
-            },
-            status=403,
-        )
-    if any(job.job_status == JOB_RUNNING for job in jobs):
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": "job_is_running",
-                "message": "A running QC job cannot be deleted.",
-            },
-            status=409,
-        )
-
-    deleted_count, _details = models.Job.objects.filter(
-        job_uuid__in=job_uuids
-    ).delete()
     return JsonResponse(
         {
             "status": "ok",
@@ -1662,7 +1644,10 @@ def get_result(request, job_uuid):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
     delivery = job.delivery
-    job_report = compile_job_report_data(job_uuid, job.product_ident)
+    job_report = serialize_job_report(
+        compile_job_report_data(job_uuid, job.product_ident),
+        job,
+    )
 
     # if job status is not set in the report then try get status from the DB table (case of TIMEOUT or LOST)
     if job_report.get("status") is None:
@@ -1700,7 +1685,10 @@ def get_pdf_report(request, job_uuid):
 def get_job_report(request, job_uuid):
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
-    job_result = compile_job_report_data(job_uuid, job.product_ident)
+    job_result = serialize_job_report(
+        compile_job_report_data(job_uuid, job.product_ident),
+        job,
+    )
     return JsonResponse(job_result, safe=False)
 
 

@@ -82,7 +82,9 @@ visible delivery =
 - Product grants use canonical product-definition identifiers.
 - Region grants currently store exact, opaque AOI codes.
 - The current delivery-region resolver still reads the uploader's legacy
-  profile country while AOI-on-delivery work is completed.
+  profile country. `Delivery.aoi_code` now exists, but remains reported
+  metadata until every supported product has authoritative spatial AOI
+  validation; see [AOI metadata](aoi-metadata.md).
 - A grant without its permission is inert.
 - A permission without a grant is inert.
 

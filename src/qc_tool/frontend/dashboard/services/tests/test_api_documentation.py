@@ -99,6 +99,19 @@ class ApiDocumentationContractTests(SimpleTestCase):
         self.assertIn("shown once", scheme["description"])
         self.assertIn("Delete tokens individually", scheme["description"])
 
+    def test_job_and_delivery_schemas_always_expose_nullable_canonical_aoi(self):
+        schemas = openapi_document("https://qc.example.test/api")[
+            "components"
+        ]["schemas"]
+
+        for schema_name in ("Delivery", "JobHistoryItem", "JobReport"):
+            with self.subTest(schema=schema_name):
+                schema = schemas[schema_name]
+                self.assertIn("aoi_code", schema["required"])
+                aoi_schema = schema["properties"]["aoi_code"]
+                self.assertTrue(aoi_schema["nullable"])
+                self.assertEqual(aoi_schema["maxLength"], 255)
+
     def test_every_local_openapi_reference_resolves(self):
         document = openapi_document("https://qc.example.test/api")
 

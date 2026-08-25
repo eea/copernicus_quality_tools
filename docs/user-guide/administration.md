@@ -70,9 +70,11 @@ Region grants currently store exact opaque AOI codes and do not normalize or
 validate against a catalogue. Each value is unique per user. Assign the related
 Additional QC permission separately.
 
-The delivery-side region value is temporarily resolved from the uploader's
-legacy profile country. Do not treat that field as the final generalized AOI
-model.
+The delivery-side region value is still resolved from the uploader's legacy
+profile country. Jobs and deliveries now record canonical AOI reporting
+metadata, but it is not an authorization fact until every supported product
+has authoritative spatial validation. See
+[AOI metadata](../architecture/aoi-metadata.md) for that trust boundary.
 
 ## Deactivate instead of delete
 

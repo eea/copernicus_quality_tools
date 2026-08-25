@@ -29,6 +29,7 @@ sequenceDiagram
     Worker->>Store: Read delivery and pinned boundaries
     Worker->>Worker: Run configured QC steps
     Worker->>Store: Write JSON, PDF, logs, attachments
+    UI->>DB: Persist terminal Job AOI and project latest AOI to Delivery
     UI->>Store: Read result for authorized user
 ```
 
@@ -36,6 +37,8 @@ Resumable metadata is validated before filesystem use. Upload identifiers map
 to opaque storage keys, path components are confined, chunks have explicit
 limits, and assembly rechecks the layout under a lock. Database creation occurs
 after a complete file is published; failed creation removes the orphaned file.
+Canonical AOI metadata is stored only after a terminal result is available;
+see [AOI metadata](aoi-metadata.md) for aliases, projection, and trust rules.
 
 ## S3 delivery
 

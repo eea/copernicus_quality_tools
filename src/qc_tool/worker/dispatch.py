@@ -12,6 +12,7 @@ from sys import exc_info
 from signal import signal, alarm, SIGALRM
 from time import time
 
+from qc_tool.aoi import AOI_CODE_KEY
 from qc_tool.common import get_qc_tool_version, validate_skip_steps
 from qc_tool.common import CONFIG
 from qc_tool.common import copy_product_definition_to_job
@@ -29,6 +30,8 @@ from qc_tool.common import TIME_FORMAT
 from qc_tool.common import store_job_result
 from qc_tool.common import get_timeout
 from qc_tool.worker.report import generate_pdf_report
+from qc_tool.worker.aoi import merge_step_aoi_metadata
+from qc_tool.worker.status import CheckStatus
 from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
 from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
@@ -112,6 +115,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                       "job_start_date": datetime.utcnow().strftime(TIME_FORMAT),
                       "filename": filepath.name,
                       "report_filename": job_report_filepath.name,
+                      AOI_CODE_KEY: None,
                       "error_message": None,
                       "qc_tool_version": get_qc_tool_version(),
                       "steps": []}
@@ -209,6 +213,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                         check_status.failed("The check has failed due to a timeout "
                                              "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
 
+                merge_step_aoi_metadata(job_params, check_status)
+
                 step_result["status"] = check_status.status
                 step_result["messages"] = check_status.messages
                 step_result["attachment_filenames"] = check_status.attachment_filenames.copy()
@@ -278,65 +284,3 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
             log.info("Job report has been generated.")
 
     return job_result
-
-
-class CheckStatus():
-    def __init__(self):
-        self.status = "ok"
-        self.messages = []
-        self.error_table_infos = []
-        self.full_table_names = []
-        self.attachment_filenames = []
-        self.params = {}
-        self.status_properties = {}
-
-    def aborted(self, message):
-        self.messages.append(message)
-        self.status = "aborted"
-
-    def failed(self, message):
-        self.messages.append(message)
-        if self.status != "aborted":
-            self.status = "failed"
-
-    def cancelled(self, message):
-        self.messages.append(message)
-        if self.status not in ("aborted", "failed"):
-            self.status = "cancelled"
-
-    def info(self, message):
-        self.messages.append(message)
-
-    def is_aborted(self):
-        return self.status == "aborted"
-
-    def add_error_table(self, error_table_name, src_table_name, pg_fid_name):
-        self.error_table_infos.append((error_table_name, src_table_name, pg_fid_name))
-
-    def add_full_table(self, table_name):
-        self.full_table_names.append(table_name)
-
-    def add_attachment(self, filename):
-        self.attachment_filenames.append(filename)
-
-    def add_params(self, params_dict):
-        self.params.update(params_dict)
-
-    def set_status_property(self, key, value):
-        self.status_properties[key] = value
-
-    def __repr__(self):
-        members_tpl = ("status={:s}"
-                       ", messages={:s}"
-                       ", error_table_infos={:s}"
-                       ", attachment_filenames={:s}"
-                       ", params={:s}"
-                       ", status_properties={:s}")
-        members = members_tpl.format(repr(self.status),
-                                     repr(self.messages),
-                                     repr(self.error_table_infos),
-                                     repr(self.attachment_filenames),
-                                     repr(self.params),
-                                     repr(self.status_properties))
-        ret = "{:s}({:s})".format(self.__class__.__name__, members)
-        return ret

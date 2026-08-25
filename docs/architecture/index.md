@@ -95,5 +95,6 @@ Continue with:
 
 - [Repository layout](repository-layout.md)
 - [Delivery and job flow](data-and-job-flow.md)
+- [AOI metadata](aoi-metadata.md)
 - [Authentication and authorization](authentication-and-authorization.md)
 - [Development guide](../development/index.md)

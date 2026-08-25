@@ -416,6 +416,7 @@ def prepare_job_blueprint(product_definition):
                   "status": None,
                   "product_ident": product_definition["product_ident"],
                   "description": product_definition["description"],
+                  "aoi_code": None,
                   "user_name": None,
                   "job_start_date": None,
                   "job_finish_date": None,

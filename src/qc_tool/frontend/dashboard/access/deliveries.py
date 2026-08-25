@@ -46,6 +46,8 @@ def delivery_action_capabilities(account_access, owner_id):
 def _region_scope_matches(account_access, delivery):
     if not account_access.can_view_region_deliveries:
         return False
+    # Canonical AOI persistence currently records reported naming metadata;
+    # authorization remains on the legacy trusted region seam by design.
     return legacy_delivery_region_code(delivery) in account_access.region_codes
 
 

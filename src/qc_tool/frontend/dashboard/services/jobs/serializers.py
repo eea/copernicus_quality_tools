@@ -1,4 +1,6 @@
-"""Explicit public projections for job records."""
+"""Explicit public projections for job records and reports."""
+
+from qc_tool.aoi import is_aoi_input_alias
 
 
 def serialize_job_history(jobs, *, compact_uuid=False):
@@ -18,10 +20,27 @@ def serialize_job_history(jobs, *, compact_uuid=False):
             "job_status": job.job_status,
             "product_ident": job.product_ident,
             "product_description": job.product_description,
+            "aoi_code": job.aoi_code,
             "skip_steps": job.skip_steps,
         }
         for job in jobs
     ]
+
+
+def serialize_job_report(job_report, job):
+    """Return a report with the persisted Job AOI as authoritative metadata."""
+
+    serialized = (
+        {
+            key: value
+            for key, value in job_report.items()
+            if not is_aoi_input_alias(key)
+        }
+        if isinstance(job_report, dict)
+        else {}
+    )
+    serialized["aoi_code"] = job.aoi_code
+    return serialized
 
 
 def _job_uuid(value, *, compact):

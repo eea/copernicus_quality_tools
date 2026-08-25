@@ -139,7 +139,7 @@
             "description": "Delivery property used for ordering. Unknown values safely fall back to id.",
             "schema": {
               "type": "string",
-              "enum": ["id", "filename", "date_uploaded", "size_bytes", "product_ident", "product_description", "date_submitted", "last_job_status", "username"],
+              "enum": ["id", "filename", "date_uploaded", "size_bytes", "product_ident", "product_description", "aoi_code", "date_submitted", "last_job_status", "username"],
               "default": "id"
             },
             "example": "date_uploaded"
@@ -523,7 +523,7 @@
       },
       "Delivery": {
         "type": "object",
-        "required": ["id", "filename", "username", "date_uploaded", "size_bytes", "type"],
+        "required": ["id", "filename", "username", "date_uploaded", "size_bytes", "type", "aoi_code"],
         "properties": {
           "id": {"type": "integer", "minimum": 1},
           "filename": {"type": "string"},
@@ -532,6 +532,7 @@
           "size_bytes": {"type": "integer", "minimum": 0},
           "product_ident": {"type": "string", "nullable": true},
           "product_description": {"type": "string", "nullable": true},
+          "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code projected from the latest QC job. Product-specific input aliases are never exposed."},
           "date_submitted": {"type": "string", "format": "date-time", "nullable": true},
           "is_deleted": {"type": "boolean", "example": false},
           "s3_id": {"type": "integer", "nullable": true},
@@ -567,7 +568,7 @@
       },
       "JobHistoryItem": {
         "type": "object",
-        "required": ["job_uuid", "delivery_id", "date_created", "job_status", "product_ident", "product_description"],
+        "required": ["job_uuid", "delivery_id", "date_created", "job_status", "product_ident", "product_description", "aoi_code"],
         "properties": {
           "job_uuid": {"type": "string", "description": "Compact UUID without hyphens in the history response.", "example": "00000000000000000000000000000001"},
           "delivery_id": {"type": "integer", "minimum": 1},
@@ -577,6 +578,7 @@
           "job_status": {"type": "string"},
           "product_ident": {"type": "string"},
           "product_description": {"type": "string"},
+          "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code reported by this job, or null when unavailable or ambiguous."},
           "skip_steps": {"type": "string", "nullable": true}
         }
       },
@@ -591,10 +593,12 @@
       },
       "JobReport": {
         "type": "object",
+        "required": ["aoi_code"],
         "properties": {
           "job_uuid": {"type": "string", "format": "uuid", "nullable": true},
           "status": {"type": "string", "nullable": true},
           "description": {"type": "string", "nullable": true},
+          "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code reported by the job, or null when unavailable or ambiguous."},
           "user_name": {"type": "string", "nullable": true},
           "job_start_date": {"type": "string", "format": "date-time", "nullable": true},
           "job_finish_date": {"type": "string", "format": "date-time", "nullable": true},
