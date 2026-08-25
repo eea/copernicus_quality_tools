@@ -3,10 +3,30 @@
 
 
 import re
+import os
 
 
 DESCRIPTION = "Attribute table is composed of prescribed attributes."
 IS_SYSTEM = False
+
+
+def clean_csvt_file(filepath):
+    """Trims trailing whitespace and empty lines from a .csvt file."""
+    csvt_path = os.path.splitext(filepath)[0] + ".csvt"
+    if os.path.exists(csvt_path):
+        try:
+            with open(csvt_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Strip trailing whitespace/newlines and trailing commas if present
+            cleaned_content = content.strip()
+
+            # Overwrite only if changes are detected
+            if cleaned_content != content:
+                with open(csvt_path, "w", encoding="utf-8") as f:
+                    f.write(cleaned_content)
+        except Exception:
+            pass  # Fallback gracefully if permissions or file locks prevent editing
 
 
 def run_check(params, status):
@@ -45,6 +65,11 @@ def run_check(params, status):
             return
 
     for layer_def in do_layers(params):
+        src_filepath = str(layer_def["src_filepath"])
+
+        # Sanitization step for .csvt files before GDAL opens the layer
+        clean_csvt_file(src_filepath)
+
         # ds = ogr.Open(str(layer_def["src_filepath"]))
         ds = OpenEx(str(layer_def["src_filepath"]), 0, open_options=["AUTODETECT_TYPE=YES", "SEPARATOR=SEMICOLON"])
         layer = ds.GetLayerByName(layer_def["src_layer_name"])
