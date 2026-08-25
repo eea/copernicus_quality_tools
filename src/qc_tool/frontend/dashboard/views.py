@@ -75,6 +75,9 @@ from qc_tool.frontend.dashboard.services.configuration import AnnouncementStorag
 from qc_tool.frontend.dashboard.services.configuration import read_announcement
 from qc_tool.frontend.dashboard.services.configuration import write_announcement
 from qc_tool.frontend.dashboard.services.deliveries import summarize_deliveries
+from qc_tool.frontend.dashboard.services.workspace_dashboard import (
+    build_workspace_dashboard,
+)
 from qc_tool.frontend.dashboard.services.exports import spreadsheet_cell_value
 from qc_tool.frontend.dashboard.services.api import JsonRequestError
 from qc_tool.frontend.dashboard.services.api import api_documentation_context
@@ -473,15 +476,32 @@ def _api_object_permission_denied(object_name):
 
 
 def dashboard_home(request):
-    """Render a concise starting point for the authenticated workspace."""
+    """Render an access-scoped overview of the authenticated workspace."""
 
     account_access = access_for_request(request)
     product_catalog, product_catalog_available = _workspace_product_catalog()
     boundary_version = get_boundary_version()
+    dashboard = build_workspace_dashboard(account_access)
     token_count = (
         request.user.personal_access_tokens.count()
         if account_access.can_manage_api_credential
         else None
+    )
+    has_dashboard_attention = bool(
+        dashboard.summary.qc_failed
+        or dashboard.summary.unknown_status
+        or (
+            account_access.can_run_qc
+            and dashboard.summary.not_checked
+        )
+        or (
+            settings.SUBMISSION_ENABLED
+            and account_access.can_submit
+            and dashboard.summary.ready_to_submit
+        )
+        or not product_catalog_available
+        or boundary_version == "Unavailable"
+        or token_count == 0
     )
     return render(
         request,
@@ -490,9 +510,11 @@ def dashboard_home(request):
             "announcement": get_announcement_message(),
             "boundary_version": boundary_version,
             "boundary_version_available": boundary_version != "Unavailable",
-            "delivery_summary": summarize_deliveries(account_access),
+            "dashboard": dashboard,
+            "has_dashboard_attention": has_dashboard_attention,
             "product_catalog_available": product_catalog_available,
             "product_count": len(product_catalog),
+            "submission_enabled": settings.SUBMISSION_ENABLED,
             "token_count": token_count,
         },
     )
@@ -1263,6 +1285,8 @@ def job_delete(request):
 
 
 def submit_delivery_to_eea(request):
+    if not settings.SUBMISSION_ENABLED:
+        return _submission_disabled_response()
     if request.method == "POST":
         try:
             delivery_id = parse_positive_identifier_list(
@@ -1348,6 +1372,8 @@ def submit_delivery_to_eea(request):
 
 
 def submit_deliveries_to_eea_batch(request):
+    if not settings.SUBMISSION_ENABLED:
+        return _submission_disabled_response()
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
@@ -1428,6 +1454,8 @@ def submit_deliveries_to_eea_batch(request):
 
 
 def api_submit_delivery_to_eea(request):
+    if not settings.SUBMISSION_ENABLED:
+        return _submission_disabled_response()
     try:
         body_json = read_json_object(
             request,
@@ -1511,6 +1539,19 @@ def api_submit_delivery_to_eea(request):
 
     return JsonResponse({"status": "ok",
                          "message": "Delivery with ID {:d} successfully submitted to EEA.".format(d.id)})
+
+
+def _submission_disabled_response():
+    """Return one stable contract when EEA submission is not configured."""
+
+    return JsonResponse(
+        {
+            "status": "error",
+            "code": "submission_disabled",
+            "message": "Delivery submission is not enabled.",
+        },
+        status=503,
+    )
 
 def get_product_list(request):
     """

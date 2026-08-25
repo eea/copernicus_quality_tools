@@ -268,7 +268,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertEqual(dashboard_response.status_code, 200)
         self.assertContains(
             dashboard_response,
-            "The product catalog is temporarily unavailable.",
+            "Product catalog unavailable",
         )
         self.assertEqual(products_response.status_code, 200)
         self.assertContains(
@@ -287,7 +287,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
         response = self.client.get(reverse("dashboard_home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Review the active boundary package.")
+        self.assertContains(response, "Boundary package unavailable")
+        self.assertContains(response, "Boundary package date")
         self.assertNotContains(response, "from Unavailable")
 
     @override_settings(SUBMISSION_ENABLED=True)

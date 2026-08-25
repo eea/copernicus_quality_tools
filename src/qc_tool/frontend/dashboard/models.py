@@ -123,11 +123,24 @@ class Delivery(models.Model):
         return str(job.job_uuid).lower().replace("-", "")
 
     def get_submittable_job(self):
-        jobs_to_submit = Job.objects.filter(delivery__id=self.id).filter(job_status=JOB_OK).order_by("-date_created")[:1]
-        if len(jobs_to_submit) == 0:
+        """Return the latest job only when the delivery is ready to submit.
+
+        Filtering for successful jobs before ordering could select an older
+        success even after a newer failed or running check. The browser and the
+        dashboard both use the latest overall QC state, so the server must
+        enforce that same rule and reject repeat submissions.
+        """
+
+        if self.is_deleted or self.date_submitted is not None:
             return None
-        else:
-            return jobs_to_submit[0]
+        latest_job = (
+            Job.objects.filter(delivery_id=self.id)
+            .order_by("-date_created", "-job_uuid")
+            .first()
+        )
+        if latest_job is None or latest_job.job_status != JOB_OK:
+            return None
+        return latest_job
 
     def submit(self):
         self.date_submitted = timezone.now()

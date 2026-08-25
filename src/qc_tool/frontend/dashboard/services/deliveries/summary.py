@@ -23,6 +23,35 @@ FAILED_STATUSES = (JOB_PARTIAL, JOB_FAILED, JOB_ERROR, JOB_TIMEOUT, JOB_LOST)
 FILE_NOT_FOUND_STATUS = "file_not_found"
 
 
+def with_latest_job_status(queryset):
+    """Annotate deliveries with their deterministically latest QC status.
+
+    Keeping this annotation in one place prevents the delivery list summary and
+    the dashboard from developing subtly different definitions of "latest".
+    """
+
+    latest_status = (
+        Job.objects.filter(delivery_id=OuterRef("pk"))
+        .order_by("-date_created", "-job_uuid")
+        .values("job_status")[:1]
+    )
+    return queryset.annotate(latest_job_status=Subquery(latest_status))
+
+
+def classify_job_status(status):
+    """Map a stored job status to the stable delivery-summary vocabulary."""
+
+    if status == JOB_OK:
+        return "passed"
+    if status in IN_PROGRESS_STATUSES:
+        return "in_progress"
+    if status in FAILED_STATUSES or status == FILE_NOT_FOUND_STATUS:
+        return "failed"
+    if status is None:
+        return "not_checked"
+    return "other"
+
+
 @dataclass(frozen=True)
 class DeliverySummary:
     """Counts shown above the delivery table for one effective access scope."""
@@ -50,29 +79,23 @@ class DeliverySummary:
 def summarize_deliveries(account_access):
     """Aggregate each delivery by its latest job, within the visible scope."""
 
-    latest_status = (
-        Job.objects.filter(delivery_id=OuterRef("pk"))
-        .order_by("-date_created", "-job_uuid")
-        .values("job_status")[:1]
-    )
     status_counts = (
-        visible_deliveries(account_access)
-        .annotate(latest_job_status=Subquery(latest_status))
+        with_latest_job_status(visible_deliveries(account_access))
         .values("latest_job_status")
         .annotate(count=Count("pk"))
     )
     total = passed = in_progress = failed = not_checked = other = 0
     for row in status_counts:
         count = row["count"]
-        status = row["latest_job_status"]
+        category = classify_job_status(row["latest_job_status"])
         total += count
-        if status == JOB_OK:
+        if category == "passed":
             passed += count
-        elif status in IN_PROGRESS_STATUSES:
+        elif category == "in_progress":
             in_progress += count
-        elif status in FAILED_STATUSES or status == FILE_NOT_FOUND_STATUS:
+        elif category == "failed":
             failed += count
-        elif status is None:
+        elif category == "not_checked":
             not_checked += count
         else:
             other += count
