@@ -29,6 +29,7 @@ class Test_clc_status(ProductTestCase):
         job_result_from_file = load_job_result(self.job_uuid)
         self.assertEqual(job_result, job_result_from_file,
                          "Job result returned by dispatch() must be the same as job result stored in json file.")
+        self.assertEqual("mt", job_result["aoi_code"])
 
 
 class Test_n2k_2006(ProductTestCase):
@@ -231,4 +232,3 @@ class Test_cz_change_2012_2018(ProductTestCase):
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.maxDiff = None
         self.assertListEqual(expected_step_results, step_results)
-

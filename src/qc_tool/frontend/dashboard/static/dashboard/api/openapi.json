@@ -612,6 +612,17 @@
           "filename": {
             "type": "string"
           },
+          "product_ident": {
+            "type": "string",
+            "nullable": true,
+            "description": "Product definition used by the latest-created QC job."
+          },
+          "aoi_code": {
+            "type": "string",
+            "nullable": true,
+            "description": "Canonical AOI code projected from the latest-created QC job.",
+            "example": "mt"
+          },
           "user": {
             "type": "string"
           },
@@ -667,6 +678,12 @@
           "hash": {
             "type": "string"
           },
+          "aoi_code": {
+            "type": "string",
+            "nullable": true,
+            "description": "Canonical lowercase AOI code produced by QC checks; null when unavailable, invalid, or ambiguous.",
+            "example": "mt"
+          },
           "reference_year": {
             "type": "integer",
             "example": 2018
@@ -716,6 +733,12 @@
           },
           "hash": {
             "type": "string"
+          },
+          "aoi_code": {
+            "type": "string",
+            "nullable": true,
+            "description": "Canonical lowercase AOI code produced by QC checks; null when unavailable, invalid, or ambiguous.",
+            "example": "mt"
           },
           "reference_year": {
             "type": "integer",

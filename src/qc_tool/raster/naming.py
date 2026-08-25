@@ -11,8 +11,10 @@ IS_SYSTEM = False
 
 def run_check(params, status):
     import osgeo.gdal as gdal
+    from qc_tool.aoi import extract_aoi_code
+    from qc_tool.aoi import has_aoi_code_capture
+    from qc_tool.aoi import publish_aoi_code
     from qc_tool.vector.helper import LayerDefsBuilder
-    from qc_tool.vector.helper import extract_aoi_code
     from qc_tool.vector.helper import extract_epsg_code
 
     # Fix reference year.
@@ -41,16 +43,18 @@ def run_check(params, status):
     status.add_params({"raster_layer_defs": builder.layer_defs})
 
     # Check AOI codes.
-    if "aoi_codes" in params and len(params["aoi_codes"]) > 0:
-        if params["aoi_codes"][0] == "*":
+    aoi_codes = params.get("aoi_codes", [])
+    has_aoi_capture = any(has_aoi_code_capture(regex) for regex in params["layer_names"].values())
+    if aoi_codes or has_aoi_capture:
+        if not aoi_codes or aoi_codes[0] == "*":
             preserve_aoicode_case = True
             compare_aoi_codes = False
         else:
             preserve_aoicode_case = False
             compare_aoi_codes = True
-        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status,
+        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], aoi_codes, status,
                                     preserve_aoicode_case=preserve_aoicode_case, compare_aoi_codes=compare_aoi_codes)
-        status.add_params({"aoi_code": aoi_code})
+        publish_aoi_code(params, status, aoi_code)
 
     # Check EPSG codes.
     if "epsg_codes" in params and len(params["epsg_codes"]) > 0:

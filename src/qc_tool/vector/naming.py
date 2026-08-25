@@ -8,9 +8,12 @@ IS_SYSTEM = False
 
 def run_check(params, status):
 
+    from qc_tool.aoi import clear_aoi_code
+    from qc_tool.aoi import extract_aoi_code
+    from qc_tool.aoi import has_aoi_code_capture
+    from qc_tool.aoi import publish_aoi_code
     from qc_tool.vector.helper import LayerDefsBuilder
     from qc_tool.vector.helper import check_gdb_filename
-    from qc_tool.vector.helper import extract_aoi_code
     from qc_tool.vector.helper import extract_epsg_code
     from qc_tool.vector.helper import extract_name_info
     from qc_tool.vector.helper import find_gdb_layers
@@ -120,22 +123,18 @@ def run_check(params, status):
 
     # Extract AOI code and compare it to pre-defined list.
     aoi_code = None
-    if "aoi_codes" in params and len(params["aoi_codes"]) > 0:
-        if params["aoi_codes"][0] == "*":
+    aoi_codes = params.get("aoi_codes", [])
+    has_aoi_capture = any(has_aoi_code_capture(regex) for regex in params["layer_names"].values())
+    detect_aoi_code = bool(aoi_codes) or has_aoi_capture
+    if detect_aoi_code:
+        if not aoi_codes or aoi_codes[0] == "*":
             preserve_aoicode_case = True
             compare_aoi_codes = False
         else:
             preserve_aoicode_case = False
             compare_aoi_codes = True
-        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], params["aoi_codes"], status,
+        aoi_code = extract_aoi_code(builder.layer_defs, params["layer_names"], aoi_codes, status,
                                     preserve_aoicode_case=preserve_aoicode_case, compare_aoi_codes=compare_aoi_codes)
-        status.add_params({"aoi_code": aoi_code})
-
-    # Check if the current AOI code belongs to the excluded AOI codes
-    if "aoi_codes_excluded" in params and len(params["aoi_codes_excluded"]) > 0:
-        if str(aoi_code).upper() in params["aoi_codes_excluded"]:
-            status.info("The delivery will be excluded from further vector checks because the vector data source does not contain a single object of interest.")
-            status.add_params({"skip_vector_checks": True})
 
     # Extract EPSG code and compare it to pre-defined list.
     name_epsg = None
@@ -151,15 +150,38 @@ def run_check(params, status):
         status.add_params({"name_info": name_info})
 
     # Check geodatabase name. If set, the aoi_code in the geodatabase name should match aoi_code from the layers.
+    conflicting_gdb_aoi_code = False
     if "gdb_filename_regex" in params:
         for gdb_filepath in gdb_filepaths:
-            check_gdb_filename(gdb_filepath, params["gdb_filename_regex"], aoi_code, status)
+            if check_gdb_filename(gdb_filepath, params["gdb_filename_regex"], aoi_code, status) is False:
+                conflicting_gdb_aoi_code = True
+
+    if detect_aoi_code:
+        if conflicting_gdb_aoi_code:
+            clear_aoi_code(status)
+            status.add_params({"_aoi_code_conflict": True})
+            aoi_code = None
+        else:
+            aoi_code = publish_aoi_code(params, status, aoi_code)
+
+    # Check if the current AOI code belongs to the excluded AOI codes
+    if "aoi_codes_excluded" in params and len(params["aoi_codes_excluded"]) > 0:
+        if str(aoi_code).upper() in params["aoi_codes_excluded"]:
+            status.info("The delivery will be excluded from further vector checks because the vector data source does not contain a single object of interest.")
+            status.add_params({"skip_vector_checks": True})
 
     # Find boundary layer.
-    boundary_source_name = params.get("boundary_source", None)
+    boundary_source_name = params.get("boundary_source")
+    if boundary_source_name is None:
+        validation_plan = params.get("aoi_validation_plan", {})
+        validation_contract = validation_plan.get("contracts", {}).get(
+            "vector"
+        ) or {}
+        if validation_contract.get("source_type") == "vector":
+            boundary_source_name = validation_contract.get("source")
     if boundary_source_name:
         # If boundary expression contains '{aoi_code}' then try to inject aoi_code into boundary file path.
-        if "{aoi_code}" in params["boundary_source"] and aoi_code is not None:
+        if "{aoi_code}" in boundary_source_name and aoi_code is not None:
             boundary_source_name = boundary_source_name.format(**{"aoi_code": aoi_code})
 
         boundary_filepath = params["boundary_dir"].joinpath("vector", boundary_source_name)
