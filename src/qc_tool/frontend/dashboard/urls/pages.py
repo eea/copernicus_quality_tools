@@ -5,7 +5,9 @@ from qc_tool.frontend.dashboard.urls._helpers import protected_path
 
 
 urlpatterns = [
-    protected_path("", views.deliveries, name="deliveries"),
+    protected_path("", views.dashboard_home, name="dashboard_home"),
+    protected_path("deliveries/", views.deliveries, name="deliveries"),
+    protected_path("products/", views.products, name="products"),
     protected_path(
         "data/delivery/export/",
         views.export_deliveries_excel,

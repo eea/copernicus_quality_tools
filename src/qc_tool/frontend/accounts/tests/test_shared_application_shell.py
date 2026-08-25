@@ -78,7 +78,7 @@ class SharedApplicationShellTests(TestCase):
         return match.group("menu")
 
     def test_homepage_and_404_render_the_same_application_shell(self):
-        homepage = self.client.get(reverse("deliveries"))
+        homepage = self.client.get(reverse("dashboard_home"))
         missing_page = self.client.get("/missing-shared-shell-page/")
 
         self.assert_shared_shell(homepage, status_code=200)

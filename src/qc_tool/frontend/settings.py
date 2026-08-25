@@ -344,7 +344,7 @@ S3_MAX_LISTED_OBJECTS = _environment_integer(
 # Use named routes so authentication redirects remain stable if URL prefixes
 # change. Login/logout themselves are handled by Django's built-in auth views.
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "deliveries"
+LOGIN_REDIRECT_URL = "dashboard_home"
 LOGOUT_REDIRECT_URL = "login"
 
 # case-insensitive username authentication backend

@@ -1,0 +1,101 @@
+{% extends "dashboard/workspace_base.html" %}
+{% load static %}
+
+{% block title %}Dashboard | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page dashboard-home-page{% endblock main_class %}
+
+{% block workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/pages/workspace-pages.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
+
+{% block workspace_content %}
+<div class="workspace-page__container">
+    <header class="workspace-page__header">
+        <div>
+            <p class="workspace-page__eyebrow">QC Tool workspace</p>
+            <h1>Dashboard</h1>
+            <p>Welcome{% if user.first_name %}, {{ user.first_name }}{% endif %}. Review your workspace and continue with the task you need.</p>
+        </div>
+        {% if account_access.can_upload %}
+        <a class="btn btn-primary btn-qc-primary" href="{% url 'file_upload' %}">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+            Upload delivery
+        </a>
+        {% endif %}
+    </header>
+
+    {% if announcement %}
+    <aside class="workspace-notice" aria-labelledby="dashboard-announcement-title">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
+        <div>
+            <h2 id="dashboard-announcement-title">Announcement</h2>
+            <p>{{ announcement }}</p>
+        </div>
+        <a href="{% url 'announcement' %}">Read announcement</a>
+    </aside>
+    {% endif %}
+
+    <section aria-labelledby="dashboard-overview-title">
+        <div class="workspace-section-heading">
+            <div>
+                <h2 id="dashboard-overview-title">Delivery overview</h2>
+                <p>Latest QC state for every active delivery visible to your account.</p>
+            </div>
+            <a href="{% url 'deliveries' %}">View my deliveries</a>
+        </div>
+        <dl class="dashboard-metrics">
+            <div>
+                <dt>Total deliveries</dt>
+                <dd>{{ delivery_summary.total }}</dd>
+            </div>
+            <div class="dashboard-metrics--success">
+                <dt>Passed</dt>
+                <dd>{{ delivery_summary.passed }}</dd>
+            </div>
+            <div class="dashboard-metrics--progress">
+                <dt>In progress</dt>
+                <dd>{{ delivery_summary.in_progress }}</dd>
+            </div>
+            <div class="dashboard-metrics--danger">
+                <dt>Failed</dt>
+                <dd>{{ delivery_summary.failed }}</dd>
+            </div>
+            <div>
+                <dt>Not checked</dt>
+                <dd>{{ delivery_summary.not_checked }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="dashboard-destinations" aria-labelledby="dashboard-destinations-title">
+        <div class="workspace-section-heading">
+            <div>
+                <h2 id="dashboard-destinations-title">Explore the QC Tool</h2>
+                <p>Each area has one clear purpose and keeps the same workspace navigation.</p>
+            </div>
+        </div>
+        <div class="dashboard-destination-grid">
+            <a class="dashboard-destination" href="{% url 'deliveries' %}">
+                <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg></span>
+                <strong>Deliveries</strong>
+                <small>Upload, check, submit, and review your delivery packages.</small>
+            </a>
+            <a class="dashboard-destination" href="{% url 'products' %}">
+                <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg></span>
+                <strong>Products</strong>
+                <small>{% if product_catalog_available %}Browse all {{ product_count }} available product{{ product_count|pluralize }}.{% else %}The product catalog is temporarily unavailable.{% endif %}</small>
+            </a>
+            <a class="dashboard-destination" href="{% url 'boundaries' %}">
+                <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg></span>
+                <strong>Boundaries</strong>
+                <small>Review the active boundary package{% if boundary_version_available %} from {{ boundary_version }}{% endif %}.</small>
+            </a>
+            <a class="dashboard-destination" href="{% url 'api_homepage' %}">
+                <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg></span>
+                <strong>API Access</strong>
+                <small>Read the interactive API reference{% if token_count is not None %}; {{ token_count }} token{{ token_count|pluralize }} configured{% endif %}.</small>
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock workspace_content %}

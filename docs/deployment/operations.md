@@ -128,7 +128,7 @@ Schedule this command through the deployment's trusted job runner.
 ## User incidents
 
 - Deactivate a compromised account immediately.
-- Revoke its API credential in Django Admin.
+- Revoke its personal API tokens in Django Admin.
 - Change/reset its password.
 - Review role, direct permission, product grant, and region grant changes.
 - Rotate any leaked S3 or external credentials at their source.

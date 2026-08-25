@@ -24,7 +24,7 @@ def change_password(request):
     if access.can_manage_own_account:
         return_url = reverse("account_settings")
     elif access.can_view_deliveries:
-        return_url = reverse("deliveries")
+        return_url = reverse("dashboard_home")
     else:
         return_url = "https://github.com/eea/copernicus_quality_tools/wiki"
 

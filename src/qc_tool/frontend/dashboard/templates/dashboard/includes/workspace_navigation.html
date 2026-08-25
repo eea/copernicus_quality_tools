@@ -3,32 +3,41 @@
     <nav aria-label="QC Tool workspace">
         <ul class="workspace-sidebar__list">
             <li class="workspace-sidebar__item">
+                <a class="workspace-sidebar__link" href="{% url 'dashboard_home' %}"{% if request.resolver_match.url_name == 'dashboard_home' %} aria-current="page"{% endif %}>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#home"></use></svg>
+                    Dashboard
+                </a>
+            </li>
+            <li class="workspace-sidebar__item">
                 <a class="workspace-sidebar__link" href="{% url 'deliveries' %}"{% if request.resolver_match.url_name == 'deliveries' %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
                     Deliveries
                 </a>
             </li>
-            {% if account_access.can_upload %}
             <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'file_upload' %}"{% if request.resolver_match.url_name == 'file_upload' %} aria-current="page"{% endif %}>
-                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
-                    Upload delivery
+                <a class="workspace-sidebar__link" href="{% url 'products' %}"{% if request.resolver_match.url_name == 'products' %} aria-current="page"{% endif %}>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg>
+                    Products
                 </a>
             </li>
-            {% endif %}
-            {% if account_access.can_manage_configuration %}
             <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'boundaries' %}"{% if request.resolver_match.url_name == 'boundaries' %} aria-current="page"{% endif %}>
+                <a class="workspace-sidebar__link" href="{% url 'boundaries' %}"{% if request.resolver_match.url_name == 'boundaries' or request.resolver_match.url_name == 'boundaries_upload' %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg>
                     Boundaries
                 </a>
             </li>
-            {% endif %}
-            {% if account_access.can_access_django_admin %}
             <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'admin:auth_user_changelist' %}">
+                <a class="workspace-sidebar__link" href="{% url 'api_homepage' %}"{% if request.resolver_match.url_name == 'api_homepage' %} aria-current="page"{% endif %}>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>
+                    API Access
+                </a>
+            </li>
+            {% if account_access.can_access_django_admin %}
+            <li class="workspace-sidebar__separator" role="separator"></li>
+            <li class="workspace-sidebar__item">
+                <a class="workspace-sidebar__link" href="{% url 'admin:index' %}">
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#users"></use></svg>
-                    User administration
+                    Admin panel
                 </a>
             </li>
             {% endif %}

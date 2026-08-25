@@ -1,76 +1,104 @@
-{% extends "dashboard/base.html" %}
+{% extends "dashboard/workspace_base.html" %}
 {% load static %}
 
-{% block content %}
+{% block title %}Replace boundary package | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page boundary-upload-page{% endblock main_class %}
 
-    <div class="container-fluid main">
-        <div class="row text-left">
+{% block workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/pages/workspace-pages.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/pages/boundaries-upload.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
 
-            <ol class="breadcrumb">
-              <li><a href="{% url 'deliveries' %}">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
-                <li><a href="{% url 'boundaries' %}">Boundaries</a></li>
-              <li class="active"><a href="">Upload Boundary Package</a></li>
-            </ol>
+{% block workspace_content %}
+<div class="workspace-page__container">
+    <header class="workspace-page__header">
+        <div>
+            <p class="workspace-page__eyebrow">Boundaries</p>
+            <h1>Replace boundary package</h1>
+            <p>Upload one validated ZIP to activate a new immutable raster and vector boundary generation.</p>
+        </div>
+        <a class="btn btn-default btn-qc-secondary" href="{% url 'boundaries' %}">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+            Back to boundaries
+        </a>
+    </header>
 
-            <div class="main">
+    <section class="workspace-card boundary-upload-card" aria-labelledby="boundary-upload-title">
+        <header class="workspace-card__header">
+            <div>
+                <h2 id="boundary-upload-title">Boundary package ZIP</h2>
+                <p>The package is checked before the active generation changes. An invalid package leaves the current generation untouched.</p>
+            </div>
+        </header>
 
-                <div id="tool-canvas">
-                    <div class="panel panel-primary">
-                        <div class="panel-heading">
-                            <div class="panel-title">
-                                Upload Boundary Package
-                            </div>
-                        </div>
-                        <div class="panel-body">
-                            <h4>Select Boundary Package ZIP File to Upload</h4>
-
-                            {# 1. BUTTON TO TRIGGER THE ACTION #}
-                            <button type="button" class="btn btn-primary js-upload-files">
-                              <span class="glyphicon glyphicon-cloud-upload"></span> Upload boundary package (.zip) ...
-                            </button>
-
-                            {# Hidden single-file input driven by boundaries_upload.js. #}
-                            <input id="fileupload" type="file" name="file"
-                                   accept=".zip,application/zip"
-                                   style="display: none;"
-                                   data-url="{% url 'boundaries_upload_data' %}"
-                                   data-success-url="{% url 'boundaries' %}">
-
-                            <div class="modal fade" id="modal-progress" data-backdrop="static" data-keyboard="false">
-                              <div class="modal-dialog">
-                                <div class="modal-content">
-                                  <div class="modal-header">
-                                    <h4 class="modal-title">Uploading...</h4>
-                                  </div>
-                                  <div class="modal-body">
-                                    <div class="progress">
-                                      <div class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div id="upload-result" aria-live="polite"></div>
-                        </div>
-                    </div>
+        <div class="boundary-upload-card__body">
+            <div class="boundary-upload-card__action">
+                <span class="boundary-upload-card__icon" aria-hidden="true">
+                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+                </span>
+                <div>
+                    <h3>Select a package</h3>
+                    <p>Choose exactly one ZIP containing top-level <code>raster/</code> and <code>vector/</code> directories.</p>
+                    <button type="button" class="btn btn-primary btn-qc-primary js-upload-files">
+                        Choose boundary package
+                    </button>
+                    <input
+                        id="fileupload"
+                        type="file"
+                        name="file"
+                        accept=".zip,application/zip"
+                        hidden
+                        data-url="{% url 'boundaries_upload_data' %}"
+                        data-success-url="{% url 'boundaries' %}"
+                    >
                 </div>
-
             </div>
 
+            <ul class="boundary-upload-card__guidance" aria-label="Boundary package validation">
+                <li>Archive paths and entry types are validated.</li>
+                <li>File count, size, and compression limits are enforced.</li>
+                <li>Activation publishes a complete immutable generation.</li>
+                <li>Running jobs remain pinned to their selected generation.</li>
+            </ul>
+        </div>
+
+        <div id="upload-result" class="boundary-upload-card__result" aria-live="polite"></div>
+    </section>
+</div>
+
+<div
+    class="modal fade"
+    id="modal-progress"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="boundary-upload-progress-title"
+    aria-describedby="boundary-upload-progress-description"
+    data-backdrop="static"
+    data-keyboard="false"
+>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="boundary-upload-progress-title" class="modal-title">Uploading boundary package</h2>
+            </div>
+            <div class="modal-body">
+                <p id="boundary-upload-progress-description">Keep this page open while the package is uploaded and validated.</p>
+                <div class="progress">
+                    <div
+                        class="progress-bar"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-valuenow="0"
+                    >0%</div>
+                </div>
+            </div>
         </div>
     </div>
-
-
-
-    <br><br><br><br>
-
-    {% include "dashboard/html-spinner.html" %}
-
-
-{% endblock content %}
+</div>
+{% endblock workspace_content %}
 
 {% block js %}
-    {{ block.super }}
-    <script src="{% static 'dashboard/js/boundaries_upload.js' %}"></script>
+{{ block.super }}
+<script src="{% static 'dashboard/js/boundaries_upload.js' %}"></script>
 {% endblock js %}

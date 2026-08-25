@@ -11,7 +11,7 @@ $('#tbl-boundaries-raster').bootstrapTable({
     pageSize: 20,
     pageList: [20, 50, 100, 500],
     formatNoMatches: function () {
-        return 'No boundaries found. Please upload a boundary package.';
+        return $('#tbl-boundaries-raster').data('empty-message');
     }
 });
 
@@ -28,7 +28,7 @@ $('#tbl-boundaries-vector').bootstrapTable({
     pageSize: 20,
     pageList: [20, 50, 100, 500],
     formatNoMatches: function () {
-        return 'No boundaries found. Please upload a boundary package.';
+        return $('#tbl-boundaries-vector').data('empty-message');
     }
 });
 

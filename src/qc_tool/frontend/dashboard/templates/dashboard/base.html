@@ -32,8 +32,8 @@
                 <nav id="menucontainer" class="navbar navbar-default" aria-label="Primary navigation">
                     <div class="container-fluid">
                         <div class="navbar-header">
-                            {% url 'deliveries' as deliveries_url %}
-                            <a class="navbar-brand" href="{% block brand_url %}{{ deliveries_url|default:'/' }}{% endblock brand_url %}">
+                            {% url 'dashboard_home' as homepage_url %}
+                            <a class="navbar-brand" href="{% block brand_url %}{{ homepage_url|default:'/' }}{% endblock brand_url %}">
                                 <img
                                     class="navbar-brand-logo navbar-brand-logo-copernicus"
                                     src="{% static 'dashboard/img/logo_copernicus_big.png' %}"

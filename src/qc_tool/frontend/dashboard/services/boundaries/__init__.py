@@ -10,7 +10,9 @@ from .contracts import (
     BoundaryPackageLimits,
     BoundaryPackageResult,
 )
+from .catalog import BoundaryFile, list_boundary_files
 from .errors import (
+    BoundaryCatalogLimitExceeded,
     BoundaryGenerationUnavailable,
     BoundaryPackageBusy,
     BoundaryPackageConfigurationError,
@@ -26,6 +28,8 @@ from .service import replace_boundary_package
 
 
 __all__ = (
+    "BoundaryCatalogLimitExceeded",
+    "BoundaryFile",
     "BoundaryGeneration",
     "BoundaryGenerationUnavailable",
     "BoundaryPackageBusy",
@@ -40,4 +44,5 @@ __all__ = (
     "BoundaryPackageUnsafe",
     "replace_boundary_package",
     "resolve_boundary_generation",
+    "list_boundary_files",
 )

@@ -35,6 +35,13 @@ class BoundaryPackageLimitExceeded(BoundaryPackageError):
     status_code = 413
 
 
+class BoundaryCatalogLimitExceeded(BoundaryPackageLimitExceeded):
+    code = "boundary_catalog_limit_exceeded"
+    user_message = (
+        "The active boundary package contains too many entries to list safely."
+    )
+
+
 class BoundaryPackageBusy(BoundaryPackageError):
     code = "boundary_package_busy"
     user_message = "Another boundary package update is in progress. Please try again."

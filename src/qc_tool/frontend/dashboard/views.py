@@ -32,6 +32,12 @@ import qc_tool.frontend.dashboard.models as models
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.accounts.services.api_tokens import has_active_api_tokens
+from qc_tool.frontend.accounts.services.products import (
+    ProductCatalogUnavailable,
+)
+from qc_tool.frontend.accounts.services.products import (
+    available_product_descriptions,
+)
 from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
@@ -57,6 +63,7 @@ from qc_tool.frontend.dashboard.helpers import guess_product_ident
 from qc_tool.frontend.dashboard.helpers import submit_job
 from qc_tool.frontend.dashboard.helpers import get_boundary_version
 from qc_tool.frontend.dashboard.services.boundaries import BoundaryPackageError
+from qc_tool.frontend.dashboard.services.boundaries import list_boundary_files
 from qc_tool.frontend.dashboard.services.boundaries import replace_boundary_package
 from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
 from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
@@ -465,6 +472,32 @@ def _api_object_permission_denied(object_name):
     )
 
 
+def dashboard_home(request):
+    """Render a concise starting point for the authenticated workspace."""
+
+    account_access = access_for_request(request)
+    product_catalog, product_catalog_available = _workspace_product_catalog()
+    boundary_version = get_boundary_version()
+    token_count = (
+        request.user.personal_access_tokens.count()
+        if account_access.can_manage_api_credential
+        else None
+    )
+    return render(
+        request,
+        "dashboard/home.html",
+        {
+            "announcement": get_announcement_message(),
+            "boundary_version": boundary_version,
+            "boundary_version_available": boundary_version != "Unavailable",
+            "delivery_summary": summarize_deliveries(account_access),
+            "product_catalog_available": product_catalog_available,
+            "product_count": len(product_catalog),
+            "token_count": token_count,
+        },
+    )
+
+
 def deliveries(request):
     """
     Displays the main page with uploaded files and action buttons
@@ -493,6 +526,44 @@ def deliveries(request):
         "update_job_statuses_interval": update_job_statuses_interval,
     }
     return render(request, "dashboard/deliveries.html", context)
+
+
+def products(request):
+    """List the complete product catalog without exposing definition files."""
+
+    product_catalog, product_catalog_available = _workspace_product_catalog()
+    return render(
+        request,
+        "dashboard/products.html",
+        {
+            "product_catalog": product_catalog,
+            "product_catalog_available": product_catalog_available,
+        },
+    )
+
+
+def _workspace_product_catalog():
+    """Return safe display records while keeping catalog failures non-fatal."""
+
+    try:
+        descriptions = available_product_descriptions()
+    except ProductCatalogUnavailable:
+        logger.warning("The product catalog is unavailable for the workspace UI.")
+        return (), False
+
+    return (
+        tuple(
+            {
+                "ident": product_ident,
+                "description": description,
+            }
+            for product_ident, description in sorted(
+                descriptions.items(),
+                key=lambda item: (str(item[1]).casefold(), item[0]),
+            )
+        ),
+        True,
+    )
 
 
 def setup_job(request):
@@ -964,19 +1035,6 @@ def get_boundaries_json(request, boundary_type):
     :param request:
     :return: list of boundary .tif or .shp file infos with name and size in JSON format
     """
-    boundary_list = []
-    try:
-        generation = resolve_boundary_generation(CONFIG["boundary_dir"])
-    except BoundaryPackageError as exc:
-        return JsonResponse(
-            {
-                "status": "error",
-                "code": exc.code,
-                "message": exc.user_message,
-            },
-            status=exc.status_code,
-        )
-
     if boundary_type not in {"raster", "vector"}:
         return JsonResponse(
             {
@@ -987,24 +1045,28 @@ def get_boundaries_json(request, boundary_type):
             status=400,
         )
 
-    if boundary_type == "raster":
-        raster_dir = generation.raster_dir
-        raster_filepaths = [path for path in raster_dir.glob("**/*") if
-                            path.is_file() and path.suffix.lower() == ".tif"]
-        for r in raster_filepaths:
-            boundary_list.append({"filename": r.name, "size_bytes": r.stat().st_size, "type": "raster"})
+    try:
+        generation = resolve_boundary_generation(CONFIG["boundary_dir"])
+        directory = (
+            generation.raster_dir
+            if boundary_type == "raster"
+            else generation.vector_dir
+        )
+        boundary_list = list_boundary_files(directory, boundary_type)
+    except BoundaryPackageError as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": exc.code,
+                "message": exc.user_message,
+            },
+            status=exc.status_code,
+        )
 
-    else:
-        vector_dir = generation.vector_dir
-        vector_filepaths = [
-            path
-            for path in vector_dir.glob("**/*")
-            if path.is_file() and path.suffix.lower() in {".shp", ".gpkg"}
-        ]
-        for v in vector_filepaths:
-            boundary_list.append({"filename": v.name, "size_bytes": v.stat().st_size, "type": "vector"})
-
-    return JsonResponse(boundary_list, safe=False)
+    return JsonResponse(
+        [boundary_file.as_dict() for boundary_file in boundary_list],
+        safe=False,
+    )
 
 
 def boundaries_upload_page(request):

@@ -1,3 +1,8 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import Permission
@@ -49,7 +54,7 @@ class ConfigurationNavigationTests(TestCase):
         )
         self.assertNotContains(
             response,
-            f'href="{reverse("admin:auth_user_changelist")}"',
+            f'href="{reverse("admin:index")}"',
         )
 
     def test_admin_role_sees_django_admin_workspace_navigation(self):
@@ -62,14 +67,14 @@ class ConfigurationNavigationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            f'href="{reverse("admin:auth_user_changelist")}"',
+            f'href="{reverse("admin:index")}"',
         )
 
     def test_authenticated_forbidden_page_uses_friendly_html_response(self):
         user = self.create_user("default-only-user")
         self.client.force_login(user)
 
-        response = self.client.get(reverse("boundaries"))
+        response = self.client.get(reverse("boundaries_upload"))
 
         self.assertEqual(response.status_code, 403)
         self.assertTemplateUsed(response, "accounts/errors/403.html")
@@ -82,6 +87,88 @@ class ConfigurationNavigationTests(TestCase):
             response,
             AccountPermission.MANAGE_CONFIGURATION.value,
             status_code=403,
+        )
+
+    def test_default_user_can_review_boundaries_but_cannot_replace_them(self):
+        user = self.create_user("boundary-viewer")
+        self.client.force_login(user)
+
+        page_response = self.client.get(reverse("boundaries"))
+
+        self.assertEqual(page_response.status_code, 200)
+        self.assertTemplateUsed(page_response, "dashboard/boundaries.html")
+        self.assertNotContains(
+            page_response,
+            f'href="{reverse("boundaries_upload")}"',
+        )
+        self.assertNotContains(page_response, "Replace boundary package")
+        self.assertContains(
+            page_response,
+            "No raster boundary files are currently available.",
+        )
+        self.assertNotContains(
+            page_response,
+            "Replace the boundary package to add them.",
+        )
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            raster_dir = root / "raster"
+            vector_dir = root / "vector"
+            raster_dir.mkdir()
+            vector_dir.mkdir()
+            (raster_dir / "reviewable.tif").write_bytes(b"boundary")
+            generation = SimpleNamespace(
+                raster_dir=raster_dir,
+                vector_dir=vector_dir,
+            )
+            with patch(
+                "qc_tool.frontend.dashboard.views."
+                "resolve_boundary_generation",
+                return_value=generation,
+            ):
+                list_response = self.client.get(
+                    reverse("boundaries_json", args=("raster",))
+                )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(
+            list_response.json(),
+            [
+                {
+                    "filename": "reviewable.tif",
+                    "size_bytes": 8,
+                    "type": "raster",
+                }
+            ],
+        )
+
+    def test_configuration_editor_can_open_boundary_replacement(self):
+        user = self.create_user("boundary-editor")
+        self.grant_configuration_permission(user)
+        self.client.force_login(user)
+
+        page_response = self.client.get(reverse("boundaries"))
+        upload_response = self.client.get(reverse("boundaries_upload"))
+
+        self.assertEqual(page_response.status_code, 200)
+        self.assertContains(
+            page_response,
+            f'href="{reverse("boundaries_upload")}"',
+        )
+        self.assertContains(page_response, "Replace boundary package")
+        self.assertContains(
+            page_response,
+            "Replace the boundary package to add them.",
+        )
+        self.assertEqual(upload_response.status_code, 200)
+        self.assertTemplateUsed(
+            upload_response,
+            "dashboard/workspace_base.html",
+        )
+        self.assertContains(
+            upload_response,
+            'href="{}" aria-current="page"'.format(reverse("boundaries")),
         )
 
 

@@ -1,22 +1,16 @@
-{% extends "dashboard/base.html" %}
+{% extends "dashboard/workspace_base.html" %}
 {% load static %}
 
-{% block css %}
-{{ block.super }}
+{% block workspace_css %}
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table-filter-control.min.css' %}" type="text/css" media="screen" />
 <link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
-<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace.css' %}" type="text/css" media="screen" />
 <link rel="stylesheet" href="{% static 'dashboard/css/pages/deliveries.css' %}" type="text/css" media="screen" />
-
-{% endblock css %}
+{% endblock workspace_css %}
 
 {% block main_class %}deliveries-page{% endblock %}
 
-{% block content %}
-<div class="workspace-layout">
-{% include "dashboard/includes/workspace_navigation.html" %}
-<div class="workspace-content">
+{% block workspace_content %}
 <div class="deliveries-page__container">
     <header class="deliveries-page__heading">
         <div>
@@ -209,9 +203,7 @@
         </div>
     </section>
 </div>
-</div>
-</div>
-{% endblock content %}
+{% endblock workspace_content %}
 
 {% block js %}
     {{ block.super }}

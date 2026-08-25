@@ -9,7 +9,11 @@ has_children: true
 QC Tool has no public registration. An administrator creates an account and
 assigns roles, direct permissions, and optional product or region scopes.
 
-After signing in, the normal workflow is:
+After signing in, **Dashboard** is the default starting page. The workspace
+sidebar provides **Deliveries**, **Products**, **Boundaries**, and the public
+**API Access** reference. Administrators also see **Admin panel**.
+
+The normal delivery workflow is:
 
 1. upload a delivery ZIP or register an allowlisted S3 delivery;
 2. choose the matching product definition;

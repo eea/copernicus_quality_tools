@@ -19,14 +19,16 @@ MANAGE_CONFIGURATION = AccountPermission.MANAGE_CONFIGURATION
 
 SESSION_PRIVATE_ROUTE_POLICIES = {
     # Navigable pages and downloads redirect an anonymous browser to login.
+    "dashboard_home": private_session_page(VIEW, "GET"),
     "deliveries": private_session_page(VIEW, "GET"),
+    "products": private_session_page(VIEW, "GET"),
     "export_deliveries_excel": private_session_page(VIEW, "GET"),
     "download_delivery_file": private_session_page(VIEW, "GET"),
     "job_report_pdf": private_session_page(VIEW, "GET"),
     "job_combined_log": private_session_page(VIEW, "GET"),
     "file_upload": private_session_page(AccountPermission.UPLOAD_DELIVERY, "GET"),
     "job_history": private_session_page(VIEW, "GET"),
-    "boundaries": private_session_page(MANAGE_CONFIGURATION, "GET"),
+    "boundaries": private_session_page(VIEW, "GET"),
     "boundaries_upload": private_session_page(MANAGE_CONFIGURATION, "GET"),
     "setup_job": private_session_page(AccountPermission.RUN_QC, "GET"),
     "show_result": private_session_page(VIEW, "GET"),
@@ -67,7 +69,7 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
         "POST",
     ),
     "update_job": private_session_data(VIEW, "POST"),
-    "boundaries_json": private_session_data(MANAGE_CONFIGURATION, "GET"),
+    "boundaries_json": private_session_data(VIEW, "GET"),
     "boundaries_upload_data": private_session_data(
         MANAGE_CONFIGURATION,
         "POST",

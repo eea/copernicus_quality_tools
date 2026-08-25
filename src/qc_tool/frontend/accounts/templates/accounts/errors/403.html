@@ -24,7 +24,7 @@
 
 {% block error_actions %}
 {% if account_access.can_view_deliveries %}
-<a class="btn btn-primary error-primary-action" href="{% url 'deliveries' %}">
+<a class="btn btn-primary error-primary-action" href="{% url 'dashboard_home' %}">
         <svg class="ui-icon" aria-hidden="true" focusable="false">
             <use href="{% static 'dashboard/icons/ui.svg' %}#home"></use>
     </svg>

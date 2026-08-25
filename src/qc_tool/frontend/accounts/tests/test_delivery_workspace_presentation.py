@@ -2,6 +2,7 @@
 
 import re
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import urlsplit
 
 from django.contrib.auth import get_user_model
@@ -14,6 +15,7 @@ from django.test import override_settings
 from django.urls import Resolver404
 from django.urls import resolve
 from django.urls import reverse
+from django.utils.html import escape
 
 from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
@@ -21,6 +23,9 @@ from qc_tool.frontend.accounts.authorization.permissions import (
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
+)
+from qc_tool.frontend.accounts.services.products import (
+    ProductCatalogUnavailable,
 )
 
 
@@ -46,6 +51,40 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertIsNotNone(match, "The workspace needs a labelled sidebar.")
         return match.group(0)
 
+    def workspace_links(self, response):
+        """Return the ordered links from the navigation list, excluding help."""
+
+        sidebar = self.workspace_sidebar(response)
+        navigation = re.search(
+            r'<nav\b[^>]*aria-label="QC Tool workspace"[^>]*>'
+            r'(.*?)</nav>',
+            sidebar,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        self.assertIsNotNone(navigation)
+
+        links = []
+        for anchor in re.finditer(
+            r'<a\b(?P<attributes>[^>]*)>(?P<body>.*?)</a>',
+            navigation.group(1),
+            flags=re.IGNORECASE | re.DOTALL,
+        ):
+            href = re.search(
+                r'\bhref="(?P<href>[^"]+)"',
+                anchor.group("attributes"),
+                flags=re.IGNORECASE,
+            )
+            self.assertIsNotNone(href)
+            label = re.sub(r"<[^>]+>", " ", anchor.group("body"))
+            links.append(
+                (
+                    href.group("href"),
+                    " ".join(label.split()),
+                    'aria-current="page"' in anchor.group("attributes"),
+                )
+            )
+        return links
+
     def permission(self, permission):
         return Permission.objects.get(
             content_type=capability_content_type(),
@@ -68,7 +107,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             *(self.permission(permission) for permission in permissions)
         )
 
-    def test_sidebar_uses_only_real_routes_for_a_default_user(self):
+    def test_sidebar_has_the_exact_workspace_order_for_a_default_user(self):
         response = self.client.get(reverse("deliveries"))
 
         self.assertEqual(response.status_code, 200)
@@ -78,33 +117,37 @@ class DeliveryWorkspacePresentationTests(TestCase):
         )
         sidebar = self.workspace_sidebar(response)
         self.assertEqual(sidebar.count('aria-current="page"'), 1)
-        self.assertIn(
-            'href="{}" aria-current="page"'.format(reverse("deliveries")),
-            sidebar,
+        self.assertEqual(
+            self.workspace_links(response),
+            [
+                (reverse("dashboard_home"), "Dashboard", False),
+                (reverse("deliveries"), "Deliveries", True),
+                (reverse("products"), "Products", False),
+                (reverse("boundaries"), "Boundaries", False),
+                (reverse("api_homepage"), "API Access", False),
+            ],
         )
-        self.assertIn('href="{}"'.format(reverse("file_upload")), sidebar)
-        self.assertIn(
-            'href="https://github.com/eea/copernicus_quality_tools/wiki"',
-            sidebar,
-        )
-        self.assertNotIn('href="{}"'.format(reverse("boundaries")), sidebar)
+        self.assertNotIn('href="{}"'.format(reverse("file_upload")), sidebar)
         self.assertNotIn(
             'href="{}"'.format(reverse("announcement")),
             sidebar,
         )
         self.assertNotIn(
-            'href="{}"'.format(reverse("admin:auth_user_changelist")),
+            'href="{}"'.format(reverse("admin:index")),
             sidebar,
         )
+        self.assertNotIn('role="separator"', sidebar)
+        self.assertContains(
+            response,
+            '<a class="skip-link" href="#workspace-content">',
+        )
+        self.assertContains(
+            response,
+            '<div id="workspace-content" class="workspace-content" '
+            'tabindex="-1">',
+        )
 
-        # The reference includes future destinations. Do not render dead
-        # controls until those URL surfaces actually exist.
-        for placeholder_label in (
-            "Dashboard",
-            "QC Results",
-            "Reports",
-            "Settings",
-        ):
+        for placeholder_label in ("QC Results", "Reports", "Settings"):
             self.assertNotIn(placeholder_label, sidebar)
 
         hrefs = re.findall(
@@ -137,7 +180,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             1,
         )
 
-    def test_sidebar_expands_only_for_effective_permissions(self):
+    def test_sidebar_adds_only_the_authorized_admin_destination(self):
         configuration_user = get_user_model().objects.create_user(
             username="workspace-configuration-user",
             password="test-password",
@@ -149,18 +192,12 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         configuration_response = self.client.get(reverse("deliveries"))
         configuration_sidebar = self.workspace_sidebar(configuration_response)
-        self.assertIn(
-            'href="{}"'.format(reverse("boundaries")),
-            configuration_sidebar,
-        )
+        self.assertEqual(len(self.workspace_links(configuration_response)), 5)
         self.assertNotIn(
-            'href="{}"'.format(reverse("announcement")),
+            'href="{}"'.format(reverse("admin:index")),
             configuration_sidebar,
         )
-        self.assertNotIn(
-            'href="{}"'.format(reverse("admin:auth_user_changelist")),
-            configuration_sidebar,
-        )
+        self.assertNotIn('role="separator"', configuration_sidebar)
 
         administrator = get_user_model().objects.create_user(
             username="workspace-administrator",
@@ -171,18 +208,87 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         administrator_response = self.client.get(reverse("deliveries"))
         administrator_sidebar = self.workspace_sidebar(administrator_response)
-        self.assertIn(
-            'href="{}"'.format(reverse("boundaries")),
-            administrator_sidebar,
+        self.assertEqual(
+            self.workspace_links(administrator_response)[-1],
+            (reverse("admin:index"), "Admin panel", False),
         )
-        self.assertNotIn(
-            'href="{}"'.format(reverse("announcement")),
-            administrator_sidebar,
+        self.assertEqual(len(self.workspace_links(administrator_response)), 6)
+        self.assertIn('role="separator"', administrator_sidebar)
+
+    def test_each_workspace_page_marks_only_its_own_sidebar_link_current(self):
+        for route_name in (
+            "dashboard_home",
+            "deliveries",
+            "products",
+            "boundaries",
+        ):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+
+                self.assertEqual(response.status_code, 200)
+                current_links = [
+                    href
+                    for href, _label, is_current in self.workspace_links(response)
+                    if is_current
+                ]
+                self.assertEqual(current_links, [reverse(route_name)])
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.available_product_descriptions"
+    )
+    def test_products_page_lists_catalog_values_with_html_escaping(
+        self,
+        get_product_descriptions,
+    ):
+        unsafe_ident = 'unsafe<product>"'
+        unsafe_description = "<script>alert('catalog')</script>"
+        get_product_descriptions.return_value = {
+            "SAFE_PRODUCT": "Safe product",
+            unsafe_ident: unsafe_description,
+        }
+
+        response = self.client.get(reverse("products"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "dashboard/products.html")
+        self.assertContains(response, "2 products available")
+        self.assertContains(response, escape(unsafe_ident))
+        self.assertContains(response, escape(unsafe_description))
+        self.assertNotContains(response, unsafe_ident)
+        self.assertNotContains(response, unsafe_description)
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.available_product_descriptions",
+        side_effect=ProductCatalogUnavailable("catalog unavailable"),
+    )
+    def test_catalog_failure_keeps_dashboard_and_products_usable(self, _catalog):
+        dashboard_response = self.client.get(reverse("dashboard_home"))
+        products_response = self.client.get(reverse("products"))
+
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertContains(
+            dashboard_response,
+            "The product catalog is temporarily unavailable.",
         )
-        self.assertIn(
-            'href="{}"'.format(reverse("admin:auth_user_changelist")),
-            administrator_sidebar,
+        self.assertEqual(products_response.status_code, 200)
+        self.assertContains(
+            products_response,
+            "Product catalog temporarily unavailable",
         )
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.get_boundary_version",
+        return_value="Unavailable",
+    )
+    def test_dashboard_does_not_describe_unavailable_boundaries_as_a_date(
+        self,
+        _boundary_version,
+    ):
+        response = self.client.get(reverse("dashboard_home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Review the active boundary package.")
+        self.assertNotContains(response, "from Unavailable")
 
     @override_settings(SUBMISSION_ENABLED=True)
     def test_upload_and_actions_follow_effective_permissions(self):

@@ -24,6 +24,12 @@
     margin-top: 6px;
 }
 
+.workspace-sidebar__separator {
+    height: 1px;
+    margin: 14px 10px;
+    background: var(--qc-color-border);
+}
+
 .workspace-sidebar__link {
     display: flex;
     min-height: 48px;
@@ -115,6 +121,13 @@
 
     .workspace-sidebar__item + .workspace-sidebar__item {
         margin-top: 0;
+    }
+
+    .workspace-sidebar__separator {
+        width: 1px;
+        height: 28px;
+        margin: 8px 4px;
+        flex: 0 0 1px;
     }
 
     .workspace-sidebar__link {

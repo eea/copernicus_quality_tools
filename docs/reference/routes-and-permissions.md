@@ -28,10 +28,12 @@ permission receive an HTML 403 response.
 
 | Area | Typical permission |
 | --- | --- |
+| Dashboard and product catalog | `view_deliveries` |
 | Deliveries, history, result downloads | `view_deliveries` plus object scope |
 | Upload page | `upload_delivery` |
 | Job setup | `run_qc` |
-| Boundaries and announcement | `manage_configuration` |
+| Boundary and announcement pages (read-only) | `view_deliveries` |
+| Replace the boundary package or update the announcement | `manage_configuration` |
 
 ## Session data and mutations
 
@@ -45,7 +47,8 @@ CSRF-protected.
 | Create job | `run_qc` plus owner/admin |
 | Delete delivery/job | `delete_delivery` plus owner/admin |
 | Submit delivery | `submit_delivery` plus owner/admin |
-| Boundary upload/data | `manage_configuration` |
+| List boundary files | `view_deliveries` |
+| Upload and activate a replacement boundary package | `manage_configuration` |
 
 ## API operations
 

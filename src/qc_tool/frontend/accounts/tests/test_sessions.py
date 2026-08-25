@@ -48,7 +48,7 @@ class BrowserSessionFlowTests(TestCase):
 
         self.assertRedirects(
             response,
-            reverse("deliveries"),
+            reverse("dashboard_home"),
             fetch_redirect_response=False,
         )
         self.assertEqual(client.session[SESSION_KEY], str(self.user.pk))
@@ -98,7 +98,7 @@ class BrowserSessionFlowTests(TestCase):
 
         self.assertRedirects(
             response,
-            reverse("deliveries"),
+            reverse("dashboard_home"),
             fetch_redirect_response=False,
         )
         self.assertEqual(client.session[SESSION_KEY], str(self.user.pk))
@@ -122,7 +122,7 @@ class BrowserSessionFlowTests(TestCase):
         )
         self.assertRedirects(
             external_response,
-            reverse("deliveries"),
+            reverse("dashboard_home"),
             fetch_redirect_response=False,
         )
 
@@ -157,7 +157,12 @@ class BrowserSessionFlowTests(TestCase):
         self.login_through_view(client)
         logout_url = reverse("logout")
 
-        for route_name in ("deliveries", "file_upload", "change_password"):
+        for route_name in (
+            "dashboard_home",
+            "deliveries",
+            "file_upload",
+            "change_password",
+        ):
             with self.subTest(route_name=route_name):
                 response = client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)

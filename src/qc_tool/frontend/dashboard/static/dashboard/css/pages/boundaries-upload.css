@@ -1,0 +1,111 @@
+/* Boundary replacement workflow; shared shell/card styles live elsewhere. */
+.boundary-upload-card__body {
+  display: grid;
+  padding: 28px 24px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  align-items: center;
+  gap: 28px;
+}
+
+.boundary-upload-card__action {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.boundary-upload-card__icon {
+  display: inline-flex;
+  width: 54px;
+  height: 54px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: var(--qc-color-primary);
+  background: var(--qc-color-primary-soft);
+}
+
+.boundary-upload-card__icon .ui-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.boundary-upload-card h3 {
+  margin: 0 0 8px;
+  color: var(--qc-color-navy);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.boundary-upload-card__action p {
+  margin: 0 0 18px;
+  color: var(--qc-color-muted);
+  line-height: 1.6;
+}
+
+.boundary-upload-card__guidance {
+  margin: 0;
+  padding: 20px 20px 20px 42px;
+  border-left: 1px solid var(--qc-color-border);
+  color: var(--qc-color-text);
+  background: #fbfdff;
+  line-height: 1.55;
+}
+
+.boundary-upload-card__guidance li + li {
+  margin-top: 10px;
+}
+
+.boundary-upload-card__result {
+  padding: 0 24px 24px;
+}
+
+.boundary-upload-card__result:empty {
+  display: none;
+}
+
+.boundary-upload-card__result .alert {
+  margin: 0;
+}
+
+.boundary-upload-card__result .btn {
+  margin-left: 12px;
+}
+
+.boundary-upload-page .modal-title {
+  color: var(--qc-color-navy);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .boundary-upload-card__body {
+    grid-template-columns: 1fr;
+  }
+
+  .boundary-upload-card__guidance {
+    border-top: 1px solid var(--qc-color-border);
+    border-left: 0;
+  }
+
+  .boundary-upload-card__result .btn {
+    display: flex;
+    width: 100%;
+    margin: 12px 0 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .boundary-upload-card__body {
+    padding: 22px 16px;
+  }
+
+  .boundary-upload-card__action {
+    grid-template-columns: 1fr;
+  }
+
+  .boundary-upload-card__result {
+    padding: 0 16px 18px;
+  }
+}

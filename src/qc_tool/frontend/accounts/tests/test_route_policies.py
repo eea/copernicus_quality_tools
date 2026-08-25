@@ -50,7 +50,9 @@ STATUS_ONLY = DenialResponse.STATUS_ONLY
 # Independent from the production registry: every URL needs an explicit access
 # decision in both implementation and tests.
 EXPECTED_POLICIES = {
+    "dashboard_home": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "deliveries": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "products": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "export_deliveries_excel": (
         PRIVATE,
         SESSION,
@@ -73,7 +75,7 @@ EXPECTED_POLICIES = {
         PRIVATE,
         SESSION,
         ("GET",),
-        MANAGE_CONFIGURATION,
+        VIEW,
         LOGIN_REDIRECT,
     ),
     "boundaries_upload": (
@@ -123,7 +125,7 @@ EXPECTED_POLICIES = {
         PRIVATE,
         SESSION,
         ("GET",),
-        MANAGE_CONFIGURATION,
+        VIEW,
         JSON,
     ),
     "boundaries_upload_data": (
@@ -293,8 +295,15 @@ class RoutePolicyValidationTests(TestCase):
 
 
 class RoutePolicyRegistryTests(TestCase):
-    def test_registry_is_an_explicit_policy_for_all_43_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 43)
+    def test_primary_workspace_routes_keep_their_canonical_paths(self):
+        self.assertEqual(reverse("dashboard_home"), "/")
+        self.assertEqual(reverse("deliveries"), "/deliveries/")
+        self.assertEqual(reverse("products"), "/products/")
+        self.assertEqual(reverse("boundaries"), "/boundaries/")
+        self.assertEqual(reverse("api_homepage"), "/api/")
+
+    def test_registry_is_an_explicit_policy_for_all_45_dashboard_routes(self):
+        self.assertEqual(len(EXPECTED_POLICIES), 45)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

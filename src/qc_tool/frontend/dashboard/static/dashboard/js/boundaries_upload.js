@@ -23,6 +23,7 @@
         var label = percentage + "%";
         progress.style.width = label;
         progress.textContent = label;
+        progress.setAttribute("aria-valuenow", String(percentage));
     }
 
     function showResult(kind, message) {

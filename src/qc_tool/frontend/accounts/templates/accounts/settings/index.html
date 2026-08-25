@@ -3,7 +3,7 @@
 
 {% block title %}Account settings | CLMS QC Tool{% endblock title %}
 {% block body_class %}account-settings-page{% endblock body_class %}
-{% block brand_url %}{% if account_access.can_view_deliveries %}{% url 'deliveries' %}{% else %}https://github.com/eea/copernicus_quality_tools/wiki{% endif %}{% endblock brand_url %}
+{% block brand_url %}{% if account_access.can_view_deliveries %}{% url 'dashboard_home' %}{% else %}https://github.com/eea/copernicus_quality_tools/wiki{% endif %}{% endblock brand_url %}
 
 {% block css %}
 <link rel="stylesheet" href="{% static 'accounts/css/account-settings.css' %}">
@@ -14,7 +14,7 @@
 <div class="account-settings">
     <div class="account-settings__container">
         <nav class="account-settings__breadcrumb" aria-label="Breadcrumb">
-            {% if account_access.can_view_deliveries %}<a href="{% url 'deliveries' %}">CLMS QC Tool</a>{% else %}<a href="https://github.com/eea/copernicus_quality_tools/wiki">CLMS QC Tool documentation</a>{% endif %}
+            {% if account_access.can_view_deliveries %}<a href="{% url 'dashboard_home' %}">CLMS QC Tool</a>{% else %}<a href="https://github.com/eea/copernicus_quality_tools/wiki">CLMS QC Tool documentation</a>{% endif %}
             <span aria-hidden="true">/</span>
             <span aria-current="page">Settings</span>
         </nav>

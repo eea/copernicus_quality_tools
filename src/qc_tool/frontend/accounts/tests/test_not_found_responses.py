@@ -83,7 +83,11 @@ class NotFoundResponseTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertTemplateUsed(response, "accounts/errors/404.html")
         self.assertContains(response, "Go to homepage", status_code=404)
-        self.assertContains(response, reverse("deliveries"), status_code=404)
+        self.assertContains(
+            response,
+            reverse("dashboard_home"),
+            status_code=404,
+        )
 
     def test_private_page_authentication_runs_before_object_lookup(self):
         response = self.client.get(

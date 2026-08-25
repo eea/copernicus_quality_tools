@@ -116,7 +116,8 @@ docker compose -f docker/compose.local.yaml exec frontend \
 In the browser, confirm that you can:
 
 1. sign in and sign out;
-2. open the Deliveries page;
+2. land on Dashboard and open Deliveries, Products, Boundaries, and API Access
+   from the workspace sidebar;
 3. open Django Admin as the local `admin` user;
 4. see both PostgreSQL and the worker as healthy in `docker compose ps`.
 

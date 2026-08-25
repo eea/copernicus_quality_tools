@@ -80,19 +80,24 @@ User deletion is disabled in QC Tool's User Admin. Clear **Active** to prevent
 future authentication while preserving delivery and job history. Plan any
 permanent erasure or ownership transfer as a deliberate retention workflow.
 
-## API credentials
+## Personal API tokens
 
-API credentials are user-owned and one-way hashed. Admin displays only whether
-a credential is configured and can revoke it by deleting the inline record.
-It cannot recover the secret.
+Personal API tokens are user-owned and one-way hashed. A user can create
+multiple named tokens from **Profile → Settings**, use a separate token for
+each integration, and delete either token without interrupting the others.
+Django Admin displays only non-secret token metadata and can revoke a token by
+deleting its record. It cannot recover the secret.
 
-The user issues or rotates a credential from the authenticated Deliveries page.
-The raw value is shown once. Store it in a secret manager; rotating it
-immediately invalidates the previous value.
+The raw token is shown once after creation. Store it in a secret manager. Each
+token captures the user's permissions and scopes when it is created; effective
+API access is the intersection of that snapshot and the user's current access.
+Removing a live permission therefore narrows existing tokens immediately,
+while later grants require a new token.
 
 ## Boundary packages
 
-The **Boundaries** and **Upload boundaries** pages require
+Authenticated delivery viewers can inspect the active package on
+**Boundaries**. Replacing the package remains restricted to users with
 `manage_configuration`.
 
 A boundary package must be a ZIP with this logical layout:
