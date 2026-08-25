@@ -6,6 +6,12 @@
     --qc-color-primary: #0868d7;
     --qc-color-primary-dark: #0757b3;
     --qc-color-primary-soft: #eaf3ff;
+    --qc-color-success: #15803d;
+    --qc-color-success-dark: #116932;
+    --qc-color-success-soft: #e6f6ed;
+    --qc-color-danger: #b42318;
+    --qc-color-danger-dark: #8f1c13;
+    --qc-color-danger-soft: #fff2f1;
     --qc-color-border: #d8e4f3;
     --qc-color-surface: #ffffff;
     --qc-color-canvas: #f7faff;

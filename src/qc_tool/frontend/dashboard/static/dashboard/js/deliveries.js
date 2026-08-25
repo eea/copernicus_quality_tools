@@ -88,75 +88,78 @@ function canSubmit(row) {
         row.last_job_status === "ok" && !row.date_submitted;
 }
 
-function disabledAction(label, message) {
-    return $('<span>', {
-        'class': 'btn btn-sm btn-default delivery-action-disabled',
-        'role': 'button',
-        'aria-disabled': 'true',
-        'tabindex': '0',
-        'data-toggle': 'tooltip',
-        'title': message,
-        'aria-label': label + '. ' + message,
+function actionIcon(symbol) {
+    var namespace = 'http://www.w3.org/2000/svg';
+    var icon = document.createElementNS(namespace, 'svg');
+    var use = document.createElementNS(namespace, 'use');
+    icon.setAttribute('class', 'ui-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('focusable', 'false');
+    use.setAttribute('href', UI_ICON_SPRITE + '#' + symbol);
+    icon.appendChild(use);
+    return icon;
+}
+
+function appendActionContent($action, icon, label, visuallyHidden) {
+    $action.append(actionIcon(icon));
+    $action.append($('<span>', {
+        'class': visuallyHidden ? 'sr-only' : 'delivery-row-action-label',
         'text': label
-    });
+    }));
+    return $action;
 }
 
 function actionsFormatter(value, row) {
     var filename = String(row.filename || 'delivery');
     var $buttons = $('<div>', {
-        'class': 'btn-group',
+        'class': 'delivery-row-actions',
         'role': 'group',
         'aria-label': 'Actions for ' + filename
     });
+    var actionCount = 0;
 
-    if (CAN_RUN_QC) {
-        if (canRunQc(row)) {
-            $('<a>', {
-                'class': 'btn btn-sm btn-success',
-                'role': 'button',
-                'data-toggle': 'tooltip',
-                'title': 'Run quality controls for this delivery.',
-                'aria-label': 'Run quality controls for ' + filename,
-                'href': '/setup_job?' + $.param({deliveries: row.id}),
-                'text': 'QC'
-            }).appendTo($buttons);
-        } else {
-            $buttons.append(disabledAction("QC", "Quality controls are not available for this delivery."));
-        }
+    if (canRunQc(row)) {
+        appendActionContent($('<a>', {
+            'class': 'btn btn-sm btn-qc delivery-row-qc',
+            'role': 'button',
+            'aria-label': 'Run quality controls for ' + filename,
+            'href': SETUP_JOB_URL + '?' + $.param({deliveries: row.id})
+        }), 'play', 'Run QC', false).appendTo($buttons);
+        actionCount += 1;
     }
 
-    if (CAN_DELETE) {
-        if (canDelete(row)) {
-            $('<button>', {
-                'class': 'btn btn-sm btn-danger delete-button',
-                'data-toggle': 'tooltip',
-                'title': 'Delete this delivery.',
-                'aria-label': 'Delete ' + filename,
-                'text': 'Delete'
-            })
-                .attr('data-delivery-id', String(row.id))
-                .attr('data-delivery-filename', String(row.filename || ''))
-                .appendTo($buttons);
-        } else {
-            $buttons.append(disabledAction("Delete", "This delivery cannot be deleted."));
-        }
+    if (canSubmit(row)) {
+        appendActionContent($('<button>', {
+            'class': 'btn btn-sm btn-submit submit-delivery-button',
+            'type': 'button',
+            'aria-label': 'Submit ' + filename + ' to EEA'
+        }), 'send', 'Submit', false)
+            .attr('data-delivery-id', String(row.id))
+            .attr('data-delivery-filename', String(row.filename || ''))
+            .appendTo($buttons);
+        actionCount += 1;
     }
 
-    if (SUBMISSION_ENABLED && CAN_SUBMIT) {
-        if (canSubmit(row)) {
-            $('<button>', {
-                'class': 'btn btn-sm btn-default submit-delivery-button',
-                'data-toggle': 'tooltip',
-                'title': 'Send this delivery to EEA for approval.',
-                'aria-label': 'Submit ' + filename + ' to EEA',
-                'text': 'Submit to EEA'
-            })
-                .attr('data-delivery-id', String(row.id))
-                .attr('data-delivery-filename', String(row.filename || ''))
-                .appendTo($buttons);
-        } else {
-            $buttons.append(disabledAction("Submit to EEA", "This delivery is not ready for submission."));
-        }
+    if (canDelete(row)) {
+        appendActionContent($('<button>', {
+            'class': 'btn btn-sm btn-delete-outline delivery-row-delete delete-button',
+            'type': 'button',
+            'data-toggle': 'tooltip',
+            'title': 'Delete delivery',
+            'aria-label': 'Delete ' + filename
+        }), 'trash', 'Delete', true)
+            .attr('data-delivery-id', String(row.id))
+            .attr('data-delivery-filename', String(row.filename || ''))
+            .appendTo($buttons);
+        actionCount += 1;
+    }
+
+    if (actionCount === 0) {
+        return $('<span>', {
+            'class': 'delivery-row-actions-empty',
+            'aria-label': 'No actions available for ' + filename,
+            'text': '\u2014'
+        }).prop('outerHTML');
     }
 
     return $buttons.prop('outerHTML');
@@ -215,24 +218,90 @@ function statusCellStyle(value, row, index) {
 }
 
 
-function toggle_select_button() {
-    var selectedRows = $("#tbl-deliveries").bootstrapTable("getSelections");
-    var qcCount = selectedRows.filter(canRunQc).length;
-    var deleteCount = selectedRows.filter(canDelete).length;
-    var submitCount = selectedRows.filter(canSubmit).length;
+function selectedDeliveryState() {
+    var rows = $("#tbl-deliveries").bootstrapTable("getSelections") || [];
+    return {
+        rows: rows,
+        total: rows.length,
+        qcRows: rows.filter(canRunQc),
+        deleteRows: rows.filter(canDelete),
+        submitRows: rows.filter(canSubmit)
+    };
+}
 
-    $("#btn-qc-multi")
-        .prop("disabled", qcCount === 0)
-        .find(".delivery-action-label")
-        .text(qcCount ? "QC all selected (" + qcCount + ")" : "QC all selected");
-    $("#btn-delete-multi")
-        .prop("disabled", deleteCount === 0)
-        .find(".delivery-action-label")
-        .text(deleteCount ? "Delete selected (" + deleteCount + ")" : "Delete selected");
-    $("#btn-submit-multi")
-        .prop("disabled", submitCount === 0)
-        .find(".delivery-action-label")
-        .text(submitCount ? "Submit selected (" + submitCount + ")" : "Submit selected");
+function updateBulkActionButton(selector, baseLabel, eligibleCount, total, reason) {
+    var $button = $(selector);
+    if (!$button.length) {
+        return;
+    }
+    var label = baseLabel;
+    if (total > 0) {
+        label += eligibleCount === total
+            ? ' (' + total + ')'
+            : ' (' + eligibleCount + ' of ' + total + ')';
+    }
+    var disabled = total === 0 || eligibleCount !== total;
+    $button
+        .prop('disabled', disabled)
+        .attr('title', disabled && total > 0 ? reason : '')
+        .attr('aria-label', label + (disabled && total > 0 ? '. ' + reason : ''))
+        .find('.delivery-action-label')
+        .text(label);
+}
+
+function toggle_select_button() {
+    var state = selectedDeliveryState();
+    var selectionLabel = state.total === 0
+        ? 'No deliveries selected'
+        : state.total + (state.total === 1 ? ' delivery' : ' deliveries') + ' selected on this page';
+    $('#delivery-selection-summary').text(selectionLabel);
+    $('#delivery-bulk-actions').prop('hidden', state.total === 0);
+    $('#btn-clear-selection').prop('hidden', state.total === 0);
+
+    var unavailableActions = [];
+    if ($('#btn-qc-multi').length && state.qcRows.length !== state.total) {
+        unavailableActions.push('Run QC');
+    }
+    if ($('#btn-submit-multi').length && state.submitRows.length !== state.total) {
+        unavailableActions.push('Submit to EEA');
+    }
+    if ($('#btn-delete-multi').length && state.deleteRows.length !== state.total) {
+        unavailableActions.push('Delete');
+    }
+    var guidance = 'Choose an action for every selected delivery.';
+    if (state.total === 0) {
+        guidance = 'Select eligible deliveries on this page to apply a bulk action.';
+    } else if (unavailableActions.length > 0) {
+        guidance = 'Adjust the selection: not every delivery is eligible for ' + unavailableActions.join(', ') + '.';
+    }
+    $('#delivery-selection-guidance').text(guidance);
+
+    updateBulkActionButton(
+        '#btn-qc-multi',
+        'Run QC',
+        state.qcRows.length,
+        state.total,
+        'Run QC requires every selected delivery to be eligible.'
+    );
+    updateBulkActionButton(
+        '#btn-delete-multi',
+        'Delete',
+        state.deleteRows.length,
+        state.total,
+        'Delete requires every selected delivery to be eligible.'
+    );
+    updateBulkActionButton(
+        '#btn-submit-multi',
+        'Submit to EEA',
+        state.submitRows.length,
+        state.total,
+        'Submission requires every selected delivery to have passed QC.'
+    );
+}
+
+function selectionActionBlocked(message) {
+    $('#delivery-selection-guidance').text(message);
+    $('#deliveries-live-status').text(message);
 }
 
 
@@ -242,7 +311,7 @@ function updateTableAccessibility() {
     $('.fixed-table-toolbar .search input')
         .attr('aria-label', 'Search deliveries');
     $('#tbl-deliveries input[name="btSelectAll"]')
-        .attr('aria-label', 'Select all eligible deliveries');
+        .attr('aria-label', 'Select all eligible deliveries on this page');
     $('#tbl-deliveries input[name="btSelectItem"]').each(function (index) {
         var row = rows[index] || {};
         var filename = String(row.filename || ('delivery ' + (index + 1)));
@@ -370,38 +439,43 @@ function submissionResultMessage(result) {
 
 
 function delete_function(delivery_ids, filenames) {
-    var msg_title = "Are you sure you want to delete the delivery ZIP file?";
-
-    // number of deliveries to delete
-    console.log(delivery_ids);
-    console.log(filenames);
+    var msg_title = "Delete this delivery?";
     var num_deliveries = delivery_ids.toString().split(",").length;
 
     if (num_deliveries > 1) {
-        msg_title = "Are you sure you want to delete " + num_deliveries + " delivery ZIP files?";
+        msg_title = "Delete " + num_deliveries + " deliveries?";
     }
     var filenameList = filenames.toString().split(',');
-    var msg_filenames = listDialogMessage(
-        filenameList.slice(0, 10),
-        Math.max(filenameList.length - 10, 0)
-    );
-    var dlg_ok = BootstrapDialog.show({
+    var msg_filenames = $('<div>')
+        .append($('<p>').text(
+            num_deliveries === 1
+                ? 'The delivery ZIP and its QC history will no longer be available. This action cannot be undone.'
+                : 'The selected delivery ZIP files and their QC histories will no longer be available. This action cannot be undone.'
+        ))
+        .append(listDialogMessage(
+            filenameList.slice(0, 10),
+            Math.max(filenameList.length - 10, 0)
+        ));
+    BootstrapDialog.show({
         type: BootstrapDialog.TYPE_DANGER,
         title: msg_title,
         message: msg_filenames,
         buttons: [{
-            label: "Delete delivery",
-            cssClass: "btn-default",
+            label: num_deliveries === 1 ? "Delete delivery" : "Delete " + num_deliveries + " deliveries",
+            cssClass: "btn-danger",
             action: function(dialog) {
-                data = {"ids": delivery_ids};
+                var $button = this;
+                var data = {"ids": delivery_ids};
+                $button.disable();
+                $button.spin();
                 $.ajax({
                     type: "POST",
-                    url: "/delivery/delete/",
+                    url: DELIVERY_DELETE_URL,
                     data: data,
                     dataType: "json",
                     success: function(result) {
                         if (result.status === "error") {
-                            var dlg_err = BootstrapDialog.show({
+                            BootstrapDialog.show({
                                 type: BootstrapDialog.TYPE_WARNING,
                                 title: "Cannot delete deliveries.",
                                 message: textDialogMessage("Error deleting deliveries. " + result.message),
@@ -411,25 +485,30 @@ function delete_function(delivery_ids, filenames) {
                                     action: function(dialog) {dialog.close();}
                                 }]
                             });
+                            dialog.close();
+                            return;
                         }
+                        $('#tbl-deliveries').bootstrapTable('uncheckAll');
                         $('#tbl-deliveries').bootstrapTable('refresh');
+                        $('#deliveries-live-status').text(result.message || 'Selected deliveries deleted.');
                         dialog.close();
                     },
                     error: function(result)  {
                         var error_message = "Unspecified error.";
-                            if (result.hasOwnProperty("responseJSON")) {
-                                error_message = result.responseJSON.message;
-                            }
-                            var dlg_err = BootstrapDialog.show({
-                                type: BootstrapDialog.TYPE_WARNING,
-                                title: "Error",
-                                message: textDialogMessage(error_message),
-                                buttons: [{
-                                    label: "OK",
-                                    cssClass: "btn-default",
-                                    action: function(dialog) {dialog.close();}
-                                }]
-                            });
+                        if (result.responseJSON && result.responseJSON.message) {
+                            error_message = result.responseJSON.message;
+                        }
+                        dialog.close();
+                        BootstrapDialog.show({
+                            type: BootstrapDialog.TYPE_WARNING,
+                            title: "Delivery could not be deleted",
+                            message: textDialogMessage(error_message),
+                            buttons: [{
+                                label: "OK",
+                                cssClass: "btn-default",
+                                action: function(errorDialog) {errorDialog.close();}
+                            }]
+                        });
                     }
                 });
             }
@@ -442,26 +521,28 @@ function delete_function(delivery_ids, filenames) {
 }
 
 function submit_eea_function(id, filename) {
-    console.log("clicked submit to EEA!");
-    var dlg_ok = BootstrapDialog.show({
-        title: "Are you sure you want to submit the delivery to EEA?",
-        message: textDialogMessage("Delivery file name: " + filename),
+    BootstrapDialog.show({
+        type: BootstrapDialog.TYPE_PRIMARY,
+        title: "Submit this delivery to EEA?",
+        message: $('<div>')
+            .append($('<p>').text('The latest successful QC result will be used for submission.'))
+            .append(textDialogMessage(filename)),
         buttons: [{
             label: "Submit delivery",
-            cssClass: "btn-default",
+            cssClass: "btn-primary",
             action: function(dialog) {
-                console.log("Submit to EEA confirmed by the user.");
-
-                data = {"id": id, "filename": filename};
+                var $button = this;
+                var data = {"id": id, "filename": filename};
+                $button.disable();
+                $button.spin();
                 dialog.setMessage("Submitting to EEA...");
                 $.ajax({
                     type: "POST",
-                    url: "/delivery/submit/",
+                    url: DELIVERY_SUBMIT_URL,
                     data: data,
                     dataType: "json",
                     success: function(result) {
-                        console.log("file marked successfully for submission to EEA!");
-                        var dlg_success = BootstrapDialog.show({
+                        BootstrapDialog.show({
                             title: "Delivery successfully submitted",
                             message: textDialogMessage(result.message),
                             buttons: [{
@@ -469,18 +550,19 @@ function submit_eea_function(id, filename) {
                                 cssClass: "btn-default",
                                 action: function(success_dialog) {success_dialog.close();}
                             }]
-                       });
-                       $('#tbl-deliveries').bootstrapTable('refresh');
-                       dialog.close();
+                        });
+                        $('#tbl-deliveries').bootstrapTable('uncheckAll');
+                        $('#tbl-deliveries').bootstrapTable('refresh');
+                        $('#deliveries-live-status').text(result.message || 'Delivery submitted to EEA.');
+                        dialog.close();
                     },
                     error: function(result)  {
-                      console.log("error in submit to EEA.");
-                      console.log(result.responseJSON);
-                      var error_message = "Unspecified error.";
-                      if (result.hasOwnProperty("responseJSON")) {
-                        error_message = result.responseJSON.message;
-                      }
-                      var dlg_err = BootstrapDialog.show({
+                        var error_message = "Unspecified error.";
+                        if (result.responseJSON && result.responseJSON.message) {
+                            error_message = result.responseJSON.message;
+                        }
+                        dialog.close();
+                        BootstrapDialog.show({
                             type: BootstrapDialog.TYPE_WARNING,
                             title: "Error submitting delivery to EEA",
                             message: textDialogMessage(error_message),
@@ -489,10 +571,9 @@ function submit_eea_function(id, filename) {
                                 cssClass: "btn-default",
                                 action: function(error_dialog) {error_dialog.close();}
                             }]
-                       });
-                       dialog.close();
+                        });
                     }
-                })
+                });
             }
         }, {
             label: "Cancel",
@@ -514,18 +595,20 @@ function submit_eea_batch_function(delivery_ids, filenames) {
         : "Submit delivery to EEA?";
 
     // Generate preview of filenames
-    var msg_filenames = listDialogMessage(
-        name_array.slice(0, 10),
-        Math.max(num_deliveries - 10, 0)
-    );
+    var msg_filenames = $('<div>')
+        .append($('<p>').text('The latest successful QC result for each delivery will be used for submission.'))
+        .append(listDialogMessage(
+            name_array.slice(0, 10),
+            Math.max(num_deliveries - 10, 0)
+        ));
 
     BootstrapDialog.show({
         type: BootstrapDialog.TYPE_PRIMARY,
         title: msg_title,
         message: msg_filenames,
         buttons: [{
-            label: "Yes, Submit",
-            cssClass: "btn-success",
+            label: num_deliveries === 1 ? "Submit delivery" : "Submit " + num_deliveries + " deliveries",
+            cssClass: "btn-primary",
             action: function(dialog) {
                 // Ensure we send BOTH ids and filenames as strings
                 var data = {
@@ -540,7 +623,7 @@ function submit_eea_batch_function(delivery_ids, filenames) {
 
                 $.ajax({
                     type: "POST",
-                    url: "/delivery/submit_batch/",
+                    url: DELIVERY_SUBMIT_BATCH_URL,
                     data: data,
                     dataType: "json",
                     success: function(result) {
@@ -557,7 +640,9 @@ function submit_eea_batch_function(delivery_ids, filenames) {
                             }]
                         });
 
+                        $('#tbl-deliveries').bootstrapTable('uncheckAll');
                         $('#tbl-deliveries').bootstrapTable('refresh');
+                        $('#deliveries-live-status').text(result.message || 'Selected deliveries submitted to EEA.');
                     },
                     error: function(xhr) {
                         dialog.close();
@@ -636,7 +721,7 @@ $(document).ready(function() {
        showColumns: true,
        sortName: 'id',
        sortOrder: 'desc',
-       url: "/data/delivery/list/",
+       url: DELIVERIES_DATA_URL,
        pageSize: 20,
        pageList: [20, 50, 100, 500],
        formatNoMatches: function () {
@@ -664,7 +749,11 @@ $(document).ready(function() {
         );
     });
 
-
+    $('#btn-clear-selection').on('click', function () {
+        $('#tbl-deliveries').bootstrapTable('uncheckAll');
+        toggle_select_button();
+        $('#deliveries-live-status').text('Delivery selection cleared.');
+    });
 
     // check one row
     $('#tbl-deliveries').on('check.bs.table', function (e, row) {
@@ -721,62 +810,57 @@ $(document).ready(function() {
         
     });
 
-    // "QC all selected" button is clicked
+    // Run QC for the current-page selection. Mixed eligibility is never
+    // silently reduced to a subset: users must first correct the selection.
     $('#btn-qc-multi').on('click', function() {
-        console.log("QC all selected button clicked!");
-        var runnableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(canRunQc);
-        if (runnableRows.length === 0) {
-            alert("Please select at least one delivery that can run QC.");
+        var state = selectedDeliveryState();
+        if (state.total === 0 || state.qcRows.length !== state.total) {
             toggle_select_button();
+            selectionActionBlocked('Run QC requires every selected delivery to be eligible.');
             return;
         }
-        var selected_delivery_ids = $.map(runnableRows, function (row) {
-            return row.id
+        var selectedDeliveryIds = $.map(state.rows, function (row) {
+            return row.id;
         });
-        $(location).attr("href","/setup_job?deliveries=" + selected_delivery_ids.join(","));
-    })
-
-    // "Delete selected" button is clicked
-    $('#btn-delete-multi').on('click', function() {
-        console.log("Delete selected button clicked!");
-        var deletableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(canDelete);
-        if (deletableRows.length === 0) {
-            alert("Please select at least one delivery that can be deleted.");
-            toggle_select_button();
-            return;
-        }
-        var selected_delivery_ids = $.map(deletableRows, function (row) {
-            return row.id
-        });
-        var selected_delivery_filenames = $.map(deletableRows, function (row) {
-            return row.filename
-        });
-        delete_function(selected_delivery_ids.join(","), selected_delivery_filenames.join(","));
+        window.location.assign(SETUP_JOB_URL + '?' + $.param({deliveries: selectedDeliveryIds.join(',')}));
     });
 
-    // "Submit selected" button is clicked
-    $('#btn-submit-multi').on('click', function() {
-        console.log("Submit selected button clicked!");
-        var submittableRows = $("#tbl-deliveries").bootstrapTable("getSelections").filter(canSubmit);
-        var numCheckedSubmittable = submittableRows.length;
-        if (numCheckedSubmittable === 0) {
-            alert("Please select at least one delivery with 'passed' status.");
+    // Delete every selected delivery, or none of them.
+    $('#btn-delete-multi').on('click', function() {
+        var state = selectedDeliveryState();
+        if (state.total === 0 || state.deleteRows.length !== state.total) {
             toggle_select_button();
+            selectionActionBlocked('Delete requires every selected delivery to be eligible.');
             return;
         }
-        // TODO - if some of the selected deliveries are not in "ok" status, show a warning message and ask user to confirm submission.
+        var selectedDeliveryIds = $.map(state.rows, function (row) {
+            return row.id;
+        });
+        var selectedDeliveryFilenames = $.map(state.rows, function (row) {
+            return row.filename;
+        });
+        delete_function(selectedDeliveryIds.join(','), selectedDeliveryFilenames.join(','));
+    });
 
-        var submittable_delivery_ids = $.map(submittableRows, function (row) {
-            return row.id
+    // Submit every selected delivery, or none of them.
+    $('#btn-submit-multi').on('click', function() {
+        var state = selectedDeliveryState();
+        if (state.total === 0 || state.submitRows.length !== state.total) {
+            toggle_select_button();
+            selectionActionBlocked('Submission requires every selected delivery to have passed QC.');
+            return;
+        }
+        var selectedDeliveryIds = $.map(state.rows, function (row) {
+            return row.id;
         });
-        var submittable_delivery_filenames = $.map(submittableRows, function (row) {
-            return row.filename
+        var selectedDeliveryFilenames = $.map(state.rows, function (row) {
+            return row.filename;
         });
-        submit_eea_batch_function(submittable_delivery_ids.join(","), submittable_delivery_filenames.join(","));
+        submit_eea_batch_function(selectedDeliveryIds.join(','), selectedDeliveryFilenames.join(','));
     });
 
     $("#btn-export").click(function() {
-        const baseUrl = "/data/delivery/export/";
+        const baseUrl = DELIVERY_EXPORT_URL;
         const search = $("input.form-control.search-input").val(); // existing search input
         const filter = ""; // you can later capture filter JSON from bootstrap-table
         const sort = $("#tbl-deliveries").bootstrapTable("getOptions").sortName;

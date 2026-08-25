@@ -284,6 +284,15 @@ STORAGES = {
     },
 }
 
+# Local development deliberately supports DEBUG=False so error pages and other
+# production-only behavior can be exercised. Keep static files live-reloading
+# in that environment anyway: WhiteNoise must read from app static directories
+# instead of serving a stale collectstatic copy. Both options stay disabled in
+# production, where immutable collected assets are required.
+WHITENOISE_AUTOREFRESH = not IS_SECURE_ENVIRONMENT
+WHITENOISE_USE_FINDERS = not IS_SECURE_ENVIRONMENT
+WHITENOISE_MAX_AGE = 60 if IS_SECURE_ENVIRONMENT else 0
+
 # Media or user-uploaded files.
 # The directory contains uploaded deliveries.
 # Such directory must be accessible by Frontend container and all Worker containers.

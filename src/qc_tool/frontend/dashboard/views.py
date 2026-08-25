@@ -447,16 +447,29 @@ def deliveries(request):
     Displays the main page with uploaded files and action buttons
     """
 
+    account_access = access_for_request(request)
     api_key_configured = has_api_key(request.user)
+    delivery_actions_enabled = (
+        account_access.can_run_qc
+        or account_access.can_delete
+        or (
+            settings.SUBMISSION_ENABLED
+            and account_access.can_submit
+        )
+    )
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
 
-    return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
-                                                         "announcement": get_announcement_message(),
-                                                         "boundary_version": get_boundary_version(),
-                                                         "api_key_configured": api_key_configured,
-                                                         "update_job_statuses": update_job_statuses,
-                                                         "update_job_statuses_interval": update_job_statuses_interval})
+    context = {
+        "submission_enabled": settings.SUBMISSION_ENABLED,
+        "announcement": get_announcement_message(),
+        "delivery_actions_enabled": delivery_actions_enabled,
+        "boundary_version": get_boundary_version(),
+        "api_key_configured": api_key_configured,
+        "update_job_statuses": update_job_statuses,
+        "update_job_statuses_interval": update_job_statuses_interval,
+    }
+    return render(request, "dashboard/deliveries.html", context)
 
 
 def setup_job(request):

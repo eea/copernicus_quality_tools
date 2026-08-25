@@ -55,7 +55,7 @@
 }
 
 .deliveries-page .btn-primary,
-.deliveries-page .btn-success,
+.deliveries-page .btn-submit,
 .deliveries-page .btn-info {
     border-color: var(--qc-color-primary);
     color: #fff;
@@ -64,8 +64,8 @@
 
 .deliveries-page .btn-primary:hover,
 .deliveries-page .btn-primary:focus,
-.deliveries-page .btn-success:hover,
-.deliveries-page .btn-success:focus,
+.deliveries-page .btn-submit:hover,
+.deliveries-page .btn-submit:focus,
 .deliveries-page .btn-info:hover,
 .deliveries-page .btn-info:focus {
     border-color: var(--qc-color-primary-dark);
@@ -73,16 +73,42 @@
     background: var(--qc-color-primary-dark);
 }
 
-.deliveries-page .btn-danger {
-    border-color: #b42318;
+.deliveries-page .btn-qc {
+    border-color: var(--qc-color-success);
     color: #fff;
-    background: #b42318;
+    background: var(--qc-color-success);
+}
+
+.deliveries-page .btn-qc:hover,
+.deliveries-page .btn-qc:focus {
+    border-color: var(--qc-color-success-dark);
+    color: #fff;
+    background: var(--qc-color-success-dark);
+}
+
+.deliveries-page .btn-delete-outline {
+    border-color: #d0443c;
+    color: #a61b14;
+    background: #fff;
+}
+
+.deliveries-page .btn-delete-outline:hover,
+.deliveries-page .btn-delete-outline:focus {
+    border-color: var(--qc-color-danger);
+    color: var(--qc-color-danger-dark);
+    background: var(--qc-color-danger-soft);
+}
+
+.deliveries-page .btn-danger {
+    border-color: var(--qc-color-danger);
+    color: #fff;
+    background: var(--qc-color-danger);
 }
 
 .deliveries-page .btn-danger:hover,
 .deliveries-page .btn-danger:focus {
-    border-color: #8f1c13;
-    background: #8f1c13;
+    border-color: var(--qc-color-danger-dark);
+    background: var(--qc-color-danger-dark);
 }
 
 .deliveries-toolbar .ui-icon {
@@ -371,6 +397,62 @@
     gap: 8px;
 }
 
+.deliveries-selection {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+
+.deliveries-selection__summary {
+    display: flex;
+    min-width: 260px;
+    align-items: center;
+    gap: 10px;
+}
+
+.deliveries-selection__summary > span:nth-child(2) {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.deliveries-selection__summary strong {
+    color: var(--qc-color-navy);
+    font-size: 13px;
+}
+
+.deliveries-selection__summary small {
+    max-width: 390px;
+    color: var(--qc-color-muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.deliveries-selection__icon {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    color: var(--qc-color-primary);
+    background: var(--qc-color-primary-soft);
+}
+
+.deliveries-selection #btn-clear-selection {
+    min-height: 36px;
+    padding-right: 6px;
+    padding-left: 6px;
+}
+
+.deliveries-selection #delivery-bulk-actions[hidden],
+.deliveries-selection #btn-clear-selection[hidden] {
+    display: none;
+}
+
 .deliveries-toolbar__actions .btn,
 .deliveries-toolbar__utilities .btn {
     min-height: 38px;
@@ -524,9 +606,38 @@
     box-shadow: 0 0 0 2px rgba(8, 104, 215, 0.18);
 }
 
-.deliveries-page .delivery-action-disabled {
-    cursor: not-allowed;
-    opacity: 0.58;
+.deliveries-page .delivery-row-actions {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.deliveries-page .delivery-row-actions .btn {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+}
+
+.deliveries-page .delivery-row-actions .ui-icon {
+    width: 17px;
+    height: 17px;
+    flex-basis: 17px;
+}
+
+.deliveries-page .delivery-row-delete {
+    width: 36px;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+}
+
+.deliveries-page .delivery-row-actions-empty {
+    color: var(--qc-color-muted);
+    font-size: 12px;
 }
 
 .deliveries-card__footer {
@@ -551,6 +662,11 @@
 
     .deliveries-toolbar__utilities {
         justify-content: flex-start;
+    }
+
+    .deliveries-selection,
+    .deliveries-selection__summary {
+        width: 100%;
     }
 
     .deliveries-summary {
@@ -613,7 +729,8 @@
     }
 
     .deliveries-toolbar__actions,
-    .deliveries-toolbar__utilities {
+    .deliveries-toolbar__utilities,
+    .deliveries-selection {
         width: 100%;
     }
 
@@ -631,6 +748,10 @@
     .deliveries-toolbar__utilities > .btn,
     .deliveries-api-credential {
         width: 100%;
+    }
+
+    .delivery-row-actions .btn {
+        width: auto;
     }
 
     .deliveries-toolbar__actions .btn,

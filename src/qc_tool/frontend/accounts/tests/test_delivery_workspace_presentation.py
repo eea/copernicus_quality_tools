@@ -1,6 +1,7 @@
 """Presentation and permission contracts for the deliveries workspace."""
 
 import re
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from django.contrib.auth import get_user_model
@@ -50,6 +51,16 @@ class DeliveryWorkspacePresentationTests(TestCase):
             content_type=capability_content_type(),
             codename=permission.value,
         )
+
+    def static_source(self, relative_path):
+        """Read a collected static source used by the workspace."""
+
+        source_path = finders.find(relative_path)
+        self.assertIsNotNone(
+            source_path,
+            "Missing workspace static asset: {}".format(relative_path),
+        )
+        return Path(source_path).read_text(encoding="utf-8")
 
     def remove_default_capabilities(self, *permissions):
         default_group = Group.objects.get(name=Role.DEFAULT.value)
@@ -173,17 +184,44 @@ class DeliveryWorkspacePresentationTests(TestCase):
             administrator_sidebar,
         )
 
+    @override_settings(SUBMISSION_ENABLED=True)
     def test_upload_and_actions_follow_effective_permissions(self):
         permitted_response = self.client.get(reverse("deliveries"))
 
         self.assertContains(permitted_response, "Upload delivery")
         self.assertContains(permitted_response, "Open uploader")
-        self.assertContains(permitted_response, 'id="btn-qc-multi"')
+        self.assertContains(
+            permitted_response,
+            'id="btn-qc-multi" class="btn btn-qc"',
+        )
         self.assertContains(permitted_response, 'id="btn-delete-multi"')
+        self.assertContains(permitted_response, 'id="btn-submit-multi"')
+        self.assertContains(
+            permitted_response,
+            'id="delivery-selection-summary" aria-live="polite"',
+        )
+        self.assertContains(permitted_response, "No deliveries selected")
+        self.assertContains(
+            permitted_response,
+            "Select eligible deliveries on this page",
+        )
+        self.assertContains(permitted_response, 'id="btn-clear-selection"')
+        self.assertContains(permitted_response, 'id="delivery-bulk-actions"')
+        self.assertContains(permitted_response, 'data-checkbox="true"')
+        self.assertContains(
+            permitted_response,
+            'data-formatter="actionsFormatter"',
+        )
+
+        self.remove_default_capabilities(AccountPermission.RUN_QC)
+        no_qc_response = self.client.get(reverse("deliveries"))
+
+        self.assertNotContains(no_qc_response, 'id="btn-qc-multi"')
+        self.assertContains(no_qc_response, 'id="btn-delete-multi"')
+        self.assertContains(no_qc_response, 'id="btn-submit-multi"')
 
         self.remove_default_capabilities(
             AccountPermission.UPLOAD_DELIVERY,
-            AccountPermission.RUN_QC,
             AccountPermission.DELETE_DELIVERY,
             AccountPermission.SUBMIT_DELIVERY,
         )
@@ -197,6 +235,69 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertNotContains(restricted_response, 'id="btn-qc-multi"')
         self.assertNotContains(restricted_response, 'id="btn-delete-multi"')
         self.assertNotContains(restricted_response, 'id="btn-submit-multi"')
+        self.assertNotContains(
+            restricted_response,
+            'id="delivery-selection-summary"',
+        )
+        self.assertNotContains(
+            restricted_response,
+            'id="btn-clear-selection"',
+        )
+        self.assertNotContains(restricted_response, 'data-checkbox="true"')
+        self.assertNotContains(
+            restricted_response,
+            'data-formatter="actionsFormatter"',
+        )
+
+    def test_delivery_action_assets_keep_semantic_action_states(self):
+        stylesheet = self.static_source(
+            "dashboard/css/pages/deliveries.css"
+        )
+        tokens = self.static_source("dashboard/css/ui/tokens.css")
+        script = self.static_source("dashboard/js/deliveries.js")
+
+        qc_rule = re.search(
+            r"\.deliveries-page\s+\.btn-qc\s*\{(?P<body>[^}]*)\}",
+            stylesheet,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        self.assertIsNotNone(qc_rule, "Run-QC needs a dedicated green style.")
+        self.assertIn("--qc-color-success: #15803d", tokens)
+        self.assertIn(
+            "background: var(--qc-color-success)",
+            qc_rule.group("body"),
+        )
+        self.assertIn("color: #fff", qc_rule.group("body"))
+
+        formatter = re.search(
+            r"function actionsFormatter\(value, row\)\s*\{(.*?)\n\}"
+            r"\n\nfunction statusFormatter",
+            script,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(formatter)
+        formatter_source = formatter.group(1)
+        for predicate, action_class in (
+            ("canRunQc(row)", "delivery-row-qc"),
+            ("canSubmit(row)", "submit-delivery-button"),
+            ("canDelete(row)", "delivery-row-delete"),
+        ):
+            with self.subTest(action=predicate):
+                self.assertIn("if ({})".format(predicate), formatter_source)
+                self.assertIn(action_class, formatter_source)
+
+        self.assertIn("delivery-row-actions-empty", formatter_source)
+        self.assertIn("No actions available for ", formatter_source)
+        self.assertNotIn("disabledAction", script)
+        self.assertNotIn("disabled", formatter_source.lower())
+
+    def test_bulk_selection_script_describes_page_local_selection(self):
+        script = self.static_source("dashboard/js/deliveries.js")
+
+        self.assertIn("selected on this page", script)
+        self.assertIn("#btn-clear-selection", script)
+        self.assertIn("eligibleCount !== total", script)
+        self.assertIn("#delivery-selection-guidance", script)
 
     def test_summary_uses_semantic_term_and_value_pairs(self):
         response = self.client.get(reverse("deliveries"))
