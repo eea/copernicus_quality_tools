@@ -1,21 +1,5 @@
 /* Breakpoints keep the error experience useful from desktop to mobile. */
 @media (max-width: 1199px) {
-    .error-layout .navbar-brand-title {
-        margin-left: 18px;
-        font-size: 18px;
-    }
-
-    .error-layout .navbar-brand-logo-land-monitoring {
-        margin-left: 16px;
-    }
-
-    .error-layout .main-menu > li > a,
-    .error-layout .main-menu > li.navbar-logout button {
-        padding-right: 10px;
-        padding-left: 10px;
-        font-size: 13px;
-    }
-
     .error-hero {
         gap: 52px;
     }
@@ -28,75 +12,6 @@
 }
 
 @media (max-width: 991px) {
-    .error-layout #menucontainer {
-        min-height: 70px;
-    }
-
-    .error-layout #menucontainer > .container-fluid {
-        padding-right: 16px;
-        padding-left: 16px;
-    }
-
-    .error-layout .navbar-header {
-        float: none;
-    }
-
-    .error-layout .navbar-brand {
-        height: 70px;
-        padding: 14px 0;
-    }
-
-    .error-layout .navbar-brand-logo {
-        height: 38px;
-    }
-
-    .error-layout .navbar-brand-logo-land-monitoring {
-        height: 38px;
-        margin-left: 16px;
-    }
-
-    .error-layout .navbar-brand-title {
-        margin-left: 18px;
-        font-size: 17px;
-    }
-
-    .error-layout .navbar-toggle {
-        display: block;
-        margin-top: 18px;
-        margin-right: 0;
-    }
-
-    .error-layout .navbar-collapse {
-        border-top-color: #dfe7f2;
-        background: #fff;
-        box-shadow: 0 8px 20px rgba(20, 36, 63, 0.08);
-    }
-
-    .error-layout .navbar-collapse.collapse {
-        display: none !important;
-    }
-
-    .error-layout .navbar-collapse.collapse.in {
-        display: block !important;
-    }
-
-    .error-layout .navbar-nav {
-        float: none !important;
-        margin: 0 -15px;
-    }
-
-    .error-layout .navbar-nav > li {
-        float: none;
-    }
-
-    .error-layout .main-menu > li > a,
-    .error-layout .main-menu > li.navbar-logout button {
-        width: 100%;
-        min-height: 48px;
-        padding: 13px 15px;
-        text-align: left;
-    }
-
     .error-page {
         padding-top: 58px;
     }
@@ -188,14 +103,6 @@
 }
 
 @media (max-width: 560px) {
-    .error-layout .navbar-brand-logo-land-monitoring {
-        display: none;
-    }
-
-    .error-layout .navbar-brand-title {
-        margin-left: 12px;
-    }
-
     .error-page {
         padding-right: 15px;
         padding-left: 15px;
@@ -236,13 +143,6 @@
         border-left: 0;
     }
 
-    .error-layout #section-footer .col-md-4:nth-child(2) > .row {
-        gap: 18px;
-    }
-
-    .error-layout #section-footer .footer-logo {
-        height: 42px;
-    }
 }
 
 @media (prefers-reduced-motion: reduce) {

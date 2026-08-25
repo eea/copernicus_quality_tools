@@ -55,6 +55,14 @@ function dateFormatter(value, row) {
    }
 }
 
+function typeFormatter(value) {
+    var label = value === 's3' ? 'S3' : 'Local';
+    return $('<span>', {
+        'class': 'delivery-type delivery-type--' + (value === 's3' ? 's3' : 'local'),
+        'text': label
+    }).prop('outerHTML');
+}
+
 function checkboxFormatter(value, row) {
     return {
         disabled: !canRunQc(row) && !canDelete(row) && !canSubmit(row),
@@ -81,17 +89,25 @@ function canSubmit(row) {
 }
 
 function disabledAction(label, message) {
-    return $('<button>', {
-        'class': 'btn btn-sm btn-default',
+    return $('<span>', {
+        'class': 'btn btn-sm btn-default delivery-action-disabled',
+        'role': 'button',
+        'aria-disabled': 'true',
+        'tabindex': '0',
         'data-toggle': 'tooltip',
         'title': message,
-        'disabled': true,
+        'aria-label': label + '. ' + message,
         'text': label
     });
 }
 
 function actionsFormatter(value, row) {
-    var $buttons = $('<div>', {'class': 'btn-group'});
+    var filename = String(row.filename || 'delivery');
+    var $buttons = $('<div>', {
+        'class': 'btn-group',
+        'role': 'group',
+        'aria-label': 'Actions for ' + filename
+    });
 
     if (CAN_RUN_QC) {
         if (canRunQc(row)) {
@@ -100,6 +116,7 @@ function actionsFormatter(value, row) {
                 'role': 'button',
                 'data-toggle': 'tooltip',
                 'title': 'Run quality controls for this delivery.',
+                'aria-label': 'Run quality controls for ' + filename,
                 'href': '/setup_job?' + $.param({deliveries: row.id}),
                 'text': 'QC'
             }).appendTo($buttons);
@@ -114,6 +131,7 @@ function actionsFormatter(value, row) {
                 'class': 'btn btn-sm btn-danger delete-button',
                 'data-toggle': 'tooltip',
                 'title': 'Delete this delivery.',
+                'aria-label': 'Delete ' + filename,
                 'text': 'Delete'
             })
                 .attr('data-delivery-id', String(row.id))
@@ -130,6 +148,7 @@ function actionsFormatter(value, row) {
                 'class': 'btn btn-sm btn-default submit-delivery-button',
                 'data-toggle': 'tooltip',
                 'title': 'Send this delivery to EEA for approval.',
+                'aria-label': 'Submit ' + filename + ' to EEA',
                 'text': 'Submit to EEA'
             })
                 .attr('data-delivery-id', String(row.id))
@@ -144,38 +163,55 @@ function actionsFormatter(value, row) {
 }
 
 function statusFormatter(value, row, index) {
+    var label;
+    var modifier = 'neutral';
+
     if (value == "file_not_found") {
-        value = '<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"> </span>';
-        value += '<span class="text-danger">FILE NOT FOUND</span>';
-        return value;
-    }
-    if (!row.last_job_status) {
-        return 'Not checked';
-    }
-    if (value == "ok") {
-        if (row["date_submitted"] !== null) {
-            value = "submitted";
-        } else {
-            value = "passed";
+        label = 'File not found';
+        modifier = 'failed';
+    } else if (!row.last_job_status) {
+        label = 'Not checked';
+    } else if (value == "ok") {
+        label = row.date_submitted !== null ? 'Submitted' : 'Passed';
+        modifier = 'passed';
+    } else {
+        var statusLabels = {
+            'waiting': 'Waiting',
+            'running': 'Running',
+            'partial': 'Partial',
+            'failed': 'Failed',
+            'error': 'Error',
+            'worker timeout': 'Worker timeout',
+            'worker lost': 'Worker unavailable'
+        };
+        label = statusLabels[value] || String(value);
+        if (value === 'waiting' || value === 'running') {
+            modifier = 'progress';
+        } else if (
+            value === 'failed' || value === 'error' || value === 'partial' ||
+            value === 'worker timeout' || value === 'worker lost'
+        ) {
+            modifier = 'failed';
         }
     }
+
+    var $status = $('<span>', {
+        'class': 'delivery-status delivery-status--' + modifier,
+        'text': label
+    });
+    if (!row.last_job_uuid) {
+        return $status.prop('outerHTML');
+    }
+
     return $('<a>', {
-        'class': 'like',
+        'class': 'delivery-status-link',
         'href': '/result/' + encodeURIComponent(String(row.last_job_uuid)),
-        'title': 'Show results',
-        'text': String(value)
-    }).prop('outerHTML');
+        'aria-label': 'View QC result for ' + String(row.filename || 'delivery') + ': ' + label
+    }).append($status).prop('outerHTML');
 }
 
 function statusCellStyle(value, row, index) {
-
-    if (value == "ok") {
-        return { classes: "success"}
-    }
-    if (value == "failed" || value == "error") {
-        return { classes: "danger" }
-    }
-    return {};
+    return {classes: 'delivery-status-cell'};
 }
 
 
@@ -187,13 +223,119 @@ function toggle_select_button() {
 
     $("#btn-qc-multi")
         .prop("disabled", qcCount === 0)
+        .find(".delivery-action-label")
         .text(qcCount ? "QC all selected (" + qcCount + ")" : "QC all selected");
     $("#btn-delete-multi")
         .prop("disabled", deleteCount === 0)
+        .find(".delivery-action-label")
         .text(deleteCount ? "Delete selected (" + deleteCount + ")" : "Delete selected");
     $("#btn-submit-multi")
         .prop("disabled", submitCount === 0)
+        .find(".delivery-action-label")
         .text(submitCount ? "Submit selected (" + submitCount + ")" : "Submit selected");
+}
+
+
+function updateTableAccessibility() {
+    var rows = $('#tbl-deliveries').bootstrapTable('getData') || [];
+
+    $('.fixed-table-toolbar .search input')
+        .attr('aria-label', 'Search deliveries');
+    $('#tbl-deliveries input[name="btSelectAll"]')
+        .attr('aria-label', 'Select all eligible deliveries');
+    $('#tbl-deliveries input[name="btSelectItem"]').each(function (index) {
+        var row = rows[index] || {};
+        var filename = String(row.filename || ('delivery ' + (index + 1)));
+        $(this).attr('aria-label', 'Select ' + filename);
+    });
+}
+
+
+function updateTableStructureAccessibility() {
+    var $scrollRegion = $('.deliveries-table-region .fixed-table-body').first();
+    $scrollRegion.attr({
+        'role': 'region',
+        'aria-labelledby': 'deliveries-table-title',
+        'aria-busy': $scrollRegion.attr('aria-busy') || 'true',
+        'tabindex': '0'
+    });
+
+    var filterLabels = {
+        'filename': 'Filter by name',
+        'date_uploaded': 'Filter by upload date',
+        'product_description': 'Filter by product',
+        'last_job_status': 'Filter by QC status'
+    };
+    $('#tbl-deliveries thead th').each(function () {
+        var $header = $(this);
+        var field = $header.attr('data-field');
+        var filterLabel = filterLabels[field];
+        if (filterLabel) {
+            $header.find('.filter-control input, .filter-control select')
+                .attr('aria-label', filterLabel);
+        }
+    });
+
+    var options = $('#tbl-deliveries').bootstrapTable('getOptions') || {};
+    $('#tbl-deliveries thead th').removeAttr('aria-sort');
+    $('#tbl-deliveries thead .th-inner.sortable').each(function () {
+        var $control = $(this);
+        var $header = $control.closest('th');
+        var field = $header.attr('data-field');
+        var label = $.trim($control.clone().children().remove().end().text()) || field;
+        $control
+            .attr({
+                'role': 'button',
+                'tabindex': '0',
+                'aria-label': 'Sort by ' + label
+            })
+            .off('keydown.qcSort')
+            .on('keydown.qcSort', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    $(this).trigger('click');
+                }
+            });
+        if (field === options.sortName) {
+            $header.attr('aria-sort', options.sortOrder === 'asc' ? 'ascending' : 'descending');
+        }
+    });
+}
+
+
+function setDeliveryTableBusy(isBusy) {
+    $('.deliveries-table-region .fixed-table-body')
+        .attr('aria-busy', isBusy ? 'true' : 'false');
+}
+
+
+function updateDeliverySummary(summary) {
+    if (!summary) {
+        return;
+    }
+    var values = {
+        '#delivery-summary-total': summary.total,
+        '#delivery-summary-passed': summary.passed,
+        '#delivery-summary-in-progress': summary.in_progress,
+        '#delivery-summary-failed': summary.failed,
+        '#delivery-summary-not-checked': summary.not_checked,
+        '#delivery-summary-other': summary.other
+    };
+    Object.keys(values).forEach(function (selector) {
+        var value = Number(values[selector]);
+        $(selector).text(Number.isFinite(value) && value >= 0 ? value : '\u2014');
+    });
+    $('#delivery-summary-other-wrap').prop('hidden', !(Number(summary.other) > 0));
+}
+
+
+var scheduledTableRefresh = null;
+
+function scheduleTableRefresh() {
+    window.clearTimeout(scheduledTableRefresh);
+    scheduledTableRefresh = window.setTimeout(function () {
+        $('#tbl-deliveries').bootstrapTable('refresh', {silent: true});
+    }, 250);
 }
 
 
@@ -248,7 +390,7 @@ function delete_function(delivery_ids, filenames) {
         title: msg_title,
         message: msg_filenames,
         buttons: [{
-            label: "Yes",
+            label: "Delete delivery",
             cssClass: "btn-default",
             action: function(dialog) {
                 data = {"ids": delivery_ids};
@@ -292,7 +434,7 @@ function delete_function(delivery_ids, filenames) {
                 });
             }
         }, {
-            label: "No",
+            label: "Cancel",
             cssClass: "btn-default",
             action: function(dialog) {dialog.close();}
         }]
@@ -305,7 +447,7 @@ function submit_eea_function(id, filename) {
         title: "Are you sure you want to submit the delivery to EEA?",
         message: textDialogMessage("Delivery file name: " + filename),
         buttons: [{
-            label: "Yes",
+            label: "Submit delivery",
             cssClass: "btn-default",
             action: function(dialog) {
                 console.log("Submit to EEA confirmed by the user.");
@@ -353,7 +495,7 @@ function submit_eea_function(id, filename) {
                 })
             }
         }, {
-            label: "No",
+            label: "Cancel",
             cssClass: "btn-default",
             action: function(dialog) {dialog.close();}
         }]
@@ -462,7 +604,11 @@ function update_job_statuses() {
                             // a matching row is found in the UI -> tell BootstrapTable to refresh it.
                             console.log("refreshing table row in UI with id: " + updated_delivery.id);
 
+                            var statusChanged = deliveries_to_update[new_index].last_job_status !== updated_delivery.last_job_status;
                             $("#tbl-deliveries").bootstrapTable("updateRow", {index: new_index, row: updated_delivery});
+                            if (statusChanged) {
+                                scheduleTableRefresh();
+                            }
                         }
                     }
                 }
@@ -476,6 +622,12 @@ $(document).ready(function() {
     // Set defult tooltip in each table row.
     $('[data-toggle="tooltip"]').tooltip();
 
+    $('.api-credential-form[data-confirm]').on('submit', function (event) {
+        if (!window.confirm($(this).attr('data-confirm'))) {
+            event.preventDefault();
+        }
+    });
+
     $('#tbl-deliveries').bootstrapTable({
        cache: false,
        striped: true,
@@ -488,9 +640,15 @@ $(document).ready(function() {
        pageSize: 20,
        pageList: [20, 50, 100, 500],
        formatNoMatches: function () {
-           return 'No deliveries found. Please upload a delivery ZIP file.';
+           if (CAN_UPLOAD) {
+               return 'No deliveries found. Upload a delivery ZIP file to get started.';
+           }
+           return 'No deliveries are currently available for your account.';
        }
     });
+
+    updateTableAccessibility();
+    updateTableStructureAccessibility();
 
     $('#tbl-deliveries').on('click', '.delete-button', function () {
         delete_function(
@@ -528,8 +686,30 @@ $(document).ready(function() {
         toggle_select_button();
     });
 
-    $('#tbl-deliveries').on('load-success.bs.table', function () {
+    $('#tbl-deliveries').on('refresh.bs.table', function () {
+        setDeliveryTableBusy(true);
+    });
+
+    $('#tbl-deliveries').on('load-success.bs.table', function (event, response) {
         toggle_select_button();
+        updateTableAccessibility();
+        updateTableStructureAccessibility();
+        updateDeliverySummary(response && response.summary);
+        $('#tbl-deliveries [data-toggle="tooltip"]').tooltip();
+        setDeliveryTableBusy(false);
+        var visibleCount = $('#tbl-deliveries').bootstrapTable('getData').length;
+        $('#deliveries-live-status').text(visibleCount + ' deliveries loaded.');
+    });
+
+    $('#tbl-deliveries').on('post-body.bs.table post-header.bs.table created-controls.bs.table sort.bs.table', function () {
+        updateTableAccessibility();
+        updateTableStructureAccessibility();
+        $('#tbl-deliveries [data-toggle="tooltip"]').tooltip();
+    });
+
+    $('#tbl-deliveries').on('load-error.bs.table', function () {
+        setDeliveryTableBusy(false);
+        $('#deliveries-live-status').text('Deliveries could not be loaded. Please try again.');
     });
 
     $('#tbl-deliveries').on('column-search.bs.table', function (event, text) {

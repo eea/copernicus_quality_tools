@@ -9,7 +9,7 @@
 
 {% block content %}
 
-    <div class="container-fluid main" style="padding-top: 70px;">
+    <div class="container-fluid main">
         <div class="row text-left">
 
             <ol class="breadcrumb">
@@ -41,7 +41,7 @@
 
                         {% if can_delete_jobs %}
                         <div id="runs-toolbar-1">
-                            <button id="btn-delete-multi" onclick="" class="btn btn-danger mr-10" disabled>
+                            <button id="btn-delete-multi" type="button" class="btn btn-danger mr-10" disabled>
                                 <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
                                 Delete all selected
                             </button>

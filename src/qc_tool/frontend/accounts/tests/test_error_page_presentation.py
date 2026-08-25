@@ -55,13 +55,17 @@ class ErrorPagePresentationTests(TestCase):
         self.assertEqual(response.status_code, status_code)
         self.assertContains(
             response,
-            '<body class="error-layout">',
+            '<body class="qc-shell error-layout">',
             status_code=status_code,
         )
         self.assertContains(
             response,
-            '<main class="error-page">',
+            '<main id="main-content" class="site-main error-page" tabindex="-1">',
             status_code=status_code,
+        )
+        self.assertEqual(
+            response.content.decode(response.charset).count("<main"),
+            1,
         )
         self.assertContains(
             response,
@@ -151,7 +155,6 @@ class ErrorPagePresentationTests(TestCase):
             "accounts/css/errors/hero.css",
             "accounts/css/errors/help.css",
             "accounts/css/errors/responsive.css",
-            "accounts/icons/error-ui.svg",
             "accounts/js/error-page.js",
         ):
             self.assertIsNotNone(finders.find(asset_path))
@@ -160,6 +163,14 @@ class ErrorPagePresentationTests(TestCase):
                 static(asset_path),
                 status_code=status_code,
             )
+
+        shared_icon_sprite = "dashboard/icons/ui.svg"
+        self.assertIsNotNone(finders.find(shared_icon_sprite))
+        self.assertContains(
+            response,
+            static(shared_icon_sprite),
+            status_code=status_code,
+        )
 
     def test_anonymous_404_uses_status_artwork_and_recovery_layout(self):
         response = self.client.get("/missing-branded-error-page/")

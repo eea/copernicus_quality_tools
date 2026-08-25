@@ -111,3 +111,6 @@ venv.bak/
 *~
 
 docker-compose.shiva.yml
+
+# OS
+*.DS_Store

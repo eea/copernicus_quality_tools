@@ -1,0 +1,58 @@
+{% load static %}
+{% if account_access.can_manage_configuration or account_access.can_access_django_admin %}
+<li class="dropdown">
+    <button class="site-nav-button dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg>
+        Manage <span class="caret" aria-hidden="true"></span>
+    </button>
+    <ul class="dropdown-menu site-nav-dropdown-menu">
+        {% if account_access.can_manage_configuration %}
+        <li><a href="{% url 'announcement' %}">Announcement</a></li>
+        <li><a href="{% url 'boundaries' %}">Boundaries</a></li>
+        {% endif %}
+        {% if account_access.can_access_django_admin %}
+        <li><a href="{% url 'admin:auth_user_changelist' %}">User administration</a></li>
+        {% endif %}
+    </ul>
+</li>
+{% endif %}
+<li>
+    <a href="https://eea.github.io/copernicus_quality_tools/">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#book"></use></svg>
+        Documentation
+    </a>
+</li>
+<li>
+    <a href="https://github.com/eea/copernicus_quality_tools">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#github"></use></svg>
+        GitHub
+    </a>
+</li>
+<li>
+    <a href="https://github.com/eea/copernicus_quality_tools/issues">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#help-circle"></use></svg>
+        Help
+    </a>
+</li>
+{% if user.is_authenticated %}
+<li class="dropdown site-nav-user">
+    <button class="site-nav-button dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#user-circle"></use></svg>
+        <span class="navbar-user-name" title="{{ user.get_username }}">{{ user.get_username }}</span>
+        <span class="caret" aria-hidden="true"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right site-nav-dropdown-menu">
+        {% if account_access.can_change_password %}
+        <li><a href="{% url 'change_password' %}?next=/">Change password</a></li>
+        {% endif %}
+        {% include "accounts/includes/logout_form.html" with dropdown_navigation=True %}
+    </ul>
+</li>
+{% else %}
+<li>
+    <a href="{% url 'login' %}">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#log-in"></use></svg>
+        Sign in
+    </a>
+</li>
+{% endif %}

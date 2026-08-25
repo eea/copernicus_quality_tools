@@ -1,0 +1,50 @@
+{% load static %}
+<aside class="workspace-sidebar" aria-label="Workspace navigation">
+    <nav aria-label="QC Tool workspace">
+        <ul class="workspace-sidebar__list">
+            <li class="workspace-sidebar__item">
+                <a class="workspace-sidebar__link" href="{% url 'deliveries' %}"{% if request.resolver_match.url_name == 'deliveries' %} aria-current="page"{% endif %}>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
+                    Deliveries
+                </a>
+            </li>
+            {% if account_access.can_upload %}
+            <li class="workspace-sidebar__item">
+                <a class="workspace-sidebar__link" href="{% url 'file_upload' %}"{% if request.resolver_match.url_name == 'file_upload' %} aria-current="page"{% endif %}>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+                    Upload delivery
+                </a>
+            </li>
+            {% endif %}
+            {% if account_access.can_manage_configuration %}
+            <li class="workspace-sidebar__item">
+                <a class="workspace-sidebar__link" href="{% url 'boundaries' %}"{% if request.resolver_match.url_name == 'boundaries' %} aria-current="page"{% endif %}>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg>
+                    Boundaries
+                </a>
+            </li>
+            <li class="workspace-sidebar__item">
+                <a class="workspace-sidebar__link" href="{% url 'announcement' %}"{% if request.resolver_match.url_name == 'announcement' %} aria-current="page"{% endif %}>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#edit"></use></svg>
+                    Announcement
+                </a>
+            </li>
+            {% endif %}
+            {% if account_access.can_access_django_admin %}
+            <li class="workspace-sidebar__item">
+                <a class="workspace-sidebar__link" href="{% url 'admin:auth_user_changelist' %}">
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#users"></use></svg>
+                    User administration
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    <div class="workspace-sidebar__help">
+        <strong>Need help?</strong>
+        <p>Read the QC Tool guides and setup documentation.</p>
+        <a href="https://eea.github.io/copernicus_quality_tools/">
+            View documentation
+        </a>
+    </div>
+</aside>

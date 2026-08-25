@@ -3,13 +3,9 @@
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit">
-            {% if error_page_navigation %}
-            <svg class="error-icon" aria-hidden="true" focusable="false">
-                <use href="{% static 'accounts/icons/error-ui.svg' %}#log-out"></use>
-            </svg>
-            {% else %}
-            <span class="glyphicon glyphicon-log-out" aria-hidden="true"></span>
-            {% endif %}
+            {% if not dropdown_navigation %}<svg class="ui-icon" aria-hidden="true" focusable="false">
+                <use href="{% static 'dashboard/icons/ui.svg' %}#log-out"></use>
+            </svg>{% endif %}
             <span class="navbar-logout-label">
                 Sign out (<span class="navbar-user-name" title="{{ user.get_username }}">{{ user.get_username }}</span>)
             </span>

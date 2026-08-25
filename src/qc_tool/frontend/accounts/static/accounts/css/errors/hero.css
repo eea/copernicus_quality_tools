@@ -1,5 +1,5 @@
 /* Two-column illustration and recovery actions. */
-.error-page {
+.site-main.error-page {
     box-sizing: border-box;
     min-height: calc(100vh - 208px);
     padding: 76px 24px 68px;
@@ -100,7 +100,7 @@
     transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
 }
 
-.error-actions .error-icon {
+.error-actions .ui-icon {
     margin-right: 10px;
 }
 

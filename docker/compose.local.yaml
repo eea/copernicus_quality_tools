@@ -67,7 +67,7 @@ services:
       S3_READ_TIMEOUT_SECONDS: "${S3_READ_TIMEOUT_SECONDS:-10}"
       S3_MAX_LISTED_OBJECTS: "${S3_MAX_LISTED_OBJECTS:-1000}"
       QC_TOOL_ENVIRONMENT: development
-      DJANGO_DEBUG: "yes"
+      DJANGO_DEBUG: "no"
       DJANGO_SECRET_KEY: development-only-compose-secret
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,frontend,testserver"
       DJANGO_STATIC_ROOT: /var/lib/qc_tool/static

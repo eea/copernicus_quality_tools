@@ -11,7 +11,9 @@
         <meta name="keywords" content="eea, copernicus, qc, tool, gis, quality"/>
         <meta name="csrf-token" content="{{ csrf_token }}">
         <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
+        <link rel="stylesheet" href="{% static 'dashboard/css/ui/tokens.css' %}">
         <link rel="stylesheet" type="text/css" href="{% static 'dashboard/css/main.css' %}">
+        <link rel="stylesheet" href="{% static 'dashboard/css/ui/shell.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-dialog.min.css' %}" type="text/css" />
         <link rel="shortcut icon" type="image/png" href="{% static 'dashboard/img/favicon.ico' %}"/>
 
@@ -20,28 +22,14 @@
         {% block js_head %}{% endblock js_head %}
 
     </head>
-    <body class="{% block body_class %}{% endblock body_class %}">
-        {% block skip_links %}{% endblock skip_links %}
+    <body class="qc-shell {% block body_class %}{% endblock body_class %}">
+        {% block skip_links %}<a class="skip-link" href="#main-content">Skip to main content</a>{% endblock skip_links %}
         <div id="wrap">
             <div id="main" class="clear-top">
-                <!--<div class="container">-->
-                <nav id="menucontainer" class="navbar navbar-default navbar-fixed-top" aria-label="Primary navigation">
-                    <!--<div class="navbar navbar-default" role="navigation">-->
+                <header class="site-header">
+                <nav id="menucontainer" class="navbar navbar-default" aria-label="Primary navigation">
                     <div class="container-fluid">
                         <div class="navbar-header">
-                            <button
-                                type="button"
-                                class="navbar-toggle"
-                                data-toggle="collapse"
-                                data-target="#primary-navigation-menu"
-                                aria-controls="primary-navigation-menu"
-                                aria-expanded="false"
-                            >
-                                <span class="sr-only">Toggle navigation</span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                            </button>
                             {% url 'deliveries' as deliveries_url %}
                             <a class="navbar-brand" href="{% block brand_url %}{{ deliveries_url|default:'/' }}{% endblock brand_url %}">
                                 <img
@@ -56,41 +44,34 @@
                                 />
                                 <span class="navbar-brand-title">CLMS QC Tool</span>
                             </a>
+                            <button
+                                type="button"
+                                class="navbar-toggle collapsed"
+                                data-toggle="collapse"
+                                data-target="#primary-navigation-menu"
+                                aria-controls="primary-navigation-menu"
+                                aria-expanded="false"
+                            >
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
                         </div>
                         <div id="primary-navigation-menu" class="navbar-collapse collapse navbar-menu">
                             <ul class="nav navbar-nav navbar-right main-menu">
                                 {% block menu %}
-                                {% if account_access.can_manage_configuration %}
-                                <li><a href="{% url 'announcement'%}">
-                                    <span class="glyphicon glyphicon-edit"></span> Announcement</a></li>
-                                <li><a href="{% url 'boundaries'%}">
-                                    <span class="glyphicon glyphicon-map-marker"></span> Boundaries</a></li>
-                                {% endif %}
-                                {% if account_access.can_access_django_admin %}
-                                <li><a href="{% url 'admin:index' %}">
-                                    <span class="glyphicon glyphicon-user"></span> User administration</a></li>
-                                {% endif %}
-                                <li><a href="https://github.com/eea/copernicus_quality_tools">
-                                    <span class="glyphicon glyphicon-cog"></span> Github</a></li>
-                                <li><a href="https://github.com/eea/copernicus_quality_tools/wiki">
-                                    <span class="glyphicon glyphicon-question-sign"></span> Documentation</a></li>
-                                {% if user.is_authenticated %}
-                                {% if account_access.can_change_password %}
-                                <li><a href="{% url 'change_password' %}?next=/">
-                                    <span class="glyphicon glyphicon-change-password"></span> Change password</a></li>
-                                {% endif %}
-                                {% include "accounts/includes/logout_form.html" %}
-                                {% else %}
-                                <li><a href="{% url 'login'%}">
-                                    <span class="glyphicon glyphicon-log-in"></span>Sign in</a></li>
-                                {% endif %}
+                                {% include "dashboard/includes/navigation.html" %}
                                 {% endblock %}
                             </ul>
                         </div>
                     </div>
                 </nav>
+                </header>
 
-                {% block content %}{% endblock content %}
+                <main id="main-content" class="site-main {% block main_class %}{% endblock main_class %}" tabindex="-1">
+                    {% block content %}{% endblock content %}
+                </main>
 
                 {% block js %}
                     <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
@@ -103,7 +84,6 @@
                     <script src="{% static 'dashboard/js/bootbox.min.js' %}"></script>
                 {% endblock js %}
             </div>
-            <br>
         </div>
         <footer class="footer">
             {% include "dashboard/footer.html" %}

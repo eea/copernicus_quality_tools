@@ -44,11 +44,14 @@ def get_boundary_version():
         files_in_rasterpath = os.listdir(rasterdir_path)
         for file_name in files_in_rasterpath:
             if 'ver' in file_name:
-               version_str = file_name.split('_')[1].split('.')[0]
-               datetime_str = datetime.strptime(version_str,"%d%m%Y").strftime("%d/%m/%Y")
-               return datetime_str       
+                version_str = file_name.split('_')[1].split('.')[0]
+                return datetime.strptime(
+                    version_str,
+                    "%d%m%Y",
+                ).strftime("%d/%m/%Y")
     except (BoundaryPackageError, OSError, ValueError, IndexError):
-        return 'None'
+        pass
+    return 'Unavailable'
 
 def find_product_description(product_ident):
     """

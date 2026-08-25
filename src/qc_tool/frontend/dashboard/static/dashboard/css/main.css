@@ -1,12 +1,14 @@
 
 .breadcrumb {
-    margin-top: -19px;
-    color: red;
+    margin-top: 0;
 }
 
 div .main {
     padding: 15px;
-    padding-top: 0px;
+}
+
+.site-main > .container-fluid.main {
+    padding-top: 24px;
 }
 
 .tab-content {
@@ -100,63 +102,4 @@ table.overview tr td {
 .bsd-content {
     overflow-y: auto;
     max-height: 80vh;
-}
-
-/* A logout changes server state, so it is a POST form rather than a link. */
-.navbar-nav > li.navbar-logout > form {
-    margin: 0;
-}
-
-.navbar-nav > li.navbar-logout button {
-    display: block;
-    padding: 15px;
-    border: 0;
-    color: #777;
-    background: transparent;
-    line-height: 20px;
-}
-
-.navbar-nav > li.navbar-logout button:hover,
-.navbar-nav > li.navbar-logout button:focus {
-    color: #333;
-    background-color: #e7e7e7;
-    text-decoration: none;
-}
-.api-credential-form {
-    display: inline;
-}
-
-.navbar-brand-logo {
-    float: left;
-    height: 45px;
-    margin-top: -13px;
-}
-
-.navbar-brand-logo-land-monitoring {
-    padding-left: 25px;
-}
-
-.navbar-brand-title {
-    overflow: hidden;
-    margin-left: 12px;
-}
-
-.navbar-menu {
-    height: 150px;
-    line-height: 150px;
-}
-
-.footer-logo {
-    height: 50px;
-    margin-top: -20px;
-    margin-bottom: 10px;
-    padding-left: 20px;
-}
-
-.footer-logo-copernicus {
-    float: left;
-}
-
-.footer-logo-eea {
-    float: right;
 }

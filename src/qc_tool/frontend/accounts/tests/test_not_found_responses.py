@@ -47,7 +47,11 @@ class NotFoundResponseTests(TestCase):
         self.assertContains(response, "#home", status_code=404)
         self.assertContains(response, "Go to homepage", status_code=404)
         self.assertNotContains(response, "Go to deliveries", status_code=404)
-        self.assertIn(b'<main class="error-page">', response.content)
+        self.assertIn(
+            b'<main id="main-content" class="site-main error-page"',
+            response.content,
+        )
+        self.assertEqual(response.content.count(b"<main"), 1)
         self.assertNotIn(b"container-fluid main error-page", response.content)
         self.assertNotContains(response, marker, status_code=404)
         self.assertEqual(

@@ -1,33 +1,12 @@
 {% load static %}
-<div class="container-fluid" id="section-footer" xmlns="http://www.w3.org/1999/html">
-    <div class="container">
-        <div class="row text-center">
-            <div class="col-md-4"></div>
-            <div class="col-md-4">
-                <div class="row text-center">
-                    <a href="https://copernicus.eu" aria-label="Copernicus website">
-                        <img
-                            class="footer-logo footer-logo-copernicus"
-                            src="{% static 'dashboard/img/copernicus_eu_logo.svg' %}"
-                            alt=""
-                        />
-                    </a>
-
-                    <a href="https://eea.europa.eu" aria-label="European Environment Agency website">
-                        <img
-                            class="footer-logo footer-logo-eea"
-                            src="{% static 'dashboard/img/logo_eea_square.png' %}"
-                            alt=""
-                        />
-                    </a>
-                </div>
-
-            </div>
-            <div class="col-md-4"></div>
-        </div>
-        <div class="row text-center">
-                    <p>Copyright © 2019-{% now "Y" %} Copernicus Programme</p>
-                </div>
-
+<div id="section-footer" class="site-footer">
+    <div class="site-footer__logos">
+        <a class="site-footer__link" href="https://copernicus.eu" aria-label="Copernicus website">
+            <img class="site-footer__logo" src="{% static 'dashboard/img/copernicus_eu_logo.svg' %}" alt="">
+        </a>
+        <a class="site-footer__link" href="https://eea.europa.eu" aria-label="European Environment Agency website">
+            <img class="site-footer__logo" src="{% static 'dashboard/img/logo_eea_square.png' %}" alt="">
+        </a>
     </div>
+    <p class="site-footer__copyright">Copyright © 2019-{% now "Y" %} Copernicus Programme</p>
 </div>

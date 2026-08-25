@@ -49,7 +49,7 @@ class ConfigurationNavigationTests(TestCase):
         )
         self.assertNotContains(
             response,
-            f'href="{reverse("admin:index")}"',
+            f'href="{reverse("admin:auth_user_changelist")}"',
         )
 
     def test_admin_role_sees_django_admin_navigation(self):
@@ -62,7 +62,7 @@ class ConfigurationNavigationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            f'href="{reverse("admin:index")}"',
+            f'href="{reverse("admin:auth_user_changelist")}"',
         )
 
     def test_authenticated_forbidden_page_uses_friendly_html_response(self):

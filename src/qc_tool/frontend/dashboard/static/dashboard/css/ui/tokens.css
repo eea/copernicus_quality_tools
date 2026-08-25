@@ -1,0 +1,17 @@
+/* Shared visual tokens for QC Tool browser pages. */
+:root {
+    --qc-color-navy: #081b3a;
+    --qc-color-text: #35415a;
+    --qc-color-muted: #66758d;
+    --qc-color-primary: #0868d7;
+    --qc-color-primary-dark: #0757b3;
+    --qc-color-primary-soft: #eaf3ff;
+    --qc-color-border: #d8e4f3;
+    --qc-color-surface: #ffffff;
+    --qc-color-canvas: #f7faff;
+    --qc-shadow-card: 0 16px 45px rgba(35, 57, 91, 0.08);
+    --qc-radius-small: 7px;
+    --qc-radius-card: 12px;
+    --qc-content-width: 1280px;
+    --qc-font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

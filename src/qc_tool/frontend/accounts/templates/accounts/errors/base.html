@@ -3,11 +3,8 @@
 
 {% block robots %}noindex, nofollow, noarchive{% endblock %}
 {% block body_class %}error-layout{% endblock %}
+{% block main_class %}error-page{% endblock %}
 {% block brand_url %}{% if user.is_authenticated and not account_access.can_view_deliveries %}https://eea.github.io/copernicus_quality_tools/{% else %}{% url 'deliveries' %}{% endif %}{% endblock %}
-{% block skip_links %}
-<a class="error-skip-link" href="#error-title">Skip to error details</a>
-{% endblock %}
-
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'accounts/css/errors/shell.css' %}">
@@ -16,13 +13,8 @@
 <link rel="stylesheet" href="{% static 'accounts/css/errors/responsive.css' %}">
 {% endblock %}
 
-{% block menu %}
-{% include "accounts/errors/includes/navigation.html" %}
-{% endblock %}
-
 {% block content %}
-<main class="error-page">
-    <div class="container error-page-container">
+<div class="container error-page-container">
         <section
             class="error-hero"
             aria-labelledby="error-title"
@@ -47,8 +39,8 @@
                         href="{% if account_access.can_view_deliveries or not user.is_authenticated %}{% url 'deliveries' %}{% else %}https://eea.github.io/copernicus_quality_tools/{% endif %}"
                         data-error-back
                     >
-                        <svg class="error-icon" aria-hidden="true" focusable="false">
-                            <use href="{% static 'accounts/icons/error-ui.svg' %}#arrow-left"></use>
+                        <svg class="ui-icon" aria-hidden="true" focusable="false">
+                            <use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use>
                         </svg>
                         Go back
                     </a>
@@ -57,8 +49,7 @@
         </section>
 
         {% include "accounts/errors/includes/help.html" %}
-    </div>
-</main>
+</div>
 {% endblock %}
 
 {% block js %}

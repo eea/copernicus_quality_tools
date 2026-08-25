@@ -6,103 +6,188 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table-filter-control.min.css' %}" type="text/css" media="screen" />
 <link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/pages/deliveries.css' %}" type="text/css" media="screen" />
 
 {% endblock css %}
 
+{% block main_class %}deliveries-page{% endblock %}
+
 {% block content %}
+<div class="workspace-layout">
+{% include "dashboard/includes/workspace_navigation.html" %}
+<div class="workspace-content">
+<div class="deliveries-page__container">
+    <header class="deliveries-page__heading">
+        <div>
+            <p class="deliveries-page__eyebrow">QC Tool workspace</p>
+            <h1>{{ account_access.delivery_list_heading }}</h1>
+            <p class="deliveries-page__summary">
+                {% if account_access.can_upload %}Upload delivery packages, run quality controls, and follow every result from one workspace.{% else %}Review the delivery packages and QC results available to your account.{% endif %}
+            </p>
+        </div>
+    </header>
 
-    <div class="container-fluid main" style="padding-top: 70px;">
-        <div class="row text-left">
+    {% if announcement %}
+    <div class="deliveries-announcement" role="status">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#edit"></use></svg>
+        <span>{{ announcement }}</span>
+    </div>
+    {% endif %}
 
-            <ol class="breadcrumb">
-              <li><a href="{% url 'deliveries' %}">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
-              <li class="active"><a href="">Deliveries</a></li>
-            </ol>
+    <p id="delivery-summary-scope" class="deliveries-summary-scope">
+        Overview of all active deliveries visible to you
+    </p>
+    <dl class="deliveries-summary" aria-label="Delivery overview" aria-describedby="delivery-summary-scope">
+        <div class="deliveries-summary__item deliveries-summary__item-total">
+            <dt>
+                <span class="deliveries-summary__icon" aria-hidden="true">
+                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
+                </span>
+                <span>Total deliveries</span>
+            </dt>
+            <dd>
+                <span id="delivery-summary-total">&mdash;</span>
+                <small class="deliveries-summary__detail"><span id="delivery-summary-not-checked">&mdash;</span> not checked<span id="delivery-summary-other-wrap" hidden>, <span id="delivery-summary-other">0</span> other</span></small>
+            </dd>
+        </div>
+        <div class="deliveries-summary__item deliveries-summary__item-passed">
+            <dt>
+                <span class="deliveries-summary__icon" aria-hidden="true">
+                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>
+                </span>
+                <span>Passed</span>
+            </dt>
+            <dd id="delivery-summary-passed">&mdash;</dd>
+        </div>
+        <div class="deliveries-summary__item deliveries-summary__item-progress">
+            <dt>
+                <span class="deliveries-summary__icon" aria-hidden="true">
+                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#clock"></use></svg>
+                </span>
+                <span>In progress</span>
+            </dt>
+            <dd id="delivery-summary-in-progress">&mdash;</dd>
+        </div>
+        <div class="deliveries-summary__item deliveries-summary__item-failed">
+            <dt>
+                <span class="deliveries-summary__icon" aria-hidden="true">
+                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#x-circle"></use></svg>
+                </span>
+                <span>Failed</span>
+            </dt>
+            <dd id="delivery-summary-failed">&mdash;</dd>
+        </div>
+        <div class="deliveries-summary__meta">
+            <dt>Boundary date</dt><dd>{{ boundary_version }}</dd>
+        </div>
+        <div class="deliveries-summary__meta">
+            <dt>API credential</dt>
+            <dd>
+                {% if api_key_configured %}Configured{% else %}Not configured{% endif %}
+                <a class="deliveries-summary__manage" href="#api-credential-controls">Manage</a>
+            </dd>
+        </div>
+    </dl>
 
-            <div class="main">
+    {% if account_access.can_upload %}
+    <section class="delivery-upload-guide" aria-labelledby="delivery-upload-guide-title">
+        <div class="delivery-upload-guide__action">
+            <span class="delivery-upload-guide__icon" aria-hidden="true">
+                <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+            </span>
+            <div>
+                <h2 id="delivery-upload-guide-title">Upload a delivery archive</h2>
+                <p>Use the secure uploader to add one or more ZIP packages.</p>
+                <a href="{% url 'file_upload' %}" class="btn btn-primary">Open uploader</a>
+            </div>
+        </div>
+        <ul class="delivery-upload-guide__checks" aria-label="Upload guidance">
+            <li>ZIP archives only</li>
+            <li>Files are validated after upload</li>
+            <li>QC reports remain linked to each delivery</li>
+        </ul>
+        {% if submission_enabled and account_access.can_submit %}
+        <div class="delivery-upload-guide__submission">
+            <strong>Submitting to EEA?</strong>
+            <p>Run QC successfully before submitting an eligible delivery.</p>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
 
-                {% if announcement %}
-                <div class="alert alert-danger" role="alert">
-                    <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
-                {% endif %}
+    <section class="deliveries-card" aria-labelledby="deliveries-table-title">
+        <header class="deliveries-card__header">
+            <div>
+                <h2 id="deliveries-table-title">Deliveries</h2>
+                <p id="deliveries-table-description" class="deliveries-card__description">
+                    {% if account_access.can_run_qc or account_access.can_delete or account_access.can_submit %}Select eligible rows to run QC, delete, or submit multiple deliveries.{% else %}Review delivery details and open the latest available QC result.{% endif %}
+                </p>
+            </div>
+        </header>
 
-                <!-- Nav tabs -->
-                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active">
-                        <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">
-                            {{ account_access.delivery_list_heading }}</a></li>
-                </ul>
+        <div class="deliveries-card__body">
+            <div id="runs-toolbar-1" class="deliveries-toolbar">
+                <div class="deliveries-toolbar__actions" role="group" aria-label="Selected delivery actions">
+                    {% if account_access.can_run_qc %}
+                    <button id="btn-qc-multi" class="btn btn-success" type="button" disabled>
+                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#play"></use></svg>
+                        <span class="delivery-action-label">QC all selected</span>
+                    </button>
+                    {% endif %}
+                    {% if account_access.can_delete %}
+                    <button id="btn-delete-multi" class="btn btn-danger" type="button" disabled>
+                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>
+                        <span class="delivery-action-label">Delete selected</span>
+                    </button>
+                    {% endif %}
+                    {% if submission_enabled and account_access.can_submit %}
+                    <button id="btn-submit-multi" class="btn btn-success" type="button" disabled>
+                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#send"></use></svg>
+                        <span class="delivery-action-label">Submit selected</span>
+                    </button>
+                    {% endif %}
+                </div>
 
-                <!-- Tab panes -->
-                <div class="tab-content">
-                    <div role="tabpanel" class="tab-pane active" id="recent">
-                        <div id="runs-toolbar-1">
-                            {% if account_access.can_upload %}
-                            <a href="{% url 'file_upload' %}" class="btn btn-primary" role="button">
-                                <span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>
-                                Upload ZIP File(s)
-                            </a>
-                            {% endif %}
-                            {% if account_access.can_run_qc %}
-                            <span>&nbsp;&nbsp;</span>
-                            <button id="btn-qc-multi" onclick="" class="btn btn-success mr-10" disabled>
-                                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                QC all selected
-                            </button>
-                            {% endif %}
-                            {% if account_access.can_delete %}
-                            <span>&nbsp;&nbsp;</span>
-                            <button id="btn-delete-multi" onclick="" class="btn btn-danger mr-10" disabled>
-                                <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
-                                Delete selected
-                            </button>
-                            {% endif %}
-                            {% if submission_enabled and account_access.can_submit %}
-                            <span>&nbsp;&nbsp;</span>
-                            <button id="btn-submit-multi" onclick="" class="btn btn-success mr-10" disabled>
-                                Submit selected
-                            </button>
-                            {% endif %}
-                            <span>&nbsp;&nbsp;</span>
-                            <span>&nbsp;&nbsp;</span>
-                            <button id="btn-version" onclick="" class="btn btn-basic mr-10">
-                                <span class="glyphicon glyphicon-basic" aria-hidden="true"></span>
-                                Boundary: {{ boundary_version }}
-                            </button>
-                            <span>&nbsp;&nbsp;</span>
-                            <span>&nbsp;&nbsp;</span>
-                            <span>API credential:</span>
-                            {% if api_key_configured %}
-                            <span class="label label-success">Configured</span>
-                            <form method="post" action="{% url 'api_credential_rotate' %}" class="form-inline api-credential-form"
-                                  onsubmit="return window.confirm('Rotate this API credential? The current credential will stop working immediately.');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-default btn-sm">Rotate</button>
-                            </form>
-                            <form method="post" action="{% url 'api_credential_revoke' %}" class="form-inline api-credential-form"
-                                  onsubmit="return window.confirm('Revoke this API credential? API clients using it will stop working immediately.');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
-                            </form>
-                            {% else %}
-                            <span class="label label-default">Not configured</span>
-                            <form method="post" action="{% url 'api_credential_rotate' %}" class="form-inline api-credential-form">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-default btn-sm">Create</button>
-                            </form>
-                            {% endif %}
-                            <span>&nbsp;&nbsp;</span>
-                            <button id="btn-export" class="btn btn-info">
-                                <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                                Export
-                            </button>
-                        </div>
-                        <table id="tbl-deliveries" class="table table-striped table-vcenter" data-checkbox-header="true" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="id" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="server" data-filter-control="true">
+                <div class="deliveries-toolbar__utilities">
+                    <div id="api-credential-controls" class="deliveries-api-credential" role="group" aria-label="API credential controls" tabindex="-1">
+                        <span class="deliveries-api-credential__label">API credential</span>
+                        {% if api_key_configured %}
+                        <span class="label label-success">Configured</span>
+                        <form method="post" action="{% url 'api_credential_rotate' %}" class="api-credential-form"
+                              data-confirm="Rotate this API credential? The current credential will stop working immediately.">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-default btn-sm">Rotate</button>
+                        </form>
+                        <form method="post" action="{% url 'api_credential_revoke' %}" class="api-credential-form"
+                              data-confirm="Revoke this API credential? API clients using it will stop working immediately.">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
+                        </form>
+                        {% else %}
+                        <span class="label label-default">Not configured</span>
+                        <form method="post" action="{% url 'api_credential_rotate' %}" class="api-credential-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-default btn-sm">Create</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <button id="btn-export" class="btn btn-default" type="button">
+                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>
+                        Export
+                    </button>
+                </div>
+            </div>
+
+            <p id="deliveries-live-status" class="sr-only" aria-live="polite"></p>
+            <div class="deliveries-table-region">
+                <table id="tbl-deliveries" class="table table-striped table-vcenter" aria-describedby="deliveries-table-description" data-checkbox-header="true" data-search-align="right" data-show-refresh="true" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-name="id" data-sort-order="desc" data-show-export="false" data-pagination="true" data-side-pagination="server" data-filter-control="true">
+                    <caption class="sr-only">Uploaded delivery packages and their latest quality-control status</caption>
                             <thead>
                             <tr>
                                 <th data-checkbox="true" data-formatter="checkboxFormatter"></th>
                                 <th data-field="id" data-sortable="true">ID</th>
-                                <th data-field="type" data-sortable="true">Type</th>
+                                <th data-field="type" data-sortable="true" data-formatter="typeFormatter">Type</th>
                                 <th data-field="filename" data-filter-control="input" data-sortable="true" data-escape="true">Name</th>
                                 <th data-field="date_uploaded" data-filter-control="input" data-search-on-enter-key="true" data-sortable="true" data-formatter="dateFormatter">Date Uploaded</th>
                                 <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
@@ -117,47 +202,19 @@
                                 {% if submission_enabled %}
                                 <th data-field="date_submitted" data-visible="true" data-search-on-enter-key="true" data-filter-control="input" data-formatter="dateFormatter" data-sortable="true">Date Submitted</th>
                                 {% endif %}
-                                {% if account_access.is_administrator %}
-                                <th data-field="is_deleted" data-visible="true" data-sortable="true" >Deleted</th>
-                                {% endif %}
                                 <th data-field="last_job_uuid" data-visible="false" data-sortable="true">Last job UUID</th>
                                 <th data-field="actions" data-sortable="false" data-formatter="actionsFormatter">Actions</th>
                             </tr>
                             </thead>
-                           <tbody>
-                           </tbody>
-                        </table>
-                        <br>
-                        <div class="row">
-                            <div class="col-md-2 col-md-offset-5"><p>QC tool version: {{qc_tool_version}}</p></div>
-                        </div>
-
-                    </div>
-                </div>
+                    <tbody></tbody>
+                </table>
             </div>
-
-
-            <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            ...
-                        </div>
-                        <div class="modal-body">
-                            ...
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                            <a class="btn btn-danger btn-ok">Delete</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <footer class="deliveries-card__footer">QC Tool version {{ qc_tool_version }}</footer>
         </div>
-    </div>
-
-    <br><br><br><br>
-
+    </section>
+</div>
+</div>
+</div>
 {% endblock content %}
 
 {% block js %}
@@ -169,6 +226,7 @@
     {% endif %}
 
     <script type="text/javascript">
+    var CAN_UPLOAD = {{ account_access.can_upload|yesno:"true,false" }};
     var CAN_RUN_QC = {{ account_access.can_run_qc|yesno:"true,false" }};
     var CAN_DELETE = {{ account_access.can_delete|yesno:"true,false" }};
     var CAN_SUBMIT = {{ account_access.can_submit|yesno:"true,false" }};
@@ -178,7 +236,7 @@
     {% else %}
     var UPDATE_JOB_STATUSES = false;
     {% endif %}
-    var job_statuses = {"Not checked": "Not checked", "waiting": "waiting", "running": "running", "ok": "ok", "failed": "failed", "error": "error"};
+    var job_statuses = {"Not checked": "Not checked", "waiting": "waiting", "running": "running", "ok": "ok", "partial": "partial", "failed": "failed", "error": "error", "worker timeout": "worker timeout", "worker lost": "worker lost", "file_not_found": "file_not_found"};
     </script>
 
     <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>

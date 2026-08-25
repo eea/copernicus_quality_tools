@@ -1,0 +1,383 @@
+/* Shared application shell: header, navigation, page frame, icons, and footer. */
+html {
+    min-height: 100%;
+}
+
+body.qc-shell {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    color: var(--qc-color-text);
+    background: var(--qc-color-canvas);
+    font-family: var(--qc-font-sans);
+}
+
+.qc-shell #wrap {
+    display: flex;
+    min-width: 0;
+    flex: 1 0 auto;
+    flex-direction: column;
+}
+
+.qc-shell #main {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 0 auto;
+    flex-direction: column;
+}
+
+.qc-shell .site-main {
+    min-width: 0;
+    flex: 1 0 auto;
+}
+
+.skip-link {
+    position: fixed;
+    z-index: 1200;
+    top: 10px;
+    left: 10px;
+    padding: 10px 14px;
+    transform: translateY(-160%);
+    border-radius: 5px;
+    color: #fff;
+    background: var(--qc-color-primary);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+    color: #fff;
+}
+
+.ui-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -4px;
+}
+
+.qc-shell #menucontainer {
+    position: relative;
+    min-height: 80px;
+    margin: 0;
+    border: 0;
+    border-bottom: 1px solid #dfe7f2;
+    border-radius: 0;
+    background: var(--qc-color-surface);
+    box-shadow: none;
+}
+
+.qc-shell #menucontainer > .container-fluid {
+    padding-right: 28px;
+    padding-left: 28px;
+}
+
+.qc-shell .navbar-brand {
+    display: flex;
+    height: 80px;
+    align-items: center;
+    padding: 15px 0;
+    color: var(--qc-color-text);
+    font-size: 21px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.qc-shell .navbar-brand:hover,
+.qc-shell .navbar-brand:focus {
+    color: #14243f;
+}
+
+.qc-shell .navbar-brand-logo {
+    float: none;
+    width: auto;
+    height: 43px;
+    margin: 0;
+    object-fit: contain;
+}
+
+.qc-shell .navbar-brand-logo-land-monitoring {
+    height: 43px;
+    margin-left: 24px;
+    padding: 0;
+}
+
+.qc-shell .navbar-brand-title {
+    margin-left: 28px;
+    overflow: visible;
+    white-space: nowrap;
+}
+
+.qc-shell .navbar-menu {
+    height: auto;
+    line-height: normal;
+}
+
+.qc-shell .main-menu > li > a,
+.qc-shell .main-menu > li > .site-nav-button,
+.qc-shell .main-menu > li.navbar-logout button {
+    display: flex;
+    min-height: 80px;
+    align-items: center;
+    padding: 29px 14px;
+    border: 0;
+    color: var(--qc-color-text);
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 22px;
+    text-decoration: none;
+}
+
+.qc-shell .main-menu > li.navbar-logout > form {
+    margin: 0;
+}
+
+.qc-shell .main-menu > li > a:hover,
+.qc-shell .main-menu > li > a:focus,
+.qc-shell .main-menu > li > .site-nav-button:hover,
+.qc-shell .main-menu > li > .site-nav-button:focus,
+.qc-shell .main-menu > li.navbar-logout button:hover,
+.qc-shell .main-menu > li.navbar-logout button:focus {
+    color: var(--qc-color-primary);
+    background: #f5f8fd;
+}
+
+.qc-shell .main-menu .ui-icon {
+    margin-right: 8px;
+    color: #53627a;
+}
+
+.qc-shell .site-nav-button .caret {
+    margin-left: 7px;
+}
+
+.qc-shell .site-nav-dropdown-menu {
+    min-width: 205px;
+    padding: 7px 0;
+    border-color: var(--qc-color-border);
+    border-radius: 8px;
+    box-shadow: 0 13px 28px rgba(20, 36, 63, 0.14);
+}
+
+.qc-shell .site-nav-dropdown-menu > li > a,
+.qc-shell .site-nav-dropdown-menu > li.navbar-logout button {
+    display: block;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 16px;
+    border: 0;
+    color: var(--qc-color-text);
+    background: #fff;
+    line-height: 22px;
+    text-align: left;
+}
+
+.qc-shell .site-nav-dropdown-menu > li > a:hover,
+.qc-shell .site-nav-dropdown-menu > li > a:focus,
+.qc-shell .site-nav-dropdown-menu > li.navbar-logout button:hover,
+.qc-shell .site-nav-dropdown-menu > li.navbar-logout button:focus {
+    color: var(--qc-color-primary);
+    background: #f3f7fd;
+    text-decoration: none;
+}
+
+.qc-shell .navbar-logout-label {
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.qc-shell .navbar-user-name {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+    white-space: nowrap;
+}
+
+.qc-shell .footer {
+    flex: 0 0 auto;
+    padding: 28px 20px 17px;
+    border-top: 1px solid #dfe7f2;
+    background: var(--qc-color-surface);
+}
+
+.site-footer {
+    text-align: center;
+}
+
+.site-footer__logos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+}
+
+.site-footer__link {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+
+.site-footer__logo {
+    display: block;
+    width: auto;
+    height: 50px;
+}
+
+.site-footer__copyright {
+    margin: 10px 0 0;
+    color: #53627a;
+    font-size: 13px;
+}
+
+.qc-shell a:focus,
+.qc-shell button:focus,
+.qc-shell input:focus,
+.qc-shell select:focus {
+    outline: 2px solid var(--qc-color-primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 1199px) and (min-width: 992px) {
+    .qc-shell #menucontainer > .container-fluid {
+        padding-right: 18px;
+        padding-left: 18px;
+    }
+
+    .qc-shell .navbar-brand-logo {
+        height: 38px;
+    }
+
+    .qc-shell .navbar-brand-logo-land-monitoring {
+        margin-left: 16px;
+    }
+
+    .qc-shell .navbar-brand-title {
+        margin-left: 18px;
+        font-size: 18px;
+    }
+
+    .qc-shell .main-menu > li > a,
+    .qc-shell .main-menu > li > .site-nav-button,
+    .qc-shell .main-menu > li.navbar-logout button {
+        padding-right: 9px;
+        padding-left: 9px;
+        font-size: 12px;
+    }
+}
+
+/* Bootstrap 3 collapses at 768px; QC Tool needs more room for its full menu. */
+@media (max-width: 991px) {
+    .qc-shell #menucontainer {
+        min-height: 70px;
+    }
+
+    .qc-shell #menucontainer > .container-fluid {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .qc-shell .navbar-header {
+        float: none;
+    }
+
+    .qc-shell .navbar-brand {
+        height: 70px;
+        padding: 14px 0;
+    }
+
+    .qc-shell .navbar-brand-logo,
+    .qc-shell .navbar-brand-logo-land-monitoring {
+        height: 38px;
+    }
+
+    .qc-shell .navbar-brand-logo-land-monitoring {
+        margin-left: 16px;
+    }
+
+    .qc-shell .navbar-brand-title {
+        margin-left: 18px;
+        font-size: 17px;
+    }
+
+    .qc-shell .navbar-toggle {
+        display: block;
+        margin-top: 18px;
+        margin-right: 0;
+    }
+
+    .qc-shell .navbar-collapse {
+        border-top-color: #dfe7f2;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(20, 36, 63, 0.08);
+    }
+
+    .qc-shell .navbar-collapse.collapse {
+        display: none !important;
+    }
+
+    .qc-shell .navbar-collapse.collapse.in {
+        display: block !important;
+    }
+
+    .qc-shell .navbar-nav {
+        float: none !important;
+        margin: 0 -15px;
+    }
+
+    .qc-shell .navbar-nav > li {
+        float: none;
+    }
+
+    .qc-shell .main-menu > li > a,
+    .qc-shell .main-menu > li > .site-nav-button,
+    .qc-shell .main-menu > li.navbar-logout button {
+        width: 100%;
+        min-height: 48px;
+        padding: 13px 15px;
+        text-align: left;
+    }
+
+    .qc-shell .site-nav-dropdown-menu {
+        position: static;
+        float: none;
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .qc-shell .site-nav-dropdown-menu > li > a,
+    .qc-shell .site-nav-dropdown-menu > li.navbar-logout button {
+        padding-left: 44px;
+    }
+}
+
+@media (max-width: 560px) {
+    .qc-shell .navbar-brand-logo-land-monitoring {
+        display: none;
+    }
+
+    .qc-shell .navbar-brand-title {
+        margin-left: 12px;
+        font-size: 16px;
+    }
+
+    .site-footer__logos {
+        gap: 18px;
+    }
+
+    .site-footer__logo {
+        height: 42px;
+    }
+}

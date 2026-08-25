@@ -63,6 +63,7 @@ from qc_tool.frontend.dashboard.services.artifacts import read_text_artifact
 from qc_tool.frontend.dashboard.services.configuration import AnnouncementStorageError
 from qc_tool.frontend.dashboard.services.configuration import read_announcement
 from qc_tool.frontend.dashboard.services.configuration import write_announcement
+from qc_tool.frontend.dashboard.services.deliveries import summarize_deliveries
 from qc_tool.frontend.dashboard.services.exports import spreadsheet_cell_value
 from qc_tool.frontend.dashboard.services.api import JsonRequestError
 from qc_tool.frontend.dashboard.services.api import read_json_object
@@ -447,12 +448,10 @@ def deliveries(request):
     """
 
     api_key_configured = has_api_key(request.user)
-
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
 
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
-                                                         "show_logo": settings.SHOW_LOGO,
                                                          "announcement": get_announcement_message(),
                                                          "boundary_version": get_boundary_version(),
                                                          "api_key_configured": api_key_configured,
@@ -565,6 +564,7 @@ def query_deliveries(
     filter="",
     search="",
     include_capabilities=False,
+    account_access=None,
 ):
     offset = _bounded_query_integer(
         offset,
@@ -635,7 +635,7 @@ def query_deliveries(
         ON j.job_uuid = (
           SELECT job_uuid FROM dashboard_job j
           WHERE j.delivery_id = d.id
-          ORDER BY j.date_created DESC LIMIT 1)
+          ORDER BY j.date_created DESC, j.job_uuid DESC LIMIT 1)
         INNER JOIN auth_user u
         ON d.user_id = u.id
         LEFT JOIN dashboard_userprofile up
@@ -649,7 +649,7 @@ def query_deliveries(
         ON j.job_uuid = (
           SELECT job_uuid FROM dashboard_job j
           WHERE j.delivery_id = d.id
-          ORDER BY j.date_created DESC LIMIT 1)
+          ORDER BY j.date_created DESC, j.job_uuid DESC LIMIT 1)
         INNER JOIN auth_user u
         ON d.user_id = u.id
         LEFT JOIN dashboard_userprofile up
@@ -657,7 +657,7 @@ def query_deliveries(
         WHERE d.is_deleted = FALSE
         """
 
-    account_access = access_for(user)
+    account_access = account_access or access_for(user)
     visibility_params = []
 
     if not account_access.is_administrator:
@@ -751,6 +751,7 @@ def get_deliveries_json(request):
     filter = request.GET.get("filter", "")
     search = request.GET.get("search", "")
 
+    account_access = access_for_request(request)
     total, data = query_deliveries(
         request.user,
         offset=offset,
@@ -760,9 +761,17 @@ def get_deliveries_json(request):
         filter=filter,
         search=search,
         include_capabilities=True,
+        account_access=account_access,
     )
 
-    return JsonResponse({"total": total, "rows": data})
+    delivery_summary = summarize_deliveries(account_access)
+    return JsonResponse(
+        {
+            "total": total,
+            "rows": data,
+            "summary": delivery_summary.as_dict(),
+        }
+    )
 
 
 def export_deliveries_excel(request):
