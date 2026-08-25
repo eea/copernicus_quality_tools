@@ -52,6 +52,7 @@ class Test_Raster(ProductTestCase):
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
+        self.assertEqual("eu", job_result["aoi_code"])
 
     def test_gra_2018_010m(self):
         """High resolution grassland (GRA) - 10m"""
@@ -188,7 +189,7 @@ class Test_Raster(ProductTestCase):
         product_ident = "ua2012_dhm"
         filepath = TEST_DATA_DIR.joinpath("raster", "ua2012_dhm", "EE003Ly_NARVA_ua2012_dhm.zip")
 
-        expected_step_results = ["ok"] * 12
+        expected_step_results = ["ok"] * 11
         # inspire check is skipped
         expected_step_results[2] = "skipped"
 
@@ -196,6 +197,7 @@ class Test_Raster(ProductTestCase):
         print(job_result)
         step_results = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_results)
+        self.assertEqual("ee003l", job_result["aoi_code"])
 
     def test_general_raster(self):
         """General raster product"""
@@ -209,3 +211,4 @@ class Test_Raster(ProductTestCase):
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses)
+        self.assertIsNone(job_result["aoi_code"])

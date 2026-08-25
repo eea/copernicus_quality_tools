@@ -18,6 +18,12 @@ import psycopg2.errorcodes
 import requests
 from checksumdir import dirhash
 
+from qc_tool.aoi import aoi_codes_equivalent as _aoi_codes_equivalent
+from qc_tool.aoi import canonicalize_aoi_capture_groups
+from qc_tool.aoi import extract_aoi_code
+from qc_tool.aoi import extract_aoi_code_from_groups
+from qc_tool.aoi import has_aoi_code_capture
+from qc_tool.aoi import publish_aoi_code
 from qc_tool.common import HASH_ALGORITHM
 from qc_tool.common import FAILED_ITEMS_LIMIT
 
@@ -310,56 +316,24 @@ def check_gdb_filename(gdb_filepath, gdb_filename_regex, aoi_code, status):
                        .format(gdb_filepath.name, gdb_filename_regex))
         return
 
-    if "?<P>aoi_code" in gdb_filename_regex and aoi_code is not None:
+    if has_aoi_code_capture(gdb_filename_regex) and aoi_code is not None:
         try:
-            detected_aoi_code = mobj.group("aoi_code")
-        except IndexError:
+            detected_aoi_code = extract_aoi_code_from_groups(mobj.groupdict())
+        except ValueError:
+            status.aborted("Geodatabase filename {:s} contains conflicting AOI codes."
+                           .format(gdb_filepath.name))
+            return False
+        if detected_aoi_code is None:
             status.aborted("Geodatabase filename {:s} does not contain AOI code.".format(gdb_filepath.name))
-            return
+            return False
 
-        if detected_aoi_code != aoi_code:
+        if not _aoi_codes_equivalent(detected_aoi_code, aoi_code):
             status.aborted("Geodatabase filename AOI code '{:s}' does not match AOI code of the layers: '{:s}'"
                            .format(detected_aoi_code, aoi_code))
-            return
+            return False
 
+        return True
 
-# Extract AOI code and compare it to pre-defined list.
-def extract_aoi_code(layer_defs, layer_regexes, expected_aoi_codes, status, preserve_aoicode_case=False, compare_aoi_codes=True):
-    layer_aoi_codes = []
-    for layer_alias, layer_def in layer_defs.items():
-        layer_name = layer_def["src_layer_name"]
-        layer_regex = layer_regexes[layer_alias]
-        if preserve_aoicode_case:
-            mobj = re.match(layer_regex, layer_name, re.IGNORECASE)
-        else:
-            mobj = re.match(layer_regex, layer_name.lower())
-        if mobj is None:
-            status.aborted("Layer {:s} has illegal name: {:s}.".format(layer_alias, layer_name))
-            continue
-        try:
-            aoi_code = mobj.group("aoi_code")
-        except IndexError:
-            status.aborted("Layer {:s} does not contain AOI code.".format(layer_name))
-            continue
-        layer_aoi_codes.append(aoi_code)
-
-        # Compare detected AOI code to pre-defined list.
-        if compare_aoi_codes and aoi_code not in expected_aoi_codes:
-            status.aborted("Layer {:s} has illegal AOI code {:s}.".format(layer_name, aoi_code))
-            continue
-
-    # Check that AOI code could be detected.
-    if len(set(layer_aoi_codes)) == 0:
-        status.aborted("AOI code could not be detected from any layer name.")
-        return
-
-    # If there are multiple layers, check that all layers have the same AOI code.
-    if len(set(layer_aoi_codes)) > 1:
-        status.aborted("Layers do not have the same AOI code. Detected AOI codes: {:s}"
-                       .format(",".join(list(layer_aoi_codes))))
-
-    # Set aoi_code as a global parameter.
-    return aoi_code
 
 # Extract EPSG code and compare it to pre-defined list.
 def extract_epsg_code(layer_defs, layer_regexes, expected_epsg_codes, status, compare_epsg_codes=True):
@@ -445,22 +419,34 @@ class LayerDefsBuilder():
         if self.tpl_params:
             regex = regex.format(**self.tpl_params)
         regex = re.compile(regex, re.IGNORECASE)
-        matched_infos = [info for info in self.layer_infos if regex.search(info["src_layer_name"])]
-        if len(matched_infos) == 0:
+        matches = []
+        for info in self.layer_infos:
+            match = regex.search(info["src_layer_name"])
+            if match is not None:
+                matches.append((info, match))
+        if len(matches) == 0:
             self.status.aborted("The {:s} layer name does not match naming convention.".format(layer_alias))
             return
-        if len(matched_infos) > 1:
-            layer_names = [item["src_layer_name"] for item in matched_infos]
+        if len(matches) > 1:
+            layer_names = [info["src_layer_name"] for info, _ in matches]
             self.status.aborted("Found {:d} {:s} layers: {:s}."
-                                .format(len(matched_infos), layer_alias, ", ".join(layer_names)))
+                                .format(len(matches), layer_alias, ", ".join(layer_names)))
+            return
+
+        try:
+            groups = canonicalize_aoi_capture_groups(matches[0][1].groupdict())
+        except ValueError:
+            self.status.aborted("The {:s} layer name contains conflicting AOI code captures."
+                                .format(layer_alias))
             return
 
         # Pop the layer info from the source list.
-        layer_info = self.layer_infos.pop(self.layer_infos.index(matched_infos[0]))
+        layer_info, _ = matches[0]
+        layer_info = self.layer_infos.pop(self.layer_infos.index(layer_info))
         layer_info["layer_alias"] = layer_alias
 
-        # Add regex groups to layer info.
-        layer_info["groups"] = regex.search(layer_info["src_layer_name"]).groupdict()
+        # Reuse the match that selected this layer for all naming metadata.
+        layer_info["groups"] = groups
 
         # Add layer info to layer_defs.
         self.layer_defs[layer_alias] = layer_info

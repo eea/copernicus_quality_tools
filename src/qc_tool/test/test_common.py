@@ -32,6 +32,7 @@ class TestCommon(TestCase):
         job_result = prepare_job_blueprint(product_definition)
         self.assertEqual("clc2012", job_result["product_ident"])
         self.assertEqual("CORINE Land Cover 2012", job_result["description"])
+        self.assertIsNone(job_result["aoi_code"])
         self.assertEqual("qc_tool.vector.attribute", job_result["steps"][2]["check_ident"])
         self.assertEqual("Attribute table is composed of prescribed attributes.", job_result["steps"][2]["description"])
         self.assertTrue(job_result["steps"][1]["required"])

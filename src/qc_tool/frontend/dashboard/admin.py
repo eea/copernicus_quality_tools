@@ -29,10 +29,57 @@ class UserAdmin(BaseUserAdmin):
     inlines = [ApiUserInline, UserProfileInline]
 
 
+class DeliveryAdmin(admin.ModelAdmin):
+    fields = (
+        "id",
+        "user",
+        "filename",
+        "size_bytes",
+        "date_uploaded",
+        "date_submitted",
+        "product_ident",
+        "product_description",
+        "aoi_code",
+        "is_deleted",
+        "s3",
+    )
+    _is_deleted_index = fields.index("is_deleted")
+    list_display = (
+        fields[:_is_deleted_index] + ("active",) + fields[_is_deleted_index + 1:]
+    )
+    list_display_links = ("id",)
+    readonly_fields = ("id", "aoi_code")
+    list_select_related = ("user", "s3")
+
+    @admin.display(boolean=True, description="Active")
+    def active(self, obj):
+        return not obj.is_deleted
+
+
+class JobAdmin(admin.ModelAdmin):
+    fields = (
+        "job_uuid",
+        "delivery",
+        "date_created",
+        "date_started",
+        "date_finished",
+        "job_status",
+        "product_ident",
+        "product_description",
+        "aoi_code",
+        "skip_steps",
+        "worker_url",
+    )
+    list_display = fields
+    list_display_links = ("job_uuid",)
+    readonly_fields = ("job_uuid", "aoi_code")
+    list_select_related = ("delivery", "delivery__user")
+
+
 # Register your models here.
-admin.site.register(Delivery)
+admin.site.register(Delivery, DeliveryAdmin)
 admin.site.register(S3Info)
-admin.site.register(Job)
+admin.site.register(Job, JobAdmin)
 
 # Re-register UserAdmin
 admin.site.unregister(User)

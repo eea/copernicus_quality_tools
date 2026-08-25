@@ -303,6 +303,7 @@ def prepare_job_blueprint(product_definition):
                   "job_finish_date": None,
                   "filename": None,
                   "hash": None,
+                  "aoi_code": None,
                   "reference_year": None,
                   "error_message": None,
                   "qc_tool_version": None,

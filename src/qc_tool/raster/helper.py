@@ -20,6 +20,24 @@ def do_raster_layers(params):
         return params["raster_layer_defs"].values()
 
 
+def get_aoi_mask_filepath(raster_boundary_dir, mask_ident, resolution,
+                          aoi_code):
+    """Resolve the existing raster mask for a raw or canonical AOI code."""
+    from qc_tool.aoi import normalize_aoi_code
+
+    raw_code = str(aoi_code).strip().casefold()
+    canonical_code = normalize_aoi_code(raw_code)
+    candidates = [
+        raster_boundary_dir.joinpath(
+            "mask_{:s}_{:03d}m_{:s}.tif".format(
+                mask_ident.casefold(), int(abs(resolution)), code
+            )
+        )
+        for code in dict.fromkeys((raw_code, canonical_code))
+    ]
+    return next((path for path in candidates if path.is_file()), candidates[0])
+
+
 def write_percent(percent_filepath, percent):
     percent_filepath.write_text(str(percent))
 

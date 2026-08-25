@@ -30,8 +30,7 @@ services:
         condition: service_healthy
         restart: true
     ports:
-      - name: frontend-http
-        target: 8000
+      - target: 8000
         published: "${QC_TOOL_PORT:-8000}"
         host_ip: 127.0.0.1
         protocol: tcp
