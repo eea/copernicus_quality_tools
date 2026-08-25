@@ -150,8 +150,6 @@ def run_check(params, status):
         name_info = extract_name_info(builder.layer_defs, params["layer_names"], status)
         status.add_params({"name_info": name_info})
 
-    status.info(str(status.params["name_info"]))
-
     # Check geodatabase name. If set, the aoi_code in the geodatabase name should match aoi_code from the layers.
     if "gdb_filename_regex" in params:
         for gdb_filepath in gdb_filepaths:

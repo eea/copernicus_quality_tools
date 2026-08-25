@@ -27,7 +27,7 @@ def run_check(params, status):
 
             if isinstance(allowed_codes[0], str) and "name_info" in allowed_codes[0]:
                 allowed_code = eval(allowed_codes[0])
-                allowed_codes = [allowed_code, allowed_code.upper(), allowed_code.lower()] # TODO: overit jak je to s datovymi typy
+                allowed_codes = [allowed_code, allowed_code.upper(), allowed_code.lower()]
 
             null_allowed = False
             if None in allowed_codes:
