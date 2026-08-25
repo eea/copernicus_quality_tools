@@ -1,0 +1,182 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Account settings | CLMS QC Tool{% endblock title %}
+{% block body_class %}account-settings-page{% endblock body_class %}
+{% block brand_url %}{% if account_access.can_view_deliveries %}{% url 'deliveries' %}{% else %}https://github.com/eea/copernicus_quality_tools/wiki{% endif %}{% endblock brand_url %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'accounts/css/account-settings.css' %}">
+{% endblock css %}
+
+{% block content %}
+<div class="account-settings">
+    <div class="account-settings__container">
+        <nav class="account-settings__breadcrumb" aria-label="Breadcrumb">
+            {% if account_access.can_view_deliveries %}<a href="{% url 'deliveries' %}">CLMS QC Tool</a>{% else %}<a href="https://github.com/eea/copernicus_quality_tools/wiki">CLMS QC Tool documentation</a>{% endif %}
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Settings</span>
+        </nav>
+
+        <header class="account-settings__header">
+            <span class="account-settings__header-icon" aria-hidden="true">
+                <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#user-circle"></use></svg>
+            </span>
+            <div>
+                <h1>Account settings</h1>
+                <p>Keep your personal details and API access up to date.</p>
+            </div>
+        </header>
+
+        <div class="account-settings__layout">
+            <div class="account-settings__main">
+                {% if account_access.can_manage_own_account %}
+                <section class="account-card" aria-labelledby="profile-settings-title">
+                    <div class="account-card__heading">
+                        <div>
+                            <h2 id="profile-settings-title">Profile details</h2>
+                            <p>These details identify you within the QC Tool.</p>
+                        </div>
+                    </div>
+
+                    <form method="post" action="{% url 'account_settings' %}">
+                        {% csrf_token %}
+
+                        {% if profile_form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ profile_form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="form-group">
+                            <label for="account-username">Username</label>
+                            <input
+                                id="account-username"
+                                class="form-control"
+                                type="text"
+                                value="{{ user.get_username }}"
+                                readonly
+                                aria-describedby="account-username-help"
+                            >
+                            <p id="account-username-help" class="help-block">
+                                Your login username is fixed because it identifies your delivery storage.
+                            </p>
+                        </div>
+
+                        {% for field in profile_form %}
+                        <div class="form-group{% if field.errors %} has-error{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="account-field-errors" id="{{ field.auto_id }}-errors" role="alert">
+                                {{ field.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+
+                        <div class="account-card__actions">
+                            <button class="btn btn-primary btn-qc-primary" type="submit">
+                                Save profile
+                            </button>
+                        </div>
+                    </form>
+                </section>
+                {% endif %}
+
+                {% if account_access.can_manage_api_credential %}
+                <section id="api-credential" class="account-card" aria-labelledby="api-credential-title">
+                    <div class="account-card__heading account-card__heading--status">
+                        <div>
+                            <h2 id="api-credential-title">Personal API token</h2>
+                            <p>Use one active Bearer credential for your QC Tool API requests.</p>
+                        </div>
+                        {% if api_key_configured %}
+                        <span class="account-status account-status--configured">
+                            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>
+                            Configured
+                        </span>
+                        {% else %}
+                        <span class="account-status">Not configured</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="account-credential-notice">
+                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#key"></use></svg>
+                        <p>
+                            {% if api_key_configured %}
+                            The secret cannot be recovered. Rotating it immediately invalidates the current token.
+                            {% else %}
+                            The token will be shown once after it is created. Store it securely.
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="account-card__actions account-card__actions--credential">
+                        <form
+                            method="post"
+                            action="{% url 'api_credential_rotate' %}"
+                            data-disable-on-submit
+                            {% if api_key_configured %}data-confirm-submit="Rotate this token? The current token will stop working immediately."{% endif %}
+                        >
+                            {% csrf_token %}
+                            <button class="btn btn-primary btn-qc-primary" type="submit">
+                                {% if api_key_configured %}Rotate token{% else %}Create token{% endif %}
+                            </button>
+                        </form>
+                        {% if api_key_configured %}
+                        <form
+                            method="post"
+                            action="{% url 'api_credential_revoke' %}"
+                            data-confirm-submit="Revoke this token? API clients using it will stop working immediately."
+                        >
+                            {% csrf_token %}
+                            <button class="btn btn-danger btn-qc-danger" type="submit">Revoke token</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </section>
+                {% endif %}
+            </div>
+
+            <aside class="account-settings__aside" aria-label="Account security and information">
+                <section class="account-card account-card--compact" aria-labelledby="account-information-title">
+                    <h2 id="account-information-title">Account information</h2>
+                    <dl class="account-facts">
+                        <div>
+                            <dt>Account type</dt>
+                            <dd>
+                                {% if account_access.is_administrator %}Administrator{% elif account_access.is_product_manager %}Product manager{% else %}User{% endif %}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>Member since</dt>
+                            <dd>{{ user.date_joined|date:"j F Y" }}</dd>
+                        </div>
+                        <div>
+                            <dt>Last signed in</dt>
+                            <dd>{% if user.last_login %}{{ user.last_login|date:"j F Y, H:i" }}{% else %}Not available{% endif %}</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                {% if account_access.can_change_password %}
+                <section class="account-card account-card--compact account-security" aria-labelledby="account-security-title">
+                    <span class="account-security__icon" aria-hidden="true">
+                        <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#shield"></use></svg>
+                    </span>
+                    <h2 id="account-security-title">Password and security</h2>
+                    <p>Use a strong, unique password and update it if you suspect it has been exposed.</p>
+                    <a class="btn btn-default btn-qc-secondary" href="{% url 'change_password' %}">Change password</a>
+                </section>
+                {% endif %}
+            </aside>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'accounts/js/account-settings.js' %}"></script>
+{% endblock js %}

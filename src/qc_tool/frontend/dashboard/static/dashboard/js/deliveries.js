@@ -707,12 +707,6 @@ $(document).ready(function() {
     // Set defult tooltip in each table row.
     $('[data-toggle="tooltip"]').tooltip();
 
-    $('.api-credential-form[data-confirm]').on('submit', function (event) {
-        if (!window.confirm($(this).attr('data-confirm'))) {
-            event.preventDefault();
-        }
-    });
-
     $('#tbl-deliveries').bootstrapTable({
        cache: false,
        striped: true,

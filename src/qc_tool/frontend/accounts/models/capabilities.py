@@ -14,6 +14,8 @@ class AccountCapability(models.Model):
             ("delete_delivery", "Can delete deliveries"),
             ("submit_delivery", "Can submit deliveries"),
             ("change_password", "Can change own password"),
+            ("manage_own_account", "Can manage own account"),
+            ("manage_api_credential", "Can manage own API credential"),
             ("manage_configuration", "Can manage QC Tool configuration"),
             (
                 "view_region_deliveries",

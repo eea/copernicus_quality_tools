@@ -16,12 +16,27 @@ from qc_tool.frontend.accounts.http import prevent_private_response_caching
 def account_permission_required(permission):
     """Require login and one explicit QC Tool application permission."""
 
-    permission = AccountPermission(permission)
+    return account_permissions_required(permission)
+
+
+def _account_access_required(permissions, *, require_all):
+    """Build a cached browser authorization decorator for a permission set."""
+
+    required_permissions = tuple(
+        AccountPermission(permission) for permission in permissions
+    )
+    if not required_permissions:
+        raise ValueError("At least one account permission is required.")
 
     def decorator(view_func):
         @wraps(view_func)
         def authorized(request, *args, **kwargs):
-            if not access_for_request(request).allows(permission):
+            access = access_for_request(request)
+            decisions = (
+                access.allows(permission) for permission in required_permissions
+            )
+            is_allowed = all(decisions) if require_all else any(decisions)
+            if not is_allowed:
                 raise PermissionDenied(
                     "Your account is not permitted to perform this action."
                 )
@@ -38,6 +53,18 @@ def account_permission_required(permission):
         return wrapped
 
     return decorator
+
+
+def account_permissions_required(*permissions):
+    """Require login and every declared QC Tool application permission."""
+
+    return _account_access_required(permissions, require_all=True)
+
+
+def account_any_permission_required(*permissions):
+    """Require login and at least one declared application permission."""
+
+    return _account_access_required(permissions, require_all=False)
 
 
 def session_login_url():

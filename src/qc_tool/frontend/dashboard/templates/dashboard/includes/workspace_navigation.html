@@ -23,12 +23,6 @@
                     Boundaries
                 </a>
             </li>
-            <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'announcement' %}"{% if request.resolver_match.url_name == 'announcement' %} aria-current="page"{% endif %}>
-                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#edit"></use></svg>
-                    Announcement
-                </a>
-            </li>
             {% endif %}
             {% if account_access.can_access_django_admin %}
             <li class="workspace-sidebar__item">
@@ -43,7 +37,7 @@
     <div class="workspace-sidebar__help">
         <strong>Need help?</strong>
         <p>Read the QC Tool guides and setup documentation.</p>
-        <a href="https://eea.github.io/copernicus_quality_tools/">
+        <a href="https://github.com/eea/copernicus_quality_tools/wiki">
             View documentation
         </a>
     </div>

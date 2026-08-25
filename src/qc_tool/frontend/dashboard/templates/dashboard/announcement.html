@@ -1,66 +1,85 @@
 {% extends "dashboard/base.html" %}
 {% load static %}
 
+{% block title %}Announcement | CLMS QC Tool{% endblock title %}
+{% block main_class %}announcement-page{% endblock main_class %}
+
 {% block css %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
-<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/pages/announcement.css' %}">
 {% endblock css %}
 
 {% block content %}
+<div class="announcement-page__container">
+    <nav class="page-breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'deliveries' %}">QC Tool</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">Announcement</span>
+    </nav>
 
-    <div class="container-fluid main">
-        <div class="row text-left">
+    <header class="announcement-page__heading">
+        <span class="announcement-page__heading-icon" aria-hidden="true">
+            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
+        </span>
+        <div>
+            <h1>Announcement</h1>
+            <p>Read the latest message from the QC Tool operators.</p>
+        </div>
+    </header>
 
-            <ol class="breadcrumb">
-                {% if show_logo %}
-              <li><a href="{% url 'deliveries' %}">CLMS QC Tool</a></li>
-                {% else %}
-              <li><a href="{% url 'deliveries' %}">QC Tool</a></li>
-                {% endif %}
-              <li class="active"><a href="">Announcement</a></li>
-            </ol>
-
-            <div class="main">
-
-                {% if result_message %}
-                <div class="alert alert-success" role="alert">{{ result_message }}</div>
-                {% endif %}
-                {% if error_message %}
-                <div class="alert alert-danger" role="alert">{{ error_message }}</div>
-                {% endif %}
-
-
-                <!-- Nav tabs -->
-                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Announcement message</a></li>
-                </ul>
-
-                <!-- Tab panes -->
-                <div class="tab-content">
-                    <form method="POST">
-                        {% csrf_token %}
-                    <div role="tabpanel" class="tab-pane active" id="recent">
-                        <h4>Enter announcement message:</h4>
-                        <textarea name="announcement_text" class="form-control">{{ announcement }}</textarea>
-                        <p></p>
-                        <button id="btn_run" type="submit" class="btn btn-success">
-                        <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                    Update announcement
-                        </button>
-                    </div>
-                    </form>
-                </div>
+    <section class="announcement-card" aria-labelledby="current-announcement-title">
+        <div class="announcement-card__header">
+            <div>
+                <p class="announcement-card__eyebrow">Current message</p>
+                <h2 id="current-announcement-title">What you need to know</h2>
             </div>
         </div>
-    </div>
 
-    <br><br><br><br>
+        {% if not announcement_available %}
+        <div class="announcement-state announcement-state--error" role="status">
+            The announcement is temporarily unavailable. Please try again later.
+        </div>
+        {% elif announcement %}
+        <div class="announcement-message">{{ announcement|linebreaksbr }}</div>
+        {% else %}
+        <div class="announcement-state">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>
+            <span>There is no active announcement.</span>
+        </div>
+        {% endif %}
+    </section>
 
+    {% if account_access.can_manage_configuration %}
+    <section class="announcement-card announcement-editor" aria-labelledby="announcement-editor-title">
+        <div class="announcement-card__header">
+            <div>
+                <p class="announcement-card__eyebrow">Operator controls</p>
+                <h2 id="announcement-editor-title">Update announcement</h2>
+                <p>Changes are shown to every signed-in user. Saving an empty message removes the current announcement.</p>
+            </div>
+        </div>
+        <form method="post" action="{% url 'announcement_update' %}">
+            {% csrf_token %}
+            <div class="form-group{% if announcement_form.announcement_text.errors %} has-error{% endif %}">
+                <label for="{{ announcement_form.announcement_text.id_for_label }}">
+                    {{ announcement_form.announcement_text.label }}
+                </label>
+                {{ announcement_form.announcement_text }}
+                {% if announcement_form.announcement_text.errors %}
+                <div class="announcement-field-errors" role="alert">
+                    {{ announcement_form.announcement_text.errors }}
+                </div>
+                {% endif %}
+                <p id="{{ announcement_form.announcement_text.auto_id }}_helptext" class="help-block">
+                    {{ announcement_form.announcement_text.help_text }}
+                </p>
+            </div>
+            <button type="submit" class="btn btn-primary btn-qc-primary">
+                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#edit"></use></svg>
+                Save announcement
+            </button>
+        </form>
+    </section>
+    {% endif %}
+</div>
 {% endblock content %}
-
-{% block js %}
-    {{ block.super }}
-    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
-    <script src="{% static 'dashboard/js/announcement.js' %}"></script>
-{% endblock js %}

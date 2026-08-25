@@ -31,9 +31,9 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
     "setup_job": private_session_page(AccountPermission.RUN_QC, "GET"),
     "show_result": private_session_page(VIEW, "GET"),
     "get_attachment": private_session_page(VIEW, "GET"),
-    "announcement": private_session_page(
+    "announcement": private_session_page(VIEW, "GET"),
+    "announcement_update": private_session_page(
         MANAGE_CONFIGURATION,
-        "GET",
         "POST",
     ),
 

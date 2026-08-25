@@ -50,4 +50,9 @@ urlpatterns = [
         name="get_attachment",
     ),
     protected_path("announcement/", views.announcement, name="announcement"),
+    protected_path(
+        "announcement/update/",
+        views.update_announcement,
+        name="announcement_update",
+    ),
 ]

@@ -51,7 +51,7 @@ class RouteAwareCsrfFailureTests(TestCase):
         self.assertIn("Cookie", response.headers["Vary"])
 
     def test_page_form_failure_retains_djangos_html_response(self):
-        response = self.client.post(reverse("announcement"))
+        response = self.client.post(reverse("announcement_update"))
 
         self.assertEqual(response.status_code, 403)
         self.assertTrue(response.headers["Content-Type"].startswith("text/html"))

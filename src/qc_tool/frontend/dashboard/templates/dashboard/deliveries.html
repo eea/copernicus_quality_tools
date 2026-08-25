@@ -82,10 +82,10 @@
             <dt>Boundary date</dt><dd>{{ boundary_version }}</dd>
         </div>
         <div class="deliveries-summary__meta">
-            <dt>API credential</dt>
+            <dt>API token</dt>
             <dd>
                 {% if api_key_configured %}Configured{% else %}Not configured{% endif %}
-                <a class="deliveries-summary__manage" href="#api-credential-controls">Manage</a>
+                {% if account_access.can_manage_api_credential %}<a class="deliveries-summary__manage" href="{% url 'account_settings' %}#api-credential">Manage</a>{% endif %}
             </dd>
         </div>
     </dl>
@@ -164,28 +164,6 @@
                 {% endif %}
 
                 <div class="deliveries-toolbar__utilities">
-                    <div id="api-credential-controls" class="deliveries-api-credential" role="group" aria-label="API credential controls" tabindex="-1">
-                        <span class="deliveries-api-credential__label">API credential</span>
-                        {% if api_key_configured %}
-                        <span class="label label-success">Configured</span>
-                        <form method="post" action="{% url 'api_credential_rotate' %}" class="api-credential-form"
-                              data-confirm="Rotate this API credential? The current credential will stop working immediately.">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-default btn-sm">Rotate</button>
-                        </form>
-                        <form method="post" action="{% url 'api_credential_revoke' %}" class="api-credential-form"
-                              data-confirm="Revoke this API credential? API clients using it will stop working immediately.">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
-                        </form>
-                        {% else %}
-                        <span class="label label-default">Not configured</span>
-                        <form method="post" action="{% url 'api_credential_rotate' %}" class="api-credential-form">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-default btn-sm">Create</button>
-                        </form>
-                        {% endif %}
-                    </div>
                     <button id="btn-export" class="btn btn-default" type="button">
                         <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>
                         Export

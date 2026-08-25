@@ -84,7 +84,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         )
         self.assertIn('href="{}"'.format(reverse("file_upload")), sidebar)
         self.assertIn(
-            'href="https://eea.github.io/copernicus_quality_tools/"',
+            'href="https://github.com/eea/copernicus_quality_tools/wiki"',
             sidebar,
         )
         self.assertNotIn('href="{}"'.format(reverse("boundaries")), sidebar)
@@ -153,7 +153,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             'href="{}"'.format(reverse("boundaries")),
             configuration_sidebar,
         )
-        self.assertIn(
+        self.assertNotIn(
             'href="{}"'.format(reverse("announcement")),
             configuration_sidebar,
         )
@@ -175,7 +175,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             'href="{}"'.format(reverse("boundaries")),
             administrator_sidebar,
         )
-        self.assertIn(
+        self.assertNotIn(
             'href="{}"'.format(reverse("announcement")),
             administrator_sidebar,
         )
@@ -332,6 +332,26 @@ class DeliveryWorkspacePresentationTests(TestCase):
             },
         )
 
+    def test_api_credential_summary_links_to_settings_without_inline_forms(self):
+        response = self.client.get(reverse("deliveries"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'href="{}#api-credential">Manage</a>'.format(
+                reverse("account_settings")
+            ),
+        )
+        self.assertNotContains(
+            response,
+            'action="{}"'.format(reverse("api_credential_rotate")),
+        )
+        self.assertNotContains(
+            response,
+            'action="{}"'.format(reverse("api_credential_revoke")),
+        )
+        self.assertNotContains(response, 'class="api-credential-form"')
+
     def test_page_has_one_main_heading_and_an_accessible_table(self):
         response = self.client.get(reverse("deliveries"))
 
@@ -374,7 +394,5 @@ class DeliveryWorkspacePresentationTests(TestCase):
             'role="group" aria-label="Selected delivery actions"',
             toolbar_markup,
         )
-        self.assertIn(
-            'aria-label="API credential controls"',
-            toolbar_markup,
-        )
+        self.assertIn('id="btn-export"', toolbar_markup)
+        self.assertNotIn("API credential", toolbar_markup)

@@ -1,0 +1,461 @@
+.account-settings {
+  padding: 34px 24px 56px;
+}
+
+.account-settings__container {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+}
+
+.account-settings__breadcrumb {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  color: var(--qc-color-muted);
+  font-size: 14px;
+  gap: 10px;
+}
+
+.account-settings__breadcrumb a {
+  color: var(--qc-color-primary);
+  font-weight: 600;
+}
+
+.account-settings__header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28px;
+  gap: 15px;
+}
+
+.account-settings__header-icon,
+.account-security__icon {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--qc-color-primary);
+  background: var(--qc-color-primary-soft);
+}
+
+.account-settings__header-icon .ui-icon {
+  width: 25px;
+  height: 25px;
+}
+
+.account-settings__header h1 {
+  margin: 0 0 5px;
+  color: var(--qc-color-navy);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.account-settings__header p,
+.account-card__heading p {
+  margin: 0;
+  color: var(--qc-color-muted);
+}
+
+.account-settings__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.account-settings__main,
+.account-settings__aside {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+}
+
+.account-card {
+  padding: 26px;
+  border: 1px solid var(--qc-color-border);
+  border-radius: var(--qc-radius-card);
+  background: var(--qc-color-surface);
+  box-shadow: var(--qc-shadow-card);
+}
+
+.account-card--compact {
+  padding: 23px;
+}
+
+.account-card h2 {
+  margin: 0;
+  color: var(--qc-color-navy);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.account-card__heading {
+  margin-bottom: 24px;
+  padding-bottom: 19px;
+  border-bottom: 1px solid #e7edf6;
+}
+
+.account-card__heading h2 {
+  margin-bottom: 5px;
+}
+
+.account-card__heading--status {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.account-card .form-group {
+  margin-bottom: 21px;
+}
+
+.account-card label {
+  margin-bottom: 7px;
+  color: var(--qc-color-navy);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.account-card .form-control {
+  height: 44px;
+  border-color: #cdd9e9;
+  border-radius: var(--qc-radius-small);
+  box-shadow: none;
+  color: var(--qc-color-text);
+}
+
+.account-card .form-control:focus {
+  border-color: var(--qc-color-primary);
+  box-shadow: 0 0 0 3px rgba(8, 104, 215, 0.12);
+}
+
+.account-card .has-error .form-control,
+.account-card .has-error .form-control:focus {
+  border-color: var(--qc-color-danger);
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.11);
+}
+
+.account-card .form-control[readonly] {
+  color: #53627a;
+  background: #f3f6fa;
+  cursor: text;
+}
+
+.account-card .help-block {
+  margin: 7px 0 0;
+  color: var(--qc-color-muted);
+  font-size: 13px;
+}
+
+.account-field-errors {
+  margin-top: 7px;
+  color: var(--qc-color-danger);
+  font-size: 13px;
+}
+
+.account-field-errors ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.account-card__actions {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  gap: 10px;
+}
+
+.account-card__actions form {
+  margin: 0;
+}
+
+.account-card__actions .btn {
+  min-height: 42px;
+  padding: 10px 17px;
+  border-radius: var(--qc-radius-small);
+  font-weight: 600;
+}
+
+.account-card__actions--credential {
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.account-status {
+  display: inline-flex;
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  color: #53627a;
+  background: #eef2f7;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.account-status--configured {
+  color: var(--qc-color-success-dark);
+  background: var(--qc-color-success-soft);
+}
+
+.account-status .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.account-credential-notice {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  border-radius: var(--qc-radius-small);
+  color: #244466;
+  background: #f0f6fd;
+  gap: 11px;
+}
+
+.account-credential-notice .ui-icon {
+  margin-top: 1px;
+  color: var(--qc-color-primary);
+}
+
+.account-credential-notice p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.account-facts {
+  margin: 18px 0 0;
+}
+
+.account-facts > div {
+  padding: 13px 0;
+  border-top: 1px solid #e7edf6;
+}
+
+.account-facts dt {
+  margin-bottom: 4px;
+  color: var(--qc-color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.account-facts dd {
+  margin: 0;
+  color: var(--qc-color-navy);
+  overflow-wrap: anywhere;
+}
+
+.account-security {
+  text-align: left;
+}
+
+.account-security__icon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 15px;
+}
+
+.account-security h2 {
+  margin-bottom: 9px;
+}
+
+.account-security p {
+  margin: 0 0 18px;
+  color: var(--qc-color-muted);
+  line-height: 1.55;
+}
+
+.account-security .btn {
+  min-height: 40px;
+  padding: 9px 15px;
+  border-color: #cdd9e9;
+  border-radius: var(--qc-radius-small);
+  color: var(--qc-color-primary);
+  font-weight: 600;
+}
+
+.credential-issued {
+  width: min(100% - 32px, 760px);
+  margin: 0 auto;
+  padding: 54px 0 72px;
+}
+
+.credential-issued__card {
+  text-align: center;
+}
+
+.credential-issued__icon {
+  display: inline-flex;
+  width: 62px;
+  height: 62px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  color: var(--qc-color-primary);
+  background: var(--qc-color-primary-soft);
+}
+
+.credential-issued__icon .ui-icon {
+  width: 29px;
+  height: 29px;
+}
+
+.credential-issued__eyebrow {
+  margin: 0 0 8px;
+  color: var(--qc-color-success-dark);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.credential-issued h1 {
+  margin: 0;
+  color: var(--qc-color-navy);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.credential-issued__intro {
+  max-width: 570px;
+  margin: 12px auto 24px;
+  color: var(--qc-color-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.credential-issued__warning {
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border: 1px solid #f1d79c;
+  border-radius: var(--qc-radius-small);
+  color: #6e4b09;
+  background: #fff8e8;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.credential-issued__value {
+  text-align: left;
+}
+
+.credential-issued__input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.credential-issued__input-group .form-control {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.credential-issued__input-group .btn {
+  min-width: 118px;
+}
+
+.credential-issued__actions {
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.account-password__container {
+  max-width: 680px;
+}
+
+.account-password__heading {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.account-password__heading .account-security__icon {
+  margin: 0;
+}
+
+.account-password__heading h1 {
+  margin: 0 0 5px;
+  color: var(--qc-color-navy);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.account-password__actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 800px) {
+  .account-settings {
+    padding: 25px 18px 42px;
+  }
+
+  .account-settings__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-settings__aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .account-settings {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .account-settings__header {
+    align-items: flex-start;
+  }
+
+  .account-settings__header h1 {
+    font-size: 26px;
+  }
+
+  .account-settings__aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-card {
+    padding: 21px 18px;
+  }
+
+  .account-card__heading--status {
+    flex-direction: column;
+  }
+
+  .account-card__actions--credential,
+  .account-card__actions--credential form,
+  .account-card__actions--credential .btn {
+    width: 100%;
+  }
+
+  .credential-issued {
+    width: calc(100% - 24px);
+    padding-top: 28px;
+  }
+
+  .credential-issued h1 {
+    font-size: 26px;
+  }
+
+  .credential-issued__input-group {
+    flex-direction: column;
+  }
+
+  .credential-issued__input-group .btn,
+  .credential-issued__actions .btn {
+    width: 100%;
+  }
+}

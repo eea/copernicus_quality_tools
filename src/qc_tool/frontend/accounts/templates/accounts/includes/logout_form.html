@@ -3,12 +3,10 @@
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit">
-            {% if not dropdown_navigation %}<svg class="ui-icon" aria-hidden="true" focusable="false">
+            <svg class="ui-icon" aria-hidden="true" focusable="false">
                 <use href="{% static 'dashboard/icons/ui.svg' %}#log-out"></use>
-            </svg>{% endif %}
-            <span class="navbar-logout-label">
-                Sign out (<span class="navbar-user-name" title="{{ user.get_username }}">{{ user.get_username }}</span>)
-            </span>
+            </svg>
+            <span class="navbar-logout-label">Log out</span>
         </button>
     </form>
 </li>

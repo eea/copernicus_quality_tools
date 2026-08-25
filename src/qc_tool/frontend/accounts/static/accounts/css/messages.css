@@ -1,0 +1,17 @@
+/* Shared placement for Django's one-time browser notifications. */
+.account-messages {
+  width: min(calc(100% - 32px), var(--qc-content-width));
+  margin: 18px auto 0;
+}
+
+.account-messages .alert {
+  margin-bottom: 10px;
+  border-radius: var(--qc-radius-small);
+  box-shadow: 0 8px 22px rgba(35, 57, 91, 0.07);
+}
+
+@media (max-width: 560px) {
+  .account-messages {
+    width: calc(100% - 24px);
+  }
+}

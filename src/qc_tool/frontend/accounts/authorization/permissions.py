@@ -12,6 +12,8 @@ class AccountPermission(str, Enum):
     DELETE_DELIVERY = "delete_delivery"
     SUBMIT_DELIVERY = "submit_delivery"
     CHANGE_PASSWORD = "change_password"
+    MANAGE_OWN_ACCOUNT = "manage_own_account"
+    MANAGE_API_CREDENTIAL = "manage_api_credential"
     MANAGE_CONFIGURATION = "manage_configuration"
     VIEW_REGION_DELIVERIES = "view_region_deliveries"
     VIEW_PRODUCT_DELIVERIES = "view_product_deliveries"
@@ -31,6 +33,8 @@ DEFAULT_PERMISSIONS = frozenset(
         AccountPermission.DELETE_DELIVERY,
         AccountPermission.SUBMIT_DELIVERY,
         AccountPermission.CHANGE_PASSWORD,
+        AccountPermission.MANAGE_OWN_ACCOUNT,
+        AccountPermission.MANAGE_API_CREDENTIAL,
     }
 )
 

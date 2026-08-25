@@ -9,9 +9,11 @@ from qc_tool.frontend.accounts.views.api_credentials import (
     rotate_api_credential,
 )
 from qc_tool.frontend.accounts.views.passwords import change_password
+from qc_tool.frontend.accounts.views.settings import account_settings
 
 
 urlpatterns = [
+    path("accounts/settings/", account_settings, name="account_settings"),
     path(
         "accounts/api-credentials/rotate/",
         rotate_api_credential,

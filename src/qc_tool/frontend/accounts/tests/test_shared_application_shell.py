@@ -66,6 +66,17 @@ class SharedApplicationShellTests(TestCase):
         self.assertIsNotNone(finders.find(icon_sprite))
         self.assertIn(static(icon_sprite), document)
 
+    def primary_menu(self, response):
+        document = response.content.decode(response.charset)
+        match = re.search(
+            r'<ul class="nav navbar-nav navbar-right main-menu">'
+            r'(?P<menu>.*)</ul>\s*</div>\s*</div>\s*</nav>',
+            document,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(match, "The page needs the shared primary menu.")
+        return match.group("menu")
+
     def test_homepage_and_404_render_the_same_application_shell(self):
         homepage = self.client.get(reverse("deliveries"))
         missing_page = self.client.get("/missing-shared-shell-page/")
@@ -73,20 +84,7 @@ class SharedApplicationShellTests(TestCase):
         self.assert_shared_shell(homepage, status_code=200)
         self.assert_shared_shell(missing_page, status_code=404)
 
-        for response, status_code in (
-            (homepage, 200),
-            (missing_page, 404),
-        ):
-            self.assertContains(
-                response,
-                "https://github.com/eea/copernicus_quality_tools",
-                status_code=status_code,
-            )
-            self.assertContains(
-                response,
-                "https://eea.github.io/copernicus_quality_tools/",
-                status_code=status_code,
-            )
+        for response, status_code in ((homepage, 200), (missing_page, 404)):
             self.assertContains(
                 response,
                 'aria-label="Copernicus website"',
@@ -98,7 +96,71 @@ class SharedApplicationShellTests(TestCase):
                 status_code=status_code,
             )
 
-        self.assertNotContains(
-            homepage,
-            "https://github.com/eea/copernicus_quality_tools/wiki",
+    def test_authenticated_header_has_announcement_docs_and_profile_actions(self):
+        response = self.client.get(reverse("deliveries"))
+
+        self.assertEqual(response.status_code, 200)
+        menu = self.primary_menu(response)
+        self.assertIn('href="{}"'.format(reverse("announcement")), menu)
+        self.assertIn(
+            'href="https://github.com/eea/copernicus_quality_tools/wiki"',
+            menu,
         )
+        self.assertIn('id="profile-menu-button"', menu)
+        self.assertIn('aria-controls="profile-menu"', menu)
+        self.assertIn("Profile", menu)
+        self.assertIn(
+            'href="{}"'.format(reverse("account_settings")),
+            menu,
+        )
+        self.assertIn("Settings", menu)
+        self.assertEqual(
+            menu.count(
+                '<form method="post" action="{}">'.format(reverse("logout"))
+            ),
+            1,
+        )
+        self.assertIn('name="csrfmiddlewaretoken"', menu)
+        self.assertIn("Log out", menu)
+        self.assertNotIn('href="{}"'.format(reverse("login")), menu)
+        self.assertNotIn("Sign in", menu)
+        self.assertEqual(
+            re.findall(r'<a\b[^>]*\bhref="([^"]+)"', menu),
+            [
+                reverse("announcement"),
+                "https://github.com/eea/copernicus_quality_tools/wiki",
+                reverse("account_settings"),
+            ],
+        )
+
+    def test_anonymous_header_has_only_documentation_and_sign_in(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        menu = self.primary_menu(response)
+        self.assertIn(
+            'href="https://github.com/eea/copernicus_quality_tools/wiki"',
+            menu,
+        )
+        self.assertIn('href="{}"'.format(reverse("login")), menu)
+        self.assertIn("Sign in", menu)
+        self.assertEqual(
+            re.findall(r'<a\b[^>]*\bhref="([^"]+)"', menu),
+            [
+                "https://github.com/eea/copernicus_quality_tools/wiki",
+                reverse("login"),
+            ],
+        )
+        for authenticated_control in (
+            'href="{}"'.format(reverse("announcement")),
+            'href="{}"'.format(reverse("account_settings")),
+            'action="{}"'.format(reverse("logout")),
+            'id="profile-menu-button"',
+            "Profile",
+            "Settings",
+            "Log out",
+        ):
+            with self.subTest(authenticated_control=authenticated_control):
+                self.assertNotIn(authenticated_control, menu)

@@ -1,0 +1,14 @@
+{% if messages %}
+<div class="account-messages" aria-label="Notifications">
+    {% for message in messages %}
+    <div
+        class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}"
+        role="{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert{% else %}status{% endif %}"
+        aria-live="{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}assertive{% else %}polite{% endif %}"
+        aria-atomic="true"
+    >
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

@@ -389,8 +389,7 @@
 }
 
 .deliveries-toolbar__actions,
-.deliveries-toolbar__utilities,
-.deliveries-api-credential {
+.deliveries-toolbar__utilities {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -460,45 +459,6 @@
 
 .deliveries-toolbar__utilities {
     justify-content: flex-end;
-}
-
-.deliveries-api-credential {
-    padding: 6px 9px 6px 12px;
-    border: 1px solid var(--qc-color-border);
-    border-radius: 8px;
-    background: #f8fbff;
-}
-
-.deliveries-api-credential:target {
-    border-color: var(--qc-color-primary);
-    box-shadow: 0 0 0 3px rgba(8, 104, 215, 0.14);
-}
-
-.deliveries-api-credential__label {
-    color: var(--qc-color-muted);
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.deliveries-api-credential .label {
-    padding: 5px 8px;
-    border-radius: 999px;
-    font-size: 11px;
-}
-
-.deliveries-api-credential .label-success {
-    color: #17633a;
-    background: #dff6e9;
-}
-
-.deliveries-api-credential .label-default {
-    color: #53627a;
-    background: #e8eef6;
-}
-
-.deliveries-api-credential .api-credential-form {
-    display: inline-flex;
-    margin: 0;
 }
 
 .deliveries-table-region {
@@ -745,8 +705,7 @@
 
 @media (max-width: 560px) {
     .deliveries-toolbar__actions .btn,
-    .deliveries-toolbar__utilities > .btn,
-    .deliveries-api-credential {
+    .deliveries-toolbar__utilities > .btn {
         width: 100%;
     }
 
@@ -757,10 +716,6 @@
     .deliveries-toolbar__actions .btn,
     .deliveries-toolbar__utilities > .btn {
         justify-content: center;
-    }
-
-    .deliveries-api-credential {
-        align-items: flex-start;
     }
 
     .deliveries-summary {

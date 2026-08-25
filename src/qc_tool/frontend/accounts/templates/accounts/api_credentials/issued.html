@@ -1,35 +1,67 @@
 {% extends "dashboard/base.html" %}
+{% load static %}
 
-{% block title %}API credential issued | CLMS QC Tool{% endblock title %}
+{% block title %}API token issued | CLMS QC Tool{% endblock title %}
 {% block robots %}noindex, nofollow, noarchive{% endblock robots %}
+{% block body_class %}account-settings-page{% endblock body_class %}
+{% block brand_url %}{% url 'account_settings' %}{% endblock brand_url %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'accounts/css/account-settings.css' %}">
+{% endblock css %}
 
 {% block content %}
-<div class="container">
-    <div class="page-header">
-        <h1>API credential issued</h1>
-    </div>
-    <div class="alert alert-warning" role="alert">
-        Copy this credential now. It is shown only once and cannot be recovered.
-        Rotating it immediately invalidates the previous credential.
-    </div>
-    <div class="form-group">
-        <label for="issued-api-key">Bearer credential</label>
-        <input
-            id="issued-api-key"
-            class="form-control"
-            type="text"
-            value="{{ api_key }}"
-            readonly
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-        >
-    </div>
-    <p>
-        Send it using the HTTP header
-        <code>Authorization: Bearer &lt;credential&gt;</code>.
-        Do not put credentials in URLs.
-    </p>
-    <a class="btn btn-primary" href="{% url 'deliveries' %}">Done</a>
+<div class="credential-issued">
+    <section class="account-card credential-issued__card" aria-labelledby="credential-issued-title">
+        <span class="credential-issued__icon" aria-hidden="true">
+            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#key"></use></svg>
+        </span>
+        <p class="credential-issued__eyebrow">Created successfully</p>
+        <h1 id="credential-issued-title">Copy your API token now</h1>
+        <p class="credential-issued__intro">
+            This is the only time the token will be shown. Store it in a secure secret manager before leaving this page.
+        </p>
+
+        <div class="credential-issued__warning" role="status">
+            Rotating a token immediately invalidates the previous one. Never put this value in a URL, chat, or source code.
+        </div>
+
+        <div class="form-group credential-issued__value">
+            <label for="issued-api-key">Bearer token</label>
+            <div class="credential-issued__input-group">
+                <input
+                    id="issued-api-key"
+                    class="form-control"
+                    type="text"
+                    value="{{ api_key }}"
+                    readonly
+                    autocomplete="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                >
+                <button
+                    class="btn btn-default btn-qc-secondary"
+                    type="button"
+                    data-copy-target="#issued-api-key"
+                    aria-describedby="credential-copy-status"
+                >
+                    Copy token
+                </button>
+            </div>
+            <p id="credential-copy-status" class="help-block" aria-live="polite">
+                Send it as <code>Authorization: Bearer &lt;token&gt;</code> over HTTPS.
+            </p>
+        </div>
+
+        <div class="account-card__actions credential-issued__actions">
+            <a class="btn btn-primary btn-qc-primary" href="{% url 'account_settings' %}#api-credential">Done</a>
+        </div>
+    </section>
 </div>
 {% endblock content %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'accounts/js/account-settings.js' %}"></script>
+{% endblock js %}

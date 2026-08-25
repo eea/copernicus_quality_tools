@@ -18,7 +18,7 @@ from qc_tool.frontend.accounts.services.role_permissions import (
 )
 
 
-DOCUMENTATION_URL = "https://eea.github.io/copernicus_quality_tools/"
+DOCUMENTATION_URL = "https://github.com/eea/copernicus_quality_tools/wiki"
 SUPPORT_URL = "https://github.com/eea/copernicus_quality_tools/issues"
 
 
@@ -206,14 +206,20 @@ class ErrorPagePresentationTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertContains(
             response,
-            'class="navbar-user-name"',
+            'id="profile-menu-button"',
             status_code=404,
         )
         self.assertContains(
             response,
-            'title="{}"'.format(self.user.username),
+            'href="{}"'.format(reverse("account_settings")),
             status_code=404,
         )
+        self.assertContains(
+            response,
+            '<form method="post" action="{}">'.format(reverse("logout")),
+            status_code=404,
+        )
+        self.assertContains(response, "Log out", status_code=404)
         self.assertNotContains(
             response,
             'href="{}"'.format(reverse("login")),

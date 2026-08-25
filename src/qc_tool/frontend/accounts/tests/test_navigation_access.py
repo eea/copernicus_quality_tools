@@ -31,12 +31,12 @@ class ConfigurationNavigationTests(TestCase):
         )
         user.user_permissions.add(permission)
 
-    def test_direct_permission_allows_configuration_pages_and_navigation(self):
+    def test_direct_permission_allows_configuration_workspace_navigation(self):
         user = self.create_user("configuration-editor")
         self.grant_configuration_permission(user)
         self.client.force_login(user)
 
-        response = self.client.get(reverse("boundaries"))
+        response = self.client.get(reverse("deliveries"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(
@@ -52,12 +52,12 @@ class ConfigurationNavigationTests(TestCase):
             f'href="{reverse("admin:auth_user_changelist")}"',
         )
 
-    def test_admin_role_sees_django_admin_navigation(self):
+    def test_admin_role_sees_django_admin_workspace_navigation(self):
         user = self.create_user("application-administrator")
         user.groups.add(Group.objects.get(name=Role.ADMIN.value))
         self.client.force_login(user)
 
-        response = self.client.get(reverse("boundaries"))
+        response = self.client.get(reverse("deliveries"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(

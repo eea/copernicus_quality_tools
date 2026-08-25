@@ -91,6 +91,20 @@ class AccountAccess:
         return self.allows(AccountPermission.CHANGE_PASSWORD)
 
     @property
+    def can_manage_own_account(self):
+        return self.allows(AccountPermission.MANAGE_OWN_ACCOUNT)
+
+    @property
+    def can_manage_api_credential(self):
+        return self.allows(AccountPermission.MANAGE_API_CREDENTIAL)
+
+    @property
+    def can_access_account_settings(self):
+        return bool(
+            self.can_manage_own_account or self.can_manage_api_credential
+        )
+
+    @property
     def can_submit(self):
         return self.allows(AccountPermission.SUBMIT_DELIVERY)
 

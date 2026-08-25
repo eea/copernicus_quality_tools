@@ -1,0 +1,63 @@
+/* Token-driven actions shared by account and configuration pages. */
+.qc-shell .btn-qc-primary,
+.qc-shell .btn-qc-danger,
+.qc-shell .btn-qc-secondary {
+  min-height: 42px;
+  padding: 10px 17px;
+  border-radius: var(--qc-radius-small);
+  font-weight: 600;
+}
+
+.qc-shell .btn-qc-primary,
+.qc-shell .btn-qc-primary:hover,
+.qc-shell .btn-qc-primary:focus {
+  color: #fff;
+}
+
+.qc-shell .btn-qc-primary {
+  border-color: var(--qc-color-primary);
+  background: var(--qc-color-primary);
+}
+
+.qc-shell .btn-qc-primary:hover,
+.qc-shell .btn-qc-primary:focus {
+  border-color: var(--qc-color-primary-dark);
+  background: var(--qc-color-primary-dark);
+}
+
+.qc-shell .btn-qc-danger,
+.qc-shell .btn-qc-danger:hover,
+.qc-shell .btn-qc-danger:focus {
+  color: #fff;
+}
+
+.qc-shell .btn-qc-danger {
+  border-color: var(--qc-color-danger);
+  background: var(--qc-color-danger);
+}
+
+.qc-shell .btn-qc-danger:hover,
+.qc-shell .btn-qc-danger:focus {
+  border-color: var(--qc-color-danger-dark);
+  background: var(--qc-color-danger-dark);
+}
+
+.qc-shell .btn-qc-secondary {
+  border-color: #c6d3e3;
+  color: var(--qc-color-primary);
+  background: var(--qc-color-surface);
+}
+
+.qc-shell .btn-qc-secondary:hover,
+.qc-shell .btn-qc-secondary:focus {
+  border-color: #9eb4cf;
+  color: var(--qc-color-primary-dark);
+  background: #f5f8fd;
+}
+
+.qc-shell .btn-qc-primary[disabled],
+.qc-shell .btn-qc-danger[disabled],
+.qc-shell .btn-qc-secondary[disabled] {
+  cursor: wait;
+  opacity: 0.68;
+}

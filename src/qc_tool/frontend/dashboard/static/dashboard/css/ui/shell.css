@@ -141,8 +141,11 @@ body.qc-shell {
 
 .qc-shell .main-menu > li > a:hover,
 .qc-shell .main-menu > li > a:focus,
+.qc-shell .main-menu > li > a[aria-current="page"],
 .qc-shell .main-menu > li > .site-nav-button:hover,
 .qc-shell .main-menu > li > .site-nav-button:focus,
+.qc-shell .main-menu > li.open > .site-nav-button,
+.qc-shell .main-menu > li.site-nav-user--active > .site-nav-button,
 .qc-shell .main-menu > li.navbar-logout button:hover,
 .qc-shell .main-menu > li.navbar-logout button:focus {
   color: var(--qc-color-primary);
@@ -168,9 +171,10 @@ body.qc-shell {
 
 .qc-shell .site-nav-dropdown-menu > li > a,
 .qc-shell .site-nav-dropdown-menu > li.navbar-logout button {
-  display: block;
+  display: flex;
   width: 100%;
   min-height: 42px;
+  align-items: center;
   padding: 10px 16px;
   border: 0;
   color: var(--qc-color-text);
@@ -179,8 +183,13 @@ body.qc-shell {
   text-align: left;
 }
 
+.qc-shell .site-nav-dropdown-menu > li.navbar-logout > form {
+  margin: 0;
+}
+
 .qc-shell .site-nav-dropdown-menu > li > a:hover,
 .qc-shell .site-nav-dropdown-menu > li > a:focus,
+.qc-shell .site-nav-dropdown-menu > li > a[aria-current="page"],
 .qc-shell .site-nav-dropdown-menu > li.navbar-logout button:hover,
 .qc-shell .site-nav-dropdown-menu > li.navbar-logout button:focus {
   color: var(--qc-color-primary);
@@ -190,15 +199,6 @@ body.qc-shell {
 
 .qc-shell .navbar-logout-label {
   min-width: 0;
-  white-space: nowrap;
-}
-
-.qc-shell .navbar-user-name {
-  display: inline-block;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: bottom;
   white-space: nowrap;
 }
 
@@ -243,7 +243,8 @@ body.qc-shell {
 .qc-shell a:focus,
 .qc-shell button:focus,
 .qc-shell input:focus,
-.qc-shell select:focus {
+.qc-shell select:focus,
+.qc-shell textarea:focus {
   outline: 2px solid var(--qc-color-primary);
   outline-offset: 2px;
 }

@@ -13,6 +13,7 @@ import json
 import openpyxl
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.db import connection
@@ -24,6 +25,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -47,6 +49,7 @@ from qc_tool.frontend.dashboard.access import can_view_delivery
 from qc_tool.frontend.dashboard.access import delivery_action_capabilities
 from qc_tool.frontend.dashboard.access import require_delivery_view
 from qc_tool.frontend.dashboard.access import require_job_view
+from qc_tool.frontend.dashboard.forms import AnnouncementForm
 from qc_tool.frontend.dashboard.helpers import find_product_description
 from qc_tool.frontend.dashboard.helpers import get_announcement_message
 from qc_tool.frontend.dashboard.helpers import guess_product_ident
@@ -868,38 +871,63 @@ def resumable_upload_page(request):
 
 
 def announcement(request):
-    """
-    Saves or loads an announcement message.
-    """
-    if request.method == "GET":
-        try:
-            announcement_message = read_announcement(
-                CONFIG["announcement_path"]
-            )
-        except AnnouncementStorageError:
-            logger.warning("Announcement state could not be read safely.")
-            announcement_message = ""
+    """Render the current announcement for an authenticated QC Tool user."""
 
-        return render(request, 'dashboard/announcement.html', {"announcement": announcement_message})
+    return _render_announcement(request)
+
+
+def _render_announcement(request, announcement_form=None):
+    """Render current state and an optional bound operator form."""
+
+    announcement_available = True
+    try:
+        announcement_message = read_announcement(CONFIG["announcement_path"])
+    except AnnouncementStorageError:
+        logger.warning("Announcement state could not be read safely.")
+        announcement_message = ""
+        announcement_available = False
+
+    if announcement_form is None:
+        announcement_form = AnnouncementForm(
+            initial={"announcement_text": announcement_message}
+        )
+
+    return render(
+        request,
+        "dashboard/announcement.html",
+        {
+            "announcement": announcement_message,
+            "announcement_available": announcement_available,
+            "announcement_form": announcement_form,
+        },
+    )
+
+
+def update_announcement(request):
+    """Replace the operator-managed announcement, then redirect to its page."""
+
+    announcement_form = AnnouncementForm(request.POST)
+    if not announcement_form.is_valid():
+        return _render_announcement(request, announcement_form)
+
+    announcement_text = announcement_form.cleaned_data["announcement_text"]
+    try:
+        write_announcement(
+            CONFIG["announcement_path"],
+            announcement_text,
+        )
+    except AnnouncementStorageError:
+        logger.warning("Announcement update was rejected by safe storage.")
+        messages.error(
+            request,
+            "The announcement could not be saved. Please try again.",
+        )
     else:
-        announcement_text = request.POST.get("announcement_text", "")
-        try:
-            write_announcement(
-                CONFIG["announcement_path"],
-                announcement_text,
-            )
-            if announcement_text:
-                result_message = "Announcement has been successfully updated."
-            else:
-                result_message = "Announcement has been successfully removed."
-            return render(request, 'dashboard/announcement.html',
-                          {"announcement": announcement_text,
-                           "result_message": result_message})
-        except AnnouncementStorageError:
-            logger.warning("Announcement update was rejected by safe storage.")
-            return render(request, 'dashboard/announcement.html',
-                          {"announcement": announcement_text,
-                           "error_message": "Error updating announcement."})
+        if announcement_text:
+            messages.success(request, "Announcement updated.")
+        else:
+            messages.success(request, "Announcement removed.")
+    return redirect("announcement")
 
 
 def boundaries(request):

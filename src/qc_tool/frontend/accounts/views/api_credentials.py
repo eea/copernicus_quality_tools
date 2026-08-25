@@ -1,5 +1,6 @@
 """Session-authenticated, self-service API credential lifecycle views."""
 
+from django.contrib import messages
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.views.decorators.debug import sensitive_variables
@@ -23,7 +24,7 @@ def _secure_credential_response(response):
     return response
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
+@account_permission_required(AccountPermission.MANAGE_API_CREDENTIAL)
 @require_POST
 @sensitive_variables()
 def rotate_api_credential(request):
@@ -38,10 +39,14 @@ def rotate_api_credential(request):
     return _secure_credential_response(response)
 
 
-@account_permission_required(AccountPermission.VIEW_DELIVERIES)
+@account_permission_required(AccountPermission.MANAGE_API_CREDENTIAL)
 @require_POST
 def revoke_api_credential(request):
-    """Revoke the current user's API key and return to the dashboard."""
+    """Revoke the current user's API key and return to account settings."""
 
-    revoke_api_key(request.user)
-    return _secure_credential_response(redirect("deliveries"))
+    revoked = revoke_api_key(request.user)
+    if revoked:
+        messages.success(request, "Your API token was revoked.")
+    else:
+        messages.info(request, "No API token was configured.")
+    return _secure_credential_response(redirect("account_settings"))

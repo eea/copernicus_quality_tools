@@ -85,10 +85,11 @@ EXPECTED_POLICIES = {
     "setup_job": (PRIVATE, SESSION, ("GET",), RUN_QC, LOGIN_REDIRECT),
     "show_result": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "get_attachment": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
-    "announcement": (
+    "announcement": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "announcement_update": (
         PRIVATE,
         SESSION,
-        ("GET", "POST"),
+        ("POST",),
         MANAGE_CONFIGURATION,
         LOGIN_REDIRECT,
     ),
@@ -291,8 +292,8 @@ class RoutePolicyValidationTests(TestCase):
 
 
 class RoutePolicyRegistryTests(TestCase):
-    def test_registry_is_an_explicit_policy_for_all_42_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 42)
+    def test_registry_is_an_explicit_policy_for_all_43_dashboard_routes(self):
+        self.assertEqual(len(EXPECTED_POLICIES), 43)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

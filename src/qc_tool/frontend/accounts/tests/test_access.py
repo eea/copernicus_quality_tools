@@ -51,6 +51,9 @@ class AccountAccessTests(TestCase):
         self.assertTrue(access.can_delete)
         self.assertTrue(access.can_submit)
         self.assertTrue(access.can_change_password)
+        self.assertTrue(access.can_manage_own_account)
+        self.assertTrue(access.can_manage_api_credential)
+        self.assertTrue(access.can_access_account_settings)
         self.assertFalse(access.can_manage_configuration)
         self.assertFalse(access.can_access_django_admin)
         self.assertFalse(

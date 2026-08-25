@@ -1,6 +1,7 @@
 import re
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.middleware.csrf import _get_new_csrf_string
 from django.test import Client
 from django.test import TestCase
@@ -12,6 +13,12 @@ from qc_tool.frontend.accounts.authentication.api_keys import (
 from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
 from qc_tool.frontend.accounts.authentication.api_keys import has_api_key
 from qc_tool.frontend.accounts.models import ApiUser
+from qc_tool.frontend.accounts.authorization.permissions import (
+    AccountPermission,
+)
+from qc_tool.frontend.accounts.services.role_permissions import (
+    capability_content_type,
+)
 
 
 class ApiCredentialViewTests(TestCase):
@@ -77,7 +84,7 @@ class ApiCredentialViewTests(TestCase):
         self.assertEqual(authenticate_api_key(second), self.user)
         self.assertEqual(ApiUser.objects.filter(user=self.user).count(), 1)
 
-    def test_revoke_deletes_credential_and_uses_fixed_redirect(self):
+    def test_revoke_deletes_credential_and_uses_fixed_settings_redirect(self):
         self.client.force_login(self.user)
         raw_key = self.client.post(self.rotate_url).context["api_key"]
 
@@ -88,13 +95,23 @@ class ApiCredentialViewTests(TestCase):
 
         self.assertRedirects(
             response,
-            reverse("deliveries"),
+            reverse("account_settings"),
             fetch_redirect_response=False,
         )
         self.assertFalse(has_api_key(self.user))
         self.assertIsNone(authenticate_api_key(raw_key))
         self.assertEqual(response["Cache-Control"], "private, no-store")
         self.assertEqual(response["Referrer-Policy"], "no-referrer")
+
+    def test_issued_credential_returns_to_account_settings(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.rotate_url)
+
+        self.assertContains(
+            response,
+            'href="{}#api-credential"'.format(reverse("account_settings")),
+        )
 
     def test_permission_is_checked_before_issue_or_revoke(self):
         self.client.force_login(self.user)
@@ -111,29 +128,55 @@ class ApiCredentialViewTests(TestCase):
                 self.assertEqual(response.status_code, 403)
         self.assertFalse(ApiUser.objects.filter(user=self.user).exists())
 
-    def test_dashboard_get_does_not_lazily_create_or_expose_a_credential(self):
+    def test_direct_api_permission_has_a_complete_management_flow(self):
+        self.client.force_login(self.user)
+        self.user.groups.through.objects.filter(user_id=self.user.pk).delete()
+        self.user.user_permissions.through.objects.filter(
+            user_id=self.user.pk,
+        ).delete()
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                content_type=capability_content_type(),
+                codename=AccountPermission.MANAGE_API_CREDENTIAL.value,
+            )
+        )
+
+        settings_response = self.client.get(reverse("account_settings"))
+        issued_response = self.client.post(self.rotate_url)
+
+        self.assertEqual(settings_response.status_code, 200)
+        self.assertContains(settings_response, 'id="api-credential"')
+        self.assertNotContains(settings_response, "Profile details")
+        self.assertEqual(issued_response.status_code, 200)
+        self.assertContains(
+            issued_response,
+            'href="{}#api-credential"'.format(reverse("account_settings")),
+        )
+        self.assertTrue(has_api_key(self.user))
+
+    def test_settings_get_does_not_lazily_create_or_expose_a_credential(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("deliveries"))
+        response = self.client.get(reverse("account_settings"))
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(ApiUser.objects.filter(user=self.user).exists())
         self.assertContains(response, "Not configured")
-        self.assertContains(response, ">Create</button>")
+        self.assertContains(response, "Create token")
         self.assertNotContains(response, "qct_")
 
-    def test_dashboard_shows_only_configured_status_for_existing_credential(self):
+    def test_settings_shows_only_configured_status_for_existing_credential(self):
         raw_key = "qct_" + ("S" * 43)
         stored_digest = digest_api_key(raw_key)
         ApiUser.objects.create(user=self.user, api_key=stored_digest)
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("deliveries"))
+        response = self.client.get(reverse("account_settings"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Configured")
-        self.assertContains(response, ">Rotate</button>")
-        self.assertContains(response, ">Revoke</button>")
+        self.assertContains(response, "Rotate token")
+        self.assertContains(response, "Revoke token")
         self.assertNotContains(response, raw_key)
         self.assertNotContains(response, stored_digest)
         self.assertEqual(

@@ -12,8 +12,10 @@ from django.test import TestCase
 from qc_tool.frontend.accounts.authentication.api_keys import digest_api_key
 from qc_tool.frontend.accounts.authentication.decorators import api_key_required
 from qc_tool.frontend.accounts.authorization.decorators import (
+    account_any_permission_required,
     account_json_permission_required,
     account_permission_required,
+    account_permissions_required,
 )
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.authorization.permissions import DEFAULT_PERMISSIONS
@@ -122,6 +124,46 @@ class PermissionDecoratorTests(TestCase):
             self.assertEqual(response["Cache-Control"], "private, no-store")
             self.assertEqual(response["Pragma"], "no-cache")
             self.assertIn("Cookie", response["Vary"])
+
+    def test_any_permission_decorator_accepts_one_declared_capability(self):
+        view = account_any_permission_required(
+            AccountPermission.MANAGE_OWN_ACCOUNT,
+            AccountPermission.MANAGE_API_CREDENTIAL,
+        )(ok_view)
+        user = self.create_user("one-account-capability")
+        self.remove_canonical_roles(user)
+        user.user_permissions.add(
+            Permission.objects.get(
+                content_type=capability_content_type(),
+                codename=AccountPermission.MANAGE_API_CREDENTIAL.value,
+            )
+        )
+        request = self.request_factory.get("/accounts/settings/")
+        request.user = user
+
+        response = view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+
+    def test_all_permission_decorator_rejects_a_partial_grant(self):
+        view = account_permissions_required(
+            AccountPermission.MANAGE_OWN_ACCOUNT,
+            AccountPermission.MANAGE_API_CREDENTIAL,
+        )(ok_view)
+        user = self.create_user("partial-account-capability")
+        self.remove_canonical_roles(user)
+        user.user_permissions.add(
+            Permission.objects.get(
+                content_type=capability_content_type(),
+                codename=AccountPermission.MANAGE_OWN_ACCOUNT.value,
+            )
+        )
+        request = self.request_factory.get("/accounts/settings/")
+        request.user = user
+
+        with self.assertRaises(PermissionDenied):
+            view(request)
 
     def test_session_json_denial_is_private_and_varies_on_cookie(self):
         view = account_json_permission_required(
