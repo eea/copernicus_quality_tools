@@ -5,6 +5,33 @@
 DESCRIPTION = "Features use specific codes in specific attributes."
 IS_SYSTEM = False
 
+# List of common SQL reserved words that break unquoted PostGIS queries
+RESERVED_KEYWORDS = {
+    "ORDER",
+    "SELECT",
+    "WHERE",
+    "FROM",
+    "GROUP",
+    "HAVING",
+    "LIMIT",
+    "OFFSET",
+    "USER",
+    "PRIMARY",
+    "FOREIGN",
+    "KEY",
+    "CHECK",
+    "DEFAULT",
+}
+
+def sanitize_column_name(col_name):
+    """Lowercases the column name to match PostGIS schema conventions, and double-quotes it ONLY if it is a reserved SQL keyword like ORDER."""
+    clean_name = col_name.strip('"').lower()
+
+    if col_name.upper() in RESERVED_KEYWORDS:
+        return f'"{clean_name}"'
+
+    return clean_name
+
 
 def run_check(params, status):
     from qc_tool.vector.helper import do_layers
@@ -36,14 +63,16 @@ def run_check(params, status):
 
             # Prepare clause excluding features with non-null value of specific column.
             if "exclude_column_name" in params:
-                exclude_clause = "AND {:s} IS NULL".format(params["exclude_column_name"])
+                # exclude_clause = "AND {:s} IS NULL".format(params["exclude_column_name"])
+                exclude_col = sanitize_column_name(params["exclude_column_name"])
+                exclude_clause = "AND {:s} IS NULL".format(exclude_col)
             else:
                 exclude_clause = ""
 
             # Prepare parameters used in sql clauses.
             sql_params = {"fid_name": layer_def["pg_fid_name"],
                           "layer_name": layer_def["pg_layer_name"],
-                          "column_name": column_name,
+                          "column_name": sanitize_column_name(column_name),
                           "exclude_clause": exclude_clause,
                           "error_table": "s{:02d}_{:s}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"], column_name)}
 
