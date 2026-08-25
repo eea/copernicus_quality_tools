@@ -55,15 +55,6 @@
       }
     },
     {
-      "check_ident": "qc_tool.raster.origin",
-      "required": false,
-      "parameters": {
-        "layers": [
-          "wvl_005m"
-        ]
-      }
-    },
-    {
       "check_ident": "qc_tool.raster.bit_depth",
       "required": false,
       "parameters": {

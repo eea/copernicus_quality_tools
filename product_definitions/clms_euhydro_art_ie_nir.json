@@ -1,0 +1,388 @@
+{
+  "description": "EU Hydro Hydro-ART vector (Ireland)",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2026",
+        "formats": [
+          ".gpkg", ".fgb"
+        ],
+        "layer_names": {
+          "WATERCOURSE_LINE": "art_artificial_watercourse_line_(?P<aoi_code>ie_nir)",
+          "WATERCOURSE_POLYGON": "art_artificial_watercourse_polygon_(?P<aoi_code>ie_nir)",
+          "LONGITUDINAL_STRUCTURE": "art_longitudinal_connectivity_structure_(?P<aoi_code>ie_nir)",
+          "LATERAL_STRUCTURE": "art_coastal_protection_lateral_connectivity_structure_(?P<aoi_code>ie_nir)"
+        },
+<<<<<<< HEAD
+        "gpkg_filename_regex": "^clms_euhydro_art_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}",
+        "aoi_codes": ["ie_nir"]
+=======
+        "gpkg_filename_regex": "^clms_euhydro_art_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
+>>>>>>> rc
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "WATERCOURSE_LINE"
+        ],
+        "required": {
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "NAMETEXT_1": "string",
+          "NAMETEXT2": "string",
+          "NAMETEXT2_1": "string",
+          "NAMETXTINT": "string",
+          "TYPE": "string",
+          "HYP": "integer",
+          "LOC": "integer",
+          "NVS": "integer",
+          "LDV": "integer",
+          "FUN": "integer",
+          "TID": "integer",
+          "BEGLIFEVER": "datetime",
+          "ENDLIFEVER": "datetime",
+          "UPDAT_WHEN": "datetime",
+          "UPDAT_BY": "string",
+          "CYEAR_WISE": "string",
+          "INSPIRE_ID": "string",
+          "OBJECT_ID": "string",
+          "HYDROID_NAT": "string",
+          "HYDROIDNAM_WISE": "string",
+          "NHI": "string",
+          "TEN": "integer",
+          "WCH_NAT": "integer",
+          "MONOT_Z": "integer",
+          "WD7_NAT": "integer",
+          "WD8_NAT": "integer",
+          "DATA_SOURCE": "string",
+          "LEN": "real",
+          "COMMENT": "string",
+          "HYBAS_ID": "string"
+        },
+        "ignored": ["OBJECTID"],
+        "allow_datetime_datatype": true,
+        "continue_on_error": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "WATERCOURSE_POLYGON"
+        ],
+        "required": {
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "NAMETEXT_1": "string",
+          "NAMETEXT2": "string",
+          "NAMETEXT2_1": "string",
+          "NAMETXTINT": "string",
+          "TYPE": "string",
+          "HYP": "integer",
+          "LOC": "integer",
+          "NVS": "integer",
+          "FUN": "integer",
+          "TID": "integer",
+          "BEGLIFEVER": "datetime",
+          "ENDLIFEVER": "datetime",
+          "UPDAT_WHEN": "datetime",
+          "CYEAR_WISE": "string",
+          "INSPIRE_ID": "string",
+          "OBJECT_ID": "string",
+          "HYDROID_NAT": "string",
+          "NHI": "string",
+          "WCH_NAT": "integer",
+          "WD7_NAT": "integer",
+          "WD8_NAT": "integer",
+          "DATA_SOURCE": "string",
+          "COMMENT": "string",
+          "AREA": "real",
+          "GEOM_LENGTH": "real",
+          "GEOM_AREA": "real",
+          "HYBAS_ID": "string"
+        },
+        "ignored": ["OBJECTID"],
+        "allow_datetime_datatype": true,
+        "continue_on_error": true
+      }
+    },
+    
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "LONGITUDINAL_STRUCTURE"
+        ],
+        "required": {
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "BASIN_NAME": "string",
+          "HYBAS_ID": "string",
+          "RIVER_NAME": "string",
+          "STRM_ID": "string",
+          "TYPE": "integer",
+          "DGIWG_ID": "string",
+          "SUB_TYPE_CROSS": "integer",
+          "CONDITION": "integer",
+          "PURPOSE": "string",
+          "HEIGHT": "real",
+          "HEIGHT_CLASS": "string",
+          "BARRIER_HEIGHT": "real",
+          "BARRIER_WIDTH": "real",
+          "RESERVOIR_CAPACITY": "real",
+          "CONSTR_YEAR": "string",
+          "X_COORD_SOURCE": "real",
+          "Y_COORD_SOURCE": "real",
+          "X_COORD_WATERWAY": "real",
+          "Y_COORD_WATERWAY": "real",
+          "HYDRO_ID": "string",
+          "INSPIRE_ID": "string",
+          "ADMIN_UNIT": "string",
+          "BEGLIFEVER": "datetime",
+          "UPDAT_WHEN": "datetime",
+          "UPDAT_BY": "string",
+          "DATA_SOURCE": "string",
+          "COMMENT": "string"
+        },
+        "ignored": ["OBJECTID"],
+        "allow_datetime_datatype": true,
+        "continue_on_error": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "LATERAL_STRUCTURE"
+        ],
+        "required": {
+          "FID": "integer",
+          "REX": "string",
+          "NAMETEXT": "string",
+          "NAMETEXT_1": "string",
+          "TYPE": "string",
+          "RIVER_NAME": "string",
+          "BASIN_NAME": "string",
+          "HYBAS_ID": "string",
+          "CONSTR_YEAR": "string",
+          "STRUCTURE_LENGHT": "real",
+          "STRUCTURE_HEIGHT": "real",
+          "STRUCTURE_WIDTH": "real",
+          "LENGTH_M": "real",
+          "PURPOSE": "string",
+          "STRUCTURE_ID": "string",
+          "INSPIRE_ID": "string",
+          "BEGLIFEVER": "datetime",
+          "MATERIAL": "string",
+          "DATA_SOURCE": "string",
+          "COMMENT": "string",
+          "COASTAL_PRO": "integer",
+          "LAT_CON_STR": "integer"
+        },
+        "ignored": ["OBJECTID"],
+        "allow_datetime_datatype": true,
+        "continue_on_error": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry_type",
+      "required": true,
+      "parameters": {
+        "layers": ["WATERCOURSE_POLYGON"],
+        "geometry_type": ["POLYGON", "MULTIPOLYGON"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry_type",
+      "required": true,
+      "parameters": {
+        "layers": ["LONGITUDINAL_STRUCTURE"],
+        "geometry_type": "POINT"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry_type",
+      "required": true,
+      "parameters": {
+        "layers": ["WATERCOURSE_LINE", "LATERAL_STRUCTURE"],
+        "geometry_type": ["LINESTRING", "MULTILINESTRING"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "WATERCOURSE_POLYGON", "WATERCOURSE_LINE", "LONGITUDINAL_STRUCTURE", "LATERAL_STRUCTURE"
+        ],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "WATERCOURSE_POLYGON", "WATERCOURSE_LINE", "LONGITUDINAL_STRUCTURE", "LATERAL_STRUCTURE"
+        ],
+        "unique_keys": ["FID"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "WATERCOURSE_LINE"
+        ],
+        "column_defs": [
+          ["TYPE", [
+            "BH020", "BH030", null
+          ]],
+          ["HYP", [
+            1, 2, 3, 4, null
+          ]],
+          ["LOC", [
+            40, 44, 45, null
+          ]],
+          ["NVS", [
+            1, 2, 3, 4, 5, null
+          ]],
+          ["LDV", [
+            1, 2, 3,null
+          ]],
+          ["FUN", [
+            1, 2, 6, null
+          ]],
+          ["TID", [
+            1, 2, null
+          ]],
+          ["TEN", [
+            1, 2, null
+          ]],
+          ["WCH_NAT", [
+            1, 2, 3, 4, 5, 9, null
+          ]],
+          ["MONOT_Z", [
+            0, 1, null
+          ]]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "WATERCOURSE_POLYGON"
+        ],
+        "column_defs": [
+          ["TYPE", [
+            "BH020", "BH030", null
+          ]],
+          ["HYP", [
+            1, 2, 3, 4, null
+          ]],
+          ["LOC", [
+            40, 44, 45, null
+          ]],
+          ["NVS", [
+            1, 2, 3, 4, 5, null
+          ]],
+          ["FUN", [
+            1, 2, 6, null
+          ]],
+          ["TID", [
+            1, 2, null
+          ]],
+          ["WCH_NAT", [
+            1, 2, 3, 4, 5, 9, null
+          ]]    
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "LONGITUDINAL_STRUCTURE"
+        ],
+        "column_defs": [
+          ["TYPE", [
+            1, 2, 3, 4, 5, 6, 7
+          ]],
+          ["DGIWG_ID", [
+            "BI020", "BI030", "BI039", null
+          ]],
+          ["SUB_TYPE_CROSS", [
+            1, 2, 3, 4, null
+          ]],
+          ["CONDITION", [
+            1, 2, 3, 4, 5
+          ]],
+          ["PURPOSE", [
+            "Hydropower", "Flood protection", "Drinking water", "Irrigation", "Recreation", "Industry", "Navigation", "Other", "Unknown", "obsolete", null
+          ]],
+          ["HEIGHT_CLASS", [
+            "< 0.5", "0.5 to 1", "1 to 2", "2 to 5", "5 to 10", "10 to 15", "> 15", null
+          ]]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "LATERAL_STRUCTURE"
+        ],
+        "column_defs": [
+          ["COASTAL_PRO", [
+            1, null
+          ]],
+          ["LAT_CON_STR", [
+            1, null
+          ]]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["WATERCOURSE_LINE", "LATERAL_STRUCTURE", "LONGITUDINAL_STRUCTURE"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mml",
+      "required": false,
+      "parameters": {
+        "layers": ["WATERCOURSE_LINE", "LATERAL_STRUCTURE"],
+        "mml": 10.0,
+        "line_geometry": true,
+        "warning_where": "ST_Length(geom) < 10.0"
+      }
+    }
+  ]
+}

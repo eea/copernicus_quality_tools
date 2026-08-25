@@ -10,9 +10,10 @@
       "required": true,
       "parameters": {
         "layer_names":{
-          "swfc_100m": "^clms_hrlslf_swfc_c2018-2021_r100m_(?P<aoi_code>[a-zA-Z]{2})_(?P<epsgcode>[0-9]{5})_(?P<version>v[0-9]{2})_r[0-9]{2}_(?P<revision>[0-9]{2})"
+          "swfc_100m": "^clms_hrlslf_swfc_c2018-2021_r100m_(?P<aoi_code>[a-zA-Z]{2})_(?P<epsgcode>[0-9]{5})_v[0-9]{2}_r[0-9]{2}"
         },
-        "aoi_codes": ["*", "EU"],
+        "aoi_codes": ["EU", "*"],
+        "epsg_codes": ["03035"],
         "extensions": [".tif"],
         "reference_year": "2018-2021"
       }

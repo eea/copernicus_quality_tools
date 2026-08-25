@@ -12,6 +12,8 @@ def run_check(params, status):
 
     cursor = params["connection_manager"].get_connection().cursor()
 
+    line_geometry = params.get("line_geometry", False)
+
     for layer_def in do_layers(params):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
@@ -20,24 +22,30 @@ def run_check(params, status):
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of warning items.
-        sql = ("CREATE TABLE {warning_table} AS\n"
-               "SELECT {fid_name}\n"
-               "FROM\n"
-               " (SELECT {fid_name}, geom\n"
-               "  FROM\n"
-               "   (SELECT\n"
-               "     {fid_name},\n"
-               "     ST_Boundary(ST_OrientedEnvelope(geom)) AS env,\n"
-               "     geom\n"
-               "    FROM {layer_name} AS layer\n"
-               "    WHERE {warning_where}\n"
-               "   ) AS tenv\n"
-               "  WHERE\n"
-               "   greatest(ST_Distance(ST_PointN(env, 1), ST_PointN(env, 2)),\n"
-               "            ST_Distance(ST_PointN(env, 2), ST_PointN(env, 3))) < %(mml)s\n"
-               " ) AS tdist\n"
-               "WHERE\n"
-               " ST_Length(ST_ApproximateMedialAxis(ST_MakePolygon(ST_ExteriorRing(geom)))) <= %(mml)s;")
+        if line_geometry:
+            sql = ("CREATE TABLE {warning_table} AS\n"
+                   "SELECT {fid_name}\n"
+                   "FROM {layer_name} AS layer\n"
+                   "WHERE ST_Length(geom) < %(mml)s;")
+        else:
+            sql = ("CREATE TABLE {warning_table} AS\n"
+                   "SELECT {fid_name}\n"
+                   "FROM\n"
+                   " (SELECT {fid_name}, geom\n"
+                   "  FROM\n"
+                   "   (SELECT\n"
+                   "     {fid_name},\n"
+                   "     ST_Boundary(ST_OrientedEnvelope(geom)) AS env,\n"
+                   "     geom\n"
+                   "    FROM {layer_name} AS layer\n"
+                   "    WHERE {warning_where}\n"
+                   "   ) AS tenv\n"
+                   "  WHERE\n"
+                   "   greatest(ST_Distance(ST_PointN(env, 1), ST_PointN(env, 2)),\n"
+                   "            ST_Distance(ST_PointN(env, 2), ST_PointN(env, 3))) < %(mml)s\n"
+                   " ) AS tdist\n"
+                   "WHERE\n"
+                   " ST_Length(ST_ApproximateMedialAxis(ST_MakePolygon(ST_ExteriorRing(geom)))) <= %(mml)s;")
         sql = sql.format(**sql_params)
         cursor.execute(sql, {"mml": params["mml"]})
 

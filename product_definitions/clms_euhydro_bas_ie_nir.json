@@ -1,0 +1,152 @@
+{
+  "description": "EU Hydro Hydro-BAS vector (Ireland)",
+  "steps": [
+    {
+      "check_ident": "qc_tool.raster.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2026",
+        "formats": [
+          ".gpkg", ".fgb"
+        ],
+        "layer_names": {
+          "BAS_L2": "bas_l2_(?P<aoi_code>ie_nir)",
+          "BAS_L2_CARTO": "bas_l2_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L3": "bas_l3_(?P<aoi_code>ie_nir)",
+          "BAS_L3_CARTO": "bas_l3_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L4": "bas_l4_(?P<aoi_code>ie_nir)",
+          "BAS_L4_CARTO": "bas_l4_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L5": "bas_l5_(?P<aoi_code>ie_nir)",
+          "BAS_L5_CARTO": "bas_l5_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L6": "bas_l6_(?P<aoi_code>ie_nir)",
+          "BAS_L6_CARTO": "bas_l6_carto_(?P<aoi_code>ie_nir)",
+          "BAS_L7": "bas_l7_(?P<aoi_code>ie_nir)",
+          "BAS_L7_CARTO": "bas_l7_carto_(?P<aoi_code>ie_nir)"
+        },
+        "gpkg_filename_regex": "^clms_euhydro_bas_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}",
+        "aoi_codes": ["ie_nir"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7"
+        ],
+        "required": {
+          "HYBAS_ID": "string",
+          "NEXT_DOWN": "string",
+          "SUB_AREA_SKM": "real",
+          "UPLAND_SKM": "real",
+          "DIST_DN_KM": "real",
+          "ORD_STRA": "integer",
+          "ORD_SHRE": "integer",
+          "ORD_HACK": "integer",
+          "ORD_HACK_ID": "integer",
+          "GRID_CODE": "integer",
+          "STRM_ID": "integer"
+          
+        },
+        "ignored": ["OBJECTID", "DIST_UP_KM"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "required": {
+          "HYBAS_ID": "string",
+          "NEXT_DOWN": "string",
+          "SUB_AREA_SKM": "real",
+          "UPLAND_SKM": "real",
+          "DIST_DN_KM": "real",
+          "ORD_STRA": "integer",
+          "ORD_SHRE": "integer",
+          "ORD_HACK": "integer",
+          "ORD_HACK_ID": "integer",
+          "GRID_CODE": "integer",
+          "STRM_ID": "integer",
+          "CARTO": "string"
+        },
+        "ignored": ["OBJECTID", "DIST_UP_KM"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7",
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7",
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "unique_keys": ["HYBAS_ID", "STRM_ID", "GRID_CODE"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"
+        ],
+        "column_defs": [
+          ["CARTO", [
+            "YES", "NO"
+          ]]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7",
+                   "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu_multipart",
+      "required": false,
+      "parameters": {
+        "layers": ["BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7", 
+                   "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"],
+        "mmu": 100.0
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7", 
+                   "BAS_L2_CARTO", "BAS_L3_CARTO", "BAS_L4_CARTO", "BAS_L5_CARTO", "BAS_L6_CARTO", "BAS_L7_CARTO"],
+        "mmw": 10.0,
+        "general_where": "FALSE",
+        "exception_where": "FALSE"
+      }
+    }
+  ]
+}

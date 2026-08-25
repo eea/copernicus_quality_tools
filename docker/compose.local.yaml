@@ -1,0 +1,151 @@
+name: copernicus-quality-tools-local
+
+services:
+  userdb:
+    image: postgres:14
+    pull_policy: missing
+    environment:
+      POSTGRES_DB: "${QC_TOOL_POSTGRES_DB:-qc_tool}"
+      POSTGRES_USER: "${QC_TOOL_POSTGRES_USER:-qc_user}"
+      POSTGRES_PASSWORD: "${QC_TOOL_POSTGRES_PASSWORD:-qc_password}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    volumes:
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
+
+  frontend:
+    image: "eeacms/copernicus-qctool-frontend:${QC_TOOL_IMAGE_TAG:-2.4.6}"
+    # Published QC Tool images are currently linux/amd64-only. Docker Desktop
+    # uses emulation on ARM hosts; the variable allows future native images.
+    platform: "${QC_TOOL_PLATFORM:-linux/amd64}"
+    pull_policy: missing
+    depends_on:
+      userdb:
+        condition: service_healthy
+        restart: true
+    ports:
+      - name: frontend-http
+        target: 8000
+        published: "${QC_TOOL_PORT:-8000}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    environment:
+      PRODUCT_DIRS: /usr/local/src/copernicus_quality_tools/product_definitions
+      BOUNDARY_DIR: /mnt/qc_tool_boundary/boundaries
+      INCOMING_DIR: /mnt/qc_tool_incoming/incoming
+      WORK_DIR: /mnt/qc_tool_work/work
+      SUBMISSION_DIR: /mnt/qc_tool_submission/submission
+      DB_ENGINE: postgres
+      POSTGRES_HOST: userdb
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: "${QC_TOOL_POSTGRES_DB:-qc_tool}"
+      POSTGRES_USER: "${QC_TOOL_POSTGRES_USER:-qc_user}"
+      POSTGRES_PASSWORD: "${QC_TOOL_POSTGRES_PASSWORD:-qc_password}"
+      API_URL: "http://localhost:${QC_TOOL_PORT:-8000}/api"
+      UPDATE_JOB_STATUSES: "yes"
+      UPDATE_JOB_STATUSES_INTERVAL: "30000"
+      WORKER_ALIVE_TIMEOUT: "20"
+      REFRESH_JOB_STATUSES_BACKGROUND: "yes"
+      REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL: "60"
+      MAINTENANCE_MODE: "no"
+      CASE_INSENSITIVE_USERNAMES: "yes"
+      CSRF_TRUSTED_ORIGINS: "http://localhost:${QC_TOOL_PORT:-8000},http://127.0.0.1:${QC_TOOL_PORT:-8000}"
+      RESUMABLE_SIMULTANEOUS_UPLOADS: "4"
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/accounts/login/', timeout=2).close()
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    volumes:
+      - type: volume
+        source: qc_tool_boundary
+        target: /mnt/qc_tool_boundary
+      - type: volume
+        source: qc_tool_incoming
+        target: /mnt/qc_tool_incoming
+      - type: volume
+        source: qc_tool_work
+        target: /mnt/qc_tool_work
+      - type: volume
+        source: qc_tool_submission
+        target: /mnt/qc_tool_submission
+      - type: volume
+        source: qc_tool_frontend
+        target: /var/lib/qc_tool
+      # The checkout overlays the code packaged in the image, so source edits
+      # are available immediately without rebuilding an image.
+      - type: bind
+        source: ..
+        target: /usr/local/src/copernicus_quality_tools
+        read_only: true
+        bind:
+          create_host_path: false
+
+  worker:
+    image: "eeacms/copernicus-qctool-worker:${QC_TOOL_IMAGE_TAG:-2.4.6}"
+    platform: "${QC_TOOL_PLATFORM:-linux/amd64}"
+    pull_policy: missing
+    shm_size: "1gb"
+    depends_on:
+      frontend:
+        condition: service_healthy
+        restart: true
+    environment:
+      PRODUCT_DIRS: /usr/local/src/copernicus_quality_tools/product_definitions
+      BOUNDARY_DIR: /mnt/qc_tool_boundary/boundaries
+      INCOMING_DIR: /mnt/qc_tool_incoming/incoming
+      WORK_DIR: /mnt/qc_tool_work/work
+      PULL_JOB_URL: http://frontend:8000/pull_job
+      INSPIRE_SERVICE_URL: http://localhost:8080/validator/v2/
+      JAVA_MAX_MEM: "1536"
+      RUN_INSPIRE_VALIDATOR: "yes"
+      USE_LIGHTWEIGHT_VALIDATOR: "no"
+      RUN_POSTGRES: "yes"
+      LEAVE_SCHEMA: "${LEAVE_SCHEMA:-no}"
+      LEAVE_JOBDIR: "${LEAVE_JOBDIR:-no}"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          curl -fsS http://localhost:8000/max_slots.json >/dev/null &&
+          curl -fsS http://localhost:8080/validator/v2/status >/dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      # The full INSPIRE validator can take several minutes under emulation.
+      start_period: 180s
+    volumes:
+      - type: volume
+        source: qc_tool_boundary
+        target: /mnt/qc_tool_boundary
+      - type: volume
+        source: qc_tool_incoming
+        target: /mnt/qc_tool_incoming
+      - type: volume
+        source: qc_tool_work
+        target: /mnt/qc_tool_work
+      - type: bind
+        source: ..
+        target: /usr/local/src/copernicus_quality_tools
+        read_only: true
+        bind:
+          create_host_path: false
+
+volumes:
+  postgres_data:
+  qc_tool_boundary:
+  qc_tool_frontend:
+  qc_tool_incoming:
+  qc_tool_submission:
+  qc_tool_work:

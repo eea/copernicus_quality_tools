@@ -49,10 +49,9 @@ def do_unzip(zip_filepath, unzip_dir, status):
                        .format(zip_filepath.name))
 
     status.set_status_property("hash_files", [zip_filepath.name])
-    unzip_dir.mkdir()
-
     # The source zip file must be a zip archive.
     try:
+        unzip_dir.mkdir()
         with ZipFile(str(zip_filepath)) as zip_file:
             zip_file.extractall(path=str(unzip_dir))
     except Exception as ex:

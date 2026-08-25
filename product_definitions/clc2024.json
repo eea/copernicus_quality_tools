@@ -26,10 +26,12 @@
           "at",
           "ba",
           "be",
+          "be_fr_lu_nl",
           "bg",
           "ch",
           "cy",
           "cz",
+          "cz_sk",
           "de",
           "dk",
           "dk_fo",
@@ -65,6 +67,7 @@
           "pt_raa_weg",
           "ro",
           "rs",
+          "rs_xk_mk",
           "se",
           "si",
           "sk",
@@ -727,7 +730,7 @@
           "meta.cc_area IS NOT NULL AND meta.cc_area >= 50000"
         ],
         "warning_where": [
-          "FALSE"
+          "layer.shape_area >= 5000"
         ]
       }
     },

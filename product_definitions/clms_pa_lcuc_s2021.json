@@ -24,6 +24,7 @@
           "du0012", "du0013", "du0014", "du0015", "du0016", "du0017", "du0018", "du0019", "du0020", "du0021", "du0022",
           "du0023", "du0024", "du0025", "du0026", "du0027", "du0028", "du0029", "du0030", "du0031", "du0032", "du0033",
           "du0034", "du0035", "du0036", "du0037", "du0038"],
+        "epsg_codes": ["03035"],
         "excessive_layers_allowed": false,
         "boundary_source": "boundary_pa.gpkg"
       }

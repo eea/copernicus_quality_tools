@@ -1,0 +1,232 @@
+
+
+import json
+import os
+from pathlib import Path
+from typing import Any, Dict
+
+import parseo
+
+
+TARGET_KEYS = [
+    "layer_names",
+    "aoi_codes",
+    "epsg_codes",
+    "extensions",
+    "reference_year",
+    "formats",
+    "gpkg_filename_regex"
+]
+
+
+def extract_values(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: data[key] for key in TARGET_KEYS if key in data}
+
+def find_keys(obj, target_keys, found=None):
+    if found is None:
+        found = {}
+
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key in target_keys and key not in found:
+                found[key] = value
+            find_keys(value, target_keys, found)
+
+    elif isinstance(obj, list):
+        for item in obj:
+            find_keys(item, target_keys, found)
+
+    return found
+
+
+def main(products_dir) -> None:
+    folder = Path(products_dir)
+
+    c = 0
+    results = dict()
+    for json_file in sorted(folder.glob("clms_*.json")):
+        c += 1
+        try:
+            with json_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, ValueError) as exc:
+            print("{}: error reading file: {}".format(json_file.name, exc))
+            continue
+
+        values = find_keys(data, TARGET_KEYS)
+        values_new = dict()
+        version = "v02"
+        revision = "r02"
+        release_date = None
+        for key, value in values.items():
+            # print(key, value)
+            if type(value) == str:
+                values_new[key] = value
+            elif type(value) == dict:
+                values_new[key] = list(value.values())[0]
+            elif type(value) == list:
+                values_new[key] =value[0]
+        # print(values)
+        # print(values_new)
+        # print("json_file", json_file.name)
+        product_layer_prefix = "_".join(json_file.name.split("_")[0:3])
+        if product_layer_prefix not in results:
+            results[product_layer_prefix] = []
+
+
+        # if product_layer_prefix != "clms_euhydro_acc":
+        #     continue
+
+        if "layer_names" in values_new:
+            sample_product_name = values_new["layer_names"].lstrip("^").rstrip("$")
+
+        if "gpkg_filename_regex" in values_new:
+            sample_product_name = values_new["gpkg_filename_regex"].lstrip("^").rstrip("$")
+
+        # print("sample_product_name orig", sample_product_name)
+
+        if product_layer_prefix.startswith("clms_ua"):
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})[0-9]{1}', "at001l3")
+            sample_product_name = sample_product_name.replace(r'(?P<fua_name>[a-z\-]+)', "wien")
+            sample_product_name = sample_product_name.replace(r'(?P<fua_name>[a-z_]+)', "wien")
+
+
+        # replace aoi code
+        if "aoi_codes" in values_new:
+
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z]{6})', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[a-zA-Z]{2})', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})[0-9]{1}', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z]{2})', values_new["aoi_codes"])
+
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z_]+)', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>gf|gp|mq|re|yt|e[0-9]{2}n[0-9]{2})', values_new["aoi_codes"])
+            sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})', values_new["aoi_codes"])
+
+        sample_product_name = sample_product_name.replace('(?P<du_name>[a-z]+)', "blacksea")
+
+        # print("sample_product_name with aoi", sample_product_name)
+
+
+        # replace AOI code for FUA regions
+        sample_product_name = sample_product_name.replace('(?P<aoi_code>gf)', "gf")
+        sample_product_name = sample_product_name.replace('(?P<aoi_code>gp)', "gp")
+        sample_product_name = sample_product_name.replace('(?P<aoi_code>mq)', "mq")
+        sample_product_name = sample_product_name.replace('(?P<aoi_code>re)', "re")
+        sample_product_name = sample_product_name.replace('(?P<aoi_code>yt)', "yt")
+
+        sample_product_name = sample_product_name.replace('(gf|GF)', "gf")
+        sample_product_name = sample_product_name.replace('(gp|GP)', "gp")
+        sample_product_name = sample_product_name.replace('(mq|MQ', "mq")
+        sample_product_name = sample_product_name.replace('(re|RE)', "re")
+        sample_product_name = sample_product_name.replace('(yt|YT)', "yt")
+        sample_product_name = sample_product_name.replace('(mf|MF)', "mf")
+
+        # replace epsg code
+        if "epsg_codes" in values_new:
+            sample_product_name = sample_product_name.replace('(?P<epsg_code>[0-9]{5})', values_new["epsg_codes"])
+            sample_product_name = sample_product_name.replace('(?P<epsgcode>[0-9]{5})', values_new["epsg_codes"])
+
+        # replace version
+        sample_product_name = sample_product_name.replace('v[0-9]{2}', version)
+        sample_product_name = sample_product_name.replace('v[0-9]{1}_[0-9]{1}', "v1_1")
+
+        # replace revision
+        sample_product_name = sample_product_name.replace('r[0-9]{2}', revision)
+
+        # replace release date
+        sample_product_name = sample_product_name.replace('_[0-9]{8}', "_20250101")
+
+
+        # add extension
+        if "extensions" in values_new:
+            sample_product_name += values_new["extensions"]
+        if "formats" in values_new:
+            sample_product_name += values_new["formats"]
+
+        # print("sample_product_name with final", sample_product_name)
+
+        results[product_layer_prefix].append(sample_product_name)
+
+    passed_examples = []
+    failed_examples = []
+
+    for prod, sample_names in results.items():
+        # filter sample names
+        sample_names_aoi_fixed = list()
+        sample_names_aoi_year_fixed = list()
+        for sample_name in sample_names:
+            if "_gp" in sample_name:
+                pass
+            elif "_mq" in sample_name:
+                pass
+            elif "_re" in sample_name:
+                pass
+            elif "_yt" in sample_name:
+                pass
+            elif "_mf" in sample_name:
+                pass
+            else:
+                sample_names_aoi_fixed.append(sample_name)
+
+        is2021 = list(set([1 for i in sample_names_aoi_fixed if "2021" in i]))
+        is2024 = list(set([1 for i in sample_names_aoi_fixed if "2024" in i]))
+
+        if len(is2021) != 0 and len(is2024) != 0:
+            for sample_name in sample_names_aoi_fixed:
+                if "2021" not in sample_name:
+                    pass
+                else:
+                    sample_names_aoi_year_fixed.append(sample_name)
+        elif len(is2021) != 0:
+            for sample_name in sample_names_aoi_fixed:
+                if "2021" not in sample_name:
+                    pass
+                else:
+                    sample_names_aoi_year_fixed.append(sample_name)
+        elif len(is2024) != 0:
+            for sample_name in sample_names_aoi_fixed:
+                if "2024" not in sample_name:
+                    pass
+                else:
+                    sample_names_aoi_year_fixed.append(sample_name)
+        else:
+            sample_names_aoi_year_fixed.append(sample_name)
+
+        # print(prod, list(set(sample_names_aoi_year_fixed)))
+
+        # now run parseo to auto-parse each of the example names.
+
+        for sample_name in list(set(sample_names_aoi_year_fixed)):
+            # print("sample_name", sample_name)
+            # run parseo
+
+            try:
+                parsed = parseo.parse_auto(sample_name, ignore_case=True)
+                parseo_family = parsed.match_family
+                print(prod, sample_name, "OK", parseo_family)
+                passed_examples.append((prod, sample_name))
+                #parseo.parse()
+            except Exception as e:
+                print(prod, sample_name, "FAILED")
+                failed_examples.append((prod, sample_name))
+                #print("Error parsing sample_name", sample_name, e)
+
+    # print("sample_product_name new", sample_product_name)
+    if len(failed_examples) == 0:
+        print(f"ALL EXAMPLES PASSED: {len(passed_examples)} total examples.")
+    else:
+        print(f"FAILED EXAMPLES: {len(failed_examples)}")
+
+    for prod, sample_name in failed_examples:
+        print(prod, sample_name)
+
+if __name__ == "__main__":
+    #products_dir = "/mnt/c/users/jkadlec/gisat/src3/copernicus_quality_tools/product_definitions/"
+    products_dir = r"C:\Users\jkadlec\gisat\src3\copernicus_quality_tools\product_definitions"
+    products_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent.joinpath("product_definitions")
+    print("products_dir", products_dir)
+
+    main(products_dir)
+
+
