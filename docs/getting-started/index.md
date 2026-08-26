@@ -99,8 +99,17 @@ The local configuration sets both `QC_TOOL_ENVIRONMENT=development` and
 | --- | --- | --- |
 | `admin` | `admin` | Django superuser and QC Tool administrator |
 | `guest` | `guest` | Ordinary local user |
-| `guest2` | `guest2` | Additional test user |
-| `guest3` | `guest3` | Additional test user |
+| `product_manager` | `product_manager` | Product manager for `clms_ua_lcuc_c2021-2024_v010ha` |
+
+On an empty local database, bootstrap creates exactly these three usernames.
+Reruns are non-destructive: they do not reset existing passwords, replace
+roles or grants, or delete accounts left by an earlier local configuration.
+
+The product manager keeps the ordinary `default` permissions and gains
+cross-user delivery and job visibility only for its assigned product. It can
+review that product's submissions and resolve its submission conflicts through
+the scoped Admin pages. It cannot mutate another user's delivery outside that
+workflow, is not a QC Tool administrator, and cannot see other products.
 
 Never copy these flags or credentials into a shared or production environment.
 The startup script refuses to create them outside development and test.

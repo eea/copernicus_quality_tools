@@ -19,8 +19,11 @@ if [ "${QC_TOOL_BOOTSTRAP_DEMO_USERS:-no}" = "yes" ]; then
     esac
     python3 -m qc_tool.frontend.manage create_default_user --username admin --password admin --superuser
     python3 -m qc_tool.frontend.manage create_default_user --username guest --password guest
-    python3 -m qc_tool.frontend.manage create_default_user --username guest2 --password guest2
-    python3 -m qc_tool.frontend.manage create_default_user --username guest3 --password guest3
+    python3 -m qc_tool.frontend.manage create_default_user \
+        --username product_manager \
+        --password product_manager \
+        --group product_manager \
+        --product clms_ua_lcuc_c2021-2024_v010ha
 fi
 
 if [ "${QC_TOOL_DEV_SERVER:-no}" = "yes" ]; then
