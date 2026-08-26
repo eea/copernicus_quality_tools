@@ -10,7 +10,7 @@ from qc_tool.frontend.dashboard.views.boundaries import get_boundaries_json
 urlpatterns = [
     protected_path("boundaries/", boundaries, name="boundaries"),
     protected_path(
-        "boundaries_upload/",
+        "boundaries/upload/",
         boundaries_upload_page,
         name="boundaries_upload",
     ),

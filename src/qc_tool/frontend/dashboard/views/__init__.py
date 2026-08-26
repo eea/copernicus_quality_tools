@@ -61,6 +61,7 @@ from qc_tool.frontend.dashboard.views.products import (
     get_product_descriptions_dropdown,
 )
 from qc_tool.frontend.dashboard.views.products import get_product_list
+from qc_tool.frontend.dashboard.views.products import product_detail
 from qc_tool.frontend.dashboard.views.products import products
 from qc_tool.frontend.dashboard.views.uploads import resumable_upload
 from qc_tool.frontend.dashboard.views.uploads import resumable_upload_page

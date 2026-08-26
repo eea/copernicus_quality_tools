@@ -1,0 +1,202 @@
+.product-detail__header {
+  align-items: center;
+}
+
+.product-detail__ident {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  color: var(--qc-color-navy);
+  background: var(--qc-color-primary-soft);
+  overflow-wrap: anywhere;
+}
+
+.product-detail__section + .product-detail__section {
+  margin-top: 18px;
+}
+
+.product-detail__section-label {
+  margin: 0 0 5px;
+  color: var(--qc-color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.product-detail__section .workspace-card__header > a {
+  color: var(--qc-color-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.product-detail__status {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--qc-color-primary);
+  background: var(--qc-color-primary-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.product-detail__facts,
+.product-detail__metrics {
+  display: grid;
+  margin: 0;
+  padding: 22px 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.product-detail__facts > div,
+.product-detail__metrics > div {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #e4eaf2;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.product-detail__facts dt,
+.product-detail__metrics dt {
+  color: var(--qc-color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.product-detail__facts dd,
+.product-detail__metrics dd {
+  margin: 6px 0 0;
+  color: var(--qc-color-navy);
+  font-size: 18px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.product-detail__body,
+.product-detail__empty,
+.product-detail__complete {
+  margin: 0;
+  padding: 0 24px 22px;
+  color: var(--qc-color-muted);
+  line-height: 1.6;
+}
+
+.product-detail__subsection {
+  padding: 22px 24px;
+  border-top: 1px solid var(--qc-color-border);
+}
+
+.product-detail__subsection .product-detail__metrics {
+  padding: 18px 0 0;
+}
+
+.product-detail__subsection .product-detail__empty,
+.product-detail__subsection .product-detail__complete {
+  padding: 16px 0 0;
+}
+
+.product-detail__subheading h3 {
+  margin: 0;
+  color: var(--qc-color-navy);
+  font-size: 17px;
+}
+
+.product-detail__subheading p {
+  margin: 5px 0 0;
+  color: var(--qc-color-muted);
+}
+
+.product-detail__metrics:not(.product-detail__metrics--coverage) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.product-detail__restricted {
+  display: flex;
+  margin: 18px 0 0;
+  padding: 16px;
+  border: 1px solid #cbdcf4;
+  border-radius: 8px;
+  align-items: center;
+  color: var(--qc-color-text);
+  background: #f4f8ff;
+  gap: 12px;
+}
+
+.product-detail__restricted .ui-icon {
+  flex: 0 0 auto;
+  color: var(--qc-color-primary);
+}
+
+.product-detail__restricted p {
+  margin: 0;
+}
+
+.product-detail__progress,
+.product-detail__remaining {
+  margin: 0 0 22px;
+}
+
+.product-detail__progress > div {
+  display: flex;
+  margin-bottom: 7px;
+  justify-content: space-between;
+  color: var(--qc-color-navy);
+}
+
+.product-detail__progress progress {
+  width: 100%;
+  height: 12px;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  accent-color: var(--qc-color-primary);
+}
+
+.product-detail__remaining {
+  padding-top: 20px;
+  border-top: 1px solid var(--qc-color-border);
+}
+
+.product-detail__remaining h4 {
+  margin: 0 0 12px;
+  color: var(--qc-color-navy);
+  font-size: 15px;
+}
+
+.product-detail__remaining ul {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  list-style: none;
+  gap: 7px;
+}
+
+.product-detail__remaining li {
+  padding: 4px 7px;
+  border: 1px solid #e4eaf2;
+  border-radius: 5px;
+  background: #fbfdff;
+}
+
+.product-detail__remaining p {
+  margin: 12px 0 0;
+  color: var(--qc-color-muted);
+}
+
+@media (max-width: 900px) {
+  .product-detail__facts,
+  .product-detail__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .product-detail__facts,
+  .product-detail__metrics,
+  .product-detail__metrics:not(.product-detail__metrics--coverage) {
+    grid-template-columns: 1fr;
+  }
+}

@@ -6,6 +6,7 @@ from qc_tool.frontend.accounts.authorization.permissions import AccountPermissio
 from qc_tool.frontend.accounts.authorization.permissions import permissions_for
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.authorization.roles import roles_for
+from qc_tool.product_security import normalize_product_ident
 
 
 @dataclass(frozen=True)
@@ -44,10 +45,13 @@ class AccountAccess:
             )
         )
         product_idents = frozenset(
-            user.product_grants.exclude(product_ident="").values_list(
-                "product_ident",
-                flat=True,
-            )
+            normalized
+            for product_ident in user.product_grants.exclude(
+                product_ident=""
+            ).values_list("product_ident", flat=True)
+            if (
+                normalized := normalize_product_ident(product_ident)
+            ) is not None
         )
         return cls(
             user_id=user.pk,
@@ -144,6 +148,22 @@ class AccountAccess:
         return bool(
             self.allows(AccountPermission.VIEW_PRODUCT_AGGREGATE_REPORT)
             and self.product_idents
+        )
+
+    def can_view_product_report(self, product_ident):
+        """Return whether aggregate facts for this exact product are visible."""
+
+        if not self.is_authenticated or not isinstance(product_ident, str):
+            return False
+        normalized = normalize_product_ident(product_ident)
+        if normalized is None:
+            return False
+        return bool(
+            self.is_administrator
+            or (
+                self.allows(AccountPermission.VIEW_PRODUCT_AGGREGATE_REPORT)
+                and normalized in self.product_idents
+            )
         )
 
     @property

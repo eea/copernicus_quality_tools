@@ -255,11 +255,10 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self,
         get_product_descriptions,
     ):
-        unsafe_ident = 'unsafe<product>"'
         unsafe_description = "<script>alert('catalog')</script>"
         get_product_descriptions.return_value = {
-            "SAFE_PRODUCT": "Safe product",
-            unsafe_ident: unsafe_description,
+            "safe-product": "Safe product",
+            "escaped-product": unsafe_description,
         }
 
         response = self.client.get(reverse("products"))
@@ -267,10 +266,28 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dashboard/products/index.html")
         self.assertContains(response, "2 products available")
-        self.assertContains(response, escape(unsafe_ident))
         self.assertContains(response, escape(unsafe_description))
-        self.assertNotContains(response, unsafe_ident)
         self.assertNotContains(response, unsafe_description)
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.products.available_product_descriptions"
+    )
+    def test_products_page_omits_unroutable_definition_identifiers(
+        self,
+        get_product_descriptions,
+    ):
+        get_product_descriptions.return_value = {
+            "safe-product": "Safe product",
+            "list": "Reserved path",
+            "unsafe/product": "Unroutable product",
+        }
+
+        response = self.client.get(reverse("products"))
+
+        self.assertContains(response, "1 product available")
+        self.assertContains(response, "Safe product")
+        self.assertNotContains(response, "Reserved path")
+        self.assertNotContains(response, "Unroutable product")
 
     @patch(
         "qc_tool.frontend.dashboard.views.products.available_product_descriptions",

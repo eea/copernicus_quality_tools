@@ -1,6 +1,8 @@
 from unittest import TestCase
 
 from qc_tool.product_security import UnsafeProductDefinition
+from qc_tool.product_security import canonical_product_ident
+from qc_tool.product_security import normalize_product_ident
 from qc_tool.product_security import validate_executable_product_configuration
 
 
@@ -55,3 +57,26 @@ class ProductDefinitionSecurityTests(TestCase):
                     ]
                 }
             )
+
+
+class ProductIdentifierTests(TestCase):
+    def test_normalizes_supported_ascii_identifiers(self):
+        self.assertEqual(normalize_product_ident("CLC_2024-V1"), "clc_2024-v1")
+        self.assertEqual(
+            canonical_product_ident("clc_2024-v1"),
+            "clc_2024-v1",
+        )
+
+    def test_rejects_reserved_unroutable_and_unicode_identifiers(self):
+        for value in (
+            "list",
+            "with space",
+            "with/slash",
+            "paß",
+            "Kelvin",
+            " leading",
+            "",
+        ):
+            with self.subTest(value=value):
+                self.assertIsNone(normalize_product_ident(value))
+                self.assertIsNone(canonical_product_ident(value))

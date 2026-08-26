@@ -69,6 +69,8 @@ class PulledJobContractTests(TestCase):
         invalid_payloads = (
             valid_job(username="../alice"),
             valid_job(filename="nested/delivery.zip"),
+            valid_job(product_ident="list"),
+            valid_job(product_ident="product/child"),
             valid_job(s3_host="https://objects.example.test"),
             valid_job(unexpected="value"),
             valid_job(skip_steps="1,,2"),

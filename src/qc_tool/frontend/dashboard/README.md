@@ -15,9 +15,9 @@ templates, browser assets, and services:
 | --- | --- | --- | --- | --- | --- |
 | Workspace overview | `urls/overview.py` | `views/overview.py` | `templates/dashboard/overview/` | `css/features/overview/` | `services/overview/` |
 | Deliveries | `urls/deliveries.py` | `views/deliveries/` | `templates/dashboard/deliveries/` | `*/features/deliveries/` | `services/deliveries/`, `services/uploads/`, `services/submissions/` |
-| Products | `urls/products.py` | `views/products.py` | `templates/dashboard/products/` | `js/features/products/` | `services/products.py`, `services/catalog/` |
+| Products | `urls/products.py` | `views/products/` | `templates/dashboard/products/` | `*/features/products/` | `services/products/`, `services/catalog/` |
 | Boundaries | `urls/boundaries.py` | `views/boundaries.py` | `templates/dashboard/boundaries/` | `*/features/boundaries/` | `services/boundaries/` |
-| QC jobs | `urls/jobs.py` | `views/jobs/` | `templates/dashboard/jobs/` | `js/features/jobs/` | `services/jobs/`, `services/aoi/`, `services/catalog/definitions.py` |
+| QC jobs | `urls/deliveries.py`, `urls/jobs.py` | `views/jobs/` | `templates/dashboard/jobs/` | `*/features/jobs/` | `services/jobs/`, `services/aoi/`, `services/catalog/definitions.py` |
 | API access | `urls/api_access.py` | `views/api_access/` | `templates/dashboard/api_access/` | `*/features/api_access/` | `services/api/`, `services/s3/` |
 | Configuration | `urls/configuration.py` | `views/configuration.py` | `templates/dashboard/configuration/` | `*/features/configuration/` | `services/configuration/` |
 | Worker callbacks | `urls/workers.py` | `views/workers.py` | — | — | worker services |
@@ -26,6 +26,44 @@ Shared layouts and partials live in `templates/dashboard/layouts/` and
 `templates/dashboard/shared/`. Shared design primitives live in `css/ui/`.
 Third-party browser code lives in `js/vendor/`; do not split or edit vendored
 files as if they were application components.
+
+## Browser URL hierarchy
+
+Browser pages follow the workspace navigation rather than the historical
+Django app-module layout. Canonical page URLs use a trailing slash:
+
+```text
+/
+/deliveries/
+  upload/
+  jobs/new/
+  jobs/<delivery_id>/
+  job-result/<job_uuid>/
+/products/
+  list/                    authenticated JSON
+  <product_ident>/         HTML product detail
+/boundaries/
+  upload/
+/api/
+```
+
+The job-history identifier is a delivery primary key; the result identifier is
+a job UUID. Keep static product children such as `products/list/` before the
+dynamic `products/<product_ident>/` pattern. `list` is consequently a reserved
+product identifier and is rejected when catalog data crosses into the system.
+Product details render bounded, release-key-ordered current release streams so
+multiple valid release series are never collapsed into one arbitrary record.
+
+This hierarchy applies to human-facing pages. Stable transport, `/data/*`,
+artifact, mutation, worker, and operational `/api/*` contracts keep their
+existing paths and authentication behavior. Do not move an internal endpoint
+just to make it resemble a page URL.
+
+Authenticated redirects for superseded page bookmarks belong in
+`urls/compatibility.py`. Each alias redirects directly to its canonical route,
+preserves the query string, and is temporary; templates and application code
+must always reverse the canonical route name. Never use compatibility routes
+for API or mutation traffic.
 
 ## Catalog and submission lifecycle map
 

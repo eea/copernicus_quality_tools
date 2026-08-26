@@ -15,7 +15,9 @@ from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import QcDefinition
 from qc_tool.frontend.dashboard.services.catalog import CatalogError
 from qc_tool.frontend.dashboard.services.catalog import load_catalog_manifest
+from qc_tool.frontend.dashboard.services.catalog import load_definition_snapshot
 from qc_tool.frontend.dashboard.services.catalog import list_current_product_coverage
+from qc_tool.frontend.dashboard.services.catalog import snapshot_definition_for_job
 from qc_tool.frontend.dashboard.services.catalog import synchronize_product_catalog
 
 
@@ -43,7 +45,18 @@ class ProductCatalogSynchronizationTests(TestCase):
             encoding="utf-8",
         )
 
-    def write_manifest(self, *, revision=1, state="authoritative"):
+    def write_manifest(
+        self,
+        *,
+        revision=1,
+        state="authoritative",
+        product_ident="TEST_DEFINITION",
+        definition_idents=None,
+        primary_definition="test_definition",
+        source_definition="test_definition",
+    ):
+        if definition_idents is None:
+            definition_idents = ["test_definition"]
         path = self.root / "catalog.json"
         path.write_text(
             json.dumps(
@@ -51,7 +64,7 @@ class ProductCatalogSynchronizationTests(TestCase):
                     "schema_version": 1,
                     "products": [
                         {
-                            "ident": "TEST_DEFINITION",
+                            "ident": product_ident,
                             "name": "Test product",
                             "description": "Catalog-owned product",
                             "releases": [
@@ -59,11 +72,11 @@ class ProductCatalogSynchronizationTests(TestCase):
                                     "release_key": "test-2026",
                                     "revision": revision,
                                     "description": "Test 2026",
-                                    "definition_idents": ["test_definition"],
-                                    "primary_definition": "test_definition",
+                                    "definition_idents": definition_idents,
+                                    "primary_definition": primary_definition,
                                     "coverage": {
                                         "state": state,
-                                        "source_definition": "test_definition",
+                                        "source_definition": source_definition,
                                     },
                                 }
                             ],
@@ -112,10 +125,19 @@ class ProductCatalogSynchronizationTests(TestCase):
 
         with self.assertNumQueries(1):
             rows = list_current_product_coverage()
+        presented_rows = tuple(
+            {
+                **row,
+                "can_view_coverage": True,
+                "release_count": 1,
+                "releases": (row,),
+            }
+            for row in rows
+        )
         rendered = render_to_string(
             "dashboard/products/index.html",
             {
-                "product_catalog": rows,
+                "product_catalog": presented_rows,
                 "product_catalog_available": True,
                 "catalog_managed": True,
             },
@@ -184,3 +206,133 @@ class ProductCatalogSynchronizationTests(TestCase):
         with self.assertRaises(CatalogError) as raised:
             self.load(self.write_manifest())
         self.assertEqual(raised.exception.code, "invalid_manifest")
+
+    def test_manifest_rejects_reserved_and_unroutable_product_identifiers(self):
+        for product_ident in ("list", "with space", "with/slash", "paß"):
+            with self.subTest(product_ident=product_ident):
+                with self.assertRaises(CatalogError) as raised:
+                    self.load(
+                        self.write_manifest(product_ident=product_ident)
+                    )
+                self.assertEqual(raised.exception.code, "invalid_manifest")
+
+    def test_manifest_canonicalizes_definition_and_primary_identifiers(self):
+        snapshot = self.load(
+            self.write_manifest(
+                definition_idents=["TEST_DEFINITION"],
+                primary_definition="TEST_DEFINITION",
+            )
+        )
+
+        release = snapshot.releases[0]
+        self.assertEqual(release.primary_definition_ident, "test_definition")
+        self.assertEqual(
+            tuple(item.product_ident for item in release.definitions),
+            ("test_definition",),
+        )
+
+    def test_manifest_compares_definition_identifiers_canonically(self):
+        with self.assertRaises(CatalogError) as raised:
+            self.load(
+                self.write_manifest(
+                    definition_idents=["test_definition", "TEST_DEFINITION"],
+                )
+            )
+
+        self.assertEqual(raised.exception.code, "invalid_manifest")
+
+    def test_manifest_rejects_unsafe_definition_identifiers(self):
+        unsafe_idents = (
+            "list",
+            "with space",
+            "with/slash",
+            "paß",
+            "ｔｅｓｔ_definition",
+        )
+        for definition_ident in unsafe_idents:
+            with self.subTest(definition_ident=definition_ident):
+                with self.assertRaises(CatalogError) as raised:
+                    self.load(
+                        self.write_manifest(
+                            definition_idents=[definition_ident],
+                            primary_definition=definition_ident,
+                        )
+                    )
+                self.assertEqual(raised.exception.code, "invalid_manifest")
+
+    def test_manifest_rejects_unsafe_primary_definition_identifiers(self):
+        unsafe_idents = (
+            "list",
+            "with space",
+            "with/slash",
+            "paß",
+            "ｔｅｓｔ_definition",
+        )
+        for primary_definition in unsafe_idents:
+            with self.subTest(primary_definition=primary_definition):
+                with self.assertRaises(CatalogError) as raised:
+                    self.load(
+                        self.write_manifest(
+                            primary_definition=primary_definition,
+                        )
+                    )
+                self.assertEqual(raised.exception.code, "invalid_manifest")
+
+    def test_manifest_canonicalizes_coverage_source_definition(self):
+        snapshot = self.load(
+            self.write_manifest(source_definition="TEST_DEFINITION")
+        )
+
+        self.assertEqual(snapshot.releases[0].aoi_provenance, "definition")
+
+    def test_manifest_rejects_unsafe_coverage_source_identifiers(self):
+        unsafe_idents = (
+            "list",
+            "with space",
+            "with/slash",
+            "paß",
+            "ｔｅｓｔ_definition",
+        )
+        for source_definition in unsafe_idents:
+            with self.subTest(source_definition=source_definition):
+                with self.assertRaises(CatalogError) as raised:
+                    self.load(
+                        self.write_manifest(
+                            source_definition=source_definition,
+                        )
+                    )
+                self.assertEqual(raised.exception.code, "invalid_manifest")
+
+    def test_definition_snapshot_boundary_normalizes_identifier(self):
+        with patch(
+            "qc_tool.frontend.dashboard.services.catalog.manifest."
+            "locate_product_definition",
+            return_value=self.definition_path,
+        ) as locate:
+            snapshot = load_definition_snapshot("TEST_DEFINITION")
+
+        locate.assert_called_once_with("test_definition")
+        self.assertEqual(snapshot.product_ident, "test_definition")
+
+    def test_definition_snapshot_boundaries_reject_unsafe_identifiers(self):
+        unsafe_idents = (
+            "list",
+            "with/slash",
+            "paß",
+            "ｔｅｓｔ_definition",
+            None,
+        )
+        for loader in (load_definition_snapshot, snapshot_definition_for_job):
+            for product_ident in unsafe_idents:
+                with self.subTest(loader=loader.__name__, value=product_ident):
+                    with patch(
+                        "qc_tool.frontend.dashboard.services.catalog.manifest."
+                        "locate_product_definition",
+                    ) as locate:
+                        with self.assertRaises(CatalogError) as raised:
+                            loader(product_ident)
+                    locate.assert_not_called()
+                    self.assertEqual(
+                        raised.exception.code,
+                        "definition_unavailable",
+                    )

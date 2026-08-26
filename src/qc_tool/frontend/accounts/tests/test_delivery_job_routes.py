@@ -50,11 +50,11 @@ class DeliveryJobRouteTests(TestCase):
 
     @property
     def canonical_history_url(self):
-        return "/deliveries/job_history/{}/".format(self.delivery.pk)
+        return "/deliveries/jobs/{}/".format(self.delivery.pk)
 
     @property
     def canonical_result_url(self):
-        return "/deliveries/result/{}".format(self.job.job_uuid)
+        return "/deliveries/job-result/{}/".format(self.job.job_uuid)
 
     def test_named_job_routes_are_nested_under_deliveries(self):
         self.assertEqual(
@@ -75,6 +75,15 @@ class DeliveryJobRouteTests(TestCase):
         self.assertEqual(response["Location"], self.canonical_history_url)
         self.assertNotEqual(response["Location"], legacy_url)
 
+    def test_interim_delivery_job_history_path_redirects_to_canonical_path(self):
+        interim_url = "/deliveries/job_history/{}/".format(self.delivery.pk)
+
+        response = self.client.get(interim_url)
+
+        self.assertIn(response.status_code, (301, 302, 307, 308))
+        self.assertEqual(response["Location"], self.canonical_history_url)
+        self.assertNotEqual(response["Location"], interim_url)
+
     def test_legacy_result_path_redirects_to_canonical_delivery_path(self):
         legacy_url = "/result/{}".format(self.job.job_uuid)
 
@@ -83,6 +92,15 @@ class DeliveryJobRouteTests(TestCase):
         self.assertIn(response.status_code, (301, 302, 307, 308))
         self.assertEqual(response["Location"], self.canonical_result_url)
         self.assertNotEqual(response["Location"], legacy_url)
+
+    def test_interim_delivery_result_path_redirects_to_canonical_path(self):
+        interim_url = "/deliveries/result/{}".format(self.job.job_uuid)
+
+        response = self.client.get(interim_url)
+
+        self.assertIn(response.status_code, (301, 302, 307, 308))
+        self.assertEqual(response["Location"], self.canonical_result_url)
+        self.assertNotEqual(response["Location"], interim_url)
 
     def test_canonical_delivery_job_paths_render_without_redirecting_back(self):
         history_response = self.client.get(self.canonical_history_url)

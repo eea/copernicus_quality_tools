@@ -64,6 +64,7 @@ class TestProductDirs(TestCase):
         self.product_dir_2.mkdir()
         self.product_dir_2.joinpath("p2.json").write_text('{"description": "p2desc"}')
         self.product_dir_2.joinpath("pX.json").write_text('{"description": "pXdesc from 2"}')
+        self.product_dir_2.joinpath("P3.json").write_text('{"description": "p3desc"}')
 
     def tearDown(self):
         from qc_tool.common import CONFIG
@@ -78,21 +79,56 @@ class TestProductDirs(TestCase):
         self.assertEqual(self.product_dir_1.joinpath("p1.json"), locate_product_definition("p1"))
         self.assertEqual(self.product_dir_2.joinpath("p2.json"), locate_product_definition("p2"))
         self.assertEqual(self.product_dir_1.joinpath("pX.json"), locate_product_definition("pX"))
+        self.assertEqual(self.product_dir_2.joinpath("P3.json"), locate_product_definition("p3"))
 
         CONFIG["product_dirs"] = [self.product_dir_2, self.product_dir_1]
         self.assertEqual(self.product_dir_1.joinpath("p1.json"), locate_product_definition("p1"))
         self.assertEqual(self.product_dir_2.joinpath("p2.json"), locate_product_definition("p2"))
         self.assertEqual(self.product_dir_2.joinpath("pX.json"), locate_product_definition("pX"))
 
+    def test_locate_product_definition_rejects_unroutable_identifiers(self):
+        from qc_tool.common import CONFIG
+        from qc_tool.common import locate_product_definition
+        from qc_tool.common import QCException
+
+        self.product_dir_1.joinpath("paß.json").write_text(
+            '{"description": "confusable"}'
+        )
+        CONFIG["product_dirs"] = [self.product_dir_1]
+
+        for product_ident in ("list", "with/slash", "paß", None):
+            with self.subTest(product_ident=product_ident):
+                with self.assertRaises(QCException):
+                    locate_product_definition(product_ident)
+
+        with self.assertRaises(QCException):
+            locate_product_definition("pass")
+
     def test_get_product_descriptions(self):
         from qc_tool.common import CONFIG
         from qc_tool.common import get_product_descriptions
 
         CONFIG["product_dirs"] = [self.product_dir_1, self.product_dir_2]
-        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "px": "pXdesc from 1"}, get_product_descriptions())
+        self.assertDictEqual(
+            {
+                "p1": "p1desc",
+                "p2": "p2desc",
+                "p3": "p3desc",
+                "px": "pXdesc from 1",
+            },
+            get_product_descriptions(),
+        )
 
         CONFIG["product_dirs"] = [self.product_dir_2, self.product_dir_1]
-        self.assertDictEqual({"p1": "p1desc", "p2": "p2desc", "px": "pXdesc from 2"}, get_product_descriptions())
+        self.assertDictEqual(
+            {
+                "p1": "p1desc",
+                "p2": "p2desc",
+                "p3": "p3desc",
+                "px": "pXdesc from 2",
+            },
+            get_product_descriptions(),
+        )
 
     def test_invalid_definition_does_not_hide_the_healthy_catalog(self):
         from qc_tool.common import CONFIG

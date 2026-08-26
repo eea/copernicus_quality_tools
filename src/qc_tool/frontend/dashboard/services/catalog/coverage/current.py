@@ -8,14 +8,20 @@ from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 
 
-def list_current_product_coverage():
+MAX_FILTERED_RELEASES = 50
+
+
+def list_current_product_coverage(*, release_ids=None):
     """Return presentation-ready current release facts in one DB query."""
 
-    return tuple(_row(release) for release in _current_releases())
+    return tuple(
+        _row(release)
+        for release in _current_releases(release_ids=release_ids)
+    )
 
 
-def _current_releases():
-    return (
+def _current_releases(*, release_ids):
+    queryset = (
         ProductRelease.objects.filter(is_current=True)
         .select_related("product")
         .annotate(
@@ -51,6 +57,20 @@ def _current_releases():
         )
         .order_by("product__name", "release_key")
     )
+    if release_ids is None:
+        return queryset
+    release_ids = tuple(release_ids)
+    if (
+        len(release_ids) > MAX_FILTERED_RELEASES
+        or any(
+            isinstance(release_id, bool)
+            or not isinstance(release_id, int)
+            or release_id < 1
+            for release_id in release_ids
+        )
+    ):
+        raise ValueError("release_ids are outside the supported bounds")
+    return queryset.filter(pk__in=release_ids)
 
 
 def _row(release):
@@ -62,6 +82,7 @@ def _row(release):
     submitted = release.submitted_count if authoritative else None
     conflicts = release.conflict_count if authoritative else None
     return {
+        "release_id": release.pk,
         "ident": release.product.ident,
         "description": release.product.name,
         "release_key": release.release_key,

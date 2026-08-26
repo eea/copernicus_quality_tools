@@ -74,7 +74,7 @@ class JobRequestTests(SimpleTestCase):
             with patch(
                 "qc_tool.frontend.dashboard.services.jobs.requests.locate_product_definition",
                 return_value=definition,
-            ):
+            ) as locate_definition:
                 result = parse_job_creation_request(
                     {
                         "delivery_id": "7",
@@ -86,6 +86,34 @@ class JobRequestTests(SimpleTestCase):
         self.assertEqual(result.delivery_id, 7)
         self.assertEqual(result.product_ident, "product")
         self.assertEqual(result.skip_steps, "2")
+        locate_definition.assert_called_once_with("product")
+
+    def test_rejects_unroutable_product_identifiers_before_lookup(self):
+        invalid_product_idents = (
+            "list",
+            "with space",
+            "with/slash",
+            "paß",
+        )
+
+        for product_ident in invalid_product_idents:
+            with self.subTest(product_ident=product_ident):
+                with patch(
+                    "qc_tool.frontend.dashboard.services.jobs.requests.locate_product_definition"
+                ) as locate_definition:
+                    with self.assertRaises(JobRequestError) as raised:
+                        parse_job_creation_request(
+                            {
+                                "delivery_id": 1,
+                                "product_ident": product_ident,
+                            }
+                        )
+
+                self.assertEqual(
+                    raised.exception.code,
+                    "invalid_product_ident",
+                )
+                locate_definition.assert_not_called()
 
     def test_rejects_invalid_identifiers_and_skip_step_syntax(self):
         with TemporaryDirectory() as directory:
@@ -122,12 +150,42 @@ class JobRequestTests(SimpleTestCase):
             with patch(
                 "qc_tool.frontend.dashboard.services.jobs.requests.locate_product_definition",
                 return_value=definition,
-            ):
+            ) as locate_definition:
                 result = parse_batch_job_creation_request(form)
 
         self.assertEqual(result.delivery_ids, (7, 8))
         self.assertEqual(result.product_ident, "product")
         self.assertEqual(result.skip_steps, "2")
+        locate_definition.assert_called_once_with("product")
+
+    def test_browser_batch_rejects_unroutable_product_before_lookup(self):
+        invalid_product_idents = (
+            "list",
+            "with space",
+            "with/slash",
+            "paß",
+        )
+
+        for product_ident in invalid_product_idents:
+            form = QueryDict(mutable=True)
+            form.update(
+                {
+                    "delivery_ids": "7,8",
+                    "product_ident": product_ident,
+                }
+            )
+            with self.subTest(product_ident=product_ident):
+                with patch(
+                    "qc_tool.frontend.dashboard.services.jobs.requests.locate_product_definition"
+                ) as locate_definition:
+                    with self.assertRaises(JobRequestError) as raised:
+                        parse_batch_job_creation_request(form)
+
+                self.assertEqual(
+                    raised.exception.code,
+                    "invalid_product_ident",
+                )
+                locate_definition.assert_not_called()
 
     def test_rejects_duplicate_fields_ids_and_oversized_batches(self):
         invalid_forms = (

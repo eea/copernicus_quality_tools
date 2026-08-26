@@ -26,6 +26,25 @@ remain private.
 Anonymous users are redirected to login. Authenticated users without the
 permission receive an HTML 403 response.
 
+Canonical browser paths use a trailing slash. Job history belongs to a
+delivery, so its identifier is the integer delivery primary key. A result
+belongs to one QC job, so its identifier is the job UUID.
+
+| Area | Canonical path | Response |
+| --- | --- | --- |
+| Dashboard | `/` | Workspace home page |
+| Deliveries | `/deliveries/` | Delivery workspace |
+| Delivery upload | `/deliveries/upload/` | Upload page |
+| New QC job | `/deliveries/jobs/new/` | Job setup page |
+| Delivery job history | `/deliveries/jobs/<delivery_id>/` | Jobs for one delivery |
+| QC job result | `/deliveries/job-result/<job_uuid>/` | Result for one job |
+| Products | `/products/` | Product catalog page |
+| Product detail | `/products/<product_ident>/` | HTML detail page for one product |
+| Product list | `/products/list/` | Authenticated session JSON; this is not an HTML page |
+| Boundaries | `/boundaries/` | Boundary catalog page |
+| Boundary upload | `/boundaries/upload/` | Boundary package management page |
+| API access | `/api/` | Human-readable API documentation |
+
 | Area | Typical permission |
 | --- | --- |
 | Dashboard and product catalog | `view_deliveries` |
@@ -35,10 +54,49 @@ permission receive an HTML 403 response.
 | Boundary and announcement pages (read-only) | `view_deliveries` |
 | Replace the boundary package or update the announcement | `manage_configuration` |
 
+Product metadata follows the catalog-page permission. Product-wide delivery
+coverage remains scoped to administrators and product managers assigned to the
+requested product; hiding a control in the template is not an authorization
+boundary.
+
+Product identifiers are canonical lowercase ASCII values that start with a
+letter or number and then use letters, numbers, `_`, `-`, or `.`. The literal
+`list` is reserved by the static `/products/list/` endpoint and is rejected at
+catalog, job/API, and worker trust boundaries. A product detail page shows each
+current release stream separately; it never chooses an arbitrary release or
+merges denominators.
+
+## Superseded browser paths
+
+Old bookmarks are supported temporarily by authenticated, one-hop redirects.
+Redirects preserve the query string, and application links must always reverse
+the canonical route name so a redirect chain cannot develop.
+
+| Superseded path | Canonical destination |
+| --- | --- |
+| `/upload/` | `/deliveries/upload/` |
+| `/setup_job` | `/deliveries/jobs/new/` |
+| `/job_history/<delivery_id>/` | `/deliveries/jobs/<delivery_id>/` |
+| `/deliveries/job_history/<delivery_id>/` | `/deliveries/jobs/<delivery_id>/` |
+| `/result/<job_uuid>` | `/deliveries/job-result/<job_uuid>/` |
+| `/deliveries/result/<job_uuid>` | `/deliveries/job-result/<job_uuid>/` |
+| `/boundaries_upload/` | `/boundaries/upload/` |
+
+These aliases live only in `frontend/dashboard/urls/compatibility.py`. Remove
+an alias after its deprecation window instead of adding a redirect from one
+legacy path to another.
+
 ## Session data and mutations
 
 These return structured JSON 401/403 responses. Mutations use POST and remain
 CSRF-protected.
+
+The browser hierarchy change does not rename internal transport, data,
+artifact, or mutation contracts. Existing `/resumable_upload/`, `/data/*`,
+`/create_job`, `/job/*`, `/delivery/*`, and `/attachment/*` consumers continue
+to use their established paths. `/products/list/` is the canonical
+authenticated product-list JSON endpoint; the existing product data endpoint
+remains a direct JSON compatibility alias while consumers transition.
 
 | Action | Permission |
 | --- | --- |
@@ -54,6 +112,10 @@ CSRF-protected.
 
 Operational `/api/*` routes require a Bearer credential. They use the same
 Django permissions and object policy as the browser.
+
+The operational `/api/*` paths and payloads are unchanged by the browser URL
+reorganization. They must not be routed through browser compatibility
+redirects.
 
 | Operation | Permission |
 | --- | --- |

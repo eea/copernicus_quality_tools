@@ -168,3 +168,21 @@ class ApiDocumentationSecurityTests(SimpleTestCase):
             },
         )
         self.assertNotIn(b"internal definition path", response.content)
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.products."
+        "compile_job_form_data",
+        return_value={"description": "Canonical product", "steps": []},
+    )
+    def test_product_info_keeps_case_insensitive_api_compatibility(
+        self,
+        compile_job_form_data,
+    ):
+        response = api_product_info(
+            RequestFactory().get("/api/product-info/PRODUCT"),
+            "PRODUCT",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        compile_job_form_data.assert_called_once_with("product")
+        self.assertEqual(json.loads(response.content)["status"], "ok")

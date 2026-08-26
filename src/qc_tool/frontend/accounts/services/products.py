@@ -8,6 +8,8 @@ from qc_tool.common import CONFIG
 from qc_tool.common import INVALID_PRODUCT_DESCRIPTION
 from qc_tool.common import PRODUCT_FILENAME_REGEX
 from qc_tool.common import get_product_descriptions
+from qc_tool.product_security import canonical_product_ident
+from qc_tool.product_security import normalize_product_ident
 
 
 UNAVAILABLE_PRODUCT_LABEL = "unavailable legacy product"
@@ -40,6 +42,7 @@ def _descriptions_are_valid(descriptions):
         and all(
             isinstance(product_ident, str)
             and product_ident
+            and canonical_product_ident(product_ident) is not None
             and isinstance(description, str)
             and description.strip()
             for product_ident, description in descriptions.items()
@@ -77,7 +80,13 @@ def _scan_product_descriptions():
             if PRODUCT_FILENAME_REGEX.match(filepath.name) is None:
                 continue
 
-            product_ident = filepath.stem.lower()
+            product_ident = normalize_product_ident(filepath.stem)
+            if product_ident is None:
+                logger.warning(
+                    "Ignoring product definition with an unroutable identifier: %s",
+                    filepath,
+                )
+                continue
             try:
                 definition = json.loads(filepath.read_text())
                 description = definition["description"]

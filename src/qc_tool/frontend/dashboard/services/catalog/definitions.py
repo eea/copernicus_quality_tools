@@ -13,7 +13,7 @@ from .manifest import load_definition_snapshot
 def snapshot_definition_for_job(product_ident):
     """Return an immutable definition and its unambiguous current release."""
 
-    snapshot = load_definition_snapshot(product_ident.casefold())
+    snapshot = load_definition_snapshot(product_ident)
     definition, created = QcDefinition.objects.get_or_create(
         product_ident=snapshot.product_ident,
         digest=snapshot.digest,

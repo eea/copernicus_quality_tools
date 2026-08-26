@@ -206,6 +206,28 @@ class AccountAccessTests(TestCase):
         self.assertFalse(access.can_view_product_deliveries)
         self.assertFalse(access.can_view_product_aggregate_report)
 
+    def test_product_report_access_is_limited_to_the_exact_granted_product(self):
+        self.add_roles(Role.PRODUCT_MANAGER)
+        UserProductGrant.objects.create(
+            user=self.user,
+            product_ident="clc2024",
+        )
+
+        access = access_for(self.user)
+
+        self.assertTrue(access.can_view_product_report("clc2024"))
+        self.assertFalse(access.can_view_product_report("other_product"))
+        self.assertFalse(access.can_view_product_report(""))
+
+    def test_administrator_can_view_any_canonical_product_report(self):
+        self.add_roles(Role.ADMIN)
+
+        access = access_for(self.user)
+
+        self.assertTrue(access.can_view_product_report("clc2024"))
+        self.assertTrue(access.can_view_product_report("another_product"))
+        self.assertFalse(access.can_view_product_report(""))
+
     def test_inactive_user_has_anonymous_access(self):
         self.grant_permissions(AccountPermission.VIEW_REGION_DELIVERIES)
         UserRegionGrant.objects.create(user=self.user, aoi_code="CZ")

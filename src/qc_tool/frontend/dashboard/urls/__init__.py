@@ -27,7 +27,6 @@ from qc_tool.frontend.dashboard.urls.overview import (
 from qc_tool.frontend.dashboard.urls.products import (
     urlpatterns as product_patterns,
 )
-from qc_tool.frontend.dashboard.urls.uploads import urlpatterns as upload_patterns
 from qc_tool.frontend.dashboard.urls.workers import urlpatterns as worker_patterns
 
 
@@ -36,7 +35,6 @@ urlpatterns = [
     *delivery_patterns,
     *product_patterns,
     *job_patterns,
-    *upload_patterns,
     *boundary_patterns,
     *configuration_patterns,
     *api_patterns,

@@ -6,6 +6,7 @@
 
 {% block workspace_css %}
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/products/index.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
 {% block workspace_content %}
@@ -47,24 +48,31 @@
                     <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg>
                 </span>
                 <div>
-                    <h3>{{ product.description }}</h3>
+                    <h3><a href="{% url 'product_detail' product.ident %}">{{ product.description }}</a></h3>
                     <code>{{ product.ident }}</code>
                     {% if catalog_managed %}
+                    {% if product.release_count == 1 %}
                     <p>
                         Release <code>{{ product.release_key }}</code>,
                         revision {{ product.revision }}
                     </p>
-                    {% if product.expected is not None %}
+                    {% if product.can_view_coverage and product.expected is not None %}
                     <p>
                         {{ product.submitted }} / {{ product.expected }} AOIs accepted
                         ({{ product.completion_percentage }}%).
                         {{ product.remaining }} remaining;
                         {{ product.conflicts }} conflict{{ product.conflicts|pluralize }}.
                     </p>
-                    {% else %}
+                    {% elif product.can_view_coverage %}
                     <p>Coverage denominator is not yet authoritative.</p>
                     {% endif %}
+                    {% else %}
+                    <p>{{ product.release_count }} current release streams. Open the product to see release-level coverage.</p>
                     {% endif %}
+                    {% endif %}
+                    <a class="product-card__link" href="{% url 'product_detail' product.ident %}">
+                        View product details <span aria-hidden="true">→</span>
+                    </a>
                 </div>
             </li>
             {% endfor %}

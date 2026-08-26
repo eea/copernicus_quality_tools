@@ -1,0 +1,138 @@
+{% extends "dashboard/layouts/workspace.html" %}
+{% load static %}
+
+{% block title %}{{ product.name }} | Products | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page products-page product-detail-page{% endblock main_class %}
+
+{% block workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/products/detail.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
+
+{% block workspace_content %}
+<div class="workspace-page__container">
+    <header class="workspace-page__header product-detail__header">
+        <div>
+            <p class="workspace-page__eyebrow">Product details</p>
+            <h1>{{ product.name }}</h1>
+            <p>{{ product.description }}</p>
+            <code class="product-detail__ident">{{ product.ident }}</code>
+        </div>
+        <a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">
+            <span aria-hidden="true">←</span> All products
+        </a>
+    </header>
+
+    {% if product.managed %}
+        {% if product.releases_truncated %}
+        <div class="workspace-notice" role="status">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#info"></use></svg>
+            <div>
+                <h2>Additional release streams exist</h2>
+                <p>This page shows the first {{ product.releases|length }} current releases in stable release-key order.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% for release_detail in product.releases %}
+        <section class="workspace-card product-detail__section" aria-labelledby="product-release-title-{{ forloop.counter }}">
+            <header class="workspace-card__header">
+                <div>
+                    <p class="product-detail__section-label">Current release</p>
+                    <h2 id="product-release-title-{{ forloop.counter }}">{{ release_detail.release.key }}</h2>
+                    <p>{{ release_detail.release.description }}</p>
+                </div>
+                <span class="product-detail__status">{{ release_detail.release.coverage_state_label }}</span>
+            </header>
+
+            <dl class="product-detail__facts">
+                <div><dt>Release</dt><dd>{{ release_detail.release.key }}</dd></div>
+                <div><dt>Revision</dt><dd>{{ release_detail.release.revision }}</dd></div>
+                <div><dt>Approved</dt><dd>{% if release_detail.release.approved_at %}{{ release_detail.release.approved_at|date:"Y-m-d H:i T" }}{% else %}Not approved{% endif %}</dd></div>
+                <div><dt>QC definitions</dt><dd>{{ release_detail.definitions|length }}</dd></div>
+            </dl>
+
+            <div class="product-detail__subsection" aria-labelledby="product-checks-title-{{ forloop.counter }}">
+                <div class="product-detail__subheading">
+                    <h3 id="product-checks-title-{{ forloop.counter }}">Quality-control definition</h3>
+                    <p>Checks from the immutable primary definition snapshot.</p>
+                </div>
+                {% if release_detail.quality_checks %}
+                <dl class="product-detail__metrics">
+                    <div><dt>Total checks</dt><dd>{{ release_detail.quality_checks.total }}</dd></div>
+                    <div><dt>Required</dt><dd>{{ release_detail.quality_checks.required }}</dd></div>
+                    <div><dt>Optional</dt><dd>{{ release_detail.quality_checks.optional }}</dd></div>
+                </dl>
+                {% else %}
+                <p class="product-detail__empty">Check totals are unavailable for this release.</p>
+                {% endif %}
+            </div>
+
+            <div class="product-detail__subsection" aria-labelledby="product-coverage-title-{{ forloop.counter }}">
+                <div class="product-detail__subheading">
+                    <h3 id="product-coverage-title-{{ forloop.counter }}">Delivery coverage</h3>
+                    <p>Progress across the AOIs expected for this release.</p>
+                </div>
+                {% if not can_view_coverage %}
+                <div class="product-detail__restricted" role="note">
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#lock"></use></svg>
+                    <p>Coverage is available to administrators and product managers assigned to this product.</p>
+                </div>
+                {% elif release_detail.coverage.expected is not None %}
+                <div class="product-detail__coverage">
+                    <dl class="product-detail__metrics product-detail__metrics--coverage">
+                        <div><dt>Expected AOIs</dt><dd>{{ release_detail.coverage.expected }}</dd></div>
+                        <div><dt>Submitted</dt><dd>{{ release_detail.coverage.submitted }}</dd></div>
+                        <div><dt>Remaining</dt><dd>{{ release_detail.coverage.remaining }}</dd></div>
+                        <div><dt>Open conflicts</dt><dd>{{ release_detail.coverage.conflicts }}</dd></div>
+                    </dl>
+                    <div class="product-detail__progress">
+                        <div><strong>Completion</strong><span>{{ release_detail.coverage.completion_percentage }}%</span></div>
+                        <progress max="100" value="{{ release_detail.coverage.completion_percentage }}">{{ release_detail.coverage.completion_percentage }}%</progress>
+                    </div>
+                    {% if release_detail.remaining_aois %}
+                    <div class="product-detail__remaining">
+                        <h4>AOIs still requiring an accepted delivery</h4>
+                        <ul aria-label="Remaining AOI codes for {{ release_detail.release.key }}">
+                            {% for aoi_code in release_detail.remaining_aois %}<li><code>{{ aoi_code }}</code></li>{% endfor %}
+                        </ul>
+                        {% if release_detail.remaining_aois_truncated %}<p>Showing the first {{ release_detail.remaining_aois|length }} AOIs.</p>{% endif %}
+                    </div>
+                    {% elif release_detail.coverage.remaining == 0 %}
+                    <p class="product-detail__complete">All expected AOIs have an accepted delivery.</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="product-detail__empty">This release does not yet have an authoritative AOI denominator.</p>
+                {% endif %}
+            </div>
+        </section>
+        {% endfor %}
+    {% else %}
+    <section class="workspace-card product-detail__section" aria-labelledby="product-checks-title">
+        <header class="workspace-card__header">
+            <div>
+                <h2 id="product-checks-title">Quality-control definition</h2>
+                <p>The checks configured for this definition-backed product.</p>
+            </div>
+            {% if product.definitions %}<a href="{% url 'product_definition_json' product.definitions.0.ident %}">View definition JSON</a>{% endif %}
+        </header>
+        {% if product.quality_checks %}
+        <dl class="product-detail__metrics">
+            <div><dt>Total checks</dt><dd>{{ product.quality_checks.total }}</dd></div>
+            <div><dt>Required</dt><dd>{{ product.quality_checks.required }}</dd></div>
+            <div><dt>Optional</dt><dd>{{ product.quality_checks.optional }}</dd></div>
+        </dl>
+        {% else %}
+        <p class="product-detail__empty">Check totals are unavailable for this definition.</p>
+        {% endif %}
+        <div class="product-detail__subsection">
+            <div class="product-detail__subheading">
+                <h3>Delivery coverage</h3>
+                <p>Coverage becomes available when this product is linked to a managed release catalog.</p>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock workspace_content %}

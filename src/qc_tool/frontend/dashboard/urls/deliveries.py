@@ -18,19 +18,37 @@ from qc_tool.frontend.dashboard.views.deliveries.listing import get_deliveries_j
 from qc_tool.frontend.dashboard.views.deliveries.pages import deliveries
 from qc_tool.frontend.dashboard.views.jobs.history import job_history_page
 from qc_tool.frontend.dashboard.views.jobs.results import get_result
+from qc_tool.frontend.dashboard.views.jobs.setup import setup_job
+from qc_tool.frontend.dashboard.views.uploads import resumable_upload
+from qc_tool.frontend.dashboard.views.uploads import resumable_upload_page
 
 
 urlpatterns = [
     protected_path("deliveries/", deliveries, name="deliveries"),
     protected_path(
-        "deliveries/job_history/<int:delivery_id>/",
+        "deliveries/upload/",
+        resumable_upload_page,
+        name="file_upload",
+    ),
+    protected_path(
+        "deliveries/jobs/new/",
+        setup_job,
+        name="setup_job",
+    ),
+    protected_path(
+        "deliveries/jobs/<int:delivery_id>/",
         job_history_page,
         name="job_history",
     ),
     protected_path(
-        "deliveries/result/<uuid:job_uuid>",
+        "deliveries/job-result/<uuid:job_uuid>/",
         get_result,
         name="show_result",
+    ),
+    protected_path(
+        "resumable_upload/",
+        resumable_upload,
+        name="resumable_upload",
     ),
     protected_path(
         "data/delivery/list/",

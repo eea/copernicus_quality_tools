@@ -6,6 +6,7 @@ import json
 from qc_tool.common import locate_product_definition
 from qc_tool.common import QCException
 from qc_tool.common import validate_skip_steps
+from qc_tool.product_security import normalize_product_ident
 
 
 class JobRequestError(Exception):
@@ -39,14 +40,8 @@ def parse_job_creation_request(payload):
     if not isinstance(payload, dict):
         raise _invalid_request()
     delivery_id = positive_identifier(payload.get("delivery_id"), "delivery_id")
-    requested_product = payload.get("product_ident")
-    if (
-        not isinstance(requested_product, str)
-        or not requested_product
-        or requested_product != requested_product.strip()
-        or len(requested_product) > 64
-        or not requested_product.isascii()
-    ):
+    requested_product = normalize_product_ident(payload.get("product_ident"))
+    if requested_product is None:
         raise JobRequestError(
             "invalid_product_ident",
             "Select an available product definition.",
@@ -80,7 +75,7 @@ def parse_job_creation_request(payload):
         raise JobRequestError("invalid_skip_steps", message) from None
     return JobCreationRequest(
         delivery_id=delivery_id,
-        product_ident=definition_path.stem.casefold(),
+        product_ident=requested_product,
         skip_steps=skip_steps_text,
     )
 

@@ -11,12 +11,10 @@ from qc_tool.frontend.dashboard.views.jobs.history import get_job_history_json
 from qc_tool.frontend.dashboard.views.jobs.mutations import job_delete
 from qc_tool.frontend.dashboard.views.jobs.results import get_job_report
 from qc_tool.frontend.dashboard.views.jobs.setup import get_job_info
-from qc_tool.frontend.dashboard.views.jobs.setup import setup_job
 from qc_tool.frontend.dashboard.views.jobs.status import update_job
 
 
 urlpatterns = [
-    protected_path("setup_job", setup_job, name="setup_job"),
     protected_path("create_job", create_job, name="create_job"),
     protected_path("job/delete/", job_delete, name="job_delete"),
     protected_path(

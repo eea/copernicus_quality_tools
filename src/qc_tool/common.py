@@ -24,6 +24,7 @@ from urllib.request import Request
 from qc_tool.jobs import compact_job_uuid
 from qc_tool.jobs import normalize_job_uuid
 from qc_tool.product_security import UnsafeProductDefinition
+from qc_tool.product_security import normalize_product_ident
 from qc_tool.product_security import validate_executable_product_configuration
 from qc_tool.worker_auth import build_worker_authorization
 from qc_tool.worker_auth import InvalidWorkerUrl
@@ -64,7 +65,7 @@ HASH_BUFFER_SIZE = 1024 ** 2
 JOB_STEP_SKIPPED = "skipped"
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-PRODUCT_FILENAME_REGEX = re.compile(r"[a-z].*\.json$")
+PRODUCT_FILENAME_REGEX = re.compile(r".+\.json\Z")
 
 ANNOUNCEMENT_FILENAME = "announcement.txt"
 
@@ -220,14 +221,20 @@ def get_qc_tool_version():
     return None
 
 def locate_product_definition(product_ident):
-    # The product ident is case insensitive.
-    # The product definition is a json file and file name is the same as the product ident.
+    """Locate one canonical definition without binding Unicode lookalikes."""
+
+    normalized = normalize_product_ident(product_ident)
+    if normalized is None:
+        raise QCException("Product definition identifier is invalid.")
     for product_dir in CONFIG["product_dirs"]:
         product_filepaths = product_dir.glob("*.json")
         for product_filepath in product_filepaths:
-            if product_filepath.stem.lower() == product_ident.lower():
+            candidate = normalize_product_ident(product_filepath.stem)
+            if candidate == normalized:
                 return product_filepath
-    raise QCException("Product definition {:s} has not been found.".format(product_ident))
+    raise QCException(
+        "Product definition {!r} has not been found.".format(normalized)
+    )
 
 def load_product_definition(product_ident):
     filepath = locate_product_definition(product_ident)
@@ -280,7 +287,14 @@ def get_product_descriptions():
                 or PRODUCT_FILENAME_REGEX.match(filepath.name) is None
             ):
                 continue
-            product_ident = filepath.stem.lower()
+            product_ident = normalize_product_ident(filepath.stem)
+            if product_ident is None:
+                logger.warning(
+                    "Ignoring product definition with an invalid or reserved "
+                    "identifier: %s",
+                    filepath,
+                )
+                continue
             try:
                 product_definition = json.loads(filepath.read_text())
                 product_description = product_definition["description"]
@@ -305,9 +319,13 @@ def get_product_definitions():
     # In case of identical product ident, the earlier product overrides the later one.
     for product_dir in reversed(CONFIG["product_dirs"]):
         for filepath in product_dir.iterdir():
-            if filepath.is_file() and PRODUCT_FILENAME_REGEX.match(filepath.name) is not None:
-                product_ident = filepath.stem
-                product_definitions.append(product_ident)
+            if (
+                filepath.is_file()
+                and PRODUCT_FILENAME_REGEX.match(filepath.name) is not None
+            ):
+                product_ident = normalize_product_ident(filepath.stem)
+                if product_ident is not None:
+                    product_definitions.append(product_ident)
     return product_definitions
 
 def compose_job_dir(job_uuid):

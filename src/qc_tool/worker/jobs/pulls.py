@@ -9,13 +9,14 @@ reaching subprocess construction.
 import json
 import re
 
+from qc_tool.product_security import normalize_product_ident
+
 from .identifiers import JobIdentifierError
 from .identifiers import normalize_job_uuid
 from .identifiers import validate_path_component
 
 
 MAX_PULL_RESPONSE_BYTES = 64 * 1024
-_PRODUCT_IDENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
 _SKIP_STEPS = re.compile(r"[0-9]+(?:,[0-9]+)*\Z")
 _REQUIRED_FIELDS = {
     "job_uuid",
@@ -125,7 +126,8 @@ def _validate_job(payload):
     except JobIdentifierError:
         raise PulledJobError("job UUID is invalid")
     product_ident = _text(payload["product_ident"], 64, ascii_only=True)
-    if not _PRODUCT_IDENT.fullmatch(product_ident):
+    product_ident = normalize_product_ident(product_ident)
+    if product_ident is None:
         raise PulledJobError("product identifier is invalid")
     username = _plain_component(payload["username"], 150, "username")
     filename = _plain_component(payload["filename"], 500, "filename")
