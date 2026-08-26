@@ -1,62 +1,24 @@
-/* Deliveries workspace. All selectors are page-scoped to avoid Bootstrap drift. */
+/* Deliveries page primitives and action colors.
+ * Layout, filters, table rows, and breakpoints live in sibling modules.
+ */
 .site-main.deliveries-page {
     background:
-        radial-gradient(circle at 15% 5%, rgba(220, 235, 255, 0.7), transparent 24%),
+        radial-gradient(circle at 15% 5%, rgba(220, 235, 255, 0.62), transparent 25%),
         linear-gradient(180deg, #fbfdff 0%, var(--qc-color-canvas) 100%);
 }
 
-.deliveries-page .workspace-content {
-    padding: 48px 24px 72px;
-}
-
-.deliveries-page__container {
-    width: 100%;
-    max-width: var(--qc-content-width);
-    margin: 0 auto;
-}
-
-.deliveries-page__heading {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 32px;
-    margin-bottom: 30px;
-}
-
-.deliveries-page__eyebrow {
-    margin: 0 0 8px;
-    color: var(--qc-color-primary);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.deliveries-page__heading h1 {
-    margin: 0;
-    color: var(--qc-color-navy);
-    font-size: 38px;
-    font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.15;
-}
-
-.deliveries-page__summary {
-    max-width: 690px;
-    margin: 12px 0 0;
-    color: var(--qc-color-muted);
-    font-size: 16px;
-    line-height: 1.65;
-}
-
 .deliveries-page .btn {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
     border-radius: var(--qc-radius-small);
-    font-weight: 600;
+    font-weight: 650;
+    gap: 8px;
 }
 
 .deliveries-page .btn-primary,
-.deliveries-page .btn-submit,
-.deliveries-page .btn-info {
+.deliveries-page .btn-submit {
     border-color: var(--qc-color-primary);
     color: #fff;
     background: var(--qc-color-primary);
@@ -65,14 +27,13 @@
 .deliveries-page .btn-primary:hover,
 .deliveries-page .btn-primary:focus,
 .deliveries-page .btn-submit:hover,
-.deliveries-page .btn-submit:focus,
-.deliveries-page .btn-info:hover,
-.deliveries-page .btn-info:focus {
+.deliveries-page .btn-submit:focus {
     border-color: var(--qc-color-primary-dark);
     color: #fff;
     background: var(--qc-color-primary-dark);
 }
 
+/* QC is intentionally green throughout row and batch workflows. */
 .deliveries-page .btn-qc {
     border-color: var(--qc-color-success);
     color: #fff;
@@ -88,7 +49,7 @@
 
 .deliveries-page .btn-delete-outline {
     border-color: #d0443c;
-    color: #a61b14;
+    color: var(--qc-color-danger);
     background: #fff;
 }
 
@@ -99,661 +60,32 @@
     background: var(--qc-color-danger-soft);
 }
 
-.deliveries-page .btn-danger {
-    border-color: var(--qc-color-danger);
-    color: #fff;
-    background: var(--qc-color-danger);
+.deliveries-page .btn-icon {
+    width: 42px;
+    padding: 9px;
 }
 
-.deliveries-page .btn-danger:hover,
-.deliveries-page .btn-danger:focus {
-    border-color: var(--qc-color-danger-dark);
-    background: var(--qc-color-danger-dark);
+.deliveries-page .btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
-.deliveries-toolbar .ui-icon {
-    margin-right: 8px;
+.deliveries-page a:focus-visible,
+.deliveries-page button:focus-visible,
+.deliveries-page input:focus-visible,
+.deliveries-page select:focus-visible,
+.deliveries-page [tabindex="0"]:focus-visible {
+    outline: 3px solid rgba(8, 104, 215, 0.35);
+    outline-offset: 2px;
 }
 
-.deliveries-announcement {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 22px;
-    padding: 15px 18px;
-    border: 1px solid #f5c2c0;
-    border-radius: 9px;
-    color: #7a271a;
-    background: #fff5f4;
+.deliveries-page .ui-icon {
+    flex: 0 0 18px;
 }
 
-.deliveries-announcement .ui-icon {
-    flex: 0 0 20px;
-    margin-top: 1px;
-}
-
-.deliveries-summary-scope {
-    margin: 0 0 8px;
-    color: var(--qc-color-muted);
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.deliveries-summary {
-    display: grid;
-    margin: 0 0 22px;
-    padding: 19px 20px;
-    grid-template-columns: repeat(4, minmax(120px, 1fr)) minmax(140px, 1.2fr) minmax(150px, 1.2fr);
-    border: 1px solid var(--qc-color-border);
-    border-radius: var(--qc-radius-card);
-    background: var(--qc-color-surface);
-    box-shadow: var(--qc-shadow-card);
-}
-
-.deliveries-summary__item,
-.deliveries-summary__meta {
-    min-width: 0;
-    min-height: 62px;
-    margin: 0;
-    padding: 0 18px;
-    border-left: 1px solid #e5ebf3;
-}
-
-.deliveries-summary__item {
-    position: relative;
-    display: block;
-    padding-top: 10px;
-    padding-left: 75px;
-}
-
-.deliveries-summary > :first-child {
-    border-left: 0;
-}
-
-.deliveries-summary__icon {
-    position: absolute;
-    top: 9px;
-    left: 18px;
-    display: inline-flex;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    color: var(--qc-color-primary);
-    background: var(--qc-color-primary-soft);
-}
-
-.deliveries-summary__item-passed .deliveries-summary__icon {
-    color: #14804a;
-    background: #e6f6ed;
-}
-
-.deliveries-summary__item-progress .deliveries-summary__icon {
-    color: #ad6400;
-    background: #fff1d9;
-}
-
-.deliveries-summary__item-failed .deliveries-summary__icon {
-    color: #b42318;
-    background: #ffebe9;
-}
-
-.deliveries-summary dt {
-    margin: 0 0 5px;
-    color: #4a5870;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.deliveries-summary__item dt > span:last-child {
-    display: block;
-}
-
-.deliveries-summary dd {
-    margin: 0;
-    color: var(--qc-color-navy);
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-}
-
-.deliveries-summary__detail {
-    display: block;
-    margin-top: 4px;
-    color: var(--qc-color-muted);
-    font-size: 10px;
-    font-weight: 500;
-    line-height: 1.35;
-}
-
-.deliveries-summary__meta {
-    display: block;
-    padding-top: 10px;
-}
-
-.deliveries-summary__meta dd {
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.deliveries-summary__manage {
-    display: inline-block;
-    margin-top: 5px;
-    color: var(--qc-color-primary);
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.delivery-upload-guide {
-    display: grid;
-    align-items: stretch;
-    margin-bottom: 22px;
-    padding: 20px;
-    grid-template-columns: minmax(280px, 1.25fr) minmax(260px, 1fr) minmax(210px, 0.7fr);
-    gap: 24px;
-    border: 1px solid var(--qc-color-border);
-    border-radius: var(--qc-radius-card);
-    background: var(--qc-color-surface);
-    box-shadow: var(--qc-shadow-card);
-}
-
-.delivery-upload-guide__action {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    padding: 18px 20px;
-    border: 1px dashed #9db7d8;
-    border-radius: 9px;
-    background: #fbfdff;
-}
-
-.delivery-upload-guide__icon {
-    display: inline-flex;
-    width: 58px;
-    height: 58px;
-    flex: 0 0 58px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    color: var(--qc-color-primary);
-    background: var(--qc-color-primary-soft);
-}
-
-.delivery-upload-guide__icon .ui-icon {
-    width: 28px;
-    height: 28px;
-}
-
-.delivery-upload-guide h2 {
-    margin: 0 0 5px;
-    color: var(--qc-color-navy);
-    font-size: 17px;
-    font-weight: 700;
-}
-
-.delivery-upload-guide p {
-    margin: 0 0 13px;
-    color: var(--qc-color-muted);
-    font-size: 13px;
-    line-height: 1.55;
-}
-
-.delivery-upload-guide__checks {
-    display: flex;
-    margin: 0;
-    padding: 10px 0;
-    flex-direction: column;
-    justify-content: center;
-    gap: 14px;
-    color: #35415a;
-    font-size: 13px;
-    list-style: none;
-}
-
-.delivery-upload-guide__checks li::before {
-    display: inline-flex;
-    width: 18px;
-    height: 18px;
-    align-items: center;
-    justify-content: center;
-    margin-right: 9px;
-    border: 1px solid #24a363;
-    border-radius: 50%;
-    color: #14804a;
-    content: "\2713";
-    font-size: 11px;
-    font-weight: 700;
-}
-
-.delivery-upload-guide__submission {
-    display: flex;
-    padding: 18px;
-    flex-direction: column;
-    justify-content: center;
-    border-left: 1px solid var(--qc-color-border);
-}
-
-.delivery-upload-guide__submission strong {
-    margin-bottom: 7px;
-    color: var(--qc-color-primary);
-}
-
-.delivery-upload-guide__submission p {
-    margin: 0;
-}
-
-.deliveries-card {
-    overflow: hidden;
-    border: 1px solid var(--qc-color-border);
-    border-radius: var(--qc-radius-card);
-    background: var(--qc-color-surface);
-    box-shadow: var(--qc-shadow-card);
-}
-
-.deliveries-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 24px 28px;
-    border-bottom: 1px solid var(--qc-color-border);
-}
-
-.deliveries-card__header h2 {
-    margin: 0;
-    color: var(--qc-color-navy);
-    font-size: 22px;
-    font-weight: 700;
-}
-
-.deliveries-card__description {
-    margin: 6px 0 0;
-    color: var(--qc-color-muted);
-    line-height: 1.5;
-}
-
-.deliveries-card__body {
-    padding: 0 28px 22px;
-}
-
-.deliveries-toolbar {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    padding: 20px 0 16px;
-}
-
-.deliveries-toolbar__actions,
-.deliveries-toolbar__utilities {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-
-.deliveries-selection {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px 16px;
-}
-
-.deliveries-selection__summary {
-    display: flex;
-    min-width: 260px;
-    align-items: center;
-    gap: 10px;
-}
-
-.deliveries-selection__summary > span:nth-child(2) {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-}
-
-.deliveries-selection__summary strong {
-    color: var(--qc-color-navy);
-    font-size: 13px;
-}
-
-.deliveries-selection__summary small {
-    max-width: 390px;
-    color: var(--qc-color-muted);
-    font-size: 11px;
-    line-height: 1.4;
-}
-
-.deliveries-selection__icon {
-    display: inline-flex;
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9px;
-    color: var(--qc-color-primary);
-    background: var(--qc-color-primary-soft);
-}
-
-.deliveries-selection #btn-clear-selection {
-    min-height: 36px;
-    padding-right: 6px;
-    padding-left: 6px;
-}
-
-.deliveries-selection #delivery-bulk-actions[hidden],
-.deliveries-selection #btn-clear-selection[hidden] {
-    display: none;
-}
-
-.deliveries-toolbar__actions .btn,
-.deliveries-toolbar__utilities .btn {
-    min-height: 38px;
-}
-
-.deliveries-toolbar__utilities {
-    justify-content: flex-end;
-}
-
-.deliveries-table-region {
-    max-width: 100%;
-    border-top: 1px solid #edf1f7;
-}
-
-.deliveries-page .fixed-table-body[role="region"]:focus {
-    outline: 2px solid var(--qc-color-primary);
-    outline-offset: -2px;
-}
-
-.deliveries-page .th-inner.sortable[role="button"]:focus {
-    outline: 2px solid var(--qc-color-primary);
-    outline-offset: -3px;
-}
-
-.deliveries-page .fixed-table-container {
-    border: 0;
-}
-
-.deliveries-page .fixed-table-toolbar .bs-bars {
-    width: 100%;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.deliveries-page .fixed-table-toolbar .search {
-    margin-top: 16px;
-}
-
-.deliveries-page #tbl-deliveries > thead > tr > th {
-    border-bottom: 1px solid var(--qc-color-border);
-    color: #34435d;
-    background: #f5f8fc;
-    font-size: 12px;
-    letter-spacing: 0.025em;
-    text-transform: uppercase;
-}
-
-.deliveries-page #tbl-deliveries > tbody > tr > td {
-    border-top-color: #e8eef6;
-    vertical-align: middle;
-}
-
-.deliveries-page #tbl-deliveries > tbody > tr:hover > td {
-    background: #f7faff;
-}
-
-.deliveries-page .delivery-type,
-.deliveries-page .delivery-status {
-    display: inline-flex;
-    min-height: 26px;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 9px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 16px;
-}
-
-.deliveries-page .delivery-type--local {
-    color: #075fc4;
-    background: #eaf3ff;
-}
-
-.deliveries-page .delivery-type--s3 {
-    color: #6b3eb3;
-    background: #f1eaff;
-}
-
-.deliveries-page .delivery-status--neutral {
-    color: #53627a;
-    background: #edf1f6;
-}
-
-.deliveries-page .delivery-status--passed {
-    border-color: #b9e3ca;
-    color: #17633a;
-    background: #e4f7ec;
-}
-
-.deliveries-page .delivery-status--progress {
-    border-color: #f3d7a6;
-    color: #8a5100;
-    background: #fff2dd;
-}
-
-.deliveries-page .delivery-status--failed {
-    border-color: #f3c1bd;
-    color: #982017;
-    background: #ffedeb;
-}
-
-.deliveries-page .delivery-status-link {
-    display: inline-block;
-    border-radius: 999px;
-    text-decoration: none !important;
-}
-
-.deliveries-page .delivery-status-link:hover .delivery-status,
-.deliveries-page .delivery-status-link:focus .delivery-status {
-    box-shadow: 0 0 0 2px rgba(8, 104, 215, 0.18);
-}
-
-.deliveries-page .delivery-row-actions {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 6px;
-    white-space: nowrap;
-}
-
-.deliveries-page .delivery-row-actions .btn {
-    display: inline-flex;
-    min-height: 36px;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 7px 10px;
-}
-
-.deliveries-page .delivery-row-actions .ui-icon {
-    width: 17px;
-    height: 17px;
-    flex-basis: 17px;
-}
-
-.deliveries-page .delivery-row-delete {
-    width: 36px;
-    padding-right: 8px !important;
-    padding-left: 8px !important;
-}
-
-.deliveries-page .delivery-row-actions-empty {
-    color: var(--qc-color-muted);
-    font-size: 12px;
-}
-
-.deliveries-card__footer {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 14px;
-    color: var(--qc-color-muted);
-    font-size: 12px;
-}
-
-@media (max-width: 991px) {
-    .deliveries-page .workspace-content {
-        padding-top: 40px;
-    }
-
-    .deliveries-page__heading,
-    .deliveries-card__header,
-    .deliveries-toolbar {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .deliveries-toolbar__utilities {
-        justify-content: flex-start;
-    }
-
-    .deliveries-selection,
-    .deliveries-selection__summary {
-        width: 100%;
-    }
-
-    .deliveries-summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .deliveries-summary__item,
-    .deliveries-summary__meta,
-    .deliveries-summary > :first-child {
-        padding: 12px 16px 12px 74px;
-        border-top: 1px solid #e5ebf3;
-        border-left: 0;
-    }
-
-    .deliveries-summary__meta {
-        padding-left: 16px;
-    }
-
-    .deliveries-summary__icon {
-        top: 11px;
-        left: 16px;
-    }
-
-    .deliveries-summary > :nth-child(-n + 2) {
-        border-top: 0;
-    }
-
-    .deliveries-summary > :nth-child(even) {
-        border-left: 1px solid #e5ebf3;
-    }
-
-    .delivery-upload-guide {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .delivery-upload-guide__submission {
-        grid-column: 1 / -1;
-        border-top: 1px solid var(--qc-color-border);
-        border-left: 0;
-    }
-}
-
-@media (max-width: 767px) {
-    .deliveries-page .workspace-content {
-        padding: 32px 15px 52px;
-    }
-
-    .deliveries-page__heading h1 {
-        font-size: 31px;
-    }
-
-    .deliveries-page__summary {
-        font-size: 15px;
-    }
-
-    .deliveries-card__header,
-    .deliveries-card__body {
-        padding-right: 18px;
-        padding-left: 18px;
-    }
-
-    .deliveries-toolbar__actions,
-    .deliveries-toolbar__utilities,
-    .deliveries-selection {
-        width: 100%;
-    }
-
-    .delivery-upload-guide {
-        grid-template-columns: 1fr;
-    }
-
-    .delivery-upload-guide__submission {
-        grid-column: auto;
-    }
-}
-
-@media (max-width: 560px) {
-    .deliveries-toolbar__actions .btn,
-    .deliveries-toolbar__utilities > .btn {
-        width: 100%;
-    }
-
-    .delivery-row-actions .btn {
-        width: auto;
-    }
-
-    .deliveries-toolbar__actions .btn,
-    .deliveries-toolbar__utilities > .btn {
-        justify-content: center;
-    }
-
-    .deliveries-summary {
-        grid-template-columns: 1fr;
-    }
-
-    .deliveries-summary__item,
-    .deliveries-summary > :first-child,
-    .deliveries-summary > :nth-child(-n + 2),
-    .deliveries-summary > :nth-child(even) {
-        padding: 13px 0 13px 58px;
-        border-top: 1px solid #e5ebf3;
-        border-left: 0;
-    }
-
-    .deliveries-summary__meta {
-        padding: 13px 0;
-        border-top: 1px solid #e5ebf3;
-        border-left: 0;
-    }
-
-    .deliveries-summary__icon {
-        top: 12px;
-        left: 0;
-    }
-
-    .deliveries-summary > :first-child {
-        border-top: 0;
-    }
-
-    .delivery-upload-guide__action {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .deliveries-page .btn {
-        transition: none;
-    }
+.delivery-dialog-list {
+    max-height: 240px;
+    overflow-y: auto;
+    margin: 12px 0 0;
+    padding-left: 22px;
 }

@@ -1,0 +1,104 @@
+/* Responsive delivery workspace behavior. */
+@media (max-width: 1100px) {
+    .delivery-filter-panel {
+        grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.7fr) minmax(160px, 0.6fr);
+    }
+
+    .delivery-filter-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+
+    .deliveries-selection {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 767px) {
+    .deliveries-page .workspace-content {
+        padding: 24px 15px 42px;
+    }
+
+    .deliveries-page__heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .deliveries-page__upload {
+        width: 100%;
+    }
+
+    .delivery-status-filters {
+        padding: 0 8px;
+    }
+
+    .delivery-status-filter {
+        min-height: 54px;
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+
+    .delivery-filter-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .delivery-filter-actions {
+        grid-column: auto;
+        justify-content: stretch;
+    }
+
+    .delivery-filter-actions #btn-clear-filters {
+        flex: 1 1 auto;
+    }
+
+    .deliveries-card__header,
+    .deliveries-toolbar {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .deliveries-toolbar,
+    .deliveries-selection__summary {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .deliveries-toolbar__utilities,
+    .deliveries-toolbar__utilities .btn,
+    .deliveries-selection,
+    .deliveries-toolbar__actions {
+        width: 100%;
+    }
+
+    .deliveries-toolbar__actions .btn {
+        flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 460px) {
+    .deliveries-toolbar__actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .deliveries-toolbar__actions .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .deliveries-page *,
+    .deliveries-page *::before,
+    .deliveries-page *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (forced-colors: active) {
+    .delivery-status-filter.is-active::after,
+    .delivery-status-filter__dot {
+        background: CanvasText;
+    }
+}

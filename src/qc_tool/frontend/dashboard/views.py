@@ -26,12 +26,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 
 import qc_tool.frontend.dashboard.models as models
+from qc_tool.aoi import AOI_CODE_MAX_LENGTH
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization import access_for_request
-from qc_tool.frontend.accounts.services.api_tokens import has_active_api_tokens
 from qc_tool.frontend.accounts.services.products import (
     ProductCatalogUnavailable,
 )
@@ -74,6 +75,17 @@ from qc_tool.frontend.dashboard.services.artifacts import read_text_artifact
 from qc_tool.frontend.dashboard.services.configuration import AnnouncementStorageError
 from qc_tool.frontend.dashboard.services.configuration import read_announcement
 from qc_tool.frontend.dashboard.services.configuration import write_announcement
+from qc_tool.frontend.dashboard.services.deliveries import (
+    InvalidDeliveryStatus,
+)
+from qc_tool.frontend.dashboard.services.deliveries import (
+    classify_delivery_status,
+)
+from qc_tool.frontend.dashboard.services.deliveries import (
+    count_delivery_statuses,
+)
+from qc_tool.frontend.dashboard.services.deliveries import delivery_status_sql
+from qc_tool.frontend.dashboard.services.deliveries import parse_delivery_status
 from qc_tool.frontend.dashboard.services.deliveries import summarize_deliveries
 from qc_tool.frontend.dashboard.services.workspace_dashboard import (
     build_workspace_dashboard,
@@ -116,6 +128,10 @@ logger = logging.getLogger(__name__)
 CHECK_RUNNING_JOB_DELAY = 10
 MAX_DELIVERY_PAGE_SIZE = 1_000
 MAX_DELIVERY_OFFSET = 10_000_000
+DELIVERY_FILTER_VALUE_LIMITS = {
+    "product_description": 500,
+    "aoi_code": AOI_CODE_MAX_LENGTH,
+}
 
 
 API_JSON_MAX_BODY_BYTES = 16 * 1024
@@ -442,8 +458,11 @@ def api_job_history(request, delivery_id):
     if not can_view_delivery(request.api_access, delivery):
         return _api_object_permission_denied("delivery")
 
+    # Delivery identity, not filename, defines the job-history boundary.
+    # Different users (or repeat uploads) may legitimately use the same ZIP
+    # name and must never have their histories merged.
     candidate_jobs = models.Job.objects.filter(
-        delivery__filename=delivery.filename,
+        delivery_id=delivery.pk,
     ).select_related("delivery__user__userprofile")
     visible_job_ids = [
         job.pk
@@ -451,7 +470,7 @@ def api_job_history(request, delivery_id):
         if can_view_job(request.api_access, job)
     ]
     jobs = models.Job.objects.filter(pk__in=visible_job_ids).order_by(
-        "-date_created"
+        "-date_created", "-job_uuid"
     )
     # Ensure job status is up-to-date
     for job in jobs:
@@ -532,7 +551,6 @@ def deliveries(request):
     """
 
     account_access = access_for_request(request)
-    api_key_configured = has_active_api_tokens(request.user)
     delivery_actions_enabled = (
         account_access.can_run_qc
         or account_access.can_delete
@@ -543,13 +561,17 @@ def deliveries(request):
     )
     update_job_statuses = CONFIG.get("update_job_statuses", True)
     update_job_statuses_interval = CONFIG.get("update_job_statuses_interval", 30000)
+    delivery_status_counts = count_delivery_statuses(account_access)
+    product_catalog, product_catalog_available = _workspace_product_catalog()
 
     context = {
         "submission_enabled": settings.SUBMISSION_ENABLED,
         "announcement": get_announcement_message(),
         "delivery_actions_enabled": delivery_actions_enabled,
         "boundary_version": get_boundary_version(),
-        "api_key_configured": api_key_configured,
+        "delivery_status_tabs": delivery_status_counts.as_tabs(),
+        "product_catalog": product_catalog,
+        "product_catalog_available": product_catalog_available,
         "update_job_statuses": update_job_statuses,
         "update_job_statuses_interval": update_job_statuses_interval,
     }
@@ -652,16 +674,7 @@ def setup_job(request):
 def parse_filter(filter_str, column_lookup):
     filter_sql = ""
     filter_params = []
-    try:
-        filter_dict = json.loads(filter_str)
-    except json.JSONDecodeError:
-        logger.warning("Unable to decode filter expression %r", filter_str)
-        return "", []
-
-    if not isinstance(filter_dict, dict):
-        logger.warning("Filter expression must be a JSON object: %r", filter_str)
-        return "", []
-
+    filter_dict = _decode_filter_mapping(filter_str)
     for key, val in filter_dict.items():
         filter_column = column_lookup.get(key)
         if not filter_column:
@@ -682,6 +695,31 @@ def parse_filter(filter_str, column_lookup):
     return filter_sql, filter_params
 
 
+def _decode_filter_mapping(filter_str):
+    """Return bounded string filters supported by the delivery workspace."""
+
+    try:
+        filter_dict = json.loads(filter_str)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("Unable to decode filter expression %r", filter_str)
+        return {}
+
+    if not isinstance(filter_dict, dict):
+        logger.warning("Filter expression must be a JSON object: %r", filter_str)
+        return {}
+
+    supported = {}
+    for key, value in filter_dict.items():
+        maximum = DELIVERY_FILTER_VALUE_LIMITS.get(key)
+        if maximum is None:
+            continue
+        if not isinstance(value, str) or len(value) > maximum:
+            logger.warning("Ignoring invalid delivery filter field %r", key)
+            continue
+        supported[key] = value
+    return supported
+
+
 def _bounded_query_integer(value, *, default, minimum, maximum):
     try:
         parsed = int(value)
@@ -700,6 +738,7 @@ def query_deliveries(
     search="",
     include_capabilities=False,
     account_access=None,
+    delivery_status="all",
 ):
     offset = _bounded_query_integer(
         offset,
@@ -731,6 +770,7 @@ def query_deliveries(
         "date_submitted": "d.date_submitted",
         "date_created": "j.date_created",
         "date_started": "j.date_started",
+        "date_finished": "j.date_finished",
         "last_job_status": "j.job_status",
         "last_job_uuid": "j.job_uuid",
         "username": "u.username",
@@ -765,7 +805,8 @@ def query_deliveries(
         d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,
-        j.date_created, j.date_started, j.job_status as last_job_status,
+        j.date_created, j.date_started, j.date_finished,
+        j.job_status as last_job_status,
         up.country AS user_country
         FROM dashboard_delivery d
         LEFT JOIN dashboard_job j
@@ -824,12 +865,18 @@ def query_deliveries(
         sql += visibility_sql
         sql_total += visibility_sql
 
+    status_sql, status_params = delivery_status_sql(delivery_status)
+    sql += status_sql
+    sql_total += status_sql
+
     # Add filter expression and search expressions to sql queries
     sql_total += filter_sql
     sql_total += search_sql
     sql += filter_sql
     sql += search_sql
-    query_params = visibility_params + filter_params + search_params
+    query_params = (
+        visibility_params + status_params + filter_params + search_params
+    )
 
     # Add sort, offset and limit to sql query (with assigned or default values)
     sql += f" ORDER BY {sort_column} {order} LIMIT {limit} OFFSET {offset};"
@@ -861,6 +908,11 @@ def query_deliveries(
                 item.update(
                     delivery_action_capabilities(account_access, owner_id)
                 )
+            if "last_job_status" in item:
+                item["delivery_status"] = classify_delivery_status(
+                    item["last_job_status"],
+                    item.get("date_submitted"),
+                ).value
         return total, data
 
 
@@ -889,6 +941,19 @@ def get_deliveries_json(request):
     order = request.GET.get("order", "desc")
     filter = request.GET.get("filter", "")
     search = request.GET.get("search", "")
+    try:
+        delivery_status = parse_delivery_status(
+            request.GET.get("delivery_status")
+        )
+    except InvalidDeliveryStatus as exc:
+        return JsonResponse(
+            {
+                "status": "error",
+                "code": "invalid_delivery_status",
+                "message": str(exc),
+            },
+            status=400,
+        )
 
     account_access = access_for_request(request)
     total, data = query_deliveries(
@@ -901,14 +966,44 @@ def get_deliveries_json(request):
         search=search,
         include_capabilities=True,
         account_access=account_access,
+        delivery_status=delivery_status,
     )
 
+    for item in data:
+        item["job_history_url"] = reverse(
+            "job_history",
+            args=(item["id"],),
+        )
+        if item["last_job_uuid"]:
+            # Raw SQLite cursors expose UUIDField values as compact text while
+            # PostgreSQL exposes ``UUID`` objects. Canonicalise at this boundary
+            # so both the JSON contract and Django's ``<uuid:...>`` route work
+            # identically on every supported database.
+            item["last_job_uuid"] = normalize_job_uuid(
+                item["last_job_uuid"]
+            )
+            item["job_result_url"] = reverse(
+                "show_result",
+                args=(item["last_job_uuid"],),
+            )
+        else:
+            item["job_result_url"] = None
+
     delivery_summary = summarize_deliveries(account_access)
+    filter_mapping = _decode_filter_mapping(filter) if filter else {}
+    delivery_status_counts = count_delivery_statuses(
+        account_access,
+        search=search,
+        product_description=filter_mapping.get("product_description"),
+        aoi_code=filter_mapping.get("aoi_code"),
+    )
     return JsonResponse(
         {
             "total": total,
             "rows": data,
             "summary": delivery_summary.as_dict(),
+            "status_counts": delivery_status_counts.as_dict(),
+            "active_status": delivery_status.value,
         }
     )
 
@@ -935,6 +1030,12 @@ def export_deliveries_excel(request):
     order = request.GET.get("order", "desc")
     filter = request.GET.get("filter", "")
     search = request.GET.get("search", "")
+    try:
+        delivery_status = parse_delivery_status(
+            request.GET.get("delivery_status")
+        )
+    except InvalidDeliveryStatus as exc:
+        return HttpResponseBadRequest(str(exc))
 
     # Get data using your existing query function
     _, data = query_deliveries(
@@ -943,8 +1044,9 @@ def export_deliveries_excel(request):
         limit=limit,
         sort=sort,
         order=order,
-        filter="",
-        search=""
+        filter=filter,
+        search=search,
+        delivery_status=delivery_status,
     )
     # Create a new Excel workbook
     wb = openpyxl.Workbook()
@@ -1596,15 +1698,16 @@ def get_job_history_json(request, delivery_id):
     account_access = access_for_request(request)
     require_delivery_view(account_access, delivery)
 
-    # find all jobs with same filename
+    # A job history belongs to one Delivery row. Filenames are not unique and
+    # must never be used as an ownership or association boundary.
     candidate_jobs = models.Job.objects.filter(
-        delivery__filename=delivery.filename
+        delivery_id=delivery.pk
     ).select_related("delivery__user__userprofile")
     visible_job_ids = [
         job.pk for job in candidate_jobs if can_view_job(account_access, job)
     ]
     jobs = models.Job.objects.filter(pk__in=visible_job_ids).order_by(
-        "-date_created"
+        "-date_created", "-job_uuid"
     )
     for job in jobs:
         if job.job_status == JOB_RUNNING:

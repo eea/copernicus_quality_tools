@@ -101,6 +101,21 @@ class DeliveryWorkspacePresentationTests(TestCase):
         )
         return Path(source_path).read_text(encoding="utf-8")
 
+    def delivery_script_source(self):
+        """Read the small delivery modules as one testable browser bundle."""
+
+        return "\n".join(
+            self.static_source(relative_path)
+            for relative_path in (
+                "dashboard/js/deliveries/formatters.js",
+                "dashboard/js/deliveries/table.js",
+                "dashboard/js/deliveries/dialogs.js",
+                "dashboard/js/deliveries/actions.js",
+                "dashboard/js/deliveries/polling.js",
+                "dashboard/js/deliveries.js",
+            )
+        )
+
     def remove_default_capabilities(self, *permissions):
         default_group = Group.objects.get(name=Role.DEFAULT.value)
         default_group.permissions.remove(
@@ -296,7 +311,6 @@ class DeliveryWorkspacePresentationTests(TestCase):
         permitted_response = self.client.get(reverse("deliveries"))
 
         self.assertContains(permitted_response, "Upload delivery")
-        self.assertContains(permitted_response, "Open uploader")
         self.assertContains(
             permitted_response,
             'id="btn-qc-multi" class="btn btn-qc"',
@@ -315,10 +329,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertContains(permitted_response, 'id="btn-clear-selection"')
         self.assertContains(permitted_response, 'id="delivery-bulk-actions"')
         self.assertContains(permitted_response, 'data-checkbox="true"')
-        self.assertContains(
-            permitted_response,
-            'data-formatter="actionsFormatter"',
-        )
+        self.assertContains(permitted_response, "Deliveries and QC jobs")
 
         self.remove_default_capabilities(AccountPermission.RUN_QC)
         no_qc_response = self.client.get(reverse("deliveries"))
@@ -353,7 +364,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertNotContains(restricted_response, 'data-checkbox="true"')
         self.assertNotContains(
             restricted_response,
-            'data-formatter="actionsFormatter"',
+            'id="delivery-bulk-actions"',
         )
 
     def test_delivery_action_assets_keep_semantic_action_states(self):
@@ -361,7 +372,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             "dashboard/css/pages/deliveries.css"
         )
         tokens = self.static_source("dashboard/css/ui/tokens.css")
-        script = self.static_source("dashboard/js/deliveries.js")
+        script = self.delivery_script_source()
 
         qc_rule = re.search(
             r"\.deliveries-page\s+\.btn-qc\s*\{(?P<body>[^}]*)\}",
@@ -376,78 +387,74 @@ class DeliveryWorkspacePresentationTests(TestCase):
         )
         self.assertIn("color: #fff", qc_rule.group("body"))
 
-        formatter = re.search(
-            r"function actionsFormatter\(value, row\)\s*\{(.*?)\n\}"
-            r"\n\nfunction statusFormatter",
-            script,
-            flags=re.DOTALL,
-        )
-        self.assertIsNotNone(formatter)
-        formatter_source = formatter.group(1)
         for predicate, action_class in (
             ("canRunQc(row)", "delivery-row-qc"),
             ("canSubmit(row)", "submit-delivery-button"),
-            ("canDelete(row)", "delivery-row-delete"),
+            ("canDelete(row)", "delete-button"),
         ):
             with self.subTest(action=predicate):
-                self.assertIn("if ({})".format(predicate), formatter_source)
-                self.assertIn(action_class, formatter_source)
+                self.assertIn(predicate, script)
+                self.assertIn(action_class, script)
 
-        self.assertIn("delivery-row-actions-empty", formatter_source)
-        self.assertIn("No actions available for ", formatter_source)
+        self.assertIn("delivery-row-actions-empty", script)
+        self.assertIn("No actions currently available", script)
         self.assertNotIn("disabledAction", script)
-        self.assertNotIn("disabled", formatter_source.lower())
 
     def test_bulk_selection_script_describes_page_local_selection(self):
-        script = self.static_source("dashboard/js/deliveries.js")
+        script = self.delivery_script_source()
 
         self.assertIn("selected on this page", script)
         self.assertIn("#btn-clear-selection", script)
-        self.assertIn("eligibleCount !== total", script)
+        self.assertIn("eligible === total", script)
+        self.assertIn('.prop("disabled", !allEligible)', script)
         self.assertIn("#delivery-selection-guidance", script)
 
-    def test_summary_uses_semantic_term_and_value_pairs(self):
+    def test_status_filters_use_semantic_term_and_count_pairs(self):
         response = self.client.get(reverse("deliveries"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            '<dl class="deliveries-summary" '
-            'aria-label="Delivery overview" '
-            'aria-describedby="delivery-summary-scope">',
+            '<nav id="delivery-status-filters" '
+            'class="delivery-status-filters" '
+            'aria-label="Filter deliveries by status">',
         )
-        for label in ("Total deliveries", "Passed", "In progress", "Failed"):
+        for status, label in (
+            ("all", "All"),
+            ("not_validated", "Not validated"),
+            ("running", "Running"),
+            ("passed", "Passed"),
+            ("failed", "Failed"),
+            ("submitted", "Submitted"),
+        ):
             with self.subTest(label=label):
                 self.assertContains(response, label)
-        self.assertContains(response, "Boundary date")
-        self.assertContains(
-            response,
-            "Overview of all active deliveries visible to you",
-        )
+                self.assertContains(
+                    response,
+                    'data-delivery-status-count="{}"'.format(status),
+                )
 
         summary_response = self.client.get(reverse("deliveries_json"))
         self.assertEqual(summary_response.status_code, 200)
         self.assertEqual(
-            summary_response.json()["summary"],
+            summary_response.json()["status_counts"],
             {
-                "total": 0,
+                "all": 0,
+                "not_validated": 0,
+                "running": 0,
                 "passed": 0,
-                "in_progress": 0,
                 "failed": 0,
-                "not_checked": 0,
-                "other": 0,
+                "submitted": 0,
             },
         )
 
-    def test_api_credential_summary_links_to_settings_without_inline_forms(self):
+    def test_delivery_page_has_no_api_credential_management_controls(self):
         response = self.client.get(reverse("deliveries"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(
+        self.assertNotContains(
             response,
-            'href="{}#api-tokens">Manage</a>'.format(
-                reverse("account_settings")
-            ),
+            'href="{}#api-tokens"'.format(reverse("account_settings")),
         )
         self.assertNotContains(
             response,
@@ -472,8 +479,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
         table_end = document.find("</table>", table.end())
         self.assertNotEqual(table_end, -1)
         self.assertIn(
-            '<caption class="sr-only">Uploaded delivery packages and their '
-            "latest quality-control status</caption>",
+            '<caption class="sr-only">Delivery packages with product, AOI, '
+            "latest QC status, job history, and available actions</caption>",
             document[table.end() : table_end],
         )
         self.assertIn(
