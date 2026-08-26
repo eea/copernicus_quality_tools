@@ -1,5 +1,7 @@
 """Validated archive value objects shared by validation and extraction."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from zipfile import ZipInfo
 

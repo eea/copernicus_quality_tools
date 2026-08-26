@@ -50,7 +50,7 @@
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Reference Year</dt>
-                      <dd class="col-sm-10">{{job_report.reference_year}}</dd>
+                      <dd class="col-sm-10">{{job_report.reference_year|default:"Not available"}}</dd>
                     </dl>
                     {% if account_access.can_view_other_users_deliveries %}
                     <dl class="row">
@@ -70,11 +70,11 @@
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Started</dt>
-                      <dd class="col-sm-10">{{job_report.job_start_date}}</dd>
+                      <dd class="col-sm-10">{{job_report.job_start_date|default:"Not available"}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Finished</dt>
-                      <dd class="col-sm-10">{{job_report.job_finish_date}}</dd>
+                      <dd class="col-sm-10">{{job_report.job_finish_date|default:"Not available"}}</dd>
                     </dl>
                     <dl class="row">
                       <dt class="col-sm-2">Status</dt>
@@ -88,7 +88,9 @@
                     </div>
                     {% endif %}
                     {% if job_report.status == "error" %}
-                    <div class="alert alert-danger">SYSTEM ERROR: {{job_report.error_message}}</div>
+                    <div class="alert alert-danger" role="alert">
+                        <strong>QC job error:</strong> {{job_report.error_message}}
+                    </div>
                     {% endif %}
                 </div></div>
 

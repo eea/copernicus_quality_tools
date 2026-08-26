@@ -29,7 +29,13 @@ class TestValidateSkipSteps(TestCase):
 
     def test_required(self):
         from qc_tool.worker.dispatch import validate_skip_steps
-        self.assertRaisesRegex(QCException, "Required step 1 can not be skipped.", validate_skip_steps, [1], self.product_definition)
+        self.assertRaisesRegex(
+            QCException,
+            "The following steps are required and can not be skipped: 1\\.",
+            validate_skip_steps,
+            [1],
+            self.product_definition,
+        )
 
 
 class Test_dump_error_table(VectorCheckTestCase):

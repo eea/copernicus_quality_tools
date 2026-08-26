@@ -1,6 +1,13 @@
 """Explicit public projections for job records and reports."""
 
 from qc_tool.aoi import is_aoi_input_alias
+from qc_tool.common import JOB_ERROR
+
+
+MISSING_RESULT_ERROR_MESSAGE = (
+    "The QC worker stopped before producing a result document. Review the "
+    "job log or contact an administrator and provide this job identifier."
+)
 
 
 def serialize_job_history(jobs, *, compact_uuid=False):
@@ -29,7 +36,13 @@ def serialize_job_history(jobs, *, compact_uuid=False):
 
 
 def serialize_job_report(job_report, job):
-    """Return a report with the persisted Job AOI as authoritative metadata."""
+    """Return one safe report backed by authoritative persisted job facts.
+
+    A worker process can terminate before it writes ``result.json``. The
+    product blueprint used for that case contains empty presentation fields;
+    fill those fields from PostgreSQL and expose an actionable, non-sensitive
+    error instead of rendering ``None`` values.
+    """
 
     serialized = (
         {
@@ -40,6 +53,29 @@ def serialize_job_report(job_report, job):
         if isinstance(job_report, dict)
         else {}
     )
+    serialized["job_uuid"] = serialized.get("job_uuid") or job.job_uuid
+    serialized["product_ident"] = job.product_ident
+    serialized["description"] = (
+        serialized.get("description") or job.product_description
+    )
+    serialized["filename"] = job.delivery.filename
+    serialized["status"] = serialized.get("status") or job.job_status
+    serialized["job_start_date"] = (
+        serialized.get("job_start_date") or job.date_started
+    )
+    serialized["job_finish_date"] = (
+        serialized.get("job_finish_date") or job.date_finished
+    )
+    serialized["reference_year"] = (
+        serialized.get("reference_year") or job.reference_period or None
+    )
+    if not isinstance(serialized.get("steps"), list):
+        serialized["steps"] = []
+    if (
+        serialized["status"] == JOB_ERROR
+        and not _has_message(serialized.get("error_message"))
+    ):
+        serialized["error_message"] = MISSING_RESULT_ERROR_MESSAGE
     serialized["aoi_code"] = job.aoi_code
     serialized["aoi_code_submitted"] = getattr(
         job,
@@ -47,6 +83,10 @@ def serialize_job_report(job_report, job):
         None,
     )
     return serialized
+
+
+def _has_message(value):
+    return isinstance(value, str) and bool(value.strip())
 
 
 def _job_uuid(value, *, compact):
