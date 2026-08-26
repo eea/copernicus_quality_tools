@@ -1,0 +1,76 @@
+{% extends "dashboard/layouts/workspace.html" %}
+{% load static %}
+
+{% block title %}Boundaries | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page boundaries-page{% endblock main_class %}
+
+{% block workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
+
+{% block workspace_content %}
+<div class="workspace-page__container">
+    <header class="workspace-page__header">
+        <div>
+            <p class="workspace-page__eyebrow">QC configuration</p>
+            <h1>Boundaries</h1>
+            <p>Review the raster and vector AOI files in the active boundary package.</p>
+        </div>
+        {% if account_access.can_manage_configuration %}
+        <a href="{% url 'boundaries_upload' %}" class="btn btn-primary btn-qc-primary">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+            Replace boundary package
+        </a>
+        {% endif %}
+    </header>
+
+    <section class="workspace-card boundary-catalog" aria-labelledby="boundary-catalog-title">
+        <header class="workspace-card__header">
+            <div>
+                <h2 id="boundary-catalog-title">Active boundary package</h2>
+                <p>File names and sizes are read from one pinned boundary generation.</p>
+            </div>
+        </header>
+
+        <div class="boundary-groups">
+            <section aria-labelledby="raster-boundaries-title">
+                <h3 id="raster-boundaries-title">Raster AOI boundaries</h3>
+                <div class="boundary-table-wrap" tabindex="0" role="region" aria-label="Raster boundary files">
+                    <table id="tbl-boundaries-raster" class="table" data-toggle="table" data-sort-name="filename" data-sort-order="asc" data-url="{% url 'boundaries_json' boundary_type='raster' %}" data-empty-message="{% if account_access.can_manage_configuration %}No raster boundary files are available. Replace the boundary package to add them.{% else %}No raster boundary files are currently available.{% endif %}">
+                        <caption class="sr-only">Raster AOI boundary files in the active package</caption>
+                        <thead>
+                            <tr>
+                                <th data-field="filename" data-sortable="true" data-escape="true">Name</th>
+                                <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section aria-labelledby="vector-boundaries-title">
+                <h3 id="vector-boundaries-title">Vector AOI boundaries</h3>
+                <div class="boundary-table-wrap" tabindex="0" role="region" aria-label="Vector boundary files">
+                    <table id="tbl-boundaries-vector" class="table" data-toggle="table" data-sort-name="filename" data-sort-order="asc" data-url="{% url 'boundaries_json' boundary_type='vector' %}" data-empty-message="{% if account_access.can_manage_configuration %}No vector boundary files are available. Replace the boundary package to add them.{% else %}No vector boundary files are currently available.{% endif %}">
+                        <caption class="sr-only">Vector AOI boundary files in the active package</caption>
+                        <thead>
+                            <tr>
+                                <th data-field="filename" data-sortable="true" data-escape="true">Name</th>
+                                <th data-field="size_bytes" data-sortable="true" data-formatter="fileSizeFormatter">Size</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </section>
+</div>
+{% endblock workspace_content %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/features/boundaries/index.js' %}"></script>
+{% endblock js %}

@@ -39,7 +39,7 @@ class AnnouncementAccessTests(TestCase):
         self.manager.user_permissions.add(manage_configuration)
 
     @patch(
-        "qc_tool.frontend.dashboard.views.read_announcement",
+        "qc_tool.frontend.dashboard.views.configuration.read_announcement",
         return_value="Service window\n<script>alert(1)</script>",
     )
     def test_default_user_can_read_plain_text_without_editor(self, _read):
@@ -48,7 +48,7 @@ class AnnouncementAccessTests(TestCase):
         response = self.client.get(reverse("announcement"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "dashboard/announcement.html")
+        self.assertTemplateUsed(response, "dashboard/configuration/announcement.html")
         self.assertContains(response, "Service window")
         self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
         self.assertNotContains(response, "<script>alert(1)</script>")
@@ -59,7 +59,7 @@ class AnnouncementAccessTests(TestCase):
         )
 
     @patch(
-        "qc_tool.frontend.dashboard.views.read_announcement",
+        "qc_tool.frontend.dashboard.views.configuration.read_announcement",
         return_value="Existing message",
     )
     def test_configuration_manager_sees_post_editor(self, _read):
@@ -79,7 +79,7 @@ class AnnouncementAccessTests(TestCase):
         self.assertContains(response, "The message may use up to 64 KiB")
         self.assertNotContains(response, 'maxlength="65536"')
 
-    @patch("qc_tool.frontend.dashboard.views.write_announcement")
+    @patch("qc_tool.frontend.dashboard.views.configuration.write_announcement")
     def test_default_user_cannot_update_announcement(self, write_announcement):
         self.client.force_login(self.viewer)
 
@@ -91,7 +91,7 @@ class AnnouncementAccessTests(TestCase):
         self.assertEqual(response.status_code, 403)
         write_announcement.assert_not_called()
 
-    @patch("qc_tool.frontend.dashboard.views.write_announcement")
+    @patch("qc_tool.frontend.dashboard.views.configuration.write_announcement")
     def test_configuration_manager_can_update_via_post_only(
         self,
         write_announcement,
@@ -124,10 +124,10 @@ class AnnouncementAccessTests(TestCase):
         )
 
     @patch(
-        "qc_tool.frontend.dashboard.views.read_announcement",
+        "qc_tool.frontend.dashboard.views.configuration.read_announcement",
         return_value="Published message",
     )
-    @patch("qc_tool.frontend.dashboard.views.write_announcement")
+    @patch("qc_tool.frontend.dashboard.views.configuration.write_announcement")
     def test_oversized_utf8_message_has_field_error_and_is_preserved(
         self,
         write_announcement,
@@ -156,7 +156,7 @@ class AnnouncementAccessTests(TestCase):
         self.assertContains(response, 'aria-invalid="true"')
         write_announcement.assert_not_called()
 
-    @patch("qc_tool.frontend.dashboard.views.write_announcement")
+    @patch("qc_tool.frontend.dashboard.views.configuration.write_announcement")
     def test_exact_utf8_byte_limit_is_accepted(self, write_announcement):
         self.client.force_login(self.manager)
         submitted = "é" * (MAX_ANNOUNCEMENT_BYTES // 2)

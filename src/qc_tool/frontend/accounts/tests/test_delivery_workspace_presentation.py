@@ -107,12 +107,12 @@ class DeliveryWorkspacePresentationTests(TestCase):
         return "\n".join(
             self.static_source(relative_path)
             for relative_path in (
-                "dashboard/js/deliveries/formatters.js",
-                "dashboard/js/deliveries/table.js",
-                "dashboard/js/deliveries/dialogs.js",
-                "dashboard/js/deliveries/actions.js",
-                "dashboard/js/deliveries/polling.js",
-                "dashboard/js/deliveries.js",
+                "dashboard/js/features/deliveries/formatters.js",
+                "dashboard/js/features/deliveries/table.js",
+                "dashboard/js/features/deliveries/dialogs.js",
+                "dashboard/js/features/deliveries/actions.js",
+                "dashboard/js/features/deliveries/polling.js",
+                "dashboard/js/features/deliveries/index.js",
             )
         )
 
@@ -128,7 +128,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(
             response,
-            "dashboard/includes/workspace_navigation.html",
+            "dashboard/shared/workspace_navigation.html",
         )
         sidebar = self.workspace_sidebar(response)
         self.assertEqual(sidebar.count('aria-current="page"'), 1)
@@ -249,7 +249,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
                 self.assertEqual(current_links, [reverse(route_name)])
 
     @patch(
-        "qc_tool.frontend.dashboard.views.available_product_descriptions"
+        "qc_tool.frontend.dashboard.views.products.available_product_descriptions"
     )
     def test_products_page_lists_catalog_values_with_html_escaping(
         self,
@@ -265,7 +265,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         response = self.client.get(reverse("products"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "dashboard/products.html")
+        self.assertTemplateUsed(response, "dashboard/products/index.html")
         self.assertContains(response, "2 products available")
         self.assertContains(response, escape(unsafe_ident))
         self.assertContains(response, escape(unsafe_description))
@@ -273,7 +273,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertNotContains(response, unsafe_description)
 
     @patch(
-        "qc_tool.frontend.dashboard.views.available_product_descriptions",
+        "qc_tool.frontend.dashboard.views.products.available_product_descriptions",
         side_effect=ProductCatalogUnavailable("catalog unavailable"),
     )
     def test_catalog_failure_keeps_dashboard_and_products_usable(self, _catalog):
@@ -292,7 +292,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         )
 
     @patch(
-        "qc_tool.frontend.dashboard.views.get_boundary_version",
+        "qc_tool.frontend.dashboard.views.overview.get_boundary_version",
         return_value="Unavailable",
     )
     def test_dashboard_does_not_describe_unavailable_boundaries_as_a_date(
@@ -369,7 +369,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
     def test_delivery_action_assets_keep_semantic_action_states(self):
         stylesheet = self.static_source(
-            "dashboard/css/pages/deliveries.css"
+            "dashboard/css/features/deliveries/base.css"
         )
         tokens = self.static_source("dashboard/css/ui/tokens.css")
         script = self.delivery_script_source()

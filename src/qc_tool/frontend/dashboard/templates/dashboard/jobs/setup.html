@@ -1,0 +1,146 @@
+{% extends "dashboard/layouts/base.html" %}
+{% load static %}
+
+{% block css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
+  <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-dialog.min.css' %}" type="text/css" media="screen" />
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid main">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="{% url 'deliveries' %}">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
+              <li class="active"><a href="">New QC Job</a></li>
+            </ol>
+
+            <div class="main">
+
+                {% if announcement %}
+                <div class="alert alert-danger" role="alert">
+                <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
+                {% endif %}
+
+                <div
+                    id="tool-canvas"
+                    data-job-info-url-template="{% url 'job_info_json' '__PRODUCT__' %}"
+                    data-product-definition-url-template="{% url 'product_definition_json' '__PRODUCT__' %}"
+                    data-create-job-url="{% url 'create_job' %}"
+                    data-deliveries-url="{% url 'deliveries' %}"
+                >
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <div class="panel-title">
+                                Setup new QC job
+                                {% if product_ident %}
+                                &nbsp; for product <strong>{{product_ident}}</strong>
+                                {% endif %}
+
+                                {% if deliveries|length > 1 %}
+                                    <strong> ({{deliveries|length}} deliveries)</strong>
+                                {% else %}
+                                    {% for delivery in deliveries %}
+                                        (delivery: <strong>{{delivery.filename}}</strong>)
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <h4>Parameters</h4>
+                            <form id = "check_form">
+                                <fieldset></fieldset>
+
+                                <div class="form-group">
+                                    {% if deliveries|length > 1 %}
+                                    <label>Selected delivery files:</label>
+                                    {% else %}
+                                    <label>Selected delivery file:</label>
+                                    {% endif %}
+
+                                    {% for delivery in deliveries %}
+                                    {{delivery.filename}}
+                                    {% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-4 col-md-6 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="select_product">Select Product</label>
+                                            <span>  - </span>
+                                            <input id="preselected_product" type="hidden" value="{{ product_ident }}">
+                                            <input id="preselected_file" type="hidden" value="{{ filename }}">
+                                            <input id="delivery_ids" type="hidden"
+                                                   value="{% for d in deliveries %}{{d.id}}{% if not forloop.last %},{% endif %}{% endfor %}">
+                                            <input id="current_username" type="hidden" value="{{ user.get_username }}">
+                                            <select id="select_product" name="select_product" class="form-control" required
+                                            data-error-msg="Please select a product.">
+                                                <option hidden >Select product ...</option>
+                                                {% for p in product_list %}
+                                                    {% if p.product_ident == product_ident %}
+                                                <option value="{{p.product_ident}}" selected>{{p.product_description}}</option>
+                                                    {% else %}
+                                                <option value="{{p.product_ident}}">{{p.product_description}}</option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="error_placeholder" class="form-group"></div>
+
+                                <table id="tbl_check_details" class="table" data-toggle="table" data-show-refresh="false" data-show-toggle="false" data-toolbar-align="right" data-buttons-align="right" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
+                                    <thead>
+                                    <tr>
+                                        <th data-field="step" data-sortable="false">Step</th>
+                                        <th data-field="name" data-sortable="false">Check</th>
+                                        <th data-field="description" data-sortable="false">Description</th>
+
+                                        <th data-field="layers" data-sortable="false">Layers</th>
+                                        <th data-field="selected" data-sortable="false">
+                                            <button type="button" id="btn_select_all" class="btn btn-default btn-md" onclick="select_all()">Select All</button>
+                                            <button type="button" id="btn_unselect_all" class="btn btn-default btn-md" onclick="unselect_all()">Unselect All</button></th>
+                                    </tr>
+                                    </thead>
+                                   <tbody>
+                                   </tbody>
+                                </table>
+                                <br>
+
+                                <div id="product_link_placeholder" class="form-group"></div>
+                                <br>
+
+                                <button id="btn_run" type="submit" class="btn btn-success">
+                                    <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                                    Run QC
+                                </button>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <br><br><br><br>
+
+    {% include "dashboard/shared/spinner.html" %}
+
+
+{% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'dashboard/js/jquery.validate.min.js' %}" type="text/javascript"></script>
+    <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
+    <script src="{% static 'dashboard/js/spin.min.js' %}" type="text/javascript"></script>
+    <script src="{% static 'dashboard/js/features/jobs/setup.js' %}" type="text/javascript"></script>
+{% endblock js %}

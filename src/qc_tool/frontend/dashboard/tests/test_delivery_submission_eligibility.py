@@ -199,7 +199,7 @@ class DisabledSubmissionEndpointTests(TestCase):
             },
         )
 
-    @patch("qc_tool.frontend.dashboard.views.submit_job")
+    @patch("qc_tool.frontend.dashboard.views.deliveries.actions.submit_job")
     def test_session_single_submission_fails_closed(self, submit_job):
         response = self.client.post(
             reverse("delivery_submit"),
@@ -211,7 +211,7 @@ class DisabledSubmissionEndpointTests(TestCase):
         self.delivery.refresh_from_db()
         self.assertIsNone(self.delivery.date_submitted)
 
-    @patch("qc_tool.frontend.dashboard.views.submit_job")
+    @patch("qc_tool.frontend.dashboard.views.deliveries.actions.submit_job")
     def test_session_batch_submission_fails_closed(self, submit_job):
         response = self.client.post(
             reverse("delivery_submit_batch"),
@@ -223,7 +223,7 @@ class DisabledSubmissionEndpointTests(TestCase):
         self.delivery.refresh_from_db()
         self.assertIsNone(self.delivery.date_submitted)
 
-    @patch("qc_tool.frontend.dashboard.views.submit_job")
+    @patch("qc_tool.frontend.dashboard.views.api_access.submissions.submit_job")
     def test_api_submission_fails_closed(self, submit_job):
         response = self.client.post(
             reverse("api_submit_delivery_to_eea"),

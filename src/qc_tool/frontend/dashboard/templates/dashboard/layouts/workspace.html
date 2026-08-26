@@ -1,0 +1,19 @@
+{% extends "dashboard/layouts/base.html" %}
+{% load static %}
+
+{% block skip_links %}<a class="skip-link" href="#workspace-content">Skip to workspace content</a>{% endblock skip_links %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace.css' %}" type="text/css" media="screen">
+{% block workspace_css %}{% endblock workspace_css %}
+{% endblock css %}
+
+{% block content %}
+<div class="workspace-layout">
+    {% include "dashboard/shared/workspace_navigation.html" %}
+    <div id="workspace-content" class="workspace-content" tabindex="-1">
+        {% block workspace_content %}{% endblock workspace_content %}
+    </div>
+</div>
+{% endblock content %}

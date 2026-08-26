@@ -1,0 +1,302 @@
+{% extends "dashboard/layouts/base.html" %}
+{% load static %}
+
+{% block title %}QC Tool API reference{% endblock title %}
+{% block brand_url %}{% url 'api_homepage' %}{% endblock brand_url %}
+{% block body_class %}api-docs-page{% endblock body_class %}
+{% block main_class %}api-docs-main{% endblock main_class %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/layout.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/guide.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/reference.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/operation.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/responsive.css' %}">
+{% endblock css %}
+
+{% block content %}
+<section class="api-docs-hero" aria-labelledby="api-docs-title">
+    <div class="api-docs-container">
+        <div class="api-docs-hero__copy">
+            <p class="api-docs-eyebrow">REST API reference</p>
+            <h1 id="api-docs-title">{{ api_title }}</h1>
+            <p class="api-docs-lead">{{ api_description }}</p>
+            <div class="api-docs-actions">
+                <a class="btn-qc-primary" href="#quick-start">Get started</a>
+                <a class="btn-qc-secondary" href="{% url 'api_openapi_json' %}">
+                    OpenAPI JSON
+                </a>
+                {% if user.is_authenticated and account_access.can_access_account_settings %}
+                <a class="api-docs-text-link" href="{% url 'account_settings' %}#api-tokens">
+                    Manage personal access tokens
+                </a>
+                {% elif not user.is_authenticated %}
+                {% url 'account_settings' as account_settings_url %}
+                <a class="api-docs-text-link" href="{% url 'login' %}?next={{ account_settings_url|urlencode }}">
+                    Sign in to create a token
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <dl class="api-docs-facts" aria-label="API summary">
+            <div>
+                <dt>Base URL</dt>
+                <dd><code>{{ api_url }}</code></dd>
+            </div>
+            <div>
+                <dt>Authentication</dt>
+                <dd>via PAT (Personal Access Token)</dd>
+            </div>
+            <div>
+                <dt>Contract</dt>
+                <dd>OpenAPI 3.0 · version {{ api_version }}</dd>
+            </div>
+            <div>
+                <dt>Operations</dt>
+                <dd>{{ api_operation_count }} documented endpoints</dd>
+            </div>
+        </dl>
+    </div>
+</section>
+
+<div class="api-docs-container api-docs-layout">
+    <aside class="api-docs-sidebar">
+        <nav class="api-docs-nav" aria-label="API documentation sections">
+            <p class="api-docs-nav__title">On this page</p>
+            <a href="#quick-start">Quick start</a>
+            <a href="#authentication">Authentication and access</a>
+            <a href="#errors">Errors and safe usage</a>
+            {% for group in api_groups %}
+            <a href="#{{ group.anchor }}">{{ group.name }}</a>
+            {% endfor %}
+        </nav>
+    </aside>
+
+    <div class="api-docs-content">
+        <section id="quick-start" class="api-guide-card" aria-labelledby="quick-start-title">
+            <span class="api-guide-card__icon" aria-hidden="true">
+                <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#book"></use></svg>
+            </span>
+            <div>
+                <p class="api-docs-kicker">Quick start</p>
+                <h2 id="quick-start-title">Make your first request</h2>
+                <ol class="api-steps">
+                    <li>Create a named personal access token in <strong>Profile → Settings</strong>.</li>
+                    <li>Copy the token when it is shown. QC Tool stores only its digest and cannot display it again.</li>
+                    <li>Send it in the <code>Authorization</code> header over HTTPS. Never put a token in a URL or query string.</li>
+                </ol>
+                <div class="api-code-block">
+                    <div class="api-code-block__header">
+                        <span>Request example</span>
+                        <button type="button" class="api-copy-button" data-copy-target="quick-start-code">Copy</button>
+                    </div>
+                    <pre id="quick-start-code"><code>curl --request GET \
+  --url '{{ api_url }}/delivery-list?limit=20&amp;offset=0' \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer &lt;personal-access-token&gt;'</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="authentication" class="api-docs-section" aria-labelledby="authentication-title">
+            <p class="api-docs-kicker">Security model</p>
+            <h2 id="authentication-title">Authentication and access</h2>
+            <p>
+                Every operational endpoint requires a named personal access token (PAT). The documentation page and
+                <a href="{% url 'api_openapi_json' %}">OpenAPI schema</a> are intentionally public and never ask for,
+                transmit, or retain a token.
+            </p>
+            <div class="api-access-grid">
+                <article>
+                    <h3>Permission snapshot</h3>
+                    <p>A new PAT captures the owner's permissions, roles, product grants, region grants, and administrator status at issuance.</p>
+                </article>
+                <article>
+                    <h3>Least privilege over time</h3>
+                    <p>Effective access is the intersection of that snapshot and current live access. Revocations apply immediately; later grants require a new PAT.</p>
+                </article>
+                <article>
+                    <h3>Independent lifecycle</h3>
+                    <p>You can keep multiple named PATs for different clients. Deleting one immediately revokes it and leaves the others active.</p>
+                </article>
+            </div>
+            <div class="api-callout api-callout--security">
+                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#shield"></use></svg>
+                <div>
+                    <strong>Treat every PAT like a password.</strong>
+                    Use HTTPS, keep it out of source control and logs, give each integration its own descriptive token, and delete tokens that are no longer used.
+                </div>
+            </div>
+        </section>
+
+        <section id="errors" class="api-docs-section" aria-labelledby="errors-title">
+            <p class="api-docs-kicker">Response contract</p>
+            <h2 id="errors-title">Errors and safe usage</h2>
+            <div class="api-status-grid">
+                <div><code>400</code><span>Invalid JSON, field, identifier, product, or resource state</span></div>
+                <div><code>401</code><span>Missing, malformed, revoked, or invalid bearer token</span></div>
+                <div><code>403</code><span>Valid token without the required permission or object scope</span></div>
+                <div><code>404</code><span>Delivery, job, product, or generated artifact is unavailable</span></div>
+                <div><code>413</code><span>JSON body exceeds the 16 KiB endpoint limit</span></div>
+                <div><code>500</code><span>An operation failed after validation; retry only when safe</span></div>
+            </div>
+            <p>
+                Credential-scoped responses are marked private and non-cacheable. API authentication failures include a
+                <code>WWW-Authenticate: Bearer</code> challenge. JSON errors use a stable <code>code</code> when one is available.
+            </p>
+        </section>
+
+        <section class="api-reference-tools" aria-labelledby="reference-title">
+            <div>
+                <p class="api-docs-kicker">Endpoint explorer</p>
+                <h2 id="reference-title">API operations</h2>
+                <p>Open an operation for its parameters, JSON fields, response codes, permission, and copyable cURL example.</p>
+            </div>
+            <div class="api-reference-tools__controls">
+                <label for="api-operation-search">Filter operations</label>
+                <input
+                    id="api-operation-search"
+                    class="form-control"
+                    type="search"
+                    placeholder="Search path, action, or permission"
+                    autocomplete="off"
+                >
+                <div class="api-reference-tools__buttons">
+                    <button type="button" class="api-quiet-button" data-api-expand>Expand all</button>
+                    <button type="button" class="api-quiet-button" data-api-collapse>Collapse all</button>
+                </div>
+            </div>
+        </section>
+
+        <p class="api-empty-state" data-api-empty hidden>No endpoints match this filter.</p>
+
+        {% for group in api_groups %}
+        <section id="{{ group.anchor }}" class="api-operation-group" data-api-group aria-labelledby="{{ group.anchor }}-title">
+            <div class="api-operation-group__heading">
+                <h2 id="{{ group.anchor }}-title">{{ group.name }}</h2>
+                {% if group.description %}<p>{{ group.description }}</p>{% endif %}
+            </div>
+
+            <div class="api-operation-list">
+                {% for operation in group.operations %}
+                <details
+                    id="{{ operation.id }}"
+                    class="api-operation api-operation--{{ operation.method|lower }}"
+                    data-api-operation
+                    data-api-search="{{ operation.search_text }}"
+                >
+                    <summary>
+                        <span class="api-method" aria-label="HTTP method {{ operation.method }}">{{ operation.method }}</span>
+                        <code class="api-path">{{ operation.path }}</code>
+                        <span class="api-summary">{{ operation.summary }}</span>
+                        <span class="api-disclosure" aria-hidden="true"></span>
+                    </summary>
+                    <div class="api-operation__body">
+                        <div class="api-operation__intro">
+                            <p>{{ operation.description }}</p>
+                            <p class="api-permission">
+                                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#shield"></use></svg>
+                                Required account permission: <strong>{{ operation.permission }}</strong>
+                            </p>
+                        </div>
+
+                        {% if operation.parameters %}
+                        <section class="api-operation__section" aria-labelledby="{{ operation.id }}-parameters">
+                            <h3 id="{{ operation.id }}-parameters">Parameters</h3>
+                            <div class="api-table-wrap">
+                                <table class="api-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Location</th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for parameter in operation.parameters %}
+                                        <tr>
+                                            <th scope="row"><code>{{ parameter.name }}</code>{% if parameter.required %}<span class="api-required">required</span>{% endif %}</th>
+                                            <td>{{ parameter.location }}</td>
+                                            <td><code>{{ parameter.type }}</code></td>
+                                            <td>
+                                                {{ parameter.description }}
+                                                {% if parameter.has_default %}<span class="api-field-note">Default: <code>{{ parameter.default }}</code>.</span>{% endif %}
+                                                {% if parameter.example %}<span class="api-field-note">Example: <code>{{ parameter.example }}</code>.</span>{% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                        {% endif %}
+
+                        {% if operation.request_body %}
+                        <section class="api-operation__section" aria-labelledby="{{ operation.id }}-body">
+                            <h3 id="{{ operation.id }}-body">Request body</h3>
+                            <p>{{ operation.request_body.description }}</p>
+                            <p class="api-content-type"><code>{{ operation.request_body.media_type }}</code>{% if operation.request_body.required %}<span class="api-required">required</span>{% endif %}</p>
+                            {% if operation.request_body.properties %}
+                            <div class="api-table-wrap">
+                                <table class="api-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Field</th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for field in operation.request_body.properties %}
+                                        <tr>
+                                            <th scope="row"><code>{{ field.name }}</code>{% if field.required %}<span class="api-required">required</span>{% endif %}</th>
+                                            <td><code>{{ field.type }}</code></td>
+                                            <td>{{ field.description }}{% if field.example %}<span class="api-field-note">Example: <code>{{ field.example }}</code>.</span>{% endif %}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
+                        </section>
+                        {% endif %}
+
+                        <div class="api-operation__columns">
+                            <section class="api-operation__section" aria-labelledby="{{ operation.id }}-responses">
+                                <h3 id="{{ operation.id }}-responses">Responses</h3>
+                                <dl class="api-response-list">
+                                    {% for response in operation.responses %}
+                                    <div>
+                                        <dt><code>{{ response.status }}</code></dt>
+                                        <dd>{{ response.description }}{% if response.content_types %}<span class="api-field-note">{{ response.content_types }}</span>{% endif %}</dd>
+                                    </div>
+                                    {% endfor %}
+                                </dl>
+                            </section>
+
+                            <section class="api-operation__section" aria-labelledby="{{ operation.id }}-example">
+                                <div class="api-code-block">
+                                    <div class="api-code-block__header">
+                                        <h3 id="{{ operation.id }}-example">cURL example</h3>
+                                        <button type="button" class="api-copy-button" data-copy-target="{{ operation.id }}-code">Copy</button>
+                                    </div>
+                                    <pre id="{{ operation.id }}-code"><code>{{ operation.curl_example }}</code></pre>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block js %}
+<script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+<script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'dashboard/js/features/api_access/index.js' %}"></script>
+{% endblock js %}

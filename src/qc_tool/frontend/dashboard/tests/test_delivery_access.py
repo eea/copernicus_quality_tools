@@ -54,10 +54,12 @@ class DeliveryAccessTests(TestCase):
         cursor_context.__enter__.return_value = cursor
 
         with patch(
-            "qc_tool.frontend.dashboard.views.access_for",
+            "qc_tool.frontend.dashboard.services.deliveries.listing.query."
+            "access_for",
             return_value=access,
         ), patch(
-            "qc_tool.frontend.dashboard.views.connection.cursor",
+            "qc_tool.frontend.dashboard.services.deliveries.listing.query."
+            "connection.cursor",
             return_value=cursor_context,
         ):
             total, rows = query_deliveries(
@@ -206,10 +208,12 @@ class DeliveryAccessTests(TestCase):
         cursor_context.__enter__.return_value = cursor
 
         with patch(
-            "qc_tool.frontend.dashboard.views.access_for",
+            "qc_tool.frontend.dashboard.services.deliveries.listing.query."
+            "access_for",
             return_value=access,
         ), patch(
-            "qc_tool.frontend.dashboard.views.connection.cursor",
+            "qc_tool.frontend.dashboard.services.deliveries.listing.query."
+            "connection.cursor",
             return_value=cursor_context,
         ):
             query_deliveries(

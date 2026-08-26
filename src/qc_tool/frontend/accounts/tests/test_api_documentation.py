@@ -30,8 +30,16 @@ class ApiDocumentationSecurityTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Authorization: Bearer")
         self.assertContains(response, reverse("api_openapi_json"))
-        self.assertContains(response, "dashboard/css/pages/api-docs.css")
-        self.assertContains(response, "dashboard/js/api-docs.js")
+        for stylesheet in (
+            "dashboard/css/features/api_access/layout.css",
+            "dashboard/css/features/api_access/guide.css",
+            "dashboard/css/features/api_access/reference.css",
+            "dashboard/css/features/api_access/operation.css",
+            "dashboard/css/features/api_access/responsive.css",
+        ):
+            with self.subTest(stylesheet=stylesheet):
+                self.assertContains(response, stylesheet)
+        self.assertContains(response, "dashboard/js/features/api_access/index.js")
         self.assertContains(response, 'id="api-operation-search"')
         self.assertContains(response, "data-api-expand")
         self.assertNotContains(response, "unpkg.com")
@@ -137,7 +145,8 @@ class ApiDocumentationSecurityTests(SimpleTestCase):
             self.assertIn("later grants", text)
 
     @patch(
-        "qc_tool.frontend.dashboard.views.compile_job_form_data",
+        "qc_tool.frontend.dashboard.views.api_access.products."
+        "compile_job_form_data",
         side_effect=QCException("internal definition path must stay private"),
     )
     def test_unavailable_product_uses_the_documented_generic_json_404(

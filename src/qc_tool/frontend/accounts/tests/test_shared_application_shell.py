@@ -25,9 +25,9 @@ class SharedApplicationShellTests(TestCase):
         self.assertEqual(response.status_code, status_code)
         self.assertTemplateUsed(
             response,
-            "dashboard/includes/navigation.html",
+            "dashboard/shared/navigation.html",
         )
-        self.assertTemplateUsed(response, "dashboard/footer.html")
+        self.assertTemplateUsed(response, "dashboard/shared/footer.html")
 
         document = response.content.decode(response.charset)
         self.assertIn('<body class="qc-shell ', document)

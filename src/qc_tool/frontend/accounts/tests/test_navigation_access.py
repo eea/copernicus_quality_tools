@@ -96,7 +96,7 @@ class ConfigurationNavigationTests(TestCase):
         page_response = self.client.get(reverse("boundaries"))
 
         self.assertEqual(page_response.status_code, 200)
-        self.assertTemplateUsed(page_response, "dashboard/boundaries.html")
+        self.assertTemplateUsed(page_response, "dashboard/boundaries/index.html")
         self.assertNotContains(
             page_response,
             f'href="{reverse("boundaries_upload")}"',
@@ -123,7 +123,7 @@ class ConfigurationNavigationTests(TestCase):
                 vector_dir=vector_dir,
             )
             with patch(
-                "qc_tool.frontend.dashboard.views."
+                "qc_tool.frontend.dashboard.views.boundaries."
                 "resolve_boundary_generation",
                 return_value=generation,
             ):
@@ -164,7 +164,7 @@ class ConfigurationNavigationTests(TestCase):
         self.assertEqual(upload_response.status_code, 200)
         self.assertTemplateUsed(
             upload_response,
-            "dashboard/workspace_base.html",
+            "dashboard/layouts/workspace.html",
         )
         self.assertContains(
             upload_response,

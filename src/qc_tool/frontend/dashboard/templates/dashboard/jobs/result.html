@@ -1,0 +1,182 @@
+{% extends "dashboard/layouts/base.html" %}
+{% load static %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
+<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
+{% endblock css %}
+
+{% block content %}
+
+    <div class="container-fluid main">
+        <div class="row text-left">
+
+            <ol class="breadcrumb">
+              <li><a href="{% url 'deliveries' %}">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
+              <li class="active"><a href="">Results</a></li>
+            </ol>
+
+            <div class="main">
+
+                {% if announcement %}
+                <div class="alert alert-danger" role="alert">
+                <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
+                {% endif %}
+
+                <!-- Nav tabs -->
+                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active">
+                        <a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Result of QC Job: {{ job_report.job_uuid }}</a>
+                    </li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <p role="tabpanel" class="tab-pane active" id="recent">
+
+                    <div class="panel panel-default"><div class="panel-body">
+                    <dl class="row">
+                      <dt class="col-sm-2">Product</dt>
+                      <dd class="col-sm-10">{{job_report.description}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">Product identifier</dt>
+                      <dd class="col-sm-10">{{job_report.product_ident}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">AOI code</dt>
+                      <dd class="col-sm-10">{{job_report.aoi_code|default:"Not available"}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">Reference Year</dt>
+                      <dd class="col-sm-10">{{job_report.reference_year}}</dd>
+                    </dl>
+                    {% if account_access.can_view_other_users_deliveries %}
+                    <dl class="row">
+                      <dt class="col-sm-2">User</dt>
+                      <dd class="col-sm-10">{{delivery.user.username}}</dd>
+                    </dl>
+                    {% endif %}
+                    <dl class="row">
+                      <dt class="col-sm-2">File</dt>
+                        <dd class="col-sm-10">
+                            {% if delivery.is_deleted %}
+                            {{job_report.filename}} (File has been deleted)
+                            {% else %}
+                            <a href="{% url 'download_delivery_file' delivery.id %}">{{job_report.filename}}</a>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">Started</dt>
+                      <dd class="col-sm-10">{{job_report.job_start_date}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">Finished</dt>
+                      <dd class="col-sm-10">{{job_report.job_finish_date}}</dd>
+                    </dl>
+                    <dl class="row">
+                      <dt class="col-sm-2">Status</dt>
+                      <dd class="col-sm-10">{{job_report.status}}</dd>
+                    </dl>
+                    {% if job_report.aborted_check %}
+                    <div class="alert alert-danger">
+                        QC-job has been aborted due to errors in the
+                        <strong>{{job_report.aborted_check}}</strong>
+                        that might cause system errors in later checks.
+                    </div>
+                    {% endif %}
+                    {% if job_report.status == "error" %}
+                    <div class="alert alert-danger">SYSTEM ERROR: {{job_report.error_message}}</div>
+                    {% endif %}
+                </div></div>
+
+
+                <table id="tbl-results" class="table" data-toggle="table" data-search-align="right" data-show-refresh="false" data-show-toggle="false" data-toolbar="#runs-toolbar-1" data-toolbar-align="left" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
+                    <thead>
+                    <tr>
+                        <th data-field="step_nr" data-sortable="false">Step</th>
+                        <th data-field="check_ident" data-sortable="false">Check</th>
+                        <th data-field="layers" data-sortable="false">Layers</th>
+                        <th data-field="check_result" data-sortable="false">Status</th>
+                        <th data-field="check_attachments" data-sortable="false">Attachments</th>
+                        <th data-field="check_message" data-sortable="false">Comments</th>
+                    </tr>
+                    </thead>
+                   <tbody>
+                        {% for step in job_report.steps %}
+                        <tr>
+                            {% if step.status == "ok" %}
+                            <td class="success">{{step.step_nr}}</td>
+                            <td class="success">
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td class="success">{{step.layers|join:", <br>"|default_if_none:""}}</td>
+                            <td class="success">{{step.status}}</td>
+                            <td class="success">
+                                {% for attachment_filename in step.attachment_filenames %}
+                                <a href="/attachment/{{ job_report.job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
+                                {% endfor %}</td>
+                            <td class="success"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
+                            {% elif step.status == "skipped" or step.status == "running" %}
+                            <td>{{step.step_nr}}</td>
+                            <td>
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td>{{step.layers|join:", <br>"|default_if_none:""}}</td>
+                            <td>{{step.status}}</td>
+                            <td></td>
+                            <td></td>
+                            {% elif step.status == None %}
+                            <td>{{step.step_nr}}</td>
+                            <td>
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td>{{step.layers|join:", <br>"|default_if_none:""}}</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            {% else %}
+                            <td class="danger">{{step.step_nr}}</td>
+                            <td class="danger">
+                                <p><small><em>{{step.check_ident}}</em></small></p>
+                                <p>{{step.description}}</p>
+                            </td>
+                            <td class="danger">{{step.layers|join:", <br>"|default_if_none:""}}</td>
+                            <td class="danger">{{step.status}}</td>
+                            <td class="danger">
+                                {% for attachment_filename in step.attachment_filenames %}
+                                <a href="/attachment/{{ job_report.job_uuid }}/{{ attachment_filename }}">{{attachment_filename}}</a><br>
+                                {% endfor %}</td>
+                            <td class="danger"><ul>{% for msg in step.messages %}<li>{{msg}}</li>{% endfor %}</ul></td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                   </tbody>
+                </table>
+                <br>
+                {% if job_report.job_finish_date %}
+                    <a href="/data/report/{{ job_report.job_uuid }}/report.pdf"><i class="glyphicon glyphicon-file"></i>PDF Report</a>&nbsp;&nbsp;&nbsp;
+                {% endif %}
+                  <span>    </span><a href="/data/report/{{ job_report.job_uuid }}/report.json">JSON Report</a>
+                  <span>&nbsp;&nbsp;&nbsp;</span>
+                        <a href="/job_history/{{ delivery.id }}/">QC job history ...</a>
+
+                  <span>&nbsp;&nbsp;&nbsp;</span><a href="/data/log/{{ job_report.job_uuid }}/log.txt">JOB log ...</a>
+
+            </div>
+
+        </div>
+    </div>
+
+    </div>
+
+{% endblock content %}
+
+{% block js %}
+    {{ block.super }}
+{% endblock js %}

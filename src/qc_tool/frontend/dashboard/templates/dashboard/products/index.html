@@ -1,0 +1,73 @@
+{% extends "dashboard/layouts/workspace.html" %}
+{% load static %}
+
+{% block title %}Products | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page products-page{% endblock main_class %}
+
+{% block workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
+
+{% block workspace_content %}
+<div class="workspace-page__container">
+    <header class="workspace-page__header">
+        <div>
+            <p class="workspace-page__eyebrow">QC configuration</p>
+            <h1>Products</h1>
+            <p>Browse the complete catalog of products available for quality control.</p>
+        </div>
+        <a class="btn btn-default btn-qc-secondary" href="{% url 'api_homepage' %}#products">
+            API documentation
+        </a>
+    </header>
+
+    <section class="workspace-card products-catalog" aria-labelledby="products-catalog-title">
+        <header class="workspace-card__header products-catalog__header">
+            <div>
+                <h2 id="products-catalog-title">Available products</h2>
+                <p>{{ product_catalog|length }} product{{ product_catalog|length|pluralize }} available.</p>
+            </div>
+            <div class="products-search">
+                <label for="products-search">Search products</label>
+                <input id="products-search" class="form-control" type="search" placeholder="Search by name or identifier" autocomplete="off" data-products-search>
+            </div>
+        </header>
+
+        <p class="sr-only" aria-live="polite" data-products-status></p>
+        {% if not product_catalog_available %}
+        <div class="products-empty" role="status">
+            <strong>Product catalog temporarily unavailable</strong>
+            <p>Please try again later or ask an administrator to check the product configuration.</p>
+        </div>
+        {% elif product_catalog %}
+        <ul class="products-grid" data-products-list>
+            {% for product in product_catalog %}
+            <li class="product-card" data-product>
+                <span class="product-card__icon" aria-hidden="true">
+                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg>
+                </span>
+                <div>
+                    <h3>{{ product.description }}</h3>
+                    <code>{{ product.ident }}</code>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        <div class="products-empty" data-products-empty hidden>
+            <strong>No matching products</strong>
+            <p>Try a different product name or identifier.</p>
+        </div>
+        {% else %}
+        <div class="products-empty">
+            <strong>No products are currently available</strong>
+            <p>Ask an administrator to check the product configuration.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock workspace_content %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/features/products/index.js' %}"></script>
+{% endblock js %}

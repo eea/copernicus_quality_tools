@@ -141,7 +141,7 @@ class WorkerTokenRequiredTests(SimpleTestCase):
 
 
 class PullJobAuthenticationIntegrationTests(SimpleTestCase):
-    @patch("qc_tool.frontend.dashboard.views.models.pull_job")
+    @patch("qc_tool.frontend.dashboard.views.workers.models.pull_job")
     @patch(
         "qc_tool.frontend.dashboard.authentication.decorators.auth_worker",
         return_value=True,
@@ -156,7 +156,7 @@ class PullJobAuthenticationIntegrationTests(SimpleTestCase):
         auth.assert_called_once_with("valid")
         pull_job.assert_not_called()
 
-    @patch("qc_tool.frontend.dashboard.views.models.pull_job")
+    @patch("qc_tool.frontend.dashboard.views.workers.models.pull_job")
     @patch(
         "qc_tool.frontend.dashboard.authentication.decorators.auth_worker"
     )
@@ -167,7 +167,7 @@ class PullJobAuthenticationIntegrationTests(SimpleTestCase):
         auth.assert_not_called()
         pull_job.assert_not_called()
 
-    @patch("qc_tool.frontend.dashboard.views.models.pull_job")
+    @patch("qc_tool.frontend.dashboard.views.workers.models.pull_job")
     @patch(
         "qc_tool.frontend.dashboard.authentication.decorators.auth_worker",
         return_value=False,
@@ -183,7 +183,7 @@ class PullJobAuthenticationIntegrationTests(SimpleTestCase):
         pull_job.assert_not_called()
 
     @patch(
-        "qc_tool.frontend.dashboard.views.models.pull_job",
+        "qc_tool.frontend.dashboard.views.workers.models.pull_job",
         return_value=None,
     )
     @patch(
@@ -203,7 +203,7 @@ class PullJobAuthenticationIntegrationTests(SimpleTestCase):
         auth.assert_called_once_with("valid")
         pull_job.assert_called_once()
 
-    @patch("qc_tool.frontend.dashboard.views.models.pull_job")
+    @patch("qc_tool.frontend.dashboard.views.workers.models.pull_job")
     @patch(
         "qc_tool.frontend.dashboard.authentication.decorators.auth_worker"
     )

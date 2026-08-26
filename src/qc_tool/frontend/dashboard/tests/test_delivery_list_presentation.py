@@ -129,11 +129,11 @@ class DeliveryListPresentationTests(TestCase):
         script = "\n".join(
             Path(script_path).read_text(encoding="utf-8")
             for script_path in (
-                finders.find("dashboard/js/deliveries/formatters.js"),
-                finders.find("dashboard/js/deliveries/table.js"),
-                finders.find("dashboard/js/deliveries/dialogs.js"),
-                finders.find("dashboard/js/deliveries/actions.js"),
-                finders.find("dashboard/js/deliveries.js"),
+                finders.find("dashboard/js/features/deliveries/formatters.js"),
+                finders.find("dashboard/js/features/deliveries/table.js"),
+                finders.find("dashboard/js/features/deliveries/dialogs.js"),
+                finders.find("dashboard/js/features/deliveries/actions.js"),
+                finders.find("dashboard/js/features/deliveries/index.js"),
             )
             if script_path is not None
         )

@@ -213,7 +213,7 @@ class AoiPersistenceTests(TestCase):
         markup = '<img src=x onerror="alert(1)">'
 
         rendered = render_to_string(
-            "dashboard/result.html",
+            "dashboard/jobs/result.html",
             {
                 "delivery": self.delivery,
                 "job_report": {

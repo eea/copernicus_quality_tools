@@ -61,7 +61,7 @@ class BoundaryUploadClientTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="fileupload"')
         self.assertContains(response, 'id="upload-result"')
-        self.assertContains(response, "dashboard/js/boundaries_upload.js")
+        self.assertContains(response, "dashboard/js/features/boundaries/upload.js")
         self.assertNotContains(response, "jquery-file-upload")
         self.assertNotContains(response, "data-form-data")
         self.assertNotContains(response, " multiple")

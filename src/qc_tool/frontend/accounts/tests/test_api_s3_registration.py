@@ -53,7 +53,10 @@ class ApiS3RegistrationSecurityTests(TestCase):
             HTTP_AUTHORIZATION=self.authorization,
         )
 
-    @patch("qc_tool.frontend.dashboard.views.inspect_s3_delivery")
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.deliveries."
+        "inspect_s3_delivery"
+    )
     def test_rejects_an_unlisted_endpoint_before_any_network_call(self, inspect):
         response = self.post(
             self.payload(host="https://attacker.example.com")
@@ -66,7 +69,10 @@ class ApiS3RegistrationSecurityTests(TestCase):
         self.assertFalse(S3Info.objects.exists())
 
     @override_settings(S3_ALLOWED_ENDPOINTS=())
-    @patch("qc_tool.frontend.dashboard.views.inspect_s3_delivery")
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.deliveries."
+        "inspect_s3_delivery"
+    )
     def test_empty_allowlist_disables_the_endpoint(self, inspect):
         response = self.post(self.payload())
 
@@ -74,9 +80,18 @@ class ApiS3RegistrationSecurityTests(TestCase):
         self.assertEqual(response.json()["code"], "s3_configuration_error")
         inspect.assert_not_called()
 
-    @patch("qc_tool.frontend.dashboard.views.find_product_description")
-    @patch("qc_tool.frontend.dashboard.views.guess_product_ident")
-    @patch("qc_tool.frontend.dashboard.views.inspect_s3_delivery")
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.deliveries."
+        "find_product_description"
+    )
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.deliveries."
+        "guess_product_ident"
+    )
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.deliveries."
+        "inspect_s3_delivery"
+    )
     def test_registers_one_validated_bounded_lookup_atomically(
         self,
         inspect,
@@ -113,7 +128,10 @@ class ApiS3RegistrationSecurityTests(TestCase):
         self.assertEqual(delivery.s3.bucketname, "deliveries")
         self.assertEqual(delivery.s3.key_prefix, "incoming/product")
 
-    @patch("qc_tool.frontend.dashboard.views.inspect_s3_delivery")
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.deliveries."
+        "inspect_s3_delivery"
+    )
     def test_returns_only_a_generic_upstream_error(self, inspect):
         inspect.side_effect = S3RegistrationError(
             "s3_lookup_failed",
@@ -129,7 +147,10 @@ class ApiS3RegistrationSecurityTests(TestCase):
         self.assertNotContains(response, ALLOWED_ENDPOINT, status_code=502)
         self.assertFalse(S3Info.objects.exists())
 
-    @patch("qc_tool.frontend.dashboard.views.inspect_s3_delivery")
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.deliveries."
+        "inspect_s3_delivery"
+    )
     def test_rejects_invalid_json_and_oversized_bodies_without_lookup(
         self,
         inspect,

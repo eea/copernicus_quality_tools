@@ -85,7 +85,8 @@ class ApiObjectAccessTests(TestCase):
         )
 
     @patch(
-        "qc_tool.frontend.dashboard.views.compile_job_report_data",
+        "qc_tool.frontend.dashboard.views.api_access.jobs."
+        "compile_job_report_data",
         return_value={"status": "ok", "steps": []},
     )
     def test_product_scoped_reader_can_open_a_job_visible_in_its_scope(
@@ -107,7 +108,10 @@ class ApiObjectAccessTests(TestCase):
         self.assertEqual(history.status_code, 200)
         self.assertEqual(len(history.json()["data"]), 1)
 
-    @patch("qc_tool.frontend.dashboard.views.compile_job_report_data")
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.jobs."
+        "compile_job_report_data"
+    )
     def test_unscoped_user_receives_json_403_before_report_loading(
         self,
         compile_report,

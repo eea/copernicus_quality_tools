@@ -1,0 +1,166 @@
+/* Public, server-rendered API reference. No third-party documentation assets. */
+.api-docs-page {
+  background: #f7faff;
+}
+
+.api-docs-main {
+  color: var(--qc-color-text);
+}
+
+.api-docs-container {
+  width: min(calc(100% - 40px), var(--qc-content-width));
+  margin: 0 auto;
+}
+
+/* Introductory masthead and deployment facts. */
+.api-docs-hero {
+  padding: 68px 0 52px;
+  border-bottom: 1px solid var(--qc-color-border);
+  background:
+    radial-gradient(circle at 84% 22%, rgba(8, 104, 215, 0.12), transparent 31%),
+    linear-gradient(135deg, #fff 0%, #f4f8ff 100%);
+}
+
+.api-docs-hero .api-docs-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(310px, 0.75fr);
+  align-items: center;
+  gap: 64px;
+}
+
+.api-docs-eyebrow,
+.api-docs-kicker {
+  margin: 0 0 10px;
+  color: var(--qc-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.api-docs-hero h1 {
+  margin: 0;
+  color: var(--qc-color-navy);
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.api-docs-lead {
+  max-width: 790px;
+  margin: 22px 0 0;
+  color: #475873;
+  font-size: 17px;
+  line-height: 1.72;
+}
+
+.api-docs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.api-docs-text-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 5px;
+  color: var(--qc-color-primary-dark);
+  font-weight: 650;
+}
+
+.api-docs-facts {
+  margin: 0;
+  padding: 7px 24px;
+  border: 1px solid rgba(216, 228, 243, 0.95);
+  border-radius: var(--qc-radius-card);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--qc-shadow-card);
+}
+
+.api-docs-facts > div {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e7eef7;
+}
+
+.api-docs-facts > div:last-child {
+  border-bottom: 0;
+}
+
+.api-docs-facts dt {
+  color: var(--qc-color-muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.api-docs-facts dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--qc-color-navy);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.api-docs-facts code {
+  color: #064f9e;
+  background: transparent;
+  font-size: 12px;
+}
+
+/* Sticky section index alongside the readable documentation column. */
+.api-docs-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 48px;
+  padding-top: 48px;
+  padding-bottom: 72px;
+}
+
+.api-docs-sidebar {
+  min-width: 0;
+}
+
+.api-docs-nav {
+  position: sticky;
+  top: 24px;
+  padding: 18px;
+  border: 1px solid var(--qc-color-border);
+  border-radius: var(--qc-radius-card);
+  background: var(--qc-color-surface);
+}
+
+.api-docs-nav__title {
+  margin: 0 0 9px;
+  color: var(--qc-color-navy);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.api-docs-nav a {
+  display: block;
+  padding: 8px 9px;
+  border-left: 2px solid transparent;
+  color: #52627a;
+  font-size: 13px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.api-docs-nav a:hover,
+.api-docs-nav a:focus {
+  border-left-color: var(--qc-color-primary);
+  color: var(--qc-color-primary-dark);
+  background: var(--qc-color-primary-soft);
+}
+
+.api-docs-content {
+  min-width: 0;
+}
+

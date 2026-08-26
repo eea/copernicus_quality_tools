@@ -12,7 +12,7 @@ from qc_tool.aoi import AOI_CODE_MAX_LENGTH
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
-from qc_tool.frontend.dashboard.helpers import find_product_description
+from qc_tool.frontend.dashboard.services.products import find_product_description
 
 
 def pull_job(worker_url):

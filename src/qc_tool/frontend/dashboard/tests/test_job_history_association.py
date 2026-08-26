@@ -10,6 +10,9 @@ from django.utils import timezone
 
 from qc_tool.common import JOB_FAILED
 from qc_tool.common import JOB_OK
+from qc_tool.frontend.accounts.services.api_tokens import (
+    issue_personal_access_token,
+)
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 
@@ -71,3 +74,19 @@ class JobHistoryAssociationTests(TestCase):
         )
         self.assertNotIn(str(second_job.job_uuid), job_ids)
 
+        issued = issue_personal_access_token(
+            self.user,
+            "Duplicate filename history regression",
+        )
+        api_response = self.client.get(
+            reverse("api_job_history", args=(first.pk,)),
+            HTTP_AUTHORIZATION=f"Bearer {issued.raw_token}",
+        )
+
+        self.assertEqual(api_response.status_code, 200)
+        api_job_ids = [row["job_uuid"] for row in api_response.json()["data"]]
+        self.assertEqual(
+            api_job_ids,
+            [latest_first_job.job_uuid.hex, older_first_job.job_uuid.hex],
+        )
+        self.assertNotIn(second_job.job_uuid.hex, api_job_ids)

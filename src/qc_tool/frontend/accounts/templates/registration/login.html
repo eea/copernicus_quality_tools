@@ -1,0 +1,72 @@
+{% extends "dashboard/layouts/base.html" %}
+{% load static %}
+
+{% block content %}
+
+
+<div class="container-fluid main">
+
+    <div class="row text-left">
+        <ol class="breadcrumb">
+          <li><a href="{% url 'dashboard_home' %}">CLMS QC Tool</a></li>
+          <li class="active">Sign In</li>
+        </ol>
+        <div class="main">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-4"></div>
+                    <div class="col-md-4 text-center">
+                        <div class="box1" style="padding:30px;">
+
+{% if form.errors %}
+<p>Your username and password didn't match. Please try again.</p>
+{% endif %}
+
+{% if next %}
+    {% if user.is_authenticated %}
+    <p>Your account doesn't have access to this page. To proceed,
+    please login with an account that has access.</p>
+    {% endif %}
+{% endif %}
+
+<form method="post" class="form-signin" action="{% url 'login' %}">
+    {% csrf_token %}
+    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+
+    {# The form controls are styled by login.js script #}
+    {{ form.username.label_tag }}
+    {{ form.username }}
+    {{ form.password.label_tag }}
+    {{ form.password }}
+    <br>
+    <!--
+    <div class="checkbox mb-3">
+        <label>
+          <input value="remember-me" type="checkbox"> Remember me
+        </label>
+    </div>
+    -->
+    <button class="btn btn-lg btn-primary btn-block" value="login" type="submit">Sign in</button>
+    {# The hidden input is internally used by Django for redirection (do not remove) #}
+    <input type="hidden" name="next" value="{{ next }}" />
+    <p class="mt-5 mb-3 text-muted"></p>
+</form>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-2 col-md-offset-5"><p>QC tool version: {{qc_tool_version}}</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'accounts/js/login.js' %}"></script>
+{% endblock js %}

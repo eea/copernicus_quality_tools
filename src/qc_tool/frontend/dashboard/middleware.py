@@ -14,7 +14,7 @@ class MaintenanceModeMiddleware:
 
             return render(
                 request,
-                "dashboard/maintenance.html",
+                "dashboard/system/maintenance.html",
                 status=503
             )
 

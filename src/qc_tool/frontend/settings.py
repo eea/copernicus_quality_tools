@@ -150,7 +150,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'qc_tool.frontend.accounts.apps.AccountsConfig',
-    'qc_tool.frontend.dashboard'
+    'qc_tool.frontend.dashboard.apps.QualityControlWorkspaceConfig',
 ]
 
 MIDDLEWARE = [

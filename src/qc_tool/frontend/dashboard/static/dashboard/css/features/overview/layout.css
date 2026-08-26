@@ -1,0 +1,200 @@
+/* Dashboard-only composition. Shared header, rail, footer, and tokens stay in ui/. */
+.dashboard-page {
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: 28px 36px 52px;
+  color: var(--qc-color-text);
+}
+
+.dashboard-page__header {
+  margin-bottom: 20px;
+}
+
+.dashboard-page__header h1 {
+  margin: 0;
+  color: var(--qc-color-navy);
+  font-size: clamp(30px, 3vw, 38px);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.dashboard-page__header p {
+  margin: 6px 0 0;
+  color: var(--qc-color-muted);
+  font-size: 15px;
+}
+
+.dashboard-announcement {
+  margin-bottom: 18px;
+}
+
+.dashboard-kpis {
+  display: grid;
+  margin-bottom: 18px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-kpi {
+  --dashboard-kpi-color: var(--qc-color-primary);
+  --dashboard-kpi-soft: var(--qc-color-primary-soft);
+  display: grid;
+  min-width: 0;
+  min-height: 130px;
+  padding: 16px;
+  border: 1px solid var(--qc-color-border);
+  border-radius: 9px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  background: var(--qc-color-surface);
+  box-shadow: 0 5px 18px rgba(24, 55, 96, 0.055);
+  gap: 0 12px;
+}
+
+.dashboard-kpi--passed {
+  --dashboard-kpi-color: var(--qc-color-success);
+  --dashboard-kpi-soft: var(--qc-color-success-soft);
+}
+
+.dashboard-kpi--attention {
+  --dashboard-kpi-color: #c76a00;
+  --dashboard-kpi-soft: #fff3df;
+}
+
+.dashboard-kpi--submitted {
+  --dashboard-kpi-color: #7c3aed;
+  --dashboard-kpi-soft: #f3edff;
+}
+
+.dashboard-kpi--products {
+  --dashboard-kpi-color: #087f8c;
+  --dashboard-kpi-soft: #e5f7f8;
+}
+
+.dashboard-kpi--ready {
+  --dashboard-kpi-color: #0e7490;
+  --dashboard-kpi-soft: #e6f6fa;
+}
+
+.dashboard-kpi__icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: var(--dashboard-kpi-color);
+  background: var(--dashboard-kpi-soft);
+}
+
+.dashboard-kpi__icon .ui-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.dashboard-kpi dl {
+  min-width: 0;
+  margin: 0;
+}
+
+.dashboard-kpi dt {
+  overflow: hidden;
+  color: var(--qc-color-text);
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-kpi dd {
+  margin: 3px 0 0;
+  color: var(--qc-color-navy);
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.dashboard-kpi__unavailable {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.dashboard-kpi > p {
+  min-width: 0;
+  margin: 10px 0 0;
+  grid-column: 1 / -1;
+  align-self: end;
+  color: var(--dashboard-kpi-color);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-primary-grid,
+.dashboard-secondary-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-primary-grid {
+  margin-bottom: 12px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+}
+
+.dashboard-secondary-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(280px, 0.72fr);
+}
+
+.dashboard-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--qc-color-border);
+  border-radius: 10px;
+  background: var(--qc-color-surface);
+  box-shadow: 0 5px 18px rgba(24, 55, 96, 0.055);
+}
+
+.dashboard-panel__header {
+  display: flex;
+  min-height: 70px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 18px 13px;
+  border-bottom: 1px solid #e8eef6;
+  gap: 16px;
+}
+
+.dashboard-panel__header h2 {
+  margin: 0;
+  color: var(--qc-color-navy);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.dashboard-panel__header p {
+  margin: 4px 0 0;
+  color: var(--qc-color-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.dashboard-panel__header > a {
+  flex: 0 0 auto;
+  color: var(--qc-color-primary);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.dashboard-panel a:focus-visible {
+  border-radius: 3px;
+  outline: 3px solid rgba(8, 104, 215, 0.24);
+  outline-offset: 3px;
+}
+

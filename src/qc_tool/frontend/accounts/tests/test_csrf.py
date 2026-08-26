@@ -22,7 +22,7 @@ def empty_view(_request):
 
 @login_not_required
 def csrf_page(request):
-    return render(request, "dashboard/base.html")
+    return render(request, "dashboard/layouts/base.html")
 
 
 @login_not_required
@@ -51,7 +51,7 @@ class BrowserCsrfContractTests(SimpleTestCase):
         ).group(1)
 
         self.assertIn("csrftoken", page.cookies)
-        self.assertIn('/static/dashboard/js/csrf.js', body)
+        self.assertIn('/static/dashboard/js/shared/csrf.js', body)
         self.assertEqual(client.post("/csrf-mutation/").status_code, 403)
         self.assertEqual(
             client.post(
