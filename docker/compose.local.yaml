@@ -4,6 +4,12 @@ services:
   userdb:
     image: postgres:14
     pull_policy: missing
+    ports:
+      - name: postgres-client
+        target: 5432
+        published: "${QC_TOOL_POSTGRES_HOST_PORT:-5432}"
+        host_ip: 127.0.0.1
+        protocol: tcp
     environment:
       POSTGRES_DB: "${QC_TOOL_POSTGRES_DB:-qc_tool}"
       POSTGRES_USER: "${QC_TOOL_POSTGRES_USER:-qc_user}"

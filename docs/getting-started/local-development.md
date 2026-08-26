@@ -23,6 +23,36 @@ The frontend is built locally. The worker image is pulled by default because
 its GDAL, PostGIS, Java, and INSPIRE dependencies make it substantially more
 expensive to build.
 
+## Connect with pgAdmin
+
+The local PostgreSQL service is published on the host loopback interface for
+desktop database tools. Register a server in pgAdmin with these development
+settings:
+
+| pgAdmin field | Local value |
+| --- | --- |
+| Host name/address | `127.0.0.1` |
+| Port | `5432` |
+| Maintenance database | `qc_tool` |
+| Username | `qc_user` |
+| Password | `qc_password` |
+
+The bind address is deliberately `127.0.0.1`, so PostgreSQL is not exposed to
+other machines on the network. These credentials are only defaults for the
+local development stack.
+
+If port 5432 is already in use, publish PostgreSQL on another host port and use
+that port in pgAdmin:
+
+```bash
+QC_TOOL_POSTGRES_HOST_PORT=55432 \
+docker compose -f docker/compose.local.yaml up --detach userdb
+```
+
+The override changes only the host-facing port. Containers continue to connect
+to `userdb:5432`. After changing the port or adding this mapping to an already
+running stack, recreate `userdb` with the same `up --detach userdb` command.
+
 ## Common commands
 
 ```bash
@@ -84,6 +114,7 @@ Frequently useful substitutions include:
 | `QC_TOOL_POSTGRES_DB` | `qc_tool` | Local user database name |
 | `QC_TOOL_POSTGRES_USER` | `qc_user` | Local user database role |
 | `QC_TOOL_POSTGRES_PASSWORD` | `qc_password` | Development-only DB password |
+| `QC_TOOL_POSTGRES_HOST_PORT` | `5432` | PostgreSQL port published on `127.0.0.1` for desktop tools |
 | `S3_ALLOWED_ENDPOINTS` | empty | Exact HTTPS S3 origins; empty disables S3 |
 | `LEAVE_SCHEMA` | `no` | Retain worker job schema for debugging |
 | `LEAVE_JOBDIR` | `no` | Retain worker job directory for debugging |

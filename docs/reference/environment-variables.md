@@ -53,6 +53,7 @@ Boolean values accept `1/0`, `true/false`, `yes/no`, or `on/off`.
 | `POSTGRES_DB` | `qc_tool_frontend` | Database name |
 | `POSTGRES_USER` | `qc_tool_user` | Database user |
 | `POSTGRES_PASSWORD` | development fallback | Required for PostgreSQL in secure mode |
+| `QC_TOOL_POSTGRES_HOST_PORT` | `5432` in local Compose | Host port published on `127.0.0.1`; does not change the container database port |
 
 The EEA Compose profile maps its `QC_TOOL_POSTGRES_PASSWORD` substitution into
 `POSTGRES_PASSWORD` for both database and frontend.

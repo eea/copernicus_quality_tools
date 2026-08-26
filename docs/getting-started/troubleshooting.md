@@ -23,6 +23,19 @@ QC_TOOL_PORT=8080 docker compose -f docker/compose.local.yaml up --detach
 
 Then open <http://localhost:8080/accounts/login/>.
 
+## Port 5432 is already in use
+
+Choose another host port for pgAdmin and other desktop database clients:
+
+```bash
+QC_TOOL_POSTGRES_HOST_PORT=55432 \
+docker compose -f docker/compose.local.yaml up --detach userdb
+```
+
+Connect pgAdmin to `127.0.0.1:55432`. Do not change the frontend's
+`POSTGRES_PORT`; container-to-container traffic continues to use
+`userdb:5432`.
+
 ## Frontend waits for PostgreSQL
 
 Inspect the database health check:
