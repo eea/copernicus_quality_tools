@@ -1,6 +1,5 @@
 """Job-history page and JSON endpoint."""
 
-from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
@@ -48,7 +47,6 @@ def job_history_page(request, delivery_id):
         "dashboard/jobs/history.html",
         {
             "delivery": delivery,
-            "show_logo": settings.SHOW_LOGO,
             "can_delete_jobs": bool(
                 account_access.can_delete
                 and account_access.can_manage_user(delivery.user_id)

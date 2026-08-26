@@ -1,114 +1,161 @@
-{% extends "dashboard/layouts/base.html" %}
+{% extends "dashboard/layouts/workspace.html" %}
 {% load static %}
 
-{% block css %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
-<link rel="stylesheet" href="{% static 'dashboard/css/select2.min.css' %}" type="text/css" media="screen" />
-{% endblock css %}
+{% block title %}QC job history | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page job-history-page{% endblock main_class %}
 
-{% block content %}
+{% block workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/history/layout.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/history/table.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/history/responsive.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
 
-    <div class="container-fluid main">
-        <div class="row text-left">
+{% block workspace_content %}
+<div class="workspace-page__container">
+    <header class="workspace-page__header">
+        <div>
+            <p class="workspace-page__eyebrow">Deliveries</p>
+            <h1>QC job history</h1>
+            <p>Review every quality-control run associated with this delivery.</p>
+        </div>
+        <a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+            Back to deliveries
+        </a>
+    </header>
 
-            <ol class="breadcrumb">
-              <li><a href="{% url 'deliveries' %}">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
-              <li class="active">QC Job history</li>
-            </ol>
-
-            <div class="main">
-
-                <!-- Nav tabs -->
-                <ul id="tabs_overview" class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active"><a id="tab_overview" href="#recent" aria-controls="home" role="tab" data-toggle="tab">Job History</a></li>
-                </ul>
-
-                <!-- Tab panes -->
-                <div class="tab-content">
-                    <div role="tabpanel" class="tab-pane active" id="recent">
-
-                        <div class="panel panel-default"><div class="panel-body">
-                            <dl class="row">
-                              <dt class="col-sm-2">Product</dt>
-                              <dd class="col-sm-10">{{delivery.product_description}}</dd>
-                            </dl>
-                            <dl class="row">
-                              <dt class="col-sm-2">Delivery File</dt>
-                              <dd class="col-sm-10">{{delivery.filename}}</dd>
-                            </dl>
-                        </div></div>
-
-                        {% if can_delete_jobs %}
-                        <div id="runs-toolbar-1">
-                            <button id="btn-delete-multi" type="button" class="btn btn-danger mr-10" disabled>
-                                <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
-                                Delete all selected
-                            </button>
-                        </div>
-                        {% endif %}
-                        <table id="tbl-history" class="table" data-toggle="table" data-search-align="right" data-show-refresh="true" data-show-toggle="false"{% if can_delete_jobs %} data-checkbox-header="true" data-toolbar="#runs-toolbar-1" data-toolbar-align="left"{% endif %} data-show-filter="false" data-smart-display="true" data-show-export="true" data-pagination="true" data-side-pagination="client">
-                            <thead>
-                            <tr>
-                                {% if can_delete_jobs %}
-                                <th data-checkbox="true"></th>
-                                {% endif %}
-                                <th data-field="job_uuid" data-sortable="true">UUID</th>
-                                <th data-field="skip_steps" data-sortable="true">Skipped Steps</th>
-                                <th data-field="date_created" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Created</th>
-                                <th data-field="date_started" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Started</th>
-                                <th data-field="date_finished" data-visible="true" data-formatter="dateFormatter" data-sortable="true">Date Finished</th>
-                                <th data-field="job_status" data-visible="true" data-sortable="true" data-formatter="statusFormatter">QC Status</th>
-                                <th data-field="aoi_code" data-visible="true" data-sortable="true" data-escape="true">AOI Code</th>
-
-                            </tr>
-                            </thead>
-                           <tbody>
-                           </tbody>
-                        </table>
-                        <div class="row">
-                            <div class="col-md-2 col-md-offset-5"><p>QC tool version: {{qc_tool_version}}</p></div>
-                        </div>
-                    </div>
-                </div>
+    <section class="workspace-card job-history-context" aria-labelledby="job-history-delivery-title">
+        <span class="job-history-context__icon" aria-hidden="true">
+            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
+        </span>
+        <div class="job-history-context__identity">
+            <p>Delivery #{{ delivery.id }}</p>
+            <h2 id="job-history-delivery-title">{{ delivery.filename }}</h2>
+            <span>{{ delivery.product_description|default:"Product not identified" }}</span>
+        </div>
+        <dl class="job-history-context__metadata">
+            <div>
+                <dt>Product</dt>
+                <dd><code>{{ delivery.product_ident|default:"Not available" }}</code></dd>
             </div>
+            <div>
+                <dt>Delivery file</dt>
+                <dd>{{ delivery.filename }}</dd>
+            </div>
+            <div>
+                <dt>Latest expected AOI</dt>
+                <dd>{{ delivery.aoi_code|default:"Not available" }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="workspace-card job-history-card" aria-labelledby="job-history-title">
+        <header class="workspace-card__header job-history-card__header">
+            <div>
+                <h2 id="job-history-title">Quality-control runs</h2>
+                <p id="job-history-description">Runs are ordered newest first. Select a status to open the complete QC result.</p>
+            </div>
+            <span class="job-history-card__icon" aria-hidden="true">
+                <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#history"></use></svg>
+            </span>
+        </header>
+
+        <div class="job-history-card__body">
             {% if can_delete_jobs %}
-            <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            ...
-                        </div>
-                        <div class="modal-body">
-                            ...
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                            <a class="btn btn-danger btn-ok">Delete</a>
-                        </div>
-                    </div>
+            <div id="runs-toolbar-1" class="job-history-selection" role="group" aria-label="Selected job actions">
+                <div class="job-history-selection__summary">
+                    <span class="job-history-selection__icon" aria-hidden="true">
+                        <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>
+                    </span>
+                    <span>
+                        <strong id="job-selection-summary" aria-live="polite">No jobs selected</strong>
+                        <small id="job-selection-guidance">Select completed QC jobs on this page to delete their history.</small>
+                    </span>
                 </div>
+                <button id="btn-delete-multi" class="btn btn-danger btn-qc-danger" type="button" aria-describedby="job-selection-guidance" aria-controls="confirm-delete" disabled>
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>
+                    <span data-job-delete-label>Delete selected</span>
+                </button>
             </div>
             {% endif %}
+
+            <div id="job-history-load-error" class="job-history-alert" role="alert" hidden>
+                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+                <div>
+                    <strong>Job history could not be loaded</strong>
+                    <p>Refresh the page to try again. If the problem continues, contact an administrator.</p>
+                </div>
+            </div>
+            <p id="job-history-live-status" class="sr-only" aria-live="polite"></p>
+
+            <div class="job-history-table-region" role="region" aria-label="QC job history" tabindex="0">
+                <table id="tbl-history" class="table" aria-describedby="job-history-description" data-search-align="right" data-show-refresh="true" data-show-toggle="false"{% if can_delete_jobs %} data-checkbox-header="true" data-toolbar="#runs-toolbar-1" data-toolbar-align="left"{% endif %} data-show-filter="false" data-smart-display="true" data-show-export="true" data-show-columns="true" data-pagination="true" data-side-pagination="client" data-sort-name="date_created" data-sort-order="desc" data-unique-id="job_uuid">
+                    <caption class="sr-only">QC runs for this delivery</caption>
+                    <thead>
+                        <tr>
+                            {% if can_delete_jobs %}<th data-checkbox="true" data-formatter="jobCheckboxFormatter"></th>{% endif %}
+                            <th data-field="job_uuid" data-sortable="true" data-escape="true">Job UUID</th>
+                            <th data-field="skip_steps" data-sortable="true" data-formatter="stepsFormatter">Skipped steps</th>
+                            <th data-field="date_created" data-formatter="dateFormatter" data-sortable="true">Created</th>
+                            <th data-field="date_started" data-formatter="dateFormatter" data-sortable="true">Started</th>
+                            <th data-field="date_finished" data-formatter="dateFormatter" data-sortable="true">Finished</th>
+                            <th data-field="job_status" data-sortable="true" data-formatter="statusFormatter">QC status</th>
+                            <th data-field="aoi_code" data-sortable="true" data-formatter="aoiFormatter">AOI</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <footer class="job-history-card__footer">QC Tool version {{ qc_tool_version }}</footer>
+        </div>
+    </section>
+
+    {% if can_delete_jobs %}
+    <div class="modal fade job-history-modal" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="confirm-delete-title" aria-describedby="confirm-delete-description">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h2 class="modal-title" id="confirm-delete-title">Delete selected QC jobs?</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="confirm-delete-description">This permanently removes the selected job history and its generated artifacts. The uploaded delivery is kept.</p>
+                    <ul id="confirm-delete-jobs" class="job-history-delete-list" aria-label="Jobs selected for deletion"></ul>
+                    <div id="job-history-delete-error" class="job-history-modal__error" role="alert" hidden></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default btn-qc-secondary" data-dismiss="modal">Cancel</button>
+                    <button id="confirm-delete-button" type="button" class="btn btn-danger btn-qc-danger btn-ok">
+                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>
+                        <span>Delete jobs</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-
-    <br><br><br><br>
-
-{% endblock content %}
+    {% endif %}
+</div>
+{% endblock workspace_content %}
 
 {% block js %}
-    {{ block.super }}
-    <script type="text/javascript">
-        var can_delete_jobs = {{ can_delete_jobs|yesno:"true,false" }};
-        var job_history_url = "{% url 'job_history_json' delivery.id %}";
-        var job_delete_url = "{% url 'job_delete' %}";
-        var job_uuid_url_placeholder = "00000000-0000-0000-0000-000000000000";
-        var job_result_url_template = "{% url 'show_result' '00000000-0000-0000-0000-000000000000' %}";
-    </script>
-    {% if can_delete_jobs %}
-    <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
-    {% endif %}
-    <script src="{% static 'dashboard/js/moment.min.js' %}"></script>
-    <script src="{% static 'dashboard/js/features/jobs/history.js' %}"></script>
+{{ block.super }}
+<script>
+window.QC_JOB_HISTORY_CONFIG = {
+    canDeleteJobs: {{ can_delete_jobs|yesno:"true,false" }},
+    historyUrl: "{% url 'job_history_json' delivery.id %}",
+    deleteUrl: "{% url 'job_delete' %}",
+    resultUrlPlaceholder: "00000000-0000-0000-0000-000000000000",
+    resultUrlTemplate: "{% url 'show_result' '00000000-0000-0000-0000-000000000000' %}",
+    iconSprite: "{% static 'dashboard/icons/ui.svg' %}"
+};
+</script>
+<script src="{% static 'dashboard/js/features/jobs/history/formatters.js' %}"></script>
+<script src="{% static 'dashboard/js/features/jobs/history/table.js' %}"></script>
+{% if can_delete_jobs %}
+<script src="{% static 'dashboard/js/features/jobs/history/deletion.js' %}"></script>
+<script src="{% static 'dashboard/js/features/jobs/history/selection.js' %}"></script>
+{% endif %}
+<script src="{% static 'dashboard/js/features/jobs/history/index.js' %}"></script>
 {% endblock js %}

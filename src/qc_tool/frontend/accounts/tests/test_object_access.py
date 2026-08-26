@@ -200,12 +200,18 @@ class DashboardObjectAccessTests(TestCase):
                     self.assertContains(response, 'id="btn-delete-multi"')
                     self.assertContains(response, 'data-checkbox="true"')
                     self.assertContains(response, 'id="confirm-delete"')
-                    self.assertContains(response, "bootstrap-dialog.min.js")
+                    self.assertContains(
+                        response,
+                        'aria-labelledby="confirm-delete-title"',
+                    )
+                    self.assertContains(
+                        response,
+                        'id="confirm-delete-button"',
+                    )
                 else:
                     self.assertNotContains(response, 'id="btn-delete-multi"')
                     self.assertNotContains(response, 'data-checkbox="true"')
                     self.assertNotContains(response, 'id="confirm-delete"')
-                    self.assertNotContains(response, "bootstrap-dialog.min.js")
                 self.client.logout()
 
     def test_policy_scopes_direct_region_permission_and_product_role(self):

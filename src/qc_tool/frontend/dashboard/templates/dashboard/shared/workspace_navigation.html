@@ -9,7 +9,7 @@
                 </a>
             </li>
             <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'deliveries' %}"{% if request.resolver_match.url_name == 'deliveries' %} aria-current="page"{% endif %}>
+                <a class="workspace-sidebar__link" href="{% url 'deliveries' %}"{% if request.resolver_match.url_name == 'deliveries' or request.resolver_match.url_name == 'job_history' %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
                     Deliveries
                 </a>
