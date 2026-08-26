@@ -11,6 +11,9 @@ from qc_tool.frontend.dashboard.urls.api_access import urlpatterns as api_patter
 from qc_tool.frontend.dashboard.urls.boundaries import (
     urlpatterns as boundary_patterns,
 )
+from qc_tool.frontend.dashboard.urls.compatibility import (
+    urlpatterns as compatibility_patterns,
+)
 from qc_tool.frontend.dashboard.urls.configuration import (
     urlpatterns as configuration_patterns,
 )
@@ -38,5 +41,6 @@ urlpatterns = [
     *configuration_patterns,
     *api_patterns,
     *worker_patterns,
+    *compatibility_patterns,
     *staticfiles_urlpatterns(),
 ]

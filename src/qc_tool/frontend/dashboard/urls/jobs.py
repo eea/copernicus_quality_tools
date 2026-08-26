@@ -8,10 +8,8 @@ from qc_tool.frontend.dashboard.views.jobs.artifacts import (
 from qc_tool.frontend.dashboard.views.jobs.artifacts import get_pdf_report
 from qc_tool.frontend.dashboard.views.jobs.creation import create_job
 from qc_tool.frontend.dashboard.views.jobs.history import get_job_history_json
-from qc_tool.frontend.dashboard.views.jobs.history import job_history_page
 from qc_tool.frontend.dashboard.views.jobs.mutations import job_delete
 from qc_tool.frontend.dashboard.views.jobs.results import get_job_report
-from qc_tool.frontend.dashboard.views.jobs.results import get_result
 from qc_tool.frontend.dashboard.views.jobs.setup import get_job_info
 from qc_tool.frontend.dashboard.views.jobs.setup import setup_job
 from qc_tool.frontend.dashboard.views.jobs.status import update_job
@@ -27,11 +25,6 @@ urlpatterns = [
         name="update_job",
     ),
     protected_path(
-        "job_history/<int:delivery_id>/",
-        job_history_page,
-        name="job_history",
-    ),
-    protected_path(
         "data/job_history/<int:delivery_id>/",
         get_job_history_json,
         name="job_history_json",
@@ -41,7 +34,6 @@ urlpatterns = [
         get_job_info,
         name="job_info_json",
     ),
-    protected_path("result/<uuid:job_uuid>", get_result, name="show_result"),
     protected_path(
         "data/report/<uuid:job_uuid>/report.pdf",
         get_pdf_report,

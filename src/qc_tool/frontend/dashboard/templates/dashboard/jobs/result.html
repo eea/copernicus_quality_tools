@@ -166,7 +166,7 @@
                 {% endif %}
                   <span>    </span><a href="/data/report/{{ job_report.job_uuid }}/report.json">JSON Report</a>
                   <span>&nbsp;&nbsp;&nbsp;</span>
-                        <a href="/job_history/{{ delivery.id }}/">QC job history ...</a>
+                        <a href="{% url 'job_history' delivery.id %}">QC job history ...</a>
 
                   <span>&nbsp;&nbsp;&nbsp;</span><a href="/data/log/{{ job_report.job_uuid }}/log.txt">JOB log ...</a>
 

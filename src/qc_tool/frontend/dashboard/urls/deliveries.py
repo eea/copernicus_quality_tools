@@ -16,10 +16,22 @@ from qc_tool.frontend.dashboard.views.deliveries.listing import (
 )
 from qc_tool.frontend.dashboard.views.deliveries.listing import get_deliveries_json
 from qc_tool.frontend.dashboard.views.deliveries.pages import deliveries
+from qc_tool.frontend.dashboard.views.jobs.history import job_history_page
+from qc_tool.frontend.dashboard.views.jobs.results import get_result
 
 
 urlpatterns = [
     protected_path("deliveries/", deliveries, name="deliveries"),
+    protected_path(
+        "deliveries/job_history/<int:delivery_id>/",
+        job_history_page,
+        name="job_history",
+    ),
+    protected_path(
+        "deliveries/result/<uuid:job_uuid>",
+        get_result,
+        name="show_result",
+    ),
     protected_path(
         "data/delivery/list/",
         get_deliveries_json,

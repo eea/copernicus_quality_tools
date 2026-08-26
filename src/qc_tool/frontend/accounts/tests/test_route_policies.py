@@ -71,6 +71,13 @@ EXPECTED_POLICIES = {
     "job_combined_log": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "file_upload": (PRIVATE, SESSION, ("GET",), UPLOAD, LOGIN_REDIRECT),
     "job_history": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "legacy_job_history": (
+        PRIVATE,
+        SESSION,
+        ("GET",),
+        VIEW,
+        LOGIN_REDIRECT,
+    ),
     "boundaries": (
         PRIVATE,
         SESSION,
@@ -87,6 +94,13 @@ EXPECTED_POLICIES = {
     ),
     "setup_job": (PRIVATE, SESSION, ("GET",), RUN_QC, LOGIN_REDIRECT),
     "show_result": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "legacy_show_result": (
+        PRIVATE,
+        SESSION,
+        ("GET",),
+        VIEW,
+        LOGIN_REDIRECT,
+    ),
     "get_attachment": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "announcement": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "announcement_update": (
@@ -171,9 +185,11 @@ ROUTE_ARGS = {
     "job_report_pdf": ("00000000-0000-0000-0000-000000000001",),
     "job_combined_log": ("00000000-0000-0000-0000-000000000001",),
     "job_history": (1,),
+    "legacy_job_history": (1,),
     "update_job": ("00000000-0000-0000-0000-000000000001",),
     "boundaries_json": ("raster",),
     "show_result": ("00000000-0000-0000-0000-000000000001",),
+    "legacy_show_result": ("00000000-0000-0000-0000-000000000001",),
     "get_attachment": (
         "00000000-0000-0000-0000-000000000001",
         "details.txt",
@@ -302,8 +318,8 @@ class RoutePolicyRegistryTests(TestCase):
         self.assertEqual(reverse("boundaries"), "/boundaries/")
         self.assertEqual(reverse("api_homepage"), "/api/")
 
-    def test_registry_is_an_explicit_policy_for_all_45_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 45)
+    def test_registry_is_an_explicit_policy_for_all_47_dashboard_routes(self):
+        self.assertEqual(len(EXPECTED_POLICIES), 47)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():
