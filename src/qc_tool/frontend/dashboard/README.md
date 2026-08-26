@@ -14,11 +14,11 @@ templates, browser assets, and services:
 | Capability | Routes | Views | Templates | First-party assets | Domain services |
 | --- | --- | --- | --- | --- | --- |
 | Workspace overview | `urls/overview.py` | `views/overview.py` | `templates/dashboard/overview/` | `css/features/overview/` | `services/overview/` |
-| Deliveries | `urls/deliveries.py` | `views/deliveries/` | `templates/dashboard/deliveries/` | `*/features/deliveries/` | `services/deliveries/`, `services/uploads/` |
-| Products | `urls/products.py` | `views/products.py` | `templates/dashboard/products/` | `js/features/products/` | `services/products.py` |
+| Deliveries | `urls/deliveries.py` | `views/deliveries/` | `templates/dashboard/deliveries/` | `*/features/deliveries/` | `services/deliveries/`, `services/uploads/`, `services/submissions/` |
+| Products | `urls/products.py` | `views/products.py` | `templates/dashboard/products/` | `js/features/products/` | `services/products.py`, `services/catalog/` |
 | Boundaries | `urls/boundaries.py` | `views/boundaries.py` | `templates/dashboard/boundaries/` | `*/features/boundaries/` | `services/boundaries/` |
-| QC jobs | `urls/jobs.py` | `views/jobs.py` | `templates/dashboard/jobs/` | `js/features/jobs/` | `services/jobs/`, `services/aoi/` |
-| API access | `urls/api_access.py` | `views/api_access.py` | `templates/dashboard/api_access/` | `*/features/api_access/` | `services/api/`, `services/s3/` |
+| QC jobs | `urls/jobs.py` | `views/jobs/` | `templates/dashboard/jobs/` | `js/features/jobs/` | `services/jobs/`, `services/aoi/`, `services/catalog/definitions.py` |
+| API access | `urls/api_access.py` | `views/api_access/` | `templates/dashboard/api_access/` | `*/features/api_access/` | `services/api/`, `services/s3/` |
 | Configuration | `urls/configuration.py` | `views/configuration.py` | `templates/dashboard/configuration/` | `*/features/configuration/` | `services/configuration/` |
 | Worker callbacks | `urls/workers.py` | `views/workers.py` | — | — | worker services |
 
@@ -26,6 +26,38 @@ Shared layouts and partials live in `templates/dashboard/layouts/` and
 `templates/dashboard/shared/`. Shared design primitives live in `css/ui/`.
 Third-party browser code lives in `js/vendor/`; do not split or edit vendored
 files as if they were application components.
+
+## Catalog and submission lifecycle map
+
+The normalized product/submission workflow is deliberately split by type of
+decision so database rules, filesystem operations, and HTTP handling do not
+grow into one service module:
+
+| Concern | Owning module |
+| --- | --- |
+| Model aggregates and audit records | `domain/<aggregate>/` |
+| Manifest parsing and definition validation | `services/catalog/manifest/` |
+| Idempotent immutable catalog synchronization | `services/catalog/sync/` |
+| Job definition/release snapshots | `services/catalog/definitions.py` |
+| Product completion and remaining-AOI queries | `services/catalog/coverage/` |
+| QC job creation and result persistence | `services/aoi/jobs/` |
+| Browser QC job adapters | `views/jobs/` |
+| Overview queries and section builders | `services/overview/sections/` |
+| Delivery SQL planning and row projection | `services/deliveries/listing/query/` |
+| Delivery JSON and spreadsheet presentation | `views/deliveries/listing/` |
+| Local/S3 delivery API adapters | `views/api_access/deliveries/` |
+| QC job API adapters | `views/api_access/jobs/` |
+| Boundary archive validation and publication | `services/boundaries/archive/`, `services/boundaries/storage/` |
+| Submission orchestration | `services/submissions/lifecycle.py` |
+| Eligibility and row-locked reservation | `services/submissions/reservation/` |
+| Publication database state transitions | `services/submissions/state/` |
+| Storage paths, secure copying, and manifests | `services/submissions/publication/` |
+| Duplicate candidates and manager decisions | `services/submissions/conflicts/` |
+| Delivery mutation adapters | `views/deliveries/actions/` |
+| Scoped catalog/review administration | `admin_features/catalog.py`, `admin_features/submissions/` |
+
+`models.py` is only Django's model-discovery and compatibility boundary. Model
+implementations belong in `domain/`; workflows belong in `services/`.
 
 ## Dependency direction
 
@@ -55,7 +87,7 @@ and contain no behavior.
    the route-policy registry under `access/routes/`.
 2. Put HTTP handling in the matching `views/` module. Split by responsibility
    before a module becomes difficult to scan; deliveries demonstrate the
-   `pages.py`, `listing.py`, `actions.py`, and `files.py` pattern.
+   `pages.py`, `listing/`, `actions/`, and `files.py` pattern.
 3. Put reusable rules in `services/<feature>/`, with contracts and errors in
    separate modules when they form stable boundaries.
 4. Keep templates and first-party CSS/JavaScript under the same feature name.

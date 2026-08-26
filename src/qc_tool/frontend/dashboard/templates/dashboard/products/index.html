@@ -49,6 +49,22 @@
                 <div>
                     <h3>{{ product.description }}</h3>
                     <code>{{ product.ident }}</code>
+                    {% if catalog_managed %}
+                    <p>
+                        Release <code>{{ product.release_key }}</code>,
+                        revision {{ product.revision }}
+                    </p>
+                    {% if product.expected is not None %}
+                    <p>
+                        {{ product.submitted }} / {{ product.expected }} AOIs accepted
+                        ({{ product.completion_percentage }}%).
+                        {{ product.remaining }} remaining;
+                        {{ product.conflicts }} conflict{{ product.conflicts|pluralize }}.
+                    </p>
+                    {% else %}
+                    <p>Coverage denominator is not yet authoritative.</p>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </li>
             {% endfor %}

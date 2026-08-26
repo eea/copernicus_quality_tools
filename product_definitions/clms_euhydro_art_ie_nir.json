@@ -19,12 +19,8 @@
           "LONGITUDINAL_STRUCTURE": "art_longitudinal_connectivity_structure_(?P<aoi_code>ie_nir)",
           "LATERAL_STRUCTURE": "art_coastal_protection_lateral_connectivity_structure_(?P<aoi_code>ie_nir)"
         },
-<<<<<<< HEAD
         "gpkg_filename_regex": "^clms_euhydro_art_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}",
         "aoi_codes": ["ie_nir"]
-=======
-        "gpkg_filename_regex": "^clms_euhydro_art_(?P<aoi_code>[0-9a-zA-Z_]+)_v[0-9]{2}"
->>>>>>> rc
       }
     },
     {

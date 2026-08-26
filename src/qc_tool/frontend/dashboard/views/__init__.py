@@ -23,11 +23,13 @@ from qc_tool.frontend.dashboard.views.boundaries import boundaries_upload_page
 from qc_tool.frontend.dashboard.views.boundaries import get_boundaries_json
 from qc_tool.frontend.dashboard.views.configuration import announcement
 from qc_tool.frontend.dashboard.views.configuration import update_announcement
-from qc_tool.frontend.dashboard.views.deliveries.actions import delivery_delete
-from qc_tool.frontend.dashboard.views.deliveries.actions import (
+from qc_tool.frontend.dashboard.views.deliveries.actions.deletion import (
+    delivery_delete,
+)
+from qc_tool.frontend.dashboard.views.deliveries.actions.submissions import (
     submit_deliveries_to_eea_batch,
 )
-from qc_tool.frontend.dashboard.views.deliveries.actions import (
+from qc_tool.frontend.dashboard.views.deliveries.actions.submissions import (
     submit_delivery_to_eea,
 )
 from qc_tool.frontend.dashboard.views.deliveries.files import download_delivery_file

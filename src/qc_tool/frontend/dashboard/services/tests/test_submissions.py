@@ -1,0 +1,772 @@
+"""Durable submission, publication, and duplicate-AOI decision tests."""
+
+import hashlib
+import json
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from types import SimpleNamespace
+import tempfile
+from threading import Barrier
+from unittest.mock import patch
+
+from django.contrib.auth import get_user_model
+from django.db import close_old_connections
+from django.db import connection
+from django.db import IntegrityError
+from django.db import transaction
+from django.test import TestCase
+from django.test import TransactionTestCase
+from django.utils import timezone
+
+from qc_tool.common import JOB_FAILED
+from qc_tool.common import JOB_OK
+from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.models import DeliverySubmission
+from qc_tool.frontend.dashboard.models import Job
+from qc_tool.frontend.dashboard.models import PersonalAccessToken
+from qc_tool.frontend.dashboard.models import Product
+from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductRelease
+from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
+from qc_tool.frontend.dashboard.models import QcDefinition
+from qc_tool.frontend.dashboard.models import SubmissionConflict
+from qc_tool.frontend.dashboard.models import SubmissionConflictEvent
+from qc_tool.frontend.dashboard.services.catalog import get_product_coverage
+from qc_tool.frontend.dashboard.services.catalog import get_remaining_aoi_codes
+from qc_tool.frontend.dashboard.services.submissions import PublicationError
+from qc_tool.frontend.dashboard.services.submissions import SubmissionError
+from qc_tool.frontend.dashboard.services.submissions import (
+    resolve_submission_conflict,
+)
+from qc_tool.frontend.dashboard.services.submissions import submit_delivery
+
+
+class SubmissionLifecycleTests(TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        root = Path(self.temporary.name)
+        self.media_root = root / "incoming"
+        self.submission_root = root / "published"
+        self.jobs_root = root / "jobs"
+        self.media_root.mkdir()
+        self.jobs_root.mkdir()
+
+        self.definition = QcDefinition.objects.create(
+            product_ident="test-definition",
+            digest="d" * 64,
+            description="Test definition",
+            document={"description": "Test definition", "steps": []},
+            source_path="test-definition.json",
+        )
+        self.product = Product.objects.create(
+            ident="test-definition",
+            name="Test product",
+        )
+        self.release = ProductRelease.objects.create(
+            product=self.product,
+            release_key="test-release-2026",
+            revision=1,
+            description="Test release",
+            catalog_digest="c" * 64,
+            coverage_state=ProductRelease.CoverageState.AUTHORITATIVE,
+            is_current=True,
+            approved_at=timezone.now(),
+        )
+        ProductReleaseDefinition.objects.create(
+            product_release=self.release,
+            qc_definition=self.definition,
+            is_primary=True,
+        )
+        self.product_aoi = ProductAOI.objects.create(
+            product_release=self.release,
+            aoi_code="ee001l",
+            source_value="EE001L1",
+            provenance="manifest",
+        )
+
+    def create_candidate(self, username, *, status=JOB_OK, aoi="ee001l"):
+        user = get_user_model().objects.create_user(
+            username=username,
+            password="password",
+        )
+        user_root = self.media_root / username
+        user_root.mkdir()
+        zip_payload = ("delivery for {}".format(username)).encode("utf-8")
+        zip_path = user_root / "delivery.zip"
+        zip_path.write_bytes(zip_payload)
+        digest = hashlib.sha256(zip_payload).hexdigest()
+        delivery = Delivery.objects.create(
+            user=user,
+            filename=zip_path.name,
+            size_bytes=len(zip_payload),
+            aoi_code_submitted=aoi,
+        )
+        job = Job.objects.create(
+            delivery=delivery,
+            job_status=status,
+            product_ident=self.definition.product_ident,
+            product_description=self.definition.description,
+            aoi_code=aoi,
+            aoi_code_submitted=aoi,
+            input_sha256=digest,
+            product_release=self.release,
+            qc_definition=self.definition,
+            requested_by=user,
+            requested_by_username=username,
+            request_source="browser",
+        )
+        job_root = self.jobs_root / str(job.job_uuid)
+        output = job_root / "output.d"
+        output.mkdir(parents=True)
+        (job_root / "result.json").write_text(
+            json.dumps({"status": "ok", "aoi_code": aoi}),
+            encoding="utf-8",
+        )
+        (output / "report.txt").write_text("validated", encoding="utf-8")
+        return user, delivery, job, job_root
+
+    def owner_access(self, user):
+        return SimpleNamespace(
+            can_manage_user=lambda owner_id: owner_id == user.pk,
+            is_administrator=False,
+            is_product_manager=False,
+            product_idents=frozenset(),
+        )
+
+    def submit(self, user, delivery, job_root):
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "compose_job_dir",
+            return_value=job_root,
+        ):
+            return submit_delivery(
+                delivery_id=delivery.pk,
+                actor=user,
+                account_access=self.owner_access(user),
+                request_channel=DeliverySubmission.RequestChannel.BROWSER,
+                submission_root=self.submission_root,
+                media_root=self.media_root,
+            )
+
+    def test_successful_submission_is_atomic_and_idempotent(self):
+        user, delivery, job, job_root = self.create_candidate("first-owner")
+
+        first = self.submit(user, delivery, job_root)
+        second = self.submit(user, delivery, job_root)
+
+        self.assertFalse(first.idempotent)
+        self.assertTrue(second.idempotent)
+        self.assertEqual(first.submission_uuid, second.submission_uuid)
+        self.assertEqual(DeliverySubmission.objects.count(), 1)
+        submission = DeliverySubmission.objects.get()
+        delivery.refresh_from_db()
+        self.assertEqual(
+            submission.publication_state,
+            DeliverySubmission.PublicationState.PUBLISHED,
+        )
+        self.assertEqual(delivery.date_submitted, submission.published_at)
+        self.assertEqual(delivery.content_sha256, job.input_sha256)
+        final_directory = Path(submission.artifact_path)
+        self.assertTrue(final_directory.is_dir())
+        self.assertTrue((final_directory / "submission-manifest.json").is_file())
+        self.assertTrue((final_directory / "output.d" / "report.txt").is_file())
+        self.assertTrue((final_directory / "input.d" / "delivery.zip").is_file())
+
+    def test_published_database_state_requires_both_integrity_digests(self):
+        user, delivery, job, _job_root = self.create_candidate(
+            "incomplete-published-owner"
+        )
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            DeliverySubmission.objects.create(
+                delivery=delivery,
+                job=job,
+                product_release=self.release,
+                product_aoi=self.product_aoi,
+                aoi_code=self.product_aoi.aoi_code,
+                aoi_code_submitted=self.product_aoi.aoi_code,
+                submitted_by=user,
+                submitted_by_username=user.username,
+                request_channel=DeliverySubmission.RequestChannel.BROWSER,
+                publication_state=(
+                    DeliverySubmission.PublicationState.PUBLISHED
+                ),
+                published_at=timezone.now(),
+                artifact_path="/published/incomplete",
+                artifact_digest="a" * 64,
+                input_digest="",
+            )
+
+    def test_token_deletion_does_not_rewrite_submission_provenance(self):
+        user, delivery, _job, job_root = self.create_candidate("token-owner")
+        token = PersonalAccessToken.objects.create(
+            user=user,
+            name="Submission token",
+            secret_digest="sha256$" + ("a" * 64),
+        )
+        token_id = token.pk
+
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "compose_job_dir",
+            return_value=job_root,
+        ):
+            submit_delivery(
+                delivery_id=delivery.pk,
+                actor=user,
+                account_access=self.owner_access(user),
+                request_channel=DeliverySubmission.RequestChannel.API,
+                api_token=token,
+                submission_root=self.submission_root,
+                media_root=self.media_root,
+            )
+        token.delete()
+
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        self.assertEqual(submission.api_token_id, token_id)
+        self.assertEqual(submission.api_token_name, "Submission token")
+
+    def test_publication_failure_never_marks_delivery_submitted(self):
+        user, delivery, _job, _job_root = self.create_candidate("failed-owner")
+
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.lifecycle."
+            "publish_reserved_submission",
+            side_effect=PublicationError(
+                "copy_failed",
+                "Copy failed.",
+                500,
+            ),
+        ):
+            with self.assertRaisesMessage(SubmissionError, "Copy failed"):
+                submit_delivery(
+                    delivery_id=delivery.pk,
+                    actor=user,
+                    account_access=self.owner_access(user),
+                    request_channel=(
+                        DeliverySubmission.RequestChannel.BROWSER
+                    ),
+                    submission_root=self.submission_root,
+                    media_root=self.media_root,
+                )
+
+        delivery.refresh_from_db()
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        self.assertIsNone(delivery.date_submitted)
+        self.assertEqual(
+            submission.publication_state,
+            DeliverySubmission.PublicationState.FAILED,
+        )
+        self.assertEqual(submission.failure_code, "copy_failed")
+
+    def test_unusable_submission_directory_returns_a_stable_service_error(self):
+        user, delivery, _job, job_root = self.create_candidate(
+            "unavailable-storage-owner"
+        )
+        self.submission_root.mkdir()
+        release_directory = self.submission_root / (
+            "release-{}-test-release-2026".format(self.release.pk)
+        )
+        release_directory.write_text("not a directory", encoding="utf-8")
+
+        with self.assertRaises(SubmissionError) as raised:
+            self.submit(user, delivery, job_root)
+
+        self.assertEqual(
+            raised.exception.code,
+            "submission_storage_unavailable",
+        )
+        delivery.refresh_from_db()
+        self.assertIsNone(delivery.date_submitted)
+        self.assertEqual(
+            DeliverySubmission.objects.get(delivery=delivery).publication_state,
+            DeliverySubmission.PublicationState.PENDING,
+        )
+
+    def test_retry_recovers_immediately_after_atomic_rename(self):
+        user, delivery, _job, job_root = self.create_candidate("crash-owner")
+
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "compose_job_dir",
+            return_value=job_root,
+        ), patch(
+            "qc_tool.frontend.dashboard.services.submissions.lifecycle."
+            "_finalize_publication",
+            side_effect=RuntimeError("simulated database outage after rename"),
+        ):
+            with self.assertRaises(RuntimeError):
+                submit_delivery(
+                    delivery_id=delivery.pk,
+                    actor=user,
+                    account_access=self.owner_access(user),
+                    request_channel=(
+                        DeliverySubmission.RequestChannel.BROWSER
+                    ),
+                    submission_root=self.submission_root,
+                    media_root=self.media_root,
+                )
+
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        self.assertEqual(
+            submission.publication_state,
+            DeliverySubmission.PublicationState.PUBLISHING,
+        )
+        result = self.submit(user, delivery, job_root)
+        submission.refresh_from_db()
+        self.assertTrue(result.idempotent)
+        self.assertEqual(
+            submission.publication_state,
+            DeliverySubmission.PublicationState.PUBLISHED,
+        )
+        self.assertEqual(
+            len(list(self.submission_root.rglob("submission-*.d"))),
+            1,
+        )
+
+    def test_retry_rejects_a_symlinked_existing_manifest(self):
+        user, delivery, _job, job_root = self.create_candidate(
+            "unsafe-recovery-owner"
+        )
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "compose_job_dir",
+            return_value=job_root,
+        ), patch(
+            "qc_tool.frontend.dashboard.services.submissions.lifecycle."
+            "_finalize_publication",
+            side_effect=RuntimeError("simulated outage after rename"),
+        ):
+            with self.assertRaises(RuntimeError):
+                submit_delivery(
+                    delivery_id=delivery.pk,
+                    actor=user,
+                    account_access=self.owner_access(user),
+                    request_channel=(
+                        DeliverySubmission.RequestChannel.BROWSER
+                    ),
+                    submission_root=self.submission_root,
+                    media_root=self.media_root,
+                )
+
+        final_directory = next(
+            self.submission_root.rglob("submission-*.d")
+        )
+        manifest = final_directory / "submission-manifest.json"
+        outside = self.media_root.parent / "outside-manifest.json"
+        outside.write_bytes(manifest.read_bytes())
+        manifest.unlink()
+        manifest.symlink_to(outside)
+
+        with self.assertRaises(SubmissionError) as raised:
+            self.submit(user, delivery, job_root)
+
+        self.assertEqual(
+            raised.exception.code,
+            "publication_manifest_mismatch",
+        )
+        delivery.refresh_from_db()
+        self.assertIsNone(delivery.date_submitted)
+
+    def test_retry_rejects_tampered_published_artifacts(self):
+        user, delivery, _job, job_root = self.create_candidate(
+            "tampered-recovery-owner"
+        )
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "compose_job_dir",
+            return_value=job_root,
+        ), patch(
+            "qc_tool.frontend.dashboard.services.submissions.lifecycle."
+            "_finalize_publication",
+            side_effect=RuntimeError("simulated outage after rename"),
+        ):
+            with self.assertRaises(RuntimeError):
+                submit_delivery(
+                    delivery_id=delivery.pk,
+                    actor=user,
+                    account_access=self.owner_access(user),
+                    request_channel=(
+                        DeliverySubmission.RequestChannel.BROWSER
+                    ),
+                    submission_root=self.submission_root,
+                    media_root=self.media_root,
+                )
+
+        final_directory = next(self.submission_root.rglob("submission-*.d"))
+        (final_directory / "output.d" / "report.txt").write_text(
+            "tampered",
+            encoding="utf-8",
+        )
+
+        with self.assertRaises(SubmissionError) as raised:
+            self.submit(user, delivery, job_root)
+
+        self.assertEqual(
+            raised.exception.code,
+            "publication_manifest_mismatch",
+        )
+        delivery.refresh_from_db()
+        self.assertIsNone(delivery.date_submitted)
+
+    def test_latest_unsuccessful_job_is_not_eligible(self):
+        user, delivery, _job, job_root = self.create_candidate("qc-owner")
+        Job.objects.create(
+            delivery=delivery,
+            job_status=JOB_FAILED,
+            product_ident=self.definition.product_ident,
+            product_description=self.definition.description,
+            product_release=self.release,
+            qc_definition=self.definition,
+        )
+
+        with self.assertRaisesMessage(
+            SubmissionError,
+            "latest QC job must finish successfully",
+        ):
+            self.submit(user, delivery, job_root)
+        self.assertFalse(DeliverySubmission.objects.exists())
+
+    def test_successful_job_without_a_valid_input_digest_is_not_eligible(self):
+        user, delivery, job, job_root = self.create_candidate(
+            "digestless-owner"
+        )
+        job.input_sha256 = "not-a-sha256"
+        job.save(update_fields=("input_sha256",))
+
+        with self.assertRaises(SubmissionError) as raised:
+            self.submit(user, delivery, job_root)
+
+        self.assertEqual(raised.exception.code, "input_digest_unavailable")
+        self.assertFalse(DeliverySubmission.objects.exists())
+
+    def test_retry_uses_the_immutable_reserved_input_digest(self):
+        user, delivery, job, job_root = self.create_candidate(
+            "digest-snapshot-owner"
+        )
+        original_digest = job.input_sha256
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.lifecycle."
+            "publish_reserved_submission",
+            side_effect=PublicationError("copy_failed", "Copy failed.", 500),
+        ):
+            with self.assertRaises(SubmissionError):
+                self.submit(user, delivery, job_root)
+
+        job.input_sha256 = "f" * 64
+        job.save(update_fields=("input_sha256",))
+        result = self.submit(user, delivery, job_root)
+
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        self.assertEqual(submission.input_digest, original_digest)
+        self.assertEqual(result.publication_state, "published")
+
+    def test_unexpected_aoi_is_not_added_to_the_catalog(self):
+        user, delivery, _job, job_root = self.create_candidate(
+            "unknown-aoi-owner",
+            aoi="ee999l",
+        )
+
+        with self.assertRaises(SubmissionError) as raised:
+            self.submit(user, delivery, job_root)
+
+        self.assertEqual(raised.exception.code, "submitted_aoi_not_expected")
+        self.assertFalse(
+            ProductAOI.objects.filter(aoi_code="ee999l").exists()
+        )
+
+    def test_different_users_open_conflict_without_losing_candidates(self):
+        first_user, first_delivery, _first_job, first_root = (
+            self.create_candidate("candidate-one")
+        )
+        second_user, second_delivery, _second_job, second_root = (
+            self.create_candidate("candidate-two")
+        )
+
+        first = self.submit(first_user, first_delivery, first_root)
+        second = self.submit(second_user, second_delivery, second_root)
+
+        self.assertIsNone(first.conflict_id)
+        self.assertIsNotNone(second.conflict_id)
+        self.assertEqual(DeliverySubmission.objects.count(), 2)
+        conflict = SubmissionConflict.objects.get(product_aoi=self.product_aoi)
+        self.assertEqual(conflict.state, SubmissionConflict.State.OPEN)
+        self.assertEqual(
+            set(
+                DeliverySubmission.objects.values_list(
+                    "review_state", flat=True
+                )
+            ),
+            {DeliverySubmission.ReviewState.CONFLICT},
+        )
+        self.assertEqual(
+            list(conflict.events.values_list("event_type", flat=True)),
+            [SubmissionConflictEvent.EventType.OPENED],
+        )
+        coverage = get_product_coverage(self.release)
+        self.assertEqual(coverage.expected, 1)
+        self.assertEqual(coverage.submitted, 0)
+        self.assertEqual(coverage.conflicts, 1)
+        self.assertEqual(coverage.remaining, 1)
+        self.assertEqual(
+            get_remaining_aoi_codes(self.release),
+            ("ee001l",),
+        )
+
+    def test_manager_resolution_selects_one_and_new_user_reopens(self):
+        first_user, first_delivery, _first_job, first_root = (
+            self.create_candidate("resolution-one")
+        )
+        second_user, second_delivery, _second_job, second_root = (
+            self.create_candidate("resolution-two")
+        )
+        first_result = self.submit(first_user, first_delivery, first_root)
+        self.submit(second_user, second_delivery, second_root)
+        conflict = SubmissionConflict.objects.get()
+        manager_access = SimpleNamespace(
+            is_administrator=False,
+            is_product_manager=True,
+            product_idents=frozenset({self.definition.product_ident}),
+        )
+
+        resolution = resolve_submission_conflict(
+            conflict_id=conflict.pk,
+            selected_submission_id=first_result.submission_uuid,
+            actor=first_user,
+            account_access=manager_access,
+            expected_version=conflict.version,
+            notes="Preferred manager candidate",
+        )
+
+        conflict.refresh_from_db()
+        self.assertEqual(conflict.state, SubmissionConflict.State.RESOLVED)
+        self.assertEqual(
+            conflict.selected_submission_id,
+            first_result.submission_uuid,
+        )
+        self.assertEqual(resolution.version, 2)
+        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_remaining_aoi_codes(self.release), ())
+
+        third_user, third_delivery, _third_job, third_root = (
+            self.create_candidate("resolution-three")
+        )
+        self.submit(third_user, third_delivery, third_root)
+        conflict.refresh_from_db()
+        self.assertEqual(conflict.state, SubmissionConflict.State.OPEN)
+        self.assertIsNone(conflict.selected_submission_id)
+        self.assertEqual(conflict.version, 3)
+        self.assertEqual(
+            get_remaining_aoi_codes(self.release),
+            ("ee001l",),
+        )
+        self.assertEqual(
+            list(conflict.events.values_list("event_type", flat=True)),
+            [
+                SubmissionConflictEvent.EventType.OPENED,
+                SubmissionConflictEvent.EventType.RESOLVED,
+                SubmissionConflictEvent.EventType.REOPENED,
+            ],
+        )
+
+    def test_unscoped_manager_cannot_resolve_conflict(self):
+        first_user, first_delivery, _first_job, first_root = (
+            self.create_candidate("scope-one")
+        )
+        second_user, second_delivery, _second_job, second_root = (
+            self.create_candidate("scope-two")
+        )
+        selected = self.submit(first_user, first_delivery, first_root)
+        self.submit(second_user, second_delivery, second_root)
+        conflict = SubmissionConflict.objects.get()
+        access = SimpleNamespace(
+            is_administrator=False,
+            is_product_manager=True,
+            product_idents=frozenset({"another-product"}),
+        )
+
+        with self.assertRaises(SubmissionError) as raised:
+            resolve_submission_conflict(
+                conflict_id=conflict.pk,
+                selected_submission_id=selected.submission_uuid,
+                actor=first_user,
+                account_access=access,
+                expected_version=conflict.version,
+            )
+        self.assertEqual(raised.exception.status_code, 403)
+
+
+class ConcurrentSubmissionTests(TransactionTestCase):
+    """Exercise row-lock invariants against the real PostgreSQL test DB."""
+
+    reset_sequences = True
+
+    def setUp(self):
+        if connection.vendor != "postgresql":
+            self.skipTest("Submission concurrency requires PostgreSQL locks.")
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        root = Path(self.temporary.name)
+        self.media_root = root / "incoming"
+        self.submission_root = root / "published"
+        self.jobs_root = root / "jobs"
+        self.media_root.mkdir()
+        self.jobs_root.mkdir()
+        definition = QcDefinition.objects.create(
+            product_ident="concurrent-definition",
+            digest="1" * 64,
+            description="Concurrent definition",
+            document={"description": "Concurrent definition", "steps": []},
+            source_path="concurrent-definition.json",
+        )
+        product = Product.objects.create(
+            ident="concurrent-definition",
+            name="Concurrent product",
+        )
+        release = ProductRelease.objects.create(
+            product=product,
+            release_key="concurrent-release",
+            revision=1,
+            description="Concurrent release",
+            catalog_digest="2" * 64,
+            coverage_state=ProductRelease.CoverageState.AUTHORITATIVE,
+            is_current=True,
+            approved_at=timezone.now(),
+        )
+        ProductReleaseDefinition.objects.create(
+            product_release=release,
+            qc_definition=definition,
+            is_primary=True,
+        )
+        self.product_aoi = ProductAOI.objects.create(
+            product_release=release,
+            aoi_code="ee010l",
+            provenance="manifest",
+        )
+        self.candidates = [
+            self._candidate("concurrent-one", definition, release),
+            self._candidate("concurrent-two", definition, release),
+        ]
+
+    def _candidate(self, username, definition, release):
+        user = get_user_model().objects.create_user(username=username)
+        user_root = self.media_root / username
+        user_root.mkdir()
+        payload = username.encode("utf-8")
+        (user_root / "delivery.zip").write_bytes(payload)
+        delivery = Delivery.objects.create(
+            user=user,
+            filename="delivery.zip",
+            size_bytes=len(payload),
+            aoi_code_submitted=self.product_aoi.aoi_code,
+        )
+        job = Job.objects.create(
+            delivery=delivery,
+            job_status=JOB_OK,
+            product_ident=definition.product_ident,
+            product_description=definition.description,
+            aoi_code=self.product_aoi.aoi_code,
+            aoi_code_submitted=self.product_aoi.aoi_code,
+            input_sha256=hashlib.sha256(payload).hexdigest(),
+            product_release=release,
+            qc_definition=definition,
+        )
+        job_root = self.jobs_root / str(job.job_uuid)
+        (job_root / "output.d").mkdir(parents=True)
+        (job_root / "result.json").write_text("{}", encoding="utf-8")
+        return user, delivery, job_root
+
+    def test_different_users_publish_same_aoi_concurrently(self):
+        barrier = Barrier(2)
+        job_roots = {
+            str(candidate[1].job_set.get().job_uuid): candidate[2]
+            for candidate in self.candidates
+        }
+
+        def publish(candidate):
+            user, delivery, _job_root = candidate
+            close_old_connections()
+            barrier.wait(timeout=10)
+            try:
+                return submit_delivery(
+                    delivery_id=delivery.pk,
+                    actor=user,
+                    account_access=SimpleNamespace(
+                        can_manage_user=lambda owner_id: owner_id == user.pk,
+                    ),
+                    request_channel=(
+                        DeliverySubmission.RequestChannel.BROWSER
+                    ),
+                    submission_root=self.submission_root,
+                    media_root=self.media_root,
+                )
+            finally:
+                close_old_connections()
+
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "compose_job_dir",
+            side_effect=lambda job_uuid: job_roots[str(job_uuid)],
+        ), ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(publish, self.candidates))
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(DeliverySubmission.objects.count(), 2)
+        conflict = SubmissionConflict.objects.get(product_aoi=self.product_aoi)
+        self.assertEqual(conflict.state, SubmissionConflict.State.OPEN)
+        self.assertEqual(conflict.events.count(), 1)
+
+    def test_same_delivery_concurrent_requests_create_one_submission(self):
+        candidate = self.candidates[0]
+        user, delivery, job_root = candidate
+        barrier = Barrier(2)
+
+        def publish(_index):
+            close_old_connections()
+            barrier.wait(timeout=10)
+            try:
+                try:
+                    return submit_delivery(
+                        delivery_id=delivery.pk,
+                        actor=user,
+                        account_access=SimpleNamespace(
+                            can_manage_user=lambda owner_id: owner_id == user.pk,
+                        ),
+                        request_channel=(
+                            DeliverySubmission.RequestChannel.BROWSER
+                        ),
+                        submission_root=self.submission_root,
+                        media_root=self.media_root,
+                    )
+                except SubmissionError as exc:
+                    return exc.code
+            finally:
+                close_old_connections()
+
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "compose_job_dir",
+            return_value=job_root,
+        ), ThreadPoolExecutor(max_workers=2) as executor:
+            outcomes = list(executor.map(publish, range(2)))
+
+        self.assertEqual(DeliverySubmission.objects.count(), 1)
+        submission = DeliverySubmission.objects.get()
+        self.assertEqual(
+            submission.publication_state,
+            DeliverySubmission.PublicationState.PUBLISHED,
+        )
+        result_ids = {
+            outcome.submission_uuid
+            for outcome in outcomes
+            if not isinstance(outcome, str)
+        }
+        self.assertLessEqual(len(result_ids), 1)
+        self.assertTrue(
+            all(
+                not isinstance(outcome, str)
+                or outcome == "submission_in_progress"
+                for outcome in outcomes
+            )
+        )

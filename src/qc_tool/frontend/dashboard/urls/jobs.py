@@ -1,18 +1,20 @@
 """QC job setup, lifecycle, history, and artifact routes."""
 
 from qc_tool.frontend.dashboard.urls._helpers import protected_path
-from qc_tool.frontend.dashboard.views.jobs import create_job
-from qc_tool.frontend.dashboard.views.jobs import get_attachment
-from qc_tool.frontend.dashboard.views.jobs import get_combined_job_log
-from qc_tool.frontend.dashboard.views.jobs import get_job_history_json
-from qc_tool.frontend.dashboard.views.jobs import get_job_info
-from qc_tool.frontend.dashboard.views.jobs import get_job_report
-from qc_tool.frontend.dashboard.views.jobs import get_pdf_report
-from qc_tool.frontend.dashboard.views.jobs import get_result
-from qc_tool.frontend.dashboard.views.jobs import job_delete
-from qc_tool.frontend.dashboard.views.jobs import job_history_page
-from qc_tool.frontend.dashboard.views.jobs import setup_job
-from qc_tool.frontend.dashboard.views.jobs import update_job
+from qc_tool.frontend.dashboard.views.jobs.artifacts import get_attachment
+from qc_tool.frontend.dashboard.views.jobs.artifacts import (
+    get_combined_job_log,
+)
+from qc_tool.frontend.dashboard.views.jobs.artifacts import get_pdf_report
+from qc_tool.frontend.dashboard.views.jobs.creation import create_job
+from qc_tool.frontend.dashboard.views.jobs.history import get_job_history_json
+from qc_tool.frontend.dashboard.views.jobs.history import job_history_page
+from qc_tool.frontend.dashboard.views.jobs.mutations import job_delete
+from qc_tool.frontend.dashboard.views.jobs.results import get_job_report
+from qc_tool.frontend.dashboard.views.jobs.results import get_result
+from qc_tool.frontend.dashboard.views.jobs.setup import get_job_info
+from qc_tool.frontend.dashboard.views.jobs.setup import setup_job
+from qc_tool.frontend.dashboard.views.jobs.status import update_job
 
 
 urlpatterns = [

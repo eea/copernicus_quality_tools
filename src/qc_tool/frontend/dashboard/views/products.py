@@ -12,6 +12,9 @@ from qc_tool.frontend.accounts.services.products import (
 from qc_tool.frontend.accounts.services.products import (
     available_product_descriptions,
 )
+from qc_tool.frontend.dashboard.services.catalog import (
+    list_current_product_coverage,
+)
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import locate_product_definition
 
@@ -21,13 +24,19 @@ logger = logging.getLogger(__name__)
 def products(request):
     """List the complete product catalog without exposing definition files."""
 
-    product_catalog, product_catalog_available = _workspace_product_catalog()
+    product_catalog = list_current_product_coverage()
+    catalog_managed = bool(product_catalog)
+    if catalog_managed:
+        product_catalog_available = True
+    else:
+        product_catalog, product_catalog_available = _workspace_product_catalog()
     return render(
         request,
         "dashboard/products/index.html",
         {
             "product_catalog": product_catalog,
             "product_catalog_available": product_catalog_available,
+            "catalog_managed": catalog_managed,
         },
     )
 

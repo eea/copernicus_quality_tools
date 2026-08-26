@@ -6,6 +6,7 @@ from django.db import transaction
 
 from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.services.aoi.projections import (
     sync_locked_delivery_from_latest_job,
@@ -71,6 +72,13 @@ def delete_jobs_and_reproject(job_uuids, account_access):
             raise JobDeletionError(
                 "job_is_running",
                 "A running QC job cannot be deleted.",
+                409,
+            )
+        if DeliverySubmission.objects.filter(job_id__in=job_uuids).exists():
+            raise JobDeletionError(
+                "job_authorizes_submission",
+                "A QC job that authorizes a delivery submission is retained "
+                "as audit history.",
                 409,
             )
 

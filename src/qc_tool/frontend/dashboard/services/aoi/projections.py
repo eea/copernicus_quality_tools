@@ -15,7 +15,12 @@ def sync_locked_delivery_from_latest_job(delivery):
     latest_job = (
         Job.objects.filter(delivery_id=delivery.pk)
         .order_by("-date_created", "-job_uuid")
-        .only("aoi_code", "product_ident", "product_description")
+        .only(
+            "aoi_code",
+            "aoi_code_submitted",
+            "product_ident",
+            "product_description",
+        )
         .first()
     )
 
@@ -28,6 +33,20 @@ def sync_locked_delivery_from_latest_job(delivery):
     if delivery.aoi_code != aoi_code:
         delivery.aoi_code = aoi_code
         updated_fields.append("aoi_code")
+
+    # The explicit submitted AOI is the identity verified from this one-ZIP,
+    # one-AOI upload.  Preserve it while a newer job is waiting and reject
+    # conflicting terminal observations in the lifecycle service.
+    submitted_aoi = delivery.aoi_code_submitted
+    if (
+        submitted_aoi is None
+        and latest_job is not None
+        and latest_job.aoi_code_submitted
+    ):
+        submitted_aoi = normalize_aoi_code(latest_job.aoi_code_submitted)
+    if delivery.aoi_code_submitted != submitted_aoi:
+        delivery.aoi_code_submitted = submitted_aoi
+        updated_fields.append("aoi_code_submitted")
 
     if latest_job is not None:
         for field_name in ("product_ident", "product_description"):

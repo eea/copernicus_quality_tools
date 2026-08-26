@@ -1,0 +1,127 @@
+"""Static SQL assembly for access-scoped delivery listings."""
+
+from dataclasses import dataclass
+
+from qc_tool.frontend.dashboard.services.deliveries.listing.filters import (
+    parse_filter,
+)
+from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
+    delivery_status_sql,
+)
+
+from .columns import COLUMN_LOOKUP
+
+
+DELIVERY_JOIN_SQL = """
+        FROM dashboard_delivery d
+        LEFT JOIN dashboard_job j
+        ON j.job_uuid = (
+          SELECT job_uuid FROM dashboard_job j
+          WHERE j.delivery_id = d.id
+          ORDER BY j.date_created DESC, j.job_uuid DESC LIMIT 1)
+        INNER JOIN auth_user u
+        ON d.user_id = u.id
+        LEFT JOIN dashboard_userprofile up
+        ON d.user_id = up.user_id
+        WHERE d.is_deleted = FALSE
+        """
+
+DELIVERY_SELECT_SQL = """
+        SELECT d.id, d.user_id AS action_owner_id, d.filename, u.username,
+        d.date_uploaded, d.size_bytes,
+        d.product_ident, d.product_description, d.aoi_code,
+        d.aoi_code_submitted, d.content_sha256,
+        d.date_submitted, d.is_deleted,
+        d.s3_id,
+        j.job_uuid AS last_job_uuid,
+        j.date_created, j.date_started, j.date_finished,
+        j.job_status as last_job_status,
+        up.country AS user_country
+        """ + DELIVERY_JOIN_SQL
+
+DELIVERY_COUNT_SQL = "SELECT COUNT(d.id)" + DELIVERY_JOIN_SQL
+
+
+@dataclass(frozen=True)
+class DeliveryQueryPlan:
+    count_sql: str
+    rows_sql: str
+    parameters: list
+
+
+def build_delivery_query_plan(
+    *,
+    user_id,
+    account_access,
+    offset,
+    limit,
+    sort,
+    order,
+    filter_expression,
+    search,
+    delivery_status,
+):
+    """Build parameterized count and row statements for one list request."""
+
+    sort_column = COLUMN_LOOKUP.get(sort, "d.id")
+    normalized_order = order.strip().lower()
+    if normalized_order not in ("asc", "desc"):
+        normalized_order = "desc"
+
+    filter_sql = ""
+    filter_parameters = []
+    if filter_expression:
+        filter_sql, filter_parameters = parse_filter(
+            filter_expression,
+            COLUMN_LOOKUP,
+        )
+
+    search_sql = ""
+    search_parameters = []
+    if search:
+        search_sql = " AND d.filename LIKE %s"
+        search_parameters.append(f"%{search}%")
+
+    visibility_sql, visibility_parameters = _visibility_clause(
+        user_id,
+        account_access,
+    )
+    status_sql, status_parameters = delivery_status_sql(delivery_status)
+    constraints = visibility_sql + status_sql + filter_sql + search_sql
+    parameters = (
+        visibility_parameters
+        + status_parameters
+        + filter_parameters
+        + search_parameters
+    )
+
+    return DeliveryQueryPlan(
+        count_sql=DELIVERY_COUNT_SQL + constraints,
+        rows_sql=(
+            DELIVERY_SELECT_SQL
+            + constraints
+            + f" ORDER BY {sort_column} {normalized_order}"
+            + f" LIMIT {limit} OFFSET {offset};"
+        ),
+        parameters=parameters,
+    )
+
+
+def _visibility_clause(user_id, account_access):
+    if account_access.is_administrator:
+        return "", []
+
+    clauses = ["d.user_id = %s"]
+    parameters = [user_id]
+    if account_access.can_view_region_deliveries:
+        region_codes = sorted(account_access.region_codes)
+        placeholders = ", ".join(["%s"] * len(region_codes))
+        clauses.append(f"up.country IN ({placeholders})")
+        parameters.extend(region_codes)
+    if account_access.can_view_product_deliveries:
+        product_idents = sorted(account_access.product_idents)
+        placeholders = ", ".join(["%s"] * len(product_idents))
+        clauses.append(f"LOWER(d.product_ident) IN ({placeholders})")
+        parameters.extend(product_idents)
+
+    return " AND ({})".format(" OR ".join(clauses)), parameters

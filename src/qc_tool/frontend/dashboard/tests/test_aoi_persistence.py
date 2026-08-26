@@ -9,10 +9,12 @@ from django.test import TestCase
 from django.utils import timezone
 
 from qc_tool.common import JOB_FAILED
+from qc_tool.common import JOB_ERROR
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
+from qc_tool.frontend.dashboard.models import PersonalAccessToken
 from qc_tool.frontend.dashboard.services.aoi import AoiResultUnavailable
 from qc_tool.frontend.dashboard.services.aoi import backfill_aoi_metadata
 from qc_tool.frontend.dashboard.services.jobs import delete_jobs_and_reproject
@@ -60,8 +62,50 @@ class AoiPersistenceTests(TestCase):
 
         loader.assert_called_once_with(job.job_uuid)
         self.assertEqual(job.aoi_code, "ee003l")
+        self.assertEqual(job.aoi_code_submitted, "ee003l")
         self.assertEqual(self.delivery.aoi_code, "ee003l")
+        self.assertEqual(self.delivery.aoi_code_submitted, "ee003l")
         self.assertIsNotNone(job.date_finished)
+
+    @patch(
+        "qc_tool.frontend.dashboard.services.aoi.lifecycle."
+        "load_aoi_result_document",
+        return_value={"status": "ok"},
+    )
+    def test_success_without_one_verified_aoi_becomes_job_error(self, _):
+        job = self.create_job()
+
+        with self.assertLogs(
+            "qc_tool.frontend.dashboard.services.aoi.lifecycle",
+            level="ERROR",
+        ):
+            job.update_status(JOB_OK)
+        job.refresh_from_db()
+
+        self.assertEqual(job.job_status, JOB_ERROR)
+        self.assertIsNone(job.aoi_code_submitted)
+
+    @patch(
+        "qc_tool.frontend.dashboard.services.aoi.lifecycle."
+        "load_aoi_result_document",
+        return_value={"aoi_code": "EE002L1"},
+    )
+    def test_later_job_cannot_replace_the_zip_aoi_identity(self, _):
+        self.delivery.aoi_code_submitted = "ee001l"
+        self.delivery.save(update_fields=("aoi_code_submitted",))
+        job = self.create_job()
+
+        with self.assertLogs(
+            "qc_tool.frontend.dashboard.services.aoi.lifecycle",
+            level="ERROR",
+        ):
+            job.update_status(JOB_OK)
+        job.refresh_from_db()
+        self.delivery.refresh_from_db()
+
+        self.assertEqual(job.job_status, JOB_ERROR)
+        self.assertEqual(job.aoi_code_submitted, "ee002l")
+        self.assertEqual(self.delivery.aoi_code_submitted, "ee001l")
 
     @patch(
         "qc_tool.frontend.dashboard.services.aoi.lifecycle."
@@ -76,6 +120,32 @@ class AoiPersistenceTests(TestCase):
         loader.assert_not_called()
         self.assertEqual(job.aoi_code, "existing")
         self.assertIsNone(job.date_finished)
+
+    @patch(
+        "qc_tool.frontend.dashboard.services.aoi.lifecycle."
+        "load_aoi_result_document",
+        return_value={"aoi_code": "EE003L1", "hash": "a" * 64},
+    )
+    def test_terminal_job_metadata_cannot_be_replaced(self, loader):
+        job = self.create_job()
+        job.update_status(JOB_OK)
+        job.refresh_from_db()
+        original_finished = job.date_finished
+        original_result_digest = job.result_sha256
+
+        with self.assertLogs(
+            "qc_tool.frontend.dashboard.services.aoi.lifecycle",
+            level="WARNING",
+        ):
+            job.update_status(JOB_FAILED)
+        job.refresh_from_db()
+
+        self.assertEqual(job.job_status, JOB_OK)
+        self.assertEqual(job.aoi_code_submitted, "ee003l")
+        self.assertEqual(job.input_sha256, "a" * 64)
+        self.assertEqual(job.date_finished, original_finished)
+        self.assertEqual(job.result_sha256, original_result_digest)
+        loader.assert_called_once_with(job.job_uuid)
 
     @patch(
         "qc_tool.frontend.dashboard.services.aoi.lifecycle."
@@ -108,6 +178,12 @@ class AoiPersistenceTests(TestCase):
             ["aoi_code"],
         )
         self.assertIsNone(job.aoi_code)
+        self.assertEqual(
+            job.apply_result_metadata({"aoi_code": "EE003L1"}),
+            ["aoi_code", "aoi_code_submitted"],
+        )
+        self.assertEqual(job.aoi_code, "ee003l")
+        self.assertEqual(job.aoi_code_submitted, "ee003l")
 
     @patch(
         "qc_tool.frontend.dashboard.models.find_product_description",
@@ -115,6 +191,8 @@ class AoiPersistenceTests(TestCase):
     )
     def test_newer_job_resets_delivery_projection_until_result_exists(self, _):
         older = self.create_job(aoi_code="old-aoi")
+        older.job_status = JOB_OK
+        older.save(update_fields=("job_status",))
         self.delivery.sync_from_latest_job()
 
         self.delivery.create_job("new-product", "")
@@ -123,6 +201,34 @@ class AoiPersistenceTests(TestCase):
         self.assertEqual(older.aoi_code, "old-aoi")
         self.assertIsNone(self.delivery.aoi_code)
         self.assertEqual(self.delivery.product_ident, "new-product")
+
+    @patch(
+        "qc_tool.frontend.dashboard.models.find_product_description",
+        return_value="Product",
+    )
+    def test_token_deletion_does_not_rewrite_job_provenance(self, _):
+        token = PersonalAccessToken.objects.create(
+            user=self.user,
+            name="QC request token",
+            secret_digest="sha256$" + ("b" * 64),
+        )
+        token_id = token.pk
+
+        self.delivery.create_job(
+            "product",
+            "",
+            requested_by=self.user,
+            request_source="api",
+            api_token=token,
+        )
+        token.delete()
+
+        job = Job.objects.get(delivery=self.delivery)
+        self.assertEqual(job.requested_by_id, self.user.pk)
+        self.assertEqual(job.requested_by_username, self.user.username)
+        self.assertEqual(job.request_source, "api")
+        self.assertEqual(job.requested_api_token_id, token_id)
+        self.assertEqual(job.requested_api_token_name, "QC request token")
 
     @patch(
         "qc_tool.frontend.dashboard.services.aoi.lifecycle."
@@ -184,6 +290,7 @@ class AoiPersistenceTests(TestCase):
 
     def test_serializers_expose_only_persisted_canonical_key(self):
         job = self.create_job(aoi_code="canonical")
+        job.aoi_code_submitted = "zip-canonical"
 
         history = serialize_job_history([job])[0]
         report = serialize_job_report(
@@ -192,7 +299,9 @@ class AoiPersistenceTests(TestCase):
         )
 
         self.assertEqual(history["aoi_code"], "canonical")
+        self.assertEqual(history["aoi_code_submitted"], "zip-canonical")
         self.assertEqual(report["aoi_code"], "canonical")
+        self.assertEqual(report["aoi_code_submitted"], "zip-canonical")
         self.assertNotIn("fua_code", history)
         self.assertNotIn("fua_code", report)
 

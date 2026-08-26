@@ -28,7 +28,7 @@ def _admin_membership_changed(
 
 
 def _synchronize_group_members(group, action, pk_set, using):
-    if group.name != Role.ADMIN.value:
+    if group.name not in {Role.ADMIN.value, Role.PRODUCT_MANAGER.value}:
         return
 
     user_model = get_user_model()
@@ -44,19 +44,11 @@ def _synchronize_group_members(group, action, pk_set, using):
         if hasattr(group, "_admin_member_ids_before_clear"):
             del group._admin_member_ids_before_clear
 
-    if action == "post_add":
-        user_model._default_manager.using(using).filter(pk__in=user_ids).update(
-            is_staff=True,
-        )
-    elif action in {"post_remove", "post_clear"}:
-        user_model._default_manager.using(using).filter(
-            pk__in=user_ids,
-            is_superuser=False,
-        ).update(is_staff=False)
-        user_model._default_manager.using(using).filter(
-            pk__in=user_ids,
-            is_superuser=True,
-        ).update(is_staff=True)
+    if action in {"post_add", "post_remove", "post_clear"}:
+        for user in user_model._default_manager.using(using).filter(
+            pk__in=user_ids
+        ):
+            synchronize_user_staff(user, using=using)
 
 
 def connect_account_admin_signals(_app_config):

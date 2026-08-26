@@ -21,6 +21,7 @@ def serialize_job_history(jobs, *, compact_uuid=False):
             "product_ident": job.product_ident,
             "product_description": job.product_description,
             "aoi_code": job.aoi_code,
+            "aoi_code_submitted": getattr(job, "aoi_code_submitted", None),
             "skip_steps": job.skip_steps,
         }
         for job in jobs
@@ -40,6 +41,11 @@ def serialize_job_report(job_report, job):
         else {}
     )
     serialized["aoi_code"] = job.aoi_code
+    serialized["aoi_code_submitted"] = getattr(
+        job,
+        "aoi_code_submitted",
+        None,
+    )
     return serialized
 
 

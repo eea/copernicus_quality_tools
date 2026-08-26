@@ -149,3 +149,61 @@ class AoiSchemaMigrationTests(TransactionTestCase):
                         quote("aoi_code"),
                     )
                 )
+
+
+class SubmittedAoiBackfillMigrationTests(TransactionTestCase):
+    """The additive migration preserves legacy AOIs under explicit names."""
+
+    migrate_from = [
+        ("accounts", "0001_initial"),
+        ("dashboard", "0023_reconcile_aoi_metadata"),
+    ]
+    migrate_to = [
+        ("accounts", "0001_initial"),
+        ("dashboard", "0025_backfill_submitted_aoi"),
+    ]
+
+    @classmethod
+    def tearDownClass(cls):
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+        super().tearDownClass()
+
+    def setUp(self):
+        super().setUp()
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        User = old_apps.get_model("auth", "User")
+        Delivery = old_apps.get_model("dashboard", "Delivery")
+        Job = old_apps.get_model("dashboard", "Job")
+        user = User.objects.create(username="submitted-aoi-migration-owner")
+        delivery = Delivery.objects.create(
+            user_id=user.pk,
+            filename="historic-submission.zip",
+            size_bytes=1,
+            aoi_code="ee003l",
+        )
+        job = Job.objects.create(
+            delivery_id=delivery.pk,
+            product_ident="historic-product",
+            product_description="Historic product",
+            aoi_code="ee003l",
+        )
+        self.delivery_id = delivery.pk
+        self.job_id = job.pk
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+        self.apps = executor.loader.project_state(self.migrate_to).apps
+
+    def test_legacy_values_are_copied_without_being_renamed_or_deleted(self):
+        Delivery = self.apps.get_model("dashboard", "Delivery")
+        Job = self.apps.get_model("dashboard", "Job")
+        delivery = Delivery.objects.get(pk=self.delivery_id)
+        job = Job.objects.get(pk=self.job_id)
+
+        self.assertEqual(delivery.aoi_code, "ee003l")
+        self.assertEqual(delivery.aoi_code_submitted, "ee003l")
+        self.assertEqual(job.aoi_code, "ee003l")
+        self.assertEqual(job.aoi_code_submitted, "ee003l")

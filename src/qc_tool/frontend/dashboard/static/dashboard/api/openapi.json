@@ -139,7 +139,7 @@
             "description": "Delivery property used for ordering. Unknown values safely fall back to id.",
             "schema": {
               "type": "string",
-              "enum": ["id", "filename", "date_uploaded", "size_bytes", "product_ident", "product_description", "aoi_code", "date_submitted", "last_job_status", "username"],
+              "enum": ["id", "filename", "date_uploaded", "size_bytes", "product_ident", "product_description", "aoi_code", "aoi_code_submitted", "content_sha256", "date_submitted", "last_job_status", "username"],
               "default": "id"
             },
             "example": "date_uploaded"
@@ -327,7 +327,7 @@
         "operationId": "submitDeliveryToEea",
         "tags": ["Submission"],
         "summary": "Submit a successful delivery to EEA",
-        "description": "Submits the latest eligible successful QC job for one delivery. Both the PAT snapshot and token owner must allow Submit deliveries, and the owner must be allowed to manage the delivery owner. A delivery without an eligible successful job is rejected without submission.",
+        "description": "Reserves and atomically publishes the latest eligible successful QC job for one delivery. The job must have verified exactly one submitted AOI and reference an authoritative catalog release containing that AOI. Requests are idempotent. Competing deliveries for the same expected AOI remain published for product-manager resolution.",
         "x-required-permission-label": "Submit deliveries",
         "requestBody": {
           "required": true,
@@ -342,12 +342,16 @@
         "responses": {
           "200": {
             "description": "The delivery was submitted successfully.",
-            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/StatusMessage"}}}
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmissionResponse"}}}
           },
           "400": {"$ref": "#/components/responses/ValidationError"},
           "401": {"$ref": "#/components/responses/AuthenticationError"},
           "403": {"$ref": "#/components/responses/PermissionDenied"},
           "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {
+            "description": "The latest QC job, submitted AOI, verified input checksum, catalog release, publication claim, or delivery lifecycle is not eligible for submission.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+          },
           "413": {"$ref": "#/components/responses/RequestTooLarge"},
           "500": {
             "description": "Submission failed after validation. The response contains a stable, non-sensitive error message.",
@@ -489,6 +493,27 @@
           "message": {"type": "string", "example": "Operation completed successfully."}
         }
       },
+      "SubmissionResponse": {
+        "type": "object",
+        "required": ["status", "message", "data"],
+        "properties": {
+          "status": {"type": "string", "example": "ok"},
+          "message": {"type": "string"},
+          "data": {
+            "type": "object",
+            "required": ["submission_id", "delivery_id", "publication_status", "review_status", "published_at", "idempotent"],
+            "properties": {
+              "submission_id": {"type": "string", "format": "uuid"},
+              "delivery_id": {"type": "integer", "minimum": 1},
+              "publication_status": {"type": "string", "enum": ["published"]},
+              "review_status": {"type": "string", "enum": ["accepted", "conflict", "rejected"]},
+              "conflict_id": {"type": "integer", "minimum": 1, "nullable": true},
+              "published_at": {"type": "string", "format": "date-time"},
+              "idempotent": {"type": "boolean"}
+            }
+          }
+        }
+      },
       "RegisterDeliveryResponse": {
         "allOf": [
           {"$ref": "#/components/schemas/StatusMessage"},
@@ -523,7 +548,7 @@
       },
       "Delivery": {
         "type": "object",
-        "required": ["id", "filename", "username", "date_uploaded", "size_bytes", "type", "aoi_code"],
+        "required": ["id", "filename", "username", "date_uploaded", "size_bytes", "type", "aoi_code", "aoi_code_submitted"],
         "properties": {
           "id": {"type": "integer", "minimum": 1},
           "filename": {"type": "string"},
@@ -533,6 +558,8 @@
           "product_ident": {"type": "string", "nullable": true},
           "product_description": {"type": "string", "nullable": true},
           "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code projected from the latest QC job. Product-specific input aliases are never exposed."},
+          "aoi_code_submitted": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI identity verified inside this one-ZIP delivery. It is preserved across later jobs."},
+          "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "nullable": true, "description": "Verified SHA-256 of the submitted input when available."},
           "date_submitted": {"type": "string", "format": "date-time", "nullable": true},
           "is_deleted": {"type": "boolean", "example": false},
           "s3_id": {"type": "integer", "nullable": true},
@@ -568,7 +595,7 @@
       },
       "JobHistoryItem": {
         "type": "object",
-        "required": ["job_uuid", "delivery_id", "date_created", "job_status", "product_ident", "product_description", "aoi_code"],
+        "required": ["job_uuid", "delivery_id", "date_created", "job_status", "product_ident", "product_description", "aoi_code", "aoi_code_submitted"],
         "properties": {
           "job_uuid": {"type": "string", "description": "Compact UUID without hyphens in the history response.", "example": "00000000000000000000000000000001"},
           "delivery_id": {"type": "integer", "minimum": 1},
@@ -579,6 +606,7 @@
           "product_ident": {"type": "string"},
           "product_description": {"type": "string"},
           "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code reported by this job, or null when unavailable or ambiguous."},
+          "aoi_code_submitted": {"type": "string", "maxLength": 255, "nullable": true, "description": "Explicit canonical AOI verified from the ZIP; aoi_code remains a compatibility alias."},
           "skip_steps": {"type": "string", "nullable": true}
         }
       },
@@ -593,12 +621,13 @@
       },
       "JobReport": {
         "type": "object",
-        "required": ["aoi_code"],
+        "required": ["aoi_code", "aoi_code_submitted"],
         "properties": {
           "job_uuid": {"type": "string", "format": "uuid", "nullable": true},
           "status": {"type": "string", "nullable": true},
           "description": {"type": "string", "nullable": true},
           "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code reported by the job, or null when unavailable or ambiguous."},
+          "aoi_code_submitted": {"type": "string", "maxLength": 255, "nullable": true, "description": "Explicit canonical AOI verified from the ZIP; aoi_code remains a compatibility alias."},
           "user_name": {"type": "string", "nullable": true},
           "job_start_date": {"type": "string", "format": "date-time", "nullable": true},
           "job_finish_date": {"type": "string", "format": "date-time", "nullable": true},

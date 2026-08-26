@@ -9,7 +9,6 @@ from qc_tool.frontend.dashboard.services.boundaries.presentation import (
 from qc_tool.frontend.dashboard.services.configuration.presentation import (
     get_announcement_message,
 )
-from qc_tool.frontend.dashboard.services.deliveries.submission import submit_job
 from qc_tool.frontend.dashboard.services.products import find_product_description
 from qc_tool.frontend.dashboard.services.products import guess_product_ident
 
@@ -19,5 +18,4 @@ __all__ = (
     "get_announcement_message",
     "get_boundary_version",
     "guess_product_ident",
-    "submit_job",
 )

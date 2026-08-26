@@ -1,11 +1,13 @@
 """Delivery workspace, query, export, and lifecycle routes."""
 
 from qc_tool.frontend.dashboard.urls._helpers import protected_path
-from qc_tool.frontend.dashboard.views.deliveries.actions import delivery_delete
-from qc_tool.frontend.dashboard.views.deliveries.actions import (
+from qc_tool.frontend.dashboard.views.deliveries.actions.deletion import (
+    delivery_delete,
+)
+from qc_tool.frontend.dashboard.views.deliveries.actions.submissions import (
     submit_deliveries_to_eea_batch,
 )
-from qc_tool.frontend.dashboard.views.deliveries.actions import (
+from qc_tool.frontend.dashboard.views.deliveries.actions.submissions import (
     submit_delivery_to_eea,
 )
 from qc_tool.frontend.dashboard.views.deliveries.files import download_delivery_file

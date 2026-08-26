@@ -71,21 +71,27 @@ def synchronize_admin_role(*, using="default"):
 
         user_model = get_user_model()
         user_model._default_manager.using(using).filter(
-            groups=group,
+            groups__name__in=(Role.ADMIN.value, Role.PRODUCT_MANAGER.value),
         ).update(is_staff=True)
 
     return group
 
 
 def synchronize_user_staff(user, *, using=None):
-    """Derive admin-site access from superuser or admin-group membership."""
+    """Derive admin-site access from operational management roles.
+
+    Product managers enter the admin shell only for explicitly scoped catalog
+    and conflict models. They receive no generic Django model permissions.
+    """
 
     if not user.pk:
         return False
 
     using = using or user._state.db or "default"
-    is_admin = user.groups.using(using).filter(name=Role.ADMIN.value).exists()
-    should_be_staff = bool(user.is_superuser or is_admin)
+    has_staff_role = user.groups.using(using).filter(
+        name__in=(Role.ADMIN.value, Role.PRODUCT_MANAGER.value)
+    ).exists()
+    should_be_staff = bool(user.is_superuser or has_staff_role)
 
     if user.is_staff != should_be_staff:
         type(user)._default_manager.using(using).filter(pk=user.pk).update(

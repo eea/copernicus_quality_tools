@@ -97,5 +97,6 @@ Continue with:
 - [Delivery and job flow](data-and-job-flow.md)
 - [Deliveries workspace](deliveries-workspace.md)
 - [AOI metadata](aoi-metadata.md)
+- [Product catalog and submissions](product-catalog-and-submissions.md)
 - [Authentication and authorization](authentication-and-authorization.md)
 - [Development guide](../development/index.md)

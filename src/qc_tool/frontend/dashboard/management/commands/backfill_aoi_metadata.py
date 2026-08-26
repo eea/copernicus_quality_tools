@@ -8,8 +8,8 @@ from qc_tool.frontend.dashboard.services.aoi import backfill_aoi_metadata
 
 class Command(BaseCommand):
     help = (
-        "Backfill null Job.aoi_code values from terminal result.json files "
-        "and refresh Delivery.aoi_code projections."
+        "Backfill null Job.aoi_code_submitted values from terminal result.json "
+        "files and refresh Delivery submitted-AOI projections."
     )
 
     def add_arguments(self, parser):

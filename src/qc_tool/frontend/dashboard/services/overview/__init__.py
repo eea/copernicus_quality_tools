@@ -5,7 +5,7 @@ from .contracts import CoverageSegment
 from .contracts import DeliveryOverview
 from .contracts import ProductAttention
 from .contracts import WorkspaceDashboard
-from .service import build_workspace_overview
+from .workspace import build_workspace_overview
 
 
 # Transitional alias for callers using the former service name.

@@ -1,210 +1,42 @@
-# -*- coding: utf-8 -*-
+"""Django model-discovery and backward-compatible import boundary.
 
+The deployed app label remains ``dashboard``. Model implementations are owned
+by focused modules under :mod:`qc_tool.frontend.dashboard.domain`; importing
+them here preserves Django discovery and every historical caller of
+``dashboard.models``.
+"""
 
-from uuid import uuid4
-
-import django.db.models as models
-from django.conf import settings
-from django.utils import timezone
-
-
-from qc_tool.aoi import AOI_CODE_MAX_LENGTH
-from qc_tool.common import JOB_OK
-from qc_tool.common import JOB_RUNNING
-from qc_tool.common import JOB_WAITING
+from qc_tool.frontend.dashboard.domain.accounts import PersonalAccessToken
+from qc_tool.frontend.dashboard.domain.accounts import UserProfile
+from qc_tool.frontend.dashboard.domain.catalog import Product
+from qc_tool.frontend.dashboard.domain.catalog import ProductAOI
+from qc_tool.frontend.dashboard.domain.catalog import ProductRelease
+from qc_tool.frontend.dashboard.domain.catalog import ProductReleaseDefinition
+from qc_tool.frontend.dashboard.domain.catalog import QcDefinition
+from qc_tool.frontend.dashboard.domain.deliveries import Delivery
+from qc_tool.frontend.dashboard.domain.jobs import Job
+from qc_tool.frontend.dashboard.domain.jobs import pull_job
+from qc_tool.frontend.dashboard.domain.storage import S3Info
+from qc_tool.frontend.dashboard.domain.submissions import DeliverySubmission
+from qc_tool.frontend.dashboard.domain.submissions import SubmissionConflict
+from qc_tool.frontend.dashboard.domain.submissions import SubmissionConflictEvent
 from qc_tool.frontend.dashboard.services.products import find_product_description
 
 
-def pull_job(worker_url):
-    """
-    UPDATE deliveries SET last_job_uuid=%s WHERE last_job_uuid IS NULL LIMIT 1
-    :return:
-    """
-
-    # [:1] tells Django to add a " LIMIT 1" clause to the database query.
-    jobs = Job.objects.filter(job_status=JOB_WAITING).order_by("date_created")[:1]
-
-    if len(jobs) == 1:
-        job = jobs.get()
-
-        # Safeguard against race condition. only return a non-null result if a row was updated in the database.
-        affected_rowcount = (Job.objects.filter(job_status=JOB_WAITING, job_uuid=job.job_uuid)
-                                        .update(job_status=JOB_RUNNING, date_started=timezone.now(), worker_url=worker_url))
-
-        if affected_rowcount == 1:
-            # The job is available.
-            job = Job.objects.get(job_uuid=job.job_uuid)
-            return job
-        else:
-            # The job has already been taken by another worker.
-            return None
-    else:
-        return None
-
-
-class PersonalAccessToken(models.Model):
-    """Named, revocable API token with an issuance-time access snapshot."""
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="personal_access_tokens",
-    )
-    name = models.CharField(max_length=80)
-    secret_digest = models.CharField(max_length=71, unique=True, editable=False)
-    token_hint = models.CharField(max_length=16, blank=True, editable=False)
-    permission_snapshot = models.JSONField(default=list, editable=False)
-    role_snapshot = models.JSONField(default=list, editable=False)
-    region_codes_snapshot = models.JSONField(default=list, editable=False)
-    product_idents_snapshot = models.JSONField(default=list, editable=False)
-    is_administrator_snapshot = models.BooleanField(default=False, editable=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    last_used_at = models.DateTimeField(blank=True, null=True, editable=False)
-
-    class Meta:
-        ordering = ("-created_at", "-pk")
-        verbose_name = "personal API token"
-        verbose_name_plural = "personal API tokens"
-        constraints = (
-            models.CheckConstraint(
-                condition=~models.Q(name=""),
-                name="dashboard_api_token_name_not_empty",
-            ),
-            models.UniqueConstraint(
-                fields=("user", "name"),
-                name="dashboard_api_token_user_name_uniq",
-            ),
-        )
-
-    def __str__(self):
-        return "{} ({})".format(self.name, self.user)
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    country = models.CharField(max_length=100, blank=True, null=True)
-    product_family = models.CharField(max_length=50, blank=True, null=True)
-
-
-class S3Info(models.Model):
-    host = models.CharField(max_length=200)
-    access_key = models.CharField(max_length=100)
-    secret_key = models.CharField(max_length=100)
-    bucketname = models.CharField(max_length=100)
-    key_prefix = models.CharField(max_length=500)
-
-
-class Delivery(models.Model):
-    class Meta:
-        app_label = "dashboard"
-        verbose_name = "Delivery"
-        verbose_name_plural = "Deliveries"
-        indexes = (
-            models.Index(fields=("aoi_code",), name="dash_delivery_aoi_idx"),
-        )
-
-    def __str__(self):
-        return "User: {:s} | File: {:s}".format(self.user.username, self.filename)
-
-    def create_job(self, product_ident, skip_steps):
-        from qc_tool.frontend.dashboard.services.aoi import create_delivery_job
-
-        job = create_delivery_job(
-            self,
-            product_ident=product_ident,
-            product_description=find_product_description(product_ident),
-            skip_steps=skip_steps,
-        )
-
-        # Return formatted uuid of the newly created job
-        return str(job.job_uuid).lower().replace("-", "")
-
-    def sync_from_latest_job(self):
-        from qc_tool.frontend.dashboard.services.aoi import refresh_delivery_projection
-
-        return refresh_delivery_projection(self)
-
-    def get_submittable_job(self):
-        """Return the latest job only when the delivery is ready to submit.
-
-        Filtering for successful jobs before ordering could select an older
-        success even after a newer failed or running check. The browser and the
-        dashboard both use the latest overall QC state, so the server must
-        enforce that same rule and reject repeat submissions.
-        """
-
-        if self.is_deleted or self.date_submitted is not None:
-            return None
-        latest_job = (
-            Job.objects.filter(delivery_id=self.id)
-            .order_by("-date_created", "-job_uuid")
-            .first()
-        )
-        if latest_job is None or latest_job.job_status != JOB_OK:
-            return None
-        return latest_job
-
-    def submit(self):
-        self.date_submitted = timezone.now()
-        self.save()
-
-    def is_submitted(self):
-        return self.date_submitted is not None
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
-    filename = models.CharField(max_length=500)
-    size_bytes = models.BigIntegerField()
-    date_uploaded = models.DateTimeField(default=timezone.now)
-    date_submitted = models.DateTimeField(blank=True, null=True)
-    product_ident = models.CharField(max_length=64, default=None, blank=True, null=True)
-    product_description = models.CharField(max_length=500, default=None, blank=True, null=True)
-    aoi_code = models.CharField(
-        max_length=AOI_CODE_MAX_LENGTH,
-        default=None,
-        blank=True,
-        null=True,
-        editable=False,
-        help_text="Canonical AOI code projected from the latest delivery job.",
-    )
-    is_deleted = models.BooleanField(default=False)
-    s3 = models.ForeignKey(S3Info, null=True, on_delete=models.CASCADE)
-
-
-class Job(models.Model):
-    class Meta:
-        app_label = "dashboard"
-        indexes = (
-            models.Index(fields=("aoi_code",), name="dash_job_aoi_idx"),
-        )
-
-    def __str__(self):
-        return "{0} | {1} | {2}".format(str(self.job_uuid), self.delivery.filename, self.job_status)
-
-    def apply_result_metadata(self, job_result):
-        from qc_tool.frontend.dashboard.services.aoi import apply_result_aoi
-
-        return apply_result_aoi(self, job_result)
-
-    def update_status(self, job_status):
-        from qc_tool.frontend.dashboard.services.aoi import update_job_status
-
-        update_job_status(self, job_status)
-
-    job_uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    delivery = models.ForeignKey(Delivery, on_delete=models.CASCADE)
-    date_created = models.DateTimeField(default=timezone.now)
-    date_started = models.DateTimeField(blank=True, null=True)
-    date_finished = models.DateTimeField(blank=True, null=True)
-    job_status = models.CharField(max_length=64, default=JOB_WAITING)
-    product_ident = models.CharField(max_length=64)
-    product_description = models.CharField(max_length=500)
-    aoi_code = models.CharField(
-        max_length=AOI_CODE_MAX_LENGTH,
-        default=None,
-        blank=True,
-        null=True,
-        editable=False,
-        help_text="Canonical AOI code reported by the delivery job result.",
-    )
-    skip_steps = models.CharField(max_length=100, default=None, blank=True, null=True)
-    worker_url = models.CharField(max_length=500, default=None, blank=True, null=True)
+__all__ = (
+    "Delivery",
+    "DeliverySubmission",
+    "Job",
+    "PersonalAccessToken",
+    "Product",
+    "ProductAOI",
+    "ProductRelease",
+    "ProductReleaseDefinition",
+    "QcDefinition",
+    "S3Info",
+    "SubmissionConflict",
+    "SubmissionConflictEvent",
+    "UserProfile",
+    "find_product_description",
+    "pull_job",
+)

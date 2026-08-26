@@ -32,11 +32,12 @@ Do not bypass this by editing generated migration state blindly.
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage test \
     qc_tool.frontend.accounts.tests \
-    qc_tool.frontend.dashboard.tests.test_delivery_access \
-    qc_tool.frontend.dashboard.tests.test_delivery_upload_paths \
-    qc_tool.frontend.dashboard.tests.test_worker_authentication \
-    qc_tool.frontend.dashboard.services.tests
+    qc_tool.frontend.dashboard.services.tests \
+    qc_tool.frontend.dashboard.tests
 ```
+
+These explicit package labels include both dashboard test packages while
+avoiding the historical `dashboard/tests.py` discovery-name collision.
 
 High-risk changes should include focused coverage for:
 

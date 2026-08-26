@@ -4,6 +4,7 @@ import json
 from datetime import timedelta
 from unittest.mock import patch
 from uuid import UUID
+from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -199,32 +200,34 @@ class DisabledSubmissionEndpointTests(TestCase):
             },
         )
 
-    @patch("qc_tool.frontend.dashboard.views.deliveries.actions.submit_job")
-    def test_session_single_submission_fails_closed(self, submit_job):
+    @patch("qc_tool.frontend.dashboard.views.deliveries.actions.submit_delivery")
+    def test_session_single_submission_fails_closed(self, submit_delivery):
         response = self.client.post(
             reverse("delivery_submit"),
             {"id": str(self.delivery.pk)},
         )
 
         self.assert_submission_disabled(response)
-        submit_job.assert_not_called()
+        submit_delivery.assert_not_called()
         self.delivery.refresh_from_db()
         self.assertIsNone(self.delivery.date_submitted)
 
-    @patch("qc_tool.frontend.dashboard.views.deliveries.actions.submit_job")
-    def test_session_batch_submission_fails_closed(self, submit_job):
+    @patch("qc_tool.frontend.dashboard.views.deliveries.actions.submit_delivery")
+    def test_session_batch_submission_fails_closed(self, submit_delivery):
         response = self.client.post(
             reverse("delivery_submit_batch"),
             {"ids": str(self.delivery.pk)},
         )
 
         self.assert_submission_disabled(response)
-        submit_job.assert_not_called()
+        submit_delivery.assert_not_called()
         self.delivery.refresh_from_db()
         self.assertIsNone(self.delivery.date_submitted)
 
-    @patch("qc_tool.frontend.dashboard.views.api_access.submissions.submit_job")
-    def test_api_submission_fails_closed(self, submit_job):
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.submissions.submit_delivery"
+    )
+    def test_api_submission_fails_closed(self, submit_delivery):
         response = self.client.post(
             reverse("api_submit_delivery_to_eea"),
             data=json.dumps({"delivery_id": self.delivery.pk}),
@@ -233,6 +236,74 @@ class DisabledSubmissionEndpointTests(TestCase):
         )
 
         self.assert_submission_disabled(response)
-        submit_job.assert_not_called()
+        submit_delivery.assert_not_called()
         self.delivery.refresh_from_db()
         self.assertIsNone(self.delivery.date_submitted)
+
+
+@override_settings(SUBMISSION_ENABLED=True)
+class SubmissionEndpointAdapterTests(TestCase):
+    """Browser and API transports delegate to the same lifecycle service."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="submission-adapter-user",
+            password="test-password",
+        )
+        self.client.force_login(self.user)
+        self.delivery = Delivery.objects.create(
+            user=self.user,
+            filename="adapter.zip",
+            size_bytes=1,
+        )
+        self.api_token = issue_personal_access_token(
+            self.user,
+            "Submission adapter tests",
+        ).raw_token
+        self.result = SimpleNamespace(
+            as_dict=lambda: {
+                "submission_id": str(UUID(int=1)),
+                "publication_status": "published",
+            }
+        )
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.deliveries.actions.submit_delivery"
+    )
+    def test_browser_adapter_calls_central_service(self, submit):
+        submit.return_value = self.result
+
+        response = self.client.post(
+            reverse("delivery_submit"),
+            {"id": str(self.delivery.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["data"]["publication_status"],
+            "published",
+        )
+        call = submit.call_args.kwargs
+        self.assertEqual(call["delivery_id"], self.delivery.pk)
+        self.assertEqual(call["actor"], self.user)
+        self.assertEqual(call["request_channel"], "browser")
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.submissions.submit_delivery"
+    )
+    def test_api_adapter_passes_authenticated_actor_and_token(self, submit):
+        submit.return_value = self.result
+
+        response = self.client.post(
+            reverse("api_submit_delivery_to_eea"),
+            data=json.dumps({"delivery_id": self.delivery.pk}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer {}".format(self.api_token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        call = submit.call_args.kwargs
+        self.assertEqual(call["delivery_id"], self.delivery.pk)
+        self.assertEqual(call["actor"], self.user)
+        self.assertEqual(call["api_token"].user_id, self.user.pk)
+        self.assertEqual(call["request_channel"], "api")

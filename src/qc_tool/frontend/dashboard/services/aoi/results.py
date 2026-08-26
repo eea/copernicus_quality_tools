@@ -27,7 +27,7 @@ def aoi_update_from_result(job_result):
 
 
 def apply_result_aoi(job, job_result):
-    """Update an unsaved Job instance and return changed field names."""
+    """Dual-write legacy and explicit submitted-AOI job fields."""
 
     update = aoi_update_from_result(job_result)
     if update.action is AoiUpdateAction.PRESERVE:
@@ -36,7 +36,9 @@ def apply_result_aoi(job, job_result):
         value = None
     else:
         value = update.value
-    if job.aoi_code == value:
-        return []
-    job.aoi_code = value
-    return ["aoi_code"]
+    changed = []
+    for field_name in ("aoi_code", "aoi_code_submitted"):
+        if getattr(job, field_name) != value:
+            setattr(job, field_name, value)
+            changed.append(field_name)
+    return changed

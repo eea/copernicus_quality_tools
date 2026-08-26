@@ -114,7 +114,9 @@ class AccountAccess:
 
     @property
     def can_access_django_admin(self):
-        return self.is_authenticated and self.is_administrator
+        return self.is_authenticated and (
+            self.is_administrator or self.is_product_manager
+        )
 
     @property
     def can_view_region_deliveries(self):

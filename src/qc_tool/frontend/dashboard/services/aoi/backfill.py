@@ -44,7 +44,10 @@ def backfill_aoi_metadata(*, batch_size=100, limit=None, dry_run=False):
     _validate_bounds(batch_size, limit)
     queryset = (
         Job.objects.exclude(job_status__in=(JOB_WAITING, JOB_RUNNING))
-        .filter(Q(aoi_code__isnull=True) | Q(aoi_code=""))
+        .filter(
+            Q(aoi_code_submitted__isnull=True)
+            | Q(aoi_code_submitted="")
+        )
         .only("job_uuid", "delivery_id")
         .order_by("date_created", "job_uuid")
     )
@@ -119,9 +122,10 @@ def _apply_batch(Job, Delivery, updates, *, dry_run):
         changed_delivery_ids = set()
         for job_id, delivery_id, value in updates:
             changed = Job.objects.filter(
-                Q(aoi_code__isnull=True) | Q(aoi_code=""),
+                Q(aoi_code_submitted__isnull=True)
+                | Q(aoi_code_submitted=""),
                 pk=job_id,
-            ).update(aoi_code=value)
+            ).update(aoi_code=value, aoi_code_submitted=value)
             if changed:
                 updated += 1
                 changed_delivery_ids.add(delivery_id)

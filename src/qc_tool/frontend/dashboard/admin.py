@@ -1,3 +1,5 @@
+"""Core Django-admin registrations and focused domain feature imports."""
+
 from django.contrib import admin
 
 from qc_tool.frontend.dashboard.models import Delivery
@@ -17,7 +19,18 @@ class DeliveryAdmin(admin.ModelAdmin):
         "is_deleted",
     )
     search_fields = ("filename", "product_ident", "aoi_code", "user__username")
-    readonly_fields = ("aoi_code",)
+    readonly_fields = tuple(field.name for field in Delivery._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Upload, deletion, QC projection, and submission each have their own
+        # row-locked service. Direct edits could bypass those invariants.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Job)
@@ -94,3 +107,18 @@ class S3InfoAdmin(admin.ModelAdmin):
         # Deleting S3Info cascades to its Delivery. Deletion belongs to the
         # audited delivery workflow, not the generic Django admin.
         return False
+
+
+# Importing these modules performs their decorator-based registrations while
+# keeping catalog and submission review logic out of this discovery boundary.
+from qc_tool.frontend.dashboard.admin_features import catalog as _catalog_admin
+from qc_tool.frontend.dashboard.admin_features import (
+    submissions as _submissions_admin,
+)
+
+
+__all__ = [
+    "DeliveryAdmin",
+    "JobAdmin",
+    "S3InfoAdmin",
+]
