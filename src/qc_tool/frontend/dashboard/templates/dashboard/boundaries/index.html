@@ -1,29 +1,27 @@
-{% extends "dashboard/layouts/workspace.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
 {% block title %}Boundaries | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page boundaries-page{% endblock main_class %}
 
 {% block workspace_css %}
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
-<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/boundaries/index.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block workspace_content %}
-<div class="workspace-page__container">
-    <header class="workspace-page__header">
-        <div>
-            <p class="workspace-page__eyebrow">QC configuration</p>
-            <h1>Boundaries</h1>
-            <p>Review the raster and vector AOI files in the active boundary package.</p>
-        </div>
-        {% if account_access.can_manage_configuration %}
-        <a href="{% url 'boundaries_upload' %}" class="btn btn-primary btn-qc-primary">
-            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
-            Replace boundary package
-        </a>
-        {% endif %}
-    </header>
+{% block page_title %}Boundaries{% endblock page_title %}
+{% block page_subtitle %}<p>Review the raster and vector AOI files in the active boundary package.</p>{% endblock page_subtitle %}
+{% block page_actions %}
+{% if account_access.can_manage_configuration %}
+<a href="{% url 'boundaries_upload' %}" class="btn btn-primary btn-qc-primary">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+    Replace boundary package
+</a>
+{% endif %}
+{% endblock page_actions %}
+
+{% block page_content %}
 
     <section class="workspace-card boundary-catalog" aria-labelledby="boundary-catalog-title">
         <header class="workspace-card__header">
@@ -67,8 +65,7 @@
             </section>
         </div>
     </section>
-</div>
-{% endblock workspace_content %}
+{% endblock page_content %}
 
 {% block js %}
 {{ block.super }}

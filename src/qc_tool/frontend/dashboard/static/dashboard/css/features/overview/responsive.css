@@ -23,10 +23,6 @@
 }
 
 @media (max-width: 1040px) {
-  .dashboard-page {
-    padding: 26px 24px 46px;
-  }
-
   .dashboard-primary-grid,
   .dashboard-secondary-grid {
     grid-template-columns: 1fr;
@@ -38,10 +34,6 @@
 }
 
 @media (max-width: 767px) {
-  .dashboard-page {
-    padding: 22px 16px 40px;
-  }
-
   .dashboard-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -84,10 +76,6 @@
 
   .dashboard-kpi {
     min-height: 116px;
-  }
-
-  .dashboard-panel__header {
-    flex-direction: column;
   }
 
   .dashboard-activity-list li {

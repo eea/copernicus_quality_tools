@@ -2,7 +2,7 @@
 @media (max-width: 1050px) {
   .api-docs-hero .api-docs-container {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
-    gap: 36px;
+    column-gap: 36px;
   }
 
   .api-docs-layout {
@@ -25,7 +25,7 @@
   }
 
   .api-docs-hero {
-    padding: 42px 0;
+    padding: 28px 0 40px;
   }
 
   .api-docs-hero .api-docs-container,

@@ -59,7 +59,7 @@
   padding: 52px 0 8px;
 }
 
-.api-docs-section > p:not(.api-docs-kicker) {
+.api-docs-section > p {
   max-width: 900px;
   margin: 16px 0 0;
   color: #52627a;
@@ -142,4 +142,3 @@
   color: var(--qc-color-navy);
   font-weight: 750;
 }
-

@@ -1,26 +1,23 @@
-{% extends "dashboard/layouts/workspace.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
 {% block title %}Products | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page products-page{% endblock main_class %}
 
 {% block workspace_css %}
-<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/features/products/index.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block workspace_content %}
-<div class="workspace-page__container">
-    <header class="workspace-page__header">
-        <div>
-            <p class="workspace-page__eyebrow">QC configuration</p>
-            <h1>Products</h1>
-            <p>Browse the complete catalog of products available for quality control.</p>
-        </div>
-        <a class="btn btn-default btn-qc-secondary" href="{% url 'api_homepage' %}#products">
-            API documentation
-        </a>
-    </header>
+{% block page_title %}Products{% endblock page_title %}
+{% block page_subtitle %}<p>Browse the complete catalog of products available for quality control.</p>{% endblock page_subtitle %}
+{% block page_actions %}
+<a class="btn btn-default btn-qc-secondary" href="{% url 'api_homepage' %}#products">
+    API documentation
+</a>
+{% endblock page_actions %}
+
+{% block page_content %}
 
     <section class="workspace-card products-catalog" aria-labelledby="products-catalog-title">
         <header class="workspace-card__header products-catalog__header">
@@ -88,8 +85,7 @@
         </div>
         {% endif %}
     </section>
-</div>
-{% endblock workspace_content %}
+{% endblock page_content %}
 
 {% block js %}
 {{ block.super }}

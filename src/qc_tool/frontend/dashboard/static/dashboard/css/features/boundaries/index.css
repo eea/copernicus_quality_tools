@@ -1,0 +1,49 @@
+/* Active boundary catalog; shared page and card primitives live in ui/. */
+.boundary-groups {
+  display: grid;
+  padding: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.boundary-groups h3 {
+  margin: 0 0 12px;
+  color: var(--qc-color-navy);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.boundary-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--qc-color-border-subtle);
+  border-radius: 8px;
+}
+
+.boundary-table-wrap:focus-visible {
+  outline: 3px solid var(--qc-focus-ring);
+  outline-offset: 2px;
+}
+
+.boundary-table-wrap .fixed-table-container,
+.boundary-table-wrap .table {
+  margin-bottom: 0;
+  border: 0;
+}
+
+@media (max-width: 991px) {
+  .boundary-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .boundary-groups {
+    padding: 16px;
+  }
+}
+
+@media (forced-colors: active) {
+  .boundary-table-wrap {
+    border: 1px solid CanvasText;
+  }
+}

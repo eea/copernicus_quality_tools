@@ -1,41 +1,46 @@
-{% extends "dashboard/layouts/workspace.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
-{% block title %}QC job history | CLMS QC Tool{% endblock title %}
+{% block title %}QC job history | Deliveries | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page job-history-page{% endblock main_class %}
 
 {% block workspace_css %}
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
-<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/history/layout.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/history/table.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/history/responsive.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block workspace_content %}
-<div class="workspace-page__container">
-    <header class="workspace-page__header">
-        <div>
-            <p class="workspace-page__eyebrow">Deliveries</p>
-            <h1>QC job history</h1>
-            <p>Review every quality-control run associated with this delivery.</p>
-        </div>
-        <a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
-            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-            Back to deliveries
-        </a>
-    </header>
+{% block page_breadcrumbs %}
+{% url 'deliveries' as deliveries_url %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Deliveries" parent_url=deliveries_url current_label="QC job history" %}
+{% endblock page_breadcrumbs %}
+
+{% block page_title %}QC job history{% endblock page_title %}
+{% block page_subtitle %}<p>Review every quality-control run associated with this delivery.</p>{% endblock page_subtitle %}
+{% block page_actions %}
+<a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+    Back to deliveries
+</a>
+{% endblock page_actions %}
+
+{% block page_content %}
 
     <section class="workspace-card job-history-context" aria-labelledby="job-history-delivery-title">
         <span class="job-history-context__icon" aria-hidden="true">
             <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
         </span>
         <div class="job-history-context__identity">
-            <p>Delivery #{{ delivery.id }}</p>
             <h2 id="job-history-delivery-title">{{ delivery.filename }}</h2>
             <span>{{ delivery.product_description|default:"Product not identified" }}</span>
         </div>
         <dl class="job-history-context__metadata">
+            <div>
+                <dt>Delivery ID</dt>
+                <dd>{{ delivery.id }}</dd>
+            </div>
             <div>
                 <dt>Product</dt>
                 <dd><code>{{ delivery.product_ident|default:"Not available" }}</code></dd>
@@ -108,7 +113,7 @@
                     <tbody></tbody>
                 </table>
             </div>
-            <footer class="job-history-card__footer">QC Tool version {{ qc_tool_version }}</footer>
+            <footer class="workspace-card__footer job-history-card__footer">QC Tool version {{ qc_tool_version }}</footer>
         </div>
     </section>
 
@@ -136,8 +141,7 @@
         </div>
     </div>
     {% endif %}
-</div>
-{% endblock workspace_content %}
+{% endblock page_content %}
 
 {% block js %}
 {{ block.super }}

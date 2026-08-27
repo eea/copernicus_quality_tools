@@ -1,29 +1,4 @@
-/* Dashboard-only composition. Shared header, rail, footer, and tokens stay in ui/. */
-.dashboard-page {
-  width: min(100%, 1440px);
-  margin: 0 auto;
-  padding: 28px 36px 52px;
-  color: var(--qc-color-text);
-}
-
-.dashboard-page__header {
-  margin-bottom: 20px;
-}
-
-.dashboard-page__header h1 {
-  margin: 0;
-  color: var(--qc-color-navy);
-  font-size: clamp(30px, 3vw, 38px);
-  font-weight: 750;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
-}
-
-.dashboard-page__header p {
-  margin: 6px 0 0;
-  color: var(--qc-color-muted);
-  font-size: 15px;
-}
+/* Dashboard-only composition. Page frame, header, cards, and tokens live in ui/. */
 
 .dashboard-announcement {
   margin-bottom: 18px;
@@ -43,13 +18,9 @@
   min-width: 0;
   min-height: 130px;
   padding: 16px;
-  border: 1px solid var(--qc-color-border);
-  border-radius: 9px;
   grid-template-columns: 42px minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   align-items: start;
-  background: var(--qc-color-surface);
-  box-shadow: 0 5px 18px rgba(24, 55, 96, 0.055);
   gap: 0 12px;
 }
 
@@ -59,13 +30,13 @@
 }
 
 .dashboard-kpi--attention {
-  --dashboard-kpi-color: #c76a00;
-  --dashboard-kpi-soft: #fff3df;
+  --dashboard-kpi-color: var(--qc-color-warning);
+  --dashboard-kpi-soft: var(--qc-color-warning-soft);
 }
 
 .dashboard-kpi--submitted {
-  --dashboard-kpi-color: #7c3aed;
-  --dashboard-kpi-soft: #f3edff;
+  --dashboard-kpi-color: var(--qc-color-accent);
+  --dashboard-kpi-soft: var(--qc-color-accent-soft);
 }
 
 .dashboard-kpi--products {
@@ -151,36 +122,6 @@
 
 .dashboard-panel {
   min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--qc-color-border);
-  border-radius: 10px;
-  background: var(--qc-color-surface);
-  box-shadow: 0 5px 18px rgba(24, 55, 96, 0.055);
-}
-
-.dashboard-panel__header {
-  display: flex;
-  min-height: 70px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 16px 18px 13px;
-  border-bottom: 1px solid #e8eef6;
-  gap: 16px;
-}
-
-.dashboard-panel__header h2 {
-  margin: 0;
-  color: var(--qc-color-navy);
-  font-size: 16px;
-  font-weight: 750;
-  line-height: 1.25;
-}
-
-.dashboard-panel__header p {
-  margin: 4px 0 0;
-  color: var(--qc-color-muted);
-  font-size: 12px;
-  line-height: 1.4;
 }
 
 .dashboard-panel__header > a {
@@ -197,4 +138,3 @@
   outline: 3px solid rgba(8, 104, 215, 0.24);
   outline-offset: 3px;
 }
-

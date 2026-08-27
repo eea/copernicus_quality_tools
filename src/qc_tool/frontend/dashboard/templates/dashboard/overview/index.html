@@ -1,11 +1,11 @@
-{% extends "dashboard/layouts/workspace.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
 {% block title %}Dashboard | CLMS QC Tool{% endblock title %}
-{% block main_class %}workspace-page dashboard-home-page{% endblock main_class %}
+{% block main_class %}workspace-page{% endblock main_class %}
 
 {% block workspace_css %}
-<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/features/overview/layout.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/overview/lifecycle.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/overview/attention.css' %}" type="text/css" media="screen">
@@ -13,12 +13,10 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/features/overview/responsive.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block workspace_content %}
-<div class="dashboard-page">
-    <header class="dashboard-page__header">
-        <h1>Dashboard</h1>
-        <p>Overview of your QC Tool workspace.</p>
-    </header>
+{% block page_title %}Dashboard{% endblock page_title %}
+{% block page_subtitle %}<p>Overview of your QC Tool workspace.</p>{% endblock page_subtitle %}
+
+{% block page_content %}
 
     {% if announcement %}
     <aside class="workspace-notice dashboard-announcement" aria-labelledby="dashboard-announcement-title">
@@ -34,32 +32,32 @@
     <section class="dashboard-kpi-section" aria-labelledby="dashboard-kpi-title">
         <h2 id="dashboard-kpi-title" class="sr-only">Workspace overview</h2>
         <div class="dashboard-kpis">
-            <article class="dashboard-kpi dashboard-kpi--deliveries" data-dashboard-metric="deliveries">
+            <article class="workspace-card dashboard-kpi dashboard-kpi--deliveries" data-dashboard-metric="deliveries">
                 <span class="dashboard-kpi__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg></span>
                 <dl><dt>Deliveries</dt><dd>{{ dashboard.summary.total_deliveries }}</dd></dl>
                 <p>{% if dashboard.summary.uploaded_last_7_days %}+{{ dashboard.summary.uploaded_last_7_days }} in the last 7 days{% else %}No uploads in the last 7 days{% endif %}</p>
             </article>
-            <article class="dashboard-kpi dashboard-kpi--passed" data-dashboard-metric="passed">
+            <article class="workspace-card dashboard-kpi dashboard-kpi--passed" data-dashboard-metric="passed">
                 <span class="dashboard-kpi__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg></span>
                 <dl><dt>QC passed</dt><dd>{{ dashboard.summary.qc_passed }}</dd></dl>
                 <p>{{ dashboard.summary.passed_percentage }}% of visible deliveries</p>
             </article>
-            <article class="dashboard-kpi dashboard-kpi--attention" data-dashboard-metric="attention">
+            <article class="workspace-card dashboard-kpi dashboard-kpi--attention" data-dashboard-metric="attention">
                 <span class="dashboard-kpi__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#x-circle"></use></svg></span>
                 <dl><dt>Needs QC attention</dt><dd>{{ dashboard.summary.needs_attention }}</dd></dl>
                 <p>{{ dashboard.summary.qc_failed }} failed, {{ dashboard.summary.not_checked }} not checked{% if dashboard.summary.unknown_status %}, {{ dashboard.summary.unknown_status }} other{% endif %}</p>
             </article>
-            <article class="dashboard-kpi dashboard-kpi--submitted" data-dashboard-metric="submitted">
+            <article class="workspace-card dashboard-kpi dashboard-kpi--submitted" data-dashboard-metric="submitted">
                 <span class="dashboard-kpi__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#send"></use></svg></span>
                 <dl><dt>Submitted to EEA</dt><dd>{{ dashboard.summary.submitted_deliveries }}</dd></dl>
                 <p>{{ dashboard.summary.submitted_percentage }}% of visible deliveries</p>
             </article>
-            <article class="dashboard-kpi dashboard-kpi--products" data-dashboard-metric="products">
+            <article class="workspace-card dashboard-kpi dashboard-kpi--products" data-dashboard-metric="products">
                 <span class="dashboard-kpi__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg></span>
                 <dl><dt>Available products</dt><dd>{% if product_catalog_available %}{{ product_count }}{% else %}<span class="dashboard-kpi__unavailable">Unavailable</span>{% endif %}</dd></dl>
                 <p>{% if product_catalog_available %}Browse the product catalog{% else %}Catalog could not be loaded{% endif %}</p>
             </article>
-            <article class="dashboard-kpi dashboard-kpi--ready" data-dashboard-metric="ready">
+            <article class="workspace-card dashboard-kpi dashboard-kpi--ready" data-dashboard-metric="ready">
                 <span class="dashboard-kpi__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#clock"></use></svg></span>
                 <dl><dt>Ready to submit</dt><dd>{{ dashboard.summary.ready_to_submit }}</dd></dl>
                 <p>{% if submission_enabled %}Passed QC and not submitted{% else %}Submission is currently disabled{% endif %}</p>
@@ -68,8 +66,8 @@
     </section>
 
     <div class="dashboard-primary-grid">
-        <section class="dashboard-panel dashboard-lifecycle" aria-labelledby="dashboard-lifecycle-title">
-            <header class="dashboard-panel__header">
+        <section class="workspace-card dashboard-panel dashboard-lifecycle" aria-labelledby="dashboard-lifecycle-title">
+            <header class="workspace-card__header dashboard-panel__header">
                 <div><h2 id="dashboard-lifecycle-title">Delivery submission status</h2><p>Where all visible deliveries currently stand.</p></div>
                 <a href="{% url 'deliveries' %}">View deliveries <span aria-hidden="true">→</span></a>
             </header>
@@ -101,8 +99,8 @@
             {% endif %}
         </section>
 
-        <section class="dashboard-panel dashboard-attention" aria-labelledby="dashboard-attention-title">
-            <header class="dashboard-panel__header"><div><h2 id="dashboard-attention-title">Needs attention</h2><p>Clear, actionable next steps for your workspace.</p></div></header>
+        <section class="workspace-card dashboard-panel dashboard-attention" aria-labelledby="dashboard-attention-title">
+            <header class="workspace-card__header dashboard-panel__header"><div><h2 id="dashboard-attention-title">Needs attention</h2><p>Clear, actionable next steps for your workspace.</p></div></header>
             <div class="dashboard-attention__list">
                 {% if dashboard.summary.qc_failed %}
                 <article class="dashboard-attention-item dashboard-attention-item--danger">
@@ -161,8 +159,8 @@
     </div>
 
     <div class="dashboard-secondary-grid">
-        <section class="dashboard-panel dashboard-products-attention" aria-labelledby="dashboard-products-attention-title">
-            <header class="dashboard-panel__header"><div><h2 id="dashboard-products-attention-title">Products with QC issues</h2><p>Grouped from the latest QC state of visible deliveries.</p></div><a href="{% url 'products' %}">View products <span aria-hidden="true">→</span></a></header>
+        <section class="workspace-card dashboard-panel dashboard-products-attention" aria-labelledby="dashboard-products-attention-title">
+            <header class="workspace-card__header dashboard-panel__header"><div><h2 id="dashboard-products-attention-title">Products with QC issues</h2><p>Grouped from the latest QC state of visible deliveries.</p></div><a href="{% url 'products' %}">View products <span aria-hidden="true">→</span></a></header>
             {% if dashboard.product_attention %}
             <div class="dashboard-product-list" role="list">
                 {% for product in dashboard.product_attention %}
@@ -178,8 +176,8 @@
             {% endif %}
         </section>
 
-        <section class="dashboard-panel dashboard-activity" aria-labelledby="dashboard-activity-title">
-            <header class="dashboard-panel__header"><div><h2 id="dashboard-activity-title">Recent delivery activity</h2><p>The latest recorded uploads, QC jobs, and submissions.</p></div></header>
+        <section class="workspace-card dashboard-panel dashboard-activity" aria-labelledby="dashboard-activity-title">
+            <header class="workspace-card__header dashboard-panel__header"><div><h2 id="dashboard-activity-title">Recent delivery activity</h2><p>The latest recorded uploads, QC jobs, and submissions.</p></div></header>
             {% if dashboard.recent_activity %}
             <ol class="dashboard-activity-list">
                 {% for activity in dashboard.recent_activity %}
@@ -197,8 +195,8 @@
             {% endif %}
         </section>
 
-        <section class="dashboard-panel dashboard-quick-actions" aria-labelledby="dashboard-quick-actions-title">
-            <header class="dashboard-panel__header"><div><h2 id="dashboard-quick-actions-title">Quick actions</h2><p>Continue with a common task.</p></div></header>
+        <section class="workspace-card dashboard-panel dashboard-quick-actions" aria-labelledby="dashboard-quick-actions-title">
+            <header class="workspace-card__header dashboard-panel__header"><div><h2 id="dashboard-quick-actions-title">Quick actions</h2><p>Continue with a common task.</p></div></header>
             <nav aria-label="Dashboard quick actions"><ul>
                 {% if account_access.can_upload %}<li><a class="dashboard-quick-action dashboard-quick-action--upload" data-dashboard-action="upload" href="{% url 'file_upload' %}"><span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg></span><span><strong>Upload delivery</strong><small>Add one or more ZIP archives</small></span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg></a></li>{% endif %}
                 <li><a class="dashboard-quick-action dashboard-quick-action--products" data-dashboard-action="products" href="{% url 'products' %}"><span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg></span><span><strong>View products</strong><small>Review product-level QC context</small></span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg></a></li>
@@ -209,5 +207,4 @@
         </section>
     </div>
 
-</div>
-{% endblock workspace_content %}
+{% endblock page_content %}

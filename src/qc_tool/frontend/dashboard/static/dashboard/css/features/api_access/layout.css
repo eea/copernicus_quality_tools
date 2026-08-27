@@ -1,8 +1,4 @@
 /* Public, server-rendered API reference. No third-party documentation assets. */
-.api-docs-page {
-  background: #f7faff;
-}
-
 .api-docs-main {
   color: var(--qc-color-text);
 }
@@ -14,45 +10,20 @@
 
 /* Introductory masthead and deployment facts. */
 .api-docs-hero {
-  padding: 68px 0 52px;
+  padding: 32px 0 48px;
   border-bottom: 1px solid var(--qc-color-border);
-  background:
-    radial-gradient(circle at 84% 22%, rgba(8, 104, 215, 0.12), transparent 31%),
-    linear-gradient(135deg, #fff 0%, #f4f8ff 100%);
 }
 
 .api-docs-hero .api-docs-container {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(310px, 0.75fr);
   align-items: center;
-  gap: 64px;
-}
-
-.api-docs-eyebrow,
-.api-docs-kicker {
-  margin: 0 0 10px;
-  color: var(--qc-color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.api-docs-hero h1 {
-  margin: 0;
-  color: var(--qc-color-navy);
-  font-size: clamp(36px, 5vw, 56px);
-  font-weight: 750;
-  letter-spacing: -0.035em;
-  line-height: 1.08;
+  column-gap: 64px;
+  row-gap: 18px;
 }
 
 .api-docs-lead {
-  max-width: 790px;
-  margin: 22px 0 0;
-  color: #475873;
-  font-size: 17px;
-  line-height: 1.72;
+  max-width: 720px;
 }
 
 .api-docs-actions {
@@ -70,6 +41,14 @@
   padding: 0 5px;
   color: var(--qc-color-primary-dark);
   font-weight: 650;
+}
+
+.api-docs-text-link:focus-visible,
+.api-operation > summary:focus-visible,
+.api-table-wrap:focus-visible {
+  border-radius: var(--qc-radius-small);
+  outline: 3px solid var(--qc-focus-ring);
+  outline-offset: 3px;
 }
 
 .api-docs-facts {
@@ -163,4 +142,3 @@
 .api-docs-content {
   min-width: 0;
 }
-

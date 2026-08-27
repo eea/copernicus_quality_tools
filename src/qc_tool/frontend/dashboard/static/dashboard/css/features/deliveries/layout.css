@@ -1,36 +1,4 @@
-/* Overall delivery workspace composition. */
-.deliveries-page .workspace-content {
-    padding: 28px 36px 56px;
-}
-
-.deliveries-page__container {
-    width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
-}
-
-.deliveries-page__heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 18px;
-    gap: 24px;
-}
-
-.deliveries-page__heading h1 {
-    margin: 0;
-    color: var(--qc-color-navy);
-    font-size: clamp(30px, 3vw, 38px);
-    font-weight: 750;
-    letter-spacing: -0.025em;
-    line-height: 1.15;
-}
-
-.deliveries-page__heading p {
-    margin: 6px 0 0;
-    color: var(--qc-color-muted);
-    font-size: 15px;
-}
+/* Delivery-only composition. Shared page, header, card, and actions live in ui/. */
 
 .deliveries-page__upload {
     flex: 0 0 auto;
@@ -45,7 +13,7 @@
     border: 1px solid #f1d2a8;
     border-radius: 9px;
     color: #70420a;
-    background: #fff9ef;
+    background: var(--qc-color-warning-soft);
     gap: 10px;
 }
 
@@ -54,12 +22,11 @@
 }
 
 .delivery-status-filters,
-.delivery-filter-panel,
-.deliveries-card {
+.delivery-filter-panel {
     border: 1px solid var(--qc-color-border);
     border-radius: var(--qc-radius-card);
     background: var(--qc-color-surface);
-    box-shadow: 0 8px 26px rgba(35, 57, 91, 0.055);
+    box-shadow: var(--qc-shadow-low);
 }
 
 .delivery-status-filters,
@@ -69,29 +36,6 @@
 
 .deliveries-card {
     overflow: hidden;
-}
-
-.deliveries-card__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--qc-color-border);
-    gap: 20px;
-}
-
-.deliveries-card__header h2 {
-    margin: 0;
-    color: var(--qc-color-navy);
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.deliveries-card__header p {
-    margin: 5px 0 0;
-    color: var(--qc-color-muted);
-    font-size: 13px;
-    line-height: 1.5;
 }
 
 .deliveries-card__body {
@@ -163,12 +107,4 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 7px;
-}
-
-.deliveries-card__footer {
-    padding: 10px 18px;
-    border-top: 1px solid #edf1f7;
-    color: var(--qc-color-muted);
-    font-size: 11px;
-    text-align: right;
 }

@@ -143,6 +143,7 @@ class ApiCredentialViewTests(TestCase):
             response,
             "Copy “Delivery automation” token now",
         )
+        self.assertNotContains(response, "credential-issued__eyebrow")
         self.assertContains(response, "#api-token")
         self.assertNotContains(response, "#key")
         self.assertContains(response, reverse("api_homepage"))

@@ -330,7 +330,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertContains(permitted_response, "Upload delivery")
         self.assertContains(
             permitted_response,
-            'id="btn-qc-multi" class="btn btn-qc"',
+            'id="btn-qc-multi" class="btn btn-qc-success"',
         )
         self.assertContains(permitted_response, 'id="btn-delete-multi"')
         self.assertContains(permitted_response, 'id="btn-submit-multi"')
@@ -386,31 +386,27 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
     def test_delivery_action_assets_keep_semantic_action_states(self):
         stylesheet = self.static_source(
-            "dashboard/css/features/deliveries/base.css"
+            "dashboard/css/ui/actions.css"
         )
         tokens = self.static_source("dashboard/css/ui/tokens.css")
         script = self.delivery_script_source()
 
-        qc_rule = re.search(
-            r"\.deliveries-page\s+\.btn-qc\s*\{(?P<body>[^}]*)\}",
-            stylesheet,
-            flags=re.IGNORECASE | re.DOTALL,
-        )
-        self.assertIsNotNone(qc_rule, "Run-QC needs a dedicated green style.")
+        self.assertIn(".qc-shell .btn-qc-success", stylesheet)
         self.assertIn("--qc-color-success: #15803d", tokens)
         self.assertIn(
             "background: var(--qc-color-success)",
-            qc_rule.group("body"),
+            stylesheet,
         )
-        self.assertIn("color: #fff", qc_rule.group("body"))
+        self.assertIn(".qc-shell .btn-qc--compact", stylesheet)
 
-        for predicate, action_class in (
-            ("canRunQc(row)", "delivery-row-qc"),
-            ("canSubmit(row)", "submit-delivery-button"),
-            ("canDelete(row)", "delete-button"),
+        for predicate, shared_class, action_class in (
+            ("canRunQc(row)", "btn-qc-success", "delivery-row-qc"),
+            ("canSubmit(row)", "btn-qc-primary", "submit-delivery-button"),
+            ("canDelete(row)", "btn-qc-danger-outline", "delete-button"),
         ):
             with self.subTest(action=predicate):
                 self.assertIn(predicate, script)
+                self.assertIn(shared_class, script)
                 self.assertIn(action_class, script)
 
         self.assertIn("delivery-row-actions-empty", script)

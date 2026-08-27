@@ -3,7 +3,7 @@ function toggle_select_buttons() {
     var num_enabled_unchecked = 0;
     var num_enabled = 0;
 
-    $(":checkbox").each(function(index) {
+    $("#tbl_check_details :checkbox").each(function() {
         if(!$(this).prop('disabled')) {
             num_enabled += 1;
             if($(this).prop("checked")) {
@@ -14,16 +14,14 @@ function toggle_select_buttons() {
         }
     });
 
-    if(num_enabled_checked === num_enabled) {
-        $("#btn_select_all").prop("disabled", true);
-    } else {
-        $("#btn_select_all").prop("disabled", false);
-    }
-    if(num_enabled_unchecked === num_enabled) {
-        $("#btn_unselect_all").prop("disabled", true);
-    } else {
-        $("#btn_unselect_all").prop("disabled", false);
-    }
+    $("#btn_select_all").prop(
+        "disabled",
+        num_enabled === 0 || num_enabled_checked === num_enabled
+    );
+    $("#btn_unselect_all").prop(
+        "disabled",
+        num_enabled === 0 || num_enabled_unchecked === num_enabled
+    );
 }
 
 
@@ -97,9 +95,9 @@ function display_product_info(product_ident) {
 
         //listen to checkbox events
         toggle_select_buttons();
-        $(":checkbox").change(function() {
+        $("#tbl_check_details :checkbox").off("change.qcSetup").on("change.qcSetup", function() {
             toggle_select_buttons();
-        })
+        });
     })
     .fail(function() {
         $("#tbl_check_details").hide();
@@ -118,10 +116,10 @@ $(document).ready(function() {
 
     $("#tbl_check_details").hide();
     var selected_product_ident = document.getElementById("preselected_product").value;
-    if (selected_product_ident == "Select product ...") {
+    if (selected_product_ident === "Select product ...") {
         selected_product_ident = "None";
     }
-    if (selected_product_ident != "None") {
+    if (selected_product_ident && selected_product_ident !== "None") {
         display_product_info(selected_product_ident);
         $("#tbl_check_details").show();
     } else {
@@ -141,11 +139,14 @@ $(document).ready(function() {
         //populate product info based on selected product ident.
         display_product_info(this.value);
     });
+
+    $("#btn_select_all").on("click", select_all);
+    $("#btn_unselect_all").on("click", unselect_all);
 });
 
 
 function unselect_all() {
-    $(":checkbox").each(function(index) {
+    $("#tbl_check_details :checkbox").each(function() {
         if(!$(this).prop('disabled')) {
             $(this).prop("checked", false);
         }
@@ -154,7 +155,7 @@ function unselect_all() {
 }
 
 function select_all() {
-    $(":checkbox").each(function(index) {
+    $("#tbl_check_details :checkbox").each(function() {
         if(!$(this).prop('disabled')) {
             $(this).prop("checked", true);
         }
@@ -166,13 +167,13 @@ function select_all() {
 function create_job() {
 
     // Validate if the user has selected a product.
-    if ($("#select_product").val() == "Select product ...") {
-        var dlg_err = BootstrapDialog.show({
+    if ($("#select_product").val() === "Select product ...") {
+        BootstrapDialog.show({
             title: "Error",
             message: "Please select a product.",
             buttons: [{
                 label: "OK",
-                cssClass: "btn-default",
+                cssClass: "btn-qc-secondary",
                 action: function(dialog) {
                     dialog.close();
                 }
@@ -216,12 +217,12 @@ function create_job() {
             if (result.num_created > 1) {
                 msg_title = result.num_created + " QC jobs have been added to queue.";
             }
-            var dlg_ok = BootstrapDialog.show({
+            BootstrapDialog.show({
                 title: msg_title,
                 message: textDialogMessage(result.message),
                 buttons: [{
                     label: "OK",
-                    cssClass: "btn-default",
+                    cssClass: "btn-qc-secondary",
                     action: function(dialog) {
                         // If the user click OK, then redirect to jobs page for now.
                     $(location).attr(
@@ -234,12 +235,12 @@ function create_job() {
         },
         error: function(result) {
             $("#modal-spinner").modal("hide");
-            var dlg_err = BootstrapDialog.show({
+            BootstrapDialog.show({
                 title: "Error",
                 message: "Error running job. Please try later.",
                 buttons: [{
                     label: "OK",
-                    cssClass: "btn-default",
+                    cssClass: "btn-qc-secondary",
                     action: function(dialog) {dialog.close();}
                 }]
             });

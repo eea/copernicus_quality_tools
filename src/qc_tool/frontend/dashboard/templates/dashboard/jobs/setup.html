@@ -1,146 +1,140 @@
-{% extends "dashboard/layouts/base.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
-{% block css %}
-  {{ block.super }}
-  <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen" />
-  <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-dialog.min.css' %}" type="text/css" media="screen" />
-{% endblock %}
+{% block title %}New QC job | Deliveries | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page job-setup-page{% endblock main_class %}
 
-{% block content %}
-    <div class="container-fluid main">
-        <div class="row text-left">
+{% block workspace_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/setup.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
 
-            <ol class="breadcrumb">
-              <li><a href="{% url 'deliveries' %}">{% if show_logo %}CLMS {% endif %}QC Tool</a></li>
-              <li class="active"><a href="">New QC Job</a></li>
-            </ol>
+{% block page_breadcrumbs %}
+{% url 'deliveries' as deliveries_url %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Deliveries" parent_url=deliveries_url current_label="New QC job" %}
+{% endblock page_breadcrumbs %}
 
-            <div class="main">
+{% block page_title %}New QC job{% endblock page_title %}
+{% block page_subtitle %}
+<p>Choose a product definition and the optional checks to run for the selected delivery package{{ deliveries|length|pluralize }}.</p>
+{% endblock page_subtitle %}
+{% block page_actions %}
+<a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+    Back to deliveries
+</a>
+{% endblock page_actions %}
 
-                {% if announcement %}
-                <div class="alert alert-danger" role="alert">
-                <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{ announcement }}</div>
-                {% endif %}
+{% block page_content %}
+{% if announcement %}
+<aside class="workspace-notice workspace-notice--warning" aria-labelledby="job-setup-announcement-title">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
+    <div>
+        <h2 id="job-setup-announcement-title">Announcement</h2>
+        <p>{{ announcement }}</p>
+    </div>
+</aside>
+{% endif %}
 
-                <div
-                    id="tool-canvas"
-                    data-job-info-url-template="{% url 'job_info_json' '__PRODUCT__' %}"
-                    data-product-definition-url-template="{% url 'product_definition_json' '__PRODUCT__' %}"
-                    data-create-job-url="{% url 'create_job' %}"
-                    data-deliveries-url="{% url 'deliveries' %}"
-                >
-                    <div class="panel panel-primary">
-                        <div class="panel-heading">
-                            <div class="panel-title">
-                                Setup new QC job
-                                {% if product_ident %}
-                                &nbsp; for product <strong>{{product_ident}}</strong>
-                                {% endif %}
+<section
+    id="tool-canvas"
+    class="workspace-card job-setup-card"
+    aria-labelledby="job-setup-title"
+    data-job-info-url-template="{% url 'job_info_json' '__PRODUCT__' %}"
+    data-product-definition-url-template="{% url 'product_definition_json' '__PRODUCT__' %}"
+    data-create-job-url="{% url 'create_job' %}"
+    data-deliveries-url="{% url 'deliveries' %}"
+>
+    <header class="workspace-card__header">
+        <div>
+            <h2 id="job-setup-title">QC parameters</h2>
+            <p>Required checks always run. Clear optional checks only when the QC workflow allows it.</p>
+        </div>
+        <span class="job-setup-card__count">{{ deliveries|length }} deliver{{ deliveries|length|pluralize:"y,ies" }}</span>
+    </header>
 
-                                {% if deliveries|length > 1 %}
-                                    <strong> ({{deliveries|length}} deliveries)</strong>
-                                {% else %}
-                                    {% for delivery in deliveries %}
-                                        (delivery: <strong>{{delivery.filename}}</strong>)
-                                    {% endfor %}
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="panel-body">
-                            <h4>Parameters</h4>
-                            <form id = "check_form">
-                                <fieldset></fieldset>
+    <div class="workspace-card__body job-setup-card__body">
+        <section class="job-setup-summary" aria-labelledby="selected-deliveries-title">
+            <span class="job-setup-summary__icon" aria-hidden="true">
+                <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
+            </span>
+            <div>
+                <h3 id="selected-deliveries-title">Selected delivery package{{ deliveries|length|pluralize }}</h3>
+                <ul>
+                    {% for delivery in deliveries %}<li>{{ delivery.filename }}</li>{% endfor %}
+                </ul>
+            </div>
+        </section>
 
-                                <div class="form-group">
-                                    {% if deliveries|length > 1 %}
-                                    <label>Selected delivery files:</label>
-                                    {% else %}
-                                    <label>Selected delivery file:</label>
-                                    {% endif %}
+        <form id="check_form" class="job-setup-form">
+            <fieldset>
+                <legend class="sr-only">Configure quality-control checks</legend>
+                <input id="preselected_product" type="hidden" value="{{ product_ident|default:'' }}">
+                <input id="preselected_file" type="hidden" value="{{ filename|default:'' }}">
+                <input id="delivery_ids" type="hidden" value="{% for delivery in deliveries %}{{ delivery.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                <input id="current_username" type="hidden" value="{{ user.get_username }}">
 
-                                    {% for delivery in deliveries %}
-                                    {{delivery.filename}}
-                                    {% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-lg-4 col-md-6 col-xs-12">
-                                        <div class="form-group">
-                                            <label for="select_product">Select Product</label>
-                                            <span>  - </span>
-                                            <input id="preselected_product" type="hidden" value="{{ product_ident }}">
-                                            <input id="preselected_file" type="hidden" value="{{ filename }}">
-                                            <input id="delivery_ids" type="hidden"
-                                                   value="{% for d in deliveries %}{{d.id}}{% if not forloop.last %},{% endif %}{% endfor %}">
-                                            <input id="current_username" type="hidden" value="{{ user.get_username }}">
-                                            <select id="select_product" name="select_product" class="form-control" required
-                                            data-error-msg="Please select a product.">
-                                                <option hidden >Select product ...</option>
-                                                {% for p in product_list %}
-                                                    {% if p.product_ident == product_ident %}
-                                                <option value="{{p.product_ident}}" selected>{{p.product_description}}</option>
-                                                    {% else %}
-                                                <option value="{{p.product_ident}}">{{p.product_description}}</option>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div id="error_placeholder" class="form-group"></div>
-
-                                <table id="tbl_check_details" class="table" data-toggle="table" data-show-refresh="false" data-show-toggle="false" data-toolbar-align="right" data-buttons-align="right" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
-                                    <thead>
-                                    <tr>
-                                        <th data-field="step" data-sortable="false">Step</th>
-                                        <th data-field="name" data-sortable="false">Check</th>
-                                        <th data-field="description" data-sortable="false">Description</th>
-
-                                        <th data-field="layers" data-sortable="false">Layers</th>
-                                        <th data-field="selected" data-sortable="false">
-                                            <button type="button" id="btn_select_all" class="btn btn-default btn-md" onclick="select_all()">Select All</button>
-                                            <button type="button" id="btn_unselect_all" class="btn btn-default btn-md" onclick="unselect_all()">Unselect All</button></th>
-                                    </tr>
-                                    </thead>
-                                   <tbody>
-                                   </tbody>
-                                </table>
-                                <br>
-
-                                <div id="product_link_placeholder" class="form-group"></div>
-                                <br>
-
-                                <button id="btn_run" type="submit" class="btn btn-success">
-                                    <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-                                    Run QC
-                                </button>
-
-                            </form>
-                        </div>
-                    </div>
+                <div class="form-group job-setup-product-field">
+                    <label for="select_product">Product definition</label>
+                    <select id="select_product" name="select_product" class="form-control" required data-error-msg="Please select a product.">
+                        <option hidden>Select product ...</option>
+                        {% for product in product_list %}
+                        <option value="{{ product.product_ident }}"{% if product.product_ident == product_ident %} selected{% endif %}>{{ product.product_description }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="help-block">The product controls the available QC checks and their required status.</p>
                 </div>
 
-            </div>
+                <div id="error_placeholder" class="job-setup-feedback" aria-live="polite"></div>
 
-        </div>
+                <section class="job-setup-checks" aria-labelledby="job-checks-title">
+                    <header class="job-setup-checks__header">
+                        <div>
+                            <h3 id="job-checks-title">Quality-control checks</h3>
+                            <p>Select the optional checks that should be included in this run.</p>
+                        </div>
+                        <div class="job-setup-checks__actions" aria-label="Check selection actions">
+                            <button type="button" id="btn_select_all" class="btn btn-default btn-qc-secondary">Select all</button>
+                            <button type="button" id="btn_unselect_all" class="btn btn-default btn-qc-secondary">Clear optional</button>
+                        </div>
+                    </header>
+                    <div class="job-setup-table-region" role="region" tabindex="0" aria-label="Available quality-control checks">
+                        <table id="tbl_check_details" class="table" data-toggle="table" data-show-refresh="false" data-show-toggle="false" data-toolbar-align="right" data-buttons-align="right" data-show-filter="false" data-smart-display="true" data-sort-order="desc" data-show-export="false" data-pagination="false" data-side-pagination="server">
+                            <caption class="sr-only">Checks configured for the selected product definition</caption>
+                            <thead>
+                                <tr>
+                                    <th data-field="step" data-sortable="false">Step</th>
+                                    <th data-field="name" data-sortable="false">Check</th>
+                                    <th data-field="description" data-sortable="false">Description</th>
+                                    <th data-field="layers" data-sortable="false">Layers</th>
+                                    <th data-field="selected" data-sortable="false">Run</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div id="product_link_placeholder" class="job-setup-definition-link"></div>
+                <div class="job-setup-actions">
+                    <button id="btn_run" type="submit" class="btn btn-success btn-qc-success">
+                        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#play"></use></svg>
+                        Run QC
+                    </button>
+                </div>
+            </fieldset>
+        </form>
     </div>
+</section>
+{% endblock page_content %}
 
-
-
-    <br><br><br><br>
-
-    {% include "dashboard/shared/spinner.html" %}
-
-
-{% endblock content %}
+{% block page_modals %}{% include "dashboard/shared/spinner.html" %}{% endblock page_modals %}
 
 {% block js %}
-    {{ block.super }}
-    <script src="{% static 'dashboard/js/jquery.validate.min.js' %}" type="text/javascript"></script>
-    <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}" type="text/javascript"></script>
-    <script src="{% static 'dashboard/js/spin.min.js' %}" type="text/javascript"></script>
-    <script src="{% static 'dashboard/js/features/jobs/setup.js' %}" type="text/javascript"></script>
+{{ block.super }}
+<script src="{% static 'dashboard/js/jquery.validate.min.js' %}"></script>
+<script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}"></script>
+<script src="{% static 'dashboard/js/spin.min.js' %}"></script>
+<script src="{% static 'dashboard/js/features/jobs/setup.js' %}"></script>
 {% endblock js %}

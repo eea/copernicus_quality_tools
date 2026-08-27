@@ -25,7 +25,9 @@ templates, browser assets, and services:
 Shared layouts and partials live in `templates/dashboard/layouts/` and
 `templates/dashboard/shared/`. Shared design primitives live in `css/ui/`.
 Third-party browser code lives in `js/vendor/`; do not split or edit vendored
-files as if they were application components.
+files as if they were application components. The page-layout, breadcrumb,
+button, and CSS ownership contracts are documented in
+[`templates/dashboard/README.md`](templates/dashboard/README.md).
 
 ## Browser URL hierarchy
 

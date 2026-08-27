@@ -45,7 +45,7 @@
             message: typeof message === "string" ? $("<div>", {text: message}) : message,
             buttons: [{
                 label: "Close",
-                cssClass: "btn-default",
+                cssClass: "btn-qc-secondary",
                 action: function (dialog) {
                     dialog.close();
                 }
@@ -75,7 +75,7 @@
             ),
             buttons: [{
                 label: count === 1 ? "Delete delivery" : "Delete " + count + " deliveries",
-                cssClass: "btn-danger",
+                cssClass: "btn-qc-danger",
                 action: function (dialog) {
                     var button = this;
                     button.disable();
@@ -108,7 +108,7 @@
                 }
             }, {
                 label: "Cancel",
-                cssClass: "btn-default",
+                cssClass: "btn-qc-secondary",
                 action: function (dialog) {
                     dialog.close();
                 }
@@ -131,7 +131,7 @@
             ),
             buttons: [{
                 label: count === 1 ? "Submit delivery" : "Submit " + count + " deliveries",
-                cssClass: "btn-primary",
+                cssClass: "btn-qc-primary",
                 action: function (dialog) {
                     var button = this;
                     var requestData = useBatch ? {
@@ -169,7 +169,7 @@
                 }
             }, {
                 label: "Cancel",
-                cssClass: "btn-default",
+                cssClass: "btn-qc-secondary",
                 action: function (dialog) {
                     dialog.close();
                 }

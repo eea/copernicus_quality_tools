@@ -17,7 +17,6 @@
         <span class="credential-issued__icon" aria-hidden="true">
             <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>
         </span>
-        <p class="credential-issued__eyebrow">Created successfully</p>
         <h1 id="credential-issued-title">Copy {% if token.name %}“{{ token.name }}” token{% else %}your API token{% endif %} now</h1>
         <p class="credential-issued__intro">
             This is the only time the token will be shown. Store it in a secure secret manager before leaving this page.

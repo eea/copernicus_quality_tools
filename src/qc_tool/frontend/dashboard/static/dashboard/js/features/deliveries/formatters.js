@@ -203,7 +203,7 @@
 
     function actionLink(cssClass, symbol, text, href, ariaLabel) {
         return appendIconText($("<a>", {
-            "class": "delivery-row-action " + cssClass,
+            "class": "btn delivery-row-action " + cssClass,
             href: href,
             "aria-label": ariaLabel
         }), symbol, text);
@@ -211,7 +211,7 @@
 
     function actionButton(row, cssClass, symbol, text, ariaLabel) {
         return appendIconText($("<button>", {
-            "class": "delivery-row-action " + cssClass,
+            "class": "btn delivery-row-action " + cssClass,
             type: "button",
             "aria-label": ariaLabel
         }).attr({
@@ -241,7 +241,7 @@
 
         if (row.job_result_url) {
             actionLink(
-                "delivery-job-link",
+                "btn-qc-quiet btn-qc--compact delivery-job-link",
                 "history",
                 "View latest QC job",
                 String(row.job_result_url),
@@ -251,7 +251,7 @@
         }
         if (canRunQc(row)) {
             actionLink(
-                "btn-qc delivery-row-qc",
+                "btn-qc-success btn-qc--compact delivery-row-qc",
                 "play",
                 row.last_job_uuid ? "Run QC again" : "Run QC",
                 String(config.setupJobUrl || "") + "?deliveries=" + encodeURIComponent(String(row.id)),
@@ -262,7 +262,7 @@
         if (canSubmit(row)) {
             actionButton(
                 row,
-                "btn-submit submit-delivery-button",
+                "btn-qc-primary btn-qc--compact submit-delivery-button",
                 "send",
                 "Submit to EEA",
                 "Submit " + filename + " to EEA"
@@ -272,7 +272,7 @@
         if (canDelete(row)) {
             actionButton(
                 row,
-                "btn-delete-outline delete-button",
+                "btn-qc-danger-outline btn-qc--compact delete-button",
                 "trash",
                 "Delete",
                 "Delete " + filename

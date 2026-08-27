@@ -1,0 +1,16 @@
+/* Delivery-only focus and dialog behavior; action primitives live in ui/. */
+.deliveries-page a:focus-visible,
+.deliveries-page button:focus-visible,
+.deliveries-page input:focus-visible,
+.deliveries-page select:focus-visible,
+.deliveries-page [tabindex="0"]:focus-visible {
+    outline: 3px solid var(--qc-focus-ring);
+    outline-offset: 2px;
+}
+
+.delivery-dialog-list {
+    max-height: 240px;
+    overflow-y: auto;
+    margin: 12px 0 0;
+    padding-left: 22px;
+}

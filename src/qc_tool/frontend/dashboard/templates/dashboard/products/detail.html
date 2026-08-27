@@ -1,27 +1,30 @@
-{% extends "dashboard/layouts/workspace.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
 {% block title %}{{ product.name }} | Products | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page products-page product-detail-page{% endblock main_class %}
 
 {% block workspace_css %}
-<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/features/products/detail.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block workspace_content %}
-<div class="workspace-page__container">
-    <header class="workspace-page__header product-detail__header">
-        <div>
-            <p class="workspace-page__eyebrow">Product details</p>
-            <h1>{{ product.name }}</h1>
-            <p>{{ product.description }}</p>
-            <code class="product-detail__ident">{{ product.ident }}</code>
-        </div>
-        <a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">
-            <span aria-hidden="true">←</span> All products
-        </a>
-    </header>
+{% block page_breadcrumbs %}
+{% url 'products' as products_url %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label=product.name %}
+{% endblock page_breadcrumbs %}
+
+{% block page_header_class %}workspace-page__header product-detail__header{% endblock page_header_class %}
+{% block page_title %}{{ product.name }}{% endblock page_title %}
+{% block page_subtitle %}<p>{{ product.description }}</p>{% endblock page_subtitle %}
+{% block page_header_meta %}<code class="product-detail__ident">{{ product.ident }}</code>{% endblock page_header_meta %}
+{% block page_actions %}
+<a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">
+    <span aria-hidden="true">←</span> All products
+</a>
+{% endblock page_actions %}
+
+{% block page_content %}
 
     {% if product.managed %}
         {% if product.releases_truncated %}
@@ -38,7 +41,6 @@
         <section class="workspace-card product-detail__section" aria-labelledby="product-release-title-{{ forloop.counter }}">
             <header class="workspace-card__header">
                 <div>
-                    <p class="product-detail__section-label">Current release</p>
                     <h2 id="product-release-title-{{ forloop.counter }}">{{ release_detail.release.key }}</h2>
                     <p>{{ release_detail.release.description }}</p>
                 </div>
@@ -134,5 +136,4 @@
         </div>
     </section>
     {% endif %}
-</div>
-{% endblock workspace_content %}
+{% endblock page_content %}

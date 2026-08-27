@@ -1,0 +1,30 @@
+{% extends "dashboard/layouts/workspace.html" %}
+{% load static %}
+
+{% block workspace_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
+
+{% block workspace_content %}
+<div class="{% block page_container_class %}workspace-page__container{% endblock page_container_class %}">
+    {% block page_breadcrumbs %}{% endblock page_breadcrumbs %}
+
+    {% block page_header %}
+    <header class="{% block page_header_class %}workspace-page__header{% endblock page_header_class %}">
+        <div class="workspace-page__heading">
+            <h1>{% block page_title %}{% endblock page_title %}</h1>
+            {% block page_subtitle %}{% endblock page_subtitle %}
+            {% block page_header_meta %}{% endblock page_header_meta %}
+        </div>
+        <div class="workspace-page__actions">
+            {% block page_actions %}{% endblock page_actions %}
+        </div>
+    </header>
+    {% endblock page_header %}
+
+    {% block page_content %}{% endblock page_content %}
+</div>
+
+{% block page_modals %}{% endblock page_modals %}
+{% endblock workspace_content %}

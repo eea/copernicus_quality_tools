@@ -1,17 +1,41 @@
-/* Token-driven actions shared by account and configuration pages. */
+/* Token-driven actions shared across QC Tool browser pages. */
 .qc-shell .btn-qc-primary,
+.qc-shell .btn-qc-secondary,
+.qc-shell .btn-qc-success,
 .qc-shell .btn-qc-danger,
-.qc-shell .btn-qc-secondary {
+.qc-shell .btn-qc-danger-outline,
+.qc-shell .btn-qc-quiet,
+.qc-shell .btn-qc-icon {
+  display: inline-flex;
+  box-sizing: border-box;
   min-height: 42px;
+  align-items: center;
+  justify-content: center;
   padding: 10px 17px;
+  border: 1px solid transparent;
   border-radius: var(--qc-radius-small);
+  font: inherit;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: middle;
+  cursor: pointer;
+  gap: 8px;
 }
 
 .qc-shell .btn-qc-primary,
+.qc-shell .btn-qc-success,
+.qc-shell .btn-qc-danger,
 .qc-shell .btn-qc-primary:hover,
-.qc-shell .btn-qc-primary:focus {
+.qc-shell .btn-qc-success:hover,
+.qc-shell .btn-qc-danger:hover,
+.qc-shell .btn-qc-primary:focus,
+.qc-shell .btn-qc-success:focus,
+.qc-shell .btn-qc-danger:focus {
   color: #fff;
+  text-decoration: none;
 }
 
 .qc-shell .btn-qc-primary {
@@ -20,15 +44,22 @@
 }
 
 .qc-shell .btn-qc-primary:hover,
-.qc-shell .btn-qc-primary:focus {
+.qc-shell .btn-qc-primary:focus,
+.qc-shell .btn-qc-primary:active {
   border-color: var(--qc-color-primary-dark);
   background: var(--qc-color-primary-dark);
 }
 
-.qc-shell .btn-qc-danger,
-.qc-shell .btn-qc-danger:hover,
-.qc-shell .btn-qc-danger:focus {
-  color: #fff;
+.qc-shell .btn-qc-success {
+  border-color: var(--qc-color-success);
+  background: var(--qc-color-success);
+}
+
+.qc-shell .btn-qc-success:hover,
+.qc-shell .btn-qc-success:focus,
+.qc-shell .btn-qc-success:active {
+  border-color: var(--qc-color-success-dark);
+  background: var(--qc-color-success-dark);
 }
 
 .qc-shell .btn-qc-danger {
@@ -37,27 +68,123 @@
 }
 
 .qc-shell .btn-qc-danger:hover,
-.qc-shell .btn-qc-danger:focus {
+.qc-shell .btn-qc-danger:focus,
+.qc-shell .btn-qc-danger:active {
   border-color: var(--qc-color-danger-dark);
   background: var(--qc-color-danger-dark);
 }
 
-.qc-shell .btn-qc-secondary {
-  border-color: #c6d3e3;
+.qc-shell .btn-qc-secondary,
+.qc-shell .btn-qc-icon {
+  border-color: var(--qc-color-border-strong);
   color: var(--qc-color-primary);
   background: var(--qc-color-surface);
 }
 
 .qc-shell .btn-qc-secondary:hover,
-.qc-shell .btn-qc-secondary:focus {
+.qc-shell .btn-qc-secondary:focus,
+.qc-shell .btn-qc-secondary:active,
+.qc-shell .btn-qc-icon:hover,
+.qc-shell .btn-qc-icon:focus,
+.qc-shell .btn-qc-icon:active {
   border-color: #9eb4cf;
   color: var(--qc-color-primary-dark);
-  background: #f5f8fd;
+  background: var(--qc-color-surface-hover);
+  text-decoration: none;
+}
+
+.qc-shell .btn-qc-danger-outline {
+  border-color: #efb5b0;
+  color: var(--qc-color-danger);
+  background: var(--qc-color-surface);
+}
+
+.qc-shell .btn-qc-danger-outline:hover,
+.qc-shell .btn-qc-danger-outline:focus,
+.qc-shell .btn-qc-danger-outline:active {
+  border-color: var(--qc-color-danger);
+  color: var(--qc-color-danger-dark);
+  background: var(--qc-color-danger-soft);
+  text-decoration: none;
+}
+
+.qc-shell .btn-qc-quiet {
+  border-color: transparent;
+  color: var(--qc-color-primary);
+  background: transparent;
+}
+
+.qc-shell .btn-qc-quiet:hover,
+.qc-shell .btn-qc-quiet:focus,
+.qc-shell .btn-qc-quiet:active {
+  color: var(--qc-color-primary-dark);
+  background: var(--qc-color-primary-soft);
+  text-decoration: none;
+}
+
+.qc-shell .btn-qc-icon {
+  width: 42px;
+  min-width: 42px;
+  padding: 9px;
+}
+
+.qc-shell .btn-qc--compact {
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: 11px;
+  line-height: 20px;
+  gap: 5px;
+}
+
+.qc-shell .btn-qc-primary .ui-icon,
+.qc-shell .btn-qc-secondary .ui-icon,
+.qc-shell .btn-qc-success .ui-icon,
+.qc-shell .btn-qc-danger .ui-icon,
+.qc-shell .btn-qc-danger-outline .ui-icon,
+.qc-shell .btn-qc-quiet .ui-icon,
+.qc-shell .btn-qc-icon .ui-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.qc-shell .btn-qc--compact .ui-icon {
+  width: 15px;
+  height: 15px;
+  flex-basis: 15px;
+}
+
+.qc-shell .btn-qc-primary:focus-visible,
+.qc-shell .btn-qc-secondary:focus-visible,
+.qc-shell .btn-qc-success:focus-visible,
+.qc-shell .btn-qc-danger:focus-visible,
+.qc-shell .btn-qc-danger-outline:focus-visible,
+.qc-shell .btn-qc-quiet:focus-visible,
+.qc-shell .btn-qc-icon:focus-visible {
+  outline: 3px solid var(--qc-focus-ring);
+  outline-offset: 2px;
 }
 
 .qc-shell .btn-qc-primary[disabled],
+.qc-shell .btn-qc-secondary[disabled],
+.qc-shell .btn-qc-success[disabled],
 .qc-shell .btn-qc-danger[disabled],
-.qc-shell .btn-qc-secondary[disabled] {
-  cursor: wait;
-  opacity: 0.68;
+.qc-shell .btn-qc-danger-outline[disabled],
+.qc-shell .btn-qc-quiet[disabled],
+.qc-shell .btn-qc-icon[disabled],
+.qc-shell .btn-qc-primary.disabled,
+.qc-shell .btn-qc-secondary.disabled,
+.qc-shell .btn-qc-success.disabled,
+.qc-shell .btn-qc-danger.disabled,
+.qc-shell .btn-qc-danger-outline.disabled,
+.qc-shell .btn-qc-quiet.disabled,
+.qc-shell .btn-qc-icon.disabled,
+.qc-shell [class*="btn-qc-"][aria-disabled="true"] {
+  opacity: 0.58;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.qc-shell [class*="btn-qc-"][aria-busy="true"] {
+  cursor: progress;
 }

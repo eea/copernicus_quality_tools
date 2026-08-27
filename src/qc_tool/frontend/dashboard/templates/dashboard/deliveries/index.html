@@ -1,32 +1,31 @@
-{% extends "dashboard/layouts/workspace.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
 {% block title %}Deliveries | CLMS QC Tool{% endblock title %}
-{% block main_class %}deliveries-page{% endblock %}
+{% block main_class %}workspace-page deliveries-page{% endblock %}
 
 {% block workspace_css %}
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
-<link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/base.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/interactions.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/layout.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/filters.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/table.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/responsive.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block workspace_content %}
-<div class="deliveries-page__container">
-    <header class="deliveries-page__heading">
-        <div>
-            <h1>{{ account_access.delivery_list_heading }}</h1>
-            <p>{% if account_access.can_upload %}Upload, validate, and submit delivery packages.{% else %}Review delivery packages and their quality-control jobs.{% endif %}</p>
-        </div>
-        {% if account_access.can_upload %}
-        <a class="btn btn-primary deliveries-page__upload" href="{% url 'file_upload' %}">
-            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
-            Upload delivery
-        </a>
-        {% endif %}
-    </header>
+{% block page_title %}{{ account_access.delivery_list_heading }}{% endblock page_title %}
+{% block page_subtitle %}<p>{% if account_access.can_upload %}Upload, validate, and submit delivery packages.{% else %}Review delivery packages and their quality-control jobs.{% endif %}</p>{% endblock page_subtitle %}
+{% block page_actions %}
+{% if account_access.can_upload %}
+<a class="btn btn-qc-primary deliveries-page__upload" href="{% url 'file_upload' %}">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+    Upload delivery
+</a>
+{% endif %}
+{% endblock page_actions %}
+
+{% block page_content %}
 
     {% if announcement %}
     <div class="deliveries-announcement" role="status">
@@ -70,15 +69,15 @@
             <input id="delivery-filter-aoi" class="form-control" type="search" maxlength="255" placeholder="All AOIs" autocomplete="off">
         </div>
         <div class="delivery-filter-actions" aria-label="Delivery filter actions">
-            <button id="btn-clear-filters" class="btn btn-default" type="button" disabled>Clear filters</button>
-            <button id="btn-refresh-deliveries" class="btn btn-default btn-icon" type="button" aria-label="Refresh deliveries" title="Refresh deliveries">
+            <button id="btn-clear-filters" class="btn btn-qc-secondary" type="button" disabled>Clear filters</button>
+            <button id="btn-refresh-deliveries" class="btn btn-qc-icon" type="button" aria-label="Refresh deliveries" title="Refresh deliveries">
                 <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#refresh"></use></svg>
             </button>
         </div>
     </section>
 
-    <section class="deliveries-card" aria-labelledby="deliveries-table-title">
-        <header class="deliveries-card__header">
+    <section class="workspace-card deliveries-card" aria-labelledby="deliveries-table-title">
+        <header class="workspace-card__header deliveries-card__header">
             <div>
                 <h2 id="deliveries-table-title">Deliveries and QC jobs</h2>
                 <p id="deliveries-table-description">Select a delivery name to see its complete job history. Use <strong>View latest QC job</strong> to open the newest result.</p>
@@ -95,17 +94,17 @@
                             <strong id="delivery-selection-summary" aria-live="polite">No deliveries selected</strong>
                             <small id="delivery-selection-guidance">Select eligible deliveries on this page to apply a bulk action.</small>
                         </span>
-                        <button id="btn-clear-selection" class="btn btn-link btn-sm" type="button">Clear selection</button>
+                        <button id="btn-clear-selection" class="btn btn-qc-quiet btn-qc--compact" type="button">Clear selection</button>
                     </div>
                     <div id="delivery-bulk-actions" class="deliveries-toolbar__actions" role="group" aria-label="Selected delivery actions">
-                        {% if account_access.can_run_qc %}<button id="btn-qc-multi" class="btn btn-qc" type="button" aria-describedby="delivery-selection-guidance" disabled><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#play"></use></svg><span class="delivery-action-label">Run QC</span></button>{% endif %}
-                        {% if submission_enabled and account_access.can_submit %}<button id="btn-submit-multi" class="btn btn-submit" type="button" aria-describedby="delivery-selection-guidance" disabled><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#send"></use></svg><span class="delivery-action-label">Submit to EEA</span></button>{% endif %}
-                        {% if account_access.can_delete %}<button id="btn-delete-multi" class="btn btn-delete-outline" type="button" aria-describedby="delivery-selection-guidance" disabled><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg><span class="delivery-action-label">Delete</span></button>{% endif %}
+                        {% if account_access.can_run_qc %}<button id="btn-qc-multi" class="btn btn-qc-success" type="button" aria-describedby="delivery-selection-guidance" disabled><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#play"></use></svg><span class="delivery-action-label">Run QC</span></button>{% endif %}
+                        {% if submission_enabled and account_access.can_submit %}<button id="btn-submit-multi" class="btn btn-qc-primary" type="button" aria-describedby="delivery-selection-guidance" disabled><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#send"></use></svg><span class="delivery-action-label">Submit to EEA</span></button>{% endif %}
+                        {% if account_access.can_delete %}<button id="btn-delete-multi" class="btn btn-qc-danger-outline" type="button" aria-describedby="delivery-selection-guidance" disabled><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg><span class="delivery-action-label">Delete</span></button>{% endif %}
                     </div>
                 </div>
                 {% endif %}
                 <div class="deliveries-toolbar__utilities">
-                    <button id="btn-export" class="btn btn-default" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>Export current view</button>
+                    <button id="btn-export" class="btn btn-qc-secondary" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>Export current view</button>
                 </div>
             </div>
 
@@ -124,11 +123,10 @@
                     <tbody></tbody>
                 </table>
             </div>
-            <footer class="deliveries-card__footer">QC Tool version {{ qc_tool_version }}</footer>
+            <footer class="workspace-card__footer deliveries-card__footer">QC Tool version {{ qc_tool_version }}</footer>
         </div>
     </section>
-</div>
-{% endblock workspace_content %}
+{% endblock page_content %}
 
 {% block js %}
 {{ block.super }}

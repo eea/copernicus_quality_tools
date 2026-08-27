@@ -1,10 +1,4 @@
 /* Job-history composition built from the shared workspace and card primitives. */
-.job-history-page {
-    background:
-        radial-gradient(circle at 15% 5%, rgba(220, 235, 255, 0.62), transparent 25%),
-        linear-gradient(180deg, #fbfdff 0%, var(--qc-color-canvas) 100%);
-}
-
 .job-history-page .workspace-page__header .btn,
 .job-history-modal .btn,
 .job-history-selection .btn {
@@ -43,15 +37,6 @@
     min-width: 0;
 }
 
-.job-history-context__identity p {
-    margin: 0 0 5px;
-    color: var(--qc-color-primary);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
 .job-history-context__identity h2 {
     margin: 0;
     color: var(--qc-color-navy);
@@ -74,7 +59,7 @@
     min-width: 0;
     margin: 0;
     padding: 0;
-    grid-template-columns: minmax(130px, 0.8fr) minmax(180px, 1.25fr) minmax(95px, 0.55fr);
+    grid-template-columns: minmax(70px, 0.45fr) minmax(125px, 0.8fr) minmax(170px, 1.2fr) minmax(95px, 0.55fr);
     gap: 18px;
 }
 

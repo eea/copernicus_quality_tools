@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
+from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.urls import reverse
 
@@ -16,13 +19,18 @@ class ResumableUploadTemplateTests(TestCase):
         self.assertContains(response, "dashboard/js/jquery.min.js", count=1)
         self.assertContains(response, "dashboard/js/shared/csrf.js", count=1)
         self.assertContains(response, "dashboard/js/vendor/resumable.js", count=1)
-        self.assertContains(response, 'class="resumable-drop"', count=1)
-        self.assertContains(response, 'class="resumable-browse"', count=1)
-        self.assertContains(response, "window.qcCsrf.getToken()", count=1)
-        self.assertContains(
-            response,
-            "window.qcAuth.redirectFromPayload(message)",
-            count=1,
+        self.assertContains(response, "resumable-drop", count=1)
+        self.assertContains(response, "resumable-browse", count=1)
+        upload_client = "dashboard/js/features/deliveries/upload.js"
+        self.assertContains(response, upload_client, count=1)
+
+        upload_path = finders.find(upload_client)
+        self.assertIsNotNone(upload_path)
+        upload_source = Path(upload_path).read_text(encoding="utf-8")
+        self.assertEqual(upload_source.count("window.qcCsrf.getToken()"), 1)
+        self.assertEqual(
+            upload_source.count("window.qcAuth.redirectFromPayload(message)"),
+            1,
         )
         self.assertContains(
             response,

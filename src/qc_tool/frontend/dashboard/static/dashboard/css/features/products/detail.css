@@ -16,15 +16,6 @@
   margin-top: 18px;
 }
 
-.product-detail__section-label {
-  margin: 0 0 5px;
-  color: var(--qc-color-primary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
 .product-detail__section .workspace-card__header > a {
   color: var(--qc-color-primary);
   font-weight: 600;

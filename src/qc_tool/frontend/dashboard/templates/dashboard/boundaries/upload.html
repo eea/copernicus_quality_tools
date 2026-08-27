@@ -1,27 +1,29 @@
-{% extends "dashboard/layouts/workspace.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
-{% block title %}Replace boundary package | CLMS QC Tool{% endblock title %}
+{% block title %}Replace boundary package | Boundaries | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page boundary-upload-page{% endblock main_class %}
 
 {% block workspace_css %}
-<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/features/boundaries/upload.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block workspace_content %}
-<div class="workspace-page__container">
-    <header class="workspace-page__header">
-        <div>
-            <p class="workspace-page__eyebrow">Boundaries</p>
-            <h1>Replace boundary package</h1>
-            <p>Upload one validated ZIP to activate a new immutable raster and vector boundary generation.</p>
-        </div>
-        <a class="btn btn-default btn-qc-secondary" href="{% url 'boundaries' %}">
-            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-            Back to boundaries
-        </a>
-    </header>
+{% block page_breadcrumbs %}
+{% url 'boundaries' as boundaries_url %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Boundaries" parent_url=boundaries_url current_label="Upload" %}
+{% endblock page_breadcrumbs %}
+
+{% block page_title %}Replace boundary package{% endblock page_title %}
+{% block page_subtitle %}<p>Upload one validated ZIP to activate a new immutable raster and vector boundary generation.</p>{% endblock page_subtitle %}
+{% block page_actions %}
+<a class="btn btn-default btn-qc-secondary" href="{% url 'boundaries' %}">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+    Back to boundaries
+</a>
+{% endblock page_actions %}
+
+{% block page_content %}
 
     <section class="workspace-card boundary-upload-card" aria-labelledby="boundary-upload-title">
         <header class="workspace-card__header">
@@ -64,8 +66,9 @@
 
         <div id="upload-result" class="boundary-upload-card__result" aria-live="polite"></div>
     </section>
-</div>
+{% endblock page_content %}
 
+{% block page_modals %}
 <div
     class="modal fade"
     id="modal-progress"
@@ -96,7 +99,7 @@
         </div>
     </div>
 </div>
-{% endblock workspace_content %}
+{% endblock page_modals %}
 
 {% block js %}
 {{ block.super }}

@@ -40,7 +40,7 @@
 
         if (kind === "success") {
             var link = document.createElement("a");
-            link.className = "btn btn-success btn-pull-right";
+            link.className = "btn btn-qc-secondary";
             link.href = input.dataset.successUrl;
             link.textContent = "Go Back to Boundaries";
             alert.appendChild(document.createTextNode(" "));

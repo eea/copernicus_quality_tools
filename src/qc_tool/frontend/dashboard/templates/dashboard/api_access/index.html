@@ -1,12 +1,13 @@
 {% extends "dashboard/layouts/base.html" %}
 {% load static %}
 
-{% block title %}QC Tool API reference{% endblock title %}
+{% block title %}API Access | CLMS QC Tool{% endblock title %}
 {% block brand_url %}{% url 'api_homepage' %}{% endblock brand_url %}
 {% block body_class %}api-docs-page{% endblock body_class %}
-{% block main_class %}api-docs-main{% endblock main_class %}
+{% block main_class %}workspace-page api-docs-main{% endblock main_class %}
 
 {% block css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/layout.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/guide.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/api_access/reference.css' %}">
@@ -17,13 +18,12 @@
 {% block content %}
 <section class="api-docs-hero" aria-labelledby="api-docs-title">
     <div class="api-docs-container">
-        <div class="api-docs-hero__copy">
-            <p class="api-docs-eyebrow">REST API reference</p>
+        <div class="workspace-page__heading api-docs-hero__copy">
             <h1 id="api-docs-title">{{ api_title }}</h1>
             <p class="api-docs-lead">{{ api_description }}</p>
             <div class="api-docs-actions">
-                <a class="btn-qc-primary" href="#quick-start">Get started</a>
-                <a class="btn-qc-secondary" href="{% url 'api_openapi_json' %}">
+                <a class="btn btn-primary btn-qc-primary" href="#quick-start">Get started</a>
+                <a class="btn btn-default btn-qc-secondary" href="{% url 'api_openapi_json' %}">
                     OpenAPI JSON
                 </a>
                 {% if user.is_authenticated and account_access.can_access_account_settings %}
@@ -78,7 +78,6 @@
                 <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#book"></use></svg>
             </span>
             <div>
-                <p class="api-docs-kicker">Quick start</p>
                 <h2 id="quick-start-title">Make your first request</h2>
                 <ol class="api-steps">
                     <li>Create a named personal access token in <strong>Profile → Settings</strong>.</li>
@@ -99,7 +98,6 @@
         </section>
 
         <section id="authentication" class="api-docs-section" aria-labelledby="authentication-title">
-            <p class="api-docs-kicker">Security model</p>
             <h2 id="authentication-title">Authentication and access</h2>
             <p>
                 Every operational endpoint requires a named personal access token (PAT). The documentation page and
@@ -130,7 +128,6 @@
         </section>
 
         <section id="errors" class="api-docs-section" aria-labelledby="errors-title">
-            <p class="api-docs-kicker">Response contract</p>
             <h2 id="errors-title">Errors and safe usage</h2>
             <div class="api-status-grid">
                 <div><code>400</code><span>Invalid JSON, field, identifier, product, or resource state</span></div>
@@ -148,7 +145,6 @@
 
         <section class="api-reference-tools" aria-labelledby="reference-title">
             <div>
-                <p class="api-docs-kicker">Endpoint explorer</p>
                 <h2 id="reference-title">API operations</h2>
                 <p>Open an operation for its parameters, JSON fields, response codes, permission, and copyable cURL example.</p>
             </div>
@@ -203,7 +199,7 @@
                         {% if operation.parameters %}
                         <section class="api-operation__section" aria-labelledby="{{ operation.id }}-parameters">
                             <h3 id="{{ operation.id }}-parameters">Parameters</h3>
-                            <div class="api-table-wrap">
+                            <div class="api-table-wrap" role="region" tabindex="0" aria-labelledby="{{ operation.id }}-parameters">
                                 <table class="api-table">
                                     <thead>
                                         <tr>
@@ -238,7 +234,7 @@
                             <p>{{ operation.request_body.description }}</p>
                             <p class="api-content-type"><code>{{ operation.request_body.media_type }}</code>{% if operation.request_body.required %}<span class="api-required">required</span>{% endif %}</p>
                             {% if operation.request_body.properties %}
-                            <div class="api-table-wrap">
+                            <div class="api-table-wrap" role="region" tabindex="0" aria-labelledby="{{ operation.id }}-body">
                                 <table class="api-table">
                                     <thead>
                                         <tr>

@@ -1,40 +1,29 @@
-{% extends "dashboard/layouts/base.html" %}
+{% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 
 {% block title %}Announcement | CLMS QC Tool{% endblock title %}
-{% block main_class %}announcement-page{% endblock main_class %}
+{% block main_class %}workspace-page announcement-page{% endblock main_class %}
 
-{% block css %}
+{% block workspace_css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/features/configuration/announcement.css' %}">
-{% endblock css %}
+{% endblock workspace_css %}
 
-{% block content %}
-<div class="announcement-page__container">
-    <nav class="page-breadcrumb" aria-label="Breadcrumb">
-        <a href="{% url 'dashboard_home' %}">QC Tool</a>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">Announcement</span>
-    </nav>
+{% block page_container_class %}workspace-page__container workspace-page__container--narrow{% endblock page_container_class %}
 
-    <header class="announcement-page__heading">
-        <span class="announcement-page__heading-icon" aria-hidden="true">
-            <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
-        </span>
-        <div>
-            <h1>Announcement</h1>
-            <p>Read the latest message from the QC Tool operators.</p>
-        </div>
-    </header>
+{% block page_title %}Announcement{% endblock page_title %}
+{% block page_subtitle %}<p>Read the latest message from the QC Tool operators.</p>{% endblock page_subtitle %}
 
-    <section class="announcement-card" aria-labelledby="current-announcement-title">
-        <div class="announcement-card__header">
+{% block page_content %}
+
+    <section class="workspace-card announcement-card" aria-labelledby="current-announcement-title">
+        <header class="workspace-card__header announcement-card__header">
             <div>
-                <p class="announcement-card__eyebrow">Current message</p>
                 <h2 id="current-announcement-title">What you need to know</h2>
             </div>
-        </div>
+        </header>
 
+        <div class="workspace-card__body announcement-card__body">
         {% if not announcement_available %}
         <div class="announcement-state announcement-state--error" role="status">
             The announcement is temporarily unavailable. Please try again later.
@@ -47,19 +36,20 @@
             <span>There is no active announcement.</span>
         </div>
         {% endif %}
+        </div>
     </section>
 
     {% if account_access.can_manage_configuration %}
-    <section class="announcement-card announcement-editor" aria-labelledby="announcement-editor-title">
-        <div class="announcement-card__header">
+    <section class="workspace-card announcement-card announcement-editor" aria-labelledby="announcement-editor-title">
+        <header class="workspace-card__header announcement-card__header">
             <div>
-                <p class="announcement-card__eyebrow">Operator controls</p>
                 <h2 id="announcement-editor-title">Update announcement</h2>
                 <p>Changes are shown to every signed-in user. Saving an empty message removes the current announcement.</p>
             </div>
-        </div>
+        </header>
         <form method="post" action="{% url 'announcement_update' %}">
             {% csrf_token %}
+            <div class="workspace-card__body announcement-card__body">
             <div class="form-group{% if announcement_form.announcement_text.errors %} has-error{% endif %}">
                 <label for="{{ announcement_form.announcement_text.id_for_label }}">
                     {{ announcement_form.announcement_text.label }}
@@ -78,8 +68,8 @@
                 <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#edit"></use></svg>
                 Save announcement
             </button>
+            </div>
         </form>
     </section>
     {% endif %}
-</div>
-{% endblock content %}
+{% endblock page_content %}

@@ -12,12 +12,30 @@
     --qc-color-danger: #b42318;
     --qc-color-danger-dark: #8f1c13;
     --qc-color-danger-soft: #fff2f1;
+    --qc-color-warning: #b45309;
+    --qc-color-warning-dark: #8f3f08;
+    --qc-color-warning-soft: #fff3df;
+    --qc-color-accent: #6d28d9;
+    --qc-color-accent-dark: #5b21b6;
+    --qc-color-accent-soft: #f3edff;
     --qc-color-border: #d8e4f3;
+    --qc-color-border-subtle: #e8eef6;
+    --qc-color-border-strong: #c6d3e3;
     --qc-color-surface: #ffffff;
+    --qc-color-surface-subtle: #fbfdff;
+    --qc-color-surface-hover: #f5f8fd;
     --qc-color-canvas: #f7faff;
+    --qc-workspace-background:
+        radial-gradient(circle at 15% 5%, rgba(220, 235, 255, 0.62), transparent 25%),
+        linear-gradient(180deg, #fbfdff 0%, var(--qc-color-canvas) 100%);
+    --qc-focus-ring: rgba(8, 104, 215, 0.32);
+    --qc-shadow-low: 0 5px 18px rgba(24, 55, 96, 0.055);
     --qc-shadow-card: 0 16px 45px rgba(35, 57, 91, 0.08);
     --qc-radius-small: 7px;
     --qc-radius-card: 12px;
+    --qc-radius-pill: 999px;
     --qc-content-width: 1280px;
+    --qc-content-width-wide: 1440px;
+    --qc-content-width-narrow: 920px;
     --qc-font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }

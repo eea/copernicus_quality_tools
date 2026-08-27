@@ -1,0 +1,21 @@
+{% if section_label or parent_label %}
+<nav class="workspace-breadcrumb" aria-label="Breadcrumb">
+    <ol class="workspace-breadcrumb__list">
+        {% if section_label %}
+        <li class="workspace-breadcrumb__item">
+            <a href="{{ section_url }}">{{ section_label }}</a>
+        </li>
+        {% endif %}
+        {% if parent_label %}
+        <li class="workspace-breadcrumb__item">
+            {% if section_label %}<span class="workspace-breadcrumb__separator" aria-hidden="true">/</span>{% endif %}
+            <a href="{{ parent_url }}">{{ parent_label }}</a>
+        </li>
+        {% endif %}
+        <li class="workspace-breadcrumb__item">
+            {% if section_label or parent_label %}<span class="workspace-breadcrumb__separator" aria-hidden="true">/</span>{% endif %}
+            <span aria-current="page">{{ current_label }}</span>
+        </li>
+    </ol>
+</nav>
+{% endif %}
