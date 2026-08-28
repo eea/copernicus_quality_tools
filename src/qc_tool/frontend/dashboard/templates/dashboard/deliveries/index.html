@@ -11,6 +11,9 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/layout.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/filters.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/table.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/rows/overview.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/rows/status.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/rows/actions.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/responsive.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
@@ -80,14 +83,21 @@
         <header class="workspace-card__header deliveries-card__header">
             <div>
                 <h2 id="deliveries-table-title">Deliveries and QC jobs</h2>
-                <p id="deliveries-table-description">Select a delivery name to see its complete job history. Use <strong>View latest QC job</strong> to open the newest result.</p>
+                <p id="deliveries-table-description">Scan each delivery's product and current QC state. Select its name for the complete job history; the most useful next steps appear in each row.</p>
+                <p id="deliveries-result-summary" class="deliveries-result-summary">Loading deliveries…</p>
+            </div>
+            <div class="deliveries-card__tools">
+                <button id="btn-export" class="btn btn-qc-secondary btn-qc--compact" type="button">
+                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>
+                    Export view
+                </button>
             </div>
         </header>
 
-        <div class="deliveries-card__body">
-            <div id="runs-toolbar-1" class="deliveries-toolbar">
-                {% if delivery_actions_enabled %}
-                <div class="deliveries-selection" role="group" aria-labelledby="delivery-selection-summary" hidden>
+        <div class="workspace-card__body workspace-card__body--flush deliveries-card__body">
+            {% if delivery_actions_enabled %}
+            <div id="delivery-selection-toolbar" class="deliveries-toolbar" hidden>
+                <div class="deliveries-selection" role="group" aria-labelledby="delivery-selection-summary">
                     <div class="deliveries-selection__summary">
                         <span class="deliveries-selection__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg></span>
                         <span>
@@ -102,22 +112,17 @@
                         {% if account_access.can_delete %}<button id="btn-delete-multi" class="btn btn-qc-danger-outline" type="button" aria-describedby="delivery-selection-guidance" disabled><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg><span class="delivery-action-label">Delete</span></button>{% endif %}
                     </div>
                 </div>
-                {% endif %}
-                <div class="deliveries-toolbar__utilities">
-                    <button id="btn-export" class="btn btn-qc-secondary" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>Export current view</button>
-                </div>
             </div>
+            {% endif %}
 
             <p id="deliveries-live-status" class="sr-only" aria-live="polite"></p>
             <div class="deliveries-table-region">
-                <table id="tbl-deliveries" class="table" aria-describedby="deliveries-table-description" data-toolbar="#runs-toolbar-1" data-query-params="deliveryQueryParams" data-pagination="true" data-side-pagination="server" data-sort-name="id" data-sort-order="desc" data-checkbox-header="true">
-                    <caption class="sr-only">Delivery packages with product, AOI, latest QC status, job history, and available actions</caption>
+                <table id="tbl-deliveries" class="table" aria-describedby="deliveries-table-description" data-query-params="deliveryQueryParams" data-pagination="true" data-side-pagination="server" data-sort-name="id" data-sort-order="desc" data-checkbox-header="true">
+                    <caption class="sr-only">Delivery overview rows with product, AOI, latest QC status, job history, and available actions</caption>
                     <thead>
                         <tr>
                             {% if delivery_actions_enabled %}<th data-checkbox="true" data-formatter="checkboxFormatter"></th>{% endif %}
-                            <th data-field="filename" data-sortable="true" data-formatter="deliveryFormatter">Delivery</th>
-                            <th data-field="product_description" data-sortable="true" data-formatter="productFormatter">Product / AOI</th>
-                            <th data-field="last_job_status" data-sortable="true" data-formatter="statusFormatter" data-cell-style="statusCellStyle">Status and actions</th>
+                            <th class="delivery-overview-cell" data-class="delivery-overview-cell" data-field="filename" data-sortable="true" data-formatter="deliveryOverviewFormatter">Delivery overview</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -141,6 +146,7 @@ window.QC_DELIVERIES_CONFIG = {
     updateInterval: {{ update_job_statuses_interval|default:30000 }},
     iconSprite: "{% static 'dashboard/icons/ui.svg' %}",
     productsUrl: "{% url 'products' %}",
+    productDetailUrlTemplate: "{% url 'product_detail' 'product-ident-placeholder' %}",
     setupJobUrl: "{% url 'setup_job' %}",
     updateJobUrlTemplate: "{% url 'update_job' '00000000-0000-0000-0000-000000000000' %}",
     deliveriesDataUrl: "{% url 'deliveries_json' %}",
@@ -152,6 +158,9 @@ window.QC_DELIVERIES_CONFIG = {
 </script>
 <script src="{% static 'dashboard/js/bootstrap-dialog.min.js' %}"></script>
 <script src="{% static 'dashboard/js/features/deliveries/formatters.js' %}"></script>
+<script src="{% static 'dashboard/js/features/deliveries/rows/status.js' %}"></script>
+<script src="{% static 'dashboard/js/features/deliveries/rows/actions.js' %}"></script>
+<script src="{% static 'dashboard/js/features/deliveries/rows/overview.js' %}"></script>
 <script src="{% static 'dashboard/js/features/deliveries/table.js' %}"></script>
 <script src="{% static 'dashboard/js/features/deliveries/dialogs.js' %}"></script>
 <script src="{% static 'dashboard/js/features/deliveries/actions.js' %}"></script>

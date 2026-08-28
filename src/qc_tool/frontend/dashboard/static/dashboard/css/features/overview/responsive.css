@@ -94,8 +94,6 @@
     forced-color-adjust: none;
   }
 
-  .dashboard-kpi,
-  .dashboard-panel,
   .dashboard-quick-action {
     border: 1px solid CanvasText;
   }

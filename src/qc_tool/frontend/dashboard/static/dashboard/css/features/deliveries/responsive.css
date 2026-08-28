@@ -13,6 +13,20 @@
         align-items: flex-start;
         flex-direction: column;
     }
+
+    .delivery-overview {
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 0.55fr);
+        column-gap: 24px;
+    }
+
+    .delivery-overview__footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .delivery-row-actions {
+        justify-content: flex-start;
+    }
 }
 
 @media (max-width: 767px) {
@@ -44,14 +58,17 @@
         padding-left: 14px;
     }
 
+    .deliveries-card__tools,
+    .deliveries-card__tools .btn {
+        width: 100%;
+    }
+
     .deliveries-toolbar,
     .deliveries-selection__summary {
         align-items: stretch;
         flex-direction: column;
     }
 
-    .deliveries-toolbar__utilities,
-    .deliveries-toolbar__utilities .btn,
     .deliveries-selection,
     .deliveries-toolbar__actions {
         width: 100%;
@@ -59,6 +76,53 @@
 
     .deliveries-toolbar__actions .btn {
         flex: 1 1 auto;
+    }
+
+    .delivery-overview {
+        padding: 18px 16px;
+        grid-template-areas:
+            "identity"
+            "product"
+            "footer";
+        grid-template-columns: 1fr;
+        row-gap: 15px;
+    }
+
+    .delivery-overview__headline {
+        grid-template-columns: 1fr;
+        gap: 9px;
+    }
+
+    .delivery-status {
+        width: max-content;
+    }
+
+    .delivery-row-actions,
+    .delivery-row-actions__workflow {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .delivery-row-actions .btn {
+        width: 100%;
+    }
+
+    .delivery-row-actions--destructive {
+        width: 100%;
+        margin-top: 3px;
+        margin-left: 0;
+        padding-top: 10px;
+        padding-left: 0;
+        border-top: 1px solid var(--qc-color-border);
+        border-left: 0;
+    }
+
+    .deliveries-page #tbl-deliveries th.bs-checkbox,
+    .deliveries-page #tbl-deliveries td.bs-checkbox {
+        width: 44px;
+        padding-right: 4px;
+        padding-left: 12px;
     }
 }
 

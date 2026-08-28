@@ -85,6 +85,22 @@
         });
     }
 
+    function updateResultSummary(response) {
+        var pageCount = rows().length;
+        var total = Number(response && response.total);
+        var noun;
+        var summary;
+
+        if (!Number.isFinite(total) || total < 0) {
+            total = pageCount;
+        }
+        noun = total === 1 ? "delivery" : "deliveries";
+        summary = total + " " + noun;
+        summary += filtersActive() ? " match this view" : " available";
+        $("#deliveries-result-summary").text(summary);
+        return total;
+    }
+
     function filtersActive() {
         return state.deliveryStatus !== "all" || Boolean(state.search || state.product || state.aoi);
     }
@@ -241,18 +257,22 @@
             })
             .on("load-success.bs.table", function (event, response) {
                 var count = rows().length;
+                var total = updateResultSummary(response);
                 setBusy(false);
                 updateStatusCounts(response && response.status_counts);
                 updateTableAccessibility();
                 announce(
-                    "Showing " + count + " " +
-                    (count === 1 ? "delivery" : "deliveries") + " on this page."
+                    "Showing " + count + " of " + total + " " +
+                    (total === 1 ? "delivery" : "deliveries") + "."
                 );
             })
             .on("post-body.bs.table post-header.bs.table sort.bs.table", updateTableAccessibility)
             .on("page-change.bs.table search.bs.table", clearSelection)
             .on("load-error.bs.table", function () {
                 setBusy(false);
+                $("#deliveries-result-summary").text(
+                    "Delivery count unavailable"
+                );
                 announce("Deliveries could not be loaded. Please try again.");
             });
     }

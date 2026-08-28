@@ -1,0 +1,51 @@
+/* Text and color status badge; lifecycle meaning never relies on color alone. */
+.delivery-status {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    border: 1px solid #d7e0eb;
+    border-radius: var(--qc-radius-pill);
+    color: #526078;
+    background: #f4f7fa;
+    font-size: 11px;
+    line-height: 18px;
+    white-space: nowrap;
+    gap: 6px;
+}
+
+.delivery-status .ui-icon {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+}
+
+.delivery-status--passed {
+    border-color: #b9dfc7;
+    color: var(--qc-color-success-dark);
+    background: var(--qc-color-success-soft);
+}
+
+.delivery-status--failed {
+    border-color: #f0c7c3;
+    color: var(--qc-color-danger-dark);
+    background: var(--qc-color-danger-soft);
+}
+
+.delivery-status--running {
+    border-color: #c5dcf8;
+    color: var(--qc-color-primary-dark);
+    background: var(--qc-color-primary-soft);
+}
+
+.delivery-status--submitted {
+    border-color: #d9c7f8;
+    color: var(--qc-color-accent-dark);
+    background: var(--qc-color-accent-soft);
+}
+
+.delivery-status--not_validated {
+    color: #5f6c80;
+    background: #edf1f6;
+}

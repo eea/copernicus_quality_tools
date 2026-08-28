@@ -108,6 +108,9 @@ class DeliveryWorkspacePresentationTests(TestCase):
             self.static_source(relative_path)
             for relative_path in (
                 "dashboard/js/features/deliveries/formatters.js",
+                "dashboard/js/features/deliveries/rows/status.js",
+                "dashboard/js/features/deliveries/rows/actions.js",
+                "dashboard/js/features/deliveries/rows/overview.js",
                 "dashboard/js/features/deliveries/table.js",
                 "dashboard/js/features/deliveries/dialogs.js",
                 "dashboard/js/features/deliveries/actions.js",
@@ -410,7 +413,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
                 self.assertIn(action_class, script)
 
         self.assertIn("delivery-row-actions-empty", script)
-        self.assertIn("No actions currently available", script)
+        self.assertIn("No additional actions available", script)
         self.assertNotIn("disabledAction", script)
 
     def test_bulk_selection_script_describes_page_local_selection(self):
@@ -492,7 +495,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         table_end = document.find("</table>", table.end())
         self.assertNotEqual(table_end, -1)
         self.assertIn(
-            '<caption class="sr-only">Delivery packages with product, AOI, '
+            '<caption class="sr-only">Delivery overview rows with product, AOI, '
             "latest QC status, job history, and available actions</caption>",
             document[table.end() : table_end],
         )
@@ -500,13 +503,15 @@ class DeliveryWorkspacePresentationTests(TestCase):
             'aria-describedby="deliveries-table-description"',
             table.group(0),
         )
+        self.assertNotIn("data-toolbar=", table.group(0))
 
         toolbar = re.search(
-            r'<[^>]+\bid="runs-toolbar-1"[^>]*>',
+            r'<[^>]+\bid="delivery-selection-toolbar"[^>]*>',
             document,
             flags=re.IGNORECASE,
         )
         self.assertIsNotNone(toolbar)
+        self.assertRegex(toolbar.group(0), r"\bhidden(?:\s|>|=)")
         toolbar_end = document.find(
             '<p id="deliveries-live-status"',
             toolbar.end(),
@@ -517,5 +522,10 @@ class DeliveryWorkspacePresentationTests(TestCase):
             'role="group" aria-label="Selected delivery actions"',
             toolbar_markup,
         )
-        self.assertIn('id="btn-export"', toolbar_markup)
+        self.assertNotIn('id="btn-export"', toolbar_markup)
+        self.assertIn('id="btn-export"', document)
+        self.assertLess(
+            document.index('id="btn-export"'),
+            document.index('id="tbl-deliveries"'),
+        )
         self.assertNotIn("API credential", toolbar_markup)

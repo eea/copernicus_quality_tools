@@ -38,30 +38,50 @@
     overflow: hidden;
 }
 
+.deliveries-card__header {
+    align-items: center;
+}
+
+.deliveries-card__header > div:first-child {
+    min-width: 0;
+}
+
+.workspace-card__header .deliveries-result-summary {
+    color: var(--qc-color-primary-dark);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.deliveries-card__tools {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+}
+
 .deliveries-card__body {
     min-width: 0;
 }
 
 .deliveries-toolbar {
     display: flex;
-    min-height: 62px;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 18px;
+    padding: 12px 20px;
     border-bottom: 1px solid #e8eef6;
-    gap: 14px;
+    background: #f7faff;
+}
+
+.deliveries-toolbar[hidden] {
+    display: none !important;
 }
 
 .deliveries-selection {
     display: flex;
+    width: 100%;
     min-width: 0;
     align-items: center;
-    flex: 1 1 auto;
+    justify-content: space-between;
     gap: 14px;
-}
-
-.deliveries-selection[hidden] {
-    display: none;
 }
 
 .deliveries-selection__summary {
@@ -101,8 +121,7 @@
     background: var(--qc-color-primary-soft);
 }
 
-.deliveries-toolbar__actions,
-.deliveries-toolbar__utilities {
+.deliveries-toolbar__actions {
     display: flex;
     align-items: center;
     flex-wrap: wrap;

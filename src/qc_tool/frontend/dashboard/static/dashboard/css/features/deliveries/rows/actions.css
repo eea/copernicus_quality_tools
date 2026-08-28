@@ -1,0 +1,44 @@
+/* Lifecycle guidance and row-level workflow controls. */
+.delivery-overview__footer {
+    display: flex;
+    min-width: 0;
+    grid-area: footer;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 13px;
+    border-top: 1px solid var(--qc-color-border-subtle);
+    gap: 16px 24px;
+}
+
+.delivery-overview__status-detail {
+    min-width: 170px;
+    margin: 0;
+    color: var(--qc-color-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.delivery-row-actions,
+.delivery-row-actions__workflow,
+.delivery-row-actions--destructive {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.delivery-row-actions {
+    min-width: 0;
+    justify-content: flex-end;
+}
+
+.delivery-row-actions--destructive {
+    margin-left: 5px;
+    padding-left: 12px;
+    border-left: 1px solid var(--qc-color-border);
+}
+
+.delivery-row-actions-empty {
+    color: var(--qc-color-muted);
+    font-size: 11px;
+}

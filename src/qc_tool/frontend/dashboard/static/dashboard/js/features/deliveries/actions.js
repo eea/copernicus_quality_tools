@@ -41,7 +41,7 @@
         var unavailable = [];
         var guidance;
 
-        $(".deliveries-selection").prop("hidden", state.total === 0);
+        $("#delivery-selection-toolbar").prop("hidden", state.total === 0);
         $("#delivery-selection-summary").text(
             state.total === 0
                 ? "No deliveries selected"
