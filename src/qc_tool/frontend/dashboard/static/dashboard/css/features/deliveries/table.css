@@ -1,95 +1,86 @@
-/* Bootstrap Table shell for delivery overview rows. */
+/* Bootstrap Table shell and semantic delivery columns. */
 .deliveries-table-region {
-    max-width: 100%;
-    overflow: hidden;
-}
-
-.deliveries-page .fixed-table-container,
-.deliveries-page .fixed-table-body {
-    border: 0;
-}
-
-.deliveries-page .fixed-table-body {
-    overflow-x: auto;
-}
-
-.deliveries-page .fixed-table-body[role="region"]:focus-visible {
-    outline: 3px solid var(--qc-focus-ring);
-    outline-offset: -3px;
+    --qc-data-table-cell-padding: 16px 14px;
+    --qc-data-table-cell-vertical-align: top;
+    --qc-data-table-empty-padding: 40px 20px;
 }
 
 .deliveries-page #tbl-deliveries {
     width: 100%;
+    min-width: 1180px;
     margin: 0;
-    table-layout: fixed;
+    table-layout: auto;
 }
 
-.deliveries-page #tbl-deliveries > thead > tr > th {
-    padding: 0;
-    border-bottom: 1px solid var(--qc-color-border);
-    color: #56647b;
-    background: #fafcff;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.035em;
-    text-transform: uppercase;
+.deliveries-page #tbl-deliveries > tbody >
+tr.delivery-row--submitted > td {
+    background-color: #f0faf3;
 }
 
-.deliveries-page #tbl-deliveries > thead > tr > th .th-inner {
-    padding: 12px 20px;
+.deliveries-page #tbl-deliveries > tbody >
+tr.delivery-row--submitted:hover > td {
+    background-color: #e7f7ec;
 }
 
-.deliveries-page #tbl-deliveries > tbody > tr > td {
-    padding: 0;
-    border-top: 1px solid #e5ecf5;
-    vertical-align: top;
+.deliveries-page #tbl-deliveries > tbody >
+tr.delivery-row--submitted.selected > td {
+    background-color: #def2e5;
 }
 
-.deliveries-page #tbl-deliveries > tbody > tr:hover > td {
-    background: var(--qc-color-surface-hover);
+.deliveries-page #tbl-deliveries > tbody >
+tr.delivery-row--submitted.selected:hover > td {
+    background-color: #d5eedf;
 }
 
 .deliveries-page #tbl-deliveries th.bs-checkbox,
 .deliveries-page #tbl-deliveries td.bs-checkbox {
     width: 52px;
-    padding: 22px 8px 0 18px;
+    padding-right: 8px;
+    padding-left: 16px;
     text-align: center;
 }
 
-.deliveries-page #tbl-deliveries th.bs-checkbox {
-    padding-top: 12px;
+.delivery-identity-cell {
+    width: 260px;
+    min-width: 250px;
 }
 
-.delivery-overview-cell {
-    width: auto;
+.delivery-product-cell {
+    width: 230px;
+    min-width: 220px;
 }
 
-.deliveries-page .pagination > .active > a,
-.deliveries-page .pagination > .active > span {
-    border-color: var(--qc-color-primary);
-    color: #fff;
-    background: var(--qc-color-primary);
+.delivery-uploaded-cell {
+    width: 160px;
+    min-width: 155px;
 }
 
-.deliveries-page .fixed-table-pagination {
-    padding: 0 18px;
-    color: #5e6c83;
-    font-size: 12px;
+.delivery-size-cell {
+    width: 120px;
+    min-width: 115px;
 }
 
-.deliveries-page .fixed-table-pagination .pagination-detail,
-.deliveries-page .fixed-table-pagination div.pagination {
-    margin-top: 12px;
-    margin-bottom: 12px;
+.delivery-source-cell {
+    width: 110px;
+    min-width: 105px;
 }
 
-.deliveries-page .no-records-found td {
-    padding: 40px 20px !important;
-    color: var(--qc-color-muted);
-    text-align: center;
+.delivery-owner-cell {
+    width: 160px;
+    min-width: 150px;
 }
 
-.deliveries-page .th-inner.sortable[role="button"]:focus-visible {
-    outline: 3px solid var(--qc-focus-ring);
-    outline-offset: -4px;
+.delivery-id-cell {
+    width: 95px;
+    min-width: 90px;
+}
+
+.delivery-status-cell {
+    width: 215px;
+    min-width: 205px;
+}
+
+.delivery-actions-cell {
+    width: 290px;
+    min-width: 280px;
 }

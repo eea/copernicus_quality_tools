@@ -41,7 +41,7 @@
     <header class="workspace-card__header">
         <div>
             <h2 id="job-result-summary-title">Job overview</h2>
-            <p>The job identity, delivery metadata, and terminal QC status.</p>
+            <p>The job identity, delivery metadata, and terminal job status.</p>
         </div>
         <span class="job-result-status job-result-status--{{ job_report.status|default:'unknown'|slugify }}">{{ job_report.status|default:"Unknown" }}</span>
     </header>

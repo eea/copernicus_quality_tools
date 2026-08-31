@@ -95,8 +95,8 @@
             </div>
             <p id="job-history-live-status" class="sr-only" aria-live="polite"></p>
 
-            <div class="job-history-table-region" role="region" aria-label="QC job history" tabindex="0">
-                <table id="tbl-history" class="table" aria-describedby="job-history-description" data-search-align="right" data-show-refresh="true" data-show-toggle="false"{% if can_delete_jobs %} data-checkbox-header="true" data-toolbar="#runs-toolbar-1" data-toolbar-align="left"{% endif %} data-show-filter="false" data-smart-display="true" data-show-export="true" data-show-columns="true" data-pagination="true" data-side-pagination="client" data-sort-name="date_created" data-sort-order="desc" data-unique-id="job_uuid">
+            <div class="job-history-table-region qc-data-table-region" role="region" aria-label="QC job history" tabindex="0">
+                <table id="tbl-history" class="table qc-data-table" aria-describedby="job-history-description" data-search-align="right" data-show-refresh="true" data-show-toggle="false"{% if can_delete_jobs %} data-checkbox-header="true" data-toolbar="#runs-toolbar-1" data-toolbar-align="left"{% endif %} data-show-filter="false" data-smart-display="true" data-show-export="true" data-show-columns="true" data-pagination="true" data-side-pagination="client" data-sort-name="date_created" data-sort-order="desc" data-unique-id="job_uuid">
                     <caption class="sr-only">QC runs for this delivery</caption>
                     <thead>
                         <tr>
@@ -106,7 +106,7 @@
                             <th data-field="date_created" data-formatter="dateFormatter" data-sortable="true">Created</th>
                             <th data-field="date_started" data-formatter="dateFormatter" data-sortable="true">Started</th>
                             <th data-field="date_finished" data-formatter="dateFormatter" data-sortable="true">Finished</th>
-                            <th data-field="job_status" data-sortable="true" data-formatter="statusFormatter">QC status</th>
+                            <th data-field="job_status" data-sortable="true" data-formatter="statusFormatter">Job status</th>
                             <th data-field="aoi_code" data-sortable="true" data-formatter="aoiFormatter">AOI</th>
                         </tr>
                     </thead>

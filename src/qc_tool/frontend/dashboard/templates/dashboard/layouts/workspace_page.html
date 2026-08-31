@@ -28,3 +28,8 @@
 
 {% block page_modals %}{% endblock page_modals %}
 {% endblock workspace_content %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/shared/data-table-ui.js' %}"></script>
+{% endblock js %}

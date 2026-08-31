@@ -4,36 +4,27 @@
 
     var history = window.QcJobHistory = window.QcJobHistory || {};
     var config = window.QC_JOB_HISTORY_CONFIG || {};
+    var dataTableUi = window.QcDataTableUi;
 
-    function labelControls($table) {
-        var $container = $table.closest(".bootstrap-table");
-
-        $container.find(".search input").attr({
-            "aria-label": "Search QC job history",
-            placeholder: "Search jobs"
+    function enhanceTable($table) {
+        dataTableUi.enhance($table, {
+            subject: "QC job history",
+            controls: "QC job history display and export controls",
+            columns: "Choose visible job columns",
+            export: "Export QC job history",
+            search: "Search QC job history",
+            refresh: "Refresh QC job history",
+            toggleAll: "Show or hide all optional job columns"
         });
-        $container.find("button[name='refresh']").attr(
-            "aria-label",
-            "Refresh QC job history"
-        );
-        $container.find("button[name='columns']").attr(
-            "aria-label",
-            "Choose visible job columns"
-        );
-        $container.find("button[data-type='json']").attr(
-            "aria-label",
-            "Export QC job history"
-        );
     }
 
-    function loadSucceeded($table, rows) {
+    function loadSucceeded(rows) {
         var count = Array.isArray(rows) ? rows.length : 0;
 
         $("#job-history-load-error").attr("hidden", true);
         $("#job-history-live-status").text(
             count === 1 ? "One QC job loaded." : count + " QC jobs loaded."
         );
-        labelControls($table);
     }
 
     function loadFailed() {
@@ -47,18 +38,17 @@
         var $table = $("#tbl-history");
 
         $table.on("load-success.bs.table", function (event, rows) {
-            loadSucceeded($table, rows);
+            loadSucceeded(rows);
         });
         $table.on("load-error.bs.table", loadFailed);
-        $table.on("post-header.bs.table", function () {
-            labelControls($table);
-        });
-        $table.bootstrapTable({
+        $table.bootstrapTable(dataTableUi.options({
             cache: false,
             striped: false,
             search: true,
             pagination: true,
-            showColumns: true,
+            showExport: true,
+            showRefresh: true,
+            buttonsOrder: ["refresh", "columns", "export"],
             sortName: "date_created",
             sortOrder: "desc",
             url: config.historyUrl,
@@ -70,7 +60,8 @@
             formatNoMatches: function () {
                 return "No QC jobs have been recorded for this delivery yet.";
             }
-        });
+        }));
+        enhanceTable($table);
         return $table;
     };
 }(window, window.jQuery));

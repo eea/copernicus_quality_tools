@@ -152,8 +152,8 @@
 .job-result-status--running,
 .job-result-status--queued,
 .job-result-status--waiting {
-  color: var(--qc-color-primary-dark);
-  background: var(--qc-color-primary-soft);
+  color: var(--qc-color-warning-dark);
+  background: var(--qc-color-warning-soft);
 }
 
 .job-result-status--failed,

@@ -52,13 +52,8 @@
         flex-direction: column;
     }
 
-    .job-history-selection .btn,
-    .job-history-page .fixed-table-toolbar .search {
+    .job-history-selection .btn {
         width: 100%;
-    }
-
-    .job-history-page .fixed-table-toolbar .columns {
-        float: left !important;
     }
 
     .job-history-modal .modal-footer {

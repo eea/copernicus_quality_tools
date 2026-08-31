@@ -158,6 +158,11 @@ class DeliveryListPresentationTests(TestCase):
         )
 
         self.assertIn("delivery-history-link", script)
+        self.assertIn('"class": "delivery-cell__filename"', script)
+        self.assertIn('"class": "delivery-history-link__label"', script)
+        self.assertIn('text: "Job history"', script)
+        self.assertIn('formatters.icon("history")', script)
+        self.assertNotIn("delivery-history-link__filename", script)
         self.assertIn("delivery-job-link", script)
         self.assertIn("View QC result", script)
         self.assertIn("Review QC result", script)
@@ -171,8 +176,88 @@ class DeliveryListPresentationTests(TestCase):
         self.assertNotIn(".innerHTML", script)
         self.assertNotRegex(script, r"\.html\(\s*(?:row|value)\b")
 
-    def test_table_has_no_dedicated_status_or_actions_column(self):
-        """A row overview keeps state and controls next to their Delivery."""
+    def test_product_aoi_only_appears_after_successful_qc(self):
+        """Do not imply that an unavailable or failed AOI was validated."""
+
+        script = self.static_source(
+            "dashboard/js/features/deliveries/rows/overview.js"
+        )
+
+        self.assertIn(
+            'String(row.last_job_status || "").toLowerCase() === "ok"',
+            script,
+        )
+        self.assertIn("row.aoi_code_submitted || row.aoi_code", script)
+        self.assertIn('text: "AOI: " + aoiCode', script)
+        self.assertNotIn("AOI not available", script)
+        self.assertNotIn("delivery-aoi--empty", script)
+
+    def test_status_coloring_distinguishes_delivery_lifecycle_states(self):
+        """Submitted is strongest green; active QC is warning yellow."""
+
+        table_script = self.static_source(
+            "dashboard/js/features/deliveries/table.js"
+        )
+        table_styles = self.static_source(
+            "dashboard/css/features/deliveries/table.css"
+        )
+        status_styles = self.static_source(
+            "dashboard/css/features/deliveries/rows/status.css"
+        )
+        filter_styles = self.static_source(
+            "dashboard/css/features/deliveries/filters.css"
+        )
+
+        self.assertRegex(
+            status_styles,
+            r"\.delivery-status--passed\s*\{[^}]*"
+            r"background:\s*var\(--qc-color-success-soft\);",
+        )
+        self.assertRegex(
+            status_styles,
+            r"\.delivery-status--running\s*\{[^}]*"
+            r"color:\s*var\(--qc-color-warning-dark\);[^}]*"
+            r"background:\s*var\(--qc-color-warning-soft\);",
+        )
+        self.assertRegex(
+            status_styles,
+            r"\.delivery-status--submitted\s*\{[^}]*"
+            r"color:\s*#fff;[^}]*"
+            r"background:\s*var\(--qc-color-success\);",
+        )
+        self.assertIn(
+            ".delivery-status-filter__dot--running { "
+            "background: var(--qc-color-warning); }",
+            filter_styles,
+        )
+        self.assertIn(
+            ".delivery-status-filter__dot--submitted { "
+            "background: var(--qc-color-success); }",
+            filter_styles,
+        )
+        self.assertNotIn("#7c3aed", filter_styles)
+
+        self.assertIn("function deliveryRowStyle(row)", table_script)
+        self.assertIn(
+            'row && row.delivery_status === "submitted"',
+            table_script,
+        )
+        self.assertIn('"delivery-row--submitted"', table_script)
+        self.assertIn("rowStyle: deliveryRowStyle", table_script)
+        for selector in (
+            r"tr\.delivery-row--submitted\s*>\s*td",
+            r"tr\.delivery-row--submitted:hover\s*>\s*td",
+            r"tr\.delivery-row--submitted\.selected\s*>\s*td",
+            r"tr\.delivery-row--submitted\.selected:hover\s*>\s*td",
+        ):
+            with self.subTest(selector=selector):
+                self.assertRegex(table_styles, selector)
+        for background in ("#f0faf3", "#e7f7ec", "#def2e5", "#d5eedf"):
+            with self.subTest(background=background):
+                self.assertIn(background, table_styles)
+
+    def test_table_has_clear_semantic_columns_with_optional_details(self):
+        """Core workflow columns stay visible while details can be toggled."""
 
         response = self.client.get(reverse("deliveries"))
 
@@ -204,19 +289,118 @@ class DeliveryListPresentationTests(TestCase):
 
         self.assertEqual(
             [(field, label) for field, label, _attributes in data_headers],
-            [("filename", "Delivery overview")],
+            [
+                ("filename", "Delivery"),
+                ("product_description", "Product"),
+                ("date_uploaded", "Uploaded"),
+                ("size_bytes", "Size"),
+                ("type", "Source"),
+                ("username", "Owner"),
+                ("id", "ID"),
+                ("last_job_status", "Job status"),
+                ("actions", "Actions"),
+            ],
         )
-        self.assertIn(
-            'data-formatter="deliveryOverviewFormatter"',
-            data_headers[0][2],
+        formatters = (
+            "deliveryFormatter",
+            "productFormatter",
+            "uploadedFormatter",
+            "sizeFormatter",
+            "sourceFormatter",
+            "ownerFormatter",
+            "idFormatter",
+            "statusFormatter",
+            "actionsFormatter",
         )
-        self.assertNotIn('data-field="last_job_status"', header.group("body"))
-        self.assertNotIn('data-field="product_description"', header.group("body"))
-        self.assertNotIn("Status and actions", header.group("body"))
-        self.assertNotIn('data-formatter="statusFormatter"', header.group("body"))
+        for data_header, formatter in zip(data_headers, formatters):
+            with self.subTest(field=data_header[0]):
+                self.assertIn(
+                    'data-formatter="{}"'.format(formatter),
+                    data_header[2],
+                )
 
-    def test_row_overview_groups_actions_and_keeps_destructive_action_last(self):
-        """Row controls have context, native semantics, and a predictable order."""
+        by_field = {
+            field: attributes
+            for field, _label, attributes in data_headers
+        }
+        for field in ("filename", "last_job_status", "actions"):
+            with self.subTest(required_field=field):
+                self.assertIn('data-switchable="false"', by_field[field])
+        for field in ("size_bytes", "type", "username", "id"):
+            with self.subTest(hidden_field=field):
+                self.assertIn('data-visible="false"', by_field[field])
+
+    def test_table_uses_the_shared_columns_and_export_toolbar(self):
+        """Data-table controls share one labelled, reusable UI contract."""
+
+        response = self.client.get(reverse("deliveries"))
+
+        self.assertEqual(response.status_code, 200)
+        document = response.content.decode(response.charset)
+        region = re.search(
+            r'<div\b(?=[^>]*\bclass="[^"]*\bqc-data-table-region\b)[^>]*>',
+            document,
+            flags=re.IGNORECASE,
+        )
+        table = re.search(
+            r'<table\b(?=[^>]*\bid="tbl-deliveries")'
+            r'(?=[^>]*\bclass="[^"]*\bqc-data-table\b)[^>]*>',
+            document,
+            flags=re.IGNORECASE,
+        )
+        self.assertIsNotNone(region)
+        self.assertIsNotNone(table)
+        for asset_path in (
+            "dashboard/css/ui/data-table.css",
+            "dashboard/js/shared/data-table-ui.js",
+        ):
+            with self.subTest(asset_path=asset_path):
+                self.assertIn(asset_path, document)
+                self.assertIsNotNone(finders.find(asset_path))
+
+        shared_script = self.static_source(
+            "dashboard/js/shared/data-table-ui.js"
+        )
+        table_script = self.static_source(
+            "dashboard/js/features/deliveries/table.js"
+        )
+        self.assertIn("window.QcDataTableUi", shared_script)
+        for common_option in (
+            "showColumns",
+            "showButtonText",
+            "showColumnsToggleAll",
+            "minimumCountColumns",
+            "formatExport",
+        ):
+            with self.subTest(common_option=common_option):
+                self.assertIn(common_option, shared_script)
+        self.assertRegex(shared_script, r'["\']Export["\']')
+        self.assertIn("QcDataTableUi", table_script)
+
+    def test_generated_export_keeps_the_server_filtered_delivery_export(self):
+        """Toolbar reuse must not reduce export to the current client page."""
+
+        response = self.client.get(reverse("deliveries"))
+
+        self.assertEqual(response.status_code, 200)
+        document = response.content.decode(response.charset)
+        scripts = "\n".join(
+            self.static_source(path)
+            for path in (
+                "dashboard/js/features/deliveries/table.js",
+                "dashboard/js/features/deliveries/actions.js",
+            )
+        )
+        self.assertNotIn('id="btn-export"', document)
+        self.assertNotIn("#btn-export", scripts)
+        self.assertIn("QcDataTableUi", scripts)
+        self.assertIn("config.exportUrl", scripts)
+        self.assertIn("exportQuery", scripts)
+        self.assertIn("$.param", scripts)
+        self.assertIn("window.location.assign", scripts)
+
+    def test_cell_formatters_prioritize_next_step_and_keep_delete_last(self):
+        """Row controls expose one next step and quieter supporting actions."""
 
         scripts = "\n".join(
             self.static_source(path)
@@ -228,10 +412,29 @@ class DeliveryListPresentationTests(TestCase):
             )
         )
 
-        self.assertIn("function deliveryOverviewFormatter", scripts)
+        for formatter in (
+            "deliveryFormatter",
+            "productFormatter",
+            "uploadedFormatter",
+            "sizeFormatter",
+            "sourceFormatter",
+            "ownerFormatter",
+            "idFormatter",
+            "statusFormatter",
+            "actionsFormatter",
+        ):
+            self.assertIn("function {}".format(formatter), scripts)
         self.assertIn('"role": "group"', scripts)
         self.assertIn('"aria-label": "Actions for " + filename', scripts)
-        self.assertIn("delivery-row-actions--destructive", scripts)
+        self.assertIn("delivery-row-actions__primary", scripts)
+        self.assertIn("delivery-row-actions__secondary", scripts)
+        self.assertIn("delivery-row-actions__destructive", scripts)
+        self.assertIn("delivery-row-action--danger", scripts)
+        self.assertIn('action !== "delete" && !primaryAssigned', scripts)
+        self.assertIn("primaryAssigned = true", scripts)
+        self.assertIn("appendDelete($destructive, row, filename)", scripts)
+        self.assertIn("delivery-row-actions-empty", scripts)
+        self.assertIn("No additional actions available", scripts)
         self.assertIn('type: "button"', scripts)
         self.assertIn("row.delivery_status", scripts)
         self.assertIn("row.job_history_url", scripts)
@@ -246,6 +449,7 @@ class DeliveryListPresentationTests(TestCase):
         )
         self.assertIn("text: status.label", scripts)
         self.assertIn("text: status.detail", scripts)
+        self.assertNotIn("QC completed ", scripts)
 
         action_plan = re.search(
             r"function plan\(row\)\s*\{(?P<body>.*?)"
@@ -266,14 +470,17 @@ class DeliveryListPresentationTests(TestCase):
             sorted(action_positions),
             "The lifecycle plan must keep the next step first and delete last.",
         )
-        self.assertNotIn("function statusFormatter", scripts)
-        self.assertNotIn("function productFormatter", scripts)
-        self.assertNotIn("window.statusFormatter", scripts)
         self.assertNotIn("window.statusCellStyle", scripts)
-        self.assertNotIn("window.productFormatter", scripts)
 
     def test_table_interactions_remain_keyboard_accessible(self):
-        script = self.static_source("dashboard/js/features/deliveries/table.js")
+        script = "\n".join(
+            (
+                self.static_source("dashboard/js/shared/data-table-ui.js"),
+                self.static_source(
+                    "dashboard/js/features/deliveries/table.js"
+                ),
+            )
+        )
 
         self.assertIn('role: "button"', script)
         self.assertIn('tabindex: "0"', script)
@@ -282,13 +489,32 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn('role: "region"', script)
         self.assertIn('"aria-labelledby": "deliveries-table-title"', script)
         self.assertIn('"aria-busy"', script)
+        self.assertIn('button[name=\'columns\']', script)
+        self.assertIn(".export", script)
+        self.assertIn('"aria-label"', script)
+        self.assertIn("title", script)
+        self.assertIn("showColumns: true", script)
+        self.assertIn("showButtonText: true", script)
+        self.assertIn("showColumnsToggleAll: true", script)
 
-    def test_overview_grid_collapses_without_the_legacy_wide_table(self):
-        """Small screens get one readable summary flow instead of a wide table."""
+    def test_visible_result_count_is_removed_but_live_updates_remain(self):
+        response = self.client.get(reverse("deliveries"))
+
+        self.assertEqual(response.status_code, 200)
+        document = response.content.decode(response.charset)
+        script = self.static_source("dashboard/js/features/deliveries/table.js")
+        self.assertNotIn('id="deliveries-result-summary"', document)
+        self.assertNotIn("#deliveries-result-summary", script)
+        self.assertIn('id="deliveries-live-status"', document)
+        self.assertIn('"Showing " + count + " of " + total', script)
+
+    def test_semantic_table_scrolls_and_column_control_adapts_on_small_screens(self):
+        """The column meaning is preserved within a focusable scroll region."""
 
         table_styles = "\n".join(
             self.static_source(path)
             for path in (
+                "dashboard/css/ui/data-table.css",
                 "dashboard/css/features/deliveries/table.css",
                 "dashboard/css/features/deliveries/rows/overview.css",
                 "dashboard/css/features/deliveries/rows/status.css",
@@ -299,15 +525,28 @@ class DeliveryListPresentationTests(TestCase):
             "dashboard/css/features/deliveries/responsive.css"
         )
 
-        self.assertNotRegex(table_styles, r"min-width\s*:\s*960px")
         self.assertRegex(
             table_styles,
-            r"\.delivery-overview\s*\{[^}]*\bdisplay\s*:\s*grid\b",
+            r"#tbl-deliveries\s*\{[^}]*\bmin-width\s*:\s*1180px",
         )
+        shared_styles = self.static_source("dashboard/css/ui/data-table.css")
+        self.assertIn(".qc-data-table-region", shared_styles)
+        self.assertIn(".fixed-table-toolbar", shared_styles)
+        self.assertIn(".fixed-table-toolbar .btn", shared_styles)
+        self.assertIn(".fixed-table-toolbar .dropdown-menu", shared_styles)
+        self.assertRegex(table_styles, r"overflow-x\s*:\s*auto")
+        self.assertRegex(shared_styles, r"@media\s*\(max-width:\s*767px\)")
+        self.assertNotRegex(
+            shared_styles + "\n" + responsive_styles,
+            r"\btd\b[^{}]*\{[^}]*\bdisplay\s*:\s*block",
+        )
+        self.assertIn(".delivery-row-action--primary", table_styles)
+        self.assertIn(".delivery-row-action--secondary", table_styles)
+        self.assertIn(".delivery-row-action--danger", table_styles)
+        self.assertIn(".delivery-row-actions__destructive", table_styles)
         self.assertRegex(
             responsive_styles,
-            r"@media\s*\(max-width:\s*767px\)[\s\S]*"
-            r"\.delivery-overview\s*\{[^}]*"
-            r"grid-template-columns\s*:\s*1fr\b",
+            r"\.delivery-row-action--primary,[^{]*"
+            r"\.delivery-row-action--secondary\s*\{[^}]*"
+            r"min-height\s*:\s*40px",
         )
-        self.assertIn(".delivery-row-actions--destructive", table_styles)

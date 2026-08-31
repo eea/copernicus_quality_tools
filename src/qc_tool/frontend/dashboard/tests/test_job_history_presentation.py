@@ -8,9 +8,11 @@ must not expose destructive controls to read-only viewers.
 
 import html
 import re
+from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
@@ -80,6 +82,16 @@ class JobHistoryPresentationTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         return response, response.content.decode(response.charset)
+
+    def static_source(self, relative_path):
+        """Return one shared or history asset for contract assertions."""
+
+        source_path = finders.find(relative_path)
+        self.assertIsNotNone(
+            source_path,
+            "Missing static asset: {}".format(relative_path),
+        )
+        return Path(source_path).read_text(encoding="utf-8")
 
     def test_history_reuses_workspace_with_deliveries_marked_current(self):
         response, document = self.response_document()
@@ -221,6 +233,96 @@ class JobHistoryPresentationTests(TestCase):
             "The scrollable table region needs an accessible name.",
         )
         self.assertLess(region.start(), table.start())
+
+    def test_history_table_uses_shared_columns_and_native_export_controls(self):
+        """History opts into the same labelled toolbar as other data tables."""
+
+        _response, document = self.response_document()
+        table = _opening_tag(document, "table", element_id="tbl-history")
+        region = _opening_tag(
+            document,
+            "div",
+            css_class="qc-data-table-region",
+        )
+
+        self.assertIsNotNone(table)
+        self.assertIsNotNone(region)
+        self.assertIn(
+            "qc-data-table",
+            (_attribute(table.group(0), "class") or "").split(),
+        )
+        for asset_path in (
+            "dashboard/css/ui/data-table.css",
+            "dashboard/js/shared/data-table-ui.js",
+        ):
+            with self.subTest(asset_path=asset_path):
+                self.assertIn(asset_path, document)
+                self.assertIsNotNone(finders.find(asset_path))
+
+        table_tag = table.group(0)
+        self.assertEqual(_attribute(table_tag, "data-show-refresh"), "true")
+        self.assertEqual(_attribute(table_tag, "data-show-export"), "true")
+        shared_script = self.static_source(
+            "dashboard/js/shared/data-table-ui.js"
+        )
+        table_script = self.static_source(
+            "dashboard/js/features/jobs/history/table.js"
+        )
+        self.assertIn("window.QcDataTableUi", shared_script)
+        for common_option in (
+            "showColumns",
+            "showButtonText",
+            "showColumnsToggleAll",
+            "minimumCountColumns",
+            "formatExport",
+        ):
+            with self.subTest(common_option=common_option):
+                self.assertIn(common_option, shared_script)
+        self.assertRegex(shared_script, r'["\']Export["\']')
+        self.assertIn('button[name=\'columns\']', shared_script)
+        self.assertIn(".export", shared_script)
+        self.assertIn('"aria-label"', shared_script)
+        self.assertIn("title", shared_script)
+        self.assertIn("QcDataTableUi", table_script)
+        self.assertNotIn("button[data-type='json']", table_script)
+
+    def test_running_jobs_use_warning_yellow_across_job_pages(self):
+        """Queued and running jobs share the same active warning palette."""
+
+        formatter = self.static_source(
+            "dashboard/js/features/jobs/history/formatters.js"
+        )
+        history_styles = self.static_source(
+            "dashboard/css/features/jobs/history/table.css"
+        )
+        result_styles = self.static_source(
+            "dashboard/css/features/jobs/result.css"
+        )
+
+        self.assertIn('waiting: ["queued", "clock", "Queued"]', formatter)
+        self.assertIn(
+            'running: ["running", "refresh", "Running"]',
+            formatter,
+        )
+        for styles, selector in (
+            (history_styles, ".job-history-status--running"),
+            (history_styles, ".job-history-status--queued"),
+            (result_styles, ".job-result-status--running"),
+            (result_styles, ".job-result-status--queued"),
+            (result_styles, ".job-result-status--waiting"),
+        ):
+            with self.subTest(selector=selector):
+                self.assertIn(selector, styles)
+        for styles in (history_styles, result_styles):
+            with self.subTest(asset="warning palette"):
+                self.assertIn(
+                    "color: var(--qc-color-warning-dark)",
+                    styles,
+                )
+                self.assertIn(
+                    "background: var(--qc-color-warning-soft)",
+                    styles,
+                )
 
     def test_delete_controls_are_rendered_only_for_authorised_managers(self):
         owner_response, owner_document = self.response_document()

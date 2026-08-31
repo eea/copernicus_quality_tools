@@ -83,14 +83,7 @@
         <header class="workspace-card__header deliveries-card__header">
             <div>
                 <h2 id="deliveries-table-title">Deliveries and QC jobs</h2>
-                <p id="deliveries-table-description">Scan each delivery's product and current QC state. Select its name for the complete job history; the most useful next steps appear in each row.</p>
-                <p id="deliveries-result-summary" class="deliveries-result-summary">Loading deliveries…</p>
-            </div>
-            <div class="deliveries-card__tools">
-                <button id="btn-export" class="btn btn-qc-secondary btn-qc--compact" type="button">
-                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>
-                    Export view
-                </button>
+                <p id="deliveries-table-description">Deliveries database with associated quality control jobs and job statuses</p>
             </div>
         </header>
 
@@ -116,13 +109,21 @@
             {% endif %}
 
             <p id="deliveries-live-status" class="sr-only" aria-live="polite"></p>
-            <div class="deliveries-table-region">
-                <table id="tbl-deliveries" class="table" aria-describedby="deliveries-table-description" data-query-params="deliveryQueryParams" data-pagination="true" data-side-pagination="server" data-sort-name="id" data-sort-order="desc" data-checkbox-header="true">
-                    <caption class="sr-only">Delivery overview rows with product, AOI, latest QC status, job history, and available actions</caption>
+            <div class="deliveries-table-region qc-data-table-region">
+                <table id="tbl-deliveries" class="table qc-data-table" aria-describedby="deliveries-table-description" data-query-params="deliveryQueryParams" data-pagination="true" data-side-pagination="server" data-sort-name="id" data-sort-order="desc" data-checkbox-header="true">
+                    <caption class="sr-only">Deliveries with product and AOI context, upload details, job status, job history, and available actions</caption>
                     <thead>
                         <tr>
                             {% if delivery_actions_enabled %}<th data-checkbox="true" data-formatter="checkboxFormatter"></th>{% endif %}
-                            <th class="delivery-overview-cell" data-class="delivery-overview-cell" data-field="filename" data-sortable="true" data-formatter="deliveryOverviewFormatter">Delivery overview</th>
+                            <th class="delivery-identity-cell" data-class="delivery-identity-cell" data-field="filename" data-sortable="true" data-switchable="false" data-formatter="deliveryFormatter">Delivery</th>
+                            <th class="delivery-product-cell" data-class="delivery-product-cell" data-field="product_description" data-sortable="true" data-formatter="productFormatter">Product</th>
+                            <th class="delivery-uploaded-cell" data-class="delivery-uploaded-cell" data-field="date_uploaded" data-sortable="true" data-formatter="uploadedFormatter">Uploaded</th>
+                            <th class="delivery-size-cell" data-class="delivery-size-cell" data-field="size_bytes" data-sortable="true" data-visible="false" data-formatter="sizeFormatter">Size</th>
+                            <th class="delivery-source-cell" data-class="delivery-source-cell" data-field="type" data-sortable="true" data-visible="false" data-formatter="sourceFormatter">Source</th>
+                            <th class="delivery-owner-cell" data-class="delivery-owner-cell" data-field="username" data-sortable="true" data-visible="false" data-formatter="ownerFormatter">Owner</th>
+                            <th class="delivery-id-cell" data-class="delivery-id-cell" data-field="id" data-sortable="true" data-visible="false" data-formatter="idFormatter">ID</th>
+                            <th class="delivery-status-cell" data-class="delivery-status-cell" data-field="last_job_status" data-sortable="true" data-switchable="false" data-formatter="statusFormatter">Job status</th>
+                            <th class="delivery-actions-cell" data-class="delivery-actions-cell" data-field="actions" data-switchable="false" data-formatter="actionsFormatter">Actions</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

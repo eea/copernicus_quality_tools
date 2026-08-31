@@ -1,100 +1,18 @@
 /* Responsive Bootstrap Table presentation for QC job records. */
 .job-history-table-region {
-    max-width: 100%;
-    overflow-x: auto;
-}
-
-.job-history-table-region:focus-visible {
-    outline: 3px solid rgba(8, 104, 215, 0.3);
-    outline-offset: -3px;
-}
-
-.job-history-page .bootstrap-table,
-.job-history-page .fixed-table-container,
-.job-history-page .fixed-table-body {
-    border: 0;
-}
-
-.job-history-page .fixed-table-toolbar {
-    min-height: 70px;
-    padding: 10px 18px;
-    border-bottom: 1px solid #e8eef6;
-}
-
-.job-history-page .fixed-table-toolbar::after {
-    display: table;
-    clear: both;
-    content: "";
-}
-
-.job-history-page .fixed-table-toolbar .bs-bars,
-.job-history-page .fixed-table-toolbar .columns,
-.job-history-page .fixed-table-toolbar .search {
-    margin-top: 0;
-    margin-bottom: 0;
+    --qc-data-table-cell-padding: 14px;
+    --qc-data-table-cell-vertical-align: middle;
+    --qc-data-table-row-hover-background: var(--qc-color-surface-subtle);
+    --qc-data-table-empty-padding: 46px 20px;
 }
 
 .job-history-page .fixed-table-toolbar .bs-bars {
     max-width: calc(100% - 410px);
 }
 
-.job-history-page .fixed-table-toolbar .search {
-    width: min(100%, 250px);
-}
-
-.job-history-page .fixed-table-toolbar .search .form-control {
-    height: 40px;
-    border-color: #cbd8e8;
-    border-radius: var(--qc-radius-small);
-    box-shadow: none;
-}
-
-.job-history-page .fixed-table-toolbar .btn {
-    min-height: 40px;
-    border-color: #c6d3e3;
-    color: var(--qc-color-primary);
-    background: var(--qc-color-surface);
-}
-
-.job-history-page .fixed-table-toolbar .btn:hover,
-.job-history-page .fixed-table-toolbar .btn:focus {
-    border-color: #9eb4cf;
-    color: var(--qc-color-primary-dark);
-    background: #f5f8fd;
-}
-
 .job-history-page #tbl-history {
     min-width: 1160px;
     margin: 0;
-}
-
-.job-history-page #tbl-history > thead > tr > th {
-    padding: 0;
-    border-bottom: 1px solid var(--qc-color-border);
-    color: #56647b;
-    background: #fafcff;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.035em;
-    text-transform: uppercase;
-    vertical-align: middle;
-}
-
-.job-history-page #tbl-history > thead > tr > th .th-inner {
-    padding: 12px 14px;
-}
-
-.job-history-page #tbl-history > tbody > tr > td {
-    padding: 14px;
-    border-top: 1px solid #e5ecf5;
-    color: var(--qc-color-text);
-    font-size: 12px;
-    line-height: 1.5;
-    vertical-align: middle;
-}
-
-.job-history-page #tbl-history > tbody > tr:hover > td {
-    background: #fbfdff;
 }
 
 .job-history-page #tbl-history th.bs-checkbox,
@@ -168,8 +86,16 @@
 
 .job-history-status--running,
 .job-history-status--queued {
-    color: var(--qc-color-primary);
-    background: var(--qc-color-primary-soft);
+    color: var(--qc-color-warning-dark);
+    background: var(--qc-color-warning-soft);
+}
+
+.job-history-status--running:hover,
+.job-history-status--running:focus,
+.job-history-status--queued:hover,
+.job-history-status--queued:focus {
+    color: var(--qc-color-warning-dark);
+    background: #fde7bd;
 }
 
 .job-history-status--failed {
@@ -205,34 +131,4 @@
 .job-history-aoi > small {
     color: var(--qc-color-muted);
     font-size: 10px;
-}
-
-.job-history-page .fixed-table-pagination {
-    padding: 0 18px;
-    color: #5e6c83;
-    font-size: 12px;
-}
-
-.job-history-page .fixed-table-pagination .pagination-detail,
-.job-history-page .fixed-table-pagination div.pagination {
-    margin-top: 12px;
-    margin-bottom: 12px;
-}
-
-.job-history-page .pagination > .active > a,
-.job-history-page .pagination > .active > span {
-    border-color: var(--qc-color-primary);
-    color: #fff;
-    background: var(--qc-color-primary);
-}
-
-.job-history-page .no-records-found td {
-    padding: 46px 20px !important;
-    color: var(--qc-color-muted) !important;
-    text-align: center;
-}
-
-.job-history-page .th-inner.sortable[role="button"]:focus-visible {
-    outline: 3px solid rgba(8, 104, 215, 0.3);
-    outline-offset: -4px;
 }

@@ -387,33 +387,48 @@ class DeliveryWorkspacePresentationTests(TestCase):
             'id="delivery-bulk-actions"',
         )
 
-    def test_delivery_action_assets_keep_semantic_action_states(self):
+    def test_delivery_action_assets_keep_a_clear_action_hierarchy(self):
         stylesheet = self.static_source(
             "dashboard/css/ui/actions.css"
         )
-        tokens = self.static_source("dashboard/css/ui/tokens.css")
-        script = self.delivery_script_source()
-
-        self.assertIn(".qc-shell .btn-qc-success", stylesheet)
-        self.assertIn("--qc-color-success: #15803d", tokens)
-        self.assertIn(
-            "background: var(--qc-color-success)",
-            stylesheet,
+        row_styles = self.static_source(
+            "dashboard/css/features/deliveries/rows/actions.css"
         )
+        script = self.static_source(
+            "dashboard/js/features/deliveries/rows/actions.js"
+        )
+
+        self.assertIn(".qc-shell .btn-qc-primary", stylesheet)
+        self.assertIn(".qc-shell .btn-qc-quiet", stylesheet)
         self.assertIn(".qc-shell .btn-qc--compact", stylesheet)
 
-        for predicate, shared_class, action_class in (
-            ("canRunQc(row)", "btn-qc-success", "delivery-row-qc"),
-            ("canSubmit(row)", "btn-qc-primary", "submit-delivery-button"),
-            ("canDelete(row)", "btn-qc-danger-outline", "delete-button"),
+        for predicate, action_class in (
+            ("canRunQc(row)", "delivery-row-qc"),
+            ("canSubmit(row)", "submit-delivery-button"),
+            ("canDelete(row)", "delete-button"),
         ):
             with self.subTest(action=predicate):
                 self.assertIn(predicate, script)
-                self.assertIn(shared_class, script)
                 self.assertIn(action_class, script)
 
-        self.assertIn("delivery-row-actions-empty", script)
-        self.assertIn("No additional actions available", script)
+        self.assertIn("delivery-row-action--primary", script)
+        self.assertIn("delivery-row-action--secondary", script)
+        self.assertIn("delivery-row-action--danger", script)
+        self.assertIn("delivery-row-actions__destructive", script)
+        self.assertIn('action !== "delete" && !primaryAssigned', script)
+        self.assertIn("primaryAssigned = true", script)
+        self.assertIn("appendDelete($destructive, row, filename)", script)
+        self.assertNotIn("btn-qc-success", script)
+        self.assertNotIn("btn-qc-danger-outline", script)
+        self.assertIn(".delivery-row-action--primary", row_styles)
+        self.assertIn(".delivery-row-action--secondary", row_styles)
+        self.assertIn(".delivery-row-action--danger", row_styles)
+        self.assertIn(".delivery-row-actions__destructive", row_styles)
+        self.assertIn(
+            "border-radius: var(--qc-radius-small)",
+            row_styles,
+        )
+        self.assertNotIn("box-shadow", row_styles)
         self.assertNotIn("disabledAction", script)
 
     def test_bulk_selection_script_describes_page_local_selection(self):
@@ -495,15 +510,15 @@ class DeliveryWorkspacePresentationTests(TestCase):
         table_end = document.find("</table>", table.end())
         self.assertNotEqual(table_end, -1)
         self.assertIn(
-            '<caption class="sr-only">Delivery overview rows with product, AOI, '
-            "latest QC status, job history, and available actions</caption>",
+            '<caption class="sr-only">Deliveries with product and AOI context, '
+            "upload details, job status, job history, and available actions</caption>",
             document[table.end() : table_end],
         )
         self.assertIn(
             'aria-describedby="deliveries-table-description"',
             table.group(0),
         )
-        self.assertNotIn("data-toolbar=", table.group(0))
+        self.assertIn("qc-data-table", table.group(0))
 
         toolbar = re.search(
             r'<[^>]+\bid="delivery-selection-toolbar"[^>]*>',
@@ -523,9 +538,6 @@ class DeliveryWorkspacePresentationTests(TestCase):
             toolbar_markup,
         )
         self.assertNotIn('id="btn-export"', toolbar_markup)
-        self.assertIn('id="btn-export"', document)
-        self.assertLess(
-            document.index('id="btn-export"'),
-            document.index('id="tbl-deliveries"'),
-        )
+        self.assertNotIn('id="btn-export"', document)
+        self.assertNotIn("Export view", document)
         self.assertNotIn("API credential", toolbar_markup)

@@ -4,6 +4,7 @@
 
     var config = window.QC_DELIVERIES_CONFIG || {};
     var formatters = window.QcDeliveryFormatters || {};
+    var dataTableUi = window.QcDataTableUi;
     var tableSelector = "#tbl-deliveries";
     var allowedStatuses = [
         "all", "not_validated", "running", "passed", "failed", "submitted"
@@ -85,19 +86,13 @@
         });
     }
 
-    function updateResultSummary(response) {
+    function resultTotal(response) {
         var pageCount = rows().length;
         var total = Number(response && response.total);
-        var noun;
-        var summary;
 
         if (!Number.isFinite(total) || total < 0) {
             total = pageCount;
         }
-        noun = total === 1 ? "delivery" : "deliveries";
-        summary = total + " " + noun;
-        summary += filtersActive() ? " match this view" : " available";
-        $("#deliveries-result-summary").text(summary);
         return total;
     }
 
@@ -238,6 +233,15 @@
         });
         labelSelectableRows();
         makeSortControlsAccessible();
+        if (dataTableUi) {
+            dataTableUi.enhance($(tableSelector), {
+                subject: "deliveries",
+                controls: "Delivery display and export controls",
+                columns: "Choose visible delivery columns",
+                export: "Export filtered deliveries",
+                toggleAll: "Show or hide all optional delivery columns"
+            });
+        }
     }
 
     function noMatchesMessage() {
@@ -257,7 +261,7 @@
             })
             .on("load-success.bs.table", function (event, response) {
                 var count = rows().length;
-                var total = updateResultSummary(response);
+                var total = resultTotal(response);
                 setBusy(false);
                 updateStatusCounts(response && response.status_counts);
                 updateTableAccessibility();
@@ -266,13 +270,14 @@
                     (total === 1 ? "delivery" : "deliveries") + "."
                 );
             })
-            .on("post-body.bs.table post-header.bs.table sort.bs.table", updateTableAccessibility)
+            .on(
+                "post-body.bs.table post-header.bs.table sort.bs.table " +
+                "column-switch.bs.table column-switch-all.bs.table",
+                updateTableAccessibility
+            )
             .on("page-change.bs.table search.bs.table", clearSelection)
             .on("load-error.bs.table", function () {
                 setBusy(false);
-                $("#deliveries-result-summary").text(
-                    "Delivery count unavailable"
-                );
                 announce("Deliveries could not be loaded. Please try again.");
             });
     }
@@ -287,12 +292,42 @@
         });
     }
 
-    function init() {
-        updateStatusControls();
-        updateClearButton();
-        bindFilters();
-        bindTableEvents();
-        $(tableSelector).bootstrapTable({
+    function exportCurrentView() {
+        window.location.assign(
+            String(config.exportUrl || "") + "?" + $.param(exportQuery())
+        );
+    }
+
+    function exportButton() {
+        var settings = {
+            label: "Export filtered deliveries",
+            event: exportCurrentView
+        };
+
+        if (dataTableUi) {
+            return dataTableUi.exportButton(settings);
+        }
+        return {
+            text: "Export",
+            icon: "glyphicon-export icon-share",
+            event: exportCurrentView,
+            attributes: {
+                "aria-label": settings.label,
+                title: settings.label
+            }
+        };
+    }
+
+    function deliveryRowStyle(row) {
+        return {
+            classes: row && row.delivery_status === "submitted"
+                ? "delivery-row--submitted"
+                : ""
+        };
+    }
+
+    function tableOptions() {
+        var options = {
             cache: false,
             url: config.deliveriesDataUrl,
             pageSize: 20,
@@ -300,12 +335,30 @@
             pagination: true,
             sidePagination: "server",
             search: false,
-            showColumns: false,
+            showColumns: true,
+            showButtonText: true,
+            showColumnsToggleAll: true,
+            minimumCountColumns: 0,
+            buttons: function () {
+                return {exportView: exportButton()};
+            },
+            buttonsOrder: ["columns", "exportView"],
             sortName: "id",
             sortOrder: "desc",
             queryParams: deliveryQueryParams,
+            rowStyle: deliveryRowStyle,
             formatNoMatches: noMatchesMessage
-        });
+        };
+
+        return dataTableUi ? dataTableUi.options(options) : options;
+    }
+
+    function init() {
+        updateStatusControls();
+        updateClearButton();
+        bindFilters();
+        bindTableEvents();
+        $(tableSelector).bootstrapTable(tableOptions());
         updateTableAccessibility();
     }
 

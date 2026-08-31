@@ -1,44 +1,84 @@
-/* Lifecycle guidance and row-level workflow controls. */
-.delivery-overview__footer {
-    display: flex;
-    min-width: 0;
-    grid-area: footer;
-    align-items: center;
-    justify-content: space-between;
-    padding-top: 13px;
-    border-top: 1px solid var(--qc-color-border-subtle);
-    gap: 16px 24px;
-}
-
-.delivery-overview__status-detail {
-    min-width: 170px;
-    margin: 0;
-    color: var(--qc-color-muted);
-    font-size: 11px;
-    line-height: 1.45;
-}
-
-.delivery-row-actions,
-.delivery-row-actions__workflow,
-.delivery-row-actions--destructive {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 7px;
-}
-
+/* One clear next step with quieter supporting row actions. */
 .delivery-row-actions {
+    display: flex;
     min-width: 0;
-    justify-content: flex-end;
+    max-width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.delivery-row-actions--destructive {
-    margin-left: 5px;
-    padding-left: 12px;
-    border-left: 1px solid var(--qc-color-border);
+.delivery-row-actions__primary,
+.delivery-row-actions__secondary,
+.delivery-row-actions__destructive {
+    display: flex;
+    max-width: 100%;
+    align-items: center;
+}
+
+.delivery-row-actions__secondary {
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.delivery-row-actions__destructive {
+    margin-top: 2px;
+}
+
+.delivery-row-action {
+    white-space: nowrap;
+}
+
+.deliveries-page .delivery-row-action--primary {
+    min-height: 38px;
+    padding: 7px 12px;
+    border-radius: var(--qc-radius-small);
+    font-size: 12px;
+}
+
+.deliveries-page .delivery-row-action--secondary {
+    min-height: 36px;
+    padding: 6px;
+    border-color: transparent;
+    color: var(--qc-color-primary);
+    background: transparent;
+    font-size: 12px;
+}
+
+.deliveries-page .delivery-row-action--secondary:hover,
+.deliveries-page .delivery-row-action--secondary:focus,
+.deliveries-page .delivery-row-action--secondary:active {
+    border-color: transparent;
+    color: var(--qc-color-primary-dark);
+    background: var(--qc-color-primary-soft);
+    text-decoration: none;
+}
+
+.deliveries-page .delivery-row-action--danger {
+    color: var(--qc-color-danger);
+}
+
+.deliveries-page .delivery-row-action--danger:hover,
+.deliveries-page .delivery-row-action--danger:focus,
+.deliveries-page .delivery-row-action--danger:active {
+    color: var(--qc-color-danger-dark);
+    background: var(--qc-color-danger-soft);
+}
+
+.deliveries-page .delivery-row-action--primary .ui-icon {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+}
+
+.deliveries-page .delivery-row-action--secondary .ui-icon {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
 }
 
 .delivery-row-actions-empty {
     color: var(--qc-color-muted);
     font-size: 11px;
+    line-height: 1.45;
 }

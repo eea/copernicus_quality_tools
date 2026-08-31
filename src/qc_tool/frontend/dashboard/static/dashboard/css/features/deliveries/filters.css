@@ -63,10 +63,10 @@
     background: #7c899e;
 }
 
-.delivery-status-filter__dot--running { background: #1976e9; }
-.delivery-status-filter__dot--passed { background: var(--qc-color-success); }
+.delivery-status-filter__dot--running { background: var(--qc-color-warning); }
+.delivery-status-filter__dot--passed { background: #6aa27d; }
 .delivery-status-filter__dot--failed { background: #dc2626; }
-.delivery-status-filter__dot--submitted { background: #7c3aed; }
+.delivery-status-filter__dot--submitted { background: var(--qc-color-success); }
 .delivery-status-filter__dot--not_validated { background: #7c899e; }
 
 .delivery-status-filter__count {

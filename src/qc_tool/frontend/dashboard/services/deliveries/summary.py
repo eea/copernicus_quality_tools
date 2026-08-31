@@ -24,7 +24,7 @@ FILE_NOT_FOUND_STATUS = "file_not_found"
 
 
 def with_latest_job_status(queryset):
-    """Annotate deliveries with their deterministically latest QC status.
+    """Annotate deliveries with their deterministically latest job status.
 
     Keeping this annotation in one place prevents the delivery list summary and
     the dashboard from developing subtly different definitions of "latest".

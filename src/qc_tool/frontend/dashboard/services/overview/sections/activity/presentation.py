@@ -22,7 +22,7 @@ def build_job_activity(job, account_access):
         title = "{} is ready for QC".format(job.delivery.filename)
         tone = "neutral"
     else:
-        title = "QC status updated for {}".format(job.delivery.filename)
+        title = "Job status updated for {}".format(job.delivery.filename)
         tone = "neutral"
     return ActivityItem(
         kind="qc",

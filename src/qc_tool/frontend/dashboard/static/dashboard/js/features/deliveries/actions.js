@@ -145,12 +145,6 @@
             }
             dialogs.confirmSubmit(state.rows);
         });
-        $("#btn-export").on("click", function () {
-            window.location.assign(
-                String(config.exportUrl || "") + "?" +
-                $.param(window.QcDeliveryTable.exportQuery())
-            );
-        });
     }
 
     function bindSelectionEvents() {

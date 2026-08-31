@@ -46,19 +46,6 @@
     min-width: 0;
 }
 
-.workspace-card__header .deliveries-result-summary {
-    color: var(--qc-color-primary-dark);
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.deliveries-card__tools {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 8px;
-}
-
 .deliveries-card__body {
     min-width: 0;
 }

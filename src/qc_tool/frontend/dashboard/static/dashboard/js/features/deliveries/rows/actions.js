@@ -5,6 +5,13 @@
     var config = window.QC_DELIVERIES_CONFIG || {};
     var formatters = window.QcDeliveryFormatters;
 
+    function actionClasses(primary, cssClass) {
+        return (primary
+            ? "btn-qc-primary delivery-row-action--primary "
+            : "btn-qc-quiet delivery-row-action--secondary ") +
+            "btn-qc--compact " + cssClass;
+    }
+
     function actionLink(cssClass, symbol, text, href, ariaLabel) {
         return formatters.appendIconText($("<a>", {
             "class": "btn delivery-row-action " + cssClass,
@@ -34,8 +41,7 @@
             label = "View current QC job";
         }
         actionLink(
-            (primary ? "btn-qc-primary" : "btn-qc-secondary") +
-                " btn-qc--compact delivery-job-link",
+            actionClasses(primary, "delivery-job-link"),
             "history",
             label,
             String(row.job_result_url),
@@ -43,10 +49,10 @@
         ).appendTo($container);
     }
 
-    function appendRun($container, row, filename) {
+    function appendRun($container, row, filename, primary) {
         var label = row.last_job_uuid ? "Run QC again" : "Run QC";
         actionLink(
-            "btn-qc-success btn-qc--compact delivery-row-qc",
+            actionClasses(primary, "delivery-row-qc"),
             "play",
             label,
             String(config.setupJobUrl || "") + "?deliveries=" +
@@ -55,10 +61,10 @@
         ).appendTo($container);
     }
 
-    function appendSubmit($container, row, filename) {
+    function appendSubmit($container, row, filename, primary) {
         actionButton(
             row,
-            "btn-qc-primary btn-qc--compact submit-delivery-button",
+            actionClasses(primary, "submit-delivery-button"),
             "send",
             "Submit to EEA",
             "Submit " + filename + " to EEA"
@@ -68,7 +74,8 @@
     function appendDelete($container, row, filename) {
         actionButton(
             row,
-            "btn-qc-danger-outline btn-qc--compact delete-button",
+            "btn-qc-quiet btn-qc--compact delivery-row-action--secondary " +
+                "delivery-row-action--danger delete-button",
             "trash",
             "Delete",
             "Delete " + filename
@@ -98,27 +105,40 @@
     }
 
     function populate($actions, row, filename) {
-        var $workflow = $("<div>", {
-            "class": "delivery-row-actions__workflow"
+        var $primary = $("<div>", {
+            "class": "delivery-row-actions__primary"
+        });
+        var $secondary = $("<div>", {
+            "class": "delivery-row-actions__secondary"
         });
         var $destructive = $("<div>", {
-            "class": "delivery-row-actions--destructive"
+            "class": "delivery-row-actions__destructive"
         });
         var actions = plan(row);
+        var primaryAssigned = false;
 
-        actions.forEach(function (action, index) {
+        actions.forEach(function (action) {
+            var isPrimary = action !== "delete" && !primaryAssigned;
+            var $container = isPrimary ? $primary : $secondary;
+
             if (action === "submit") {
-                appendSubmit($workflow, row, filename);
+                appendSubmit($container, row, filename, isPrimary);
             } else if (action === "result") {
-                appendResult($workflow, row, filename, index === 0);
+                appendResult($container, row, filename, isPrimary);
             } else if (action === "run") {
-                appendRun($workflow, row, filename);
+                appendRun($container, row, filename, isPrimary);
             } else if (action === "delete") {
                 appendDelete($destructive, row, filename);
             }
+            if (isPrimary && $primary.children().length) {
+                primaryAssigned = true;
+            }
         });
-        if ($workflow.children().length) {
-            $workflow.appendTo($actions);
+        if ($primary.children().length) {
+            $primary.appendTo($actions);
+        }
+        if ($secondary.children().length) {
+            $secondary.appendTo($actions);
         }
         if ($destructive.children().length) {
             $destructive.appendTo($actions);

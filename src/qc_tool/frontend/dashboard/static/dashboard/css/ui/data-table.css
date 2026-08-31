@@ -1,0 +1,328 @@
+/* Shared, opt-in presentation for Bootstrap Table shells and controls. */
+.qc-data-table-region {
+    max-width: 100%;
+    overflow: visible;
+}
+
+.qc-data-table-region .bootstrap-table,
+.qc-data-table-region .fixed-table-container,
+.qc-data-table-region .fixed-table-body,
+.bootstrap-table.qc-data-table,
+.bootstrap-table.qc-data-table .fixed-table-container,
+.bootstrap-table.qc-data-table .fixed-table-body {
+    max-width: 100%;
+    border: 0;
+}
+
+.qc-data-table-region .fixed-table-body,
+.bootstrap-table.qc-data-table .fixed-table-body {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.qc-data-table-region:focus-visible,
+.qc-data-table-region .fixed-table-body[role="region"]:focus-visible,
+.bootstrap-table.qc-data-table .fixed-table-body[role="region"]:focus-visible {
+    outline: 3px solid var(--qc-focus-ring);
+    outline-offset: -3px;
+}
+
+.qc-data-table-region .fixed-table-container .table,
+.bootstrap-table.qc-data-table .fixed-table-container .table {
+    width: 100%;
+    min-width: var(--qc-data-table-min-width, 100%);
+    margin: 0;
+    table-layout: auto;
+}
+
+.qc-data-table-region .fixed-table-container .table > thead > tr > th,
+.bootstrap-table.qc-data-table .fixed-table-container .table > thead > tr > th {
+    padding: 0;
+    border-bottom: 1px solid var(--qc-color-border);
+    color: #56647b;
+    background: #fafcff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.qc-data-table-region .fixed-table-container .table > thead > tr > th .th-inner,
+.bootstrap-table.qc-data-table .fixed-table-container .table > thead > tr > th .th-inner {
+    padding: var(--qc-data-table-header-padding, 12px 14px);
+}
+
+.qc-data-table-region .fixed-table-container .table > tbody > tr > td,
+.bootstrap-table.qc-data-table .fixed-table-container .table > tbody > tr > td {
+    padding: var(--qc-data-table-cell-padding, 14px);
+    border-top: 1px solid #e5ecf5;
+    color: var(--qc-color-text);
+    font-size: 12px;
+    line-height: 1.5;
+    vertical-align: var(--qc-data-table-cell-vertical-align, middle);
+}
+
+.qc-data-table-region .fixed-table-container .table > tbody > tr:hover > td,
+.bootstrap-table.qc-data-table .fixed-table-container .table > tbody > tr:hover > td {
+    background: var(
+        --qc-data-table-row-hover-background,
+        var(--qc-color-surface-hover)
+    );
+}
+
+.qc-data-table-region .fixed-table-container .table th.bs-checkbox,
+.qc-data-table-region .fixed-table-container .table td.bs-checkbox,
+.bootstrap-table.qc-data-table .fixed-table-container .table th.bs-checkbox,
+.bootstrap-table.qc-data-table .fixed-table-container .table td.bs-checkbox {
+    width: var(--qc-data-table-selection-width, 48px);
+    padding-right: var(--qc-data-table-selection-padding-right, 8px);
+    padding-left: var(--qc-data-table-selection-padding-left, 16px);
+    text-align: center;
+}
+
+.qc-data-table-region .fixed-table-pagination,
+.bootstrap-table.qc-data-table .fixed-table-pagination {
+    padding: var(--qc-data-table-pagination-padding, 0 18px);
+    color: #5e6c83;
+    font-size: 12px;
+}
+
+.qc-data-table-region .fixed-table-pagination .pagination-detail,
+.qc-data-table-region .fixed-table-pagination div.pagination,
+.bootstrap-table.qc-data-table .fixed-table-pagination .pagination-detail,
+.bootstrap-table.qc-data-table .fixed-table-pagination div.pagination {
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+.qc-data-table-region .pagination > .active > a,
+.qc-data-table-region .pagination > .active > span,
+.bootstrap-table.qc-data-table .pagination > .active > a,
+.bootstrap-table.qc-data-table .pagination > .active > span {
+    border-color: var(--qc-color-primary);
+    color: #fff;
+    background: var(--qc-color-primary);
+}
+
+.qc-data-table-region .no-records-found td,
+.bootstrap-table.qc-data-table .no-records-found td {
+    padding: var(--qc-data-table-empty-padding, 40px 20px) !important;
+    color: var(--qc-color-muted) !important;
+    text-align: center;
+}
+
+.qc-data-table-region .th-inner.sortable[role="button"]:focus-visible,
+.bootstrap-table.qc-data-table .th-inner.sortable[role="button"]:focus-visible {
+    outline: 3px solid var(--qc-focus-ring);
+    outline-offset: -4px;
+}
+
+.qc-data-table-region .fixed-table-toolbar,
+.bootstrap-table.qc-data-table .fixed-table-toolbar {
+    display: flex;
+    min-height: 60px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--qc-color-border-subtle);
+    background: var(--qc-color-surface-subtle);
+    gap: 10px;
+}
+
+.qc-data-table-region .fixed-table-toolbar::after,
+.bootstrap-table.qc-data-table .fixed-table-toolbar::after {
+    display: none;
+}
+
+.qc-data-table-region .fixed-table-toolbar .bs-bars,
+.qc-data-table-region .fixed-table-toolbar .columns,
+.qc-data-table-region .fixed-table-toolbar .search,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .bs-bars,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .search {
+    float: none !important;
+    margin: 0;
+}
+
+.qc-data-table-region .fixed-table-toolbar .bs-bars,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .bs-bars {
+    order: 1;
+    margin-right: auto;
+}
+
+.qc-data-table-region .fixed-table-toolbar .search,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .search {
+    order: 2;
+    width: min(100%, 250px);
+}
+
+.qc-data-table-region .fixed-table-toolbar .columns,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns {
+    display: flex;
+    order: 3;
+    align-items: center;
+    gap: 8px;
+}
+
+.qc-data-table-region .fixed-table-toolbar .columns > .btn-group,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qc-data-table-region .fixed-table-toolbar .columns .btn-group > .btn-group,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns .btn-group > .btn-group {
+    margin-left: 0 !important;
+}
+
+.qc-data-table-region .fixed-table-toolbar .btn,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .btn {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--qc-color-border-strong);
+    border-radius: var(--qc-radius-small);
+    color: var(--qc-color-primary);
+    background: var(--qc-color-surface);
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 700;
+    gap: 7px;
+}
+
+.qc-data-table-region .fixed-table-toolbar .columns .btn-group > .btn-group > .btn,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns .btn-group > .btn-group > .btn {
+    border-radius: var(--qc-radius-small);
+}
+
+.qc-data-table-region .fixed-table-toolbar .btn:hover,
+.qc-data-table-region .fixed-table-toolbar .btn:focus,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .btn:hover,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .btn:focus {
+    border-color: #9eb4cf;
+    color: var(--qc-color-primary-dark);
+    background: var(--qc-color-surface-hover);
+}
+
+.qc-data-table-region .fixed-table-toolbar .btn:focus-visible,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .btn:focus-visible {
+    outline: 3px solid var(--qc-focus-ring);
+    outline-offset: 2px;
+}
+
+.qc-data-table-region .fixed-table-toolbar .search .form-control,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .search .form-control {
+    width: 100%;
+    height: 40px;
+    border-color: var(--qc-color-border-strong);
+    border-radius: var(--qc-radius-small);
+    box-shadow: none;
+}
+
+.qc-data-table-region .fixed-table-toolbar .search .form-control:focus,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .search .form-control:focus {
+    border-color: var(--qc-color-primary);
+    box-shadow: 0 0 0 3px var(--qc-focus-ring);
+}
+
+.qc-data-table-region .fixed-table-toolbar .dropdown-menu,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu {
+    min-width: 230px;
+    max-width: min(320px, calc(100vw - 32px));
+    padding: 8px 0;
+    border-color: var(--qc-color-border);
+    border-radius: var(--qc-radius-small);
+    box-shadow: var(--qc-shadow-card);
+}
+
+.qc-data-table-region .fixed-table-toolbar .dropdown-menu label,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu label {
+    display: flex;
+    min-height: 32px;
+    align-items: center;
+    margin: 0;
+    padding: 6px 16px;
+    color: var(--qc-color-text);
+    font-size: 12px;
+    font-weight: 500;
+    gap: 9px;
+}
+
+.qc-data-table-region .fixed-table-toolbar .dropdown-menu > li > a,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu > li > a {
+    min-height: 32px;
+    padding: 7px 16px;
+    color: var(--qc-color-text);
+    font-size: 12px;
+}
+
+.qc-data-table-region .fixed-table-toolbar .dropdown-menu label:hover,
+.qc-data-table-region .fixed-table-toolbar .dropdown-menu > li > a:hover,
+.qc-data-table-region .fixed-table-toolbar .dropdown-menu > li > a:focus,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu label:hover,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu > li > a:hover,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu > li > a:focus {
+    color: var(--qc-color-primary-dark);
+    background: var(--qc-color-surface-hover);
+}
+
+.qc-data-table-region .fixed-table-toolbar .dropdown-menu input,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu input {
+    margin: 0;
+}
+
+@media (max-width: 767px) {
+    .qc-data-table-region .fixed-table-toolbar,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar {
+        min-height: 64px;
+        align-items: stretch;
+        padding: 12px 14px;
+    }
+
+    .qc-data-table-region .fixed-table-toolbar .bs-bars,
+    .qc-data-table-region .fixed-table-toolbar .columns,
+    .qc-data-table-region .fixed-table-toolbar .search,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .bs-bars,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .columns,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .search {
+        width: 100%;
+        max-width: none;
+    }
+
+    .qc-data-table-region .fixed-table-toolbar .columns > .btn-group,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group {
+        width: 100%;
+    }
+
+    .qc-data-table-region .fixed-table-toolbar .columns > .btn,
+    .qc-data-table-region .fixed-table-toolbar .columns > .btn-group > .btn,
+    .qc-data-table-region .fixed-table-toolbar .columns > .btn-group > .btn-group,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group > .btn,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group > .btn-group {
+        min-width: 0;
+        flex: 1 1 0;
+    }
+
+    .qc-data-table-region .fixed-table-toolbar .columns > .btn-group > .btn-group > .btn,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group > .btn-group > .btn {
+        width: 100%;
+    }
+
+    .qc-data-table-region .fixed-table-toolbar .dropdown-menu,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu {
+        width: 100%;
+    }
+}
+
+@media (forced-colors: active) {
+    .qc-data-table-region .fixed-table-toolbar .btn,
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .btn {
+        border: 1px solid ButtonText;
+    }
+}
