@@ -3,6 +3,10 @@
   overflow: hidden;
 }
 
+.delivery-upload-card [hidden] {
+  display: none !important;
+}
+
 .delivery-upload-card .workspace-card__body {
   display: grid;
   gap: 20px;
