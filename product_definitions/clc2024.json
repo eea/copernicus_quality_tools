@@ -634,7 +634,7 @@
         "boundary_tolerance": 0,
         "boundary_buffer_zone_width": 1200.0,
         "gap_area_tolerance": 0.1,
-        "gap_width_tolerance": 0.01,
+        "gap_width_tolerance": 0.02,
         "du_column_name": null
       }
     },
