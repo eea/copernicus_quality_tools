@@ -1,17 +1,14 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 import re
 import os
-
 
 DESCRIPTION = "The attribute order complies with the specification."
 IS_SYSTEM = False
 
 
 def run_check(params, status):
-    import osgeo.ogr as ogr
     from osgeo.gdal import OpenEx
 
     from qc_tool.vector.helper import do_layers
@@ -25,73 +22,31 @@ def run_check(params, status):
 
     for layer_def in do_layers(params):
 
-        # ds = ogr.Open(str(layer_def["src_filepath"]))
         ds = OpenEx(str(layer_def["src_filepath"]), 0, open_options=["AUTODETECT_TYPE=YES", "SEPARATOR=SEMICOLON"])
         layer = ds.GetLayerByName(layer_def["src_layer_name"])
-        attribute_order = [attr_name.lower() for attr_name in params["attribute_order"]]
+        attribute_order_defined = [attr_name.lower() for attr_name in params["attribute_order"]]
 
-        status.info(str(attribute_order))
+        layer_attributes = [field_defn.name.lower() for field_defn in layer.schema]
 
-        """
-        if "lengths" in params.keys():
-            attr_lengths = {attr_name.lower(): attr_len for attr_name, attr_len in params["lengths"].items()}
-        else:
-            attr_lengths = {}
-        ignored_attrs = params["ignored"].copy()
-        extra_attrs = {}
-        bad_type_attrs = {}
-        bad_attr_lengths = {}
-        for field_defn in layer.schema:
-            field_name = field_defn.name.lower()
-            field_type = field_defn.GetType()
-            field_length = field_defn.GetWidth()
+        is_subset = set(attribute_order_defined).issubset(layer_attributes)
 
-            if field_name in attr_lengths:
-                if field_length <= attr_lengths[field_name]:
-                    del attr_lengths[field_name]
-                else:
-                    bad_attr_lengths.update({field_name: str(field_length)})
+        if not is_subset:
+            missing_items = set(attribute_order_defined) - set(layer_attributes)
+            status.failed("Layer {:s} does not contain some of the required attributes (the following required attributes are missing: '{:s}')".format(
+                layer_def["src_layer_name"],
+                "', '".join(list(missing_items))))
 
-            if field_name in ignored_attrs:
-                # Ignored attribute.
-                ignored_attrs.remove(field_name)
+        attribute_order_layer = [attr_name for attr_name in layer_attributes if attr_name in attribute_order_defined]
 
-            elif field_name in required_attrs:
-                # Required attribute.
-                if field_type not in OGR_TYPES:
-                    # Attribute type is unknown.
-                    bad_type_attrs.update({field_name: "unknown-type"})
-                elif field_type not in ALLOWED_TYPES:
-                    # Attribute type is not allowed.
-                    bad_type_attrs.update({field_name: OGR_TYPES[field_type]})
-                elif ALLOWED_TYPES[field_type] != required_attrs[field_name]:
-                    # Attribute type does not match the type in product definition.
-                    bad_type_attrs.update({field_name: ALLOWED_TYPES[field_type]})
-                del required_attrs[field_name]
-            else:
-                # Extra attribute.
-                extra_attrs.update({field_name: OGR_TYPES[field_type]})
+        order_is_correct = attribute_order_layer == attribute_order_defined
 
-        # The attributes remaining in required_attrs are missing.
-        if len(required_attrs) > 0:
-            status.aborted("Layer {:s} has missing attributes: {:s}."
-                           .format(layer_def["src_layer_name"],
-                                   ", ".join("{:s}({:s})".format(attr_name, required_attrs[attr_name])
-                                             for attr_name in sorted(required_attrs.keys()))))
-        if len(extra_attrs) > 0:
-            status.failed("Layer {:s} has extra attributes: {:s}."
-                          .format(layer_def["src_layer_name"],
-                                  ", ".join("{:s}({:s})".format(attr_name, extra_attrs[attr_name])
-                                            for attr_name in sorted(extra_attrs.keys()))))
-        if len(bad_type_attrs) > 0:
-            status.aborted("Layer {:s} has attributes with bad type: {:s}."
-                           .format(layer_def["src_layer_name"],
-                                   ", ".join("{:s}({:s})".format(attr_name, bad_type_attrs[attr_name])
-                                             for attr_name in sorted(bad_type_attrs.keys()))))
-
-        if len(bad_attr_lengths) > 0:
-            status.failed("Layer {:s} has attributes with bad length: {:s}."
-                          .format(layer_def["src_layer_name"],
-                                  ", ".join("{:s}({:s})".format(attr_name, bad_attr_lengths[attr_name])
-                                            for attr_name in sorted(bad_attr_lengths.keys()))))
-"""
+        if not order_is_correct:
+            status.failed(
+                "The order of attributes in the layer {:s} does not match the specification. "
+                "Order of attributes in the checked layer: '{:s}'. "
+                "Order of attributes according to specification: '{:s}'.".format(
+                    layer_def["src_layer_name"],
+                    "', '".join(list(attribute_order_layer)),
+                    "', '".join(list(attribute_order_defined))
+                )
+            )
