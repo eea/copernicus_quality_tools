@@ -8,6 +8,7 @@ DESCRIPTION = "There is no couple of overlapping polygons."
 IS_SYSTEM = False
 
 DEFAULT_OVERLAP_AREA_TOLERANCE = 1e-6 # square metres
+DEFAULT_OVERLAP_WIDTH_TOLERANCE = 1e-6 # metres
 
 log = logging.getLogger(__name__)
 
@@ -28,20 +29,22 @@ def run_check(params, status):
     # e.g to ignore very small overlaps due to floating-point precision errors (area in m2)
     overlap_area_tolerance = params.get("overlap_area_tolerance", DEFAULT_OVERLAP_AREA_TOLERANCE)
 
+    overlap_width_tolerance = params.get("overlap_width_tolerance", DEFAULT_OVERLAP_WIDTH_TOLERANCE)
+
+    overlap_negative_buffer = overlap_width_tolerance  * -0.5 # negative buffer: half of overlap width tolerance.
+
     cursor = params["connection_manager"].get_connection().cursor()
     for layer_def in do_layers(params):
         log.debug("Started overlap check for the layer {:s}.".format(layer_def["pg_layer_name"]))
 
         # Check for number of polygons in vector layer
-        cursor = params["connection_manager"].get_connection().cursor()
         sql_params = {"layer_name": layer_def["pg_layer_name"]}
-        sql = "SELECT EXISTS (SELECT 1 FROM {layer_name});"
-        sql = sql.format(**sql_params)
+        sql = "SELECT EXISTS (SELECT 1 FROM {layer_name});".format(**sql_params)
         cursor.execute(sql)
         any_polygon_in_vector = cursor.fetchone()[0]
         if not any_polygon_in_vector:
             status.info("There is no polygon to check in the vector layer.")
-            return
+            continue
 
         # Prepare support data.
         partitioned_layer = PartitionedLayer(cursor.connection, layer_def["pg_layer_name"], layer_def["pg_fid_name"])
@@ -55,7 +58,9 @@ def run_check(params, status):
                       "overlap_suspect_table": "s{:02d}_{:s}_suspect".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "error_table": "s{:02d}_{:s}_error".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "overlap_exception_table": "s{:02d}_{:s}_exception".format(params["step_nr"], layer_def["pg_layer_name"]),
-                      "overlap_area_tolerance": str(overlap_area_tolerance)}
+                      "overlap_area_tolerance": str(overlap_area_tolerance),
+                      "overlap_width_tolerance": str(overlap_width_tolerance),
+                      "overlap_negative_buffer": str(overlap_negative_buffer)}
 
         # FIXME:
         # It may happen during partitioning, that the splitted geometries may get shifted a bit.
@@ -67,26 +72,79 @@ def run_check(params, status):
         # from the overlap detail table.
 
         # Create suspects table.
-        sql = ("CREATE TABLE {overlap_suspect_table} AS\n"
-               "(SELECT fida, fidb\n"
-               "FROM {neighbour_table}\n"
-               "WHERE\n"
-               "fida < fidb\n"
-               "AND dim >= 2);")
-        sql = sql.format(**sql_params)
-        log.debug(sql)
-        cursor.execute(sql)
-        if cursor.rowcount > 0:
-            # Create overlap detail table.
-            sql = ("CREATE TABLE {overlap_detail_table} AS\n"
-                   "(SELECT fida, fidb, polygon_dump(ST_Intersection(layer_a.geom, layer_b.geom)) AS geom\n"
-                   "FROM {overlap_suspect_table}\n"
-                   "INNER JOIN {layer_name} AS layer_a ON {overlap_suspect_table}.fida = layer_a.{fid_name}\n"
-                   "INNER JOIN {layer_name} AS layer_b ON {overlap_suspect_table}.fidb = layer_b.{fid_name});\n")
+        sql_suspects = ("CREATE TABLE {overlap_suspect_table} AS\n"
+                        "(SELECT fida, fidb\n"
+                        "FROM {neighbour_table}\n"
+                        "WHERE\n"
+                        "fida < fidb\n"
+                        "AND dim >= 2);")
+        sql_suspects = sql_suspects.format(**sql_params)
+        log.debug(sql_suspects)
+        cursor.execute(sql_suspects)
 
-            # Overlap exception - overlaps with area smaller than tolerance are reported as exceptions, not errors.
-            if overlap_area_tolerance > 0:
-                sql = ("""
+        cursor.execute("SELECT count(*) FROM {overlap_suspect_table};".format(**sql_params))
+        num_suspects = cursor.fetchone()[0]
+
+        if num_suspects > 0:
+            if overlap_area_tolerance > 0 and overlap_width_tolerance > 0:
+                # Both area and width tolerances are set.
+                sql_exceptions = ("""
+                CREATE TABLE {overlap_exception_table} AS
+                WITH inters AS (
+                SELECT fida,
+                        fidb,
+                        (ST_Dump(ST_Intersection(layer_a.geom, layer_b.geom))).geom AS geom
+                FROM {overlap_suspect_table}
+                INNER JOIN {layer_name} AS layer_a
+                    ON {overlap_suspect_table}.fida = layer_a.{fid_name}
+                INNER JOIN {layer_name} AS layer_b
+                    ON {overlap_suspect_table}.fidb = layer_b.{fid_name}
+                )
+                SELECT *
+                FROM inters
+                WHERE ST_Dimension(geom) = 2 AND (ST_Area(geom) <= {overlap_area_tolerance} OR ST_Area(ST_buffer(geom, {overlap_negative_buffer})) = 0)
+                """)
+                cursor.execute(sql_exceptions.format(**sql_params))
+                cursor.execute("SELECT count(*) FROM {overlap_exception_table};".format(**sql_params))
+                num_exceptions = cursor.fetchone()[0]
+                if num_exceptions > 0:
+                    status.add_full_table(sql_params["overlap_exception_table"])
+                    status.info("Layer {:s} has {:d} overlap exceptions with area < {:s} or width < {:s} tolerance."
+                                .format(layer_def["pg_layer_name"], num_exceptions, str(overlap_area_tolerance), str(overlap_width_tolerance)))
+
+                sql_error_detail = ("""
+                CREATE TABLE {overlap_detail_table} AS
+                WITH inters AS (
+                SELECT fida,
+                        fidb,
+                        (ST_Dump(ST_Intersection(layer_a.geom, layer_b.geom))).geom AS geom
+                FROM {overlap_suspect_table}
+                INNER JOIN {layer_name} AS layer_a
+                    ON {overlap_suspect_table}.fida = layer_a.{fid_name}
+                INNER JOIN {layer_name} AS layer_b
+                    ON {overlap_suspect_table}.fidb = layer_b.{fid_name}
+                )
+                SELECT *
+                FROM inters
+                WHERE ST_Area(geom) > {overlap_area_tolerance} OR ST_Area(ST_buffer(geom, {overlap_negative_buffer})) > 0
+                """)
+                cursor.execute(sql_error_detail.format(**sql_params))
+                cursor.execute("SELECT count(*) FROM {overlap_detail_table};".format(**sql_params))
+                num_errors = cursor.fetchone()[0]
+                if num_errors > 0:
+                    status.add_full_table(sql_params["overlap_detail_table"])
+                    sql_error_items = ("CREATE TABLE {error_table} AS\n"
+                                       "SELECT DISTINCT unnest(ARRAY[fida, fidb]) AS {fid_name}\n"
+                                       "FROM {overlap_detail_table};")
+                    cursor.execute(sql_error_items.format(**sql_params))
+                    items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
+                    status.failed("Layer {:s} has overlapping pairs in features with {:s}: {:s}."
+                                  .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+                    status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+
+            elif overlap_area_tolerance > 0:
+                # Only area tolerance is set, width tolerance is not used.
+                sql_exceptions = ("""
                 CREATE TABLE {overlap_exception_table} AS
                 WITH inters AS (
                 SELECT fida,
@@ -102,18 +160,15 @@ def run_check(params, status):
                 FROM inters
                 WHERE ST_Dimension(geom) = 2 AND ST_Area(geom) <= {overlap_area_tolerance}
                 """)
-                sql = sql.format(**sql_params)
-                cursor.execute(sql)
-                if cursor.rowcount > 0:
-                    # Report overlap exception table.
+                cursor.execute(sql_exceptions.format(**sql_params))
+                cursor.execute("SELECT count(*) FROM {overlap_exception_table};".format(**sql_params))
+                num_exceptions = cursor.fetchone()[0]
+                if num_exceptions > 0:
                     status.add_full_table(sql_params["overlap_exception_table"])
-                    # Report exception items.
-                    status.info("Layer {:s} has {:s} overlap exceptions with area < {:s} tolerance."
-                                .format(layer_def["pg_layer_name"], str(cursor.rowcount), str(overlap_area_tolerance)))
+                    status.info("Layer {:s} has {:d} overlap exceptions with area < {:s} tolerance."
+                                .format(layer_def["pg_layer_name"], num_exceptions, str(overlap_area_tolerance)))
 
-            # This version of overlap detail table is more robust.
-            if overlap_area_tolerance > 0:
-                sql = ("""
+                sql_error_detail = ("""
                 CREATE TABLE {overlap_detail_table} AS
                 WITH inters AS (
                 SELECT fida,
@@ -129,25 +184,50 @@ def run_check(params, status):
                 FROM inters
                 WHERE ST_Area(geom) > {overlap_area_tolerance}
                 """)
+                cursor.execute(sql_error_detail.format(**sql_params))
+                cursor.execute("SELECT count(*) FROM {overlap_detail_table};".format(**sql_params))
+                num_errors = cursor.fetchone()[0]
+                if num_errors > 0:
+                    status.add_full_table(sql_params["overlap_detail_table"])
+                    sql_error_items = ("CREATE TABLE {error_table} AS\n"
+                                       "SELECT DISTINCT unnest(ARRAY[fida, fidb]) AS {fid_name}\n"
+                                       "FROM {overlap_detail_table};")
+                    cursor.execute(sql_error_items.format(**sql_params))
+                    items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
+                    status.failed("Layer {:s} has overlapping pairs in features with {:s}: {:s}."
+                                  .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+                    status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
-            # Now look for overlap errors (or overlaps or overlaps larger than tolerance).
-            sql = sql.format(**sql_params)
-            cursor.execute(sql)
-            if cursor.rowcount > 0:
-                # Report overlap detail table.
-                status.add_full_table(sql_params["overlap_detail_table"])
-
-                # Create table of error items.
-                sql = ("CREATE TABLE {error_table} AS\n"
-                       "SELECT DISTINCT unnest(ARRAY[fida, fidb]) AS {fid_name}\n"
-                       "FROM {overlap_detail_table};")
-                sql = sql.format(**sql_params)
-                cursor.execute(sql)
-
-                # Report error items.
-                items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
-                status.failed("Layer {:s} has overlapping pairs in features with {:s}: {:s}."
-                              .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
-                status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+            else:
+                # No tolerance filtering: all 2D intersections are errors.
+                sql_error_detail = ("""
+                CREATE TABLE {overlap_detail_table} AS
+                WITH inters AS (
+                SELECT fida,
+                        fidb,
+                        (ST_Dump(ST_Intersection(layer_a.geom, layer_b.geom))).geom AS geom
+                FROM {overlap_suspect_table}
+                INNER JOIN {layer_name} AS layer_a
+                    ON {overlap_suspect_table}.fida = layer_a.{fid_name}
+                INNER JOIN {layer_name} AS layer_b
+                    ON {overlap_suspect_table}.fidb = layer_b.{fid_name}
+                )
+                SELECT *
+                FROM inters
+                WHERE ST_Dimension(geom) = 2
+                """)
+                cursor.execute(sql_error_detail.format(**sql_params))
+                cursor.execute("SELECT count(*) FROM {overlap_detail_table};".format(**sql_params))
+                num_errors = cursor.fetchone()[0]
+                if num_errors > 0:
+                    status.add_full_table(sql_params["overlap_detail_table"])
+                    sql_error_items = ("CREATE TABLE {error_table} AS\n"
+                                       "SELECT DISTINCT unnest(ARRAY[fida, fidb]) AS {fid_name}\n"
+                                       "FROM {overlap_detail_table};")
+                    cursor.execute(sql_error_items.format(**sql_params))
+                    items_message = get_failed_items_message(cursor, sql_params["error_table"], layer_def["pg_fid_name"])
+                    status.failed("Layer {:s} has overlapping pairs in features with {:s}: {:s}."
+                                  .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+                    status.add_error_table(sql_params["error_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
 
         log.info("Overlap check for the layer {:s} has been finished.".format(layer_def["pg_layer_name"]))

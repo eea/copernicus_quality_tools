@@ -92,7 +92,8 @@ def run_check(params, status):
                       "gap_suspect_table": "s{:02d}_{:s}_gap_suspect".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "gap_error_table": "s{:02d}_{:s}_gap_error".format(params["step_nr"], layer_def["pg_layer_name"]),
                       "gap_area_tolerance": str(gap_area_tolerance),
-                      "gap_width_tolerance": str(gap_width_tolerance)}
+                      "gap_width_tolerance": str(gap_width_tolerance),
+                      "gap_negative_buffer": str(gap_width_tolerance * -0.5)}
         
         with params["connection_manager"].get_connection().cursor() as cursor:
 
@@ -102,7 +103,8 @@ def run_check(params, status):
                        "SELECT ROW_NUMBER() OVER () AS id, geom, ST_Area(geom) as area FROM {gap_table}\n"
                        "WHERE ST_AREA(geom) <= {gap_area_tolerance}\n"
                        "OR ST_XMAX(geom) - ST_XMIN(geom) <= {gap_width_tolerance}\n"
-                       "OR ST_YMAX(geom) - ST_YMIN(geom) <= {gap_width_tolerance};")
+                       "OR ST_YMAX(geom) - ST_YMIN(geom) <= {gap_width_tolerance}\n"
+                       "OR ST_Area(ST_Buffer(geom, {gap_negative_buffer})) = 0;")
                 sql = sql.format(**sql_params)
                 cursor.execute(sql)
 
