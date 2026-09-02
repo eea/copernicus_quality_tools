@@ -91,6 +91,9 @@ RUN echo "$VERSION" >/etc/qc_tool_version.txt \
         libproj-dev libgeos-dev libgeos++-dev \
         libtiff-dev libjpeg-dev libpng-dev \
         libpq-dev libzstd-dev libgeotiff-dev \
+        libxml2-dev \
+        libxslt1-dev \
+        zlib1g-dev \
         swig \
     && cd / && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
@@ -145,7 +148,7 @@ WORKDIR /
 RUN pip3 install --no-cache-dir \
     boto3 checksumdir scikit-image requests bottle supervisor reportlab==3.6.13 \
     saxonche lxml \
-    git+https://github.com/Gisat/envi-geonetwork-validator.git
+    https://github.com/Gisat/envi-geonetwork-validator/archive/refs/heads/main.zip
 
 # Install jetty for the INSPIRE validator.
 #RUN mkdir -p "$JETTY_HOME"
