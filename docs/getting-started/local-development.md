@@ -67,16 +67,29 @@ docker compose -f docker/compose.local.yaml exec frontend \
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage shell
 
-# Database migrations
+# Database readiness (draft initializes models; released applies migrations)
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage makemigrations --check --dry-run
 docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage migrate
+  python3 -m qc_tool.frontend.manage database apply
+docker compose -f docker/compose.local.yaml exec frontend \
+  python3 -m qc_tool.frontend.manage database check
 
 # Restart one service after a shared-code change
 docker compose -f docker/compose.local.yaml restart frontend
 docker compose -f docker/compose.local.yaml restart worker
 ```
+
+Local Compose enables `QC_TOOL_MIGRATE_ON_STARTUP=yes` in the development
+environment. In draft it creates missing tables from models and standard roles,
+with no migration files or product import. It does not alter existing tables;
+use a fresh development database after schema changes. After release freeze
+it applies committed migrations; production uses an explicit deployment job. See [Database migrations](../development/database-migrations.md).
+
+Moving from a draft or incompatible legacy schema to a released schema requires
+a new database initialized from the frozen migrations. Preserve needed local
+data and use a new database/volume; import retained records through an explicit
+conversion procedure. Startup does not perform that transfer.
 
 ## Create a local administrator
 

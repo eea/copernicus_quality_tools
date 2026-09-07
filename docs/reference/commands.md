@@ -28,13 +28,13 @@ docker compose -f docker/compose.local.yaml down --volumes
 ## Django
 
 ```bash
-# Configuration and schema
+# Configuration and whole-application schema
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage check
 docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage showmigrations
+  python3 -m qc_tool.frontend.manage database plan
 docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage migrate
+  python3 -m qc_tool.frontend.manage database check
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage makemigrations --check --dry-run
 
@@ -49,9 +49,24 @@ docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage clearsessions
 ```
 
+During draft, `database plan` explains initialization and `database check`
+verifies table/column presence. `database apply` creates missing tables from
+models, without generating migration files, importing products, or altering
+existing columns. Use a fresh development schema after model changes. After
+freeze, these commands manage the full migration graph, and
+`makemigrations --check --dry-run` detects model drift without writing files.
+
+Use the [local verification procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#local-verification)
+to apply and test changes on a disposable database. For a release, follow the
+[canonical workflow](../development/database-migrations.md) and run the
+application-wide `database apply` once in the documented deployment job before
+frontend startup. Never use `migrate <app> zero` to create the baseline; that
+command unapplies migrations.
+
 ### Historical AOI metadata
 
-After the AOI schema migration, preview the bounded historical result scan:
+After importing and reconciling historical jobs into the baseline schema,
+preview the bounded historical result scan:
 
 ```bash
 docker compose -f docker/compose.local.yaml exec frontend \

@@ -67,13 +67,23 @@ On the first run, this command:
 2. pulls the published worker and PostgreSQL images if necessary;
 3. creates persistent Docker volumes;
 4. waits for PostgreSQL;
-5. applies Django migrations and collects static files;
+5. initializes the draft schema from current models (or applies committed
+   migrations after release freeze), then collects static files;
 6. creates development-only demo users;
 7. starts the frontend and worker health checks.
 
 The repository is mounted read-only over the source packaged in both
 containers. Frontend Python changes are picked up by Django's development
 server. Restart the worker after changing worker or shared Python code.
+
+When the policy phase is `draft`, development has no migration history and
+schema initialization does not import products. Draft schema changes require a
+fresh development database; restarting does not alter existing columns. In
+`released` mode, committed migrations maintain schema history. Legacy data
+transfers use the separate import procedure in
+[Database migrations](../development/database-migrations.md). Normal production
+startup only checks migrations; local Compose enables draft initialization or
+released migration application for development.
 
 ## 5. Watch startup
 

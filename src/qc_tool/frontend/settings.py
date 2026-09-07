@@ -18,6 +18,9 @@ from os import environ
 from django.core.exceptions import ImproperlyConfigured
 
 from qc_tool.common import CONFIG
+from qc_tool.database.policy import migration_modules
+
+MIGRATION_MODULES = migration_modules()
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -149,6 +152,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'qc_tool.database.apps.DatabaseConfig',
     'qc_tool.frontend.accounts.apps.AccountsConfig',
     'qc_tool.frontend.dashboard.apps.QualityControlWorkspaceConfig',
 ]

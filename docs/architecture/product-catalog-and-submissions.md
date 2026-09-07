@@ -168,7 +168,7 @@ Duplicates therefore cannot inflate completion.
 ## Deployment order
 
 ```bash
-python3 -m qc_tool.frontend.manage migrate
+python3 -m qc_tool.frontend.manage database apply
 python3 -m qc_tool.frontend.manage sync_product_catalog path/to/catalog.json --dry-run
 python3 -m qc_tool.frontend.manage sync_product_catalog path/to/catalog.json
 python3 -m qc_tool.frontend.manage backfill_aoi_metadata --dry-run
@@ -179,3 +179,9 @@ Catalog synchronization is an explicit post-deploy operation. Migrations never
 read product definitions or shared result files. Historical legacy submissions
 remain fail-closed until they are reconciled; the new service does not guess an
 authorizing Job or expected release.
+
+Run the schema command as the serialized deployment job described in
+[Operations](../deployment/operations.md#upgrades). The major architecture
+release requires a new database and an operator-managed import; these commands
+do not perform that transfer. See
+[Database migrations](../development/database-migrations.md).

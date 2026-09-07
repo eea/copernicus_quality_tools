@@ -17,6 +17,7 @@ copernicus_quality_tools/
 ├── product_definitions/       # Product-specific JSON QC recipes
 ├── scripts/                   # Maintainer and data-preparation utilities
 ├── src/qc_tool/
+│   ├── database/             # Whole-app migration history, policy, CLI and tests
 │   ├── frontend/
 │   │   ├── accounts/         # Identity, roles, permissions, grants, admin
 │   │   ├── dashboard/        # Deliveries, jobs, UI, route and object access
@@ -44,7 +45,6 @@ frontend/accounts/
 ├── authentication/    # Login backend and API credential authentication
 ├── authorization/     # Role, permission, and per-request access facts
 ├── management/        # User provisioning management command
-├── migrations/        # Accounts schema and canonical permission seed
 ├── models/            # Capability and scope-grant models
 ├── services/          # User, role, and product-grant use cases
 ├── signals/           # Default-role and staff synchronization
@@ -70,6 +70,7 @@ frontend/dashboard/
 │   ├── deliveries.py  # Delivery ownership/product/region read policy
 │   ├── jobs.py        # Job access inherited from its delivery
 │   └── routes/        # Complete public/private endpoint registry
+├── domain/            # Focused account, catalog, delivery, job and submission models
 ├── services/
 │   ├── api/           # Stable JSON request handling
 │   ├── aoi/           # AOI persistence, projection, artifact backfill
@@ -83,12 +84,42 @@ frontend/dashboard/
 ├── static/            # Self-hosted browser assets
 ├── templates/         # Django templates
 ├── urls/              # Pages, data, API, and worker URL groups
-├── models.py          # Delivery, Job, S3Info, and legacy account tables
+├── models.py          # Model discovery and stable imports; dashboard app label
 └── views.py           # HTTP adapters; domain logic should move to services
 ```
 
 When a view grows, extract one logical use case into a focused service rather
 than creating another general helper module.
+
+## Application database package
+
+`src/qc_tool/database/` owns all first-party database lifecycle assets:
+
+```text
+database/
+├── README.md          # Ownership, layout and entry points
+├── MIGRATIONS.md      # Canonical whole-app migration and deployment runbook
+├── policy.json        # Draft/released lifecycle and baseline identities
+├── policy.py          # Policy loading and validation
+├── deployment.py      # Planning, migration checks, apply and PostgreSQL locks
+├── apps.py            # Django management-command discovery
+├── management/        # database plan|check|apply command
+├── migrations/
+│   ├── accounts/      # Migration namespace for the accounts app label
+│   └── dashboard/     # Migration namespace for the dashboard app label
+├── checks/            # Git history guard and disposable schema verification
+└── tests/             # Host history tests and runtime integration tests
+```
+
+During draft, Django builds all tables from current models; migration history
+is disabled and no first-party migration definitions exist. Model/app ownership
+may evolve with the architecture. The first snapshots are generated at explicit
+release freeze into this package's subdirectories for the then-current app
+labels. Released deployments apply one complete graph, including Django's own
+migrations. Legacy data transfers use a separate import procedure into a fresh
+released database. See the
+[migration policy](../development/database-migrations.md) for the developer,
+freeze, data-transfer and deployment procedures.
 
 ## Worker and shared security packages
 

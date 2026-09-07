@@ -22,22 +22,66 @@ docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage collectstatic --noinput
 ```
 
-The checkout is mounted read-only in the local containers. Migration drift
-checks work, but generating a migration file requires a writable environment.
-Do not bypass this by editing generated migration state blindly.
+The checkout is mounted read-only. In draft, tests create tables directly from
+models; no migration files are maintained and the drift command has no history
+to compare. After release freeze, drift checks compare models with committed
+migrations. Use the writable environment in
+[Database migrations](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#development-after-the-major-release-is-frozen)
+to author reviewed new migrations.
+
+## Migration checks
+
+CI enforces the phase declared in `src/qc_tool/database/policy.json` and runs
+the frontend suite on SQLite and PostgreSQL. In draft, it rejects migration
+files and creates the schema directly from current models. After freeze, it
+checks immutable history, baseline-to-head upgrades and model drift. Both modes
+exercise synthetic records, permissions and repeat initialization/application.
+Neither imports or upgrades old production data.
+
+The complete [local verification procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#local-verification)
+is maintained in the database runbook. For a quick schema check, use a disposable
+SQLite database in a one-shot container:
+
+```bash
+docker compose -f docker/compose.local.yaml run --rm --no-deps \
+  -e QC_TOOL_ENVIRONMENT=test \
+  -e DB_ENGINE=sqlite \
+  -e FRONTEND_DB_PATH=/tmp/qc-tool-migration-check.sqlite3 \
+  -e WORK_DIR=/tmp/qc-tool-migration-check-work \
+  frontend python3 -m qc_tool.database.checks.schema
+```
+
+The command overrides ordinary frontend startup and uses container-local
+temporary storage removed with the container. It does not require the local
+database service to be running. The check requires a test environment and
+refuses a populated database. Follow the runbook for its PostgreSQL equivalent
+with a dedicated empty test database. Add
+focused predecessor-to-successor migration tests for data transformations or
+constraints that need additional historical fixtures.
 
 ## Frontend regression suite
 
 ```bash
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage test \
+    qc_tool.database.tests.integration \
     qc_tool.frontend.accounts.tests \
     qc_tool.frontend.dashboard.services.tests \
     qc_tool.frontend.dashboard.tests
 ```
 
-These explicit package labels include both dashboard test packages while
-avoiding the historical `dashboard/tests.py` discovery-name collision.
+These explicit package labels include the central database integration tests
+and both dashboard test packages while avoiding the historical
+`dashboard/tests.py` discovery-name collision. The migration-history unit tests
+run separately on the host because they use Git, which is not part of the
+frontend runtime image:
+
+```bash
+PYTHONPATH=src python3 -m unittest qc_tool.database.tests.test_history
+PYTHONPATH=src python3 -m qc_tool.database.checks.history --base <commit>
+```
+
+Use the PR base or push predecessor as `<commit>` for the history comparison.
 
 High-risk changes should include focused coverage for:
 
@@ -101,3 +145,23 @@ git diff --check
 For production settings, run Django's deploy check with a long throwaway secret,
 an explicit test hostname, and HTTPS/HSTS settings matching the deployment.
 Never weaken the check or commit its secret.
+
+## Central database release policy
+
+The [whole-application migration runbook](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md) and
+[`src/qc_tool/database/policy.json`](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/policy.json) govern every component.
+When the policy phase is `draft`, CI rejects every first-party migration
+definition and tests schemas built directly from models. Release freeze
+introduces the first snapshots; the `released` phase enforces immutable history
+and reviewed forward migrations.
+
+The workflow uses SQLite and PostgreSQL 14. PostgreSQL tests additionally
+exercise serialization between concurrent migration jobs and timeout
+restoration. Do not use `--keepdb` across draft schema changes.
+
+The generic baseline fixture is not a release-to-release or load test. A future
+data migration also needs a predecessor fixture and expected transformation;
+an online release needs old/new application compatibility and representative
+PostgreSQL staging data. Record the evidence and accepted limitations in the
+[release record](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#release-record).
+CI success alone cannot promise zero downtime.

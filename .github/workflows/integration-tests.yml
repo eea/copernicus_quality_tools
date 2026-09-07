@@ -15,15 +15,46 @@ concurrency:
 
 jobs:
   frontend:
+    name: Frontend (${{ matrix.database }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres]
+    services:
+      # Match the PostgreSQL major used by the deployment Compose stack.
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_DB: qc_tool_migration_ci
+          POSTGRES_USER: qc_tool_ci
+          POSTGRES_PASSWORD: ci-only-postgres-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U qc_tool_ci -d qc_tool_migration_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     env:
       TEST_IMAGE: qc-tool-frontend-ci:${{ github.sha }}
       SOURCE_VERSION: ${{ github.event.pull_request.head.sha || github.sha }}
+      MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      DB_ENGINE: ${{ matrix.database }}
 
     steps:
       - name: Check out the proposed source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce draft or released database policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=src python3 -m unittest qc_tool.database.tests.test_history
+          PYTHONPATH=src python3 -m qc_tool.database.checks.history --base "$MIGRATION_BASE_SHA"
 
       - name: Build the supported frontend runtime
         run: >-
@@ -40,11 +71,19 @@ jobs:
 
           run_frontend() {
             docker run --rm \
+              --network host \
               --volume "$GITHUB_WORKSPACE:/usr/local/src/copernicus_quality_tools:ro" \
+              --workdir /usr/local/src/copernicus_quality_tools \
               --env PYTHONPATH=/usr/local/src/copernicus_quality_tools/src \
               --env QC_TOOL_ENVIRONMENT=test \
               --env DJANGO_SECRET_KEY=ci-only-secret \
               --env DJANGO_ALLOWED_HOSTS=testserver,localhost \
+              --env DB_ENGINE \
+              --env POSTGRES_DB=qc_tool_migration_ci \
+              --env POSTGRES_USER=qc_tool_ci \
+              --env POSTGRES_PASSWORD=ci-only-postgres-password \
+              --env POSTGRES_HOST=127.0.0.1 \
+              --env POSTGRES_PORT=5432 \
               --env WORK_DIR=/tmp/qc-tool-work \
               --env FRONTEND_DB_PATH=/tmp/qc-tool-test.sqlite3 \
               --env INCOMING_DIR=/tmp/qc-tool-incoming \
@@ -55,18 +94,24 @@ jobs:
 
           run_frontend python3 -c \
             'import sys, django; assert sys.version_info[:3] == (3, 12, 14); assert django.get_version() == "5.2.17"'
-          run_frontend python3 -m qc_tool.frontend.manage check
-          run_frontend python3 -m qc_tool.frontend.manage makemigrations \
-            --check --dry-run
-          run_frontend python3 -m qc_tool.frontend.manage collectstatic \
-            --noinput
-          run_frontend python3 -m qc_tool.frontend.manage test \
-            qc_tool.frontend.accounts.tests \
-            qc_tool.frontend.dashboard.tests.test_delivery_access \
-            qc_tool.frontend.dashboard.tests.test_delivery_upload_paths \
-            qc_tool.frontend.dashboard.tests.test_worker_authentication \
-            qc_tool.frontend.dashboard.services.tests \
-            --verbosity 2
+          # The checker requires an empty disposable database. Keep all commands
+          # in one container so SQLite retains the verified schema between them.
+          # Draft: create models directly without migration files. Released:
+          # verify the committed baseline-to-head graph and migration drift.
+          run_frontend bash -euc '
+            python3 -m qc_tool.database.checks.schema
+            python3 -m qc_tool.frontend.manage check
+            python3 -m qc_tool.frontend.manage database check
+            python3 -m qc_tool.frontend.manage makemigrations \
+              --check --dry-run
+            python3 -m qc_tool.frontend.manage collectstatic --noinput
+            python3 -m qc_tool.frontend.manage test \
+              qc_tool.frontend.accounts.tests \
+              qc_tool.frontend.dashboard.services.tests \
+              qc_tool.frontend.dashboard.tests \
+              qc_tool.database.tests.integration \
+              --verbosity 2
+          '
 
       - name: Verify secure deployment settings can pass Django checks
         run: >-

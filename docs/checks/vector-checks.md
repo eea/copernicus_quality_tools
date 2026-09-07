@@ -20,7 +20,7 @@ deliveries portable across the tools without any hassle.
 ### Delivery can be unzipped
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/unzip.py).
+[here](../../src/qc_tool/vector/unzip.py).
 
 The check can not be skipped. The result values of the check are: `ok`,
 `aborted`.
@@ -33,7 +33,7 @@ valid ZIP file and the ZIP file can be successfully unzipped.
 ### Naming is in accord with specification
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/naming.py).
+[here](../../src/qc_tool/vector/naming.py).
 
 The check can not be skipped.
 
@@ -64,7 +64,7 @@ valid names.
 ### Attribute table check
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/attribute.py).
+[here](../../src/qc_tool/vector/attribute.py).
 
 `objectid` and `fid` attributes reserves special treatment. These are
 internal attributes operated by the tools. User is not allowed to
@@ -98,7 +98,7 @@ The check ignores any geometry columns.
 ### CRS (Projection) check
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/epsg.py).
+[here](../../src/qc_tool/vector/epsg.py).
 
 Each layer in the delivery must have a coordinate reference system (CRS)
 assigned. The CRS definition must include a valid EPSG code. For
@@ -118,14 +118,14 @@ Product specific sets of allowed EPSG codes are described below.
 ### Data can be imported into database.
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/import2pg.py).
+[here](../../src/qc_tool/vector/import2pg.py).
 
 ## vector.unique
 
 ### Unique attribute check
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/unique.py).
+[here](../../src/qc_tool/vector/unique.py).
 
 Attributes described below can contain only unique values. In addition,
 NULL values are not allowed.
@@ -135,7 +135,7 @@ NULL values are not allowed.
 ### Valid codes
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/enum.py).
+[here](../../src/qc_tool/vector/enum.py).
 
 The values representing Land use / land cover (LULC) code must belong to
 a pre-defined set of valid codes. Empty text or NULL values are not
@@ -146,7 +146,7 @@ allowed.
 ### Distinct codes in change layer
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/change.py).
+[here](../../src/qc_tool/vector/change.py).
 
 The check is applicable to change layers only. Change layers are
 currently parts of CORINE Land Cover, Coastal Zones, Urban Atlas and
@@ -165,7 +165,7 @@ an exception instead of an error.
 ### Non-probable changes
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/non_probable.py).
+[here](../../src/qc_tool/vector/non_probable.py).
 
 The check is applicable to the Urban Atlas change layer product only.
 
@@ -178,14 +178,14 @@ features. The check is informative and always results in `ok` status.
 ### If a feature has nodata set, then all dependent attributes must have specific value.
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/nodata.py).
+[here](../../src/qc_tool/vector/nodata.py).
 
 ## vector.singlepart
 
 ### Singlepart polygon check
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/singlepart.py).
+[here](../../src/qc_tool/vector/singlepart.py).
 
 The QC tool does not allow multi-part geometries.
 
@@ -207,7 +207,7 @@ Reference:
 ### Geometries are valid
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/geometry.py).
+[here](../../src/qc_tool/vector/geometry.py).
 
   - feature satisfying general requirements:
       - Feature with valid geometries as defined by Open Geospatial
@@ -224,14 +224,14 @@ The check definition can be found
 ### Calculated area and value in the column `area` coincide (are within specified tolerance).
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/area.py).
+[here](../../src/qc_tool/vector/area.py).
 
 ## vector.gap
 
 ### There is no gap in the AOI
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/gap.py).
+[here](../../src/qc_tool/vector/gap.py).
 
 There must be no area inside AOI not being covered by some of the layer
 features. Areas inside AOI not covered by any of the features (gaps) are
@@ -242,7 +242,7 @@ reported as error features created for the purpose.
 ### Minimum mapping unit
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mmu.py).
+[here](../../src/qc_tool/vector/mmu.py).
 
 `Boundary` for the purpose of vector minimum mapping unit (MMU)
 requirements means virtual geometry which is created as union of all
@@ -257,7 +257,7 @@ definition applies to all products below.
 ### Maximum mapping unit
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mxmu.py).
+[here](../../src/qc_tool/vector/mxmu.py).
 
 `Area` refers to the value in the `area` attribute.
 
@@ -268,7 +268,7 @@ Applicable to `HRL Small Woody Features: Vector Raster 5m` only.
 ### Minimum mapping width
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mmw.py).
+[here](../../src/qc_tool/vector/mmw.py).
 
 All features not satisfying any requirements specified below are
 considered warning features. This way, as there is no error feature, the
@@ -279,7 +279,7 @@ vector.mxmw ----------
 ### Maximum mapping width
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mxmw.py).
+[here](../../src/qc_tool/vector/mxmw.py).
 
 Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
 
@@ -291,7 +291,7 @@ corresponding feature is reported as warning.
 ### Minimum mapping length
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/mml.py).
+[here](../../src/qc_tool/vector/mml.py).
 
 Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
 
@@ -304,7 +304,7 @@ warning.
 ### No overlapping polygons
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/overlap.py).
+[here](../../src/qc_tool/vector/overlap.py).
 
 There must be no feature having any part of its interior common with any
 other feature (aka overlaps).
@@ -322,7 +322,7 @@ pass through QC tool's overlapping polygon checks
 ### No neighbouring polygons with the same code
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/neighbour.py).
+[here](../../src/qc_tool/vector/neighbour.py).
 
 Every two neighbouring features in the same layer must be of distinct
 class. However, there are slight differences across products.
@@ -332,7 +332,7 @@ class. However, there are slight differences across products.
 ### Vector and raster layer area comparison
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/layer_area.py).
+[here](../../src/qc_tool/vector/layer_area.py).
 
 Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
 
@@ -345,7 +345,7 @@ warning.
 ### Linear and patchy features have appropriate compactness coefficient.
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/compactness.py).
+[here](../../src/qc_tool/vector/compactness.py).
 
 Only applicable to `Small Woody Features: Vector Raster 5 m` layer.
 
@@ -358,7 +358,7 @@ reported as error. Compactness of patchy features must be greater than
 ### Metadata
 
 The check definition can be found
-[here](https://github.com/eea/copernicus_quality_tools/blob/master/src/qc_tool/vector/inspire.py).
+[here](../../src/qc_tool/vector/inspire.py).
 
 EEA-MSGI has been developed by EEA to meet needs and demands for
 interoperability of metadata. EEA’s standard for metadata is a profile

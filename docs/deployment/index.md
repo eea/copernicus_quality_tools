@@ -11,6 +11,14 @@ manifests. Select a persistence profile, pin reviewed image tags, provide
 secrets, adapt hostnames/origins, and put the frontend behind a correctly
 configured HTTPS reverse proxy.
 
+New installations start with an empty database and apply the release's committed
+migrations. Transferring data from an incompatible legacy schema requires a
+separate target database and a reviewed import. Read the
+[cutover procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover)
+before attaching persistent storage. For upgrades, choose the appropriate
+[release workflow](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#choose-the-workflow)
+and follow [Operations](operations.md#upgrades).
+
 ## Choose a profile
 
 | Profile | Frontend database | Shared storage | Appropriate for |
@@ -101,53 +109,98 @@ and CSRF cookies default on.
 ## 4. Validate the rendered configuration
 
 Use one stable project name for initial deployment and every upgrade; Compose
-uses it in persistent volume names.
+uses it in persistent volume names. For a legacy data cutover, use
+a distinct target project and new database volumes so the old deployment stays
+available for recovery. Define the deployment command once and use it for all
+remaining steps. Set these values to the reviewed target environment:
 
 ```bash
-docker compose \
-  --project-name qc_tool_app \
-  --env-file /secure/path/qc-tool.env \
-  -f docker/docker-compose.eea.yml \
-  config --quiet
+QC_RELEASE_PROJECT=qc_tool_app
+QC_RELEASE_ENV_FILE=/secure/path/qc-tool.env
+QC_RELEASE_COMPOSE_FILE=docker/docker-compose.eea.yml
+
+qc_compose() {
+  docker compose \
+    --project-name "$QC_RELEASE_PROJECT" \
+    --env-file "$QC_RELEASE_ENV_FILE" \
+    -f "$QC_RELEASE_COMPOSE_FILE" \
+    "$@"
+}
+
+qc_compose config --quiet
 ```
 
 Inspect the full rendered configuration as well. Confirm there are no demo-user
 or development-server flags and no accidental host bind mounts.
 
-## 5. Pull and start
+## 5. Pull and initialize the database
+
+Production images must use the frozen `released` database policy. A `draft`
+policy refuses production database commands; complete the
+[release freeze](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#freeze-the-first-release)
+before production deployment.
+Prepare the [release record](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#release-record)
+from the [template](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/RELEASE_TEMPLATE.md)
+before running this sequence. These commands initialize an empty installation
+or a separate manual-cutover target; later upgrades follow the
+[online or maintenance workflow](operations.md#upgrades).
 
 ```bash
-docker compose \
-  --project-name qc_tool_app \
-  --env-file /secure/path/qc-tool.env \
-  -f docker/docker-compose.eea.yml \
-  pull
+qc_compose pull
 
-docker compose \
-  --project-name qc_tool_app \
-  --env-file /secure/path/qc-tool.env \
-  -f docker/docker-compose.eea.yml \
-  up --detach --scale worker=4
+qc_compose up --detach userdb
+
+qc_compose exec -T userdb pg_isready --username qc_user --dbname qc_tool
 ```
 
-The frontend entrypoint applies migrations and collects static files before
-starting Gunicorn. Coordinate upgrades so multiple frontend replicas cannot
-race these startup tasks.
+Wait for `pg_isready` to succeed. The SQLite profile has no `userdb` service;
+skip those two commands for that profile and retain its persistent frontend
+volume. Apply migrations once with the same pinned frontend image that will
+serve traffic:
+
+```bash
+qc_compose run --rm --no-deps frontend \
+  python3 -m qc_tool.frontend.manage database plan
+```
+
+Review the plan against the release record and confirm the target is the new
+database. Only then apply it:
+
+```bash
+qc_compose run --rm --no-deps frontend \
+  python3 -m qc_tool.frontend.manage database apply --traceback
+```
+
+The command overrides normal frontend startup. Stop on any error and follow
+[failure and recovery](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
+Keep detailed migration output in restricted release logs. For a legacy data
+cutover, complete and validate the manual data import at this point,
+while frontend and workers remain stopped. For an empty installation no import
+is needed.
+
+```bash
+qc_compose run --rm --no-deps frontend \
+  python3 -m qc_tool.frontend.manage database check
+```
+
+Continue only after this check and the release's import/data validation succeed.
+Start application services:
+
+```bash
+qc_compose up --detach --scale worker=4
+```
+
+Production frontend startup checks for pending migrations and collects static
+files before Gunicorn. It refuses to start when migrations are pending; the
+deployment job owns their application. Never generate migrations in a release
+container. `QC_TOOL_MIGRATE_ON_STARTUP=yes` is reserved for development/test.
 
 ## 6. Verify
 
 ```bash
-docker compose \
-  --project-name qc_tool_app \
-  --env-file /secure/path/qc-tool.env \
-  -f docker/docker-compose.eea.yml \
-  ps
+qc_compose ps
 
-docker compose \
-  --project-name qc_tool_app \
-  --env-file /secure/path/qc-tool.env \
-  -f docker/docker-compose.eea.yml \
-  exec frontend python3 -m qc_tool.frontend.manage check --deploy
+qc_compose exec frontend python3 -m qc_tool.frontend.manage check --deploy
 ```
 
 Review every reported item. If the trusted ingress—not Django—owns SSL redirect
@@ -155,6 +208,7 @@ or HSTS, document that control rather than enabling conflicting Django settings
 merely to silence a check. No other warning should be accepted without an
 explicit risk decision.
 
+Record the migration result and the following checks in the release record.
 Verify through the public HTTPS hostname:
 
 - login renders and POST login works;
@@ -171,11 +225,7 @@ Verify through the public HTTPS hostname:
 Create the first superuser interactively:
 
 ```bash
-docker compose \
-  --project-name qc_tool_app \
-  --env-file /secure/path/qc-tool.env \
-  -f docker/docker-compose.eea.yml \
-  exec frontend python3 -m qc_tool.frontend.manage createsuperuser
+qc_compose exec frontend python3 -m qc_tool.frontend.manage createsuperuser
 ```
 
 Sign in, create named operator accounts, and activate an operator-supplied

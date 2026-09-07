@@ -99,4 +99,5 @@ Continue with:
 - [AOI metadata](aoi-metadata.md)
 - [Product catalog and submissions](product-catalog-and-submissions.md)
 - [Authentication and authorization](authentication-and-authorization.md)
+- [Whole-application database lifecycle](../development/database-migrations.md)
 - [Development guide](../development/index.md)

@@ -15,7 +15,10 @@ contains compiled geospatial, database, Java, and validator dependencies.
 
 1. Read the relevant [architecture](../architecture/index.md) section.
 2. Start the [local environment](../getting-started/index.md).
-3. Keep the change in the owning package.
+3. Keep the change in the owning package; database changes follow the
+   [application-wide release policy](database-migrations.md). Follow the workflow
+   for its phase: model changes without migration files in `draft`, reviewed
+   forward migrations in `released`.
 4. Add focused tests for the behavior and trust boundary.
 5. Run the focused suite while iterating.
 6. Run the documented regression suite and checks before review.
@@ -39,6 +42,7 @@ contains compiled geospatial, database, Java, and validator dependencies.
 ## Main contributor guides
 
 - [Testing](testing.md)
+- [Database lifecycle and migrations](database-migrations.md)
 - [Writing documentation](documentation.md)
 - [Product onboarding](product-onboarding.md)
 - [Repository layout](../architecture/repository-layout.md)

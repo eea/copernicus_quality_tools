@@ -61,10 +61,16 @@ For advice see the example docker compose configuration [docker-compose.igor.yml
 There are already some automated tests at `src/qc_tool/test`.
 See the instructions in [NOTES.txt](src/qc_tool/test/NOTES.txt).
 
-The qc_tool_frontend service uses sqlite database originally located at `/var/lib/qc_tool/frontend.sqlite`.
-The initial database structure is made during docker build.
-The `service_provider` and `eea` configurations use named volumes for persisting such database.
-You are free to copy the database to other persistent location, however you must ensure setting up FRONTEND_DB_PATH properly.
+The application-wide database package lives in
+[`src/qc_tool/database/`](src/qc_tool/database/README.md). It owns the committed
+schema history, release policy, deployment command, checks and migration runbook.
+The release policy determines the workflow: `draft` schemas are developed from
+models without migration files; release freeze creates the first versioned
+snapshots. Released schemas evolve through committed migrations applied in one
+deployment job, and production startup checks that they are current. Legacy
+data transfers use a separate import procedure into a fresh target database.
+See the [migration runbook](src/qc_tool/database/MIGRATIONS.md) before changing
+models, selecting persistent volumes or deploying an upgrade.
 
 
 # Demo installation

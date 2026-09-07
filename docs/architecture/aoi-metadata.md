@@ -26,8 +26,8 @@ accepted only where a QC check reads external metadata:
 
 Alias spelling is case- and separator-insensitive. Workers continue to emit
 `aoi_code` for protocol compatibility. In the database it is written to
-`Job.aoi_code_submitted`; the legacy `Job.aoi_code` alias is dual-written
-during the migration period.
+`Job.aoi_code_submitted`; the retained `Job.aoi_code` compatibility field is
+dual-written. Both fields are part of the current model schema.
 The identifier is trimmed and case-folded. Established Urban Atlas and N2K
 suffixes are normalized to their shared FUA or delivery-unit identifier.
 Purely numeric identifiers are stored without leading zeroes, so values such
@@ -134,8 +134,9 @@ identifier package to product definitions or raster/vector implementations.
 
 ## Historical jobs
 
-Schema migrations do not read files from shared storage. After deploying the
-new columns, an operator may inspect and backfill existing terminal results:
+Schema migrations do not read files from shared storage. After importing and
+reconciling historical jobs into a target database, an operator
+may inspect and backfill their terminal results:
 
 ```bash
 python3 -m qc_tool.frontend.manage backfill_aoi_metadata --dry-run --limit 100
@@ -147,9 +148,9 @@ ambiguous results. Result documents are opened without following symbolic
 links and are capped at 16 MiB before JSON decoding. Run it while the shared
 job-result volume is mounted.
 
-The schema migrations also recognize columns created by the former dev AOI
-work. They adopt those columns, canonicalize existing Job values in bounded
-batches, rebuild every Delivery projection from its deterministic latest Job,
-then reconcile the database to the stable `dash_job_aoi_idx` and
-`dash_delivery_aoi_idx` index names used by the current models. This also
-repairs a partially applied dev schema that had only the Job AOI migration.
+Draft initialization creates AOI fields and indexes directly from models;
+released installations use committed migrations. Neither schema initialization
+path adopts former development columns, repairs partial schemas or converts
+legacy records. Legacy imports require a separate data reconciliation procedure;
+the artifact backfill does not complete that import. See
+[Database migrations](../development/database-migrations.md).

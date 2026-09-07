@@ -3,8 +3,29 @@ set -eu
 
 cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend
 
-# Create frontend database and tables if they do not exist.
-python3 -m qc_tool.frontend.manage migrate --noinput
+# Production schema changes belong to one explicit deployment job, using the
+# same release image as the web process. Startup only verifies readiness.
+case "${QC_TOOL_MIGRATE_ON_STARTUP:-no}" in
+    yes)
+        case "${QC_TOOL_ENVIRONMENT:-production}" in
+            development|test) ;;
+            *)
+                echo "Automatic migrations are limited to development/test. Run database apply as a deployment job." >&2
+                exit 1
+                ;;
+        esac
+        python3 -m qc_tool.frontend.manage database apply
+        ;;
+    no) ;;
+    *)
+        echo "QC_TOOL_MIGRATE_ON_STARTUP must be yes or no." >&2
+        exit 1
+        ;;
+esac
+if ! python3 -m qc_tool.frontend.manage database check; then
+    echo "Database is not ready. Draft: initialize a fresh development schema. Released: apply committed migrations. See src/qc_tool/database/MIGRATIONS.md." >&2
+    exit 1
+fi
 python3 -m qc_tool.frontend.manage collectstatic --noinput
 
 # Predictable demo credentials are opt-in and must never be enabled in a

@@ -6,16 +6,22 @@ nav_order: 2
 
 # Operations
 
+## Deployment command setup
+
 Use the same Compose project name, env file, and Compose-file set for every
 command. For the examples below, define a shell function for the selected
 profile:
 
 ```bash
+QC_RELEASE_PROJECT=qc_tool_app
+QC_RELEASE_ENV_FILE=/secure/path/qc-tool.env
+QC_RELEASE_COMPOSE_FILE=docker/docker-compose.eea.yml
+
 qc_compose() {
   docker compose \
-    --project-name qc_tool_app \
-    --env-file /secure/path/qc-tool.env \
-    -f docker/docker-compose.eea.yml \
+    --project-name "$QC_RELEASE_PROJECT" \
+    --env-file "$QC_RELEASE_ENV_FILE" \
+    -f "$QC_RELEASE_COMPOSE_FILE" \
     "$@"
 }
 ```
@@ -81,25 +87,108 @@ At minimum, preserve:
 
 ## Upgrades
 
-1. Read release and migration notes.
-2. Back up database and shared data.
-3. Validate new image tags in a staging environment with production-like data
-   volume and boundaries.
-4. Render Compose configuration with `config --quiet` and inspect it.
-5. Enter maintenance mode and allow/stop jobs according to policy.
-6. Pull images.
-7. Recreate services; frontend startup applies migrations.
-8. Run `check --deploy` and smoke tests.
-9. Leave maintenance mode and monitor.
+The [database runbook](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md)
+owns schema authoring, compatibility, migration-job gates and recovery rules.
+This page describes Compose operations for the selected deployment. Read the
+runbook from the source revision matching the pinned release image and complete
+its [release record](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#release-record)
+using the [template](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/RELEASE_TEMPLATE.md).
+
+Choose the rollout path before applying schema changes:
+
+- **Compatible PostgreSQL expansion:** use the [online rollout
+  sequence](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#online-rollout-sequence).
+  Keep the old release serving during the bounded migration job; deploy
+  compatible code, backfill, and contract only in a later release.
+- **SQLite or incompatible operations after the first release:** use the
+  maintenance procedure below.
+- **First manual cutover:** use a separate target database and the
+  [cutover runbook](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover),
+  with the [initial deployment commands](index.md#5-pull-and-initialize-the-database).
+
+SQLite upgrades and the manual cutover require a maintenance window.
+
+### Maintenance procedure
+
+This procedure applies after the major-release baseline. The first architecture
+cutover uses a **new database and a manual data import**, described in
+[Database migrations](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover).
+Do not run the new baseline against a pre-release production database.
+
+1. Read the release's migration and compatibility notes. Rehearse with
+   production-like data volume and boundaries; verify restore procedures.
+2. Pin the new frontend and worker image tags/digests. Render the deployment
+   configuration and inspect its database identity and persistent volumes.
+3. Enter maintenance mode, prevent new writes/uploads, and drain or deliberately
+   stop active jobs. Stop frontend and workers so API clients, admin sessions,
+   background refresh and job polling cannot write during migration.
+4. Take a coherent database and shared-data backup. Keep the database service
+   and persistent volumes available. Pull the pinned images.
+5. Inspect the migration plan and run exactly one serialized migration job
+   using the new frontend image. Run required release-specific backfills at
+   their documented point, then check the migration state.
+6. Only after successful migration and validation, recreate application
+   services. Run deployment checks, exercise login and permitted/denied access,
+   inspect deliveries and submissions, and verify a representative worker job.
+7. Leave maintenance mode and monitor. Record the image digests, migration log,
+   backup reference and validation results with the deployment.
 
 ```bash
+qc_compose config --quiet &&
 qc_compose pull
-qc_compose up --detach --remove-orphans --scale worker=4
+```
+
+After configuration validation succeeds, enter maintenance and drain jobs.
+Stop all application writers:
+
+```bash
+qc_compose stop worker frontend
+```
+
+Take the coordinated backup described above and record its recovery reference
+before proceeding. Inspect the new image's plan against the release record:
+
+```bash
+qc_compose run --rm --no-deps frontend \
+  python3 -m qc_tool.frontend.manage database plan
+```
+
+Only after the plan is reviewed, apply it and check the migration state. The
+second command runs only if the first succeeds:
+
+```bash
+qc_compose run --rm --no-deps frontend \
+  python3 -m qc_tool.frontend.manage database apply --traceback &&
+qc_compose run --rm --no-deps frontend \
+  python3 -m qc_tool.frontend.manage database check
+```
+
+Complete release-specific backfills and data validation at their documented
+stage. Continue only when both commands and the validation succeed:
+
+```bash
+qc_compose up --detach --remove-orphans --scale worker=4 &&
 qc_compose exec frontend python3 -m qc_tool.frontend.manage check --deploy
 ```
 
-Rollback may require restoring the database and shared volumes; rolling back
-only an image is unsafe when a migration is not backward compatible.
+Use the same service configuration and pinned frontend image for the job and
+the application; the `run` command replaces the normal startup command and
+`--no-deps` avoids launching application services as a side effect. Prevent
+concurrent deployments with the deployment runner's environment lock. The
+PostgreSQL command also holds a session advisory lock and bounds DDL lock waits.
+The repository validates migrations in CI but does not supply a production
+deployment orchestrator.
+
+Production startup runs the whole-application `database check`; it does not apply pending schema
+changes. `database check` checks the migration recorder, not the validity of
+imported data or manual schema edits. `makemigrations`, `--fake`, and deleting
+migration history are not production repair procedures.
+
+If the job fails, keep application services stopped and follow the canonical
+[failure and recovery procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
+The `--traceback` option captures the cause on the first attempt; keep its output
+in restricted release logs and do not retry merely to obtain better diagnostics.
+Resume only after the release's recovery and compatibility criteria are met.
 
 ## Scale workers
 
@@ -112,7 +201,7 @@ planning must include per-worker shared memory, Java/validator memory, embedded
 PostGIS, archive expansion, shared-storage throughput, and external S3 limits.
 
 Do not scale the frontend horizontally until background status refresh and
-startup migration/static responsibilities are moved to dedicated processes and
+static-file collection responsibilities are moved to dedicated processes and
 the database/storage profile supports it.
 
 ## Session maintenance

@@ -81,8 +81,11 @@ The EEA Compose profile maps its `QC_TOOL_POSTGRES_PASSWORD` substitution into
 | --- | --- | --- |
 | `QC_TOOL_BOOTSTRAP_DEMO_USERS` | `no` | Create predictable demo accounts; refused outside dev/test |
 | `QC_TOOL_DEV_SERVER` | `no` | Run Django `runserver` instead of Gunicorn |
+| `QC_TOOL_MIGRATE_ON_STARTUP` | `no`; local Compose sets `yes` | Initialize draft models or apply released migrations before startup; dev/test only. Existing draft columns are not altered. Otherwise startup runs `database check` |
 
-Never enable either setting in production.
+Never enable these settings in production. Production schema changes run as a
+serialized deployment job using the pinned release image. See
+[Database migrations](../development/database-migrations.md).
 
 ## Worker connectivity and debugging
 
