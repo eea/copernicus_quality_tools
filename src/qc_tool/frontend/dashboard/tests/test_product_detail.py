@@ -21,6 +21,9 @@ from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.services.products.lookup import (
     MAX_CURRENT_RELEASES,
 )
+from qc_tool.frontend.dashboard.views.products.catalog import (
+    _aggregate_coverage,
+)
 from qc_tool.frontend.dashboard.views.products.data import (
     get_product_definition,
 )
@@ -239,12 +242,53 @@ class ManagedProductDetailAccessTests(TestCase):
             )
         )
 
-    def test_product_catalog_card_links_to_the_product_detail(self):
+    def test_product_coverage_percentage_uses_aggregate_counts(self):
+        coverage = _aggregate_coverage(
+            (
+                {"expected": 2, "submitted": 1, "conflicts": 0},
+                {"expected": 3, "submitted": 2, "conflicts": 1},
+            ),
+            True,
+        )
+
+        self.assertEqual(
+            coverage,
+            {
+                "expected": 5,
+                "submitted": 3,
+                "conflicts": 1,
+                "remaining": 2,
+                "completion_percentage": 60.0,
+            },
+        )
+
+    def test_product_coverage_is_unavailable_for_non_authoritative_stream(self):
+        coverage = _aggregate_coverage(
+            (
+                {"expected": 2, "submitted": 1},
+                {"expected": None, "submitted": None},
+            ),
+            True,
+        )
+
+        self.assertTrue(all(value is None for value in coverage.values()))
+
+    def test_product_coverage_is_unavailable_without_report_access(self):
+        coverage = _aggregate_coverage(
+            ({"expected": 2, "submitted": 1, "conflicts": 0},),
+            False,
+        )
+
+        self.assertTrue(all(value is None for value in coverage.values()))
+
+    def test_product_catalog_row_links_to_the_product_detail(self):
         self.client.force_login(self.default_user)
 
         response = self.client.get(reverse("products"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="product-table__title"')
+        self.assertContains(response, "Product details")
         self.assertContains(
             response,
             'href="{}"'.format(
@@ -254,6 +298,22 @@ class ManagedProductDetailAccessTests(TestCase):
                 )
             ),
         )
+
+    def test_product_catalog_masks_coverage_without_report_access(self):
+        self.client.force_login(self.default_user)
+
+        response = self.client.get(reverse("products"))
+
+        self.assertEqual(response.status_code, 200)
+        products = response.context["product_catalog"]
+        self.assertEqual(len(products), 2)
+        for product in products:
+            with self.subTest(product=product["ident"]):
+                self.assertFalse(product["can_view_coverage"])
+                self.assertIsNone(product["expected"])
+                self.assertIsNone(product["submitted"])
+                self.assertIsNone(product["completion_percentage"])
+        self.assertContains(response, "Restricted", count=6)
 
     def test_default_user_sees_metadata_without_aggregate_coverage(self):
         self.client.force_login(self.default_user)
@@ -363,13 +423,19 @@ class ManagedProductDetailAccessTests(TestCase):
         self.assertContains(response, second.release_key)
         self.assertContains(response, "fr001l")
 
-    def test_product_catalog_groups_multiple_release_streams_into_one_card(self):
+    def test_product_catalog_aggregates_multiple_current_release_streams(self):
         self.create_release(
             self.product,
             release_key="urban_atlas_secondary",
             description="Secondary delivery scope",
+            aoi_codes=("fr001l",),
         )
-        self.client.force_login(self.default_user)
+        administrator = get_user_model().objects.create_user(
+            username="product-catalog-administrator",
+            password="test-password",
+        )
+        administrator.groups.add(Group.objects.get(name=Role.ADMIN.value))
+        self.client.force_login(administrator)
 
         response = self.client.get(reverse("products"))
 
@@ -380,8 +446,12 @@ class ManagedProductDetailAccessTests(TestCase):
             if product["ident"] == PRODUCT_IDENT
         )
         self.assertEqual(urban_atlas["release_count"], 2)
+        self.assertEqual(urban_atlas["expected"], 3)
+        self.assertEqual(urban_atlas["submitted"], 0)
+        self.assertEqual(urban_atlas["completion_percentage"], 0.0)
         self.assertEqual(len(products), 2)
-        self.assertContains(response, "2 current release streams")
+        self.assertContains(response, 'id="tbl-products"')
+        self.assertNotContains(response, "2 current release streams")
 
     def test_release_streams_are_bounded_and_truncation_is_visible(self):
         for index in range(MAX_CURRENT_RELEASES):

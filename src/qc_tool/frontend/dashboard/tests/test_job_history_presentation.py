@@ -183,7 +183,7 @@ class JobHistoryPresentationTests(TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, visible_text)
 
-    def test_history_table_has_caption_description_and_labelled_region(self):
+    def test_history_table_has_caption_description_and_scroll_region(self):
         _response, document = self.response_document()
 
         table = _opening_tag(document, "table", element_id="tbl-history")
@@ -225,16 +225,23 @@ class JobHistoryPresentationTests(TestCase):
         )
         self.assertIsNotNone(region)
         region_tag = region.group(0)
-        self.assertEqual(_attribute(region_tag, "role"), "region")
-        self.assertEqual(_attribute(region_tag, "tabindex"), "0")
-        self.assertTrue(
-            _attribute(region_tag, "aria-label")
-            or _attribute(region_tag, "aria-labelledby"),
-            "The scrollable table region needs an accessible name.",
-        )
+        self.assertIsNone(_attribute(region_tag, "role"))
+        self.assertIsNone(_attribute(region_tag, "tabindex"))
         self.assertLess(region.start(), table.start())
 
-    def test_history_table_uses_shared_columns_and_native_export_controls(self):
+        shared_script = self.static_source(
+            "dashboard/js/shared/data-table-ui.js"
+        )
+        table_script = self.static_source(
+            "dashboard/js/features/jobs/history/table.js"
+        )
+        self.assertIn("function enhanceScrollRegion", shared_script)
+        self.assertIn('.find(".fixed-table-body")', shared_script)
+        self.assertIn('role: "region"', shared_script)
+        self.assertIn('tabindex: "0"', shared_script)
+        self.assertIn('region: "QC job history table"', table_script)
+
+    def test_history_table_uses_shared_columns_and_export_controls(self):
         """History opts into the same labelled toolbar as other data tables."""
 
         _response, document = self.response_document()
@@ -261,7 +268,7 @@ class JobHistoryPresentationTests(TestCase):
 
         table_tag = table.group(0)
         self.assertEqual(_attribute(table_tag, "data-show-refresh"), "true")
-        self.assertEqual(_attribute(table_tag, "data-show-export"), "true")
+        self.assertIsNone(_attribute(table_tag, "data-show-export"))
         shared_script = self.static_source(
             "dashboard/js/shared/data-table-ui.js"
         )
@@ -274,7 +281,7 @@ class JobHistoryPresentationTests(TestCase):
             "showButtonText",
             "showColumnsToggleAll",
             "minimumCountColumns",
-            "formatExport",
+            "exportButton",
         ):
             with self.subTest(common_option=common_option):
                 self.assertIn(common_option, shared_script)
@@ -283,8 +290,16 @@ class JobHistoryPresentationTests(TestCase):
         self.assertIn(".export", shared_script)
         self.assertIn('"aria-label"', shared_script)
         self.assertIn("title", shared_script)
+        self.assertIn("function exportCsv(table, settings)", shared_script)
+        self.assertIn("csvExportButton", shared_script)
         self.assertIn("QcDataTableUi", table_script)
-        self.assertNotIn("button[data-type='json']", table_script)
+        self.assertIn("csvExportButton", table_script)
+        self.assertIn('filename: "qc-job-history.csv"', table_script)
+        self.assertIn(
+            'buttonsOrder: ["refresh", "columns", "exportView"]',
+            table_script,
+        )
+        self.assertNotIn("showExport: true", table_script)
 
     def test_running_jobs_use_warning_yellow_across_job_pages(self):
         """Queued and running jobs share the same active warning palette."""

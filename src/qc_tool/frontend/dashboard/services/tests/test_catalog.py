@@ -145,7 +145,11 @@ class ProductCatalogSynchronizationTests(TestCase):
 
         self.assertEqual(rows[0]["expected"], 2)
         self.assertEqual(rows[0]["submitted"], 0)
-        self.assertIn("0 / 2 AOIs accepted", rendered)
+        self.assertIn('id="tbl-products"', rendered)
+        self.assertIn("Total AOIs", rendered)
+        self.assertIn("% submitted", rendered)
+        self.assertIn('value="0.0"', rendered)
+        self.assertIn('aria-hidden="true">0%</strong>', rendered)
 
     def test_changed_content_requires_a_higher_release_revision(self):
         first = self.load(self.write_manifest(revision=1))

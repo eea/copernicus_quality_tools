@@ -9,6 +9,7 @@
     function enhanceTable($table) {
         dataTableUi.enhance($table, {
             subject: "QC job history",
+            region: "QC job history table",
             controls: "QC job history display and export controls",
             columns: "Choose visible job columns",
             export: "Export QC job history",
@@ -34,6 +35,13 @@
         );
     }
 
+    function exportButton($table) {
+        return dataTableUi.csvExportButton($table, {
+            filename: "qc-job-history.csv",
+            label: "Export filtered QC job history as CSV"
+        });
+    }
+
     history.createTable = function () {
         var $table = $("#tbl-history");
 
@@ -46,9 +54,11 @@
             striped: false,
             search: true,
             pagination: true,
-            showExport: true,
             showRefresh: true,
-            buttonsOrder: ["refresh", "columns", "export"],
+            buttons: function () {
+                return {exportView: exportButton($table)};
+            },
+            buttonsOrder: ["refresh", "columns", "exportView"],
             sortName: "date_created",
             sortOrder: "desc",
             url: config.historyUrl,

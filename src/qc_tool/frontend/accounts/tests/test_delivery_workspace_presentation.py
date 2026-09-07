@@ -271,6 +271,101 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertContains(response, "2 products available")
         self.assertContains(response, escape(unsafe_description))
         self.assertNotContains(response, unsafe_description)
+        self.assertContains(response, 'id="tbl-products"')
+        for field, label in (
+            ("description", "Product name"),
+            ("ident", "Product ident"),
+            ("expected", "Total AOIs"),
+            ("submitted", "Submitted"),
+            ("completion_percentage", "% submitted"),
+        ):
+            with self.subTest(field=field):
+                self.assertContains(response, 'data-field="{}"'.format(field))
+                self.assertContains(response, label)
+
+        document = response.content.decode(response.charset)
+        self.assertContains(response, "<th ", count=5)
+        self.assertContains(response, 'scope="col"', count=5)
+        field_positions = [
+            document.index('data-field="{}"'.format(field))
+            for field in (
+                "description",
+                "ident",
+                "expected",
+                "submitted",
+                "completion_percentage",
+            )
+        ]
+        self.assertEqual(field_positions, sorted(field_positions))
+        self.assertContains(response, 'data-switchable="false"', count=2)
+        self.assertContains(response, 'data-sorter="productMetricSorter"', count=3)
+        self.assertContains(response, 'data-sorter="productTextSorter"', count=2)
+        self.assertContains(response, 'data-searchable="false"', count=3)
+        self.assertIn("qc-data-table-region", document)
+        self.assertIn("qc-data-table", document)
+        self.assertIn("Product details", document)
+        self.assertNotIn("products-grid", document)
+        self.assertNotIn("product-card", document)
+        self.assertNotIn("data-products-search", document)
+        for asset in (
+            "dashboard/css/bootstrap-table.min.css",
+            "dashboard/css/features/products/index.css",
+            "dashboard/js/features/products/index.js",
+        ):
+            with self.subTest(asset=asset):
+                self.assertIn(asset, document)
+
+        product_script = self.static_source(
+            "dashboard/js/features/products/index.js"
+        )
+        product_styles = self.static_source(
+            "dashboard/css/features/products/index.css"
+        )
+        shared_table_script = self.static_source(
+            "dashboard/js/shared/data-table-ui.js"
+        )
+        for option in (
+            "QcDataTableUi",
+            "search: true",
+            "showColumns: true",
+            "csvExportButton",
+            'buttonsOrder: ["columns", "exportView"]',
+            "customSearch: productSearch",
+            "window.productMetricSorter",
+            "window.productTextSorter",
+        ):
+            with self.subTest(option=option):
+                self.assertIn(option, product_script)
+        self.assertIn(".products-table-region", product_styles)
+        self.assertIn("--qc-data-table-min-width: 900px", product_styles)
+        self.assertIn("progress::-webkit-progress-value", product_styles)
+        self.assertIn("progress::-moz-progress-bar", product_styles)
+        self.assertIn("content: attr(data-label)", product_styles)
+        self.assertIn("function enhanceSortControls($table)", shared_table_script)
+        self.assertIn("function enhanceScrollRegion($table, labels)", shared_table_script)
+        self.assertIn('.find(".fixed-table-body")', shared_table_script)
+        self.assertIn("function exportCsv(table, settings)", shared_table_script)
+        self.assertIn('bootstrapTable("getVisibleColumns")', shared_table_script)
+        self.assertIn('bootstrapTable("getData", {formatted: true})', shared_table_script)
+        self.assertIn("new window.Blob", shared_table_script)
+        self.assertIn("window.URL.createObjectURL", shared_table_script)
+        self.assertIn('filename: "products.csv"', product_script)
+        self.assertIn('event.key === "Enter"', shared_table_script)
+        self.assertIn('event.key === " "', shared_table_script)
+        self.assertIn('"aria-sort"', shared_table_script)
+        self.assertContains(response, "Not available", count=6)
+
+        details_link = re.search(
+            r'<a\b[^>]*class="product-table__details"[^>]*>'
+            r'(?P<body>.*?)</a>',
+            document,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        self.assertIsNotNone(details_link)
+        self.assertFalse(
+            re.sub(r"<[^>]+>", "", details_link.group("body")).strip(),
+            "The details action label must not leak into exported product names.",
+        )
 
     @patch(
         "qc_tool.frontend.dashboard.views.products.available_product_descriptions"

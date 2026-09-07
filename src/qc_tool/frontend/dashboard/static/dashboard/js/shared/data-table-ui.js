@@ -13,9 +13,6 @@
         },
         formatColumnsToggleAll: function () {
             return "All optional columns";
-        },
-        formatExport: function () {
-            return "Export";
         }
     };
 
@@ -46,6 +43,83 @@
             button.render = config.render;
         }
         return button;
+    }
+
+    function exportText(value) {
+        var text;
+
+        if (value === undefined || value === null) {
+            return "";
+        }
+        if (typeof value === "object") {
+            try {
+                value = JSON.stringify(value);
+            } catch (error) {
+                value = String(value);
+            }
+        }
+        text = $("<div>").html(String(value)).text();
+        return $.trim(text).replace(/\s+/g, " ");
+    }
+
+    function csvCell(value) {
+        var text = exportText(value);
+
+        if (/^[\t\r\n ]*[=+\-@]/.test(text)) {
+            text = "'" + text;
+        }
+        return '"' + text.replace(/"/g, '""') + '"';
+    }
+
+    function exportCsv(table, settings) {
+        var $table = table && table.jquery ? table : $(table);
+        var config = settings || {};
+        var columns = ($table.bootstrapTable("getVisibleColumns") || [])
+            .filter(function (column) {
+                return Boolean(column.field);
+            });
+        var rows = $table.bootstrapTable("getData", {formatted: true}) || [];
+        var lines = [columns.map(function (column) {
+            return csvCell(column.title);
+        }).join(",")];
+        var blob;
+        var downloadUrl;
+        var link;
+
+        rows.forEach(function (row) {
+            lines.push(columns.map(function (column) {
+                return csvCell(row[column.field]);
+            }).join(","));
+        });
+        blob = new window.Blob(
+            ["\ufeff", lines.join("\r\n")],
+            {type: "text/csv;charset=utf-8"}
+        );
+        downloadUrl = window.URL.createObjectURL(blob);
+        link = window.document.createElement("a");
+        link.href = downloadUrl;
+        link.download = config.filename || "table.csv";
+        link.hidden = true;
+        window.document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(function () {
+            window.URL.revokeObjectURL(downloadUrl);
+        }, 0);
+        return rows.length;
+    }
+
+    function csvExportButton(table, settings) {
+        var config = settings || {};
+
+        return exportButton({
+            text: config.text || "Export",
+            label: config.label || "Export table as CSV",
+            title: config.title || config.label || "Export table as CSV",
+            event: function () {
+                exportCsv(table, config);
+            }
+        });
     }
 
     function labelValue(labels, name, fallback) {
@@ -156,6 +230,72 @@
         });
     }
 
+    function enhanceSortControls($table) {
+        var tableOptions = $table.bootstrapTable("getOptions") || {};
+
+        $table.find("thead th").removeAttr("aria-sort");
+        $table.find("thead .th-inner.sortable").each(function () {
+            var $control = $(this);
+            var $header = $control.closest("th");
+            var field = $header.attr("data-field");
+            var label = $.trim(
+                $control.clone().children().remove().end().text()
+            ) || field;
+
+            $control.attr({
+                role: "button",
+                tabindex: "0",
+                "aria-label": "Sort by " + label
+            }).off("keydown.qcDataTableSort").on(
+                "keydown.qcDataTableSort",
+                function (event) {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        $(this).trigger("click");
+                    }
+                }
+            );
+            if (field === tableOptions.sortName) {
+                $header.attr(
+                    "aria-sort",
+                    tableOptions.sortOrder === "asc"
+                        ? "ascending"
+                        : "descending"
+                );
+            }
+        });
+    }
+
+    function enhanceScrollRegion($table, labels) {
+        var $container = $table.closest(".bootstrap-table");
+        var $scrollRegion = $container.find(".fixed-table-body").first();
+        var labelledBy = labels && labels.regionLabelledBy;
+
+        if (!$scrollRegion.length) {
+            return;
+        }
+        $scrollRegion.attr({
+            role: "region",
+            tabindex: "0"
+        });
+        if (labelledBy) {
+            $scrollRegion
+                .attr("aria-labelledby", labelledBy)
+                .removeAttr("aria-label");
+        } else {
+            $scrollRegion
+                .attr(
+                    "aria-label",
+                    labelValue(
+                        labels,
+                        "region",
+                        labelValue(labels, "subject", "Data") + " table"
+                    )
+                )
+                .removeAttr("aria-labelledby");
+        }
+    }
+
     function enhance(table, labels) {
         var $tables = table && table.jquery ? table : $(table);
         var resolvedLabels = $.extend({}, labels || {});
@@ -169,12 +309,17 @@
                 "reset-view.bs.table.qcDataTableUi " +
                 "column-switch.bs.table.qcDataTableUi " +
                 "column-switch-all.bs.table.qcDataTableUi " +
+                "sort.bs.table.qcDataTableUi " +
                 "refresh-options.bs.table.qcDataTableUi",
                 function () {
                     enhanceControls($table, resolvedLabels);
+                    enhanceSortControls($table);
+                    enhanceScrollRegion($table, resolvedLabels);
                 }
             );
             enhanceControls($table, resolvedLabels);
+            enhanceSortControls($table);
+            enhanceScrollRegion($table, resolvedLabels);
         });
         return $tables;
     }
@@ -182,6 +327,8 @@
     window.QcDataTableUi = {
         options: options,
         exportButton: exportButton,
+        exportCsv: exportCsv,
+        csvExportButton: csvExportButton,
         enhance: enhance
     };
 }(window, window.jQuery));

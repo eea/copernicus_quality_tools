@@ -52,6 +52,10 @@ def workspace_product_catalog(load_descriptions):
             {
                 "ident": product_ident,
                 "description": description,
+                "can_view_coverage": False,
+                "expected": None,
+                "submitted": None,
+                "completion_percentage": None,
             }
             for product_ident, description in sorted(
                 descriptions.items(),
@@ -105,5 +109,41 @@ def _scope_coverage(product_catalog, account_access):
         }
         if len(releases) == 1:
             product.update(releases[0])
+        product.update(
+            _aggregate_coverage(releases, record["can_view_coverage"])
+        )
         records.append(product)
     return tuple(records)
+
+
+def _aggregate_coverage(releases, can_view_coverage):
+    """Combine authoritative current release streams into one product row."""
+
+    unavailable = {
+        "expected": None,
+        "submitted": None,
+        "conflicts": None,
+        "remaining": None,
+        "completion_percentage": None,
+    }
+    if not can_view_coverage or not releases:
+        return unavailable
+    if any(
+        release.get("expected") is None
+        or release.get("submitted") is None
+        for release in releases
+    ):
+        return unavailable
+
+    expected = sum(release["expected"] for release in releases)
+    submitted = sum(release["submitted"] for release in releases)
+    conflicts = sum(release.get("conflicts") or 0 for release in releases)
+    return {
+        "expected": expected,
+        "submitted": submitted,
+        "conflicts": conflicts,
+        "remaining": expected - submitted,
+        "completion_percentage": (
+            round((submitted / expected) * 100, 2) if expected else 0.0
+        ),
+    }

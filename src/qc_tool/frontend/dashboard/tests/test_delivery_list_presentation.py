@@ -370,7 +370,7 @@ class DeliveryListPresentationTests(TestCase):
             "showButtonText",
             "showColumnsToggleAll",
             "minimumCountColumns",
-            "formatExport",
+            "exportButton",
         ):
             with self.subTest(common_option=common_option):
                 self.assertIn(common_option, shared_script)
@@ -487,7 +487,11 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn('event.key === "Enter"', script)
         self.assertIn('event.key === " "', script)
         self.assertIn('role: "region"', script)
-        self.assertIn('"aria-labelledby": "deliveries-table-title"', script)
+        self.assertIn(
+            'regionLabelledBy: "deliveries-table-title"',
+            script,
+        )
+        self.assertIn('.find(".fixed-table-body")', script)
         self.assertIn('"aria-busy"', script)
         self.assertIn('button[name=\'columns\']', script)
         self.assertIn(".export", script)

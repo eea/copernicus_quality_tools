@@ -1,16 +1,17 @@
 {% extends "dashboard/layouts/workspace_page.html" %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}Products | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page products-page{% endblock main_class %}
 
 {% block workspace_css %}
 {{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/products/index.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
 {% block page_title %}Products{% endblock page_title %}
-{% block page_subtitle %}<p>Browse the complete catalog of products available for quality control.</p>{% endblock page_subtitle %}
+{% block page_subtitle %}<p>Review the product catalog and submitted AOI coverage.</p>{% endblock page_subtitle %}
 {% block page_actions %}
 <a class="btn btn-default btn-qc-secondary" href="{% url 'api_homepage' %}#products">
     API documentation
@@ -22,61 +23,64 @@
     <section class="workspace-card products-catalog" aria-labelledby="products-catalog-title">
         <header class="workspace-card__header products-catalog__header">
             <div>
-                <h2 id="products-catalog-title">Available products</h2>
-                <p>{{ product_catalog|length }} product{{ product_catalog|length|pluralize }} available.</p>
-            </div>
-            <div class="products-search">
-                <label for="products-search">Search products</label>
-                <input id="products-search" class="form-control" type="search" placeholder="Search by name or identifier" autocomplete="off" data-products-search>
+                <h2 id="products-catalog-title">Product catalog</h2>
+                <p id="products-table-description">{{ product_catalog|length }} product{{ product_catalog|length|pluralize }} available. Total AOIs sums current release-stream AOI requirements; Submitted counts those AOIs with an accepted published delivery.</p>
             </div>
         </header>
 
-        <p class="sr-only" aria-live="polite" data-products-status></p>
+        <p id="products-live-status" class="sr-only" aria-live="polite"></p>
         {% if not product_catalog_available %}
         <div class="products-empty" role="status">
             <strong>Product catalog temporarily unavailable</strong>
             <p>Please try again later or ask an administrator to check the product configuration.</p>
         </div>
         {% elif product_catalog %}
-        <ul class="products-grid" data-products-list>
-            {% for product in product_catalog %}
-            <li class="product-card" data-product>
-                <span class="product-card__icon" aria-hidden="true">
-                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg>
-                </span>
-                <div>
-                    <h3><a href="{% url 'product_detail' product.ident %}">{{ product.description }}</a></h3>
-                    <code>{{ product.ident }}</code>
-                    {% if catalog_managed %}
-                    {% if product.release_count == 1 %}
-                    <p>
-                        Release <code>{{ product.release_key }}</code>,
-                        revision {{ product.revision }}
-                    </p>
-                    {% if product.can_view_coverage and product.expected is not None %}
-                    <p>
-                        {{ product.submitted }} / {{ product.expected }} AOIs accepted
-                        ({{ product.completion_percentage }}%).
-                        {{ product.remaining }} remaining;
-                        {{ product.conflicts }} conflict{{ product.conflicts|pluralize }}.
-                    </p>
-                    {% elif product.can_view_coverage %}
-                    <p>Coverage denominator is not yet authoritative.</p>
-                    {% endif %}
-                    {% else %}
-                    <p>{{ product.release_count }} current release streams. Open the product to see release-level coverage.</p>
-                    {% endif %}
-                    {% endif %}
-                    <a class="product-card__link" href="{% url 'product_detail' product.ident %}">
-                        View product details <span aria-hidden="true">→</span>
-                    </a>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
-        <div class="products-empty" data-products-empty hidden>
-            <strong>No matching products</strong>
-            <p>Try a different product name or identifier.</p>
+        <div class="products-table-region qc-data-table-region">
+            <table id="tbl-products" class="table qc-data-table" aria-describedby="products-table-description" data-search-align="right" data-show-columns="true" data-pagination="true" data-side-pagination="client" data-sort-name="description" data-sort-order="asc" data-unique-id="ident">
+                <caption class="sr-only">Products with identifiers, total release-stream AOI requirements, submitted AOIs, and submitted percentages</caption>
+                <thead>
+                    <tr>
+                        <th class="product-name-column" data-class="product-name-column" data-field="description" data-sortable="true" data-sorter="productTextSorter" data-switchable="false" scope="col">Product name</th>
+                        <th class="product-ident-column" data-class="product-ident-column" data-field="ident" data-sortable="true" data-sorter="productTextSorter" data-switchable="false" scope="col">Product ident</th>
+                        <th class="product-total-column" data-class="product-total-column" data-field="expected" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Total AOIs</th>
+                        <th class="product-submitted-column" data-class="product-submitted-column" data-field="submitted" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Submitted</th>
+                        <th class="product-percentage-column" data-class="product-percentage-column" data-field="completion_percentage" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">% submitted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in product_catalog %}
+                    <tr>
+                        <td>
+                            <div class="product-table__identity">
+                                <strong class="product-table__title">{{ product.description }}</strong>
+                                <a class="product-table__details" href="{% url 'product_detail' product.ident %}" data-label="Product details" aria-label="View product details for {{ product.description }}">
+                                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg>
+                                </a>
+                            </div>
+                        </td>
+                        <td><code class="product-table__ident">{{ product.ident }}</code></td>
+                        {% if catalog_managed and product.can_view_coverage and product.expected is not None %}
+                        <td><span class="product-table__metric">{{ product.expected }}</span></td>
+                        <td><span class="product-table__metric product-table__metric--submitted">{{ product.submitted }}</span></td>
+                        <td>
+                            <div class="product-table__progress">
+                                <progress max="100" value="{{ product.completion_percentage|unlocalize }}" aria-label="{{ product.completion_percentage|floatformat:"-2" }} percent of AOIs submitted for {{ product.description }}"></progress>
+                                <strong aria-hidden="true">{{ product.completion_percentage|floatformat:"-2" }}%</strong>
+                            </div>
+                        </td>
+                        {% elif catalog_managed and not product.can_view_coverage %}
+                        <td><span class="product-table__unavailable">Restricted</span></td>
+                        <td><span class="product-table__unavailable">Restricted</span></td>
+                        <td><span class="product-table__unavailable">Restricted</span></td>
+                        {% else %}
+                        <td><span class="product-table__unavailable">Not available</span></td>
+                        <td><span class="product-table__unavailable">Not available</span></td>
+                        <td><span class="product-table__unavailable">Not available</span></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
         {% else %}
         <div class="products-empty">
@@ -84,6 +88,7 @@
             <p>Ask an administrator to check the product configuration.</p>
         </div>
         {% endif %}
+        <footer class="workspace-card__footer products-catalog__footer">QC Tool version {{ qc_tool_version }}</footer>
     </section>
 {% endblock page_content %}
 

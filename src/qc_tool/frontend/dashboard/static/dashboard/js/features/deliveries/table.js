@@ -199,43 +199,17 @@
         });
     }
 
-    function makeSortControlsAccessible() {
-        var options = $(tableSelector).bootstrapTable("getOptions") || {};
-        $(tableSelector + " thead th").removeAttr("aria-sort");
-        $(tableSelector + " thead .th-inner.sortable").each(function () {
-            var $control = $(this);
-            var $header = $control.closest("th");
-            var field = $header.attr("data-field");
-            var label = $.trim($control.clone().children().remove().end().text()) || field;
-            $control.attr({
-                role: "button",
-                tabindex: "0",
-                "aria-label": "Sort by " + label
-            }).off("keydown.qcSort").on("keydown.qcSort", function (event) {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    $(this).trigger("click");
-                }
-            });
-            if (field === options.sortName) {
-                $header.attr("aria-sort", options.sortOrder === "asc" ? "ascending" : "descending");
-            }
-        });
-    }
-
     function updateTableAccessibility() {
         var $scrollRegion = $(".deliveries-table-region .fixed-table-body").first();
-        $scrollRegion.attr({
-            role: "region",
-            "aria-labelledby": "deliveries-table-title",
-            tabindex: "0",
-            "aria-busy": $scrollRegion.attr("aria-busy") || "false"
-        });
+        $scrollRegion.attr(
+            "aria-busy",
+            $scrollRegion.attr("aria-busy") || "false"
+        );
         labelSelectableRows();
-        makeSortControlsAccessible();
         if (dataTableUi) {
             dataTableUi.enhance($(tableSelector), {
                 subject: "deliveries",
+                regionLabelledBy: "deliveries-table-title",
                 controls: "Delivery display and export controls",
                 columns: "Choose visible delivery columns",
                 export: "Export filtered deliveries",
