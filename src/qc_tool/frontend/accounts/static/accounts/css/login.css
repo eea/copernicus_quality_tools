@@ -1,0 +1,11 @@
+/* Sign-in composition reuses the account card, fields, and shared navigation. */
+.account-login__container {
+  max-width: 460px;
+}
+
+.account-login__version {
+  margin: 20px 0 0;
+  color: var(--qc-color-muted);
+  font-size: 12px;
+  text-align: center;
+}

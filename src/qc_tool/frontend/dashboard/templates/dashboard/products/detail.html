@@ -11,7 +11,7 @@
 
 {% block page_breadcrumbs %}
 {% url 'products' as products_url %}
-{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label=product.name %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label=product.name only %}
 {% endblock page_breadcrumbs %}
 
 {% block page_header_class %}workspace-page__header product-detail__header{% endblock page_header_class %}

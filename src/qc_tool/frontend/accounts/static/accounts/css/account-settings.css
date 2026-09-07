@@ -7,20 +7,6 @@
   margin: 0 auto;
 }
 
-.account-settings__breadcrumb {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  color: var(--qc-color-muted);
-  font-size: 14px;
-  gap: 10px;
-}
-
-.account-settings__breadcrumb a {
-  color: var(--qc-color-primary);
-  font-weight: 600;
-}
-
 .account-settings__header {
   display: flex;
   align-items: center;

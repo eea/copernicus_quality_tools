@@ -228,6 +228,13 @@ class AccountSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Profile details")
         self.assertNotContains(response, 'id="api-tokens"')
+        self.assertTemplateUsed(response, "dashboard/shared/breadcrumbs.html")
+        self.assertContains(
+            response,
+            '<a href="https://github.com/eea/copernicus_quality_tools/wiki">'
+            'CLMS QC Tool documentation</a>',
+            html=True,
+        )
 
     def test_api_permission_alone_opens_only_token_settings(self):
         self.client.force_login(self.user)

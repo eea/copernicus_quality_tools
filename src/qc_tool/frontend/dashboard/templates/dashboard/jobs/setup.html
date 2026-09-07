@@ -12,7 +12,7 @@
 
 {% block page_breadcrumbs %}
 {% url 'deliveries' as deliveries_url %}
-{% include "dashboard/shared/breadcrumbs.html" with parent_label="Deliveries" parent_url=deliveries_url current_label="New QC job" %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Deliveries" parent_url=deliveries_url current_label="New QC job" only %}
 {% endblock page_breadcrumbs %}
 
 {% block page_title %}New QC job{% endblock page_title %}

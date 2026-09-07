@@ -82,6 +82,29 @@ class BrowserSessionFlowTests(TestCase):
         self.assertEqual(inactive.status_code, 200)
         self.assertNotIn(SESSION_KEY, client.session)
 
+    def test_login_validation_preserves_username_next_and_accessible_errors(self):
+        response = self.client.post(
+            reverse("login"),
+            {
+                "username": self.user.username,
+                "password": "",
+                "next": reverse("products"),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+        self.assertEqual(
+            response.context["form"]["username"].value(), self.user.username,
+        )
+        self.assertContains(response, 'aria-describedby="id_password_error"')
+        self.assertContains(response, 'id="id_password_error"')
+        self.assertContains(
+            response,
+            f'<input type="hidden" name="next" value="{reverse("products")}">',
+            html=True,
+        )
+
     @override_settings(
         AUTHENTICATION_BACKENDS=(
             "qc_tool.frontend.accounts.authentication.backends."

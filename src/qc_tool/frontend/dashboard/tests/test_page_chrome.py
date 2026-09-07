@@ -13,6 +13,8 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.template.loader import render_to_string
+from django.test import SimpleTestCase
 from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
@@ -271,6 +273,68 @@ def _selector_targets_page_root(selector, root_classes):
         re.findall(r"\.([A-Za-z_][A-Za-z0-9_-]*)", base_selector)
     )
     return bool(selector_classes & root_classes)
+
+
+class SharedBreadcrumbTests(SimpleTestCase):
+    def test_deep_trails_support_section_labels_and_one_current_page(self):
+        ancestors = [
+            {"label": "Products", "url": "/products/"},
+            {"label": "Land cover", "url": "/products/land-cover/"},
+            {"label": "Reports"},
+            {"label": "2024", "url": "/products/land-cover/reports/2024/"},
+        ]
+        parser = _DocumentParser()
+        parser.feed(render_to_string(
+            BREADCRUMBS_TEMPLATE,
+            {
+                "ancestors": ancestors,
+                "current_label": "Quality & coverage",
+                "aria_label": "Report breadcrumb",
+                "parent_label": "Ignored shorthand",
+                "parent_url": "/ignored/",
+            },
+        ))
+        document = parser.root
+        navs = list(document.descendants("nav"))
+        self.assertEqual(len(navs), 1)
+        self.assertEqual(navs[0].attrs["aria-label"], "Report breadcrumb")
+        (ordered_list,) = navs[0].descendants("ol")
+        items = list(ordered_list.descendants("li"))
+        self.assertEqual(
+            [item.text for item in items],
+            [item["label"] for item in ancestors] + ["Quality & coverage"],
+        )
+        self.assertEqual(
+            [anchor.attrs["href"] for anchor in document.descendants("a")],
+            [item["url"] for item in ancestors if "url" in item],
+        )
+        current = [
+            element for element in document.descendants()
+            if element.attrs.get("aria-current") == "page"
+        ]
+        self.assertEqual(len(current), 1)
+        self.assertEqual(current[0].text, "Quality & coverage")
+        self.assertIs(current[0].parent, items[-1])
+        self.assertFalse(list(items[-1].descendants("a")))
+        separators = [
+            element for element in document.descendants("span")
+            if element.attrs.get("aria-hidden") == "true"
+        ]
+        self.assertEqual(len(separators), len(ancestors))
+
+    def test_missing_ancestor_or_current_page_does_not_render_navigation(self):
+        for context in (
+            {},
+            {"current_label": "Products"},
+            {"ancestors": [], "current_label": "Products"},
+            {"ancestors": [{"label": "Products", "url": "/products/"}]},
+            {"parent_label": "Products", "parent_url": "/products/"},
+            {"section_label": "Products", "section_url": "/products/"},
+        ):
+            with self.subTest(context=context):
+                self.assertEqual(
+                    render_to_string(BREADCRUMBS_TEMPLATE, context).strip(), "",
+                )
 
 
 @override_settings(DEBUG=False, MAINTENANCE_MODE=False)
@@ -540,6 +604,65 @@ class SharedPageChromeTests(TestCase):
         self.assertTrue(metrics)
         for metric in metrics:
             self.assertIn("workspace-card", _classes(metric))
+
+    def test_public_sign_in_uses_shared_navigation_and_labelled_controls(self):
+        self.client.logout()
+        response = self.client.get(reverse("login"), {"next": reverse("products")})
+        self.assert_page_chrome(
+            response,
+            heading="Sign in",
+            breadcrumbs=(
+                ("CLMS QC Tool", reverse("dashboard_home")),
+                ("Sign in", None),
+            ),
+            workspace=False,
+        )
+        document = _DocumentParser.from_response(response)
+        inputs = {
+            element.attrs.get("name"): element
+            for element in document.descendants("input")
+        }
+        labels = {
+            element.attrs.get("for"): element.text
+            for element in document.descendants("label")
+        }
+        for name, input_type, autocomplete in (
+            ("username", "text", "username"),
+            ("password", "password", "current-password"),
+        ):
+            with self.subTest(field=name):
+                field = inputs[name]
+                self.assertTrue(labels[field.attrs["id"]])
+                self.assertEqual(field.attrs["type"], input_type)
+                self.assertEqual(field.attrs["autocomplete"], autocomplete)
+                self.assertIn("required", field.attrs)
+                self.assertIn("form-control", _classes(field))
+        self.assertIn("csrfmiddlewaretoken", inputs)
+        self.assertEqual(inputs["next"].attrs["value"], reverse("products"))
+
+    def test_account_pages_use_shared_breadcrumbs_without_workspace_navigation(self):
+        for route, heading, breadcrumbs in (
+            (
+                "account_settings", "Account settings",
+                (("CLMS QC Tool", reverse("dashboard_home")), ("Settings", None)),
+            ),
+            (
+                "change_password", "Change password",
+                (
+                    ("Account", reverse("account_settings")),
+                    ("Change password", None),
+                ),
+            ),
+        ):
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assert_page_chrome(
+                    response,
+                    heading=heading,
+                    breadcrumbs=breadcrumbs,
+                    workspace=False,
+                )
+                self.assertTemplateNotUsed(response, WORKSPACE_PAGE_TEMPLATE)
 
     def test_primary_authenticated_pages_share_page_chrome(self):
         with ExitStack() as patches:

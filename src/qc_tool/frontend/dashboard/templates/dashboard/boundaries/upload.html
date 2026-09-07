@@ -11,7 +11,7 @@
 
 {% block page_breadcrumbs %}
 {% url 'boundaries' as boundaries_url %}
-{% include "dashboard/shared/breadcrumbs.html" with parent_label="Boundaries" parent_url=boundaries_url current_label="Upload" %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Boundaries" parent_url=boundaries_url current_label="Upload" only %}
 {% endblock page_breadcrumbs %}
 
 {% block page_title %}Replace boundary package{% endblock page_title %}

@@ -2,6 +2,7 @@ from django.contrib.auth.views import LoginView
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
+from qc_tool.frontend.accounts.forms import AccountAuthenticationForm
 from qc_tool.frontend.accounts.views.api_credentials import create_api_token
 from qc_tool.frontend.accounts.views.api_credentials import delete_api_token
 from qc_tool.frontend.accounts.views.passwords import change_password
@@ -24,7 +25,10 @@ urlpatterns = [
     path("accounts/password_change/", change_password, name="password_change"),
     path(
         "accounts/login/",
-        LoginView.as_view(template_name="registration/login.html"),
+        LoginView.as_view(
+            template_name="registration/login.html",
+            authentication_form=AccountAuthenticationForm,
+        ),
         name="login",
     ),
     path("accounts/logout/", LogoutView.as_view(), name="logout"),

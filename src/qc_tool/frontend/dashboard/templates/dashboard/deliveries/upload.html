@@ -11,7 +11,7 @@
 
 {% block page_breadcrumbs %}
 {% url 'deliveries' as deliveries_url %}
-{% include "dashboard/shared/breadcrumbs.html" with parent_label="Deliveries" parent_url=deliveries_url current_label="Upload" %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Deliveries" parent_url=deliveries_url current_label="Upload" only %}
 {% endblock page_breadcrumbs %}
 
 {% block page_title %}Upload delivery{% endblock page_title %}

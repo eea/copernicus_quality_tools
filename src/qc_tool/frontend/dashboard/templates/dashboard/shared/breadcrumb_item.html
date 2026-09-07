@@ -1,0 +1,10 @@
+<li class="qc-breadcrumb__item">
+    {% if separator %}<span class="qc-breadcrumb__separator" aria-hidden="true">/</span>{% endif %}
+    {% if current %}
+    <span aria-current="page">{{ label }}</span>
+    {% elif url %}
+    <a href="{{ url }}">{{ label }}</a>
+    {% else %}
+    <span>{{ label }}</span>
+    {% endif %}
+</li>

@@ -1,0 +1,60 @@
+/* Breadcrumb navigation shared by public, account, and workspace pages. */
+.qc-breadcrumb {
+  min-width: 0;
+  margin: 0 0 18px;
+  color: var(--qc-color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.qc-breadcrumb__list {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 6px 9px;
+}
+
+.qc-breadcrumb__item {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.qc-breadcrumb__separator {
+  flex: 0 0 auto;
+  color: #9aa8ba;
+}
+
+.qc-breadcrumb a {
+  color: var(--qc-color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.qc-breadcrumb a:hover,
+.qc-breadcrumb a:focus {
+  color: var(--qc-color-primary-dark);
+  text-decoration: underline;
+}
+
+.qc-breadcrumb a:focus-visible {
+  border-radius: 3px;
+  outline: 3px solid var(--qc-focus-ring);
+  outline-offset: 2px;
+}
+
+.qc-breadcrumb__item > a,
+.qc-breadcrumb__item > span {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .qc-breadcrumb { margin-bottom: 16px; font-size: 12px; }
+}

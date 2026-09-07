@@ -13,7 +13,7 @@
 {% block page_breadcrumbs %}
 {% url 'deliveries' as deliveries_url %}
 {% url 'job_history' delivery.id as history_url %}
-{% include "dashboard/shared/breadcrumbs.html" with section_label="Deliveries" section_url=deliveries_url parent_label="QC job history" parent_url=history_url current_label="QC job result" %}
+{% include "dashboard/shared/breadcrumbs.html" with section_label="Deliveries" section_url=deliveries_url parent_label="QC job history" parent_url=history_url current_label="QC job result" only %}
 {% endblock page_breadcrumbs %}
 
 {% block page_title %}QC job result{% endblock page_title %}

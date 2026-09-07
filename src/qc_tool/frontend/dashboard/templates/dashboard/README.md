@@ -23,26 +23,57 @@ Do not reproduce the page container or header inside a feature template.
 
 ## Breadcrumb hierarchy
 
-Top-level pages do not render breadcrumbs because the H1 already identifies
-their location. Use `shared/breadcrumbs.html` on child pages only. The current
-item is always plain text and the ancestors are canonical links:
+`shared/breadcrumbs.html` is the breadcrumb component for every layout,
+including public sign-in and account pages. Its `qc-breadcrumb` styles live in
+`ui/breadcrumbs.css`, loaded once by `base.html`; using it does not require the
+workspace sidebar or workspace content stylesheet. Do not add Bootstrap
+`breadcrumb` markup or feature-specific breadcrumb styles.
+
+Top-level workspace pages do not render breadcrumbs because the H1 already
+identifies their location. The current item is always plain text with
+`aria-current="page"`; navigable ancestors use canonical links:
 
 ```django
 {% url "products" as products_url %}
-{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label=product.name %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label=product.name only %}
 ```
 
-For a third ancestor, pass `section_label` and `section_url` before the parent.
-Breadcrumbs start at the owning area; they never add Dashboard as a synthetic
-root. Dashboard and every other level-one page render no breadcrumb.
-Compatibility URLs must never appear in breadcrumbs.
+For a three-level trail, pass `section_label` and `section_url` before the
+parent. For deeper or data-driven hierarchies, supply `ancestors`, an ordered
+list of dictionaries with `label` and optional `url`, plus `current_label`:
+
+```python
+breadcrumb_ancestors = [
+    {"label": "Deliveries", "url": reverse("deliveries")},
+    {"label": "QC job history", "url": history_url},
+    {"label": "QC job result", "url": result_url},
+]
+```
+
+```django
+{% include "dashboard/shared/breadcrumbs.html" with ancestors=breadcrumb_ancestors current_label="Report" only %}
+```
+
+A nonempty `ancestors` list takes precedence over the shorthand section/parent
+arguments. An ancestor without a URL renders as a plain section label, never
+an empty link. The component renders nothing without a current label or any
+ancestors. It supports a custom `aria_label` (default: `Breadcrumb`), wraps long
+labels on small screens, and hides separators from assistive technology.
+Always use `only` so unrelated page context cannot change the trail.
+
+Workspace breadcrumbs start at the owning area; they never add Dashboard as a
+synthetic root. Dashboard and every other level-one workspace page render no
+breadcrumb. Public and account pages choose their own meaningful root and
+preserve permission-aware return links. Compatibility URLs must never appear
+in breadcrumbs.
 
 ## Shared visual primitives
 
 Cross-feature primitives live in `static/dashboard/css/ui/`:
 
 - `tokens.css`: semantic colors, widths, radii, focus ring, and elevation
-- `workspace-content.css`: page, breadcrumb, card, callout, and responsive page composition
+- `breadcrumbs.css`: navigation trails shared across all layouts
+- `workspace-content.css`: page, card, callout, and responsive workspace composition
 - `actions.css`: primary, secondary, success, danger, danger-outline, quiet,
   icon, and compact button variants
 

@@ -13,11 +13,12 @@
 {% block content %}
 <div class="account-settings">
     <div class="account-settings__container">
-        <nav class="account-settings__breadcrumb" aria-label="Breadcrumb">
-            {% if account_access.can_view_deliveries %}<a href="{% url 'dashboard_home' %}">CLMS QC Tool</a>{% else %}<a href="https://github.com/eea/copernicus_quality_tools/wiki">CLMS QC Tool documentation</a>{% endif %}
-            <span aria-hidden="true">/</span>
-            <span aria-current="page">Settings</span>
-        </nav>
+        {% if account_access.can_view_deliveries %}
+        {% url 'dashboard_home' as account_home_url %}
+        {% include "dashboard/shared/breadcrumbs.html" with parent_label="CLMS QC Tool" parent_url=account_home_url current_label="Settings" only %}
+        {% else %}
+        {% include "dashboard/shared/breadcrumbs.html" with parent_label="CLMS QC Tool documentation" parent_url="https://github.com/eea/copernicus_quality_tools/wiki" current_label="Settings" only %}
+        {% endif %}
 
         <header class="account-settings__header">
             <span class="account-settings__header-icon" aria-hidden="true">

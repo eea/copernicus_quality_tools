@@ -1,72 +1,54 @@
 {% extends "dashboard/layouts/base.html" %}
 {% load static %}
 
+{% block title %}Sign in | CLMS QC Tool{% endblock title %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'accounts/css/account-settings.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/login.css' %}">
+{% endblock css %}
+
 {% block content %}
+<div class="account-settings">
+    <div class="account-settings__container account-login__container">
+        {% url 'dashboard_home' as home_url %}
+        {% include "dashboard/shared/breadcrumbs.html" with parent_label="CLMS QC Tool" parent_url=home_url current_label="Sign in" only %}
 
-
-<div class="container-fluid main">
-
-    <div class="row text-left">
-        <ol class="breadcrumb">
-          <li><a href="{% url 'dashboard_home' %}">CLMS QC Tool</a></li>
-          <li class="active">Sign In</li>
-        </ol>
-        <div class="main">
-            <div class="container">
-                <div class="row">
-                    <div class="col-md-4"></div>
-                    <div class="col-md-4 text-center">
-                        <div class="box1" style="padding:30px;">
-
-{% if form.errors %}
-<p>Your username and password didn't match. Please try again.</p>
-{% endif %}
-
-{% if next %}
-    {% if user.is_authenticated %}
-    <p>Your account doesn't have access to this page. To proceed,
-    please login with an account that has access.</p>
-    {% endif %}
-{% endif %}
-
-<form method="post" class="form-signin" action="{% url 'login' %}">
-    {% csrf_token %}
-    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
-
-    {# The form controls are styled by login.js script #}
-    {{ form.username.label_tag }}
-    {{ form.username }}
-    {{ form.password.label_tag }}
-    {{ form.password }}
-    <br>
-    <!--
-    <div class="checkbox mb-3">
-        <label>
-          <input value="remember-me" type="checkbox"> Remember me
-        </label>
-    </div>
-    -->
-    <button class="btn btn-lg btn-primary btn-block" value="login" type="submit">Sign in</button>
-    {# The hidden input is internally used by Django for redirection (do not remove) #}
-    <input type="hidden" name="next" value="{{ next }}" />
-    <p class="mt-5 mb-3 text-muted"></p>
-</form>
-
-                        </div>
-                    </div>
+        <section class="account-card" aria-labelledby="sign-in-title">
+            <header class="account-settings__header">
+                <div>
+                    <h1 id="sign-in-title">Sign in</h1>
+                    <p>Access your QC Tool workspace.</p>
                 </div>
-                <div class="row">
-                  <div class="col-md-2 col-md-offset-5"><p>QC tool version: {{qc_tool_version}}</p></div>
+            </header>
+
+            {% if next and user.is_authenticated %}
+            <p class="alert alert-info" role="status">Your account doesn't have access to this page. Please sign in with an account that has access.</p>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                {% for field in form %}
+                <div class="form-group{% if field.errors %} has-error{% endif %}">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="account-field-errors" role="alert">{{ field.errors }}</div>{% endif %}
                 </div>
-            </div>
-        </div>
+                {% endfor %}
+
+                <div class="account-card__actions">
+                    <button class="btn btn-qc-primary btn-block" type="submit">Sign in</button>
+                </div>
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+        </section>
+
+        <p class="account-login__version">QC tool version: {{ qc_tool_version }}</p>
     </div>
 </div>
-
-
-{% endblock %}
-
-{% block js %}
-    {{ block.super }}
-    <script src="{% static 'accounts/js/login.js' %}"></script>
-{% endblock js %}
+{% endblock content %}

@@ -1,21 +1,21 @@
-{% if section_label or parent_label %}
-<nav class="workspace-breadcrumb" aria-label="Breadcrumb">
-    <ol class="workspace-breadcrumb__list">
+{% if current_label %}
+{% if ancestors or section_label or parent_label %}
+<nav class="qc-breadcrumb" aria-label="{{ aria_label|default:'Breadcrumb' }}">
+    <ol class="qc-breadcrumb__list">
+        {% if ancestors %}
+        {% for item in ancestors %}
+        {% include "dashboard/shared/breadcrumb_item.html" with label=item.label url=item.url separator=forloop.counter0 only %}
+        {% endfor %}
+        {% else %}
         {% if section_label %}
-        <li class="workspace-breadcrumb__item">
-            <a href="{{ section_url }}">{{ section_label }}</a>
-        </li>
+        {% include "dashboard/shared/breadcrumb_item.html" with label=section_label url=section_url only %}
         {% endif %}
         {% if parent_label %}
-        <li class="workspace-breadcrumb__item">
-            {% if section_label %}<span class="workspace-breadcrumb__separator" aria-hidden="true">/</span>{% endif %}
-            <a href="{{ parent_url }}">{{ parent_label }}</a>
-        </li>
+        {% include "dashboard/shared/breadcrumb_item.html" with label=parent_label url=parent_url separator=section_label only %}
         {% endif %}
-        <li class="workspace-breadcrumb__item">
-            {% if section_label or parent_label %}<span class="workspace-breadcrumb__separator" aria-hidden="true">/</span>{% endif %}
-            <span aria-current="page">{{ current_label }}</span>
-        </li>
+        {% endif %}
+        {% include "dashboard/shared/breadcrumb_item.html" with label=current_label current=True separator=True only %}
     </ol>
 </nav>
+{% endif %}
 {% endif %}

@@ -1,4 +1,4 @@
-/* Shared page, breadcrumb, card, and notice primitives for QC Tool workspaces. */
+/* Shared page, card, and notice primitives for QC Tool workspaces. */
 .workspace-page {
   background: var(--qc-workspace-background);
 }
@@ -13,56 +13,6 @@
   width: min(100%, var(--qc-content-width-narrow));
   margin: 0 auto;
   padding: 32px 36px 56px;
-}
-
-.workspace-breadcrumb {
-  min-width: 0;
-  margin: 0 0 18px;
-  color: var(--qc-color-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.workspace-breadcrumb__list {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  gap: 6px 9px;
-}
-
-.workspace-breadcrumb__item {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 9px;
-  overflow-wrap: anywhere;
-}
-
-.workspace-breadcrumb__separator {
-  flex: 0 0 auto;
-  color: #9aa8ba;
-}
-
-.workspace-breadcrumb a {
-  color: var(--qc-color-primary);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.workspace-breadcrumb a:hover,
-.workspace-breadcrumb a:focus {
-  color: var(--qc-color-primary-dark);
-  text-decoration: underline;
-}
-
-.workspace-breadcrumb a:focus-visible {
-  border-radius: 3px;
-  outline: 3px solid var(--qc-focus-ring);
-  outline-offset: 2px;
 }
 
 .workspace-page__header,
@@ -246,7 +196,6 @@
 @media (max-width: 480px) {
   .workspace-page__container,
   .workspace-page__container--narrow { padding: 22px 15px 40px; }
-  .workspace-breadcrumb { margin-bottom: 16px; font-size: 12px; }
   .workspace-card__header,
   .workspace-card__body { padding: 19px 16px; }
   .workspace-card__body--flush { padding: 0; }
