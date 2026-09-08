@@ -105,19 +105,20 @@ class Job(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "execution_job"
         indexes = (
-            models.Index(fields=("aoi_code",), name="dash_job_aoi_idx"),
+            models.Index(fields=("aoi_code",), name="execution_job_aoi_idx"),
             models.Index(
                 fields=("aoi_code_submitted",),
-                name="dash_job_zip_aoi_idx",
+                name="execution_job_zip_aoi_idx",
             ),
             models.Index(
                 fields=("delivery", "-date_created", "-job_uuid"),
-                name="dash_job_latest_idx",
+                name="execution_job_latest_idx",
             ),
             models.Index(
                 fields=("job_status", "date_created"),
-                name="dash_job_queue_idx",
+                name="execution_job_queue_idx",
             ),
         )
 

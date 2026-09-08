@@ -6,7 +6,9 @@ The application is composed of:
 
 # Documentation
 
-Documentation of the QC tool, and specification of supported QA checks is available at https://github.com/eea/copernicus_quality_tools/wiki
+Use the [documentation in this repository](docs/index.md), including the
+[QA check reference](docs/checks/index.md). Read the files from the same source
+revision as the application; the historical wiki is not maintained with the code.
 
 # Reporting Issues
 
@@ -32,7 +34,7 @@ Please report any issues in the QC tool via GitHub:
 
 (2) Download the file `docker-compose.service_provider.yml`
 
-(3) (Optional) Adjust the file `docker-compose.service_provider.yml` in accord with your environment.  For example see [docker/docker-compose.igor.yml](docker/docker-compose.igor.yml).  The environment variables are described in [docker/NOTES.environ.txt](docker/NOTES.environ.txt).  There is also `docker-compose.eea.yml` prepared targeting eea infrastructure with submission feature enabled.
+(3) (Optional) Adjust the file `docker-compose.service_provider.yml` in accord with your environment. Follow the [deployment guide](docs/deployment/index.md) and [environment-variable reference](docs/reference/environment-variables.md). There is also `docker-compose.eea.yml` prepared targeting eea infrastructure with submission feature enabled.
 
 (4) Run the application
 
@@ -56,7 +58,7 @@ This will instruct docker to re-download the latest QC tool release images from 
 
 If you want to propagate your local source code into running containers you may apply docker bind mount.
 Such a way you overlay the source code already built in the image at `/usr/local/src/copernicus_quality_tools`.
-For advice see the example docker compose configuration [docker-compose.igor.yml](docker/docker-compose.igor.yml).
+For configuration advice, see the [deployment guide](docs/deployment/index.md).
 
 There are already some automated tests at `src/qc_tool/test`.
 See the instructions in [NOTES.txt](src/qc_tool/test/NOTES.txt).

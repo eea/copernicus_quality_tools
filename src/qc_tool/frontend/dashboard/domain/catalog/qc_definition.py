@@ -16,25 +16,26 @@ class QcDefinition(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "catalog_definition_revision"
         ordering = ("product_ident", "-imported_at", "-pk")
         constraints = (
             models.CheckConstraint(
                 condition=~models.Q(product_ident=""),
-                name="dash_qcdef_ident_not_empty",
+                name="catalog_def_ident_present",
             ),
             models.CheckConstraint(
                 condition=~models.Q(digest=""),
-                name="dash_qcdef_digest_not_empty",
+                name="catalog_def_digest_present",
             ),
             models.UniqueConstraint(
                 fields=("product_ident", "digest"),
-                name="dash_qcdef_ident_digest_uniq",
+                name="catalog_def_ident_digest_uniq",
             ),
         )
         indexes = (
             models.Index(
                 fields=("product_ident", "-imported_at"),
-                name="dash_qcdef_ident_date_idx",
+                name="catalog_def_ident_date_idx",
             ),
         )
 

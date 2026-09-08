@@ -5,12 +5,18 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db import router
+from django.db import transaction
 
 from qc_tool.aoi import AOI_CODE_MAX_LENGTH
+
+from .retention import SubmissionQuerySet
 
 
 class DeliverySubmission(models.Model):
     """Immutable association between an upload, its successful job, and AOI."""
+
+    objects = SubmissionQuerySet.as_manager()
 
     class PublicationState(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -103,15 +109,17 @@ class DeliverySubmission(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "publication_submission"
+        base_manager_name = "objects"
         ordering = ("-requested_at", "submission_uuid")
         constraints = (
             models.CheckConstraint(
                 condition=~models.Q(aoi_code=""),
-                name="dash_submission_aoi_not_empty",
+                name="pub_submission_aoi_not_empty",
             ),
             models.CheckConstraint(
                 condition=~models.Q(aoi_code_submitted=""),
-                name="dash_submission_zip_aoi_not_empty",
+                name="pub_submission_zip_aoi_present",
             ),
             models.CheckConstraint(
                 condition=(
@@ -123,17 +131,17 @@ class DeliverySubmission(models.Model):
                         & ~models.Q(input_digest="")
                     )
                 ),
-                name="dash_submission_published_complete",
+                name="pub_submission_complete",
             ),
         )
         indexes = (
             models.Index(
                 fields=("product_aoi", "publication_state", "review_state"),
-                name="dash_submission_aoi_state_idx",
+                name="pub_submission_aoi_state_idx",
             ),
             models.Index(
                 fields=("product_release", "publication_state"),
-                name="dash_submission_release_idx",
+                name="pub_submission_release_idx",
             ),
         )
 
@@ -152,7 +160,20 @@ class DeliverySubmission(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        if self.pk and type(self).objects.filter(pk=self.pk).exclude(
+        database = kwargs.get("using") or router.db_for_write(type(self), instance=self)
+        with transaction.atomic(using=database):
+            previous = (
+                type(self).objects.using(database)
+                .select_for_update()
+                .filter(pk=self.pk)
+                .first()
+            )
+            if previous is not None:
+                self._require_retained_history(previous)
+            return super().save(*args, **kwargs)
+
+    def _require_retained_history(self, previous):
+        identity = dict(
             delivery_id=self.delivery_id,
             job_id=self.job_id,
             product_release_id=self.product_release_id,
@@ -165,9 +186,18 @@ class DeliverySubmission(models.Model):
             api_token_id=self.api_token_id,
             api_token_name=self.api_token_name,
             requested_at=self.requested_at,
-        ).exists():
+            input_digest=self.input_digest,
+        )
+        if any(getattr(previous, field) != value for field, value in identity.items()):
             raise ValidationError("Submission identity and provenance are immutable.")
-        return super().save(*args, **kwargs)
+        if previous.publication_state == self.PublicationState.PUBLISHED:
+            mutable_fields = {"review_state"}
+            if any(
+                getattr(previous, field.attname) != getattr(self, field.attname)
+                for field in self._meta.concrete_fields
+                if field.attname not in mutable_fields
+            ):
+                raise ValidationError("Published submission receipts are immutable.")
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Delivery submissions are retained as audit history.")

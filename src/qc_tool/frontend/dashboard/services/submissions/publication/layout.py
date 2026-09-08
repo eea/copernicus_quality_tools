@@ -6,6 +6,7 @@ import shutil
 
 from ..contracts import PublicationLayout
 from ..errors import PublicationError
+from .secure_copy import sync_directory
 
 
 _SAFE_COMPONENT_RE = re.compile(r"[^a-zA-Z0-9._-]+")
@@ -22,6 +23,7 @@ def publication_layout(reserved, *, submission_root):
     try:
         root.mkdir(parents=True, exist_ok=True)
         root = root.resolve(strict=True)
+        sync_directory(root.parent)
     except (OSError, RuntimeError) as exc:
         raise PublicationError(
             "submission_storage_unavailable",
@@ -85,6 +87,7 @@ def _ensure_owned_directories(root, *components):
                     500,
                 )
             candidate.mkdir(mode=0o750, exist_ok=True)
+            sync_directory(current)
             resolved = candidate.resolve(strict=True)
         except PublicationError:
             raise

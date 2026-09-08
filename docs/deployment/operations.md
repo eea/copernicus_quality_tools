@@ -59,7 +59,7 @@ workers by itself.
 ## Backups
 
 Back up the frontend database and required shared volumes as one coherent
-system. The database references files under incoming/work storage.
+system. The database references files under incoming, work and publication storage.
 
 For PostgreSQL, a logical dump can be captured from the database service:
 
@@ -85,25 +85,33 @@ At minimum, preserve:
 - `SUBMISSION_DIR` when enabled;
 - deployment configuration and secret references (not plaintext secrets).
 
+Final deliverables live under `SUBMISSION_DIR`, with their retained receipts in
+`publication_submission`. Keep that directory outside upload/worker cleanup and
+on durable storage that supports file and directory synchronization. Restore the
+database and its publication files together, then verify the manifest inventory
+and recorded checksums before reopening submissions. A successful database restore
+alone does not prove that the verified deliverables were recovered. See the
+[publication retention contract](../../src/qc_tool/database/SCHEMA.md#retaining-verified-deliverables).
+
 ## Upgrades
 
-The [database runbook](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md)
+The [database runbook](../../src/qc_tool/database/MIGRATIONS.md)
 owns schema authoring, compatibility, migration-job gates and recovery rules.
 This page describes Compose operations for the selected deployment. Read the
 runbook from the source revision matching the pinned release image and complete
-its [release record](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#release-record)
-using the [template](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/RELEASE_TEMPLATE.md).
+its [release record](../../src/qc_tool/database/MIGRATIONS.md#release-record)
+using the [template](../../src/qc_tool/database/RELEASE_TEMPLATE.md).
 
 Choose the rollout path before applying schema changes:
 
 - **Compatible PostgreSQL expansion:** use the [online rollout
-  sequence](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#online-rollout-sequence).
+  sequence](../../src/qc_tool/database/MIGRATIONS.md#online-rollout-sequence).
   Keep the old release serving during the bounded migration job; deploy
   compatible code, backfill, and contract only in a later release.
 - **SQLite or incompatible operations after the first release:** use the
   maintenance procedure below.
 - **First manual cutover:** use a separate target database and the
-  [cutover runbook](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover),
+  [cutover runbook](../../src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover),
   with the [initial deployment commands](index.md#5-pull-and-initialize-the-database).
 
 SQLite upgrades and the manual cutover require a maintenance window.
@@ -112,7 +120,7 @@ SQLite upgrades and the manual cutover require a maintenance window.
 
 This procedure applies after the major-release baseline. The first architecture
 cutover uses a **new database and a manual data import**, described in
-[Database migrations](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover).
+[Database migrations](../../src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover).
 Do not run the new baseline against a pre-release production database.
 
 1. Read the release's migration and compatibility notes. Rehearse with
@@ -185,7 +193,7 @@ imported data or manual schema edits. `makemigrations`, `--fake`, and deleting
 migration history are not production repair procedures.
 
 If the job fails, keep application services stopped and follow the canonical
-[failure and recovery procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
+[failure and recovery procedure](../../src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
 The `--traceback` option captures the cause on the first attempt; keep its output
 in restricted release logs and do not retry merely to obtain better diagnostics.
 Resume only after the release's recovery and compatibility criteria are met.

@@ -165,7 +165,10 @@ class AdminRoleTests(TestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(user.has_perm("auth.change_user"))
         self.assertTrue(user.has_perm("auth.change_group"))
-        self.assertTrue(user.has_perm("dashboard.change_userprofile"))
+        self.assertTrue(user.has_perm("accounts.change_userprofile"))
+        self.assertTrue(user.has_perm("accounts.change_personalaccesstoken"))
+        self.assertFalse(user.has_perm("dashboard.change_userprofile"))
+        self.assertFalse(user.has_perm("dashboard.change_personalaccesstoken"))
         self.assertTrue(user.has_perm("accounts.change_userregiongrant"))
         self.assertTrue(user.has_perm("accounts.change_userproductgrant"))
 

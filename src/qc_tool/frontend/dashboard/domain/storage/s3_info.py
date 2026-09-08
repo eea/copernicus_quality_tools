@@ -12,3 +12,4 @@ class S3Info(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "storage_delivery_source"

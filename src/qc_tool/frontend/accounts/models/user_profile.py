@@ -1,4 +1,4 @@
-"""Historical dashboard-owned user profile model."""
+"""Account profile metadata."""
 
 from django.conf import settings
 from django.db import models
@@ -13,4 +13,4 @@ class UserProfile(models.Model):
     product_family = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
-        app_label = "dashboard"
+        db_table = "account_profile"

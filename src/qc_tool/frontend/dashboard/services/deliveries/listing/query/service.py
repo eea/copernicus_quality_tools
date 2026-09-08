@@ -55,6 +55,7 @@ def execute_delivery_query(
         filter_expression=filter_expression,
         search=search,
         delivery_status=delivery_status,
+        database_connection=database_connection,
     )
 
     with database_connection.cursor() as cursor:

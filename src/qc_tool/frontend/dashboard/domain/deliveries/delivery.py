@@ -65,17 +65,18 @@ class Delivery(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "execution_delivery"
         verbose_name = "Delivery"
         verbose_name_plural = "Deliveries"
         indexes = (
-            models.Index(fields=("aoi_code",), name="dash_delivery_aoi_idx"),
+            models.Index(fields=("aoi_code",), name="execution_delivery_aoi_idx"),
             models.Index(
                 fields=("aoi_code_submitted",),
-                name="dash_delivery_zip_aoi_idx",
+                name="execution_delivery_zip_aoi_idx",
             ),
             models.Index(
                 fields=("content_sha256",),
-                name="dash_delivery_sha_idx",
+                name="execution_delivery_sha_idx",
             ),
         )
 

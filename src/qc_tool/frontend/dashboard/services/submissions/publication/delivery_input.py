@@ -29,7 +29,13 @@ def copy_delivery_input(
                 "The QC job reported an invalid delivery checksum.",
                 409,
             )
-        return expected
+        raise PublicationError(
+            "s3_input_not_archived",
+            "Final submission requires a retained copy of the verified input. "
+            "S3 source objects are not archived by this publication workflow; "
+            "upload the delivery ZIP and run QC before submitting it.",
+            409,
+        )
 
     input_path = resolve_user_delivery_upload(
         reserved.filename,

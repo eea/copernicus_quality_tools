@@ -18,6 +18,8 @@ from .manifest import receipt_from_existing
 from .manifest import SUBMITTED_MARKER
 from .secure_copy import inventory_entry
 from .secure_copy import write_owned_file
+from .secure_copy import sync_directory
+from .secure_copy import sync_publication_directories
 
 
 def publish_reserved_submission(
@@ -62,6 +64,7 @@ def publish_reserved_submission(
             layout.staging_directory / MANIFEST_FILENAME,
             manifest_bytes,
         )
+        sync_publication_directories(layout.staging_directory)
 
         recovered = _expose_staging(layout, reserved)
         if recovered is not None:
@@ -102,4 +105,5 @@ def _expose_staging(layout, reserved):
             discard_owned_staging(layout)
             return receipt_from_existing(layout.final_directory, reserved)
         raise
+    sync_directory(layout.final_directory.parent)
     return None

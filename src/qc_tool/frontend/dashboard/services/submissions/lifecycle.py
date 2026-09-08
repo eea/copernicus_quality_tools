@@ -1,13 +1,17 @@
 """Orchestrate reservation, artifact publication, and database finalization."""
 
+from pathlib import Path
+
 from django.conf import settings
 
 from qc_tool.common import CONFIG
+from qc_tool.frontend.dashboard.models import DeliverySubmission
 
 from .errors import PublicationError
 from .errors import SubmissionError
 from .publication import publish_reserved_submission
 from .publication import publication_layout
+from .publication.manifest import receipt_from_existing
 from .reservation import reserve_submission as _reserve_submission
 from .state import claim_publication as _claim_publication
 from .state import finalize_publication as _finalize_publication
@@ -50,6 +54,7 @@ def submit_delivery(
         idempotent=True,
     )
     if existing_result is not None:
+        _verify_retained_publication(reserved, existing_result, submission_root)
         return existing_result
 
     layout = publication_layout(reserved, submission_root=submission_root)
@@ -71,6 +76,7 @@ def submit_delivery(
                 "The submission changed while the request was processed.",
                 409,
             )
+        _verify_retained_publication(reserved, result, submission_root)
         return result
 
     receipt = _publish_or_record_failure(
@@ -91,6 +97,28 @@ def submit_delivery(
     except SubmissionError as exc:
         _record_failure(reserved, publication_token, exc)
         raise
+
+
+def _verify_retained_publication(reserved, result, submission_root):
+    """A retry verifies retained files against both manifest and DB receipt."""
+
+    layout = publication_layout(reserved, submission_root=submission_root)
+    if Path(result.artifact_path) != layout.final_directory:
+        raise PublicationError(
+            "publication_manifest_mismatch",
+            "The recorded publication path differs from its retained location.",
+            409,
+        )
+    receipt = receipt_from_existing(layout.final_directory, reserved)
+    recorded_digest = DeliverySubmission.objects.values_list(
+        "artifact_digest", flat=True,
+    ).get(pk=reserved.submission_uuid)
+    if receipt.artifact_digest != recorded_digest:
+        raise PublicationError(
+            "publication_manifest_mismatch",
+            "The retained files do not match the recorded publication receipt.",
+            409,
+        )
 
 
 def _publish_or_record_failure(

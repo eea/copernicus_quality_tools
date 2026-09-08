@@ -26,7 +26,7 @@ The checkout is mounted read-only. In draft, tests create tables directly from
 models; no migration files are maintained and the drift command has no history
 to compare. After release freeze, drift checks compare models with committed
 migrations. Use the writable environment in
-[Database migrations](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#development-after-the-major-release-is-frozen)
+[Database migrations](../../src/qc_tool/database/MIGRATIONS.md#development-after-the-major-release-is-frozen)
 to author reviewed new migrations.
 
 ## Migration checks
@@ -38,7 +38,7 @@ checks immutable history, baseline-to-head upgrades and model drift. Both modes
 exercise synthetic records, permissions and repeat initialization/application.
 Neither imports or upgrades old production data.
 
-The complete [local verification procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#local-verification)
+The complete [local verification procedure](../../src/qc_tool/database/MIGRATIONS.md#local-verification)
 is maintained in the database runbook. For a quick schema check, use a disposable
 SQLite database in a one-shot container:
 
@@ -148,8 +148,8 @@ Never weaken the check or commit its secret.
 
 ## Central database release policy
 
-The [whole-application migration runbook](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md) and
-[`src/qc_tool/database/policy.json`](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/policy.json) govern every component.
+The [whole-application migration runbook](../../src/qc_tool/database/MIGRATIONS.md) and
+[`src/qc_tool/database/policy.json`](../../src/qc_tool/database/policy.json) govern every component.
 When the policy phase is `draft`, CI rejects every first-party migration
 definition and tests schemas built directly from models. Release freeze
 introduces the first snapshots; the `released` phase enforces immutable history
@@ -163,5 +163,5 @@ The generic baseline fixture is not a release-to-release or load test. A future
 data migration also needs a predecessor fixture and expected transformation;
 an online release needs old/new application compatibility and representative
 PostgreSQL staging data. Record the evidence and accepted limitations in the
-[release record](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#release-record).
+[release record](../../src/qc_tool/database/MIGRATIONS.md#release-record).
 CI success alone cannot promise zero downtime.

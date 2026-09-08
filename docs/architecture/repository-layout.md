@@ -45,7 +45,7 @@ frontend/accounts/
 ├── authentication/    # Login backend and API credential authentication
 ├── authorization/     # Role, permission, and per-request access facts
 ├── management/        # User provisioning management command
-├── models/            # Capability and scope-grant models
+├── models/            # Profiles, API tokens, capabilities and scope grants
 ├── services/          # User, role, and product-grant use cases
 ├── signals/           # Default-role and staff synchronization
 ├── templates/         # Account-specific pages and error fragments
@@ -70,7 +70,7 @@ frontend/dashboard/
 │   ├── deliveries.py  # Delivery ownership/product/region read policy
 │   ├── jobs.py        # Job access inherited from its delivery
 │   └── routes/        # Complete public/private endpoint registry
-├── domain/            # Focused account, catalog, delivery, job and submission models
+├── domain/            # Catalog, delivery, job, storage and publication models
 ├── services/
 │   ├── api/           # Stable JSON request handling
 │   ├── aoi/           # AOI persistence, projection, artifact backfill
@@ -98,6 +98,7 @@ than creating another general helper module.
 ```text
 database/
 ├── README.md          # Ownership, layout and entry points
+├── SCHEMA.md          # Canonical table ownership and persistence boundaries
 ├── MIGRATIONS.md      # Canonical whole-app migration and deployment runbook
 ├── policy.json        # Draft/released lifecycle and baseline identities
 ├── policy.py          # Policy loading and validation
@@ -110,6 +111,12 @@ database/
 ├── checks/            # Git history guard and disposable schema verification
 └── tests/             # Host history tests and runtime integration tests
 ```
+
+The [application schema](../../src/qc_tool/database/SCHEMA.md) maps business
+responsibilities to explicit table names and model modules. Accounts owns its
+profiles and tokens as well as grants; dashboard discovers the other business
+models. Table prefixes identify domains within one application database and do
+not introduce independent component releases.
 
 During draft, Django builds all tables from current models; migration history
 is disabled and no first-party migration definitions exist. Model/app ownership

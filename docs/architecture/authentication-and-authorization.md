@@ -13,6 +13,12 @@ QC Tool separates four questions:
 3. Which capability does the caller need?
 4. May the caller access this specific delivery or job?
 
+`accounts.models` owns profiles, personal API tokens, capability declarations
+and scope grants. It uses Django's native users, groups and permissions without
+depending on dashboard models. See the central
+[table ownership reference](../../src/qc_tool/database/SCHEMA.md) for persistence
+names and boundaries.
+
 ## Authentication modes
 
 | Caller | Credential | Intended endpoints |

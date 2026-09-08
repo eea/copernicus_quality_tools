@@ -1,4 +1,4 @@
-"""Django discovers the unchanged schema identities from the central package."""
+"""Django discovers domain models and the application-wide database workflow."""
 
 from contextlib import chdir
 from pathlib import Path

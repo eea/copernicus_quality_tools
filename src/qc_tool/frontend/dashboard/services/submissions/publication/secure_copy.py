@@ -43,6 +43,8 @@ def copy_regular_file(source, destination):
                     destination_stream.write(block)
                     digest.update(block)
                     size += len(block)
+                destination_stream.flush()
+                os.fsync(destination_stream.fileno())
     finally:
         os.close(descriptor)
     return digest.hexdigest(), size
@@ -51,6 +53,25 @@ def copy_regular_file(source, destination):
 def write_owned_file(path, payload):
     with path.open("xb") as stream:
         stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def sync_directory(path):
+    """Persist directory entries before acknowledging a publication."""
+
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def sync_publication_directories(root):
+    """Persist children before their parents in an owned staging tree."""
+
+    for directory, _children, _files in os.walk(root, topdown=False):
+        sync_directory(directory)
 
 
 def inventory_entry(path, payload):

@@ -21,21 +21,22 @@ class UserProductGrant(models.Model):
     )
 
     class Meta:
+        db_table = "account_product_grant"
         ordering = ("product_ident", "pk")
         constraints = (
             models.CheckConstraint(
                 condition=~models.Q(product_ident=""),
-                name="accounts_product_key_not_empty",
+                name="account_product_key_not_empty",
             ),
             models.UniqueConstraint(
                 fields=("user", "product_ident"),
-                name="accounts_product_user_ident_uniq",
+                name="account_product_user_key_uniq",
             ),
         )
         indexes = (
             models.Index(
                 fields=("product_ident",),
-                name="accounts_product_ident_idx",
+                name="account_product_ident_idx",
             ),
         )
 

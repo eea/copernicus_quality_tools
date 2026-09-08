@@ -1,42 +1,15 @@
-# Editing Product Definitions
+# Editing product definitions
 
-When deployed, the QC tool uses product definition .json files located inside its docker containers.
-The product definition files are cloned from the GitHub master branch every time a docker container is rebuilt.
-Local edits to a product definition file do not have any effect on the product definition file used by the QC tool.
+Use the [local development workflow](../docs/getting-started/local-development.md)
+and [local Compose configuration](compose.local.yaml) to work with product
+recipes from the checkout. The local frontend and worker mount the repository,
+including [`product_definitions/`](../product_definitions/).
 
-If you want to use a custom product definition .json file in the QC tool, you will need to adjust your *docker-compose yml* file to use a bind mount.
-Open **docker-compose.service_provider.yml** in a text editor and change the **volumes** sections of **qc_tool_frontend** and **qc_tool_worker**:
+Executable check recipes and relational product catalog records have separate
+ownership. Follow [catalog ownership](../docs/architecture/product-catalog-and-submissions.md#catalog-ownership)
+and [deployment order](../docs/architecture/product-catalog-and-submissions.md#deployment-order)
+when changing the catalog. Editing a recipe does not register a catalog release.
 
-In **qc_tool_frontend** change:
-<pre>
-volumes:
-      - qc_tool_volume:/mnt/qc_tool_volume
-      - qc_tool_frontend:/var/lib/qc_tool
-</pre>
-to:
-<pre>
-volumes:
-      - qc_tool_volume:/mnt/qc_tool_volume
-      - qc_tool_frontend:/var/lib/qc_tool
-      - ../../copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-</pre>
-
-In **qc_tool_worker** change:
-<pre>
-volumes:
-      - qc_tool_volume:/mnt/qc_tool_volume
-</pre>
-to:
-<pre>
-volumes:
-      - qc_tool_volume:/mnt/qc_tool_volume
-      - ../../copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
-</pre>
-
-The new entries in the volumes sections have two paths separated by a colon character:
-* The first part *../../copernicus_quality_tools* means 'path to the source code directory from **host point of view**' _(relative to the docker-compose yml file)_
-* The second part */usr/local/src/copernicus_quality_tools* means 'path to the source code directory from **container point of view**'
-
-Please see an example docker-compose file here: https://github.com/eea/copernicus_quality_tools/blob/master/docker/docker-compose.editable_product.yml
-Once you edit your docker-compose.service_provider.yml and restart (docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up), you should be able to see your custom product definition in the web application.
-
+The [legacy editable-product Compose example](docker_compose_examples/docker-compose.editable_product.yml)
+is available for reference. Use the maintained local workflow above for startup
+commands and service names.

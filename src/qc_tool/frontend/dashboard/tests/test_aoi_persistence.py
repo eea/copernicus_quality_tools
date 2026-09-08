@@ -14,7 +14,7 @@ from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
-from qc_tool.frontend.dashboard.models import PersonalAccessToken
+from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.dashboard.services.aoi import AoiResultUnavailable
 from qc_tool.frontend.dashboard.services.aoi import backfill_aoi_metadata
 from qc_tool.frontend.dashboard.services.jobs import delete_jobs_and_reproject

@@ -2,6 +2,11 @@
 
 from dataclasses import dataclass
 
+from django.contrib.auth import get_user_model
+
+from qc_tool.frontend.accounts.models import UserProfile
+from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.services.deliveries.listing.filters import (
     parse_filter,
 )
@@ -12,19 +17,28 @@ from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
 from .columns import COLUMN_LOOKUP
 
 
-DELIVERY_JOIN_SQL = """
-        FROM dashboard_delivery d
-        LEFT JOIN dashboard_job j
+def _delivery_join_sql(database_connection):
+    """Resolve SQL identifiers from the same models used by ORM consumers."""
+
+    quote_name = database_connection.ops.quote_name
+    delivery_table = quote_name(Delivery._meta.db_table)
+    job_table = quote_name(Job._meta.db_table)
+    user_table = quote_name(get_user_model()._meta.db_table)
+    profile_table = quote_name(UserProfile._meta.db_table)
+    return f"""
+        FROM {delivery_table} d
+        LEFT JOIN {job_table} j
         ON j.job_uuid = (
-          SELECT job_uuid FROM dashboard_job j
+          SELECT job_uuid FROM {job_table} j
           WHERE j.delivery_id = d.id
           ORDER BY j.date_created DESC, j.job_uuid DESC LIMIT 1)
-        INNER JOIN auth_user u
+        INNER JOIN {user_table} u
         ON d.user_id = u.id
-        LEFT JOIN dashboard_userprofile up
+        LEFT JOIN {profile_table} up
         ON d.user_id = up.user_id
         WHERE d.is_deleted = FALSE
         """
+
 
 DELIVERY_SELECT_SQL = """
         SELECT d.id, d.user_id AS action_owner_id, d.filename, u.username,
@@ -37,9 +51,7 @@ DELIVERY_SELECT_SQL = """
         j.date_created, j.date_started, j.date_finished,
         j.job_status as last_job_status,
         up.country AS user_country
-        """ + DELIVERY_JOIN_SQL
-
-DELIVERY_COUNT_SQL = "SELECT COUNT(d.id)" + DELIVERY_JOIN_SQL
+        """
 
 
 @dataclass(frozen=True)
@@ -60,6 +72,7 @@ def build_delivery_query_plan(
     filter_expression,
     search,
     delivery_status,
+    database_connection,
 ):
     """Build parameterized count and row statements for one list request."""
 
@@ -88,6 +101,7 @@ def build_delivery_query_plan(
     )
     status_sql, status_parameters = delivery_status_sql(delivery_status)
     constraints = visibility_sql + status_sql + filter_sql + search_sql
+    join_sql = _delivery_join_sql(database_connection)
     parameters = (
         visibility_parameters
         + status_parameters
@@ -96,9 +110,10 @@ def build_delivery_query_plan(
     )
 
     return DeliveryQueryPlan(
-        count_sql=DELIVERY_COUNT_SQL + constraints,
+        count_sql="SELECT COUNT(d.id)" + join_sql + constraints,
         rows_sql=(
             DELIVERY_SELECT_SQL
+            + join_sql
             + constraints
             + f" ORDER BY {sort_column} {normalized_order}"
             + f" LIMIT {limit} OFFSET {offset};"

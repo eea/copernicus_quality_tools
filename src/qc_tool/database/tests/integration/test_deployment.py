@@ -41,6 +41,20 @@ class DatabaseReleaseGuardTests(SimpleTestCase):
 
 @override_settings(IS_SECURE_ENVIRONMENT=False)
 class DatabaseDeploymentTests(TransactionTestCase):
+    def test_application_tables_have_explicit_business_domain_names(self):
+        tables = set(connection.introspection.table_names())
+        prefixes = ("account_", "catalog_", "execution_", "publication_", "storage_")
+        for model in apps.get_models():
+            if model._meta.app_label not in {"accounts", "dashboard"}:
+                continue
+            if not model._meta.managed:
+                continue
+            with self.subTest(model=model._meta.label):
+                self.assertIn("db_table", model._meta.original_attrs)
+                self.assertTrue(model._meta.db_table.startswith(prefixes))
+                self.assertIn(model._meta.db_table, tables)
+        self.assertFalse(any(name.startswith("dashboard_") for name in tables))
+
     def test_draft_schema_has_no_applied_migration_history_or_products(self):
         if load_policy()["phase"] != "draft":
             self.skipTest("Released schemas have committed history.")
@@ -54,7 +68,7 @@ class DatabaseDeploymentTests(TransactionTestCase):
             models.CharField(max_length=20, null=True), preserve_default=True,
         )
         with patch("qc_tool.database.deployment.apps", state.apps):
-            with self.assertRaisesMessage(CommandError, "columns differ in dashboard_product"):
+            with self.assertRaisesMessage(CommandError, "columns differ in catalog_product"):
                 check_draft_tables(connection)
         # The readiness check must not add the proposed field or reset data.
         check_draft_tables(connection)

@@ -23,6 +23,9 @@ foreign keys: deleting a credential must not rewrite historical audit facts.
 
 ## Relational ownership
 
+The central [application schema](../../src/qc_tool/database/SCHEMA.md) maps these
+models to the `catalog_*`, `execution_*` and `publication_*` tables in one database.
+
 ```mermaid
 erDiagram
     Product ||--o{ ProductRelease : versions
@@ -121,7 +124,10 @@ Browser and API endpoints are thin adapters over the same service. Reservation
 requires the deterministically latest Job to be successful, to contain one
 canonical submitted AOI, and to reference an authoritative release and exact
 QC definition revision. It also requires a valid SHA-256 snapshot binding the
-published input to the exact ZIP or S3 object set inspected by QC. A successful
+archived input to the exact ZIP inspected by QC. S3 registration and QC remain
+available, but final submission rejects remote inputs with `s3_input_not_archived`
+because their source objects are not copied into publication storage. Upload the
+ZIP and run QC on that upload before publishing a retained deliverable. A successful
 older Job never overrides a newer failed or running Job. Once a Job reaches a
 terminal state, later polling cannot rewrite its terminal status, AOI, result
 metadata, or input digest.
@@ -133,7 +139,10 @@ release, both AOI values, input checksum, and hashes of published files. One
 atomic rename exposes the complete directory. A retry accepts an existing
 directory only if its bounded manifest identifies the same submission and
 the no-follow file inventory still matches every recorded path, size, and
-SHA-256 digest.
+SHA-256 digest. Files and directory entries are synchronized before the database
+records success. Retries of finalized submissions also check the stored manifest
+digest against the database receipt. A mismatch produces an integrity error and
+leaves the retained files in place for investigation.
 
 The database and filesystem form a recoverable saga:
 
@@ -145,6 +154,13 @@ The database and filesystem form a recoverable saga:
 - PostgreSQL rejects a `published` row without publication and input digests;
 - one Delivery and authorizing Job have at most one DeliverySubmission;
 - many deliveries may point to one ProductAOI.
+
+Ordinary model and queryset operations cannot delete submission history or
+rewrite finalized receipt fields. Conflict events are append-only, while review
+state can change through the conflict workflow. The retained ZIP and reports
+remain available independently of upload and worker-scratch cleanup. Storage
+permissions, consistent database/storage backups and restore verification are
+required operational safeguards; see [retention](../../src/qc_tool/database/SCHEMA.md#retaining-verified-deliverables).
 
 ## Conflicts and coverage
 

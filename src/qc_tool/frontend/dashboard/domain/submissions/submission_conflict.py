@@ -47,11 +47,12 @@ class SubmissionConflict(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "publication_conflict"
         ordering = ("state", "-opened_at", "pk")
         constraints = (
             models.CheckConstraint(
                 condition=models.Q(version__gt=0),
-                name="dash_conflict_version_positive",
+                name="pub_conflict_version_positive",
             ),
             models.CheckConstraint(
                 condition=(
@@ -66,7 +67,7 @@ class SubmissionConflict(models.Model):
                         resolved_at__isnull=False,
                     )
                 ),
-                name="dash_conflict_state_consistent",
+                name="pub_conflict_state_consistent",
             ),
         )
 

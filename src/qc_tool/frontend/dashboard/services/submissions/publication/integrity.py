@@ -16,7 +16,7 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 class PublicationIntegrityError(ValueError):
-    """The durable publication tree differs from its signed inventory."""
+    """The durable publication tree differs from its checksummed inventory."""
 
 
 def verify_publication_inventory(
@@ -38,9 +38,17 @@ def verify_publication_inventory(
     )
     if actual != expected or JOB_OUTPUT_DIRNAME not in directories:
         raise PublicationIntegrityError
+    # A remote object checksum without retained input bytes is insufficient
+    # evidence for a final publication. The ZIP archive must match the QC hash.
+    input_files = [
+        details for path, details in expected.items()
+        if path.startswith(JOB_INPUT_DIRNAME + "/")
+    ]
     if (
-        manifest.get("storage") == "local"
-        and JOB_INPUT_DIRNAME not in directories
+        manifest.get("storage") != "local"
+        or JOB_INPUT_DIRNAME not in directories
+        or len(input_files) != 1
+        or input_files[0][0] != manifest.get("input_sha256")
     ):
         raise PublicationIntegrityError
 

@@ -1,13 +1,10 @@
-"""Django model-discovery and backward-compatible import boundary.
+"""Django model discovery for catalog, execution, publication and storage.
 
-The deployed app label remains ``dashboard``. Model implementations are owned
-by focused modules under :mod:`qc_tool.frontend.dashboard.domain`; importing
-them here preserves Django discovery and every historical caller of
-``dashboard.models``.
+Model implementations are owned by focused modules under
+:mod:`qc_tool.frontend.dashboard.domain`. Account records are discovered by
+the accounts app through :mod:`qc_tool.frontend.accounts.models`.
 """
 
-from qc_tool.frontend.dashboard.domain.accounts import PersonalAccessToken
-from qc_tool.frontend.dashboard.domain.accounts import UserProfile
 from qc_tool.frontend.dashboard.domain.catalog import Product
 from qc_tool.frontend.dashboard.domain.catalog import ProductAOI
 from qc_tool.frontend.dashboard.domain.catalog import ProductRelease
@@ -27,7 +24,6 @@ __all__ = (
     "Delivery",
     "DeliverySubmission",
     "Job",
-    "PersonalAccessToken",
     "Product",
     "ProductAOI",
     "ProductRelease",
@@ -36,7 +32,6 @@ __all__ = (
     "S3Info",
     "SubmissionConflict",
     "SubmissionConflictEvent",
-    "UserProfile",
     "find_product_description",
     "pull_job",
 )

@@ -54,7 +54,7 @@ def seed_baseline(apps):
         product_ident=product.ident,
     )
     token = create(
-        "dashboard", "PersonalAccessToken", user_id=user.pk, name="Migration probe",
+        "accounts", "PersonalAccessToken", user_id=user.pk, name="Migration probe",
         secret_digest="sha256:" + "e" * 64,
         permission_snapshot=["view_deliveries"], role_snapshot=["default"],
         region_codes_snapshot=["CZ-001"], product_idents_snapshot=[product.ident],

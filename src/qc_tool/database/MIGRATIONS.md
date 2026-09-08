@@ -27,6 +27,21 @@ the migration code. A successful `database check` does not prove that someone
 has not manually altered a table. Never copy the legacy recorder into a new
 release database or edit it to bypass an error.
 
+In `django_migrations`, `app` identifies the Django app, `name` identifies the
+migration file, and `applied` records its application time; `id` is the row's
+primary key. Django maintains these rows automatically. The table does not
+store the Python code, generated SQL, schema diff or application release number.
+For a released database, inspect its applied history without changing it:
+
+```sql
+SELECT app, name, applied
+FROM django_migrations
+ORDER BY applied, app, name;
+```
+
+Draft initialization does not apply migration history, so an empty recorder
+is expected on a freshly initialized draft database.
+
 During draft, **there is no application migration history to maintain**. Django
 migration modules are disabled for QC Tool and its framework tables; fresh
 schemas are created from current models through `migrate --run-syncdb`. This is
@@ -44,8 +59,8 @@ schema creation before scheduling the production cutover.
 ## Choose the workflow
 
 Start here for each change. Run commands from the repository root unless a
-section says otherwise. Use this file from the **same commit as the release**;
-the documentation site's `dev` links are navigation, not a frozen release guide.
+section says otherwise. Use this file from the **same commit as the release**.
+Repository-relative links refer to documentation and code in that checkout.
 
 | Situation | Follow | Done when |
 | --- | --- | --- |
@@ -95,15 +110,17 @@ they must not introduce independent component release procedures.
 | Owner | Persistent state |
 | --- | --- |
 | Django `auth`, `contenttypes`, `sessions`, `admin` | Users, groups, permissions, sessions, admin audit history |
-| `accounts` | Account capability declarations and product/region grants |
-| `dashboard` | Profiles and personal API tokens; catalog releases, AOIs and QC definitions; deliveries, jobs, storage references, submissions and conflict history |
+| `accounts` | Profiles, personal API tokens, account capability declarations and product/region grants |
+| `dashboard` domain packages | Catalog releases, AOIs and QC definitions; deliveries, jobs, storage references, submissions and conflict history |
 | Worker and shared storage | Delivery ZIPs, job artifacts, published submissions and boundary generations; worker scratch PostGIS schemas are disposable job state |
 
-Python package ownership does not necessarily match a Django app label:
-`dashboard/models.py` discovers models implemented under `dashboard/domain/`,
-and accounts exposes stable imports for profiles and tokens. During draft these ownership boundaries may change with the architecture.
-After freeze, changes to app labels must address content types, permissions
-and foreign keys as a released compatibility change.
+The [application schema](SCHEMA.md) is the table ownership reference. Models
+declare explicit business-domain table names independently of Django app labels.
+`accounts/models/` owns account models; `dashboard/models.py` discovers the
+business models implemented under `dashboard/domain/`. These ownership boundaries
+share one database and migration graph. After freeze, changes to app labels or
+table names must address content types, permissions, foreign keys and running
+application compatibility explicitly.
 
 Schema migrations describe database structure and small, deterministic database
 transformations. They do not discover product recipes, read job-result files,

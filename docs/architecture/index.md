@@ -13,7 +13,8 @@ storage, and an authenticated job-polling protocol:
   public/private HTTP contracts;
 - the **worker** claims queued jobs, materializes their input, runs configured
   QC steps, and writes reports and artifacts;
-- a **user database** stores Django and dashboard state;
+- one **application database** stores account, catalog, execution, publication
+  and storage-reference state, alongside Django's framework tables;
 - **shared storage** carries uploads, boundary generations, job artifacts, and
   the internal worker token.
 
@@ -43,7 +44,8 @@ flowchart TB
     API -->|Bearer credential| Django
     Django --> Accounts
     Django --> Dashboard
-    Dashboard --> UserDB[(Django/job database)]
+    Accounts --> UserDB[(Application database)]
+    Dashboard --> UserDB
     Scheduler -->|POST /pull_job + WorkerToken| Django
     Django -->|authenticated status polling| Scheduler
     Scheduler --> Dispatcher
@@ -99,5 +101,6 @@ Continue with:
 - [AOI metadata](aoi-metadata.md)
 - [Product catalog and submissions](product-catalog-and-submissions.md)
 - [Authentication and authorization](authentication-and-authorization.md)
+- [Application schema and table ownership](../../src/qc_tool/database/SCHEMA.md)
 - [Whole-application database lifecycle](../development/database-migrations.md)
 - [Development guide](../development/index.md)

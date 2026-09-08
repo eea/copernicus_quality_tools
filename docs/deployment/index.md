@@ -14,9 +14,9 @@ configured HTTPS reverse proxy.
 New installations start with an empty database and apply the release's committed
 migrations. Transferring data from an incompatible legacy schema requires a
 separate target database and a reviewed import. Read the
-[cutover procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover)
+[cutover procedure](../../src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover)
 before attaching persistent storage. For upgrades, choose the appropriate
-[release workflow](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#choose-the-workflow)
+[release workflow](../../src/qc_tool/database/MIGRATIONS.md#choose-the-workflow)
 and follow [Operations](operations.md#upgrades).
 
 ## Choose a profile
@@ -137,10 +137,10 @@ or development-server flags and no accidental host bind mounts.
 
 Production images must use the frozen `released` database policy. A `draft`
 policy refuses production database commands; complete the
-[release freeze](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#freeze-the-first-release)
+[release freeze](../../src/qc_tool/database/MIGRATIONS.md#freeze-the-first-release)
 before production deployment.
-Prepare the [release record](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#release-record)
-from the [template](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/RELEASE_TEMPLATE.md)
+Prepare the [release record](../../src/qc_tool/database/MIGRATIONS.md#release-record)
+from the [template](../../src/qc_tool/database/RELEASE_TEMPLATE.md)
 before running this sequence. These commands initialize an empty installation
 or a separate manual-cutover target; later upgrades follow the
 [online or maintenance workflow](operations.md#upgrades).
@@ -172,7 +172,7 @@ qc_compose run --rm --no-deps frontend \
 ```
 
 The command overrides normal frontend startup. Stop on any error and follow
-[failure and recovery](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
+[failure and recovery](../../src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
 Keep detailed migration output in restricted release logs. For a legacy data
 cutover, complete and validate the manual data import at this point,
 while frontend and workers remain stopped. For an empty installation no import

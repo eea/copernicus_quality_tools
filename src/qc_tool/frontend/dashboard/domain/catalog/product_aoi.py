@@ -24,21 +24,22 @@ class ProductAOI(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "catalog_release_aoi"
         ordering = ("product_release_id", "aoi_code")
         constraints = (
             models.CheckConstraint(
                 condition=~models.Q(aoi_code=""),
-                name="dash_product_aoi_not_empty",
+                name="catalog_aoi_code_present",
             ),
             models.UniqueConstraint(
                 fields=("product_release", "aoi_code"),
-                name="dash_release_aoi_code_uniq",
+                name="catalog_release_aoi_code_uniq",
             ),
         )
         indexes = (
             models.Index(
                 fields=("aoi_code", "product_release"),
-                name="dash_aoi_code_release_idx",
+                name="catalog_aoi_code_release_idx",
             ),
         )
 

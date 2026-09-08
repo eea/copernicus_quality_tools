@@ -1,13 +1,13 @@
 # Dashboard domain models
 
-This directory holds durable business records. Django still registers every
-model under the historical `dashboard` app label, so table names, migrations,
-content types, and permissions remain stable.
+This directory holds catalog, execution, storage and publication records.
+Django discovers these models through `dashboard.models` under the `dashboard`
+app label. Explicit `Meta.db_table` names describe business responsibility;
+the [application schema](../../../database/SCHEMA.md) owns their table inventory
+and persistence boundaries. Account models belong to `accounts.models`.
 
 ## Packages
 
-- `accounts/` owns token and profile records that remain under the historical
-  `dashboard` app label for migration compatibility.
 - `storage/` owns remote delivery storage coordinates.
 - `deliveries/` owns the one-ZIP upload aggregate.
 - `jobs/` owns persisted QC history, provenance, and the worker queue seam.

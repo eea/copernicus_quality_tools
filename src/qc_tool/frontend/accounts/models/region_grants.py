@@ -21,21 +21,22 @@ class UserRegionGrant(models.Model):
     )
 
     class Meta:
+        db_table = "account_region_grant"
         ordering = ("aoi_code", "pk")
         constraints = (
             models.CheckConstraint(
                 condition=~models.Q(aoi_code=""),
-                name="accounts_region_aoi_not_empty",
+                name="account_region_aoi_not_empty",
             ),
             models.UniqueConstraint(
                 fields=("user", "aoi_code"),
-                name="accounts_region_user_aoi_uniq",
+                name="account_region_user_aoi_uniq",
             ),
         )
         indexes = (
             models.Index(
                 fields=("aoi_code",),
-                name="accounts_region_aoi_idx",
+                name="account_region_aoi_idx",
             ),
         )
 

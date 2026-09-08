@@ -11,7 +11,7 @@ registering deliveries, queues quality-control jobs, runs those jobs in one or
 more workers, and publishes machine-readable and human-readable results.
 
 The software is maintained by Gisat for the European Environment Agency and is
-licensed under [EUPL-1.2](https://github.com/eea/copernicus_quality_tools/blob/dev/LICENSE).
+licensed under [EUPL-1.2](../LICENSE).
 
 ## Choose your path
 
@@ -68,9 +68,9 @@ before adding an endpoint.
 
 ## Documentation scope
 
-This site documents the current repository. Historical wiki content may still
-be useful for individual products, but it is not the source of truth for
-installation, authentication, deployment, or runtime architecture.
+These files document the code in the same repository revision. Read them from
+the checkout or source revision used by your application. Historical wiki
+content and separately published pages are not authoritative for that revision.
 
 The hosted service is available at <https://qc-copernicus.eea.europa.eu/>.
 Accounts are managed by its operator; no credentials are published here.

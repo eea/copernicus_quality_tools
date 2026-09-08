@@ -50,34 +50,35 @@ class ProductRelease(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "catalog_release_revision"
         ordering = ("release_key", "-revision")
         constraints = (
             models.CheckConstraint(
                 condition=~models.Q(release_key=""),
-                name="dash_release_key_not_empty",
+                name="catalog_release_key_present",
             ),
             models.CheckConstraint(
                 condition=models.Q(revision__gt=0),
-                name="dash_release_revision_positive",
+                name="catalog_release_revision_gt0",
             ),
             models.CheckConstraint(
                 condition=~models.Q(catalog_digest=""),
-                name="dash_release_digest_not_empty",
+                name="catalog_release_digest_present",
             ),
             models.UniqueConstraint(
                 fields=("release_key", "revision"),
-                name="dash_release_key_revision_uniq",
+                name="catalog_release_revision_uniq",
             ),
             models.UniqueConstraint(
                 fields=("release_key",),
                 condition=models.Q(is_current=True),
-                name="dash_release_one_current_uniq",
+                name="catalog_release_current_uniq",
             ),
         )
         indexes = (
             models.Index(
                 fields=("product", "coverage_state", "is_current"),
-                name="dash_release_coverage_idx",
+                name="catalog_release_coverage_idx",
             ),
         )
 

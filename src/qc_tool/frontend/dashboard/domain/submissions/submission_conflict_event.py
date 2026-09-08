@@ -6,10 +6,13 @@ from django.db import models
 
 from .delivery_submission import DeliverySubmission
 from .submission_conflict import SubmissionConflict
+from .retention import ConflictEventQuerySet
 
 
 class SubmissionConflictEvent(models.Model):
     """Append-only audit trail for conflict opening, reopening, and resolution."""
+
+    objects = ConflictEventQuerySet.as_manager()
 
     class EventType(models.TextChoices):
         OPENED = "opened", "Opened"
@@ -43,11 +46,13 @@ class SubmissionConflictEvent(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "publication_conflict_event"
+        base_manager_name = "objects"
         ordering = ("conflict_id", "version", "created_at", "pk")
         constraints = (
             models.UniqueConstraint(
                 fields=("conflict", "version", "event_type"),
-                name="dash_conflict_event_version_uniq",
+                name="pub_conflict_event_version_uniq",
             ),
         )
 

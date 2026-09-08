@@ -24,16 +24,17 @@ class ProductReleaseDefinition(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "catalog_release_definition"
         ordering = ("product_release_id", "-is_primary", "pk")
         constraints = (
             models.UniqueConstraint(
                 fields=("product_release", "qc_definition"),
-                name="dash_release_qcdef_uniq",
+                name="catalog_release_def_uniq",
             ),
             models.UniqueConstraint(
                 fields=("product_release",),
                 condition=models.Q(is_primary=True),
-                name="dash_release_primary_def_uniq",
+                name="catalog_release_primary_uniq",
             ),
         )
 

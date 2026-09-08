@@ -56,7 +56,7 @@ existing columns. Use a fresh development schema after model changes. After
 freeze, these commands manage the full migration graph, and
 `makemigrations --check --dry-run` detects model drift without writing files.
 
-Use the [local verification procedure](https://github.com/eea/copernicus_quality_tools/blob/dev/src/qc_tool/database/MIGRATIONS.md#local-verification)
+Use the [local verification procedure](../../src/qc_tool/database/MIGRATIONS.md#local-verification)
 to apply and test changes on a disposable database. For a release, follow the
 [canonical workflow](../development/database-migrations.md) and run the
 application-wide `database apply` once in the documented deployment job before

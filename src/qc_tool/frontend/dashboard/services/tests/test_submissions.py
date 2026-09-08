@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,10 +11,12 @@ from threading import Barrier
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import close_old_connections
 from django.db import connection
 from django.db import IntegrityError
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django.test import TransactionTestCase
 from django.utils import timezone
@@ -23,12 +26,13 @@ from qc_tool.common import JOB_OK
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import Job
-from qc_tool.frontend.dashboard.models import PersonalAccessToken
+from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.dashboard.models import Product
 from qc_tool.frontend.dashboard.models import ProductAOI
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
 from qc_tool.frontend.dashboard.models import QcDefinition
+from qc_tool.frontend.dashboard.models import S3Info
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.models import SubmissionConflictEvent
 from qc_tool.frontend.dashboard.services.catalog import get_product_coverage
@@ -197,6 +201,120 @@ class SubmissionLifecycleTests(TestCase):
                 artifact_digest="a" * 64,
                 input_digest="",
             )
+
+    def test_final_receipt_rejects_save_and_bulk_rewrites(self):
+        user, delivery, _job, job_root = self.create_candidate("retained-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get()
+        original_digest = submission.artifact_digest
+        for field, value in (
+            ("artifact_digest", "f" * 64),
+            ("artifact_path", "/replacement"),
+            ("publication_state", "failed"),
+            ("published_at", None),
+            ("input_digest", "e" * 64),
+        ):
+            with self.subTest(field=field):
+                submission.refresh_from_db()
+                setattr(submission, field, value)
+                with self.assertRaises(ValidationError):
+                    submission.save(update_fields=(field,))
+                with self.assertRaises(ValidationError):
+                    DeliverySubmission.objects.filter(pk=submission.pk).update(
+                        **{field: value},
+                    )
+        with self.assertRaises(ValidationError), transaction.atomic():
+            DeliverySubmission.objects.bulk_update([submission], ["input_digest"])
+        with self.assertRaises(ValidationError):
+            DeliverySubmission.objects.bulk_create(
+                [submission], update_conflicts=True,
+                update_fields=["input_digest"], unique_fields=["submission_uuid"],
+            )
+        submission.refresh_from_db()
+        self.assertEqual(submission.artifact_digest, original_digest)
+        self.assertEqual(submission.publication_state, "published")
+
+    def test_final_submission_and_its_dependencies_cannot_be_deleted(self):
+        user, delivery, job, job_root = self.create_candidate("protected-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get()
+        for record in (user, delivery, job, self.product_aoi, self.release):
+            with self.subTest(model=type(record).__name__):
+                with self.assertRaises(ProtectedError):
+                    type(record).objects.filter(pk=record.pk).delete()
+        with self.assertRaises(ValidationError):
+            submission.delete()
+        with self.assertRaises(ValidationError):
+            DeliverySubmission.objects.all().delete()
+        self.assertTrue(Path(submission.artifact_path).is_dir())
+        self.assertTrue(Job.objects.filter(pk=job.pk).exists())
+
+    def test_final_copies_survive_removal_of_upload_and_worker_artifacts(self):
+        user, delivery, _job, job_root = self.create_candidate("archived-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get()
+        final_directory = Path(submission.artifact_path)
+        archive = final_directory / "input.d" / "delivery.zip"
+        original_bytes = archive.read_bytes()
+        (self.media_root / user.username / delivery.filename).unlink()
+        shutil.rmtree(job_root)
+
+        result = self.submit(user, delivery, job_root)
+
+        self.assertTrue(result.idempotent)
+        self.assertEqual(archive.read_bytes(), original_bytes)
+        self.assertEqual(
+            (final_directory / "output.d" / "report.txt").read_text(), "validated",
+        )
+
+    def test_final_retry_rejects_changed_files_without_replacing_them(self):
+        user, delivery, _job, job_root = self.create_candidate("corrupted-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get()
+        report = Path(submission.artifact_path) / "output.d" / "report.txt"
+        report.write_text("changed outside the application")
+
+        with self.assertRaises(SubmissionError) as raised:
+            self.submit(user, delivery, job_root)
+
+        self.assertEqual(raised.exception.code, "publication_manifest_mismatch")
+        self.assertEqual(report.read_text(), "changed outside the application")
+        submission.refresh_from_db()
+        self.assertEqual(submission.publication_state, "published")
+
+    def test_storage_sync_failure_does_not_finalize_and_can_recover(self):
+        user, delivery, _job, job_root = self.create_candidate("sync-owner")
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.publication."
+            "sync_directory", side_effect=OSError("storage sync failed"),
+        ):
+            with self.assertRaises(SubmissionError):
+                self.submit(user, delivery, job_root)
+        delivery.refresh_from_db()
+        self.assertIsNone(delivery.date_submitted)
+        self.assertEqual(DeliverySubmission.objects.get().publication_state, "failed")
+        self.assertEqual(len(list(self.submission_root.rglob("submission-*.d"))), 1)
+
+        result = self.submit(user, delivery, job_root)
+
+        self.assertTrue(result.idempotent)
+        self.assertEqual(result.publication_state, "published")
+
+    def test_s3_checksum_alone_cannot_be_published_as_retained_input(self):
+        user, delivery, _job, job_root = self.create_candidate("s3-owner")
+        delivery.s3 = S3Info.objects.create(
+            host="https://s3.example.test", access_key="test", secret_key="test",
+            bucketname="test", key_prefix="delivery",
+        )
+        delivery.save(update_fields=("s3",))
+
+        with self.assertRaises(SubmissionError) as raised:
+            self.submit(user, delivery, job_root)
+
+        self.assertEqual(raised.exception.code, "s3_input_not_archived")
+        delivery.refresh_from_db()
+        self.assertIsNone(delivery.date_submitted)
+        self.assertFalse(list(self.submission_root.rglob("submission-*.d")))
 
     def test_token_deletion_does_not_rewrite_submission_provenance(self):
         user, delivery, _job, job_root = self.create_candidate("token-owner")
@@ -595,6 +713,37 @@ class SubmissionLifecycleTests(TestCase):
                 expected_version=conflict.version,
             )
         self.assertEqual(raised.exception.status_code, 403)
+
+    def test_conflict_history_survives_actor_deletion_and_rejects_bulk_rewrites(self):
+        first_user, first_delivery, _first_job, first_root = self.create_candidate("audit-one")
+        second_user, second_delivery, _second_job, second_root = self.create_candidate("audit-two")
+        selected = self.submit(first_user, first_delivery, first_root)
+        self.submit(second_user, second_delivery, second_root)
+        manager = get_user_model().objects.create_user(username="audit-manager")
+        conflict = SubmissionConflict.objects.get()
+        resolve_submission_conflict(
+            conflict_id=conflict.pk, selected_submission_id=selected.submission_uuid,
+            actor=manager, account_access=SimpleNamespace(is_administrator=True),
+            expected_version=conflict.version,
+        )
+        event = conflict.events.get(event_type="resolved")
+        with self.assertRaises(ValidationError):
+            event.delete()
+        with self.assertRaises(ValidationError):
+            conflict.events.all().delete()
+        with self.assertRaises(ValidationError):
+            conflict.events.filter(pk=event.pk).update(notes="rewritten")
+        event.notes = "rewritten"
+        with self.assertRaises(ValidationError), transaction.atomic():
+            SubmissionConflictEvent.objects.bulk_update([event], ["notes"])
+
+        manager.delete()
+
+        event.refresh_from_db()
+        self.assertIsNone(event.actor_id)
+        self.assertEqual(event.actor_username, "audit-manager")
+        self.assertEqual(event.selected_submission_id, selected.submission_uuid)
+        self.assertEqual(DeliverySubmission.objects.filter(publication_state="published").count(), 2)
 
 
 class ConcurrentSubmissionTests(TransactionTestCase):

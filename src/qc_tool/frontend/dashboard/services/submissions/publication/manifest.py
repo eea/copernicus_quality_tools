@@ -11,6 +11,7 @@ from ..contracts import PublicationReceipt
 from ..errors import PublicationError
 from .integrity import PublicationIntegrityError
 from .integrity import verify_publication_inventory
+from .secure_copy import sync_directory
 
 
 MANIFEST_FILENAME = "submission-manifest.json"
@@ -123,6 +124,9 @@ def receipt_from_existing(final_directory, reserved):
     input_digest = manifest.get("input_sha256", "")
     if not isinstance(input_digest, str):
         input_digest = ""
+    # Recovery may follow a failure between rename and the parent-directory
+    # sync. Do not commit the database receipt until that entry is durable.
+    sync_directory(final_directory.parent)
     return PublicationReceipt(
         artifact_path=str(final_directory),
         artifact_digest=stated_digest,

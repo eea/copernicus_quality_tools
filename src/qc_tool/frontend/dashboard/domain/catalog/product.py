@@ -14,15 +14,16 @@ class Product(models.Model):
 
     class Meta:
         app_label = "dashboard"
+        db_table = "catalog_product"
         ordering = ("ident",)
         constraints = (
             models.CheckConstraint(
                 condition=~models.Q(ident=""),
-                name="dash_product_ident_not_empty",
+                name="catalog_product_ident_present",
             ),
             models.CheckConstraint(
                 condition=~models.Q(name=""),
-                name="dash_product_name_not_empty",
+                name="catalog_product_name_present",
             ),
         )
 
