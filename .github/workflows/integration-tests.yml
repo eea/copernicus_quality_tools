@@ -1,15 +1,15 @@
-name: Integration tests
+name: Integration Tests
 
 on:
   push:
     branches: ["dev", "master"]
   pull_request:
-    branches: [ "dev" ]
+    branches: ["dev"]
 
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         working-directory: ./docker
@@ -18,38 +18,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker images
-        run: docker compose -f docker-compose.service_provider.yml build
-
       - name: Start services
-        run: docker compose -f docker-compose.service_provider.yml up -d
+        run: docker compose -f docker-compose.service_provider.yml up -d --build
 
-      # 4. Wait for the API to be "Live" before testing
       - name: Wait for API Ready
         run: |
-          echo "Waiting for API to respond..."
-          # This loops until the endpoint returns a 200 OK or we hit 30 seconds
+          echo "Waiting for API to respond on port 8000..."
           for i in {1..30}; do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/delivery-list | grep "200"; then
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/delivery-list || true)
+            if [ "$STATUS" -eq 200 ]; then
               echo "API is up!"
-              break
+              exit 0
             fi
-            echo "Still waiting..."
+            echo "Attempt $i/30: Status code $STATUS. Waiting..."
             sleep 1
           done
+          echo "Error: API failed to respond with 200 within 30 seconds."
+          exit 1
 
-      # 5. Call the specific endpoint
       - name: Test API Endpoint
         run: |
           echo "Fetching delivery list..."
-          curl -v http://localhost:8000/api/delivery-list
+          curl --fail -v http://localhost:8000/api/delivery-list
 
-      # 6. Keep running for the remainder of the 5 minutes
-      - name: Stay alive
+      - name: Run Worker Unit Tests
         run: |
-          echo "Testing complete. Keeping services up for remainder of 5 minutes..."
-          sleep 300
-          docker compose -f docker-compose.service_provider.yml ps
+          docker compose -f docker-compose.service_provider.yml exec -T \
+            -e SKIP_INSPIRE_CHECK=yes \
+            worker \
+            python3 -m unittest discover \
+            -s /usr/local/src/copernicus_quality_tools/src/qc_tool/test \
+            -t /usr/local/src/copernicus_quality_tools/src
+
+      - name: Run Frontend Dashboard Tests
+        run: |
+          docker compose -f docker-compose.service_provider.yml exec -T \
+            --workdir /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
+            frontend \
+            python3 manage.py test dashboard.tests
 
       - name: Stop services
         if: always()
