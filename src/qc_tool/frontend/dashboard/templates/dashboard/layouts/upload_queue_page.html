@@ -1,0 +1,7 @@
+{% extends "dashboard/layouts/upload_page.html" %}
+{% load static %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/shared/upload-queue.js' %}"></script>
+{% endblock js %}

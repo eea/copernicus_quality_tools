@@ -39,7 +39,7 @@
         "operationId": "registerDelivery",
         "tags": ["Deliveries"],
         "summary": "Register an uploaded ZIP delivery",
-        "description": "Registers a ZIP file that already exists directly inside the token owner's incoming directory. Supply either its filename or its full path. Nested paths, traversal, symlinks, directories, files outside the owner's storage, and non-ZIP files are rejected. Registration creates a database record; it does not upload file bytes.",
+        "description": "Registers a ZIP file that already exists directly inside the token owner's incoming directory. Supply either its filename or its full path. Nested paths, traversal, symlinks, directories, files outside the owner's storage, and non-ZIP files are rejected. Registration creates a database record; it does not upload file bytes. A filename already registered to this owner, or reserved by an unfinished browser overwrite, returns 409. Use the browser overwrite workflow to replace a delivery.",
         "x-required-permission-label": "Upload deliveries",
         "requestBody": {
           "required": true,
@@ -64,6 +64,7 @@
           "400": {"$ref": "#/components/responses/ValidationError"},
           "401": {"$ref": "#/components/responses/AuthenticationError"},
           "403": {"$ref": "#/components/responses/PermissionDenied"},
+          "409": {"description": "This filename is already registered or has an unfinished overwrite.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
           "413": {"$ref": "#/components/responses/RequestTooLarge"}
         }
       }

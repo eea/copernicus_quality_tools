@@ -40,19 +40,15 @@
         });
     }
 
-    function productSearch(data, text) {
+    function productSearch(data, text, filters) {
         var query = String(text || "").trim().toLocaleLowerCase();
-
-        if (!query) {
-            return data;
-        }
+        var plan = filters && filters.plan;
         return data.filter(function (row) {
-            var searchableText = [
-                cellText(row.description),
-                cellText(row.ident)
-            ].join(" ").toLocaleLowerCase();
-
-            return searchableText.indexOf(query) >= 0;
+            var identity = $("<div>").html(row.description)
+                .find(".product-table__title, .product-table__ident")
+                .map(function () { return $(this).text(); }).get().join(" ");
+            return (!plan || cellText(row.plan_status) === plan) &&
+                identity.toLocaleLowerCase().indexOf(query) >= 0;
         });
     }
 
@@ -67,7 +63,7 @@
         var message;
 
         if (!allRows.length) {
-            message = "No products match the current search.";
+            message = "No products match these filters. Clear filters to see all products.";
         } else if (pageRows.length === allRows.length) {
             message = allRows.length === 1
                 ? "One product shown."
@@ -80,6 +76,9 @@
                 " of " + allRows.length + " matching products.";
         }
         $("#products-live-status").text(message);
+        $("#products-clear-filters").prop("hidden", !(
+            $("#products-search").val() || $("#products-plan-filter").val()
+        ));
     }
 
     function scheduleAnnouncement($table) {
@@ -93,17 +92,16 @@
         dataTableUi.enhance($table, {
             subject: "products",
             region: "Product catalog table",
-            controls: "Product display and export controls",
-            columns: "Choose visible product columns",
-            export: "Export products",
-            search: "Search products",
-            toggleAll: "Show or hide all optional product columns"
+            controls: "Product export",
+            export: "Export filtered products as CSV",
+            search: "Search products by name or identifier"
         });
     }
 
     function exportButton($table) {
         return dataTableUi.csvExportButton($table, {
             filename: "products.csv",
+            text: "Export CSV",
             label: "Export filtered products as CSV"
         });
     }
@@ -111,7 +109,7 @@
     function init() {
         var $table = $(tableSelector);
 
-        if (!$table.length || !dataTableUi) {
+        if (!$table.length || !dataTableUi || !$.fn.bootstrapTable) {
             return;
         }
         $table.on(
@@ -129,21 +127,35 @@
         );
         $table.bootstrapTable(dataTableUi.options({
             search: true,
+            searchSelector: "#products-search",
+            searchTimeOut: 150,
+            toolbar: "#products-toolbar",
             customSearch: productSearch,
             pagination: true,
-            showColumns: true,
+            showColumns: false,
             buttons: function () {
                 return {exportView: exportButton($table)};
             },
-            buttonsOrder: ["columns", "exportView"],
+            buttonsOrder: ["exportView"],
             sortName: "description",
             sortOrder: "asc",
             pageSize: 20,
             pageList: [20, 50, 100, 500],
             formatNoMatches: function () {
-                return "No products match this search.";
+                return "No products match these filters. Try another name or delivery plan.";
             }
         }));
+        $("#products-toolbar").prop("hidden", false);
+        $("#products-plan-filter").on("change", function () {
+            var plan = this.options[this.selectedIndex].getAttribute("data-plan-label");
+            $table.bootstrapTable("filterBy", plan ? {plan: plan} : {});
+        });
+        $("#products-clear-filters").on("click", function () {
+            $("#products-plan-filter").val("");
+            $table.bootstrapTable("filterBy", {});
+            $table.bootstrapTable("resetSearch", "");
+            $("#products-search").trigger("focus");
+        });
         enhance($table);
         scheduleAnnouncement($table);
     }

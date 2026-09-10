@@ -1,0 +1,52 @@
+{% extends "dashboard/layouts/upload_queue_page.html" %}
+{% load static %}
+
+{% block title %}Add specifications | Products | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page product-upload-page{% endblock main_class %}
+
+{% block page_breadcrumbs %}
+{% url 'products' as products_url %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label="Add specifications" only %}
+{% endblock page_breadcrumbs %}
+
+{% block page_title %}Add product specifications{% endblock page_title %}
+{% block page_subtitle %}<p>Choose JSON files, review them below, then add them individually or together.</p>{% endblock page_subtitle %}
+{% block page_actions %}
+<a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+    Back to products
+</a>
+{% endblock page_actions %}
+
+{% block upload_id %}product-definition-upload-card{% endblock upload_id %}
+{% block upload_title %}Product specification JSON{% endblock upload_title %}
+{% block upload_description %}Choose files first. A product is added only when you select Add or Add all.{% endblock upload_description %}
+{% block upload_body %}
+<form id="product-definition-upload" class="workspace-card__body qc-upload-body" method="post" enctype="multipart/form-data" data-max-file-bytes="{{ max_file_bytes|default:1048576 }}">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="workspace-notice workspace-notice--danger" role="alert">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+        <div>
+            <h2>The specification could not be saved</h2>
+            {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% include "dashboard/shared/uploads/picker.html" with id="product-upload" input=form.definition_file input_id=form.definition_file.id_for_label label="Product specification JSON" title="Choose JSON files" drop_title="Drop JSON files here" hint="Up to 1 MiB per specification. You can choose multiple files." choose_label="Choose JSON files" errors=form.definition_file.errors only %}
+    {% include "dashboard/shared/uploads/queue.html" only %}
+    <button type="submit" class="btn btn-primary btn-qc-primary" data-upload-native>Add specification</button>
+    <noscript><p>With JavaScript disabled, add one specification at a time.</p></noscript>
+    <details class="qc-upload-guidance qc-upload-guidance--compact">
+        <summary>How product specifications work</summary>
+        <p>Name each file after its product, for example <code>my_product.json</code>. Use the same filename to add a new specification version.</p>
+        <p>Existing versions and quality-check results are retained. After adding a product, review and approve its delivery plan from the product page.</p>
+    </details>
+</form>
+{% endblock upload_body %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/features/products/upload.js' %}"></script>
+{% endblock js %}

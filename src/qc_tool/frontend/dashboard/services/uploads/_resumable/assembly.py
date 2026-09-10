@@ -56,6 +56,42 @@ def assemble_chunks(
             os.close(target_directory)
 
 
+def publish_for_registration(descriptor, paths, chunks_descriptor):
+    """Publish or recover this upload's inode while retaining its ownership link.
+
+    The caller holds the upload lock through database registration. Keeping
+    ``.assembled`` until registration succeeds makes a process interruption
+    recoverable without trusting an unrelated file with the same name.
+    """
+
+    target_directory = open_directory(paths.user_root)
+    try:
+        if owned_publication(paths, chunks_descriptor, target_directory):
+            return paths.target_path
+        _reject_existing_target(paths, target_directory)
+        chunk_paths = expected_chunk_paths(descriptor, paths)
+        if not all(regular_file_exists_at(chunks_descriptor, path.name) for path in chunk_paths):
+            raise ResumableUploadError("upload_incomplete", "The upload is not complete.", 409)
+        _discard_stale_assembly(chunks_descriptor)
+        _write_assembly(descriptor, chunk_paths, chunks_descriptor)
+        os.fsync(chunks_descriptor)
+        _publish_assembly(paths, chunks_descriptor, target_directory)
+        return paths.target_path
+    finally:
+        os.close(target_directory)
+
+
+def owned_publication(paths, chunks_descriptor, target_directory):
+    try:
+        staged = os.stat(".assembled", dir_fd=chunks_descriptor, follow_symlinks=False)
+        target = os.stat(paths.target_path.name, dir_fd=target_directory, follow_symlinks=False)
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISREG(staged.st_mode) or not stat.S_ISREG(target.st_mode):
+        raise ResumableUploadError("unsafe_upload_staging", "Upload staging is not safe.", 500)
+    return (staged.st_dev, staged.st_ino) == (target.st_dev, target.st_ino)
+
+
 def _reject_existing_target(
     paths: ResumableUploadPaths,
     target_directory: int,

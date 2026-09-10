@@ -8,6 +8,7 @@ from .contracts import SubmissionResult
 from .errors import PublicationError
 from .errors import SubmissionError
 from .lifecycle import submit_delivery
+from .review import review_submission
 
 __all__ = [
     "ConflictResolutionResult",
@@ -17,6 +18,6 @@ __all__ = [
     "SubmissionResult",
     "can_resolve_product_aoi",
     "resolve_submission_conflict",
+    "review_submission",
     "submit_delivery",
 ]
-

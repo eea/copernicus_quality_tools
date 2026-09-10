@@ -1,0 +1,18 @@
+{% load static %}
+<div class="qc-upload-picker" data-upload-picker data-drop-title="{{ drop_title }}">
+    <span class="qc-upload-picker__icon" aria-hidden="true">
+        <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
+    </span>
+    <div>
+        <h3 data-upload-picker-title>{{ title }}</h3>
+        <p id="{{ id }}-hint" data-upload-hint>{{ hint }}</p>
+    </div>
+    <label class="sr-only" for="{{ input_id }}">{{ label }}</label>
+    {% if input %}
+        {{ input }}
+    {% else %}
+        <input type="file" id="{{ input_id }}" name="{{ input_name }}" accept="{{ accept }}" aria-describedby="{{ id }}-hint {{ id }}-error"{% if multiple %} multiple{% endif %}>
+    {% endif %}
+    <button type="button" class="btn btn-primary btn-qc-primary" data-upload-browse aria-describedby="{{ id }}-hint {{ id }}-error" hidden><span data-upload-browse-label>{{ choose_label }}</span></button>
+</div>
+<div id="{{ id }}-error" class="qc-upload-error" data-upload-error role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div>

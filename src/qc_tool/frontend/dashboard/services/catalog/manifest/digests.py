@@ -14,6 +14,7 @@ def calculate_release_digest(
     definitions,
     primary_definition_ident,
     aoi_codes,
+    source_kind="manifest",
 ):
     document = {
         "product_ident": product_ident,
@@ -27,6 +28,7 @@ def calculate_release_digest(
         ],
         "primary_definition": primary_definition_ident,
         "aoi_codes": aoi_codes,
+        "source_kind": source_kind,
     }
     encoded = json.dumps(
         document,

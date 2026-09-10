@@ -1,0 +1,32 @@
+{% extends "dashboard/layouts/workspace_page.html" %}
+{% load static %}
+{% block title %}Submission | {{ submission.delivery.filename }} | CLMS QC Tool{% endblock %}
+{% block main_class %}workspace-page submission-review-page{% endblock %}
+{% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}">{% endblock %}
+{% block page_breadcrumbs %}{% url 'submission_queue' as submissions_url %}{% include "dashboard/shared/breadcrumbs.html" with parent_label="Submissions" parent_url=submissions_url current_label="Review" only %}{% endblock %}
+{% block page_title %}{{ submission.delivery.filename }}{% endblock %}
+{% block page_subtitle %}<p>{{ submission.product_release.product.name }} · AOI {{ submission.aoi_code }} · <strong>{{ submission.get_review_state_display }}</strong></p>{% endblock %}
+{% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'submission_queue' %}">Back to submissions</a>{% endblock %}
+{% block page_content %}
+{% if form.non_field_errors %}<div class="workspace-notice workspace-notice--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<section class="workspace-card">
+    <header class="workspace-card__header"><div><h2>Verify the submitted delivery</h2><p>Review the retained ZIP and QC evidence before deciding. Files and previous decisions are preserved.</p></div></header>
+    <div class="workspace-card__body">
+        <dl class="review-facts"><div><dt>Product</dt><dd><a href="{% url 'product_detail' submission.product_release.product.ident %}">{{ submission.product_release.product.name }}</a></dd></div><div><dt>Plan revision</dt><dd>{{ submission.product_release.revision }}</dd></div><div><dt>Submitted by</dt><dd>{{ submission.submitted_by_username }}</dd></div><div><dt>Submitted on</dt><dd>{{ submission.requested_at|date:"Y-m-d H:i T" }}</dd></div><div><dt>QC result</dt><dd>{% if submission.job.job_status == "ok" %}Passed{% else %}{{ submission.job.job_status }}{% endif %}</dd></div><div><dt>Files</dt><dd>{{ submission.get_publication_state_display }}</dd></div></dl>
+        {% if storage_available %}<details open><summary>Retained files and QC evidence</summary><ul class="review-files">{% for file in files %}<li><a href="{{ file.url }}">{{ file.name }}</a> <span>{{ file.size|filesizeformat }}</span></li>{% endfor %}</ul></details>{% else %}<p class="workspace-notice workspace-notice--warning">The retained files are currently unavailable. Check publication or storage before approving this delivery.</p>{% endif %}
+    </div>
+</section>
+{% if can_review and candidates %}<section class="workspace-card"><header class="workspace-card__header"><div><h2>Other submissions for this AOI</h2><p>An existing approved delivery keeps contributing until a reviewer explicitly selects a replacement.</p></div></header><ul class="review-files">{% for candidate in candidates %}<li><a href="{% url 'submission_review' candidate.pk %}">{{ candidate.delivery.filename }}</a> — {{ candidate.submitted_by_username }} · {{ candidate.get_review_state_display }}</li>{% endfor %}</ul></section>{% endif %}
+{% if can_decide %}
+<form method="post" class="workspace-card review-form">
+    {% csrf_token %}{{ form.expected_review_version }}{{ form.expected_conflict_version }}
+    <header class="workspace-card__header"><div><h2>Record your decision</h2><p>Approval counts this AOI towards fulfilment. A decline keeps the files and gives the uploader feedback.</p></div></header>
+    <div class="workspace-card__body">
+        {{ form.expected_review_version.errors }}{{ form.expected_conflict_version.errors }}{{ form.decision.errors }}
+        <div class="review-form__field"><label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label><p>{{ form.notes.help_text }}</p>{{ form.notes }}{{ form.notes.errors }}</div>
+        <div class="review-actions">{% if not conflict or conflict.state != "open" %}<button class="btn btn-primary btn-qc-primary" type="submit" name="decision" value="approved">Approve submission</button>{% endif %}<button class="btn btn-qc-danger-outline" type="submit" name="decision" value="declined">Decline submission</button>{% if conflict and conflict.state == 'open' %}<button class="btn btn-default btn-qc-secondary" type="submit" name="decision" value="replace">Approve this and decline competing submissions</button>{% endif %}</div>
+    </div>
+</form>
+{% endif %}
+<section class="workspace-card"><header class="workspace-card__header"><div><h2>Review history</h2><p>Each decision records its author, time and feedback.</p></div></header><div class="workspace-card__body">{% for event in events %}<article class="review-event"><strong>{{ event.get_decision_display }}</strong> · {{ event.actor_username }} · <time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"Y-m-d H:i T" }}</time><p>{{ event.notes|linebreaksbr }}</p></article>{% empty %}<p>No review decisions have been recorded.</p>{% endfor %}{% if submission.review_state == 'rejected' %}<p>To correct a declined delivery, upload a new ZIP, run QC and submit it for review. This submission remains in your history.</p>{% endif %}</div></section>
+{% endblock %}

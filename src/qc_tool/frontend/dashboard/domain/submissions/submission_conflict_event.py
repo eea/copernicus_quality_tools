@@ -18,6 +18,8 @@ class SubmissionConflictEvent(models.Model):
         OPENED = "opened", "Opened"
         REOPENED = "reopened", "Reopened"
         RESOLVED = "resolved", "Resolved"
+        DISMISSED = "dismissed", "Closed"
+        CANDIDATE_ADDED = "candidate", "Candidate added"
 
     conflict = models.ForeignKey(
         SubmissionConflict,

@@ -53,7 +53,7 @@
             unavailable.push("Run QC");
         }
         if ($("#btn-submit-multi").length && state.submittable.length !== state.total) {
-            unavailable.push("Submit to EEA");
+            unavailable.push("Submit for review");
         }
         if ($("#btn-delete-multi").length && state.removable.length !== state.total) {
             unavailable.push("Delete");
@@ -77,7 +77,7 @@
         );
         updateButton(
             "#btn-submit-multi",
-            "Submit to EEA",
+            "Submit for review",
             state.submittable.length,
             state.total,
             "Submission requires every selected delivery to have passed QC."

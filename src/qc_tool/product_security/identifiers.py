@@ -4,7 +4,7 @@ import re
 
 
 MAX_PRODUCT_IDENT_LENGTH = 64
-RESERVED_PRODUCT_IDENTS = frozenset({"list"})
+RESERVED_PRODUCT_IDENTS = frozenset({"list", "upload"})
 _PRODUCT_IDENT_PATTERN = re.compile(r"[a-z0-9][a-z0-9_.-]{0,63}\Z")
 
 

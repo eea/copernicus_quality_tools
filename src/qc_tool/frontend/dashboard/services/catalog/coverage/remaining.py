@@ -2,16 +2,14 @@
 
 from django.db.models import Exists
 from django.db.models import OuterRef
-from django.db.models import Q
 
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import ProductAOI
 from qc_tool.frontend.dashboard.models import ProductRelease
-from qc_tool.frontend.dashboard.models import SubmissionConflict
 
 
 def get_remaining_aoi_codes(product_release, *, offset=0, limit=200):
-    """Return AOIs without a published, conflict-free candidate."""
+    """Return AOIs without a safely published, approved candidate."""
 
     release = (
         product_release
@@ -24,18 +22,14 @@ def get_remaining_aoi_codes(product_release, *, offset=0, limit=200):
     published = DeliverySubmission.objects.filter(
         product_aoi_id=OuterRef("pk"),
         publication_state=DeliverySubmission.PublicationState.PUBLISHED,
-    )
-    open_conflict = SubmissionConflict.objects.filter(
-        product_aoi_id=OuterRef("pk"),
-        state=SubmissionConflict.State.OPEN,
+        review_state=DeliverySubmission.ReviewState.ACCEPTED,
     )
     return tuple(
         ProductAOI.objects.filter(product_release=release)
         .annotate(
             has_published=Exists(published),
-            has_open_conflict=Exists(open_conflict),
         )
-        .filter(Q(has_published=False) | Q(has_open_conflict=True))
+        .filter(has_published=False)
         .order_by("aoi_code")
         .values_list("aoi_code", flat=True)[offset : offset + limit]
     )

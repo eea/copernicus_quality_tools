@@ -22,6 +22,12 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
     "dashboard_home": private_session_page(VIEW, "GET"),
     "deliveries": private_session_page(VIEW, "GET"),
     "products": private_session_page(VIEW, "GET"),
+    "product_upload": private_session_page(MANAGE_CONFIGURATION, "GET", "POST"),
+    "product_remove": private_session_page(MANAGE_CONFIGURATION, "GET", "POST"),
+    "product_plan_edit": private_session_page(MANAGE_CONFIGURATION, "GET", "POST"),
+    "submission_queue": private_session_page(VIEW, "GET"),
+    "submission_review": private_session_page(VIEW, "GET", "POST"),
+    "submission_file": private_session_page(VIEW, "GET"),
     "product_detail": private_session_page(VIEW, "GET"),
     "export_deliveries_excel": private_session_page(VIEW, "GET"),
     "download_delivery_file": private_session_page(VIEW, "GET"),
@@ -77,6 +83,10 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
     "resumable_upload": private_session_data(
         AccountPermission.UPLOAD_DELIVERY,
         "GET",
+        "POST",
+    ),
+    "delivery_upload_check": private_session_data(
+        AccountPermission.UPLOAD_DELIVERY,
         "POST",
     ),
     "job_delete": private_session_data(

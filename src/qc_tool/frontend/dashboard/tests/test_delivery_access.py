@@ -78,6 +78,7 @@ class DeliveryAccessTests(TestCase):
                     "can_run_qc": True,
                     "can_delete": True,
                     "can_submit": True,
+                    "submission_url": "",
                 }
             ],
         )
@@ -236,6 +237,8 @@ class DeliveryAccessTests(TestCase):
                     7,
                     "CZ",
                     "DE",
+                    "clc",
+                    "water",
                     "clc",
                     "water",
                     "CLC",

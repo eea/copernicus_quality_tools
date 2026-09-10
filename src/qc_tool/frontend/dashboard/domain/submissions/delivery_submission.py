@@ -25,9 +25,10 @@ class DeliverySubmission(models.Model):
         FAILED = "failed", "Failed"
 
     class ReviewState(models.TextChoices):
-        ACCEPTED = "accepted", "Accepted"
-        CONFLICT = "conflict", "Conflict"
-        REJECTED = "rejected", "Rejected"
+        PENDING = "pending", "Awaiting review"
+        ACCEPTED = "accepted", "Approved"
+        CONFLICT = "conflict", "Competing submissions"
+        REJECTED = "rejected", "Declined"
 
     class RequestChannel(models.TextChoices):
         BROWSER = "browser", "Browser"
@@ -95,8 +96,9 @@ class DeliverySubmission(models.Model):
     review_state = models.CharField(
         max_length=10,
         choices=ReviewState.choices,
-        default=ReviewState.ACCEPTED,
+        default=ReviewState.PENDING,
     )
+    review_version = models.PositiveIntegerField(default=0, editable=False)
     requested_at = models.DateTimeField(auto_now_add=True)
     publication_claimed_at = models.DateTimeField(blank=True, null=True)
     publication_token = models.UUIDField(blank=True, null=True, editable=False)
@@ -191,7 +193,7 @@ class DeliverySubmission(models.Model):
         if any(getattr(previous, field) != value for field, value in identity.items()):
             raise ValidationError("Submission identity and provenance are immutable.")
         if previous.publication_state == self.PublicationState.PUBLISHED:
-            mutable_fields = {"review_state"}
+            mutable_fields = {"review_state", "review_version"}
             if any(
                 getattr(previous, field.attname) != getattr(self, field.attname)
                 for field in self._meta.concrete_fields

@@ -4,6 +4,7 @@ from django.db import transaction
 
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
+from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
 
 from ..errors import SubmissionError
 from .eligibility import catalog_target
@@ -26,6 +27,7 @@ def reserve_submission(
 ):
     """Lock a delivery and reserve its one durable submission record."""
 
+    lock_catalog_sync()
     delivery = _locked_delivery(delivery_id)
     if not account_access.can_manage_user(delivery.user_id):
         raise SubmissionError(

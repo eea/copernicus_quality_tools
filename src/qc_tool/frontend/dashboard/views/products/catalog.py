@@ -12,6 +12,7 @@ from qc_tool.product_security import canonical_product_ident
 from qc_tool.frontend.dashboard.services.catalog import (
     list_current_product_coverage,
 )
+from qc_tool.frontend.dashboard.services.products.lookup import managed_catalog_exists
 
 
 logger = logging.getLogger(__name__)
@@ -21,13 +22,33 @@ def render_product_catalog(request, *, fallback_catalog):
     """Render catalog metadata and only authorized aggregate coverage."""
 
     account_access = access_for_request(request)
-    product_catalog = list_current_product_coverage()
-    catalog_managed = bool(product_catalog)
+    show_archived = account_access.is_administrator and request.GET.get("archived") == "1"
+    product_catalog = list_current_product_coverage(include_inactive=show_archived)
+    catalog_managed = bool(product_catalog) or managed_catalog_exists()
+    if show_archived:
+        product_catalog = tuple(row for row in product_catalog if not row["is_active"])
     if catalog_managed:
         product_catalog = _scope_coverage(product_catalog, account_access)
         product_catalog_available = True
     else:
         product_catalog, product_catalog_available = fallback_catalog()
+    product_catalog = tuple(
+        {**product, **_plan_presentation(product, managed=catalog_managed)}
+        for product in product_catalog
+        if account_access.can_browse_product(product["ident"])
+    )
+    plan_filters = tuple(
+        {"value": status, "label": label, "count": count}
+        for status, label in (
+            ("approved", "Approved"),
+            ("draft", "Draft"),
+            ("undefined", "Not defined"),
+            ("mixed", "Mixed plans"),
+            ("retired", "Retired"),
+            ("restricted", "Restricted"),
+        )
+        if (count := sum(product["plan_status"] == status for product in product_catalog))
+    )
     return render(
         request,
         "dashboard/products/index.html",
@@ -35,8 +56,85 @@ def render_product_catalog(request, *, fallback_catalog):
             "product_catalog": product_catalog,
             "product_catalog_available": product_catalog_available,
             "catalog_managed": catalog_managed,
+            "show_archived": show_archived,
+            "product_count": len(product_catalog),
+            "plan_filters": plan_filters,
         },
     )
+
+
+def _plan_presentation(product, *, managed):
+    """Explain scoped coverage without exposing hidden release plan states."""
+
+    if managed and not product["can_view_coverage"]:
+        status = "restricted"
+    elif product.get("expected") is not None:
+        status = "approved"
+    else:
+        states = {
+            release["coverage_state"] for release in product.get("releases", ())
+        }
+        status = {
+            frozenset({"draft"}): "draft",
+            frozenset({"unknown"}): "undefined",
+            frozenset({"retired"}): "retired",
+            frozenset(): "undefined",
+        }.get(frozenset(states), "mixed")
+
+    presentation = {
+        "approved": (
+            "Approved",
+            "The expected areas of interest are approved for delivery.",
+            "Approved scope",
+            (
+                "Accepted submissions against the approved plan"
+                if product.get("expected")
+                else "No AOIs in the approved plan"
+            ),
+        ),
+        "draft": (
+            "Draft",
+            "The declared delivery scope still needs approval.",
+            "Provisional scope",
+            "Awaiting plan approval",
+        ),
+        "undefined": (
+            "Not defined",
+            "An expected delivery scope has not been defined.",
+            "AOIs not specified",
+            "Define expected AOIs",
+        ),
+        "mixed": (
+            "Mixed plans",
+            "The release plans have different approval states.",
+            (
+                "Includes unapproved scope"
+                if product.get("declared_expected") is not None
+                else "Full scope unavailable"
+            ),
+            "Review release plans",
+        ),
+        "retired": (
+            "Retired",
+            "All delivery plans for this product are retired.",
+            "Plan retired",
+            "Plan retired",
+        ),
+        "restricted": (
+            "Restricted",
+            "You do not have access to this product's delivery coverage.",
+            "Coverage restricted",
+            "Coverage restricted",
+        ),
+    }
+    label, hint, expected_hint, progress_hint = presentation[status]
+    return {
+        "plan_status": status,
+        "plan_label": label,
+        "plan_hint": hint,
+        "expected_hint": expected_hint,
+        "progress_hint": progress_hint,
+    }
 
 
 def workspace_product_catalog(load_descriptions):
@@ -53,6 +151,7 @@ def workspace_product_catalog(load_descriptions):
                 "ident": product_ident,
                 "description": description,
                 "can_view_coverage": False,
+                "declared_expected": None,
                 "expected": None,
                 "submitted": None,
                 "completion_percentage": None,
@@ -81,6 +180,7 @@ def _scope_coverage(product_catalog, account_access):
         release["can_view_coverage"] = can_view
         if not can_view:
             for field in (
+                "declared_expected",
                 "expected",
                 "submitted",
                 "conflicts",
@@ -93,6 +193,7 @@ def _scope_coverage(product_catalog, account_access):
             {
                 "ident": product["ident"],
                 "description": product["description"],
+                "is_active": product.get("is_active", True),
                 "can_view_coverage": can_view,
                 "releases": [],
             },
@@ -106,6 +207,10 @@ def _scope_coverage(product_catalog, account_access):
             **record,
             "releases": releases,
             "release_count": len(releases),
+            "scope_is_draft": record["can_view_coverage"] and any(
+                release["coverage_state"] == "draft"
+                for release in releases
+            ),
         }
         if len(releases) == 1:
             product.update(releases[0])
@@ -117,9 +222,10 @@ def _scope_coverage(product_catalog, account_access):
 
 
 def _aggregate_coverage(releases, can_view_coverage):
-    """Combine authoritative current release streams into one product row."""
+    """Total declared scope separately from authoritative delivery progress."""
 
     unavailable = {
+        "declared_expected": None,
         "expected": None,
         "submitted": None,
         "conflicts": None,
@@ -128,6 +234,10 @@ def _aggregate_coverage(releases, can_view_coverage):
     }
     if not can_view_coverage or not releases:
         return unavailable
+    if all(release.get("declared_expected") is not None for release in releases):
+        unavailable["declared_expected"] = sum(
+            release["declared_expected"] for release in releases
+        )
     if any(
         release.get("expected") is None
         or release.get("submitted") is None
@@ -139,6 +249,7 @@ def _aggregate_coverage(releases, can_view_coverage):
     submitted = sum(release["submitted"] for release in releases)
     conflicts = sum(release.get("conflicts") or 0 for release in releases)
     return {
+        "declared_expected": unavailable["declared_expected"],
         "expected": expected,
         "submitted": submitted,
         "conflicts": conflicts,

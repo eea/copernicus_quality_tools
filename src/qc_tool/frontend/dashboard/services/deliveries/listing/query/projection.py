@@ -1,5 +1,6 @@
 """Database-row projection for delivery-list consumers."""
 
+from django.urls import reverse
 from qc_tool.frontend.dashboard.access import delivery_action_capabilities
 from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
     classify_delivery_status,
@@ -28,4 +29,8 @@ def project_delivery_rows(rows, account_access, include_capabilities):
                 item["last_job_status"],
                 item.get("date_submitted"),
             ).value
+        item["submission_url"] = (
+            "{}?state=all&delivery={}".format(reverse("submission_queue"), item["id"])
+            if item.get("date_submitted") else ""
+        )
     return rows

@@ -66,8 +66,8 @@
             row,
             actionClasses(primary, "submit-delivery-button"),
             "send",
-            "Submit to EEA",
-            "Submit " + filename + " to EEA"
+            "Submit for review",
+            "Submit " + filename + " for review"
         ).appendTo($container);
     }
 
@@ -86,6 +86,9 @@
         var status = String(row.delivery_status || "failed");
         var actions = [];
 
+        if (row.submission_url) {
+            actions.push("review");
+        }
         if (status === "passed" && formatters.canSubmit(row)) {
             actions.push("submit");
         }
@@ -121,7 +124,13 @@
             var isPrimary = action !== "delete" && !primaryAssigned;
             var $container = isPrimary ? $primary : $secondary;
 
-            if (action === "submit") {
+            if (action === "review") {
+                actionLink(
+                    actionClasses(isPrimary, "delivery-review-link"),
+                    "send", "View submission", String(row.submission_url),
+                    "View submission and review feedback for " + filename
+                ).appendTo($container);
+            } else if (action === "submit") {
                 appendSubmit($container, row, filename, isPrimary);
             } else if (action === "result") {
                 appendResult($container, row, filename, isPrimary);

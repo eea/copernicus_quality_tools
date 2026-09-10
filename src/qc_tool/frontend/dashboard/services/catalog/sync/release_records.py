@@ -31,6 +31,7 @@ def create_release(snapshot, *, product, definitions, result):
         revision=snapshot.revision,
         description=snapshot.description,
         catalog_digest=snapshot.catalog_digest,
+        source_kind=snapshot.source_kind,
         coverage_state=snapshot.coverage_state,
         is_current=False,
         supersedes=previous,

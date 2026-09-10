@@ -16,6 +16,11 @@ class ProductRelease(models.Model):
         AUTHORITATIVE = "authoritative", "Authoritative coverage"
         RETIRED = "retired", "Retired"
 
+    class SourceKind(models.TextChoices):
+        DEFINITION = "definition", "Definition directory"
+        MANIFEST = "manifest", "Release manifest"
+        UPLOAD = "upload", "Specification upload"
+
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
@@ -25,6 +30,11 @@ class ProductRelease(models.Model):
     revision = models.PositiveIntegerField()
     description = models.CharField(max_length=500)
     catalog_digest = models.CharField(max_length=64)
+    source_kind = models.CharField(
+        max_length=20,
+        choices=SourceKind.choices,
+        default=SourceKind.MANIFEST,
+    )
     coverage_state = models.CharField(
         max_length=20,
         choices=CoverageState.choices,
@@ -99,6 +109,7 @@ class ProductRelease(models.Model):
             revision=self.revision,
             description=self.description,
             catalog_digest=self.catalog_digest,
+            source_kind=self.source_kind,
             coverage_state=self.coverage_state,
             supersedes_id=self.supersedes_id,
         ).exists():

@@ -33,7 +33,7 @@ class RetainedPublicationQuerySet(models.QuerySet):
 
 
 class SubmissionQuerySet(RetainedPublicationQuerySet):
-    bulk_mutable_fields = frozenset({"review_state"})
+    bulk_mutable_fields = frozenset({"review_state", "review_version"})
     # Django's SET_NULL collector may detach a removed account; its immutable
     # username and credential snapshots remain the historical evidence.
     clearable_actor_fields = frozenset({"submitted_by", "submitted_by_id"})

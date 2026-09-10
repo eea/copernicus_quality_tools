@@ -13,6 +13,7 @@ class SubmissionConflict(models.Model):
     class State(models.TextChoices):
         OPEN = "open", "Open"
         RESOLVED = "resolved", "Resolved"
+        DISMISSED = "dismissed", "Closed"
 
     product_aoi = models.OneToOneField(
         "dashboard.ProductAOI",
@@ -64,6 +65,11 @@ class SubmissionConflict(models.Model):
                     | models.Q(
                         state="resolved",
                         selected_submission__isnull=False,
+                        resolved_at__isnull=False,
+                    )
+                    | models.Q(
+                        state="dismissed",
+                        selected_submission__isnull=True,
                         resolved_at__isnull=False,
                     )
                 ),

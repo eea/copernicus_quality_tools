@@ -129,6 +129,7 @@ def _coverage_by_release(releases, *, include):
     return {
         row["release_id"]: ProductCoverageSummary(
             state=row["coverage_state"],
+            declared_expected=row["declared_expected"],
             expected=row["expected"],
             submitted=row["submitted"],
             conflicts=row["conflicts"],
@@ -163,7 +164,7 @@ def _quality_checks(document):
     required = sum(
         1
         for step in steps
-        if isinstance(step, dict) and step.get("required") is True
+        if isinstance(step, dict) and step.get("required") == 1
     )
     return QualityCheckSummary(
         total=len(steps),

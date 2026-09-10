@@ -53,7 +53,17 @@ EXPECTED_POLICIES = {
     "dashboard_home": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "deliveries": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "products": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "product_upload": (
+        PRIVATE, SESSION, ("GET", "POST"), MANAGE_CONFIGURATION, LOGIN_REDIRECT
+    ),
+    "product_remove": (
+        PRIVATE, SESSION, ("GET", "POST"), MANAGE_CONFIGURATION, LOGIN_REDIRECT
+    ),
     "product_detail": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "product_plan_edit": (PRIVATE, SESSION, ("GET", "POST"), MANAGE_CONFIGURATION, LOGIN_REDIRECT),
+    "submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "submission_review": (PRIVATE, SESSION, ("GET", "POST"), VIEW, LOGIN_REDIRECT),
+    "submission_file": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "export_deliveries_excel": (
         PRIVATE,
         SESSION,
@@ -170,6 +180,7 @@ EXPECTED_POLICIES = {
         UPLOAD,
         JSON,
     ),
+    "delivery_upload_check": (PRIVATE, SESSION, ("POST",), UPLOAD, JSON),
     "job_delete": (PRIVATE, SESSION, ("POST",), DELETE, JSON),
     "update_job": (PRIVATE, SESSION, ("POST",), VIEW, JSON),
     "boundaries_json": (
@@ -211,6 +222,10 @@ EXPECTED_POLICIES = {
 
 ROUTE_ARGS = {
     "product_detail": ("fixtureless",),
+    "product_remove": ("fixtureless",),
+    "product_plan_edit": ("fixtureless", 1),
+    "submission_review": ("00000000-0000-0000-0000-000000000001",),
+    "submission_file": ("00000000-0000-0000-0000-000000000001", "results.pdf"),
     "api_product_info": ("fixtureless",),
     "api_job_result": ("00000000-0000-0000-0000-000000000001",),
     "api_job_result_pdf": ("00000000-0000-0000-0000-000000000001",),
@@ -357,6 +372,7 @@ class RoutePolicyRegistryTests(TestCase):
         self.assertEqual(reverse("dashboard_home"), "/")
         self.assertEqual(reverse("deliveries"), "/deliveries/")
         self.assertEqual(reverse("products"), "/products/")
+        self.assertEqual(reverse("product_upload"), "/products/upload/")
         self.assertEqual(reverse("product_list_json"), "/products/list/")
         self.assertEqual(
             reverse("product_detail", args=("sample-product",)),
@@ -409,8 +425,8 @@ class RoutePolicyRegistryTests(TestCase):
             "/data/product_list/",
         )
 
-    def test_registry_is_an_explicit_policy_for_all_54_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 54)
+    def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
+        self.assertEqual(len(EXPECTED_POLICIES), 61)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

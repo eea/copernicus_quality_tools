@@ -5,11 +5,11 @@ boundary. Roles are deliberately absent here: effective Django permissions and
 explicit scope grants are already resolved into ``AccountAccess``.
 """
 
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 from django.db.models.functions import Lower
 
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
-from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.models import Delivery, Job
 
 
 def visible_deliveries(account_access):
@@ -36,10 +36,17 @@ def visible_deliveries(account_access):
         )
     if account_access.can_view_product_deliveries:
         queryset = queryset.annotate(
-            _scope_product_ident=Lower("product_ident")
+            _scope_product_ident=Lower("product_ident"),
+            _scope_catalog_ident=Subquery(
+                Job.objects.filter(delivery_id=OuterRef("pk"))
+                .order_by("-date_created", "-job_uuid")
+                .values("product_release__product__ident")[:1]
+            ),
         )
         visibility |= Q(
             _scope_product_ident__in=account_access.product_idents
+        ) | Q(
+            _scope_catalog_ident__in=account_access.product_idents
         )
 
     return queryset.filter(visibility).distinct()

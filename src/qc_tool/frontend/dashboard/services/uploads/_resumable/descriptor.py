@@ -26,6 +26,7 @@ class ResumableUploadDescriptor:
     current_chunk_size: int
     total_chunks: int
     total_size: int
+    overwrite_delivery_id: int | None = None
 
     @classmethod
     def from_mapping(cls, values) -> "ResumableUploadDescriptor":
@@ -38,7 +39,12 @@ class ResumableUploadDescriptor:
                 "invalid_upload_identifier",
                 "The upload identifier is invalid.",
             )
-        _validate_filename(filename)
+        validate_delivery_filename(filename)
+        overwrite_delivery_id = None
+        if "overwrite_delivery_id" in values:
+            overwrite_delivery_id = _positive_integer(
+                _single_mapping_value(values, "overwrite_delivery_id")
+            )
 
         chunk_number = _positive_integer(
             _single_mapping_value(values, "resumableChunkNumber")
@@ -78,6 +84,7 @@ class ResumableUploadDescriptor:
             current_chunk_size=current_chunk_size,
             total_chunks=total_chunks,
             total_size=total_size,
+            overwrite_delivery_id=overwrite_delivery_id,
         )
 
     @property
@@ -92,8 +99,10 @@ class ResumableUploadDescriptor:
                 str(self.total_chunks),
                 str(self.total_size),
             )
-        ).encode("utf-8")
-        return sha256(metadata).hexdigest()
+        )
+        if self.overwrite_delivery_id is not None:
+            metadata += "\0overwrite\0" + str(self.overwrite_delivery_id)
+        return sha256(metadata.encode("utf-8")).hexdigest()
 
     def expected_size_for_chunk(self, chunk_number: int) -> int:
         if chunk_number < 1 or chunk_number > self.total_chunks:
@@ -137,7 +146,7 @@ def _invalid_parameters() -> ResumableUploadError:
     )
 
 
-def _validate_filename(filename) -> None:
+def validate_delivery_filename(filename) -> None:
     if not isinstance(filename, str) or not filename or "\x00" in filename:
         raise ResumableUploadError(
             "invalid_delivery_filename",

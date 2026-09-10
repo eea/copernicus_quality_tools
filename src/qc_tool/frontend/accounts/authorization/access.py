@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import cached_property
 from typing import FrozenSet
 from typing import Optional
 
@@ -162,9 +163,47 @@ class AccountAccess:
             self.is_administrator
             or (
                 self.allows(AccountPermission.VIEW_PRODUCT_AGGREGATE_REPORT)
-                and normalized in self.product_idents
+                and normalized in self.reportable_product_idents
             )
         )
+
+    def can_review_product_submission(self, product_ident):
+        """Review decisions belong to admins and explicitly assigned managers."""
+
+        ident = normalize_product_ident(product_ident)
+        return bool(
+            self.is_authenticated and ident is not None
+            and (self.is_administrator or (
+                self.is_product_manager and ident in self.reviewable_product_idents
+            ))
+        )
+
+    def can_browse_product(self, product_ident):
+        """Managers browse assigned products; uploaders browse active choices."""
+
+        ident = normalize_product_ident(product_ident)
+        return bool(self.is_authenticated and ident is not None and (
+            self.is_administrator or not self.is_product_manager
+            or ident in self.browsable_product_idents
+        ))
+
+    @cached_property
+    def _catalog_product_scope(self):
+        from qc_tool.frontend.accounts.services.products import catalog_product_scope
+
+        return catalog_product_scope(self.product_idents)
+
+    @property
+    def browsable_product_idents(self):
+        return self._catalog_product_scope[0]
+
+    @property
+    def reportable_product_idents(self):
+        return self._catalog_product_scope[1]
+
+    @property
+    def reviewable_product_idents(self):
+        return self._catalog_product_scope[2] if self.is_product_manager else frozenset()
 
     @property
     def can_view_other_users_deliveries(self):

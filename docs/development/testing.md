@@ -83,6 +83,19 @@ PYTHONPATH=src python3 -m qc_tool.database.checks.history --base <commit>
 
 Use the PR base or push predecessor as `<commit>` for the history comparison.
 
+Upload feedback also has JavaScript event tests. Run them with Node.js 22:
+
+```bash
+node --test src/qc_tool/frontend/dashboard/tests/javascript/*.test.cjs
+```
+
+CI runs these explicitly on the host. The Python adapter runs them when Node.js
+is installed and skips them inside the Python-only frontend image. They cover
+shared selection and feedback behavior, failed and partial uploads, successful
+registration feedback, cancellation and authentication redirects. See
+[Upload pages](upload-pages.md) for the shared component contract and browser
+checks for delivery, boundary and product adapters.
+
 High-risk changes should include focused coverage for:
 
 - anonymous, authenticated, and forbidden route behavior;

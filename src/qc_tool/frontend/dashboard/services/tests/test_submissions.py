@@ -35,6 +35,7 @@ from qc_tool.frontend.dashboard.models import QcDefinition
 from qc_tool.frontend.dashboard.models import S3Info
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.models import SubmissionConflictEvent
+from qc_tool.frontend.dashboard.models import SubmissionReviewEvent
 from qc_tool.frontend.dashboard.services.catalog import get_product_coverage
 from qc_tool.frontend.dashboard.services.catalog import get_remaining_aoi_codes
 from qc_tool.frontend.dashboard.services.submissions import PublicationError
@@ -43,9 +44,12 @@ from qc_tool.frontend.dashboard.services.submissions import (
     resolve_submission_conflict,
 )
 from qc_tool.frontend.dashboard.services.submissions import submit_delivery
+from qc_tool.frontend.dashboard.services.submissions import review_submission
 
 
-class SubmissionLifecycleTests(TestCase):
+class SubmissionFixtureMixin:
+    initial_coverage_state = ProductRelease.CoverageState.AUTHORITATIVE
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -73,7 +77,7 @@ class SubmissionLifecycleTests(TestCase):
             revision=1,
             description="Test release",
             catalog_digest="c" * 64,
-            coverage_state=ProductRelease.CoverageState.AUTHORITATIVE,
+            coverage_state=self.initial_coverage_state,
             is_current=True,
             approved_at=timezone.now(),
         )
@@ -153,6 +157,21 @@ class SubmissionLifecycleTests(TestCase):
                 media_root=self.media_root,
             )
 
+    def manager_access(self, *product_idents):
+        allowed = frozenset(product_idents or (self.product.ident,))
+        return SimpleNamespace(
+            can_review_product_submission=lambda ident: ident in allowed,
+        )
+
+    def review(self, submission, actor, *, decision="approved", notes=""):
+        return review_submission(
+            submission_id=submission.pk, decision=decision, actor=actor,
+            account_access=self.manager_access(),
+            expected_review_version=submission.review_version, notes=notes,
+        )
+
+
+class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
     def test_successful_submission_is_atomic_and_idempotent(self):
         user, delivery, job, job_root = self.create_candidate("first-owner")
 
@@ -171,6 +190,9 @@ class SubmissionLifecycleTests(TestCase):
         )
         self.assertEqual(delivery.date_submitted, submission.published_at)
         self.assertEqual(delivery.content_sha256, job.input_sha256)
+        self.assertEqual(submission.review_state, DeliverySubmission.ReviewState.PENDING)
+        self.assertEqual(submission.review_version, 0)
+        self.assertEqual(get_product_coverage(self.release).submitted, 0)
         final_directory = Path(submission.artifact_path)
         self.assertTrue(final_directory.is_dir())
         self.assertTrue((final_directory / "submission-manifest.json").is_file())
@@ -642,11 +664,7 @@ class SubmissionLifecycleTests(TestCase):
         first_result = self.submit(first_user, first_delivery, first_root)
         self.submit(second_user, second_delivery, second_root)
         conflict = SubmissionConflict.objects.get()
-        manager_access = SimpleNamespace(
-            is_administrator=False,
-            is_product_manager=True,
-            product_idents=frozenset({self.definition.product_ident}),
-        )
+        manager_access = self.manager_access()
 
         resolution = resolve_submission_conflict(
             conflict_id=conflict.pk,
@@ -677,8 +695,9 @@ class SubmissionLifecycleTests(TestCase):
         self.assertEqual(conflict.version, 3)
         self.assertEqual(
             get_remaining_aoi_codes(self.release),
-            ("ee001l",),
+            (),
         )
+        self.assertEqual(get_product_coverage(self.release).submitted, 1)
         self.assertEqual(
             list(conflict.events.values_list("event_type", flat=True)),
             [
@@ -687,6 +706,204 @@ class SubmissionLifecycleTests(TestCase):
                 SubmissionConflictEvent.EventType.REOPENED,
             ],
         )
+
+    def test_approval_counts_only_after_review_and_retains_receipt(self):
+        user, delivery, _job, job_root = self.create_candidate("approval-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        receipt = (submission.artifact_path, submission.artifact_digest, submission.input_digest, submission.published_at)
+
+        self.review(submission, user, notes="Verified against the delivery plan.")
+
+        submission.refresh_from_db()
+        event = submission.review_events.get()
+        self.assertEqual(submission.review_state, "accepted")
+        self.assertEqual(submission.review_version, 1)
+        self.assertEqual((event.decision, event.version, event.actor_username), ("approved", 1, user.username))
+        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_remaining_aoi_codes(self.release), ())
+        self.assertEqual((submission.artifact_path, submission.artifact_digest, submission.input_digest, submission.published_at), receipt)
+        self.assertTrue(Path(submission.artifact_path).is_dir())
+
+    def test_decline_requires_reason_and_preserves_files(self):
+        user, delivery, _job, job_root = self.create_candidate("decline-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        with self.assertRaises(SubmissionError) as raised:
+            self.review(submission, user, decision="declined", notes="  ")
+        self.assertEqual(raised.exception.code, "review_reason_required")
+
+        self.review(submission, user, decision="declined", notes="The submitted metadata is incomplete.")
+
+        submission.refresh_from_db()
+        self.assertEqual(submission.review_state, "rejected")
+        self.assertEqual(submission.review_events.get().notes, "The submitted metadata is incomplete.")
+        self.assertEqual(get_product_coverage(self.release).submitted, 0)
+        self.assertTrue(Path(submission.artifact_path).is_dir())
+
+    def test_review_denies_unassigned_accounts_and_stale_versions(self):
+        user, delivery, _job, job_root = self.create_candidate("review-scope-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        with self.assertRaises(SubmissionError) as raised:
+            review_submission(
+                submission_id=submission.pk, decision="approved", actor=user,
+                account_access=self.manager_access("another-product"), expected_review_version=0,
+            )
+        self.assertEqual(raised.exception.status_code, 403)
+        self.review(submission, user)
+        with self.assertRaises(SubmissionError) as raised:
+            review_submission(
+                submission_id=submission.pk, decision="declined", actor=user,
+                account_access=self.manager_access(), expected_review_version=0,
+                notes="Attempt from an outdated form.",
+            )
+        self.assertEqual(raised.exception.code, "submission_review_changed")
+        self.assertEqual(submission.review_events.count(), 1)
+
+    def test_review_requires_published_files_and_active_product(self):
+        user, delivery, _job, job_root = self.create_candidate("review-publishing-owner")
+        with patch(
+            "qc_tool.frontend.dashboard.services.submissions.lifecycle.publish_reserved_submission",
+            side_effect=PublicationError("copy_failed", "Copy failed.", 500),
+        ), self.assertRaises(SubmissionError):
+            self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        with self.assertRaises(SubmissionError) as raised:
+            self.review(submission, user)
+        self.assertEqual(raised.exception.code, "submission_not_published")
+        self.submit(user, delivery, job_root)
+        submission.refresh_from_db()
+        self.product.is_active = False
+        self.product.save(update_fields=("is_active",))
+        with self.assertRaises(SubmissionError) as raised:
+            self.review(submission, user)
+        self.assertEqual(raised.exception.code, "product_archived")
+        self.review(submission, user, decision="declined", notes="Product withdrawn.")
+
+    def test_all_declined_candidates_close_the_conflict_without_fulfilment(self):
+        first_user, first_delivery, _job, first_root = self.create_candidate("decline-conflict-one")
+        second_user, second_delivery, _job, second_root = self.create_candidate("decline-conflict-two")
+        self.submit(first_user, first_delivery, first_root)
+        self.submit(second_user, second_delivery, second_root)
+        for submission in DeliverySubmission.objects.all():
+            submission.refresh_from_db()
+            self.review(submission, first_user, decision="declined", notes="Incomplete deliverable.")
+
+        conflict = SubmissionConflict.objects.get()
+        self.assertEqual(conflict.state, SubmissionConflict.State.DISMISSED)
+        self.assertIsNone(conflict.selected_submission_id)
+        self.assertEqual(get_product_coverage(self.release).conflicts, 0)
+        self.assertEqual(get_product_coverage(self.release).submitted, 0)
+        self.assertEqual(SubmissionReviewEvent.objects.count(), 2)
+
+    def test_new_candidate_does_not_revoke_approval_and_replacement_is_explicit(self):
+        first_user, first_delivery, _job, first_root = self.create_candidate("replace-one")
+        second_user, second_delivery, _job, second_root = self.create_candidate("replace-two")
+        self.submit(first_user, first_delivery, first_root)
+        first = DeliverySubmission.objects.get(delivery=first_delivery)
+        self.review(first, first_user)
+        self.submit(second_user, second_delivery, second_root)
+        second = DeliverySubmission.objects.get(delivery=second_delivery)
+        first.refresh_from_db()
+        self.assertEqual(first.review_state, "accepted")
+        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        with self.assertRaises(SubmissionError) as raised:
+            self.review(second, first_user)
+        self.assertEqual(raised.exception.code, "approved_candidate_exists")
+        conflict = SubmissionConflict.objects.get()
+        resolve_submission_conflict(
+            conflict_id=conflict.pk, selected_submission_id=second.pk,
+            actor=first_user, account_access=self.manager_access(),
+            expected_version=conflict.version, notes="The replacement corrects the metadata.",
+        )
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual((first.review_state, second.review_state), ("rejected", "accepted"))
+        self.assertEqual(list(first.review_events.values_list("decision", flat=True)), ["approved", "declined"])
+        self.assertEqual(second.review_events.get().decision, "approved")
+        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+
+    def test_review_audit_survives_actor_removal_and_rejects_rewrites(self):
+        user, delivery, _job, job_root = self.create_candidate("review-history-owner")
+        reviewer = get_user_model().objects.create_user(username="review-history-manager")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        self.review(submission, reviewer, notes="Verified.")
+        event = submission.review_events.get()
+        with self.assertRaises(ValidationError):
+            event.delete()
+        with self.assertRaises(ValidationError):
+            submission.review_events.all().delete()
+        with self.assertRaises(ValidationError):
+            submission.review_events.update(notes="rewritten")
+        event.notes = "rewritten"
+        with self.assertRaises(ValidationError):
+            event.save()
+        with self.assertRaises(ValidationError), transaction.atomic():
+            SubmissionReviewEvent.objects.bulk_update([event], ["notes"])
+        reviewer.delete()
+        event.refresh_from_db()
+        self.assertIsNone(event.actor_id)
+        self.assertEqual(event.actor_username, "review-history-manager")
+
+    def test_open_conflict_rejects_stale_choice_after_a_new_candidate_arrives(self):
+        first_user, first_delivery, _job, first_root = self.create_candidate("stale-choice-one")
+        second_user, second_delivery, _job, second_root = self.create_candidate("stale-choice-two")
+        third_user, third_delivery, _job, third_root = self.create_candidate("stale-choice-three")
+        first = self.submit(first_user, first_delivery, first_root)
+        self.submit(second_user, second_delivery, second_root)
+        version = SubmissionConflict.objects.get().version
+        self.submit(third_user, third_delivery, third_root)
+        conflict = SubmissionConflict.objects.get()
+
+        with self.assertRaises(SubmissionError) as raised:
+            resolve_submission_conflict(
+                conflict_id=conflict.pk, selected_submission_id=first.submission_uuid,
+                actor=first_user, account_access=self.manager_access(),
+                expected_version=version,
+            )
+
+        self.assertEqual(raised.exception.code, "submission_conflict_changed")
+        self.assertEqual(conflict.version, version + 1)
+        self.assertFalse(SubmissionReviewEvent.objects.exists())
+
+    def test_review_form_is_stale_when_another_candidate_changes(self):
+        first_user, first_delivery, _job, first_root = self.create_candidate("stale-review-one")
+        second_user, second_delivery, _job, second_root = self.create_candidate("stale-review-two")
+        third_user, third_delivery, _job, third_root = self.create_candidate("stale-review-three")
+        self.submit(first_user, first_delivery, first_root)
+        self.submit(second_user, second_delivery, second_root)
+        first = DeliverySubmission.objects.get(delivery=first_delivery)
+        second = DeliverySubmission.objects.get(delivery=second_delivery)
+        self.submit(third_user, third_delivery, third_root)
+        with self.assertRaises(SubmissionError) as raised:
+            self.review(first, first_user)
+        self.assertEqual(raised.exception.code, "submission_review_changed")
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.review(second, first_user, decision="declined", notes="Incomplete replacement.")
+        with self.assertRaises(SubmissionError) as raised:
+            self.review(first, first_user)
+        self.assertEqual(raised.exception.code, "submission_review_changed")
+
+    def test_declining_last_competitor_keeps_previous_approval_and_closes_conflict(self):
+        first_user, first_delivery, _job, first_root = self.create_candidate("keep-approval-one")
+        second_user, second_delivery, _job, second_root = self.create_candidate("keep-approval-two")
+        self.submit(first_user, first_delivery, first_root)
+        first = DeliverySubmission.objects.get(delivery=first_delivery)
+        self.review(first, first_user)
+        self.submit(second_user, second_delivery, second_root)
+        second = DeliverySubmission.objects.get(delivery=second_delivery)
+
+        self.review(second, first_user, decision="declined", notes="Existing delivery is complete.")
+
+        conflict = SubmissionConflict.objects.get()
+        self.assertEqual(conflict.state, SubmissionConflict.State.RESOLVED)
+        self.assertEqual(conflict.selected_submission_id, first.pk)
+        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_product_coverage(self.release).conflicts, 0)
+        self.assertEqual(first.review_events.count(), 1)
 
     def test_unscoped_manager_cannot_resolve_conflict(self):
         first_user, first_delivery, _first_job, first_root = (
@@ -698,11 +915,7 @@ class SubmissionLifecycleTests(TestCase):
         selected = self.submit(first_user, first_delivery, first_root)
         self.submit(second_user, second_delivery, second_root)
         conflict = SubmissionConflict.objects.get()
-        access = SimpleNamespace(
-            is_administrator=False,
-            is_product_manager=True,
-            product_idents=frozenset({"another-product"}),
-        )
+        access = self.manager_access("another-product")
 
         with self.assertRaises(SubmissionError) as raised:
             resolve_submission_conflict(
@@ -723,7 +936,7 @@ class SubmissionLifecycleTests(TestCase):
         conflict = SubmissionConflict.objects.get()
         resolve_submission_conflict(
             conflict_id=conflict.pk, selected_submission_id=selected.submission_uuid,
-            actor=manager, account_access=SimpleNamespace(is_administrator=True),
+            actor=manager, account_access=self.manager_access(),
             expected_version=conflict.version,
         )
         event = conflict.events.get(event_type="resolved")

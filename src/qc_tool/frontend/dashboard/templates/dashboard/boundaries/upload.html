@@ -1,13 +1,8 @@
-{% extends "dashboard/layouts/workspace_page.html" %}
+{% extends "dashboard/layouts/upload_page.html" %}
 {% load static %}
 
 {% block title %}Replace boundary package | Boundaries | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page boundary-upload-page{% endblock main_class %}
-
-{% block workspace_css %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'dashboard/css/features/boundaries/upload.css' %}" type="text/css" media="screen">
-{% endblock workspace_css %}
 
 {% block page_breadcrumbs %}
 {% url 'boundaries' as boundaries_url %}
@@ -15,7 +10,7 @@
 {% endblock page_breadcrumbs %}
 
 {% block page_title %}Replace boundary package{% endblock page_title %}
-{% block page_subtitle %}<p>Upload one validated ZIP to activate a new immutable raster and vector boundary generation.</p>{% endblock page_subtitle %}
+{% block page_subtitle %}<p>Choose a ZIP containing the raster and vector boundaries used for quality checks.</p>{% endblock page_subtitle %}
 {% block page_actions %}
 <a class="btn btn-default btn-qc-secondary" href="{% url 'boundaries' %}">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
@@ -23,83 +18,40 @@
 </a>
 {% endblock page_actions %}
 
-{% block page_content %}
-
-    <section class="workspace-card boundary-upload-card" aria-labelledby="boundary-upload-title">
-        <header class="workspace-card__header">
+{% block upload_id %}boundary-upload-workspace{% endblock upload_id %}
+{% block upload_title %}Boundary package{% endblock upload_title %}
+{% block upload_description %}The current boundaries remain available while the new package is validated.{% endblock upload_description %}
+{% block upload_body %}
+<div class="workspace-card__body qc-upload-body">
+    <form id="boundary-upload-form" method="post" enctype="multipart/form-data"
+          action="{% url 'boundaries_upload_data' %}" data-success-url="{% url 'boundaries' %}">
+        {% csrf_token %}
+        <noscript><p class="qc-upload-error">Enable JavaScript to upload and activate boundary packages.</p></noscript>
+        <p class="qc-upload-error" data-boundary-unsupported hidden>Please use a current browser to upload boundary packages.</p>
+        <div class="qc-upload-layout">
             <div>
-                <h2 id="boundary-upload-title">Boundary package ZIP</h2>
-                <p>The package is checked before the active generation changes. An invalid package leaves the current generation untouched.</p>
-            </div>
-        </header>
-
-        <div class="boundary-upload-card__body">
-            <div class="boundary-upload-card__action">
-                <span class="boundary-upload-card__icon" aria-hidden="true">
-                    <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
-                </span>
-                <div>
-                    <h3>Select a package</h3>
-                    <p>Choose exactly one ZIP containing top-level <code>raster/</code> and <code>vector/</code> directories.</p>
-                    <button type="button" class="btn btn-primary btn-qc-primary js-upload-files">
-                        Choose boundary package
-                    </button>
-                    <input
-                        id="fileupload"
-                        type="file"
-                        name="file"
-                        accept=".zip,application/zip"
-                        hidden
-                        data-url="{% url 'boundaries_upload_data' %}"
-                        data-success-url="{% url 'boundaries' %}"
-                    >
+                {% include "dashboard/shared/uploads/picker.html" with id="boundary-upload" input_id="fileupload" input_name="file" accept=".zip,application/zip" label="Boundary package ZIP" title="Choose one ZIP file" drop_title="Drop one ZIP file here" hint="One ZIP containing raster/ and vector/ directories." choose_label="Choose ZIP file" only %}
+                <ul class="qc-upload-list" data-upload-list aria-label="Selected boundary package"></ul>
+                <div class="qc-upload-actions">
+                    <button type="submit" class="btn btn-primary btn-qc-primary" data-boundary-submit disabled>Upload and activate</button>
+                    <a class="btn btn-default btn-qc-secondary" href="{% url 'boundaries' %}" data-upload-idle>Cancel</a>
                 </div>
+                <p class="qc-upload-hint" data-upload-pending hidden>Keep this page open while the package uploads and is validated.</p>
             </div>
-
-            <ul class="boundary-upload-card__guidance" aria-label="Boundary package validation">
-                <li>Archive paths and entry types are validated.</li>
-                <li>File count, size, and compression limits are enforced.</li>
-                <li>Activation publishes a complete immutable generation.</li>
-                <li>Running jobs remain pinned to their selected generation.</li>
-            </ul>
+            <aside class="qc-upload-guidance" aria-labelledby="boundary-package-guidance">
+                <h3 id="boundary-package-guidance">Preparing the package</h3>
+                <ul>
+                    <li>Include top-level <code>raster/</code> and <code>vector/</code> directories.</li>
+                    <li>Archive paths, file types, counts, sizes and compression are checked.</li>
+                    <li>The new package becomes active only after it passes validation.</li>
+                    <li>Running quality checks continue using their original boundaries.</li>
+                </ul>
+            </aside>
         </div>
-
-        <div id="upload-result" class="boundary-upload-card__result" aria-live="polite"></div>
-    </section>
-{% endblock page_content %}
-
-{% block page_modals %}
-<div
-    class="modal fade"
-    id="modal-progress"
-    tabindex="-1"
-    role="dialog"
-    aria-labelledby="boundary-upload-progress-title"
-    aria-describedby="boundary-upload-progress-description"
-    data-backdrop="static"
-    data-keyboard="false"
->
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="boundary-upload-progress-title" class="modal-title">Uploading boundary package</h2>
-            </div>
-            <div class="modal-body">
-                <p id="boundary-upload-progress-description">Keep this page open while the package is uploaded and validated.</p>
-                <div class="progress">
-                    <div
-                        class="progress-bar"
-                        role="progressbar"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        aria-valuenow="0"
-                    >0%</div>
-                </div>
-            </div>
-        </div>
-    </div>
+        <div id="upload-result" class="qc-upload-feedback"></div>
+    </form>
 </div>
-{% endblock page_modals %}
+{% endblock upload_body %}
 
 {% block js %}
 {{ block.super }}

@@ -527,3 +527,34 @@ class ResumableStorageTests(TestCase):
         self.assertEqual(caught.exception.code, "unsafe_upload_cleanup")
         self.assertTrue(self.paths.target_path.is_symlink())
         self.assertEqual(outside.read_bytes(), b"outside")
+
+
+class OverwriteUploadIdentityTests(TestCase):
+    def test_overwrite_target_is_explicit_validated_and_bound_to_staging(self):
+        parameters = _parameters()
+        first = ResumableUploadDescriptor.from_mapping({**parameters, "overwrite_delivery_id": "7"})
+        second = ResumableUploadDescriptor.from_mapping({**parameters, "overwrite_delivery_id": "8"})
+        self.assertEqual(first.overwrite_delivery_id, 7)
+        self.assertNotEqual(first.storage_key, second.storage_key)
+        self.assertNotEqual(first.storage_key, _descriptor().storage_key)
+        for invalid in ("", "0", "-1", "true", None, ["7", "8"]):
+            with self.subTest(invalid=invalid), self.assertRaises(ResumableUploadError):
+                ResumableUploadDescriptor.from_mapping({**parameters, "overwrite_delivery_id": invalid})
+
+    def test_pending_overwrite_excludes_other_registrations_but_allows_its_retry(self):
+        from qc_tool.frontend.dashboard.services.uploads.locking import (
+            delivery_filename_lock, mark_overwrite_intent,
+            require_available_filename, clear_overwrite_intent,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            with delivery_filename_lock(Path(temporary), "delivery.zip") as directory:
+                require_available_filename(directory)
+                mark_overwrite_intent(directory, "a" * 64)
+                require_available_filename(directory, storage_key="a" * 64)
+                with self.assertRaises(ResumableUploadError) as conflict:
+                    require_available_filename(directory, storage_key="b" * 64)
+                self.assertEqual(conflict.exception.code, "overwrite_pending")
+                with self.assertRaises(ResumableUploadError):
+                    require_available_filename(directory)
+                clear_overwrite_intent(directory)
+                require_available_filename(directory)

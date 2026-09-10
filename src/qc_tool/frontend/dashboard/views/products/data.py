@@ -1,5 +1,7 @@
 """Authenticated product data endpoints used by browser clients."""
 
+import re
+
 from django.http import FileResponse
 from django.http import Http404
 from django.http import JsonResponse
@@ -34,11 +36,13 @@ def get_product_descriptions_dropdown(request):
 
 
 def get_product_definition(request, product_ident):
-    """Return the executable definition through its explicit data route."""
+    """Return a selected stored revision, or the current executable file."""
 
     product_ident = normalize_product_ident(product_ident)
     if product_ident is None:
         raise Http404("Product definition not found.")
+    if "digest" in request.GET:
+        return _stored_definition(product_ident, request.GET.getlist("digest"))
     try:
         filepath = locate_product_definition(product_ident)
         return FileResponse(
@@ -47,3 +51,17 @@ def get_product_definition(request, product_ident):
         )
     except (FileNotFoundError, OSError, QCException) as error:
         raise Http404("Product definition not found.") from error
+
+
+def _stored_definition(product_ident, digests):
+    # An explicit revision must never fall back to a newer executable file.
+    if len(digests) != 1 or re.fullmatch(r"[0-9a-f]{64}", digests[0]) is None:
+        raise Http404("Product definition revision not found.")
+    try:
+        definition = models.QcDefinition.objects.only("document").get(
+            product_ident=product_ident,
+            digest=digests[0],
+        )
+    except models.QcDefinition.DoesNotExist as error:
+        raise Http404("Product definition revision not found.") from error
+    return JsonResponse(definition.document, json_dumps_params={"indent": 2})

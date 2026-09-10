@@ -124,10 +124,10 @@
         }
         window.BootstrapDialog.show({
             type: window.BootstrapDialog.TYPE_PRIMARY,
-            title: count === 1 ? "Submit this delivery to EEA?" : "Submit " + count + " deliveries to EEA?",
+            title: count === 1 ? "Submit this delivery for review?" : "Submit " + count + " deliveries for review?",
             message: filenameList(
                 rows,
-                "The latest successful QC result for each delivery will be used for submission."
+                "The ZIP and successful QC evidence will be stored for product manager review. Approval adds the AOI to product fulfilment."
             ),
             buttons: [{
                 label: count === 1 ? "Submit delivery" : "Submit " + count + " deliveries",

@@ -66,3 +66,23 @@ class ApiDeliveryRegistrationSecurityTests(TestCase):
             self.media_root / delivery.user.username / delivery.filename,
             delivery_file,
         )
+
+    def test_repeat_registration_cannot_create_duplicate_active_records(self):
+        delivery_file = self.user_root / "example.zip"
+        delivery_file.write_bytes(b"delivery")
+        self.assertEqual(self.post_registration(delivery_file).status_code, 200)
+        response = self.post_registration(delivery_file)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "delivery_exists")
+        self.assertEqual(Delivery.objects.count(), 1)
+
+    def test_registration_cannot_bypass_unconfirmed_browser_overwrite(self):
+        from qc_tool.frontend.dashboard.services.uploads.locking import delivery_filename_lock, mark_overwrite_intent
+        delivery_file = self.user_root / "example.zip"
+        delivery_file.write_bytes(b"delivery")
+        with delivery_filename_lock(self.user_root, delivery_file.name) as directory:
+            mark_overwrite_intent(directory, "a" * 64)
+        response = self.post_registration(delivery_file)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "overwrite_pending")
+        self.assertFalse(Delivery.objects.exists())

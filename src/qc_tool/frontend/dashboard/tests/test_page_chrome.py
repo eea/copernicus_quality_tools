@@ -88,7 +88,7 @@ FEATURE_CANVAS_STYLESHEETS = {
         / "css"
         / "features"
         / "products",
-        frozenset({"products-page", "product-detail-page"}),
+        frozenset({"products-page", "product-detail-page", "product-upload-page", "product-remove-page"}),
     ),
     "Boundaries": (
         DASHBOARD_APP_DIRECTORY
@@ -737,10 +737,7 @@ class SharedPageChromeTests(TestCase):
                     reverse("products"),
                     "Products",
                     None,
-                    (
-                        "API documentation",
-                        "{}#products".format(reverse("api_homepage")),
-                    ),
+                    None,
                 ),
                 (
                     reverse("boundaries"),

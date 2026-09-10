@@ -21,6 +21,7 @@ from qc_tool.frontend.dashboard.views.jobs.results import get_result
 from qc_tool.frontend.dashboard.views.jobs.setup import setup_job
 from qc_tool.frontend.dashboard.views.uploads import resumable_upload
 from qc_tool.frontend.dashboard.views.uploads import resumable_upload_page
+from qc_tool.frontend.dashboard.views.uploads import delivery_upload_check
 
 
 urlpatterns = [
@@ -29,6 +30,11 @@ urlpatterns = [
         "deliveries/upload/",
         resumable_upload_page,
         name="file_upload",
+    ),
+    protected_path(
+        "deliveries/upload/check/",
+        delivery_upload_check,
+        name="delivery_upload_check",
     ),
     protected_path(
         "deliveries/jobs/new/",

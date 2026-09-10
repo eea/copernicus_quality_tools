@@ -8,6 +8,22 @@ nav_order: 2
 
 ## Browser upload
 
+The browser stages ZIP files for review and checks only the signed-in user's
+existing filenames. New files offer **Add**; eligible duplicates offer
+**Overwrite**. The batch action says **Add all & overwrite** when it includes
+replacements and displays the new/overwrite counts. Protected submissions,
+waiting/running QC, S3 records and ambiguous duplicates are explained and skipped.
+
+Overwrite approval is pinned to the inspected delivery ID and checked again
+before sending and at finalization. The server stages the complete replacement,
+retains the old archive, retires the old delivery identity, then publishes and
+activates a fresh delivery under a filename lock. Old QC history is retained;
+the replacement needs new QC. Durable recovery records keep old QC from being
+associated with new bytes even if a process stops between database and file
+operations. The [upload maintenance guide](../development/upload-pages.md#recover-an-interrupted-overwrite)
+describes browser retry and operator recovery. New selections use fresh upload
+identifiers; retries keep their identifier and overwrite target.
+
 ```mermaid
 sequenceDiagram
     actor User
@@ -35,8 +51,19 @@ sequenceDiagram
 
 Resumable metadata is validated before filesystem use. Upload identifiers map
 to opaque storage keys, path components are confined, chunks have explicit
-limits, and assembly rechecks the layout under a lock. Database creation occurs
-after a complete file is published; failed creation removes the orphaned file.
+limits, and assembly and registration share an upload lock. A chunk probe cannot
+report a completed upload until a live Delivery record exists. Fully staged
+uploads require a final POST to finish registration.
+
+Database creation occurs after the complete ZIP is published. An ownership link
+in private staging retains the published inode until registration succeeds, so
+an interrupted database write can be retried without overwriting an unrelated
+file. An atomic registration receipt binds the upload to its Delivery ID and
+file identity. Concurrent final chunks and retries return the same Delivery;
+chunks are discarded only after that receipt is durable. If the delivery was
+deleted, its receipt no longer proves completion and reuploading starts with
+fresh chunks, even when the browser reuses its upload identifier.
+
 Canonical AOI metadata is stored only after a terminal result is available;
 see [AOI metadata](aoi-metadata.md) for aliases, projection, and trust rules.
 

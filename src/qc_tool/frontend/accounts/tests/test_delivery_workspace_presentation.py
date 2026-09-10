@@ -141,6 +141,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
                 (reverse("dashboard_home"), "Dashboard", False),
                 (reverse("deliveries"), "Deliveries", True),
                 (reverse("products"), "Products", False),
+                (reverse("submission_queue"), "My submissions", False),
                 (reverse("boundaries"), "Boundaries", False),
                 (reverse("api_homepage"), "API Access", False),
             ],
@@ -210,7 +211,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         configuration_response = self.client.get(reverse("deliveries"))
         configuration_sidebar = self.workspace_sidebar(configuration_response)
-        self.assertEqual(len(self.workspace_links(configuration_response)), 5)
+        self.assertEqual(len(self.workspace_links(configuration_response)), 6)
         self.assertNotIn(
             'href="{}"'.format(reverse("admin:index")),
             configuration_sidebar,
@@ -230,7 +231,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             self.workspace_links(administrator_response)[-1],
             (reverse("admin:index"), "Admin panel", False),
         )
-        self.assertEqual(len(self.workspace_links(administrator_response)), 6)
+        self.assertEqual(len(self.workspace_links(administrator_response)), 7)
         self.assertIn('role="separator"', administrator_sidebar)
 
     def test_each_workspace_page_marks_only_its_own_sidebar_link_current(self):
@@ -238,6 +239,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             "dashboard_home",
             "deliveries",
             "products",
+            "submission_queue",
             "boundaries",
         ):
             with self.subTest(route_name=route_name):
@@ -268,104 +270,44 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dashboard/products/index.html")
-        self.assertContains(response, "2 products available")
+        self.assertEqual(response.context["product_count"], 2)
         self.assertContains(response, escape(unsafe_description))
         self.assertNotContains(response, unsafe_description)
         self.assertContains(response, 'id="tbl-products"')
+        self.assertContains(response, 'scope="col"', count=4)
         for field, label in (
-            ("description", "Product name"),
-            ("ident", "Product ident"),
-            ("expected", "Total AOIs"),
-            ("submitted", "Submitted"),
-            ("completion_percentage", "% submitted"),
+            ("description", "Product"),
+            ("plan_status", "Delivery plan"),
+            ("declared_expected", "Expected AOIs"),
+            ("completion_percentage", "Accepted coverage"),
         ):
             with self.subTest(field=field):
                 self.assertContains(response, 'data-field="{}"'.format(field))
                 self.assertContains(response, label)
-
-        document = response.content.decode(response.charset)
-        self.assertContains(response, "<th ", count=5)
-        self.assertContains(response, 'scope="col"', count=5)
-        field_positions = [
-            document.index('data-field="{}"'.format(field))
-            for field in (
-                "description",
-                "ident",
-                "expected",
-                "submitted",
-                "completion_percentage",
-            )
-        ]
-        self.assertEqual(field_positions, sorted(field_positions))
-        self.assertContains(response, 'data-switchable="false"', count=2)
-        self.assertContains(response, 'data-sorter="productMetricSorter"', count=3)
-        self.assertContains(response, 'data-sorter="productTextSorter"', count=2)
-        self.assertContains(response, 'data-searchable="false"', count=3)
-        self.assertIn("qc-data-table-region", document)
-        self.assertIn("qc-data-table", document)
-        self.assertIn("Product details", document)
-        self.assertNotIn("products-grid", document)
-        self.assertNotIn("product-card", document)
-        self.assertNotIn("data-products-search", document)
+        for product_ident in ("safe-product", "escaped-product"):
+            with self.subTest(product=product_ident):
+                self.assertContains(response, product_ident)
+                self.assertContains(
+                    response,
+                    'href="{}"'.format(reverse("product_detail", args=(product_ident,))),
+                )
+        self.assertEqual(
+            response.context["plan_filters"],
+            ({"value": "undefined", "label": "Not defined", "count": 2},),
+        )
+        self.assertContains(response, "Not defined")
+        self.assertContains(response, "Define expected AOIs")
+        self.assertNotContains(response, "Not available")
+        self.assertNotContains(response, "API documentation")
+        self.assertNotContains(response, reverse("api_homepage") + "#products")
+        self.assertNotContains(response, 'href="{}"'.format(reverse("product_upload")))
         for asset in (
             "dashboard/css/bootstrap-table.min.css",
             "dashboard/css/features/products/index.css",
             "dashboard/js/features/products/index.js",
         ):
             with self.subTest(asset=asset):
-                self.assertIn(asset, document)
-
-        product_script = self.static_source(
-            "dashboard/js/features/products/index.js"
-        )
-        product_styles = self.static_source(
-            "dashboard/css/features/products/index.css"
-        )
-        shared_table_script = self.static_source(
-            "dashboard/js/shared/data-table-ui.js"
-        )
-        for option in (
-            "QcDataTableUi",
-            "search: true",
-            "showColumns: true",
-            "csvExportButton",
-            'buttonsOrder: ["columns", "exportView"]',
-            "customSearch: productSearch",
-            "window.productMetricSorter",
-            "window.productTextSorter",
-        ):
-            with self.subTest(option=option):
-                self.assertIn(option, product_script)
-        self.assertIn(".products-table-region", product_styles)
-        self.assertIn("--qc-data-table-min-width: 900px", product_styles)
-        self.assertIn("progress::-webkit-progress-value", product_styles)
-        self.assertIn("progress::-moz-progress-bar", product_styles)
-        self.assertIn("content: attr(data-label)", product_styles)
-        self.assertIn("function enhanceSortControls($table)", shared_table_script)
-        self.assertIn("function enhanceScrollRegion($table, labels)", shared_table_script)
-        self.assertIn('.find(".fixed-table-body")', shared_table_script)
-        self.assertIn("function exportCsv(table, settings)", shared_table_script)
-        self.assertIn('bootstrapTable("getVisibleColumns")', shared_table_script)
-        self.assertIn('bootstrapTable("getData", {formatted: true})', shared_table_script)
-        self.assertIn("new window.Blob", shared_table_script)
-        self.assertIn("window.URL.createObjectURL", shared_table_script)
-        self.assertIn('filename: "products.csv"', product_script)
-        self.assertIn('event.key === "Enter"', shared_table_script)
-        self.assertIn('event.key === " "', shared_table_script)
-        self.assertIn('"aria-sort"', shared_table_script)
-        self.assertContains(response, "Not available", count=6)
-
-        details_link = re.search(
-            r'<a\b[^>]*class="product-table__details"[^>]*>'
-            r'(?P<body>.*?)</a>',
-            document,
-            flags=re.IGNORECASE | re.DOTALL,
-        )
-        self.assertIsNotNone(details_link)
-        self.assertFalse(
-            re.sub(r"<[^>]+>", "", details_link.group("body")).strip(),
-            "The details action label must not leak into exported product names.",
-        )
+                self.assertContains(response, asset)
 
     @patch(
         "qc_tool.frontend.dashboard.views.products.available_product_descriptions"
@@ -382,7 +324,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         response = self.client.get(reverse("products"))
 
-        self.assertContains(response, "1 product available")
+        self.assertEqual(response.context["product_count"], 1)
         self.assertContains(response, "Safe product")
         self.assertNotContains(response, "Reserved path")
         self.assertNotContains(response, "Unroutable product")

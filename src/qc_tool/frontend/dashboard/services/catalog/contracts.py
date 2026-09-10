@@ -28,6 +28,7 @@ class ReleaseSnapshot:
     aoi_source_values: tuple
     aoi_provenance: str
     catalog_digest: str
+    source_kind: str = "manifest"
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,65 @@
+{% extends "dashboard/layouts/workspace_page.html" %}
+{% load static %}
+
+{% block title %}Remove specification | {{ product.name }} | CLMS QC Tool{% endblock title %}
+{% block main_class %}workspace-page product-remove-page{% endblock main_class %}
+
+{% block workspace_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/features/products/detail.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
+
+{% block page_breadcrumbs %}
+{% url 'products' as products_url %}
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label="Remove specification" only %}
+{% endblock page_breadcrumbs %}
+
+{% block page_title %}Remove specification{% endblock page_title %}
+{% block page_subtitle %}<p>Review the effect of removing {{ product.name }} from active use.</p>{% endblock page_subtitle %}
+{% block page_actions %}
+<a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+    Back to product
+</a>
+{% endblock page_actions %}
+
+{% block page_content %}
+<section class="workspace-card product-detail__section" aria-labelledby="product-remove-title">
+    <header class="workspace-card__header">
+        <div>
+            <h2 id="product-remove-title">{{ product.name }}</h2>
+            <p><code>{{ product.ident }}</code></p>
+        </div>
+    </header>
+    <div class="workspace-card__body product-remove__body">
+        {% if error %}
+        <div class="workspace-notice workspace-notice--danger" role="alert">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+            <div><h2>The specification could not be removed</h2><p>{{ error }}</p></div>
+        </div>
+        {% endif %}
+        {% if product.is_active or removal_pending %}
+        {% if removal_pending %}
+        <div class="workspace-notice workspace-notice--warning" role="status">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#info"></use></svg>
+            <div>
+                <h2>Removal needs to be completed</h2>
+                <p>The product has been disabled in the catalog. Retry removal to finish updating the specification on shared storage.</p>
+            </div>
+        </div>
+        {% endif %}
+        <p>Removing this specification hides the product from the active catalog and prevents it from being selected for new quality-control jobs.</p>
+        <p>Specification versions, existing jobs, stored files, and submitted deliveries are retained. You can restore the product later by uploading a specification named <code>{{ product.ident }}.json</code>.</p>
+        <form method="post" class="product-remove__actions">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-qc-danger">{% if removal_pending %}Retry removal{% else %}Remove specification{% endif %}</button>
+            <a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">Cancel</a>
+        </form>
+        {% else %}
+        <p>This product has already been removed from active use. Its specifications and delivery history remain available.</p>
+        <p>To restore it, upload a specification named <code>{{ product.ident }}.json</code>.</p>
+        <a class="btn btn-primary btn-qc-primary" href="{% url 'product_upload' %}">Restore product</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock page_content %}

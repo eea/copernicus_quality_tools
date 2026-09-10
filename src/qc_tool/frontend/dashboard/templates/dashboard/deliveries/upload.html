@@ -1,13 +1,10 @@
-{% extends "dashboard/layouts/workspace_page.html" %}
+{% extends "dashboard/layouts/upload_queue_page.html" %}
 {% load static %}
 
 {% block title %}Upload delivery | Deliveries | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page delivery-upload-page{% endblock main_class %}
 
-{% block workspace_css %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/upload.css' %}" type="text/css" media="screen">
-{% endblock workspace_css %}
+
 
 {% block page_breadcrumbs %}
 {% url 'deliveries' as deliveries_url %}
@@ -15,7 +12,7 @@
 {% endblock page_breadcrumbs %}
 
 {% block page_title %}Upload delivery{% endblock page_title %}
-{% block page_subtitle %}<p>Add one or more ZIP delivery packages with resumable upload.</p>{% endblock page_subtitle %}
+{% block page_subtitle %}<p>Upload ZIP files, review them below, then add them individually or together.</p>{% endblock page_subtitle %}
 {% block page_actions %}
 <a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
@@ -23,65 +20,21 @@
 </a>
 {% endblock page_actions %}
 
-{% block page_content %}
-<section
-    id="resumable-upload"
-    class="workspace-card delivery-upload-card"
-    aria-labelledby="delivery-upload-title"
-    data-upload-url="{% url 'resumable_upload' %}"
-    data-deliveries-url="{% url 'deliveries' %}"
-    data-simultaneous-uploads="{{ resumable_simultaneous_uploads }}"
->
-    <header class="workspace-card__header">
-        <div>
-            <h2 id="delivery-upload-title">Delivery package ZIP files</h2>
-            <p>Uploads continue in chunks and are validated before a delivery record is made available.</p>
-        </div>
-    </header>
-
-    <div class="workspace-card__body delivery-upload-card__body">
-        <div class="resumable-error workspace-notice workspace-notice--danger" role="alert" hidden>
-            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
-            <div>
-                <h2>Browser upload is unavailable</h2>
-                <p>This browser does not provide the HTML5 file features required for resumable uploads.</p>
-            </div>
-        </div>
-
-        <div class="resumable-drop delivery-upload-dropzone">
-            <span class="delivery-upload-dropzone__icon" aria-hidden="true">
-                <svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
-            </span>
-            <div>
-                <h3>Drop ZIP files here</h3>
-                <p>Each ZIP must contain exactly one delivery AOI.</p>
-            </div>
-            <button type="button" class="resumable-browse btn btn-primary btn-qc-primary">Choose ZIP files</button>
-        </div>
-
-        <div class="resumable-progress delivery-upload-progress" hidden>
-            <div class="delivery-upload-progress__summary">
-                <strong>Uploading deliveries</strong>
-                <span class="progress-text" aria-live="polite">Preparing upload…</span>
-            </div>
-            <div class="progress-container" aria-hidden="true"><div class="progress-bar"></div></div>
-            <div class="progress-pause delivery-upload-progress__actions">
-                <button type="button" class="progress-resume-link btn btn-default btn-qc-secondary">Resume</button>
-                <button type="button" class="progress-pause-link btn btn-default btn-qc-secondary">Pause</button>
-                <button type="button" class="progress-cancel-link btn btn-default btn-qc-danger-outline">Cancel</button>
-            </div>
-        </div>
-
-        <ul class="resumable-list delivery-upload-list" aria-label="Upload queue" aria-live="polite" hidden></ul>
-        <div class="progress delivery-upload-overall-progress" aria-label="Overall upload progress" hidden>
-            <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%">
-                <span class="sr-only">0% uploaded</span>
-            </div>
-        </div>
-        <div class="delivery-upload-feedback" aria-live="polite"></div>
+{% block upload_id %}resumable-upload{% endblock upload_id %}
+{% block upload_title %}Upload delivery files{% endblock upload_title %}
+{% block upload_description %}Drag and drop or browse .zip delivery archives to add them. Each archive will go through a preliminary validation check before upload, so potential conflicts can be reviewed safely. If an archive with the same name already exists, you can choose to overwrite it with the new version.{% endblock upload_description %}
+{% block upload_attributes %}data-check-url="{% url 'delivery_upload_check' %}" data-upload-url="{% url 'resumable_upload' %}" data-deliveries-url="{% url 'deliveries' %}" data-simultaneous-uploads="{{ resumable_simultaneous_uploads }}"{% endblock upload_attributes %}
+{% block upload_body %}
+<div class="workspace-card__body qc-upload-body">
+    <div class="workspace-notice workspace-notice--danger" data-upload-unsupported role="alert" hidden>
+        <div><h2>Browser upload is unavailable</h2><p>Please use a current browser to upload your ZIP files.</p></div>
     </div>
-</section>
-{% endblock page_content %}
+    {% include "dashboard/shared/uploads/picker.html" with id="delivery-upload" input_id="delivery-upload-file" input_name="file" accept=".zip,application/zip" label="Delivery ZIP files" title="Browse files" drop_title="Drop ZIP files here" hint="Deliveries should contain one area of interest per ZIP file." choose_label="Browse files" multiple=True only %}
+    <noscript><p class="qc-upload-error">Enable JavaScript to upload delivery files.</p></noscript>
+    {% include "dashboard/shared/uploads/queue.html" only %}
+    <p class="qc-upload-hint">After adding a delivery, open Deliveries to run quality checks.</p>
+</div>
+{% endblock upload_body %}
 
 {% block js %}
 {{ block.super }}

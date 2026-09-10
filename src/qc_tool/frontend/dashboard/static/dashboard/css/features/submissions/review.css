@@ -1,0 +1,26 @@
+/* Plan forms and submission decisions share the workspace's visual language. */
+.review-form__field { margin: 0 0 26px; }
+.review-form__field > label, .review-form__field legend { display: block; margin-bottom: 8px; color: var(--qc-color-navy); font-size: 15px; font-weight: 600; }
+.review-form__field p { color: var(--qc-color-muted); line-height: 1.6; }
+.review-form__field textarea { width: 100%; padding: 12px; border: 1px solid var(--qc-color-border-strong); border-radius: var(--qc-radius-small); font: inherit; resize: vertical; }
+.review-form__field input[type="checkbox"] { margin-right: 8px; }
+.review-form .errorlist { color: var(--qc-color-danger-dark); margin: 8px 0; }
+.review-actions, .review-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.review-filters { padding: 20px 24px; border-bottom: 1px solid var(--qc-color-border); }
+.review-filters .form-control { width: auto; min-width: 180px; }
+.review-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 22px; }
+.review-facts dt { color: var(--qc-color-muted); font-size: 12px; margin-bottom: 5px; }
+.review-facts dd { margin: 0; overflow-wrap: anywhere; }
+.review-table-region { max-width: 100%; overflow-x: auto; }
+.review-table { min-width: 730px; }
+.review-table > tbody > tr > td, .review-table > thead > tr > th { padding: 18px 24px; vertical-align: middle; }
+.review-table > thead > tr > th { color: var(--qc-color-muted); font-size: 12px; background: var(--qc-color-surface-subtle); }
+.review-status { display: inline-block; padding: 5px 10px; border-radius: var(--qc-radius-pill); color: var(--qc-color-warning-dark); background: var(--qc-color-warning-soft); font-size: 12px; white-space: nowrap; }
+.review-status--accepted { color: var(--qc-color-success-dark); background: var(--qc-color-success-soft); }
+.review-status--rejected { color: var(--qc-color-danger-dark); background: var(--qc-color-danger-soft); }
+.review-pagination { display: flex; justify-content: center; gap: 20px; padding: 20px; }
+.review-files { padding: 16px 24px 16px 40px; line-height: 1.8; overflow-wrap: anywhere; max-height: 400px; overflow-y: auto; }
+.review-files span { color: var(--qc-color-muted); font-size: 12px; }
+.review-event { padding: 18px 0; border-bottom: 1px solid var(--qc-color-border-subtle); }
+.review-form .form-control:focus-visible, .review-form textarea:focus-visible, .review-table-region:focus-visible { outline: 3px solid var(--qc-focus-ring); outline-offset: 2px; }
+@media(max-width: 767px) { .review-facts { grid-template-columns: 1fr; } .review-actions { align-items: stretch; flex-direction: column; } .review-filters { padding: 16px; } }

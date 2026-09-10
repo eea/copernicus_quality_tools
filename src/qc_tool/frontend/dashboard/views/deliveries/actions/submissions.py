@@ -46,7 +46,7 @@ def submit_delivery_to_eea(request):
     return JsonResponse(
         {
             "status": "ok",
-            "message": "Delivery {} successfully submitted to EEA.".format(
+            "message": "Delivery {} successfully submitted for review.".format(
                 delivery_id
             ),
             "data": result.as_dict(),

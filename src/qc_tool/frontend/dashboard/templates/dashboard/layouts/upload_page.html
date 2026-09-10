@@ -1,0 +1,25 @@
+{% extends "dashboard/layouts/workspace_page.html" %}
+{% load static %}
+
+{% block workspace_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/uploads.css' %}" type="text/css" media="screen">
+{% endblock workspace_css %}
+
+{% block page_content %}
+<section id="{% block upload_id %}upload-workspace{% endblock upload_id %}" class="workspace-card qc-upload" aria-labelledby="upload-title" data-upload-icons="{% static 'dashboard/icons/ui.svg' %}" {% block upload_attributes %}{% endblock upload_attributes %}>
+    <header class="workspace-card__header">
+        <div>
+            <h2 id="upload-title">{% block upload_title %}Add files{% endblock upload_title %}</h2>
+            <p>{% block upload_description %}{% endblock upload_description %}</p>
+        </div>
+    </header>
+    {% block upload_body %}{% endblock upload_body %}
+    <div class="sr-only" data-upload-announcement role="status" aria-atomic="true"></div>
+</section>
+{% endblock page_content %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/shared/uploads.js' %}"></script>
+{% endblock js %}

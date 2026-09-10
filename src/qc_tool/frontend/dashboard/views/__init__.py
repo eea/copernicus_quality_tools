@@ -65,7 +65,6 @@ from qc_tool.frontend.dashboard.views.products import product_detail
 from qc_tool.frontend.dashboard.views.products import products
 from qc_tool.frontend.dashboard.views.uploads import resumable_upload
 from qc_tool.frontend.dashboard.views.uploads import resumable_upload_page
-from qc_tool.frontend.dashboard.views.uploads import uploaded_delivery_file_exists
 from qc_tool.frontend.dashboard.views.workers import pull_job
 
 

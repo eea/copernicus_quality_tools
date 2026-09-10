@@ -107,14 +107,28 @@ def catalog_target(latest_job, submitted_aoi):
         raise SubmissionError(
             "catalog_release_unavailable",
             "The QC job is not associated with an authoritative product "
-            "release. Synchronize the catalog and run QC again.",
+            "release. Ask an administrator to approve its delivery plan, then run QC again.",
             409,
         )
+    if not release.product.is_active:
+        raise SubmissionError("product_inactive", "This product has been removed from active use.", 409)
+    # A plan-only revision may approve an already checked definition. Preserve
+    # the job's original provenance while targeting the current plan of the
+    # same stream, only when its exact definition still belongs to that plan.
+    current = ProductRelease.objects.filter(
+        release_key=release.release_key, is_current=True,
+        definition_links__qc_definition_id=latest_job.qc_definition_id,
+    ).first()
+    if current is None:
+        raise SubmissionError(
+            "qc_definition_outdated",
+            "The product specification has changed. Run QC with its current specification before submitting.", 409,
+        )
+    release = current
     if release.coverage_state != ProductRelease.CoverageState.AUTHORITATIVE:
         raise SubmissionError(
             "catalog_release_not_authoritative",
-            "The QC job's product release does not have authoritative AOI "
-            "coverage.",
+            "An administrator must approve the product's delivery plan before submissions can be sent for review.",
             409,
         )
     if not release.definition_links.filter(

@@ -31,6 +31,7 @@ def get_product_coverage(product_release):
     published = DeliverySubmission.objects.filter(
         product_aoi_id=OuterRef("pk"),
         publication_state=DeliverySubmission.PublicationState.PUBLISHED,
+        review_state=DeliverySubmission.ReviewState.ACCEPTED,
     )
     open_conflict = SubmissionConflict.objects.filter(
         product_aoi_id=OuterRef("pk"),
@@ -46,7 +47,7 @@ def get_product_coverage(product_release):
             expected=Count("pk"),
             submitted=Count(
                 "pk",
-                filter=Q(has_published=True, has_open_conflict=False),
+                filter=Q(has_published=True),
             ),
             conflicts=Count("pk", filter=Q(has_open_conflict=True)),
         )

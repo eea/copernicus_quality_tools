@@ -28,12 +28,14 @@ from qc_tool.frontend.dashboard.urls.products import (
     urlpatterns as product_patterns,
 )
 from qc_tool.frontend.dashboard.urls.workers import urlpatterns as worker_patterns
+from qc_tool.frontend.dashboard.urls.submissions import urlpatterns as submission_patterns
 
 
 urlpatterns = [
     *overview_patterns,
     *delivery_patterns,
     *product_patterns,
+    *submission_patterns,
     *job_patterns,
     *boundary_patterns,
     *configuration_patterns,

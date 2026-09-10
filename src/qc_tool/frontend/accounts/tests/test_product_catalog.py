@@ -16,8 +16,8 @@ class ProductCatalogFallbackTests(SimpleTestCase):
     def scan(self, product_dirs):
         with patch.object(
             products,
-            "CONFIG",
-            {"product_dirs": product_dirs},
+            "product_definition_directories",
+            return_value=product_dirs,
         ), patch.object(
             products,
             "get_product_descriptions",
@@ -94,8 +94,8 @@ class ProductCatalogFallbackTests(SimpleTestCase):
 
             with patch.object(
                 products,
-                "CONFIG",
-                {"product_dirs": [product_dir]},
+                "product_definition_directories",
+                return_value=[product_dir],
             ), patch.object(
                 products,
                 "get_product_descriptions",

@@ -19,11 +19,20 @@ def can_view_delivery(account_access, delivery):
     if _region_scope_matches(account_access, delivery):
         return True
 
-    return bool(
-        account_access.can_view_product_deliveries
-        and _normalized_product_ident(delivery.product_ident)
-        in account_access.product_idents
-    )
+    if not account_access.can_view_product_deliveries:
+        return False
+    if _normalized_product_ident(delivery.product_ident) in account_access.product_idents:
+        return True
+    if not getattr(delivery, "pk", None):
+        return False
+    # Keep a catalog-parent grant attached to this delivery's selected release;
+    # another product may use the same QC definition.
+    from qc_tool.frontend.dashboard.models import Job
+
+    parent_ident = Job.objects.filter(delivery_id=delivery.pk).order_by(
+        "-date_created", "-job_uuid",
+    ).values_list("product_release__product__ident", flat=True).first()
+    return parent_ident in account_access.product_idents
 
 
 def require_delivery_view(account_access, delivery):

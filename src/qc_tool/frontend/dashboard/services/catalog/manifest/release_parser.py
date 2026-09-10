@@ -18,6 +18,7 @@ def parse_release_document(
     product_name,
     product_description,
     definition_loader,
+    source_kind="manifest",
 ):
     if not isinstance(document, dict):
         raise invalid_manifest("every release must be an object")
@@ -54,6 +55,7 @@ def parse_release_document(
         definitions=definitions,
         primary_definition_ident=primary_ident,
         aoi_codes=aoi_codes,
+        source_kind=source_kind,
     )
     return ReleaseSnapshot(
         product_ident=product_ident,
@@ -70,6 +72,7 @@ def parse_release_document(
         aoi_source_values=tuple(source_values),
         aoi_provenance=provenance,
         catalog_digest=catalog_digest,
+        source_kind=source_kind,
     )
 
 

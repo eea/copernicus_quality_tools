@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
+from qc_tool.frontend.dashboard.models import Product, ProductRelease
 from qc_tool.frontend.dashboard.services.deliveries.listing.filters import (
     parse_filter,
 )
@@ -98,6 +99,7 @@ def build_delivery_query_plan(
     visibility_sql, visibility_parameters = _visibility_clause(
         user_id,
         account_access,
+        database_connection,
     )
     status_sql, status_parameters = delivery_status_sql(delivery_status)
     constraints = visibility_sql + status_sql + filter_sql + search_sql
@@ -122,7 +124,7 @@ def build_delivery_query_plan(
     )
 
 
-def _visibility_clause(user_id, account_access):
+def _visibility_clause(user_id, account_access, database_connection):
     if account_access.is_administrator:
         return "", []
 
@@ -137,6 +139,16 @@ def _visibility_clause(user_id, account_access):
         product_idents = sorted(account_access.product_idents)
         placeholders = ", ".join(["%s"] * len(product_idents))
         clauses.append(f"LOWER(d.product_ident) IN ({placeholders})")
+        parameters.extend(product_idents)
+        quote_name = database_connection.ops.quote_name
+        release_table = quote_name(ProductRelease._meta.db_table)
+        product_table = quote_name(Product._meta.db_table)
+        clauses.append(
+            f"EXISTS (SELECT 1 FROM {release_table} scoped_release "
+            f"JOIN {product_table} scoped_product ON scoped_product.id = scoped_release.product_id "
+            f"WHERE scoped_release.id = j.product_release_id "
+            f"AND scoped_product.ident IN ({placeholders}))"
+        )
         parameters.extend(product_idents)
 
     return " AND ({})".format(" OR ".join(clauses)), parameters

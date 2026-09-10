@@ -42,8 +42,10 @@ contains compiled geospatial, database, Java, and validator dependencies.
 ## Main contributor guides
 
 - [Testing](testing.md)
+- [Upload page components](upload-pages.md)
 - [Database lifecycle and migrations](database-migrations.md)
 - [Writing documentation](documentation.md)
 - [Product onboarding](product-onboarding.md)
+- [Product definitions and reporting](product-definitions.md)
 - [Repository layout](../architecture/repository-layout.md)
 - [Frontend vendor assets](frontend-vendor-assets.md)

@@ -1,4 +1,6 @@
-"""Open or reopen review when distinct users publish the same expected AOI."""
+"""Flag competing deliveries without invalidating an existing approval."""
+
+from django.db.models import F
 
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import SubmissionConflict
@@ -13,15 +15,11 @@ def reconcile_published_submission(submission, now):
             product_aoi_id=submission.product_aoi_id,
             publication_state=DeliverySubmission.PublicationState.PUBLISHED,
         )
+        .exclude(review_state=DeliverySubmission.ReviewState.REJECTED)
         .select_related("delivery")
         .order_by("requested_at", "submission_uuid")
     )
-    owner_ids = {
-        candidate.delivery.user_id
-        for candidate in candidates
-        if candidate.delivery.user_id is not None
-    }
-    if len(owner_ids) < 2:
+    if len(candidates) < 2:
         return None
 
     conflict = (
@@ -31,13 +29,21 @@ def reconcile_published_submission(submission, now):
     )
     if conflict is None:
         conflict = _open_conflict(submission.product_aoi_id, now)
-    elif conflict.state == SubmissionConflict.State.RESOLVED:
+    elif conflict.state != SubmissionConflict.State.OPEN:
         _reopen_conflict(conflict)
+    else:
+        conflict.version += 1
+        conflict.save(update_fields=("version", "updated_at"))
+        _create_event(conflict, SubmissionConflictEvent.EventType.CANDIDATE_ADDED)
 
     DeliverySubmission.objects.filter(
         pk__in=[candidate.pk for candidate in candidates]
-    ).exclude(review_state=DeliverySubmission.ReviewState.CONFLICT).update(
-        review_state=DeliverySubmission.ReviewState.CONFLICT
+    ).filter(review_state__in=(
+        DeliverySubmission.ReviewState.PENDING,
+        DeliverySubmission.ReviewState.CONFLICT,
+    )).update(
+        review_state=DeliverySubmission.ReviewState.CONFLICT,
+        review_version=F("review_version") + 1,
     )
     return conflict.pk
 

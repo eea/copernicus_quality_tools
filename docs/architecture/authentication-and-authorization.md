@@ -51,14 +51,14 @@ registry.
 
 ## Roles and permissions
 
-Roles are Django groups that bundle permissions. They are not hard-coded checks
-inside views.
+Roles are Django groups that bundle permissions. `AccountAccess` combines these
+roles with capabilities and object scope; views and services reuse that policy.
 
 | Role | Purpose | Permission bundle |
 | --- | --- | --- |
 | `default` | Baseline for every active user | view, upload, run QC, delete own, submit own, change password |
-| `product_manager` | Cross-user visibility for assigned products | view product deliveries and product aggregate-report capability |
-| `admin` | QC Tool and Django administration | all QC Tool capabilities; synchronized to Django staff access |
+| `product_manager` | View assigned products, track fulfilment, and review their submissions | product visibility plus approval/decline within the assigned business-product scope |
+| `admin` | Manage products, delivery plans, users and reviews | all QC Tool capabilities; synchronized to Django staff access |
 
 The authorization vocabulary also reserves region/product aggregate-report
 permissions. No production aggregate-report view currently consumes them. A
@@ -68,7 +68,8 @@ treating the permission name as implementation.
 Every newly created user receives `default`. Administrators can assign
 additional roles and direct **Additional QC permissions** in Django Admin.
 Direct permissions are additive and are the correct mechanism for a one-user
-exception.
+capability exception. They do not bypass explicit role requirements for product
+administration or submission review.
 
 Canonical role permissions are synchronized by the application and are not
 edited on the Group page.
@@ -94,8 +95,25 @@ visible delivery =
 - A grant without its permission is inert.
 - A permission without a grant is inert.
 
-Managers may read cross-user records in scope. Mutation remains owner-or-admin
-unless a specific policy explicitly changes that rule.
+Managers may read cross-user records in scope. Delivery upload, QC requests,
+deletion and submission remain owner-or-admin operations. Reviewing a submitted
+delivery is a separate permission: an administrator may review any product; a
+product manager may review only the canonical business products assigned to
+them. A recipe grant or region-based visibility does not authorize review of a
+different business product.
+
+Only administrators may create products by uploading JSON specifications, upload
+specification revisions, remove products, or configure and activate delivery
+plans. Product removal hides it from new work while retaining earlier deliveries,
+specifications and review history.
+
+Users submit their successfully checked deliveries for review and can see the
+decision and feedback. Product managers and administrators explicitly approve or
+decline safely published submissions; a decline requires a reason. Only approved
+submissions contribute to product fulfilment. A new competing submission does
+not revoke an existing approval; replacing the approved candidate requires an
+explicit decision. Each decision retains its actor, time and feedback in the
+database audit history.
 
 ## Request-time behavior
 
@@ -110,7 +128,8 @@ without requiring logout.
 1. Add a named URL through `protected_path` in the appropriate `urls/` module.
 2. Add the matching policy to `access/routes/private.py` or, after an explicit
    security review, `public.py`.
-3. Require a stable `AccountPermission`; never name a group in the view.
+3. Require a stable `AccountPermission`; use `AccountAccess` for any additional
+   role or object-scope requirements rather than naming a group in the view.
 4. Load the object and call the delivery/job access policy before rendering,
    returning data, or mutating state.
 5. Use a service for validation and multi-step writes.

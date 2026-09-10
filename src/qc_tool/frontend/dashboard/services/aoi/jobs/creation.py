@@ -5,6 +5,8 @@ from django.utils import timezone
 
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
+from qc_tool.common import QCException, validate_skip_steps
+from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
 
 from ..projections import sync_locked_delivery_from_latest_job
 
@@ -26,6 +28,7 @@ def create_delivery_job(
     Delivery = delivery._meta.model
     Job = delivery._meta.apps.get_model("dashboard", "Job")
     with transaction.atomic():
+        lock_catalog_sync()
         locked_delivery = Delivery.objects.select_for_update().get(
             pk=delivery.pk
         )
@@ -38,11 +41,23 @@ def create_delivery_job(
             product_ident,
             logger=logger,
         )
+        _require_active_specification(product_ident, qc_definition, Job)
+        if qc_definition is not None and skip_steps:
+            try:
+                validate_skip_steps(
+                    [int(number) for number in skip_steps.split(",")],
+                    qc_definition.document,
+                )
+            except (QCException, KeyError, TypeError, ValueError) as exc:
+                raise ValueError("The specification changed. Review the selected QC steps and try again.") from exc
         job = Job.objects.create(
             date_created=timezone.now(),
             job_status=JOB_WAITING,
             product_ident=product_ident,
-            product_description=product_description,
+            product_description=(
+                qc_definition.description if qc_definition is not None
+                else product_description
+            ),
             skip_steps=skip_steps,
             delivery=locked_delivery,
             requested_by=requested_by,
@@ -61,6 +76,21 @@ def create_delivery_job(
 
     _copy_projection(locked_delivery, delivery)
     return job
+
+
+def _require_active_specification(product_ident, definition, Job):
+    Product = Job._meta.apps.get_model("dashboard", "Product")
+    ProductRelease = Job._meta.apps.get_model("dashboard", "ProductRelease")
+    if Product.objects.filter(ident=product_ident, is_active=False).exists():
+        raise ValueError("This product specification has been removed from active use.")
+    uploaded = ProductRelease.objects.filter(
+        product__ident=product_ident, is_current=True, source_kind="upload"
+    )
+    if uploaded.exists() and (
+        definition is None
+        or not uploaded.filter(definition_links__qc_definition=definition).exists()
+    ):
+        raise ValueError("This specification is awaiting activation in shared storage. Retry its upload before starting QC.")
 
 
 def refresh_delivery_projection(delivery):

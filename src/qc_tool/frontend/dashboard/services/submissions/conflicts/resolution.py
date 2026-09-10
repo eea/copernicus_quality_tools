@@ -1,5 +1,6 @@
 """Product-manager selection of one published duplicate-AOI candidate."""
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -7,9 +8,12 @@ from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import ProductAOI
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.models import SubmissionConflictEvent
+from qc_tool.frontend.dashboard.models import SubmissionReviewEvent
+from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
 
 from ..contracts import ConflictResolutionResult
 from ..errors import SubmissionError
+from ..review_history import record_review_decision
 from .access import require_resolution_scope
 
 
@@ -26,8 +30,9 @@ def resolve_submission_conflict(
 
     product_aoi_id = _conflict_product_aoi_id(conflict_id)
     with transaction.atomic():
+        lock_catalog_sync()
         product_aoi = (
-            ProductAOI.objects.select_for_update()
+            ProductAOI.objects.select_for_update(of=("self",))
             .select_related("product_release__product")
             .get(pk=product_aoi_id)
         )
@@ -37,6 +42,16 @@ def resolve_submission_conflict(
         require_resolution_scope(account_access, product_aoi)
         _require_current_version(conflict, expected_version)
         selected = _published_candidate(selected_submission_id, product_aoi)
+        from ..review import require_approvable_product
+
+        require_approvable_product(product_aoi)
+        notes = str(notes or "").strip()
+        if len(notes) > 5_000:
+            raise SubmissionError("review_notes_too_long", "Review notes must be at most 5,000 characters.", 400)
+        if not notes and DeliverySubmission.objects.filter(
+            product_aoi=product_aoi, review_state=DeliverySubmission.ReviewState.ACCEPTED,
+        ).exclude(pk=selected.pk).exists():
+            raise SubmissionError("review_reason_required", "Explain why this delivery replaces the approved submission.", 400)
 
         if (
             conflict.state == SubmissionConflict.State.RESOLVED
@@ -45,7 +60,7 @@ def resolve_submission_conflict(
             return _resolution_result(conflict, selected)
 
         _apply_resolution(conflict, selected, actor=actor, notes=notes)
-        _select_candidate(product_aoi, selected)
+        _select_candidate(product_aoi, selected, actor=actor, notes=conflict.resolution_notes)
         _append_resolution_event(conflict, selected, actor=actor)
         return _resolution_result(conflict, selected)
 
@@ -81,7 +96,7 @@ def _published_candidate(selected_submission_id, product_aoi):
         selected = DeliverySubmission.objects.select_for_update().get(
             pk=selected_submission_id
         )
-    except (DeliverySubmission.DoesNotExist, ValueError) as exc:
+    except (DeliverySubmission.DoesNotExist, ValidationError, ValueError) as exc:
         raise SubmissionError(
             "submission_candidate_not_found",
             "The selected submission candidate does not exist.",
@@ -124,17 +139,19 @@ def _apply_resolution(conflict, selected, *, actor, notes):
     )
 
 
-def _select_candidate(product_aoi, selected):
-    candidates = DeliverySubmission.objects.filter(
+def _select_candidate(product_aoi, selected, *, actor, notes):
+    candidates = DeliverySubmission.objects.select_for_update().filter(
         product_aoi=product_aoi,
         publication_state=DeliverySubmission.PublicationState.PUBLISHED,
     )
-    candidates.exclude(pk=selected.pk).update(
-        review_state=DeliverySubmission.ReviewState.REJECTED
-    )
-    candidates.filter(pk=selected.pk).update(
-        review_state=DeliverySubmission.ReviewState.ACCEPTED
-    )
+    for candidate in candidates.order_by("submission_uuid"):
+        approved = candidate.pk == selected.pk
+        record_review_decision(
+            candidate,
+            decision=(SubmissionReviewEvent.Decision.APPROVED if approved else SubmissionReviewEvent.Decision.DECLINED),
+            actor=actor,
+            notes=(notes if approved else "Another delivery was selected for this AOI." + (" " + notes if notes else "")),
+        )
 
 
 def _append_resolution_event(conflict, selected, *, actor):

@@ -47,6 +47,7 @@ from qc_tool.frontend.dashboard.views.api_access.shared import (
 logger = logging.getLogger(__name__)
 
 
+@transaction.non_atomic_requests
 def api_register_delivery(request):
     return register_local_delivery(
         request,

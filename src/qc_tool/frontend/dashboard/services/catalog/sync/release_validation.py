@@ -9,6 +9,7 @@ def validate_existing_release(release, snapshot, *, product):
         or release.catalog_digest != snapshot.catalog_digest
         or release.description != snapshot.description
         or release.coverage_state != snapshot.coverage_state
+        or release.source_kind != snapshot.source_kind
     ):
         raise CatalogError(
             "immutable_release_changed",

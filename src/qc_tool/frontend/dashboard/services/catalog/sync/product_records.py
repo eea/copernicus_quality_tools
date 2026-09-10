@@ -3,9 +3,7 @@
 from dataclasses import replace
 
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import QcDefinition
-
-from ..errors import CatalogError
+from ..revisions import store_definition
 
 
 def synchronize_product(snapshot, result):
@@ -32,32 +30,11 @@ def synchronize_product(snapshot, result):
 def synchronize_definitions(snapshot, result):
     definitions = {}
     for definition_snapshot in snapshot.definitions:
-        definition, created = QcDefinition.objects.get_or_create(
-            product_ident=definition_snapshot.product_ident,
-            digest=definition_snapshot.digest,
-            defaults={
-                "description": definition_snapshot.description,
-                "document": definition_snapshot.document,
-                "source_path": definition_snapshot.source_path,
-            },
-        )
+        definition, created = store_definition(definition_snapshot)
         if created:
             result = replace(
                 result,
                 definitions_created=result.definitions_created + 1,
             )
-        elif _definition_has_drifted(definition, definition_snapshot):
-            raise CatalogError(
-                "definition_digest_collision",
-                "A stored QC definition differs despite an identical digest.",
-            )
         definitions[definition.product_ident] = definition
     return definitions, result
-
-
-def _definition_has_drifted(definition, snapshot):
-    return (
-        definition.description != snapshot.description
-        or definition.document != snapshot.document
-        or definition.source_path != snapshot.source_path
-    )

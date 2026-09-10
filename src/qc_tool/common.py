@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+import hashlib
 import json
 import logging
 import os
@@ -220,17 +221,129 @@ def get_qc_tool_version():
         return filepath.read_text()
     return None
 
+def uploaded_definition_root():
+    """Return shared specification storage without creating it."""
+
+    return CONFIG["work_dir"].joinpath("product_definitions")
+
+
+def product_definition_directories():
+    """Discover configured sources and the shared upload directory in priority order.
+
+    Uploaded specifications become visible to frontend and worker processes on
+    their next read. Discovery never creates storage or changes configured
+    sources; a missing configured directory retains its usual error behavior.
+    """
+
+    directories = list(CONFIG["product_dirs"])
+    uploaded_directory = uploaded_definition_root()
+    if uploaded_directory.is_dir() and uploaded_directory not in directories:
+        directories.append(uploaded_directory)
+    return directories
+
+
+def _specification_state_directory():
+    directory = uploaded_definition_root() / ".state"
+    if not directory.exists() and not directory.is_symlink():
+        return None
+    if (
+        uploaded_definition_root().is_symlink()
+        or directory.is_symlink()
+        or not directory.is_dir()
+    ):
+        raise QCException("Product specification state directory is unavailable.")
+    return directory
+
+
+def _read_regular_specification_file(path, limit):
+    descriptor = os.open(
+        path,
+        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+    )
+    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        os.close(descriptor)
+        raise ValueError("Specification path is not a regular file")
+    with os.fdopen(descriptor, "rb") as source:
+        payload = source.read(limit + 1)
+    if len(payload) > limit:
+        raise ValueError("Specification file exceeds its size limit")
+    return payload
+
+
+def _unique_specification_state_keys(pairs):
+    state = {}
+    for key, value in pairs:
+        if key in state:
+            raise ValueError("Duplicate specification state key")
+        state[key] = value
+    return state
+
+
+def current_product_specification_state(product_ident):
+    """Read the current active/archive marker, never falling back on bad state."""
+
+    ident = normalize_product_ident(product_ident)
+    if ident is None:
+        raise QCException("Product definition identifier is invalid.")
+    directory = _specification_state_directory()
+    if directory is None:
+        return None
+    path = directory / (ident + ".json")
+    try:
+        payload = _read_regular_specification_file(path, 1024)
+    except FileNotFoundError:
+        if path.is_symlink():
+            raise QCException("Product specification state is unavailable.")
+        return None
+    except (OSError, ValueError) as exc:
+        raise QCException("Product specification state is unavailable.") from exc
+    try:
+        state = json.loads(
+            payload.decode("utf-8"), object_pairs_hook=_unique_specification_state_keys
+        )
+        if not isinstance(state, dict) or type(state.get("active")) is not bool:
+            raise ValueError("Invalid active state")
+        if state["active"] and (
+            not isinstance(state.get("digest"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", state["digest"]) is None
+        ):
+            raise ValueError("Invalid specification digest")
+    except (UnicodeError, ValueError) as exc:
+        raise QCException("Product specification state is invalid.") from exc
+    return state
+
+
+def _versioned_product_definition(ident, state):
+    directory = uploaded_definition_root() / ".versions"
+    product_directory = directory / ident
+    path = product_directory / (state["digest"] + ".json")
+    try:
+        if directory.is_symlink() or product_directory.is_symlink():
+            raise ValueError("Specification version directory must not be a symlink")
+        payload = _read_regular_specification_file(path, 1024 * 1024)
+        if hashlib.sha256(payload).hexdigest() != state["digest"]:
+            raise ValueError("Specification version digest does not match")
+    except (OSError, ValueError) as exc:
+        raise QCException("The active product specification is unavailable or changed.") from exc
+    return path
+
+
 def locate_product_definition(product_ident):
     """Locate one canonical definition without binding Unicode lookalikes."""
 
     normalized = normalize_product_ident(product_ident)
     if normalized is None:
         raise QCException("Product definition identifier is invalid.")
-    for product_dir in CONFIG["product_dirs"]:
-        product_filepaths = product_dir.glob("*.json")
+    state = current_product_specification_state(normalized)
+    if state is not None:
+        if not state["active"]:
+            raise QCException("Product definition {!r} is archived.".format(normalized))
+        return _versioned_product_definition(normalized, state)
+    for product_dir in product_definition_directories():
+        product_filepaths = sorted(product_dir.glob("*.json"))
         for product_filepath in product_filepaths:
             candidate = normalize_product_ident(product_filepath.stem)
-            if candidate == normalized:
+            if candidate == normalized and product_filepath.is_file():
                 return product_filepath
     raise QCException(
         "Product definition {!r} has not been found.".format(normalized)
@@ -268,20 +381,12 @@ def validate_skip_steps(skip_steps, product_definition):
             ", ".join([str(s) for s in unskippable_steps])))
 
 
-def get_product_descriptions():
-    """Return the available product catalog without one bad file hiding all.
+def _listed_product_definitions():
+    """Select one runtime source per identifier, including version/archive state."""
 
-    Product identifiers are canonical lowercase filename stems. Earlier
-    configured directories retain precedence. Invalid definitions remain
-    visible with a stable diagnostic label so operators can repair them while
-    the rest of the catalog continues to work.
-    """
-
-    product_descriptions = {}
-    # We iterate the dirs in reverse order.
-    # In case of identical product ident, the earlier product overrides the later one.
-    for product_dir in reversed(CONFIG["product_dirs"]):
-        for filepath in product_dir.iterdir():
+    definitions = {}
+    for product_dir in product_definition_directories():
+        for filepath in sorted(product_dir.iterdir()):
             if (
                 not filepath.is_file()
                 or PRODUCT_FILENAME_REGEX.match(filepath.name) is None
@@ -295,6 +400,51 @@ def get_product_descriptions():
                     filepath,
                 )
                 continue
+            if product_ident in definitions:
+                continue
+            definitions[product_ident] = filepath
+    state_directory = _specification_state_directory()
+    if state_directory is not None:
+        for path in sorted(state_directory.iterdir()):
+            if PRODUCT_FILENAME_REGEX.match(path.name) is None:
+                continue
+            ident = normalize_product_ident(path.stem)
+            if ident is None or ident != path.stem:
+                logger.warning("Ignoring invalid product specification state: %s", path)
+                continue
+            try:
+                state = current_product_specification_state(ident)
+                if state is None:
+                    # A concurrently removed marker must not re-enable a source.
+                    raise QCException("Product specification state disappeared.")
+                if state["active"]:
+                    definitions[ident] = _versioned_product_definition(ident, state)
+                else:
+                    definitions.pop(ident, None)
+            except QCException as exc:
+                definitions[ident] = None
+                logger.warning(
+                    "Invalid product specification state for %s: %s",
+                    ident,
+                    exc,
+                )
+    return definitions
+
+
+def get_product_descriptions():
+    """Describe selected runtime specifications, omitting archived products.
+
+    Explicit version state overrides configured sources. Invalid definitions
+    remain visible with a stable diagnostic label instead of falling back to a
+    different recipe. Without a version marker, configured directory precedence
+    applies.
+    """
+
+    product_descriptions = {}
+    for ident, filepath in _listed_product_definitions().items():
+        if filepath is None:
+            product_description = INVALID_PRODUCT_DESCRIPTION
+        else:
             try:
                 product_definition = json.loads(filepath.read_text())
                 product_description = product_definition["description"]
@@ -304,29 +454,16 @@ def get_product_descriptions():
                 ):
                     raise ValueError("description must be a non-empty string")
             except (OSError, UnicodeError, ValueError, KeyError, TypeError) as exc:
-                logger.warning(
-                    "Invalid product definition %s: %s",
-                    filepath,
-                    exc,
-                )
+                logger.warning("Invalid product definition %s: %s", filepath, exc)
                 product_description = INVALID_PRODUCT_DESCRIPTION
-            product_descriptions[product_ident] = product_description
+        product_descriptions[ident] = product_description
     return product_descriptions
 
 def get_product_definitions():
-    product_definitions = []
-    # We iterate the dirs in reverse order.
-    # In case of identical product ident, the earlier product overrides the later one.
-    for product_dir in reversed(CONFIG["product_dirs"]):
-        for filepath in product_dir.iterdir():
-            if (
-                filepath.is_file()
-                and PRODUCT_FILENAME_REGEX.match(filepath.name) is not None
-            ):
-                product_ident = normalize_product_ident(filepath.stem)
-                if product_ident is not None:
-                    product_definitions.append(product_ident)
-    return product_definitions
+    return [
+        ident for ident, filepath in _listed_product_definitions().items()
+        if filepath is not None
+    ]
 
 def compose_job_dir(job_uuid):
     """Return the confined working directory for a validated job UUID."""

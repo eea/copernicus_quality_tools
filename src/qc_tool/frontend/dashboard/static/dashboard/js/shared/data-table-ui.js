@@ -78,7 +78,9 @@
             .filter(function (column) {
                 return Boolean(column.field);
             });
-        var rows = $table.bootstrapTable("getData", {formatted: true}) || [];
+        // Keep row objects: the vendored formatted option returns one scalar
+        // per row. exportText already removes markup from HTML-backed cells.
+        var rows = $table.bootstrapTable("getData") || [];
         var lines = [columns.map(function (column) {
             return csvCell(column.title);
         }).join(",")];

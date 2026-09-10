@@ -9,6 +9,7 @@ class Product(models.Model):
     ident = models.CharField(max_length=64, unique=True)
     name = models.CharField(max_length=200)
     description = models.CharField(max_length=500, blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

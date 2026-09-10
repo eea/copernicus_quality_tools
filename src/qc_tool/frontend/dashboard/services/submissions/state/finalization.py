@@ -19,6 +19,9 @@ def finalize_publication(reserved, token, receipt, *, idempotent):
 
     # All delivery mutators acquire the Delivery row first.
     delivery = Delivery.objects.select_for_update().get(pk=reserved.delivery_id)
+    # Review and publication serialize on the AOI before locking candidates.
+    # Holding a candidate before the AOI could deadlock two publishers/reviewers.
+    ProductAOI.objects.select_for_update().get(pk=reserved.product_aoi_id)
     submission = (
         DeliverySubmission.objects.select_for_update()
         .select_related("product_aoi")
@@ -27,8 +30,6 @@ def finalize_publication(reserved, token, receipt, *, idempotent):
     if submission.publication_state == DeliverySubmission.PublicationState.PUBLISHED:
         return result_from_submission(submission, idempotent=True)
     _require_owned_claim(submission, token)
-    ProductAOI.objects.select_for_update().get(pk=submission.product_aoi_id)
-
     published_at = timezone.now()
     _apply_receipt(submission, receipt, published_at=published_at)
     _apply_delivery_projection(delivery, receipt, published_at=published_at)

@@ -177,6 +177,84 @@
   color: var(--qc-color-muted);
 }
 
+.product-detail__version-table-region {
+  overflow-x: auto;
+}
+
+.product-detail__version-table-region:focus-visible {
+  outline: 2px solid var(--qc-color-primary);
+  outline-offset: -2px;
+}
+
+.product-detail__version-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  color: var(--qc-color-text);
+}
+
+.product-detail__version-table th,
+.product-detail__version-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--qc-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.product-detail__version-table th {
+  color: var(--qc-color-muted);
+  background: var(--qc-color-surface-subtle);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.product-detail__version-table td:first-child {
+  white-space: nowrap;
+}
+
+.product-detail__version-table a {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.product-detail__digest {
+  display: block;
+  max-width: 34ch;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.product-detail__history-label {
+  color: var(--qc-color-muted);
+  font-size: 12px;
+}
+
+.product-detail__version-pagination,
+.product-remove__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.product-detail__version-pagination {
+  padding: 16px 24px;
+  color: var(--qc-color-muted);
+}
+
+.product-remove__body > p {
+  max-width: 78ch;
+  margin-bottom: 16px;
+  color: var(--qc-color-text);
+  line-height: 1.6;
+}
+
+.product-remove__actions {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--qc-color-border);
+}
+
 @media (max-width: 900px) {
   .product-detail__facts,
   .product-detail__metrics {
@@ -191,3 +269,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+.product-detail__plan { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--qc-color-border-subtle); }
+.product-detail__plan p { margin: 6px 0 0; color: var(--qc-color-muted); }
+@media (max-width: 767px) { .product-detail__plan { align-items: flex-start; flex-direction: column; } }

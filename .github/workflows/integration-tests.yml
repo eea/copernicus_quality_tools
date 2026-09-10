@@ -49,6 +49,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up JavaScript test runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify shared upload components and feature adapters
+        run: node --test src/qc_tool/frontend/dashboard/tests/javascript/*.test.cjs
+
       - name: Enforce draft or released database policy
         shell: bash
         run: |
@@ -110,6 +118,7 @@ jobs:
               qc_tool.frontend.dashboard.services.tests \
               qc_tool.frontend.dashboard.tests \
               qc_tool.database.tests.integration \
+              qc_tool.test.test_uploaded_product_definitions \
               --verbosity 2
           '
 

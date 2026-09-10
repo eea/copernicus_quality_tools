@@ -34,6 +34,7 @@ class QualityCheckSummary:
 @dataclass(frozen=True)
 class ProductCoverageSummary:
     state: str
+    declared_expected: Optional[int]
     expected: Optional[int]
     submitted: Optional[int]
     conflicts: Optional[int]
