@@ -53,17 +53,17 @@ jobs:
             -e SKIP_INSPIRE_CHECK=yes \
             -e PYTHONWARNINGS="ignore" \
             worker \
-            python3 -c "
+            python3 -c '
 import logging, unittest
 logging.disable(logging.CRITICAL)
 suite = unittest.defaultTestLoader.discover(
-    '/usr/local/src/copernicus_quality_tools/src/qc_tool/test',
-    top_level_dir='/usr/local/src/copernicus_quality_tools/src'
+    "/usr/local/src/copernicus_quality_tools/src/qc_tool/test",
+    top_level_dir="/usr/local/src/copernicus_quality_tools/src"
 )
 runner = unittest.TextTestRunner(verbosity=2, buffer=True)
 result = runner.run(suite)
 exit(0 if result.wasSuccessful() else 1)
-"
+'
 
       - name: Run Frontend Dashboard Tests
         run: |
