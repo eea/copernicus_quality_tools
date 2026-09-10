@@ -30,7 +30,6 @@ jobs:
               echo "API is up! (Received HTTP $STATUS)"
               exit 0
             fi
-            echo "Attempt $i/30: Status code $STATUS. Waiting..."
             sleep 1
           done
           echo "Error: API failed to respond with 200 or 403 within 30 seconds."
@@ -39,29 +38,37 @@ jobs:
       - name: Test API Endpoint
         run: |
           echo "Fetching delivery list..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -v http://localhost:8000/api/delivery-list || true)
+          # Removed -v (verbose) to suppress HTTP headers and connection logs
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/delivery-list || true)
           if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 403 ]; then
-            echo "Endpoint test passed with HTTP $STATUS"
+            echo "SUCCESS: API Endpoint test passed (HTTP $STATUS)"
           else
-            echo "Endpoint test failed with HTTP $STATUS"
+            echo "FAILURE: API Endpoint test failed (HTTP $STATUS)"
             exit 1
           fi
 
       - name: Run Worker Unit Tests
         run: |
+          echo "Running Worker Unit Tests..."
+          # Added -v 1 / --buffer to unittest and PYTHONWARNINGS to suppress log noise
           docker compose -f docker-compose.service_provider.yml exec -T \
             -e SKIP_INSPIRE_CHECK=yes \
+            -e PYTHONWARNINGS="ignore" \
             worker \
             python3 -m unittest discover \
+            -v 1 \
+            --buffer \
             -s /usr/local/src/copernicus_quality_tools/src/qc_tool/test \
             -t /usr/local/src/copernicus_quality_tools/src
 
       - name: Run Frontend Dashboard Tests
         run: |
+          echo "Running Frontend Dashboard Tests..."
+          # Added -v 1 to Django test runner to show standard pass/fail summary
           docker compose -f docker-compose.service_provider.yml exec -T \
             --workdir /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend \
             frontend \
-            python3 manage.py test dashboard.tests
+            python3 manage.py test dashboard.tests -v 1
 
       - name: Stop services
         if: always()
