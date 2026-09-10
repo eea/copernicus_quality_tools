@@ -50,6 +50,7 @@ STATUS_ONLY = DenialResponse.STATUS_ONLY
 # Independent from the production registry: every URL needs an explicit access
 # decision in both implementation and tests.
 EXPECTED_POLICIES = {
+    "table_export": (PRIVATE, SESSION, ("POST",), VIEW, JSON),
     "dashboard_home": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "deliveries": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "products": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
@@ -426,7 +427,7 @@ class RoutePolicyRegistryTests(TestCase):
         )
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 61)
+        self.assertEqual(len(EXPECTED_POLICIES), 62)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

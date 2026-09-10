@@ -1,0 +1,10 @@
+/* Shared retained-review feedback and correction guidance. */
+.submission-feedback { border-color: var(--qc-color-warning); }
+.submission-feedback > .workspace-card__header { background: var(--qc-color-warning-soft); }
+.submission-feedback__byline { color: var(--qc-color-muted); font-size: 13px; }
+.submission-feedback__comment { margin: 16px 0; padding: 16px 20px; border-left: 3px solid var(--qc-color-warning); border-radius: 0 var(--qc-radius-small) var(--qc-radius-small) 0; background: var(--qc-color-surface-subtle); color: var(--qc-color-navy); font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
+.submission-feedback__next { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--qc-color-border); }
+.submission-feedback__next h3 { margin: 0 0 12px; font-size: 16px; }
+.submission-feedback__next ol { padding-left: 22px; line-height: 1.7; }
+.submission-feedback__next li + li { margin-top: 8px; }
+.submission-feedback__next .btn { margin-top: 8px; }

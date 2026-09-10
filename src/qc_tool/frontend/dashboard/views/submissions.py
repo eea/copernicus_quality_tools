@@ -11,28 +11,18 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.forms.submission_reviews import SubmissionReviewForm
-from qc_tool.frontend.dashboard.models import DeliverySubmission, SubmissionConflict
+from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
 from qc_tool.frontend.dashboard.services.submissions import SubmissionError, resolve_submission_conflict
+from qc_tool.frontend.dashboard.services.submissions.access import visible_submissions
 from qc_tool.frontend.dashboard.services.submissions.artifacts import submission_inventory, open_submission_file
+from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context, current_review_feedback
 from qc_tool.frontend.dashboard.services.submissions.review import review_submission
-
-
-def visible_submissions(access):
-    queryset = DeliverySubmission.objects.select_related(
-        "delivery__user", "job", "product_release__product", "product_aoi",
-    )
-    if not access.is_authenticated:
-        return queryset.none()
-    if access.is_administrator:
-        return queryset
-    if access.is_product_manager:
-        return queryset.filter(product_release__product__ident__in=access.reviewable_product_idents)
-    return queryset.filter(delivery__user_id=access.user_id)
 
 
 def submission_queue(request):
     access = access_for_request(request)
+    can_review = access.is_administrator or access.is_product_manager
     queryset = visible_submissions(access)
     product = request.GET.get("product", "")
     if product:
@@ -40,7 +30,7 @@ def submission_queue(request):
     delivery = request.GET.get("delivery", "")
     if delivery:
         queryset = queryset.filter(delivery_id=int(delivery)) if delivery.isdecimal() and len(delivery) < 19 else queryset.none()
-    state = request.GET.get("state", "pending")
+    state = request.GET.get("state", "pending" if can_review else "all")
     if state not in {"pending", "accepted", "rejected", "all"}:
         state = "pending"
     if state == "pending":
@@ -51,7 +41,7 @@ def submission_queue(request):
     return render(request, "dashboard/submissions/index.html", {
         "review_items": page, "selected_state": state, "selected_product": product,
         "selected_delivery": delivery,
-        "can_review": access.is_administrator or access.is_product_manager,
+        "can_review": can_review,
     })
 
 
@@ -91,8 +81,10 @@ def submission_review(request, submission_id):
             except SubmissionError as exc:
                 form.add_error(None, exc.message)
             else:
-                messages.success(request, "Submission {}.".format(
-                    "declined" if form.cleaned_data["decision"] == "declined" else "approved",
+                messages.success(request, (
+                    "Submission rejected. Your feedback is now visible to the uploader."
+                    if form.cleaned_data["decision"] == "declined"
+                    else "Submission approved."
                 ))
                 return redirect("submission_review", submission_id=submission.pk)
     files = []
@@ -105,6 +97,7 @@ def submission_review(request, submission_id):
         storage_available = True
     except (ArtifactUnavailable, OSError):
         pass
+    events = list(submission.review_events.select_related("actor").order_by("created_at", "pk"))
     return render(request, "dashboard/submissions/detail.html", {
         "submission": submission, "form": form, "can_review": can_review,
         "can_decide": can_review and submission.publication_state == "published"
@@ -113,7 +106,9 @@ def submission_review(request, submission_id):
         "candidates": visible_submissions(access).filter(
             product_aoi=submission.product_aoi, publication_state="published",
         ).exclude(pk=submission.pk).order_by("requested_at"),
-        "events": submission.review_events.select_related("actor").order_by("created_at", "pk"),
+        "events": events,
+        "review_feedback": current_review_feedback(submission, events=events),
+        "correction": correction_context(submission, access, events=events),
         "files": files, "storage_available": storage_available,
     })
 

@@ -132,7 +132,8 @@
     }
 
     function statusFormatter(value, row) {
-        var status = rowStatus.presentation(row || {});
+        row = row || {};
+        var status = rowStatus.presentation(row);
         var $status = $("<div>", {"class": "delivery-status-block"});
 
         rowStatus.badge(status).appendTo($status);
@@ -140,6 +141,24 @@
             "class": "delivery-status-block__detail",
             text: status.detail
         }).appendTo($status);
+        if (row.delivery_status === "needs_correction" && row.submission_url) {
+            var $feedback = $("<div>", {"class": "delivery-review-feedback"});
+            $("<p>", {
+                "class": "delivery-review-feedback__byline",
+                text: "Feedback" + (row.review_actor_username ? " from " + row.review_actor_username : "")
+            }).appendTo($feedback);
+            $("<p>", {
+                "class": "delivery-review-feedback__comment",
+                text: row.review_notes || "No written feedback was recorded. Contact your product manager."
+            }).appendTo($feedback);
+            if (row.review_created_at) {
+                $("<time>", {
+                    datetime: String(row.review_created_at),
+                    text: formatters.formatDate(row.review_created_at)
+                }).appendTo($feedback);
+            }
+            $feedback.appendTo($status);
+        }
         return html($status);
     }
 

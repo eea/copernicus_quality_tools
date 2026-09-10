@@ -101,7 +101,7 @@
                     <thead>
                         <tr>
                             {% if can_delete_jobs %}<th data-checkbox="true" data-formatter="jobCheckboxFormatter"></th>{% endif %}
-                            <th data-field="job_uuid" data-sortable="true" data-escape="true">Job UUID</th>
+                            <th data-field="job_uuid" data-switchable="false" data-sortable="true" data-escape="true">Job UUID</th>
                             <th data-field="skip_steps" data-sortable="true" data-formatter="stepsFormatter">Skipped steps</th>
                             <th data-field="date_created" data-formatter="dateFormatter" data-sortable="true">Created</th>
                             <th data-field="date_started" data-formatter="dateFormatter" data-sortable="true">Started</th>

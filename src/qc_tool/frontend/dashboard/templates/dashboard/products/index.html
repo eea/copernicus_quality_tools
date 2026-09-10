@@ -24,10 +24,7 @@
 {% block page_content %}
 <section class="workspace-card products-catalog" aria-labelledby="products-catalog-title">
     {% if account_access.is_administrator %}
-    <nav class="products-catalog__tabs" aria-label="Product catalog">
-        <a href="{% url 'products' %}"{% if not show_archived %} aria-current="page"{% endif %}>Active products</a>
-        <a href="{% url 'products' %}?archived=1"{% if show_archived %} aria-current="page"{% endif %}>Removed products</a>
-    </nav>
+    {% include "dashboard/shared/section_tabs.html" with tabs=catalog_tabs label="Product catalog" only %}
     {% endif %}
     <header class="workspace-card__header products-catalog__header">
         <div>
@@ -54,27 +51,14 @@
         </details>
     </div>
 
-    <div id="products-toolbar" class="products-catalog__filters" hidden>
-        <div class="products-catalog__search">
-            <label for="products-search">Search products</label>
-            <input id="products-search" class="form-control" type="search" placeholder="Product name or identifier" aria-controls="tbl-products" autocomplete="off">
-        </div>
-        <div class="products-catalog__plan-filter">
-            <label for="products-plan-filter">Delivery plan</label>
-            <select id="products-plan-filter" class="form-control" aria-controls="tbl-products">
-                <option value="">All plans ({{ product_count }})</option>
-                {% for filter in plan_filters %}<option value="{{ filter.value }}" data-plan-label="{{ filter.label }}">{{ filter.label }} ({{ filter.count }})</option>{% endfor %}
-            </select>
-        </div>
-        <button id="products-clear-filters" class="btn btn-default btn-qc-secondary" type="button" hidden>Clear filters</button>
-    </div>
+    {% include "dashboard/shared/tables/toolbar.html" with id="products-toolbar" table_id="tbl-products" search_id="products-search" search_label="Search products" search_placeholder="Product name or identifier" filters_template="dashboard/products/table_filters.html" clear_id="products-clear-filters" toggle_id="products-filter-toggle" panel_id="products-filter-panel" summary_id="products-filter-summary" hidden=True %}
 
     <div class="products-table-region qc-data-table-region">
         <table id="tbl-products" class="table qc-data-table" aria-describedby="products-table-description" data-pagination="true" data-side-pagination="client" data-sort-name="description" data-sort-order="asc">
             <caption class="sr-only">Product specifications, delivery plan status, expected areas of interest and accepted coverage</caption>
             <thead>
                 <tr>
-                    <th class="product-name-column" data-class="product-name-column" data-field="description" data-sortable="true" data-sorter="productTextSorter" scope="col">Product</th>
+                    <th class="product-name-column" data-class="product-name-column" data-field="description" data-switchable="false" data-sortable="true" data-sorter="productTextSorter" scope="col">Product</th>
                     <th class="product-plan-column" data-class="product-plan-column" data-field="plan_status" data-sortable="true" data-sorter="productTextSorter" scope="col">Delivery plan</th>
                     <th class="product-total-column" data-class="product-total-column" data-field="declared_expected" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Expected AOIs</th>
                     <th class="product-coverage-column" data-class="product-coverage-column" data-field="completion_percentage" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Accepted coverage</th>

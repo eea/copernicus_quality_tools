@@ -1,0 +1,110 @@
+/* Section navigation shared by routed catalogs and interactive table views. */
+.qc-section-tabs {
+    padding: 0 24px;
+    border-bottom: 1px solid var(--qc-color-border);
+}
+
+.qc-section-tabs__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 28px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.qc-section-tabs__list > li {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.qc-section-tabs__end {
+    margin-inline-start: auto;
+}
+
+.qc-section-tabs__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    min-height: 54px;
+    padding: 16px 0 13px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--qc-color-muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.qc-section-tabs__item:hover, .qc-section-tabs__item:focus {
+    color: var(--qc-color-primary-dark);
+    text-decoration: none;
+}
+
+.qc-section-tabs__item[aria-current="page"], .qc-section-tabs__item[aria-pressed="true"] {
+    border-bottom-color: var(--qc-color-primary);
+    color: var(--qc-color-primary);
+}
+
+.qc-section-tabs__item:focus-visible {
+    outline: 3px solid var(--qc-focus-ring);
+    outline-offset: 2px;
+}
+
+.qc-section-tabs__count {
+    padding: 2px 7px;
+    border-radius: var(--qc-radius-pill);
+    background: var(--qc-color-surface-hover);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.qc-section-tabs__indicator {
+    display: none;
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    opacity: 0.65;
+}
+
+.qc-section-tabs__indicator.is-active {
+    display: inline-block;
+    animation: qc-section-activity 1.2s linear infinite;
+}
+
+@keyframes qc-section-activity {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qc-section-tabs__indicator.is-active { animation: none; }
+}
+
+.qc-section-tabs__item[aria-pressed="true"] .qc-section-tabs__count {
+    background: var(--qc-color-primary-soft);
+}
+
+@media (max-width: 767px) {
+    .qc-section-tabs {
+        padding: 0 16px;
+    }
+    .qc-section-tabs__list {
+        gap: 0 18px;
+    }
+    .qc-section-tabs__item {
+        font-size: 13px;
+    }
+}
+
+@media (forced-colors: active) {
+    .qc-section-tabs__item[aria-current="page"], .qc-section-tabs__item[aria-pressed="true"] {
+        border-bottom-color: Highlight;
+    }
+}

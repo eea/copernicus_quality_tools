@@ -3,6 +3,7 @@
 import logging
 
 from django.shortcuts import render
+from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.accounts.services.products import (
@@ -57,6 +58,10 @@ def render_product_catalog(request, *, fallback_catalog):
             "product_catalog_available": product_catalog_available,
             "catalog_managed": catalog_managed,
             "show_archived": show_archived,
+            "catalog_tabs": (
+                {"label": "Active products", "url": reverse("products"), "active": not show_archived},
+                {"label": "Removed products", "url": reverse("products") + "?archived=1", "active": show_archived},
+            ),
             "product_count": len(product_catalog),
             "plan_filters": plan_filters,
         },

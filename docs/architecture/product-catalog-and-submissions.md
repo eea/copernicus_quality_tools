@@ -224,6 +224,65 @@ delivery with a new successful QC job. Review services record every decision in
 notes and submission review version. An outdated form cannot overwrite a newer
 decision.
 
+The **Deliveries** page distinguishes QC results from the manager's decision.
+Its primary navigation follows the uploader's workflow:
+
+| View | Membership and next step |
+| --- | --- |
+| **Action required** (default) | **Review changes** for requested corrections; **Resolve QC issues** for failed checks; **Run QC** for unvalidated uploads; **Submit** for passed checks. These groups always appear in that order, before pagination. |
+| **Running now** | Queued or running QC jobs. The badge distinguishes **In queue** from **In progress**; the view link is quiet and the activity indicator respects reduced-motion preferences. |
+| **In review** | Submitted deliveries awaiting a manager's decision, including competing submissions under review. |
+| **Completed** | Published submissions explicitly accepted by a manager. These remain searchable as history. |
+
+**All deliveries** is a secondary view for searching across the entire workflow.
+Status badges describe the delivery inside its stage; backend status names are
+not the main navigation. Search, product and AOI filters apply to every view and
+update their counts. Search and sorting sit directly below the workflow tabs.
+**Filters** expands Status, Product and AOI controls in the same table area,
+and shows how many of those filters are applied when collapsed. **Clear filters**
+appears only while a filter is applied and keeps the selected workflow.
+Exports use the current workflow, filters and ordering. Column sorting within
+**Action required** preserves the action groups and sorts within each group.
+
+The page refreshes QC and review changes while visible, preserving row selections
+and keyboard focus. Finished checks move from **Running now** to **Resolve QC
+issues** or **Submit**. Submission moves the delivery to **In review**; acceptance
+moves it to **Completed**, while rejection returns it to **Review changes**.
+Published rejections show **Correction needed**, with the current feedback,
+reviewer and date. **View feedback** opens
+the retained submission and its full review history. The uploader's **My
+submissions** page includes completed decisions by default; the manager's queue
+defaults to work awaiting review.
+
+To request a correction, the manager chooses **Reject and request corrections**
+and writes the changes needed in the feedback field. The uploader then:
+
+1. Opens **View feedback** from Deliveries and checks the requested changes.
+2. Chooses **Upload correction** and prepares a corrected ZIP with the exact
+   original filename, including letter case. The correction page accepts only
+   this filename and checks that the rejected submission still belongs to them.
+3. Chooses **Upload correction**, then **Run quality checks** and checks the same
+   product and AOI. After QC passes, they choose **Submit for review**.
+   Uploading alone does not request review.
+
+The corrected delivery is a new submission for its product and AOI. Managers can
+compare it with the other retained submissions for that AOI. The rejected receipt
+remains rejected in the history; it is not silently replaced or approved when a
+new file arrives. A correction creates a fresh delivery while preserving the
+original ZIP, QC evidence and review events. The upload page's `correction_for`
+parameter supplies authorized feedback and identifies the rejected submission.
+The preflight and upload endpoints require that identity, the original delivery
+identity and the unchanged filename; a changed review state or upload target
+prevents the correction. This workflow does not introduce a separate persistent
+revision relationship.
+
+Review visibility and correction eligibility are shared by the submission and
+upload workspaces through `services/submissions/access.py` and `presentation.py`.
+The delivery listing joins only the current review event, so a stale comment
+cannot represent a newer decision. Review comments are available to the uploader,
+assigned product managers and administrators; broader delivery browsing grants
+do not expose this correspondence.
+
 Product-manager review scope is the canonical **business product** assigned to
 the manager. A grant for another recipe, a region grant or visibility of an
 uploader's other files does not grant review authority. Administrators can review

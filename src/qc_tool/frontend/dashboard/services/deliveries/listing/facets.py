@@ -12,6 +12,7 @@ from qc_tool.frontend.dashboard.access.delivery_querysets import (
 from qc_tool.frontend.dashboard.services.deliveries.summary import (
     with_latest_job_status,
 )
+from qc_tool.frontend.dashboard.services.submissions.access import visible_submissions
 
 from .statuses import DeliveryStatusCounts
 
@@ -33,11 +34,25 @@ def count_delivery_statuses(
     if aoi_code is not None:
         queryset = queryset.filter(aoi_code__contains=aoi_code)
 
-    unsubmitted = Q(date_submitted__isnull=True)
+    needs_correction = Q(
+        submission__in=visible_submissions(account_access).filter(
+            publication_state="published", review_state="rejected",
+        ),
+    )
+    accepted = Q(
+        submission__in=visible_submissions(account_access).filter(
+            publication_state="published", review_state="accepted",
+        ),
+    )
+    unsubmitted = Q(date_submitted__isnull=True) & ~needs_correction & ~accepted
     non_failure_statuses = (JOB_WAITING, JOB_RUNNING, JOB_OK)
     counts = queryset.aggregate(
         all=Count("pk"),
-        submitted=Count("pk", filter=Q(date_submitted__isnull=False)),
+        submitted=Count(
+            "pk", filter=Q(date_submitted__isnull=False) & ~needs_correction & ~accepted,
+        ),
+        accepted=Count("pk", filter=accepted),
+        needs_correction=Count("pk", filter=needs_correction),
         not_validated=Count(
             "pk",
             filter=unsubmitted & Q(latest_job_status__isnull=True),

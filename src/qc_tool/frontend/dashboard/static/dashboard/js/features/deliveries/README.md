@@ -32,9 +32,23 @@ The matching styles use the same ownership under
 Responsive rules stay in `responsive.css`; narrow screens retain the semantic
 columns inside a labelled, keyboard-focusable horizontal scroll region.
 
-The toolbar and table shell come from the shared `QcDataTableUi` component and
-`css/ui/data-table.css`. A Bootstrap Table opts in with a
-`qc-data-table-region` wrapper, passes its page-specific behavior through
-`QcDataTableUi.options()`, and calls `QcDataTableUi.enhance()` after
-initialization. Deliveries supplies a custom server-export button so exported
-rows continue to respect account access, active filters, and sorting.
+The toolbar and table shell come from the shared `QcDataTableUi` component,
+the shared table-toolbar template, and `css/ui/data-table.css`. Initialize a
+table once through `QcDataTableUi.create()`, supplying its page-specific
+options, accessible labels, and export provider. The shared initializer keeps
+column controls, sorting accessibility, and the Export menu consistent after
+refreshes and column changes.
+
+`QcTableExports` renders the same **JSON, CSV, XLSX, XML** menu for every
+exportable table. Formats and order come from the central server registry;
+Deliveries does not define its own list or generate files in browser code.
+Its `server` export provider sends `exportQuery()` filters and ordering to the
+delivery export endpoint. Pagination and column-selection parameters are
+removed so the download includes all matching records and the complete public
+export schema within the user's access scope. Hiding columns in the table does
+not remove them from downloads. The endpoint validates its column allowlist
+and uses the same serializers as other table exports. Keep selection and
+action controls out of the export schema.
+
+See the [table-page development guide](../../../../../../../../../docs/development/table-pages.md)
+for filter composition, export providers, column metadata, and verification.

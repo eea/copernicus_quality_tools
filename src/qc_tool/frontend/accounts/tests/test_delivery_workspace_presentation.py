@@ -386,7 +386,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertContains(permitted_response, 'id="btn-clear-selection"')
         self.assertContains(permitted_response, 'id="delivery-bulk-actions"')
         self.assertContains(permitted_response, 'data-checkbox="true"')
-        self.assertContains(permitted_response, "Deliveries and QC jobs")
+        self.assertContains(permitted_response, "Deliveries")
 
         self.remove_default_capabilities(AccountPermission.RUN_QC)
         no_qc_response = self.client.get(reverse("deliveries"))
@@ -483,23 +483,22 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            '<nav id="delivery-status-filters" '
-            'class="delivery-status-filters" '
-            'aria-label="Filter deliveries by status">',
+            '<nav id="delivery-workflow-tabs" '
+            'class="qc-section-tabs" '
+            'aria-label="Delivery workflow">',
         )
         for status, label in (
-            ("all", "All"),
-            ("not_validated", "Not validated"),
-            ("running", "Running"),
-            ("passed", "Passed"),
-            ("failed", "Failed"),
-            ("submitted", "Submitted"),
+            ("action_required", "Action required"),
+            ("running", "Running now"),
+            ("in_review", "In review"),
+            ("completed", "Completed"),
+            ("all", "All deliveries"),
         ):
             with self.subTest(label=label):
                 self.assertContains(response, label)
                 self.assertContains(
                     response,
-                    'data-delivery-status-count="{}"'.format(status),
+                    'data-delivery-view-count="{}"'.format(status),
                 )
 
         summary_response = self.client.get(reverse("deliveries_json"))
@@ -508,11 +507,14 @@ class DeliveryWorkspacePresentationTests(TestCase):
             summary_response.json()["status_counts"],
             {
                 "all": 0,
+                "attention": 0,
                 "not_validated": 0,
                 "running": 0,
                 "passed": 0,
                 "failed": 0,
                 "submitted": 0,
+                "accepted": 0,
+                "needs_correction": 0,
             },
         )
 
@@ -548,11 +550,11 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertNotEqual(table_end, -1)
         self.assertIn(
             '<caption class="sr-only">Deliveries with product and AOI context, '
-            "upload details, job status, job history, and available actions</caption>",
+            "upload details, QC and review status, job history, and available actions</caption>",
             document[table.end() : table_end],
         )
         self.assertIn(
-            'aria-describedby="deliveries-table-description"',
+            'aria-labelledby="deliveries-table-title"',
             table.group(0),
         )
         self.assertIn("qc-data-table", table.group(0))

@@ -9,9 +9,10 @@ nav_order: 2
 ## Browser upload
 
 The browser stages ZIP files for review and checks only the signed-in user's
-existing filenames. New files offer **Add**; eligible duplicates offer
-**Overwrite**. The batch action says **Add all & overwrite** when it includes
-replacements and displays the new/overwrite counts. Protected submissions,
+existing filenames. New files offer **Upload**; eligible duplicates offer
+**Replace and upload**. The batch action says **Upload all** for new files or
+**Replace and upload all** when it includes replacements and displays the
+new/replacement counts. Protected submissions,
 waiting/running QC, S3 records and ambiguous duplicates are explained and skipped.
 
 Overwrite approval is pinned to the inspected delivery ID and checked again

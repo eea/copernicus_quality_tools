@@ -1,0 +1,32 @@
+{% load static %}
+<div id="{{ id }}" class="qc-table-toolbar" data-table-filter-toolbar{% if hidden %} hidden{% endif %}>
+    <div class="qc-table-toolbar__main">
+        <div class="qc-table-toolbar__field qc-table-toolbar__search" role="search" aria-label="{{ search_label }}">
+            <label for="{{ search_id }}" class="sr-only">{{ search_label }}</label>
+            <span class="qc-table-toolbar__input">
+                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#search"></use></svg>
+                <input id="{{ search_id }}" class="form-control" type="search" maxlength="500" placeholder="{{ search_placeholder|default:search_label }}" autocomplete="off" aria-controls="{{ table_id }}" data-table-filter-search>
+            </span>
+        </div>
+        <div class="qc-table-toolbar__actions">
+            {% if sort_template %}{% include sort_template %}{% endif %}
+            {% if filters_template %}
+            <button id="{{ toggle_id }}" class="btn btn-qc-secondary qc-table-toolbar__toggle" type="button" aria-expanded="false" aria-controls="{{ panel_id }}" data-table-filter-toggle>
+                <span id="{{ summary_id }}" data-table-filter-summary>Filters</span>
+                <svg class="ui-icon qc-table-toolbar__chevron" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-down"></use></svg>
+            </button>
+            {% endif %}
+            {% if clear_id %}<button id="{{ clear_id }}" class="btn btn-qc-quiet" type="button" data-table-filter-clear hidden>Clear filters</button>{% endif %}
+            {% if refresh_id %}
+            <button id="{{ refresh_id }}" class="btn btn-qc-icon" type="button" aria-label="{{ refresh_label|default:'Refresh table' }}" title="{{ refresh_label|default:'Refresh table' }}" aria-controls="{{ table_id }}"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#refresh"></use></svg></button>
+            {% endif %}
+        </div>
+    </div>
+    {% if filters_template %}
+    <div id="{{ panel_id }}" class="qc-table-toolbar__panel" data-table-filter-panel hidden>
+        <div class="qc-table-toolbar__fields">
+            {% include filters_template %}
+        </div>
+    </div>
+    {% endif %}
+</div>

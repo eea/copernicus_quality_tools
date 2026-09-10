@@ -45,83 +45,17 @@
         return button;
     }
 
-    function exportText(value) {
-        var text;
-
-        if (value === undefined || value === null) {
-            return "";
-        }
-        if (typeof value === "object") {
-            try {
-                value = JSON.stringify(value);
-            } catch (error) {
-                value = String(value);
-            }
-        }
-        text = $("<div>").html(String(value)).text();
-        return $.trim(text).replace(/\s+/g, " ");
+    function exportMenu(table, settings) {
+        return window.QcTableExports.button(table, settings);
     }
 
-    function csvCell(value) {
-        var text = exportText(value);
-
-        if (/^[\t\r\n ]*[=+\-@]/.test(text)) {
-            text = "'" + text;
-        }
-        return '"' + text.replace(/"/g, '""') + '"';
-    }
-
+    // Programmatic CSV compatibility; all menu callers share the full registry.
     function exportCsv(table, settings) {
-        var $table = table && table.jquery ? table : $(table);
-        var config = settings || {};
-        var columns = ($table.bootstrapTable("getVisibleColumns") || [])
-            .filter(function (column) {
-                return Boolean(column.field);
-            });
-        // Keep row objects: the vendored formatted option returns one scalar
-        // per row. exportText already removes markup from HTML-backed cells.
-        var rows = $table.bootstrapTable("getData") || [];
-        var lines = [columns.map(function (column) {
-            return csvCell(column.title);
-        }).join(",")];
-        var blob;
-        var downloadUrl;
-        var link;
-
-        rows.forEach(function (row) {
-            lines.push(columns.map(function (column) {
-                return csvCell(row[column.field]);
-            }).join(","));
-        });
-        blob = new window.Blob(
-            ["\ufeff", lines.join("\r\n")],
-            {type: "text/csv;charset=utf-8"}
-        );
-        downloadUrl = window.URL.createObjectURL(blob);
-        link = window.document.createElement("a");
-        link.href = downloadUrl;
-        link.download = config.filename || "table.csv";
-        link.hidden = true;
-        window.document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.setTimeout(function () {
-            window.URL.revokeObjectURL(downloadUrl);
-        }, 0);
-        return rows.length;
+        return window.QcTableExports.exportFile(table, "csv", settings);
     }
 
     function csvExportButton(table, settings) {
-        var config = settings || {};
-
-        return exportButton({
-            text: config.text || "Export",
-            label: config.label || "Export table as CSV",
-            title: config.title || config.label || "Export table as CSV",
-            event: function () {
-                exportCsv(table, config);
-            }
-        });
+        return exportMenu(table, settings);
     }
 
     function labelValue(labels, name, fallback) {
@@ -163,6 +97,10 @@
         if (!$toolbar.length) {
             return;
         }
+        $toolbar.toggleClass(
+            "qc-data-table__toolbar--custom",
+            $toolbar.find("[data-table-filter-toolbar]").length > 0
+        );
 
         $toolbar.children(".columns").attr({
             role: "group",
@@ -326,9 +264,31 @@
         return $tables;
     }
 
+    function create(table, settings) {
+        var $table = table && table.jquery ? table : $(table);
+        var config = settings || {};
+        var resolved = options(config.options);
+        var originalButtons = resolved.buttons;
+
+        if (config.exports) {
+            resolved.buttons = function () {
+                var buttons = typeof originalButtons === "function"
+                    ? originalButtons.apply(this, arguments) : originalButtons;
+                return $.extend({}, buttons || {}, {exportView: exportMenu($table, config.exports)});
+            };
+            resolved.buttonsOrder = (resolved.buttonsOrder || ["refresh", "columns"]).slice();
+            if (resolved.buttonsOrder.indexOf("exportView") < 0) resolved.buttonsOrder.push("exportView");
+        }
+        $table.bootstrapTable(resolved);
+        enhance($table, config.labels);
+        return $table;
+    }
+
     window.QcDataTableUi = {
+        create: create,
         options: options,
         exportButton: exportButton,
+        exportMenu: exportMenu,
         exportCsv: exportCsv,
         csvExportButton: csvExportButton,
         enhance: enhance

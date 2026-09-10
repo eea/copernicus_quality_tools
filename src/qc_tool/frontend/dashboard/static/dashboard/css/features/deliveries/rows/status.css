@@ -29,7 +29,8 @@
     flex: 0 0 15px;
 }
 
-.delivery-status--passed {
+.delivery-status--passed,
+.delivery-status--accepted {
     border-color: #b9dfc7;
     color: var(--qc-color-success-dark);
     background: var(--qc-color-success-soft);
@@ -42,20 +43,61 @@
 }
 
 .delivery-status--running {
-    border-color: #efcf8d;
-    color: var(--qc-color-warning-dark);
-    background: var(--qc-color-warning-soft);
+    border-color: #d7e0eb;
+    color: #526078;
+    background: #f4f7fa;
 }
 
 .delivery-status--submitted {
-    border-color: var(--qc-color-success-dark);
-    color: #fff;
-    background: var(--qc-color-success);
+    border-color: #cddded;
+    color: var(--qc-color-primary-dark);
+    background: var(--qc-color-primary-soft);
 }
 
 .delivery-status--not_validated {
     color: #5f6c80;
     background: #edf1f6;
+}
+
+.delivery-status--needs_correction {
+    border-color: #efcf8d;
+    color: var(--qc-color-warning-dark);
+    background: var(--qc-color-warning-soft);
+}
+
+.delivery-review-feedback {
+    width: 100%;
+    max-width: 270px;
+    padding: 9px 11px;
+    border-left: 3px solid #dfb458;
+    border-radius: 0 6px 6px 0;
+    background: #fffaf0;
+    color: var(--qc-color-text);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.delivery-review-feedback__byline {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.delivery-review-feedback__comment {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    white-space: pre-line;
+}
+
+.delivery-review-feedback time {
+    display: block;
+    margin-top: 5px;
+    color: var(--qc-color-muted);
+    font-size: 10px;
 }
 
 .delivery-status-block__detail {

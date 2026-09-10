@@ -6,7 +6,7 @@ const {webcrypto} = require("node:crypto");
 const {createDOM, addPicker} = require("./dom.cjs");
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function queuePage(feature, {authExpired = false} = {}) {
+function queuePage(feature, {authExpired = false, correction = null} = {}) {
     const {window, document} = createDOM();
     function node(tag, attrs, parent) {
         const result = document.createElement(tag);
@@ -15,6 +15,12 @@ function queuePage(feature, {authExpired = false} = {}) {
         return result;
     }
     const root = node("section", {id: feature === "products" ? "product-definition-upload-card" : "resumable-upload", "data-upload-url": "/resumable_upload/", "data-check-url": "/deliveries/upload/check/", "data-deliveries-url": "/deliveries/"}, document.body);
+    if (correction) {
+        root.setAttribute("data-correction-submission", correction.id);
+        root.setAttribute("data-correction-filename", correction.filename);
+        root.setAttribute("data-correction-delivery-id", correction.deliveryId);
+        root.setAttribute("data-setup-job-url", "/deliveries/jobs/new/");
+    }
     const form = node("form", {id: "product-definition-upload", "data-max-file-bytes": "1048576"}, root);
     form.action = "/products/upload/";
     const picker = addPicker(document, form, {id: "queued", accept: feature === "products" ? ".json" : ".zip"});

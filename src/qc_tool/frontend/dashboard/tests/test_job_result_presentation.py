@@ -86,3 +86,22 @@ class MissingWorkerResultPresentationTests(TestCase):
         self.assertEqual(report["error_message"], MISSING_RESULT_ERROR_MESSAGE)
         self.assertIsNotNone(report["job_start_date"])
         self.assertIsNotNone(report["job_finish_date"])
+
+    @patch(
+        "qc_tool.frontend.dashboard.views.jobs.results.compile_job_report_data",
+        return_value={"status": "error", "steps": [{
+            "step_nr": 1, "check_ident": "geometry", "description": "Geometry validity",
+            "layers": ["parcels"], "status": "failed", "messages": ["Invalid boundary"],
+            "attachment_filenames": [],
+        }]},
+    )
+    def test_check_table_uses_shared_exports_while_report_downloads_remain_available(self, _compile):
+        response = self.client.get(reverse("show_result", args=(self.job.job_uuid,)))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="tbl-results"')
+        self.assertContains(response, 'id="qc-table-export-config"')
+        self.assertContains(response, "dashboard/js/features/jobs/result/table.js")
+        self.assertNotContains(response, 'data-toggle="table"')
+        self.assertContains(response, "Invalid boundary")
+        for route in ("job_report_json", "job_report_pdf", "job_combined_log"):
+            self.assertContains(response, reverse(route, args=(self.job.job_uuid,)))

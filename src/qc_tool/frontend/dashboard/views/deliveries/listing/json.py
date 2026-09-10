@@ -16,6 +16,9 @@ from qc_tool.frontend.dashboard.services.deliveries.listing import (
 from qc_tool.frontend.dashboard.services.deliveries.listing import (
     query_deliveries,
 )
+from qc_tool.frontend.dashboard.services.deliveries.listing.workflows import (
+    InvalidDeliveryWorkflow, delivery_workflow_counts,
+)
 
 from .links import add_delivery_links
 from .parameters import delivery_list_parameters
@@ -26,11 +29,14 @@ def get_deliveries_json(request):
 
     try:
         parameters = delivery_list_parameters(request, default_limit=100)
-    except InvalidDeliveryStatus as exc:
+    except (InvalidDeliveryStatus, InvalidDeliveryWorkflow) as exc:
         return JsonResponse(
             {
                 "status": "error",
-                "code": "invalid_delivery_status",
+                "code": (
+                    "invalid_delivery_view" if isinstance(exc, InvalidDeliveryWorkflow)
+                    else "invalid_delivery_status"
+                ),
                 "message": str(exc),
             },
             status=400,
@@ -62,6 +68,8 @@ def get_deliveries_json(request):
             "rows": data,
             "summary": summarize_deliveries(account_access).as_dict(),
             "status_counts": status_counts.as_dict(),
+            "workflow_counts": delivery_workflow_counts(status_counts),
             "active_status": parameters.delivery_status.value,
+            "active_view": parameters.delivery_view.value,
         }
     )

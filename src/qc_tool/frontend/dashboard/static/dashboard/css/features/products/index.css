@@ -1,29 +1,4 @@
 /* Product plans and coverage within the shared workspace table. */
-.products-catalog__tabs {
-  display: flex;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--qc-color-border);
-  gap: 28px;
-}
-
-.products-catalog__tabs a {
-  padding: 18px 0 15px;
-  border-bottom: 3px solid transparent;
-  color: var(--qc-color-muted);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.products-catalog__tabs a[aria-current="page"] {
-  border-bottom-color: var(--qc-color-primary);
-  color: var(--qc-color-primary);
-}
-
-.products-catalog__tabs a:hover {
-  color: var(--qc-color-primary-dark);
-}
-
 .products-catalog__header h2 {
   display: flex;
   align-items: center;
@@ -82,66 +57,12 @@
   margin: 0;
 }
 
-.products-catalog__filters {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-}
-
-.products-catalog [hidden] {
-  display: none !important;
-}
-
-.products-catalog__filters label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--qc-color-text);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.products-catalog__search {
-  flex: 1 1 320px;
-  max-width: 520px;
-}
-
-.products-catalog__plan-filter {
-  flex: 0 1 210px;
-  min-width: 170px;
-}
-
-.products-catalog__filters .form-control {
-  width: 100%;
-  height: 42px;
-  border-color: var(--qc-color-border-strong);
-  border-radius: var(--qc-radius-small);
-  color: var(--qc-color-text);
-  background: var(--qc-color-surface);
-  box-shadow: none;
-  font-size: 13px;
-}
-
 .products-table-region {
   --qc-data-table-cell-padding: 19px 24px;
   --qc-data-table-header-padding: 14px 24px;
   --qc-data-table-cell-vertical-align: middle;
   --qc-data-table-empty-padding: 48px 20px;
   --qc-data-table-min-width: 740px;
-  overflow-x: auto;
-}
-
-.products-catalog .fixed-table-toolbar {
-  align-items: flex-end;
-  padding: 18px 24px;
-  gap: 18px;
-}
-
-.products-catalog .fixed-table-toolbar .bs-bars {
-  flex: 1 1 500px;
-}
-
-.products-catalog .fixed-table-toolbar .columns {
-  padding-bottom: 1px;
 }
 
 .products-page #tbl-products {
@@ -346,19 +267,13 @@
   margin-bottom: 18px;
 }
 
-.products-catalog__tabs a:focus-visible,
 .products-catalog__help summary:focus-visible,
-.products-catalog__filters .form-control:focus-visible,
 .product-table__title:focus-visible {
   outline: 3px solid var(--qc-focus-ring);
   outline-offset: 3px;
 }
 
 @media (max-width: 767px) {
-  .products-catalog__tabs {
-    padding: 0 16px;
-    gap: 24px;
-  }
 
   .products-catalog__guide {
     padding: 0 16px 16px;
@@ -367,34 +282,6 @@
   .products-catalog__help dl {
     grid-template-columns: 1fr;
     gap: 16px;
-  }
-
-  .products-catalog .fixed-table-toolbar {
-    padding: 16px;
-    gap: 12px;
-  }
-
-  .products-catalog__filters {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .products-catalog__search {
-    flex: 1 1 100%;
-    max-width: none;
-  }
-
-  .products-catalog__plan-filter {
-    flex: 1 1 160px;
-  }
-
-  .products-catalog .fixed-table-toolbar .bs-bars {
-    flex-basis: 100%;
-  }
-
-  .products-catalog .fixed-table-toolbar .columns {
-    width: auto;
-    margin-left: auto;
   }
 
   .products-table-region {
@@ -412,7 +299,4 @@
     border-color: CanvasText;
   }
 
-  .products-catalog__tabs a[aria-current="page"] {
-    border-bottom-color: Highlight;
-  }
 }

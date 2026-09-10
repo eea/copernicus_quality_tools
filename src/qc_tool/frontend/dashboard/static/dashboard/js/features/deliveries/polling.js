@@ -1,4 +1,4 @@
-/* Bounded status polling for jobs visible on the current table page. */
+/* Bounded QC polling and review updates for the visible delivery page. */
 (function (window, $) {
     "use strict";
 
@@ -23,6 +23,22 @@
         );
     }
 
+    function refreshWorkflow() {
+        var table = window.QcDeliveryTable;
+        // QC and reviews can move deliveries in from another workflow stage.
+        // Refresh even when the current view has no running or pending rows.
+        // Preserve selections and keyboard focus while a user acts on a row.
+        if (document.hidden || (!config.submissionEnabled && !config.updateJobStatuses) || table.selectedRows().length ||
+            (document.activeElement && document.activeElement.closest("#tbl-deliveries"))) {
+            return;
+        }
+        table.refresh({
+            silent: true,
+            pageNumber: $("#tbl-deliveries").bootstrapTable("getOptions").pageNumber
+        });
+        return true;
+    }
+
     function poll() {
         var activeRows;
         var batch;
@@ -32,9 +48,10 @@
         if (pollInProgress || document.hidden || !window.QcDeliveryTable) {
             return;
         }
-        activeRows = window.QcDeliveryTable.rows().filter(isActive);
+        activeRows = config.updateJobStatuses ? window.QcDeliveryTable.rows().filter(isActive) : [];
         if (!activeRows.length) {
             pollCursor = 0;
+            refreshWorkflow();
             return;
         }
 
@@ -64,10 +81,7 @@
                     return;
                 }
                 pollInProgress = false;
-                if (statusChanged) {
-                    window.QcDeliveryTable.refresh({
-                        pageNumber: $("#tbl-deliveries").bootstrapTable("getOptions").pageNumber
-                    });
+                if (refreshWorkflow() && statusChanged) {
                     window.QcDeliveryTable.announce(
                         "A QC job status changed. Deliveries refreshed."
                     );
@@ -77,7 +91,7 @@
     }
 
     function init() {
-        if (!config.updateJobStatuses) {
+        if (!config.updateJobStatuses && !config.submissionEnabled) {
             return;
         }
         $("#tbl-deliveries").one("load-success.bs.table", poll);

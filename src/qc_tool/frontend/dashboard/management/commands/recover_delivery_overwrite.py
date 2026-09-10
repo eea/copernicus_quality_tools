@@ -45,6 +45,8 @@ class Command(BaseCommand):
                         "resumableChunkNumber": values.get("chunk_number"), "resumableChunkSize": values.get("chunk_size"),
                         "resumableCurrentChunkSize": values.get("current_chunk_size"), "resumableTotalChunks": values.get("total_chunks"),
                         "resumableTotalSize": values.get("total_size"), "overwrite_delivery_id": values.get("overwrite_delivery_id"),
+                        **({"correction_submission_id": values["correction_submission_id"]}
+                           if values.get("correction_submission_id") is not None else {}),
                     })
                     if descriptor.storage_key != key or descriptor.overwrite_delivery_id != original.pk or descriptor.filename != original.filename:
                         raise CommandError("The upload identity does not match this delivery.")

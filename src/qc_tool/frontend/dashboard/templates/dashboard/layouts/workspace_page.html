@@ -1,9 +1,11 @@
 {% extends "dashboard/layouts/workspace.html" %}
-{% load static %}
+{% load static table_exports %}
 
 {% block workspace_css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/section-tabs.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/table-toolbar.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
 {% block workspace_content %}
@@ -31,5 +33,9 @@
 
 {% block js %}
 {{ block.super }}
+{% table_export_config as table_exports_config %}
+{{ table_exports_config|json_script:"qc-table-export-config" }}
+<script src="{% static 'dashboard/js/shared/table-exports.js' %}"></script>
+<script src="{% static 'dashboard/js/shared/table-filters.js' %}"></script>
 <script src="{% static 'dashboard/js/shared/data-table-ui.js' %}"></script>
 {% endblock js %}

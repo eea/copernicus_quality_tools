@@ -22,5 +22,6 @@
 .review-files { padding: 16px 24px 16px 40px; line-height: 1.8; overflow-wrap: anywhere; max-height: 400px; overflow-y: auto; }
 .review-files span { color: var(--qc-color-muted); font-size: 12px; }
 .review-event { padding: 18px 0; border-bottom: 1px solid var(--qc-color-border-subtle); }
+.review-feedback-link { display: inline-block; margin-top: 8px; }
 .review-form .form-control:focus-visible, .review-form textarea:focus-visible, .review-table-region:focus-visible { outline: 3px solid var(--qc-focus-ring); outline-offset: 2px; }
 @media(max-width: 767px) { .review-facts { grid-template-columns: 1fr; } .review-actions { align-items: stretch; flex-direction: column; } .review-filters { padding: 16px; } }

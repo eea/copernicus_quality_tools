@@ -29,16 +29,34 @@
 
 .workspace-page__heading {
   min-width: 0;
+  max-width: 100%;
   flex: 1 1 auto;
+  overflow-wrap: anywhere;
 }
 
 .workspace-page__actions {
   display: flex;
-  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* Let filenames and other unbroken values wrap inside shared content. */
+.workspace-card__header > *,
+.workspace-notice > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.workspace-card__header,
+.workspace-card__body,
+.workspace-card__footer,
+.workspace-notice {
+  overflow-wrap: anywhere;
 }
 
 .workspace-page__header h1,
@@ -48,6 +66,7 @@
   font-size: clamp(30px, 3vw, 40px);
   font-weight: 700;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .workspace-page__header p,
@@ -124,6 +143,11 @@
   color: var(--qc-color-primary);
 }
 
+/* Notices without an icon or action use the whole available text column. */
+.workspace-notice > :only-child {
+  grid-column: 1 / -1;
+}
+
 .workspace-notice h2,
 .workspace-card__header h2 {
   margin: 0;
@@ -141,7 +165,7 @@
 .workspace-card__header > a {
   color: var(--qc-color-primary);
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .workspace-notice--success {

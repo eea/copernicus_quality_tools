@@ -16,14 +16,7 @@ from django.test import override_settings
 from django.urls import reverse
 
 
-STATUS_FILTERS = (
-    "all",
-    "not_validated",
-    "running",
-    "passed",
-    "failed",
-    "submitted",
-)
+STATUS_FILTERS = ("action_required", "running", "in_review", "completed", "all")
 
 
 @override_settings(DEBUG=False, MAINTENANCE_MODE=False)
@@ -53,8 +46,8 @@ class DeliveryListPresentationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         document = response.content.decode(response.charset)
         navigation = re.search(
-            r'<nav\b(?=[^>]*\bid="delivery-status-filters")'
-            r'(?=[^>]*\baria-label="Filter deliveries by status")[^>]*>'
+            r'<nav\b(?=[^>]*\bid="delivery-workflow-tabs")'
+            r'(?=[^>]*\baria-label="Delivery workflow")[^>]*>'
             r'(?P<body>.*?)</nav>',
             document,
             flags=re.IGNORECASE | re.DOTALL,
@@ -72,7 +65,7 @@ class DeliveryListPresentationTests(TestCase):
         controls = {}
         for attributes, body in buttons:
             status = re.search(
-                r'\bdata-delivery-status="([^"]+)"',
+                r'\bdata-delivery-view="([^"]+)"',
                 attributes,
                 flags=re.IGNORECASE,
             )
@@ -85,7 +78,7 @@ class DeliveryListPresentationTests(TestCase):
                 self.assertRegex(attributes, r'\btype="button"')
                 self.assertRegex(attributes, r'\baria-pressed="(?:true|false)"')
                 self.assertIn(
-                    'data-delivery-status-count="{}"'.format(status),
+                    'data-delivery-view-count="{}"'.format(status),
                     body,
                 )
 
@@ -94,27 +87,27 @@ class DeliveryListPresentationTests(TestCase):
             for status, (attributes, _body) in controls.items()
             if 'aria-pressed="true"' in attributes
         ]
-        self.assertEqual(pressed, ["all"])
+        self.assertEqual(pressed, ["action_required"])
 
     def test_search_product_and_aoi_controls_have_explicit_labels(self):
         response = self.client.get(reverse("deliveries"))
 
         self.assertEqual(response.status_code, 200)
         document = response.content.decode(response.charset)
-        self.assertIn(
-            '<section class="delivery-filter-panel" '
-            'aria-labelledby="delivery-filter-title">',
+        self.assertRegex(
             document,
+            r'<div\b[^>]*id="delivery-table-toolbar"[^>]*data-table-filter-toolbar',
         )
+        self.assertIn('role="search" aria-label="Search deliveries"', document)
         for control_id, label in (
             ("delivery-filter-search", "Search deliveries"),
             ("delivery-filter-product", "Product"),
             ("delivery-filter-aoi", "AOI"),
         ):
             with self.subTest(control_id=control_id):
-                self.assertIn(
-                    '<label for="{}">{}</label>'.format(control_id, label),
+                self.assertRegex(
                     document,
+                    r'<label\b[^>]*for="{}"[^>]*>{}</label>'.format(control_id, label),
                 )
                 self.assertRegex(
                     document,
@@ -123,11 +116,6 @@ class DeliveryListPresentationTests(TestCase):
                     ),
                 )
         self.assertIn('id="btn-clear-filters"', document)
-        self.assertIn(
-            'id="btn-refresh-deliveries"',
-            document,
-        )
-        self.assertIn('aria-label="Refresh deliveries"', document)
 
     def test_delivery_and_latest_qc_job_are_separate_link_destinations(self):
         response = self.client.get(reverse("deliveries"))
@@ -166,7 +154,7 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn("delivery-job-link", script)
         self.assertIn("View QC result", script)
         self.assertIn("Review QC result", script)
-        self.assertIn("View current QC job", script)
+        self.assertIn("View QC progress", script)
         self.assertIn("row.job_history_url", script)
         self.assertIn("row.job_result_url", script)
         self.assertNotIn("'/result/' +", script)
@@ -192,69 +180,20 @@ class DeliveryListPresentationTests(TestCase):
         self.assertNotIn("AOI not available", script)
         self.assertNotIn("delivery-aoi--empty", script)
 
-    def test_status_coloring_distinguishes_delivery_lifecycle_states(self):
-        """Submitted is strongest green; active QC is warning yellow."""
-
-        table_script = self.static_source(
-            "dashboard/js/features/deliveries/table.js"
+    def test_workflow_navigation_keeps_history_secondary_and_actions_grouped(self):
+        response = self.client.get(reverse("deliveries"))
+        document = response.content.decode(response.charset)
+        nav = re.search(r'<nav[^>]*id="delivery-workflow-tabs".*?</nav>', document, re.DOTALL).group(0)
+        self.assertIn('data-delivery-view="all"', nav)
+        self.assertRegex(nav, r'<li class="qc-section-tabs__end">\s*<button[^>]*data-delivery-view="all"')
+        self.assertEqual(document.count('data-delivery-view="all"'), 1)
+        self.assertEqual(
+            [group["label"] for group in response.context["delivery_action_groups"]],
+            ["Review changes", "Resolve QC issues", "Run QC", "Submit"],
         )
-        table_styles = self.static_source(
-            "dashboard/css/features/deliveries/table.css"
-        )
-        status_styles = self.static_source(
-            "dashboard/css/features/deliveries/rows/status.css"
-        )
-        filter_styles = self.static_source(
-            "dashboard/css/features/deliveries/filters.css"
-        )
-
-        self.assertRegex(
-            status_styles,
-            r"\.delivery-status--passed\s*\{[^}]*"
-            r"background:\s*var\(--qc-color-success-soft\);",
-        )
-        self.assertRegex(
-            status_styles,
-            r"\.delivery-status--running\s*\{[^}]*"
-            r"color:\s*var\(--qc-color-warning-dark\);[^}]*"
-            r"background:\s*var\(--qc-color-warning-soft\);",
-        )
-        self.assertRegex(
-            status_styles,
-            r"\.delivery-status--submitted\s*\{[^}]*"
-            r"color:\s*#fff;[^}]*"
-            r"background:\s*var\(--qc-color-success\);",
-        )
-        self.assertIn(
-            ".delivery-status-filter__dot--running { "
-            "background: var(--qc-color-warning); }",
-            filter_styles,
-        )
-        self.assertIn(
-            ".delivery-status-filter__dot--submitted { "
-            "background: var(--qc-color-success); }",
-            filter_styles,
-        )
-        self.assertNotIn("#7c3aed", filter_styles)
-
-        self.assertIn("function deliveryRowStyle(row)", table_script)
-        self.assertIn(
-            'row && row.delivery_status === "submitted"',
-            table_script,
-        )
-        self.assertIn('"delivery-row--submitted"', table_script)
-        self.assertIn("rowStyle: deliveryRowStyle", table_script)
-        for selector in (
-            r"tr\.delivery-row--submitted\s*>\s*td",
-            r"tr\.delivery-row--submitted:hover\s*>\s*td",
-            r"tr\.delivery-row--submitted\.selected\s*>\s*td",
-            r"tr\.delivery-row--submitted\.selected:hover\s*>\s*td",
-        ):
-            with self.subTest(selector=selector):
-                self.assertRegex(table_styles, selector)
-        for background in ("#f0faf3", "#e7f7ec", "#def2e5", "#d5eedf"):
-            with self.subTest(background=background):
-                self.assertIn(background, table_styles)
+        self.assertContains(response, 'id="delivery-workflow-config"')
+        self.assertContains(response, 'id="delivery-action-groups"')
+        self.assertContains(response, 'qc-section-tabs__indicator')
 
     def test_table_has_clear_semantic_columns_with_optional_details(self):
         """Core workflow columns stay visible while details can be toggled."""
@@ -297,7 +236,7 @@ class DeliveryListPresentationTests(TestCase):
                 ("type", "Source"),
                 ("username", "Owner"),
                 ("id", "ID"),
-                ("last_job_status", "Job status"),
+                ("last_job_status", "QC &amp; review"),
                 ("actions", "Actions"),
             ],
         )
@@ -352,6 +291,9 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIsNotNone(table)
         for asset_path in (
             "dashboard/css/ui/data-table.css",
+            "dashboard/css/ui/table-toolbar.css",
+            "dashboard/js/shared/table-filters.js",
+            "dashboard/js/shared/table-exports.js",
             "dashboard/js/shared/data-table-ui.js",
         ):
             with self.subTest(asset_path=asset_path):
@@ -376,6 +318,7 @@ class DeliveryListPresentationTests(TestCase):
                 self.assertIn(common_option, shared_script)
         self.assertRegex(shared_script, r'["\']Export["\']')
         self.assertIn("QcDataTableUi", table_script)
+        self.assertIn("dataTableUi.create", table_script)
 
     def test_generated_export_keeps_the_server_filtered_delivery_export(self):
         """Toolbar reuse must not reduce export to the current client page."""
@@ -396,8 +339,12 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn("QcDataTableUi", scripts)
         self.assertIn("config.exportUrl", scripts)
         self.assertIn("exportQuery", scripts)
-        self.assertIn("$.param", scripts)
-        self.assertIn("window.location.assign", scripts)
+        self.assertIn("server: {url: config.exportUrl, getQuery: exportQuery}", scripts)
+        self.assertIn('id="qc-table-export-config"', document)
+        for label in ("JSON", "CSV", "XLSX", "XML"):
+            self.assertIn(f'"label": "{label}"', document)
+        self.assertIn('data-export-field="delivery_status"', document)
+        self.assertIn('data-exportable="false"', document)
 
     def test_cell_formatters_prioritize_next_step_and_keep_delete_last(self):
         """Row controls expose one next step and quieter supporting actions."""

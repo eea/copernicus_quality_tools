@@ -7,9 +7,10 @@ nav_order: 6
 # Upload pages
 
 Upload pages share file selection, file rows, progress and feedback. Products and
-deliveries also share an explicit review queue: selecting a file stages it;
-**Add** sends one new file, **Overwrite** replaces an eligible existing delivery,
-and the batch action processes the reviewed files sequentially.
+deliveries also share an explicit review queue: selecting a file stages it.
+Products use **Add** and **Add all**. Deliveries use **Upload** for new files and
+**Replace and upload** for eligible existing deliveries. Batch actions process
+the reviewed files sequentially.
 Boundary packages retain their explicit **Upload and activate** operation.
 
 ## Components and responsibilities
@@ -19,7 +20,7 @@ Boundary packages retain their explicit **Upload and activate** operation.
 | [Upload layout][layout] | Workspace shell, shared assets and accessible announcements |
 | [Queue layout][queue-layout] | Loads the queue controller after the shared upload helpers |
 | [Picker template][picker] | Native file input, chooser, format guidance and field errors |
-| [Queue template][queue-template] | File list, ready/added counts, Add all and pending guidance |
+| [Queue template][queue-template] | File list, ready/completed counts, batch action and pending guidance |
 | [Shared presentation][helpers] | Picker validation, drag-and-drop, file rows, notices and size formatting |
 | [Queue controller][queue] | Staging, individual/batch actions, sequential processing and partial results |
 | [Shared styles][styles] | Responsive picker, file rows, state colors, progress and actions |
@@ -54,6 +55,7 @@ CSRF, safe filenames, content limits, archive safety and domain rules.
 | `extensions`, `maxBytes` | Allowed lowercase extensions without dots and optional per-file size limit |
 | `key(file)` | Optional identity used to detect duplicate selections; defaults to the filename |
 | `describe(file)` | Optional text displayed below the filename |
+| `labels` | Optional action and state wording; defaults suit product additions, while delivery uploads supply their own labels |
 | `check(entry)` | Optional asynchronous preflight; returns a blocked result or permits addition |
 | `send(entry, report)` | Returns a promise which resolves only after server confirmation |
 
@@ -61,7 +63,7 @@ An entry retains its `file`, `key`, `state`, `attempted` flag and adapter-owned
 `meta` across retries. A blocked preflight returns `{blocked: true, message,
 url, linkLabel}`. Include an opaque `overwriteKey` to offer an explicit
 overwrite action; the queue pins this key in `entry.overwriteKey` only when
-the user selects Overwrite or the clearly labeled batch action. A changed key
+the user selects the replacement action or the clearly labeled batch action. A changed key
 at the next check requires another explicit choice. A successful send returns `{label, message, url, linkLabel}`.
 `report({state, label, percent})` updates measurable transfer or pending
 processing. An adapter may report `controls` with `pause`, `resume` and `cancel`
@@ -75,11 +77,18 @@ overwrite choice and run preflight again on Retry. Retry otherwise uses the
 same entry. The queue API exposes `picker`, `entries`, `add(entry)`,
 `overwrite(entry)`, `addAll()` and `remove(entry)`.
 
-Ready rows show Add and Remove; eligible stored duplicates show Overwrite and
-Remove; invalid or protected rows show an explanation and Remove; failed rows
-expose Retry. The batch action is offered for at least two ready or replaceable
-files after selection checks finish. If replacements are present, it says
-**Add all & overwrite (N)** and explains the new/overwrite counts. It excludes blocked and failed files;
+The `labels` object supports `add`, `overwrite`, `addAll` and `overwriteAll` for
+actions; `ready`, `pending`, `failed` and `running` for state wording; and
+`completed` for the completed-file count. Keep these labels specific to the
+adapter: product specifications are added, while delivery files are uploaded.
+
+Ready rows show their primary action and Remove; eligible stored duplicates show
+the replacement action and Remove; invalid or protected rows show an explanation
+and Remove; failed rows expose Retry. The batch action is offered for at least
+two ready or replaceable files after selection checks finish. Deliveries use
+**Upload all (N)**, or **Replace and upload all (N)** when replacements are
+present, with separate new/replacement counts. The batch action remains visible
+but disabled while its files upload. It excludes blocked and failed files;
 retries remain an explicit per-file decision. Completed rows retain their result
 and a link to the created or existing record. Additional selections do not erase
 previous outcomes.
@@ -108,8 +117,8 @@ lookup uses only the signed-in user's non-deleted deliveries, including when
 that user is an administrator. Other users' filenames and record metadata are
 never disclosed. Responses are private and not cached.
 
-Checks run when files are selected and immediately before the first Add or
-Overwrite. Only the owner's local deliveries without submission records,
+Checks run when files are selected and immediately before the first **Upload** or
+**Replace and upload**. Only the owner's local deliveries without submission records,
 submission timestamps or waiting/running QC may be overwritten. S3 deliveries
 and ambiguous duplicate database records are protected. The row explains the
 reason and links to the existing delivery. Repeating a filename within the
@@ -120,6 +129,16 @@ validates its owner, filename, current identity and eligibility again at
 finalization. The parameter participates in the staging identity. If another
 upload changes the target after the warning, the client requires a new explicit
 choice; a batch never silently adopts a newer target.
+
+Rejected submissions have a dedicated **Upload correction** action. Its page
+uses the same queue and transfer adapter, restricted to one ZIP with the exact
+original filename. `correction_submission_id` accompanies both the filename
+preflight and every chunk request, along with `overwrite_delivery_id` for the
+original delivery. The server verifies ownership, publication and rejection
+state, active delivery identity and filename before accepting a correction.
+The original submission remains immutable. A successful correction links
+directly to QC setup for its fresh delivery; submission for review is a later
+explicit action after the new checks pass.
 
 The replacement is fully staged before the original is changed. Under the
 shared filename lock, a durable transaction retires the original delivery and
@@ -188,8 +207,8 @@ message and optional record link. State names include `selected`, `checking`,
 `canceled`. The component presents these states; adapters establish their truth.
 
 Keep the main row ordered as file icon, filename, size, primary action and
-Remove. Add and Overwrite occupy the same primary-action position; unavailable
-actions remain hidden. The Remove label means removal from the upload list.
+Remove. New-file and replacement actions occupy the same primary-action position;
+unavailable actions remain hidden. The Remove label means removal from the upload list.
 Use the shared decorative file icon, hidden from assistive technology, and keep
 the full filename as text. Put status, warnings and record links in the
 secondary feedback area so they do not compete with the main row's actions.
@@ -230,7 +249,7 @@ node --test src/qc_tool/frontend/dashboard/tests/javascript/*.test.cjs
 
 CI and the optional Python wrapper discover all suites. Check shared behavior
 with every adapter, including keyboard selection, mixed valid/invalid files,
-Add/Add all, duplicates, partial failures, retry, session expiry and removal.
+individual/batch actions, duplicates, partial failures, retry, session expiry and removal.
 Exercise slow transfer and server processing, product single-file no-JavaScript
 fallback, boundary explicit activation, narrow cards and long filenames.
 

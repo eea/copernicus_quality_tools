@@ -260,6 +260,7 @@ class JobHistoryPresentationTests(TestCase):
         )
         for asset_path in (
             "dashboard/css/ui/data-table.css",
+            "dashboard/js/shared/table-exports.js",
             "dashboard/js/shared/data-table-ui.js",
         ):
             with self.subTest(asset_path=asset_path):
@@ -290,15 +291,10 @@ class JobHistoryPresentationTests(TestCase):
         self.assertIn(".export", shared_script)
         self.assertIn('"aria-label"', shared_script)
         self.assertIn("title", shared_script)
-        self.assertIn("function exportCsv(table, settings)", shared_script)
-        self.assertIn("csvExportButton", shared_script)
+        self.assertIn("exportMenu", shared_script)
         self.assertIn("QcDataTableUi", table_script)
-        self.assertIn("csvExportButton", table_script)
-        self.assertIn('filename: "qc-job-history.csv"', table_script)
-        self.assertIn(
-            'buttonsOrder: ["refresh", "columns", "exportView"]',
-            table_script,
-        )
+        self.assertIn("dataTableUi.create", table_script)
+        self.assertIn('exports: {filename: "qc-job-history"}', table_script)
         self.assertNotIn("showExport: true", table_script)
 
     def test_running_jobs_use_warning_yellow_across_job_pages(self):

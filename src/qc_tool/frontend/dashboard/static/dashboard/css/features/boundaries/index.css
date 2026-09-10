@@ -14,7 +14,6 @@
 }
 
 .boundary-table-wrap {
-  overflow-x: auto;
   border: 1px solid var(--qc-color-border-subtle);
   border-radius: 8px;
 }

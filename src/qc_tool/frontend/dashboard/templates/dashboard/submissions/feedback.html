@@ -1,0 +1,6 @@
+{% if feedback %}
+<p class="submission-feedback__byline">Feedback from <strong>{{ feedback.actor_username }}</strong> · <time datetime="{{ feedback.created_at|date:'c' }}">{{ feedback.created_at|date:"Y-m-d H:i T" }}</time></p>
+{% if feedback.notes %}<blockquote class="submission-feedback__comment">{{ feedback.notes|linebreaksbr }}</blockquote>{% else %}<p>No written feedback was recorded for this decision.</p>{% endif %}
+{% else %}
+<p>No written feedback is available for this decision. Contact your product manager before preparing a correction.</p>
+{% endif %}

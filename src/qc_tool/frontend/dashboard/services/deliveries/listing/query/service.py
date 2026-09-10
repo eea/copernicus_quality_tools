@@ -27,6 +27,7 @@ def execute_delivery_query(
     include_capabilities,
     account_access,
     delivery_status,
+    delivery_view,
     resolve_access,
     database_connection,
 ):
@@ -55,6 +56,7 @@ def execute_delivery_query(
         filter_expression=filter_expression,
         search=search,
         delivery_status=delivery_status,
+        delivery_view=delivery_view,
         database_connection=database_connection,
     )
 
@@ -62,7 +64,7 @@ def execute_delivery_query(
         cursor.execute(plan.count_sql, plan.parameters)
         total = int(cursor.fetchone()[0])
 
-        cursor.execute(plan.rows_sql, plan.parameters)
+        cursor.execute(plan.rows_sql, plan.row_parameters)
         rows = rows_from_cursor(cursor)
 
     return total, project_delivery_rows(
@@ -70,3 +72,35 @@ def execute_delivery_query(
         account_access,
         include_capabilities,
     )
+
+
+def iterate_delivery_query(
+    user, *, sort, order, filter_expression, search, delivery_status,
+    delivery_view, account_access, database_connection, batch_size,
+):
+    """Read one ordered result through Django's chunked cursor.
+
+    PostgreSQL uses a server-side cursor, retaining a consistent result while
+    the user downloads it. SQLite uses its normal cursor with bounded fetches.
+    No table page limits, offsets or repeated count queries are involved.
+    """
+
+    batch_size = bounded_query_integer(
+        batch_size, default=MAX_DELIVERY_PAGE_SIZE,
+        minimum=1, maximum=MAX_DELIVERY_PAGE_SIZE,
+    )
+    plan = build_delivery_query_plan(
+        user_id=user.id, account_access=account_access, offset=0, limit=None,
+        sort=sort, order=order, filter_expression=filter_expression,
+        search=search, delivery_status=delivery_status, delivery_view=delivery_view,
+        database_connection=database_connection,
+    )
+    with database_connection.chunked_cursor() as cursor:
+        cursor.execute(plan.rows_sql, plan.row_parameters)
+        while True:
+            records = cursor.fetchmany(batch_size)
+            if not records:
+                return
+            headers = [column[0] for column in cursor.description]
+            rows = [dict(zip(headers, record)) for record in records]
+            yield from project_delivery_rows(rows, account_access, False)

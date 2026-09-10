@@ -6,7 +6,7 @@ from .filters import decode_filter_mapping
 from .filters import MAX_DELIVERY_OFFSET
 from .filters import MAX_DELIVERY_PAGE_SIZE
 from .filters import parse_filter
-from .query import query_deliveries
+from .query import iter_deliveries, query_deliveries
 from .statuses import classify_delivery_status
 from .statuses import DeliveryStatus
 from .statuses import DeliveryStatusCounts
@@ -28,5 +28,6 @@ __all__ = (
     "delivery_status_sql",
     "parse_filter",
     "parse_delivery_status",
+    "iter_deliveries",
     "query_deliveries",
 )

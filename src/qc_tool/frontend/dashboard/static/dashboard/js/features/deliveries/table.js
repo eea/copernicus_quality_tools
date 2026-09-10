@@ -6,25 +6,36 @@
     var formatters = window.QcDeliveryFormatters || {};
     var dataTableUi = window.QcDataTableUi;
     var tableSelector = "#tbl-deliveries";
-    var allowedStatuses = [
-        "all", "not_validated", "running", "passed", "failed", "submitted"
-    ];
-    var state = {
-        deliveryStatus: initialStatus(),
-        search: "",
-        product: "",
-        aoi: ""
-    };
-    var inputTimers = {};
+    function readConfig(id, fallback) {
+        var element = document.getElementById(id);
+        return element ? JSON.parse(element.textContent) : fallback;
+    }
 
-    function initialStatus() {
-        var value;
-        try {
-            value = new URL(window.location.href).searchParams.get("delivery_status");
-        } catch (error) {
-            value = null;
+    var workflows = readConfig("delivery-workflow-config", {});
+    var actionGroups = readConfig("delivery-action-groups", []);
+    var allowedStatuses = ["all", "not_validated", "running", "passed", "failed", "submitted", "needs_correction", "accepted"];
+    var latestCounts = null;
+    var state = initialState();
+    var inputTimers = {};
+    var filters;
+    var lastAnnouncement = "";
+    var recoveringEmptyPage = false;
+
+    function initialState() {
+        var params;
+        try { params = new URL(window.location.href).searchParams; }
+        catch (_error) { params = new URLSearchParams(); }
+        var status = params.get("delivery_status") || "all";
+        var view = params.get("delivery_view");
+        if (!Object.prototype.hasOwnProperty.call(workflows, view)) {
+            view = status === "all" && params.has("delivery_status") ? "all" : "action_required";
+            if (["running", "submitted", "accepted"].indexOf(status) >= 0) {
+                view = {running: "running", submitted: "in_review", accepted: "completed"}[status];
+            }
         }
-        return allowedStatuses.indexOf(value) >= 0 ? value : "all";
+        if (allowedStatuses.indexOf(status) < 0 ||
+            (status !== "all" && workflows[view].statuses.indexOf(status) < 0)) status = "all";
+        return {view: view, deliveryStatus: status, search: "", product: "", aoi: ""};
     }
 
     function currentFilter() {
@@ -40,6 +51,7 @@
 
     function deliveryQueryParams(params) {
         var filter = currentFilter();
+        params.delivery_view = state.view;
         params.delivery_status = state.deliveryStatus;
         params.search = state.search;
         params.filter = Object.keys(filter).length ? JSON.stringify(filter) : "";
@@ -62,27 +74,80 @@
     }
 
     function announce(message) {
-        $("#deliveries-live-status").text(message);
+        if (message !== lastAnnouncement) {
+            $("#deliveries-live-status").text(message);
+            lastAnnouncement = message;
+        }
     }
 
     function updateStatusControls() {
-        $("[data-delivery-status]").each(function () {
-            var isActive = $(this).attr("data-delivery-status") === state.deliveryStatus;
-            $(this)
-                .toggleClass("is-active", isActive)
-                .attr("aria-pressed", isActive ? "true" : "false");
+        $("[data-delivery-view]").each(function () {
+            var isActive = $(this).attr("data-delivery-view") === state.view;
+            $(this).toggleClass("is-active", isActive).attr("aria-pressed", isActive ? "true" : "false");
         });
     }
 
-    function updateStatusCounts(counts) {
-        if (!counts) {
-            return;
-        }
-        Object.keys(counts).forEach(function (status) {
-            var numericCount = Number(counts[status]);
-            $("[data-delivery-status-count='" + status + "']").text(
-                Number.isFinite(numericCount) && numericCount >= 0 ? numericCount : "\u2014"
-            );
+    function updateStatusOptions() {
+        var select = document.getElementById("delivery-status-select");
+        if (!select) return;
+        var workflow = workflows[state.view];
+        Array.from(select.options).forEach(function (option) {
+            if (!option.value) return;
+            var available = workflow.statuses.indexOf(option.value) >= 0;
+            var selected = state.deliveryStatus === option.value;
+            var count = latestCounts && Number(latestCounts[option.value]);
+            option.hidden = !selected && (!available || (latestCounts && !count));
+            option.disabled = option.hidden;
+            if (latestCounts) option.textContent = option.dataset.statusLabel + " (" + (count || 0) + ")";
+        });
+        select.value = state.deliveryStatus === "all" ? "" : state.deliveryStatus;
+        document.getElementById("delivery-status-field").hidden = workflow.statuses.length <= 1;
+    }
+
+    function updateViewPresentation() {
+        $("#deliveries-table-title").text(workflows[state.view].label);
+        updateStatusOptions();
+    }
+
+    function updateStatusCounts(counts, workflowCounts) {
+        latestCounts = counts || latestCounts;
+        Object.keys(workflowCounts || {}).forEach(function (view) {
+            var count = Number(workflowCounts[view]);
+            $("[data-delivery-view-count='" + view + "']").text(Number.isFinite(count) && count >= 0 ? count : "—");
+            $("[data-delivery-view='" + view + "'] .qc-section-tabs__indicator").toggleClass("is-active", count > 0);
+        });
+        updateStatusOptions();
+    }
+
+    function renderActionGroups() {
+        var table = document.querySelector(tableSelector);
+        if (!table || !table.tBodies.length) return;
+        var body = table.tBodies[0];
+        body.querySelectorAll(".delivery-action-group").forEach(function (row) { row.remove(); });
+        if (state.view !== "action_required") return;
+        var data = rows(), previous = null;
+        body.querySelectorAll("tr[data-index]").forEach(function (row) {
+            var item = data[Number(row.getAttribute("data-index"))];
+            if (!item || item.delivery_status === previous) return;
+            previous = item.delivery_status;
+            var group = actionGroups.find(function (entry) { return entry.value === previous; });
+            if (!group) return;
+            var heading = document.createElement("tr"), cell = document.createElement("th");
+            heading.className = "delivery-action-group";
+            cell.colSpan = row.cells.length;
+            cell.setAttribute("scope", "rowgroup");
+            var label = document.createElement("span");
+            label.textContent = group.label;
+            cell.appendChild(label);
+            if (latestCounts) {
+                var count = document.createElement("span");
+                count.className = "delivery-action-group__count";
+                count.textContent = String(latestCounts[group.value] || 0);
+                count.setAttribute("aria-label", (latestCounts[group.value] || 0) + " deliveries in this group");
+                cell.appendChild(count);
+            }
+            heading.appendChild(cell);
+            body.insertBefore(heading, row);
         });
     }
 
@@ -101,7 +166,8 @@
     }
 
     function updateClearButton() {
-        $("#btn-clear-filters").prop("disabled", !filtersActive());
+        var extra = Number(Boolean(state.product)) + Number(Boolean(state.aoi)) + Number(state.deliveryStatus !== "all");
+        filters.update({active: filtersActive(), count: extra});
     }
 
     function updateAddressBar() {
@@ -113,6 +179,8 @@
             } else {
                 url.searchParams.set("delivery_status", state.deliveryStatus);
             }
+            if (state.view !== "action_required") url.searchParams.set("delivery_view", state.view);
+            else url.searchParams.delete("delivery_view");
             window.history.replaceState({}, "", url.pathname + url.search + url.hash);
         } catch (error) {
             return;
@@ -133,11 +201,13 @@
     }
 
     function selectStatus(status) {
-        if (allowedStatuses.indexOf(status) < 0 || status === state.deliveryStatus) {
+        if (allowedStatuses.indexOf(status) < 0 ||
+            (status !== "all" && workflows[state.view].statuses.indexOf(status) < 0)) {
             return;
         }
         state.deliveryStatus = status;
         updateStatusControls();
+        updateViewPresentation();
         updateClearButton();
         updateAddressBar();
         refresh();
@@ -153,6 +223,7 @@
     }
 
     function resetFilters() {
+        Object.keys(inputTimers).forEach(function (key) { window.clearTimeout(inputTimers[key]); });
         state.deliveryStatus = "all";
         state.search = "";
         state.product = "";
@@ -160,14 +231,30 @@
         $("#delivery-filter-search, #delivery-filter-aoi").val("");
         $("#delivery-filter-product").val("");
         updateStatusControls();
+        updateViewPresentation();
         updateClearButton();
         updateAddressBar();
         refresh();
     }
 
     function bindFilters() {
-        $("#delivery-status-filters").on("click", "[data-delivery-status]", function () {
-            selectStatus($(this).attr("data-delivery-status"));
+        $("[data-delivery-view]").on("click", function () {
+            var view = $(this).attr("data-delivery-view");
+            if (!Object.prototype.hasOwnProperty.call(workflows, view)) return;
+            state.view = view;
+            selectStatus("all");
+        });
+        $("#delivery-status-select").on("change", function () {
+            selectStatus(String($(this).val() || "all"));
+        });
+        $("#delivery-sort").on("change", function () {
+            var order = String($(this).val());
+            if (["priority", "newest", "oldest"].indexOf(order) < 0) return;
+            clearSelection();
+            $(tableSelector).bootstrapTable("refreshOptions", {
+                pageNumber: 1, sortName: order === "priority" ? "priority" : "id",
+                sortOrder: order === "newest" ? "desc" : "asc"
+            });
         });
         $("#delivery-filter-search").on("input", function () {
             scheduleInputFilter("search", String($(this).val() || "").trim());
@@ -180,11 +267,7 @@
         $("#delivery-filter-aoi").on("input", function () {
             scheduleInputFilter("aoi", String($(this).val() || "").trim());
         });
-        $("#btn-clear-filters").on("click", resetFilters);
-        $("#btn-refresh-deliveries").on("click", function () {
-            refresh({pageNumber: $(tableSelector).bootstrapTable("getOptions").pageNumber});
-            announce("Refreshing deliveries.");
-        });
+
     }
 
     function labelSelectableRows() {
@@ -220,8 +303,9 @@
 
     function noMatchesMessage() {
         if (filtersActive()) {
-            return "No deliveries match these filters. Clear filters to see all deliveries.";
+            return "No deliveries match these filters. Clear filters to see this view again.";
         }
+        if (state.view !== "all") return workflows[state.view].empty_message;
         if (config.canUpload) {
             return "No deliveries yet. Upload a delivery ZIP file to get started.";
         }
@@ -237,18 +321,28 @@
                 var count = rows().length;
                 var total = resultTotal(response);
                 setBusy(false);
-                updateStatusCounts(response && response.status_counts);
+                updateStatusCounts(response && response.status_counts, response && response.workflow_counts);
+                // A transition can remove the last row on a later page. The
+                // table library clamps pagination without fetching that page.
+                if (!count && total > 0 && !recoveringEmptyPage) {
+                    recoveringEmptyPage = true;
+                    refresh({pageNumber: 1});
+                    return;
+                }
+                if (count || !total) recoveringEmptyPage = false;
+                renderActionGroups();
                 updateTableAccessibility();
-                announce(
-                    "Showing " + count + " of " + total + " " +
-                    (total === 1 ? "delivery" : "deliveries") + "."
-                );
+                var resultMessage = "Showing " + count + " of " + total + " " + (total === 1 ? "delivery" : "deliveries") + ".";
+                announce(resultMessage);
             })
             .on(
                 "post-body.bs.table post-header.bs.table sort.bs.table " +
                 "column-switch.bs.table column-switch-all.bs.table",
-                updateTableAccessibility
+                function () { renderActionGroups(); updateTableAccessibility(); }
             )
+            .on("sort.bs.table", function (_event, name, order) {
+                $("#delivery-sort").val(name === "priority" ? "priority" : name === "id" ? (order === "desc" ? "newest" : "oldest") : "custom");
+            })
             .on("page-change.bs.table search.bs.table", clearSelection)
             .on("load-error.bs.table", function () {
                 setBusy(false);
@@ -259,44 +353,15 @@
     function exportQuery() {
         var options = $(tableSelector).bootstrapTable("getOptions") || {};
         return deliveryQueryParams({
-            sort: options.sortName || "id",
-            order: options.sortOrder || "desc",
-            offset: 0,
-            limit: 1000
+            sort: options.sortName || "priority",
+            order: options.sortOrder || "asc"
         });
-    }
-
-    function exportCurrentView() {
-        window.location.assign(
-            String(config.exportUrl || "") + "?" + $.param(exportQuery())
-        );
-    }
-
-    function exportButton() {
-        var settings = {
-            label: "Export filtered deliveries",
-            event: exportCurrentView
-        };
-
-        if (dataTableUi) {
-            return dataTableUi.exportButton(settings);
-        }
-        return {
-            text: "Export",
-            icon: "glyphicon-export icon-share",
-            event: exportCurrentView,
-            attributes: {
-                "aria-label": settings.label,
-                title: settings.label
-            }
-        };
     }
 
     function deliveryRowStyle(row) {
         return {
-            classes: row && row.delivery_status === "submitted"
-                ? "delivery-row--submitted"
-                : ""
+            classes: row && ["running", "submitted", "accepted"].indexOf(row.delivery_status) >= 0
+                ? "delivery-row--calm" : ""
         };
     }
 
@@ -309,30 +374,34 @@
             pagination: true,
             sidePagination: "server",
             search: false,
-            showColumns: true,
-            showButtonText: true,
-            showColumnsToggleAll: true,
-            minimumCountColumns: 0,
-            buttons: function () {
-                return {exportView: exportButton()};
-            },
-            buttonsOrder: ["columns", "exportView"],
-            sortName: "id",
-            sortOrder: "desc",
+            showRefresh: true,
+            toolbar: "#delivery-table-toolbar",
+            sortName: "priority",
+            sortOrder: "asc",
             queryParams: deliveryQueryParams,
             rowStyle: deliveryRowStyle,
             formatNoMatches: noMatchesMessage
         };
 
-        return dataTableUi ? dataTableUi.options(options) : options;
+        return options;
     }
 
     function init() {
+        filters = window.QcTableFilters.create(document.getElementById("delivery-table-toolbar"), {onClear: resetFilters});
         updateStatusControls();
+        updateViewPresentation();
+        filters.setExpanded(state.deliveryStatus !== "all");
         updateClearButton();
         bindFilters();
         bindTableEvents();
-        $(tableSelector).bootstrapTable(tableOptions());
+        dataTableUi.create($(tableSelector), {
+            options: tableOptions(),
+            labels: {subject: "deliveries", regionLabelledBy: "deliveries-table-title"},
+            exports: {
+                filename: "deliveries",
+                server: {url: config.exportUrl, getQuery: exportQuery}
+            }
+        });
         updateTableAccessibility();
     }
 

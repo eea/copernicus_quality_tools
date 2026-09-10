@@ -234,6 +234,7 @@ class DeliveryAccessTests(TestCase):
             self.assertEqual(
                 params,
                 [
+                    7,  # Submission feedback is independently restricted to its owner.
                     7,
                     "CZ",
                     "DE",

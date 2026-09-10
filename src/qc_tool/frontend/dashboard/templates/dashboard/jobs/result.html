@@ -91,12 +91,12 @@
     </header>
 
     {% if job_report.steps %}
-    <div class="job-result-table-region" role="region" tabindex="0" aria-label="QC check results">
-        <table id="tbl-results" class="table" aria-describedby="job-result-checks-description" data-toggle="table" data-search-align="right" data-show-refresh="false" data-show-toggle="false" data-show-filter="false" data-smart-display="true" data-sort-order="asc" data-show-export="false" data-pagination="false">
+    <div class="job-result-table-region qc-data-table-region">
+        <table id="tbl-results" class="table qc-data-table" aria-describedby="job-result-checks-description" data-export-filename="qc-check-results-{{ job_report.job_uuid }}">
             <caption class="sr-only">Quality-control checks for job {{ job_report.job_uuid }}</caption>
             <thead>
                 <tr>
-                    <th data-field="step_nr" data-sortable="false">Step</th>
+                    <th data-field="step_nr" data-sortable="false" data-switchable="false">Step</th>
                     <th data-field="check_ident" data-sortable="false">Check</th>
                     <th data-field="layers" data-sortable="false">Layers</th>
                     <th data-field="check_result" data-sortable="false">Status</th>
@@ -144,3 +144,8 @@
     </footer>
 </section>
 {% endblock page_content %}
+
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/features/jobs/result/table.js' %}"></script>
+{% endblock js %}

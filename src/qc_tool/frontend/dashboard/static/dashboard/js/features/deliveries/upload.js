@@ -1,11 +1,19 @@
-/* Explicit delivery additions, checked against this user's existing filenames. */
+/* Explicit delivery uploads, checked against this user's existing filenames. */
 (function(window, document) {
     "use strict";
     var root = document.getElementById("resumable-upload");
     var ui = window.qcUpload;
     if (!root || !window.Resumable || !ui || !ui.createQueue) return;
+    var correctionId = root.dataset.correctionSubmission;
+    var correctionFilename = root.dataset.correctionFilename;
+    var correctionDeliveryId = Number(root.dataset.correctionDeliveryId);
 
     function check(entry) {
+        if (correctionId && entry.file.name !== correctionFilename) {
+            return Promise.resolve({blocked: true,
+                label: "Filename must match",
+                message: 'Keep the original filename: "' + correctionFilename + '". Choose the corrected ZIP with this exact name.'});
+        }
         return new Promise(function(resolve, reject) {
             var xhr = new window.XMLHttpRequest();
             xhr.open("POST", root.dataset.checkUrl);
@@ -24,21 +32,29 @@
                 var payload = xhr.response;
                 if (xhr.status !== 200 || !payload || payload.status !== "ok" || !Array.isArray(payload.files) || payload.files.length !== 1 || !payload.files[0] ||
                         payload.files[0].filename !== entry.file.name || typeof payload.files[0].exists !== "boolean") {
-                    reject(new Error(payload && payload.message || "Could not check your existing deliveries. Retry before adding this file."));
+                    reject(new Error(payload && payload.message || "Could not check for an existing delivery. Retry to continue."));
                     return;
                 }
                 var existing = payload.files[0];
                 var canOverwrite = existing.exists && existing.can_overwrite === true && Number.isSafeInteger(existing.delivery_id) && existing.delivery_id > 0;
+                if (correctionId && (!canOverwrite || existing.delivery_id !== correctionDeliveryId)) {
+                    resolve({blocked: true, message: existing.overwrite_reason || "This submission can no longer receive a correction. Open the original submission to check its current status.",
+                        url: existing.url, linkLabel: "View existing delivery"});
+                    return;
+                }
                 resolve({blocked: existing.exists,
+                    label: correctionId ? "Ready for correction" : undefined,
                     overwriteKey: canOverwrite ? existing.delivery_id : null,
-                    message: canOverwrite ? "You already uploaded this filename. Overwrite replaces its ZIP with this file and requires new quality checks. Previous QC history is retained." :
-                        existing.overwrite_reason || "You already uploaded a delivery with this filename. View that delivery or rename this ZIP before adding it.",
+                    message: canOverwrite ? (correctionId ? "Ready to upload your correction. The rejected submission and its files will stay in your history." : "You have a delivery with this name. Replacing it keeps its history and requires new quality checks.") :
+                        existing.overwrite_reason || "You have a delivery with this name. View it or rename this ZIP before uploading.",
                     url: existing.url, linkLabel: "View existing delivery"});
             });
             ["error", "timeout", "abort"].forEach(function(event) {
-                xhr.addEventListener(event, function() { reject(new Error("Could not check your existing deliveries. Retry before adding this file.")); });
+                xhr.addEventListener(event, function() { reject(new Error("Could not check for an existing delivery. Retry to continue.")); });
             });
-            xhr.send(JSON.stringify({filenames: [entry.file.name]}));
+            var request = {filenames: [entry.file.name]};
+            if (correctionId) request.correction_submission_id = correctionId;
+            xhr.send(JSON.stringify(request));
         });
     }
 
@@ -55,10 +71,12 @@
             var paused = false;
             var canceling = false;
             var percent = 0;
+            var query = overwriting ? {overwrite_delivery_id: entry.overwriteKey} : {};
+            if (correctionId) query.correction_submission_id = correctionId;
             var resumable = new window.Resumable({
                 target: root.dataset.uploadUrl,
                 headers: {"X-CSRFToken": window.qcCsrf.getToken()},
-                query: overwriting ? {overwrite_delivery_id: entry.overwriteKey} : {},
+                query: query,
                 chunkSize: 5 * 1024 * 1024,
                 simultaneousUploads: Number(root.dataset.simultaneousUploads) || 1,
                 testChunks: true, throttleProgressCallbacks: 1,
@@ -67,7 +85,7 @@
             function update() {
                 if (settled || canceling) return;
                 report({state: paused ? "paused" : percent === 100 ? "saving" : "uploading",
-                    label: paused ? "Paused" : percent === 100 ? "Saving delivery…" : (overwriting ? "Uploading replacement · " : "Adding delivery · ") + percent + "%",
+                    label: paused ? "Paused" : percent === 100 ? "Saving delivery…" : (correctionId ? "Uploading correction · " : overwriting ? "Uploading replacement · " : "Uploading delivery · ") + percent + "%",
                     percent: percent, controls: controls});
             }
             function fail(error) {
@@ -96,24 +114,30 @@
                 try { payload = JSON.parse(message); } catch (_error) { payload = null; }
                 // Successful resume probes return an empty body. Nonempty
                 // responses must carry the endpoint's acknowledgement; an
-                // HTML error page must never appear as an added delivery.
+                // HTML error page must never appear as an uploaded delivery.
                 if (message && (!payload || payload.status !== "ok")) {
                     fail(new Error("The server did not confirm this delivery. Retry the upload to confirm it."));
                     return;
                 }
                 payload = payload || {};
                 settled = true;
-                resolve({label: overwriting ? "Overwritten" : "Added", message: "Ready for quality checks.", url: payload.delivery_id ? root.dataset.deliveriesUrl + "jobs/" + payload.delivery_id + "/" : root.dataset.deliveriesUrl, linkLabel: "View delivery"});
+                if (correctionId) {
+                    resolve({label: "Correction uploaded", message: "Run quality checks, then submit this correction for review.",
+                        url: payload.delivery_id && root.dataset.setupJobUrl ? root.dataset.setupJobUrl + "?deliveries=" + payload.delivery_id : root.dataset.deliveriesUrl,
+                        linkLabel: payload.delivery_id && root.dataset.setupJobUrl ? "Run quality checks" : "Open deliveries to run quality checks"});
+                    return;
+                }
+                resolve({label: overwriting ? "Replaced" : "Uploaded", message: "Ready for quality checks.", url: payload.delivery_id ? root.dataset.deliveriesUrl + "jobs/" + payload.delivery_id + "/" : root.dataset.deliveriesUrl, linkLabel: "View delivery"});
             });
             resumable.on("fileError", function(_file, message) {
                 if (settled || canceling) return;
-                var error = new Error("The delivery could not be added. Retry the upload.");
+                var error = new Error("The delivery could not be uploaded. Retry the upload.");
                 if (window.qcAuth.redirectFromPayload(message)) error.redirecting = true;
                 else {
                     var payload;
                     try { payload = JSON.parse(message); } catch (_error) { payload = {}; }
                     if (typeof payload.message === "string") error.message = payload.message;
-                    if (["delivery_exists", "overwrite_target_changed", "overwrite_not_allowed"].indexOf(payload.code) !== -1) {
+                    if (["delivery_exists", "overwrite_target_changed", "overwrite_not_allowed", "correction_not_available"].indexOf(payload.code) !== -1) {
                         error.recheck = true;
                         error.url = root.dataset.deliveriesUrl;
                         error.linkLabel = "View your deliveries";
@@ -127,5 +151,15 @@
             resumable.addFile(entry.file);
         });
     }
-    window.qcDeliveryUpload = ui.createQueue(root, {extensions: ["zip"], check: check, send: send});
+    window.qcDeliveryUpload = ui.createQueue(root, {
+        extensions: ["zip"], check: check, send: send,
+        labels: correctionId ? {
+            add: "Upload correction", overwrite: "Upload correction", ready: "Ready to upload correction",
+            pending: "Uploading correction…", failed: "Correction upload failed", completed: "uploaded", running: "Uploading correction…"
+        } : {
+            add: "Upload", overwrite: "Replace and upload", addAll: "Upload all", overwriteAll: "Replace and upload all",
+            ready: "Ready to upload", pending: "Uploading…", failed: "Upload failed", completed: "uploaded", running: "Uploading…"
+        }
+    });
+    if (correctionId) window.qcDeliveryUpload.picker.input.multiple = false;
 })(window, document);

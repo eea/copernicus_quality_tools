@@ -1,4 +1,4 @@
-/* Text-first lifecycle presentation for a delivery's latest QC state. */
+/* Keep the manager's decision distinct from the delivery's QC result. */
 (function (window, $) {
   "use strict";
 
@@ -14,37 +14,45 @@
       detail: "The latest QC state needs review.",
     };
 
-    if (deliveryStatus === "submitted") {
+    if (deliveryStatus === "needs_correction") {
+      result.icon = "alert-triangle";
+      result.label = "Correction needed";
+      result.detail = "Corrections requested. Read the feedback before uploading again.";
+    } else if (deliveryStatus === "accepted") {
+      result.icon = "check-circle";
+      result.label = "Accepted";
+      result.detail = "Accepted by the product manager. No further action is needed.";
+    } else if (deliveryStatus === "submitted") {
       result.icon = "send";
       result.label = "Submitted";
-      result.detail = row.date_submitted
-        ? "Submitted " + formatters.formatDate(row.date_submitted)
-        : "Submitted to EEA";
+      result.detail = "Awaiting the product manager's review.";
+      if (row.submission_review_state === "conflict") {
+        result.detail = "The product manager is reviewing competing submissions.";
+      }
     } else if (deliveryStatus === "not_validated") {
       result.icon = "clock";
       result.label = "Not validated";
       result.detail = "Run QC to validate this delivery.";
     } else if (deliveryStatus === "running") {
-      result.icon = "refresh";
-      result.label = jobStatus === "waiting" ? "Queued" : "Running";
-      result.detail = row.date_started
-        ? "Started " + formatters.formatDate(row.date_started)
-        : "Waiting for a QC worker.";
+      result.icon = jobStatus === "waiting" ? "clock" : "refresh";
+      result.label = jobStatus === "waiting" ? "In queue" : "In progress";
+      result.detail = jobStatus === "waiting"
+        ? "QC will start automatically when a worker is available."
+        : "QC is running. Results will appear automatically.";
     } else if (deliveryStatus === "passed") {
       result.icon = "check-circle";
-      result.label = "Passed";
-      result.detail = "The latest QC job passed.";
+      result.label = "Validated";
+      result.detail = "QC passed. Ready to submit for review.";
     } else if (deliveryStatus === "failed") {
       result.icon = "x-circle";
-      result.label =
+      result.label = "Failed";
+      result.detail =
         {
-          partial: "Partially passed",
-          error: "Failed",
-          "worker timeout": "Worker timeout",
-          "worker lost": "Worker unavailable",
-          file_not_found: "File not found",
-        }[jobStatus] || "Failed";
-      result.detail = "The latest QC job needs review.";
+          partial: "Some checks failed. Review the QC result before trying again.",
+          "worker timeout": "The QC worker timed out. Review the result and run QC again.",
+          "worker lost": "The QC worker became unavailable. Run QC again.",
+          file_not_found: "The delivery file could not be found. Review the QC result.",
+        }[jobStatus] || "Review the QC result to see what needs fixing.";
     }
     return result;
   }

@@ -167,6 +167,7 @@
     }
 
     function createFile(list, options) {
+        var labels = options.labels || {};
         var row = element("li", "qc-upload-file", list);
         row.setAttribute("tabindex", "-1");
         var heading = element("div", "qc-upload-file__heading", row);
@@ -219,10 +220,10 @@
             button.hidden = true;
             return button;
         }
-        var add = action("Add", "data-upload-add", options.add);
+        var add = action(labels.add || "Add", "data-upload-add", options.add);
         add.className = "btn btn-primary btn-qc-primary";
-        var overwrite = action("Overwrite", "data-upload-overwrite", options.overwrite);
-        overwrite.className = "btn btn-primary btn-qc-primary";
+        var overwrite = action(labels.overwrite || "Overwrite", "data-upload-overwrite", options.overwrite);
+        overwrite.className = "btn btn-default btn-qc-secondary qc-upload-file__replace";
         var retry = action("Retry upload", "data-upload-retry", options.retry);
         var pause = action("Pause", "data-upload-pause", options.pause);
         var resume = action("Resume", "data-upload-resume", options.resume);
@@ -241,7 +242,7 @@
                 status.textContent = value.label;
                 // Ready actions already express the state. Keep the main row
                 // compact; processing, warnings and results live below it.
-                status.hidden = value.state === "selected" || value.state === "replaceable";
+                status.hidden = value.state === "selected";
                 track.hidden = ["selected", "replaceable", "blocked", "failed", "checking", "queued", "canceled", "completed"].indexOf(value.state) !== -1;
                 track.setAttribute("aria-valuetext", value.label);
                 if (typeof value.percent === "number" && Number.isFinite(value.percent)) {

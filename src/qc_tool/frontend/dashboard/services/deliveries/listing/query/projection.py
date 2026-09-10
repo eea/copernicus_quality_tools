@@ -1,9 +1,15 @@
 """Database-row projection for delivery-list consumers."""
 
+from uuid import UUID
+
 from django.urls import reverse
+
 from qc_tool.frontend.dashboard.access import delivery_action_capabilities
 from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
     classify_delivery_status,
+)
+from qc_tool.frontend.dashboard.services.deliveries.listing.workflows import (
+    classify_delivery_workflow,
 )
 
 
@@ -28,9 +34,29 @@ def project_delivery_rows(rows, account_access, include_capabilities):
             item["delivery_status"] = classify_delivery_status(
                 item["last_job_status"],
                 item.get("date_submitted"),
+                item.get("submission_review_state"),
+                item.get("submission_publication_state"),
             ).value
+            item["workflow_stage"] = classify_delivery_workflow(item["delivery_status"])
+        submission_id = item.get("submission_id")
+        if submission_id:
+            # SQLite raw cursors return UUID hex strings; the public URL and
+            # JSON contract use the same canonical UUID on both backends.
+            submission_id = str(UUID(str(submission_id)))
+            item["submission_id"] = submission_id
         item["submission_url"] = (
-            "{}?state=all&delivery={}".format(reverse("submission_queue"), item["id"])
-            if item.get("date_submitted") else ""
+            reverse("submission_review", args=(submission_id,))
+            if submission_id else ""
         )
+        if "submission_id" in item:
+            item["can_upload_correction"] = bool(
+                submission_id
+                and item.get("delivery_status") == "needs_correction"
+                and account_access.user_id == owner_id
+                and account_access.can_upload
+            )
+            item["correction_upload_url"] = (
+                "{}?correction_for={}".format(reverse("file_upload"), submission_id)
+                if item["can_upload_correction"] else ""
+            )
     return rows

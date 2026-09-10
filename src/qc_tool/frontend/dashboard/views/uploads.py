@@ -1,22 +1,27 @@
 """Resumable browser-upload pages and chunk endpoints."""
 
 import json
+from uuid import UUID
 
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.services.submissions.access import visible_submissions
+from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context
 from qc_tool.frontend.dashboard.services.uploads import ResumableUploadDescriptor
 from qc_tool.frontend.dashboard.services.uploads import ResumableUploadError
 from qc_tool.frontend.dashboard.services.uploads import prepare_resumable_paths
 from qc_tool.frontend.dashboard.services.uploads.registration import probe_registered_chunk, receive_registered_chunk
 from qc_tool.frontend.dashboard.services.uploads.resumable import validate_delivery_filename
 from qc_tool.frontend.dashboard.services.uploads.overwrite import overwrite_reason
+from qc_tool.frontend.dashboard.services.uploads.corrections import correction_identifier, require_correction_submission
 
 
 MAX_CHECK_BYTES = 64 * 1024
@@ -25,6 +30,7 @@ MAX_CHECK_BYTES = 64 * 1024
 def delivery_upload_check(request):
     """Check filename collisions in the authenticated user's deliveries only."""
 
+    correction_id = None
     try:
         if request.content_type != "application/json":
             raise ResumableUploadError("invalid_upload_check", "Send the filenames as JSON.", 400)
@@ -40,6 +46,14 @@ def delivery_upload_check(request):
             raise ResumableUploadError("invalid_upload_check", "Provide between 1 and 100 filenames.", 400)
         for filename in filenames:
             validate_delivery_filename(filename)
+        if "correction_submission_id" in payload:
+            correction_id = correction_identifier(payload["correction_submission_id"])
+            for filename in filenames:
+                submission = require_correction_submission(correction_id, user=request.user, filename=filename)
+                if submission.delivery.is_deleted:
+                    raise ResumableUploadError(
+                        "correction_not_available", "A correction has already been uploaded. Open Deliveries to continue with its quality checks.", 409,
+                    )
     except RequestDataTooBig:
         return JsonResponse({"status": "error", "code": "upload_check_too_large", "message": "Check at most 100 filenames at a time."}, status=413)
     except (ValueError, UnicodeError):
@@ -60,7 +74,7 @@ def delivery_upload_check(request):
         delivery = existing.get(filename)
         reason = ""
         if delivery is not None:
-            reason = "Multiple deliveries have this filename. Use a different filename or resolve the existing records first." if filename in ambiguous else overwrite_reason(delivery)
+            reason = "Multiple deliveries have this filename. Resolve the existing records first." if filename in ambiguous else overwrite_reason(delivery, correction_submission_id=correction_id)
         files.append({
             "filename": filename, "exists": delivery is not None,
             "delivery_id": delivery.pk if delivery is not None else None,
@@ -76,8 +90,20 @@ def delivery_upload_check(request):
 
 def resumable_upload_page(request):
     """Upload delivery ZIP files with recoverable registration."""
+    correction = None
+    if "correction_for" in request.GET:
+        try:
+            submission_id = UUID(request.GET["correction_for"])
+        except (ValueError, TypeError, AttributeError):
+            raise Http404("Correction unavailable.") from None
+        access = access_for_request(request)
+        submission = get_object_or_404(visible_submissions(access), pk=submission_id)
+        correction = correction_context(submission, access)
+        if correction is None:
+            raise Http404("Correction unavailable.")
     return render(request, 'dashboard/deliveries/upload.html', {
-        'resumable_simultaneous_uploads': settings.RESUMABLE_SIMULTANEOUS_UPLOADS
+        'resumable_simultaneous_uploads': settings.RESUMABLE_SIMULTANEOUS_UPLOADS,
+        'correction': correction,
     })
 
 
@@ -86,6 +112,12 @@ def resumable_upload(request):
     parameters = request.GET if request.method == "GET" else request.POST
     try:
         descriptor = ResumableUploadDescriptor.from_mapping(parameters)
+        if descriptor.correction_submission_id is not None:
+            require_correction_submission(
+                descriptor.correction_submission_id, user=request.user,
+                filename=descriptor.filename, delivery_id=descriptor.overwrite_delivery_id,
+                allow_retired=True,
+            )
 
         if request.method == "GET":
             paths = prepare_resumable_paths(

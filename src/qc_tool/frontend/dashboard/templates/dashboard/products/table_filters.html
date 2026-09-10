@@ -1,0 +1,7 @@
+<div class="qc-table-toolbar__field">
+    <label for="products-plan-filter">Delivery plan</label>
+    <select id="products-plan-filter" class="form-control" aria-controls="tbl-products">
+        <option value="">All plans ({{ product_count }})</option>
+        {% for filter in plan_filters %}<option value="{{ filter.value }}" data-plan-label="{{ filter.label }}">{{ filter.label }} ({{ filter.count }})</option>{% endfor %}
+    </select>
+</div>

@@ -13,6 +13,9 @@ from qc_tool.frontend.dashboard.services.configuration.presentation import (
 from qc_tool.frontend.dashboard.services.deliveries import (
     count_delivery_statuses,
 )
+from qc_tool.frontend.dashboard.services.deliveries.listing.workflows import (
+    ACTION_GROUPS, WORKFLOW_CONFIG, delivery_workflow_tabs,
+)
 
 from qc_tool.frontend.dashboard.views.products import (
     _workspace_product_catalog,
@@ -43,7 +46,11 @@ def deliveries(request):
         "announcement": get_announcement_message(),
         "delivery_actions_enabled": delivery_actions_enabled,
         "boundary_version": get_boundary_version(),
-        "delivery_status_tabs": delivery_status_counts.as_tabs(),
+        "delivery_workflow_tabs": delivery_workflow_tabs(delivery_status_counts),
+        "delivery_workflow_config": WORKFLOW_CONFIG,
+        "delivery_action_groups": ACTION_GROUPS,
+        "delivery_status_counts": delivery_status_counts,
+        "delivery_status_filters": delivery_status_counts.as_filters(),
         "product_catalog": product_catalog,
         "product_catalog_available": product_catalog_available,
         "update_job_statuses": update_job_statuses,

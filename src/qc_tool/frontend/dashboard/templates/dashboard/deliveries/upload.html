@@ -1,18 +1,21 @@
 {% extends "dashboard/layouts/upload_queue_page.html" %}
 {% load static %}
 
-{% block title %}Upload delivery | Deliveries | CLMS QC Tool{% endblock title %}
+{% block title %}{% if correction %}Upload correction{% else %}Upload delivery{% endif %} | Deliveries | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page delivery-upload-page{% endblock main_class %}
 
-
+{% block workspace_css %}
+{{ block.super }}
+{% if correction %}<link rel="stylesheet" href="{% static 'dashboard/css/ui/review-feedback.css' %}">{% endif %}
+{% endblock workspace_css %}
 
 {% block page_breadcrumbs %}
 {% url 'deliveries' as deliveries_url %}
 {% include "dashboard/shared/breadcrumbs.html" with parent_label="Deliveries" parent_url=deliveries_url current_label="Upload" only %}
 {% endblock page_breadcrumbs %}
 
-{% block page_title %}Upload delivery{% endblock page_title %}
-{% block page_subtitle %}<p>Upload ZIP files, review them below, then add them individually or together.</p>{% endblock page_subtitle %}
+{% block page_title %}{% if correction %}Upload correction{% else %}Upload delivery{% endif %}{% endblock page_title %}
+{% block page_subtitle %}<p>{% if correction %}Address the feedback and upload your corrected ZIP with the original filename.{% else %}Choose ZIP files, review the list, then upload them individually or together.{% endif %}</p>{% endblock page_subtitle %}
 {% block page_actions %}
 <a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
@@ -21,18 +24,38 @@
 {% endblock page_actions %}
 
 {% block upload_id %}resumable-upload{% endblock upload_id %}
-{% block upload_title %}Upload delivery files{% endblock upload_title %}
-{% block upload_description %}Drag and drop or browse .zip delivery archives to add them. Each archive will go through a preliminary validation check before upload, so potential conflicts can be reviewed safely. If an archive with the same name already exists, you can choose to overwrite it with the new version.{% endblock upload_description %}
-{% block upload_attributes %}data-check-url="{% url 'delivery_upload_check' %}" data-upload-url="{% url 'resumable_upload' %}" data-deliveries-url="{% url 'deliveries' %}" data-simultaneous-uploads="{{ resumable_simultaneous_uploads }}"{% endblock upload_attributes %}
+{% block upload_title %}{% if correction %}Corrected delivery ZIP{% else %}Upload delivery files{% endif %}{% endblock upload_title %}
+{% block upload_description %}{% if correction %}Upload one corrected ZIP named {{ correction.submission.delivery.filename }}. Your original submission stays preserved.{% else %}We check for matching names in your deliveries before uploading. Review any replacements below; submitted files and files with active quality checks stay protected. To correct a rejected submission, use Upload correction from its review.{% endif %}{% endblock upload_description %}
+{% block upload_attributes %}data-check-url="{% url 'delivery_upload_check' %}" data-upload-url="{% url 'resumable_upload' %}" data-deliveries-url="{% url 'deliveries' %}" data-setup-job-url="{% url 'setup_job' %}" data-simultaneous-uploads="{{ resumable_simultaneous_uploads }}"{% if correction %} data-correction-submission="{{ correction.submission.pk }}" data-correction-filename="{{ correction.submission.delivery.filename }}" data-correction-delivery-id="{{ correction.submission.delivery_id }}"{% endif %}{% endblock upload_attributes %}
 {% block upload_body %}
 <div class="workspace-card__body qc-upload-body">
+    {% if correction %}
+    <section class="workspace-notice workspace-notice--warning" aria-labelledby="delivery-correction-title">
+        <div>
+            <h2 id="delivery-correction-title">Upload a correction</h2>
+            <p><strong>{{ correction.submission.delivery.filename }}</strong> was rejected for {{ correction.submission.product_release.product.name }} · {{ correction.submission.aoi_code }}.</p>
+            {% include "dashboard/submissions/feedback.html" with feedback=correction.feedback only %}
+            <ol>
+                <li>Address the feedback and keep the exact filename <strong>{{ correction.submission.delivery.filename }}</strong>.</li>
+                <li>Upload the corrected ZIP below, then choose <strong>Run quality checks</strong>.</li>
+                <li>Once QC passes, submit the corrected delivery for the product manager to review.</li>
+            </ol>
+            <p>The rejected submission and its files stay in your history. Uploading a correction does not submit it automatically.</p>
+            <a class="btn btn-qc-secondary btn-qc--compact" href="{{ correction.review_url }}">View original submission and feedback</a>
+        </div>
+    </section>
+    {% endif %}
     <div class="workspace-notice workspace-notice--danger" data-upload-unsupported role="alert" hidden>
         <div><h2>Browser upload is unavailable</h2><p>Please use a current browser to upload your ZIP files.</p></div>
     </div>
+    {% if correction %}
+    {% include "dashboard/shared/uploads/picker.html" with id="delivery-upload" input_id="delivery-upload-file" input_name="file" accept=".zip,application/zip" label="Corrected delivery ZIP" title="Choose corrected ZIP" drop_title="Drop your corrected ZIP here" hint="Keep the original filename exactly, including letter case. Choose one ZIP file." choose_label="Choose corrected ZIP" multiple=False only %}
+    {% else %}
     {% include "dashboard/shared/uploads/picker.html" with id="delivery-upload" input_id="delivery-upload-file" input_name="file" accept=".zip,application/zip" label="Delivery ZIP files" title="Browse files" drop_title="Drop ZIP files here" hint="Deliveries should contain one area of interest per ZIP file." choose_label="Browse files" multiple=True only %}
+    {% endif %}
     <noscript><p class="qc-upload-error">Enable JavaScript to upload delivery files.</p></noscript>
     {% include "dashboard/shared/uploads/queue.html" only %}
-    <p class="qc-upload-hint">After adding a delivery, open Deliveries to run quality checks.</p>
+    <p class="qc-upload-hint">{% if correction %}Your correction needs new quality checks before you can submit it for review. The original submission and its review history remain available.{% else %}After uploading, open Deliveries to run quality checks. Replaced deliveries keep their previous history and need new checks.{% endif %}</p>
 </div>
 {% endblock upload_body %}
 

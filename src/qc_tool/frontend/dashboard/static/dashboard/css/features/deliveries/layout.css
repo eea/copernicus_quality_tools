@@ -21,29 +21,8 @@
     margin-top: 1px;
 }
 
-.delivery-status-filters,
-.delivery-filter-panel {
-    border: 1px solid var(--qc-color-border);
-    border-radius: var(--qc-radius-card);
-    background: var(--qc-color-surface);
-    box-shadow: var(--qc-shadow-low);
-}
-
-.delivery-status-filters,
-.delivery-filter-panel {
-    margin-bottom: 14px;
-}
-
 .deliveries-card {
     overflow: hidden;
-}
-
-.deliveries-card__header {
-    align-items: center;
-}
-
-.deliveries-card__header > div:first-child {
-    min-width: 0;
 }
 
 .deliveries-card__body {

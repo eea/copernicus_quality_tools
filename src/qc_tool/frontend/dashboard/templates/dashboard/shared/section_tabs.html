@@ -1,0 +1,15 @@
+{# Shared section navigation: links for page routes, buttons for table views. #}
+<nav{% if id %} id="{{ id }}"{% endif %} class="qc-section-tabs" aria-label="{{ label }}">
+    <ul class="qc-section-tabs__list">
+        {% for tab in tabs %}
+        <li{% if tab.align_end %} class="qc-section-tabs__end"{% endif %}>
+            {% if tab.url %}<a class="qc-section-tabs__item" href="{{ tab.url }}"{% if tab.active %} aria-current="page"{% endif %}>
+            {% else %}<button class="qc-section-tabs__item{% if tab.active %} is-active{% endif %}" type="button" data-{{ data_attribute }}="{{ tab.value }}" aria-pressed="{{ tab.active|yesno:'true,false' }}"{% if controls %} aria-controls="{{ controls }}"{% endif %}>{% endif %}
+                {% if tab.indicator %}<span class="qc-section-tabs__indicator{% if tab.count %} is-active{% endif %}" aria-hidden="true"></span>{% endif %}
+                <span>{{ tab.label }}</span>
+                {% if tab.count != None %}<span class="qc-section-tabs__count"{% if data_attribute %} data-{{ data_attribute }}-count="{{ tab.value }}"{% endif %}>{{ tab.count }}</span>{% endif %}
+            {% if tab.url %}</a>{% else %}</button>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</nav>

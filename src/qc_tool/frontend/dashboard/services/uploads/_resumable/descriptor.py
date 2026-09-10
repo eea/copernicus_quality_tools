@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 import re
+from uuid import UUID
 
 from .errors import ResumableUploadError
 
@@ -27,6 +28,7 @@ class ResumableUploadDescriptor:
     total_chunks: int
     total_size: int
     overwrite_delivery_id: int | None = None
+    correction_submission_id: str | None = None
 
     @classmethod
     def from_mapping(cls, values) -> "ResumableUploadDescriptor":
@@ -45,6 +47,15 @@ class ResumableUploadDescriptor:
             overwrite_delivery_id = _positive_integer(
                 _single_mapping_value(values, "overwrite_delivery_id")
             )
+        correction_submission_id = None
+        if "correction_submission_id" in values:
+            correction_submission_id = correction_identifier(
+                _single_mapping_value(values, "correction_submission_id")
+            )
+            if overwrite_delivery_id is None:
+                raise ResumableUploadError(
+                    "correction_target_required", "Choose the rejected delivery to correct.", 400,
+                )
 
         chunk_number = _positive_integer(
             _single_mapping_value(values, "resumableChunkNumber")
@@ -85,6 +96,7 @@ class ResumableUploadDescriptor:
             total_chunks=total_chunks,
             total_size=total_size,
             overwrite_delivery_id=overwrite_delivery_id,
+            correction_submission_id=correction_submission_id,
         )
 
     @property
@@ -102,6 +114,8 @@ class ResumableUploadDescriptor:
         )
         if self.overwrite_delivery_id is not None:
             metadata += "\0overwrite\0" + str(self.overwrite_delivery_id)
+        if self.correction_submission_id is not None:
+            metadata += "\0correction\0" + self.correction_submission_id
         return sha256(metadata.encode("utf-8")).hexdigest()
 
     def expected_size_for_chunk(self, chunk_number: int) -> int:
@@ -110,6 +124,15 @@ class ResumableUploadDescriptor:
         if chunk_number < self.total_chunks:
             return self.chunk_size
         return self.total_size - self.chunk_size * (self.total_chunks - 1)
+
+
+def correction_identifier(value):
+    try:
+        return str(UUID(str(value)))
+    except (ValueError, TypeError, AttributeError):
+        raise ResumableUploadError(
+            "invalid_correction_submission", "The correction reference is invalid.", 400,
+        ) from None
 
 
 def _single_mapping_value(values, name: str):

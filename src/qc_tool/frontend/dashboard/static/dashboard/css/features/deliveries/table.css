@@ -12,24 +12,31 @@
     table-layout: auto;
 }
 
-.deliveries-page #tbl-deliveries > tbody >
-tr.delivery-row--submitted > td {
-    background-color: #f0faf3;
+.deliveries-page #tbl-deliveries > tbody > tr.delivery-action-group > th {
+    padding: 12px 16px;
+    border-top: 1px solid var(--qc-color-border);
+    border-bottom: 1px solid var(--qc-color-border);
+    background: var(--qc-color-surface-subtle);
+    color: var(--qc-color-navy);
+    font-size: 13px;
+    font-weight: 650;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
-.deliveries-page #tbl-deliveries > tbody >
-tr.delivery-row--submitted:hover > td {
-    background-color: #e7f7ec;
+.delivery-action-group__count {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 1px 7px;
+    border-radius: var(--qc-radius-pill);
+    background: var(--qc-color-surface);
+    color: var(--qc-color-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
 }
 
-.deliveries-page #tbl-deliveries > tbody >
-tr.delivery-row--submitted.selected > td {
-    background-color: #def2e5;
-}
-
-.deliveries-page #tbl-deliveries > tbody >
-tr.delivery-row--submitted.selected:hover > td {
-    background-color: #d5eedf;
+.delivery-row--calm .delivery-row-action {
+    font-weight: 500;
 }
 
 .deliveries-page #tbl-deliveries th.bs-checkbox,

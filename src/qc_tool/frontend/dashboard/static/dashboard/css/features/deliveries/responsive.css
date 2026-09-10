@@ -1,14 +1,5 @@
 /* Responsive delivery workspace behavior. */
 @media (max-width: 1100px) {
-    .delivery-filter-panel {
-        grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.7fr) minmax(160px, 0.6fr);
-    }
-
-    .delivery-filter-actions {
-        grid-column: 1 / -1;
-        justify-content: flex-end;
-    }
-
     .deliveries-selection {
         align-items: flex-start;
         flex-direction: column;
@@ -16,29 +7,6 @@
 }
 
 @media (max-width: 767px) {
-    .delivery-status-filters {
-        padding: 0 8px;
-    }
-
-    .delivery-status-filter {
-        min-height: 54px;
-        padding-right: 10px;
-        padding-left: 10px;
-    }
-
-    .delivery-filter-panel {
-        grid-template-columns: 1fr;
-    }
-
-    .delivery-filter-actions {
-        grid-column: auto;
-        justify-content: stretch;
-    }
-
-    .delivery-filter-actions #btn-clear-filters {
-        flex: 1 1 auto;
-    }
-
     .deliveries-toolbar {
         padding-right: 14px;
         padding-left: 14px;
@@ -89,12 +57,5 @@
     .deliveries-page *::after {
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
-    }
-}
-
-@media (forced-colors: active) {
-    .delivery-status-filter.is-active::after,
-    .delivery-status-filter__dot {
-        background: CanvasText;
     }
 }

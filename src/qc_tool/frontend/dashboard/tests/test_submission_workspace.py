@@ -1,7 +1,9 @@
 """Exercise plan activation, owner tracking, review and retained downloads."""
 
 from pathlib import Path
+from dataclasses import replace
 import shutil
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -9,10 +11,13 @@ from django.contrib.auth.models import Group
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.authorization import AccountAccess
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import DeliverySubmission, ProductRelease
 from qc_tool.frontend.dashboard.services.catalog import get_product_coverage
 from qc_tool.frontend.dashboard.services.submissions import SubmissionError
+from qc_tool.frontend.dashboard.services.submissions.access import can_view_submission
+from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context, current_review_feedback
 from qc_tool.frontend.dashboard.services.tests.test_submissions import SubmissionFixtureMixin
 
 
@@ -76,10 +81,105 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.client.force_login(self.owner)
         response = self.client.get(self.review_url(submission))
         self.assertContains(response, "Please correct the boundary extent.")
-        self.assertContains(response, "upload a new ZIP")
+        self.assertContains(response, "Rejected · corrections requested")
+        self.assertContains(response, "keep the exact filename")
+        self.assertContains(response, "Upload correction")
         response = self.client.get(reverse("submission_file", args=(submission.pk, "input.d/delivery.zip")))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"delivery for workspace-owner")
+
+    def test_rejection_feedback_is_prominent_escaped_and_linked_to_owner_correction(self):
+        submission = self.published()
+        notes = 'Correct the <script>alert("extent")</script> boundary.\nInclude all required tiles.'
+        self.client.force_login(self.manager)
+        self.assertContains(self.client.get(self.review_url(submission)), "Reject and request corrections")
+        self.assertEqual(self.decision(submission, "declined", notes=notes).status_code, 302)
+        submission.refresh_from_db()
+        self.client.force_login(self.owner)
+        response = self.client.get(self.review_url(submission))
+        event = submission.review_events.get()
+        self.assertEqual(response.context["review_feedback"], event)
+        self.assertEqual(response.context["correction"]["feedback"], event)
+        self.assertContains(response, "Feedback from <strong>assigned-manager</strong>")
+        self.assertContains(response, "&lt;script&gt;alert(&quot;extent&quot;)&lt;/script&gt;")
+        self.assertNotContains(response, '<script>alert("extent")</script>')
+        self.assertContains(response, '?correction_for={}'.format(submission.pk))
+        self.assertContains(response, 'datetime="{}"'.format(event.created_at.isoformat()))
+        self.assertLess(response.content.index(b"correction-heading"), response.content.index(b"Submitted delivery and QC evidence"))
+        self.assertNotContains(response, "Reject and request corrections")
+        queue = self.client.get(reverse("submission_queue"))
+        self.assertEqual(queue.context["selected_state"], "all")
+        self.assertEqual(list(queue.context["review_items"]), [submission])
+        self.assertContains(queue, "Read feedback")
+
+    def test_correction_upload_keeps_feedback_and_limits_access_to_rejected_owner(self):
+        submission = self.published()
+        self.client.force_login(self.manager)
+        self.decision(submission, "declined", notes="Fix the extent. <script>unsafe()</script>")
+        url = "{}?correction_for={}".format(reverse("file_upload"), submission.pk)
+        self.client.force_login(self.owner)
+        response = self.client.get(url)
+        self.assertContains(response, "Upload a correction")
+        self.assertContains(response, "Fix the extent. &lt;script&gt;unsafe()&lt;/script&gt;")
+        self.assertContains(response, "Uploading a correction does not submit it automatically.")
+        self.assertContains(response, 'data-correction-submission="{}"'.format(submission.pk))
+        self.assertContains(response, 'data-correction-filename="{}"'.format(submission.delivery.filename))
+        self.assertContains(response, 'data-correction-delivery-id="{}"'.format(submission.delivery_id))
+        self.assertNotContains(response, "Use a different filename")
+        self.assertEqual(response.context["correction"]["submission"].pk, submission.pk)
+        self.assertIsNone(self.client.get(reverse("file_upload")).context["correction"])
+        for invalid in ("", "not-a-uuid", "00000000-0000-0000-0000-000000000000"):
+            self.assertEqual(self.client.get(reverse("file_upload"), {"correction_for": invalid}).status_code, 404)
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.client.force_login(self.unassigned)
+        self.assertIn(self.client.get(url).status_code, (403, 404))
+        DeliverySubmission.objects.filter(pk=submission.pk).update(review_state="accepted")
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_reviewers_read_feedback_but_only_uploader_can_start_a_correction(self):
+        submission = self.published()
+        self.client.force_login(self.manager)
+        self.decision(submission, "declined", notes="Correct the coverage gaps.")
+        submission.refresh_from_db()
+        for reviewer in (self.manager, self.admin):
+            with self.subTest(reviewer=reviewer.username):
+                self.client.force_login(reviewer)
+                response = self.client.get(self.review_url(submission))
+                self.assertContains(response, "Correct the coverage gaps.")
+                self.assertNotContains(response, "Upload correction")
+                self.assertIsNone(response.context["correction"])
+        other = get_user_model().objects.create_user("other-review-owner", password="password")
+        UserProductGrant.objects.create(user=other, product_ident=self.product.ident)
+        for outsider in (self.unassigned, other):
+            self.client.force_login(outsider)
+            self.assertEqual(self.client.get(self.review_url(submission)).status_code, 404)
+            self.assertFalse(can_view_submission(
+                AccountAccess.from_user(outsider), owner_id=self.owner.pk, product_ident=self.product.ident,
+            ))
+        owner_access = AccountAccess.from_user(self.owner)
+        self.assertIsNotNone(correction_context(submission, owner_access))
+        self.assertIsNone(correction_context(submission, replace(owner_access, permissions=frozenset())))
+        self.assertIsNone(correction_context(submission, AccountAccess.anonymous()))
+
+    def test_manager_can_track_own_submission_without_product_review_assignment(self):
+        submission = self.published()
+        self.owner.groups.add(Group.objects.get(name="product_manager"))
+        self.client.force_login(self.owner)
+        response = self.client.get(self.review_url(submission))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["can_review"])
+        self.assertIsNone(response.context["correction"])
+        self.assertEqual(self.decision(submission, "approved").status_code, 403)
+
+    def test_feedback_matches_current_decision_and_version(self):
+        old_rejection = SimpleNamespace(version=1, decision="declined", notes="Old feedback")
+        current_approval = SimpleNamespace(version=2, decision="approved", notes="Approved after review")
+        receipt = SimpleNamespace(review_version=2, review_state="rejected")
+        self.assertIsNone(current_review_feedback(receipt, events=[old_rejection, current_approval]))
+        current_rejection = SimpleNamespace(version=2, decision="declined", notes="Current feedback")
+        self.assertIs(current_review_feedback(receipt, events=[old_rejection, current_rejection]), current_rejection)
 
     def test_download_scope_and_integrity_are_enforced(self):
         submission = self.published()

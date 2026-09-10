@@ -122,13 +122,13 @@
 .qc-data-table-region .fixed-table-toolbar,
 .bootstrap-table.qc-data-table .fixed-table-toolbar {
     display: flex;
-    min-height: 60px;
+    min-height: var(--qc-data-table-toolbar-min-height, 60px);
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    padding: 10px 18px;
+    padding: var(--qc-data-table-toolbar-padding, 10px 18px);
     border-bottom: 1px solid var(--qc-color-border-subtle);
-    background: var(--qc-color-surface-subtle);
+    background: var(--qc-data-table-toolbar-background, var(--qc-color-surface-subtle));
     gap: 10px;
 }
 
@@ -196,7 +196,9 @@
 }
 
 .qc-data-table-region .fixed-table-toolbar .columns .btn-group > .btn-group > .btn,
-.bootstrap-table.qc-data-table .fixed-table-toolbar .columns .btn-group > .btn-group > .btn {
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns .btn-group > .btn-group > .btn,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group > .btn,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn {
     border-radius: var(--qc-radius-small);
 }
 
@@ -279,9 +281,9 @@
 @media (max-width: 767px) {
     .qc-data-table-region .fixed-table-toolbar,
     .bootstrap-table.qc-data-table .fixed-table-toolbar {
-        min-height: 64px;
+        min-height: var(--qc-data-table-toolbar-min-height, 64px);
         align-items: stretch;
-        padding: 12px 14px;
+        padding: var(--qc-data-table-toolbar-padding, 12px 14px);
     }
 
     .qc-data-table-region .fixed-table-toolbar .bs-bars,
@@ -296,7 +298,9 @@
 
     .qc-data-table-region .fixed-table-toolbar .columns > .btn-group,
     .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group {
-        width: 100%;
+        width: auto;
+        min-width: 0;
+        flex: 1 1 0;
     }
 
     .qc-data-table-region .fixed-table-toolbar .columns > .btn,

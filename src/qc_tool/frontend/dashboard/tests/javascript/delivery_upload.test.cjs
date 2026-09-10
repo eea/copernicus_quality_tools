@@ -33,7 +33,7 @@ test("existing filename offers explicit Overwrite with a warning and link", asyn
     page.choose([file()]); page.checked(0, true); await tick();
     const entry = page.queue.entries[0];
     assert.equal(entry.state, "replaceable");
-    assert.match(entry.message, /already uploaded/);
+    assert.match(entry.message, /delivery with this name/);
     assert.equal(entry.url, "/deliveries/jobs/7/");
     assert.equal(entry.row.element.querySelector("[data-upload-add]").hidden, true);
     assert.equal(entry.row.element.querySelector("[data-upload-overwrite]").hidden, false);
@@ -104,7 +104,11 @@ test("Add all skips protected deliveries and confirms each new delivery independ
     page.choose([file("existing.zip"), file("one.zip"), file("two.zip")]);
     page.checked(0, true, {can_overwrite: false, overwrite_reason: "This delivery has a submission."}); page.checked(1); page.checked(2); await tick();
     assert.equal(page.all.hidden, false);
+    assert.equal(page.all.textContent, "Upload all (2)");
     page.all.click(); page.checked(3); await tick();
+    assert.equal(page.all.hidden, false);
+    assert.equal(page.all.disabled, true);
+    assert.match(page.all.textContent, /Uploading.*2 remaining/);
     assert.equal(page.transports.length, 1);
     page.transports[0].success(8); await tick();
     page.checked(4); await tick();
@@ -150,7 +154,7 @@ test("Overwrite explicitly pins the inspected delivery and requires fresh QC", a
     assert.equal(page.transports[1].options.query.overwrite_delivery_id, 7);
     assert.equal(page.transports[1].options.generateUniqueIdentifier(), upload.options.generateUniqueIdentifier());
     page.transports[1].success(8); await tick();
-    assert.equal(page.queue.entries[0].label, "Overwritten");
+    assert.equal(page.queue.entries[0].label, "Replaced");
     assert.equal(page.queue.entries[0].url, "/deliveries/jobs/8/");
 });
 
@@ -158,8 +162,8 @@ test("mixed batch clearly adds new files and overwrites eligible duplicates", as
     const page = queuePage("deliveries");
     page.choose([file("new.zip"), file("existing.zip"), file("protected.zip")]);
     page.checked(0); page.checked(1, true); page.checked(2, true, {can_overwrite: false}); await tick();
-    assert.equal(page.all.textContent, "Add all & overwrite (2)");
-    assert.match(page.batchDescription.textContent, /Adds 1 new file and overwrites 1 existing file/);
+    assert.equal(page.all.textContent, "Replace and upload all (2)");
+    assert.match(page.batchDescription.textContent, /1 new file · 1 replacement/);
     page.all.click(); page.checked(3); await tick();
     assert.equal(page.transports[0].options.query.overwrite_delivery_id, undefined);
     page.transports[0].success(10); await tick();
@@ -173,8 +177,8 @@ test("a batch of only duplicates also offers an overwrite batch action", async (
     const page = queuePage("deliveries");
     page.choose([file("one.zip"), file("two.zip")]); page.checked(0, true); page.checked(1, true); await tick();
     assert.equal(page.all.hidden, false);
-    assert.equal(page.all.textContent, "Add all & overwrite (2)");
-    assert.match(page.batchDescription.textContent, /^Overwrites 2 existing files/);
+    assert.equal(page.all.textContent, "Replace and upload all (2)");
+    assert.match(page.batchDescription.textContent, /^2 replacements/);
 });
 
 test("a changed overwrite target requires a new explicit choice", async () => {
@@ -196,4 +200,62 @@ test("a file becoming protected before batch overwrite is skipped", async () => 
     assert.match(page.queue.entries[0].message, /retained/);
     assert.equal(page.transports.length, 1);
     assert.equal(page.transports[0].file.name, "next.zip");
+});
+
+const correction = {id: "c31729bc-f62d-4dcc-8636-0520b510a52e", filename: "delivery.zip", deliveryId: 7};
+
+test("corrections reject a changed filename locally, including letter case", async () => {
+    const page = queuePage("deliveries", {correction});
+    assert.equal(page.picker.input.multiple, false);
+    page.choose([file("different.zip"), file("Delivery.zip")]);
+    await tick();
+    assert.equal(page.requests.length, 0);
+    assert.equal(page.transports.length, 0);
+    page.queue.entries.forEach(entry => {
+        assert.equal(entry.state, "blocked");
+        assert.equal(entry.label, "Filename must match");
+        assert.match(entry.message, /Keep the original filename: "delivery.zip"/);
+        assert.equal(entry.row.element.querySelector("[data-upload-overwrite]").hidden, true);
+    });
+});
+
+test("correction upload pins the rejected submission and opens fresh QC", async () => {
+    const page = queuePage("deliveries", {correction});
+    page.choose([file()]);
+    assert.deepEqual(JSON.parse(page.requests[0].body), {filenames: ["delivery.zip"], correction_submission_id: correction.id});
+    page.checked(0, true); await tick();
+    const entry = page.queue.entries[0];
+    assert.equal(entry.label, "Ready for correction");
+    assert.equal(entry.row.element.querySelector("[data-upload-overwrite]").textContent, "Upload correction");
+    assert.match(entry.message, /rejected submission and its files will stay/);
+    page.click(entry, "overwrite"); page.checked(1, true); await tick();
+    assert.deepEqual({...page.transports[0].options.query}, {overwrite_delivery_id: 7, correction_submission_id: correction.id});
+    page.transports[0].success(8); await tick();
+    assert.equal(entry.label, "Correction uploaded");
+    assert.equal(entry.url, "/deliveries/jobs/new/?deliveries=8");
+    assert.equal(entry.linkLabel, "Run quality checks");
+    assert.match(entry.message, /then submit this correction for review/);
+});
+
+test("a correction cannot silently switch to a different delivery or a new upload", async () => {
+    for (const extra of [{delivery_id: 8}, {exists: false}, {can_overwrite: false}]) {
+        const page = queuePage("deliveries", {correction});
+        page.choose([file()]); page.checked(0, true); await tick();
+        page.click(page.queue.entries[0], "overwrite"); page.checked(1, true, extra); await tick();
+        assert.equal(page.transports.length, 0);
+        assert.equal(page.queue.entries[0].state, "blocked");
+        assert.match(page.queue.entries[0].message, /can no longer receive a correction/);
+    }
+});
+
+test("only one same-named corrected ZIP can be eligible in the queue", async () => {
+    const page = queuePage("deliveries", {correction});
+    page.choose([file(), file()]); page.checked(0, true); await tick();
+    assert.deepEqual(Array.from(page.queue.entries, entry => entry.state), ["replaceable", "blocked"]);
+    assert.equal(page.all.hidden, true);
+    page.click(page.queue.entries[0], "overwrite"); page.checked(1, true); await tick();
+    page.transports[0].fail({message: "Response lost"}); await tick();
+    page.click(page.queue.entries[0], "retry"); await tick();
+    assert.equal(page.transports[1].options.query.correction_submission_id, correction.id);
+    assert.equal(page.transports[1].options.generateUniqueIdentifier(), page.transports[0].options.generateUniqueIdentifier());
 });

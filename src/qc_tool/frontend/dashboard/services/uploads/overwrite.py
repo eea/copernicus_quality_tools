@@ -19,13 +19,21 @@ from ._resumable.chunks import is_chunk_stored, is_upload_complete, store_chunk
 from ._resumable.errors import ResumableUploadError
 from ._resumable.filesystem import open_directory, read_flags, write_once_flags
 from ._resumable.paths import expected_chunk_paths
+from .corrections import require_correction_submission, verify_retained_correction_input
 
 
-def overwrite_reason(delivery):
+def overwrite_reason(delivery, *, correction_submission_id=None, locked=False):
     if delivery.s3_id is not None:
         return "This delivery uses S3 storage. Add this ZIP with a different filename."
-    if delivery.date_submitted is not None or DeliverySubmission.objects.filter(delivery_id=delivery.pk).exists():
-        return "This delivery has a submission and is retained. Add this ZIP with a different filename."
+    submissions = DeliverySubmission.objects.select_for_update() if locked else DeliverySubmission.objects
+    submission = submissions.filter(delivery_id=delivery.pk).first()
+    if submission is not None:
+        if submission.review_state != "rejected" or submission.publication_state != "published":
+            return "This delivery is submitted for review or approved. Only rejected submissions can receive corrections."
+        if str(submission.pk) != correction_submission_id:
+            return "This delivery was rejected. Open its submission and choose Upload correction to keep the original filename and review history."
+    elif delivery.date_submitted is not None:
+        return "This submitted delivery has no review receipt and cannot be replaced."
     if Job.objects.filter(delivery_id=delivery.pk, job_status__in=(JOB_WAITING, JOB_RUNNING)).exists():
         return "This delivery has waiting or running quality checks. Wait for them to finish before overwriting."
     return ""
@@ -85,9 +93,14 @@ def _require_original(descriptor, paths, user, *, locked=False):
                             filename=descriptor.filename, is_deleted=False).first()
     if original is None or Delivery.objects.filter(user_id=user.pk, filename=descriptor.filename, is_deleted=False).exclude(pk=original.pk).exists():
         raise _changed()
-    reason = overwrite_reason(original)
+    reason = overwrite_reason(original, correction_submission_id=descriptor.correction_submission_id, locked=locked)
     if reason:
         raise ResumableUploadError("overwrite_not_allowed", reason, 409)
+    if descriptor.correction_submission_id is not None:
+        require_correction_submission(
+            descriptor.correction_submission_id, user=user, filename=descriptor.filename,
+            delivery_id=original.pk, locked=locked,
+        )
     return original
 
 
@@ -141,13 +154,16 @@ def receive_overwrite_chunk(descriptor, paths, *, user, uploaded_chunk, director
                     original.is_deleted = True
                     original.save(update_fields=("is_deleted",))
         if journal is None:
-            _require_original(descriptor, paths, user)
+            original = _require_original(descriptor, paths, user)
             if uploaded_chunk is not None:
                 store_chunk(uploaded_chunk, paths.chunk_path, expected_bytes=descriptor.current_chunk_size)
             elif not is_upload_complete(descriptor, paths):
                 raise ResumableUploadError("upload_incomplete", "The staged replacement is incomplete. Resume the browser upload with its selected ZIP.", 409)
             if not is_upload_complete(descriptor, paths):
                 return None
+            submission = DeliverySubmission.objects.filter(delivery_id=original.pk).first()
+            if submission is not None:
+                verify_retained_correction_input(submission)
             _discard_stale_assembly(directory)
             _write_assembly(descriptor, expected_chunk_paths(descriptor, paths), directory)
             previous = _identity(target_directory, descriptor.filename)

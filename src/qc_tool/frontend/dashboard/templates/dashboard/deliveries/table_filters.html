@@ -1,0 +1,18 @@
+<div id="delivery-status-field" class="qc-table-toolbar__field">
+    <label for="delivery-status-select">Status</label>
+    <select id="delivery-status-select" class="form-control" aria-controls="tbl-deliveries">
+        <option value="">Any status</option>
+        {% for status in delivery_status_filters %}<option value="{{ status.value }}" data-status-label="{{ status.label }}">{{ status.label }} ({{ status.count }})</option>{% endfor %}
+    </select>
+</div>
+<div class="qc-table-toolbar__field">
+    <label for="delivery-filter-product">Product</label>
+    <select id="delivery-filter-product" class="form-control" aria-controls="tbl-deliveries">
+        <option value="">All products</option>
+        {% if product_catalog_available %}{% for product in product_catalog %}<option value="{{ product.description }}">{{ product.description }}</option>{% endfor %}{% endif %}
+    </select>
+</div>
+<div class="qc-table-toolbar__field">
+    <label for="delivery-filter-aoi">AOI</label>
+    <input id="delivery-filter-aoi" class="form-control" type="search" maxlength="255" placeholder="All AOIs" autocomplete="off" aria-controls="tbl-deliveries">
+</div>

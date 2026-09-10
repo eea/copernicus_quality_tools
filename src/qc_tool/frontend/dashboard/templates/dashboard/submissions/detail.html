@@ -2,15 +2,31 @@
 {% load static %}
 {% block title %}Submission | {{ submission.delivery.filename }} | CLMS QC Tool{% endblock %}
 {% block main_class %}workspace-page submission-review-page{% endblock %}
-{% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}">{% endblock %}
+{% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/ui/review-feedback.css' %}">{% endblock %}
 {% block page_breadcrumbs %}{% url 'submission_queue' as submissions_url %}{% include "dashboard/shared/breadcrumbs.html" with parent_label="Submissions" parent_url=submissions_url current_label="Review" only %}{% endblock %}
 {% block page_title %}{{ submission.delivery.filename }}{% endblock %}
-{% block page_subtitle %}<p>{{ submission.product_release.product.name }} · AOI {{ submission.aoi_code }} · <strong>{{ submission.get_review_state_display }}</strong></p>{% endblock %}
+{% block page_subtitle %}<p>{{ submission.product_release.product.name }} · AOI {{ submission.aoi_code }} · <strong>{% if submission.review_state == 'rejected' %}Rejected{% else %}{{ submission.get_review_state_display }}{% endif %}</strong></p>{% endblock %}
 {% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'submission_queue' %}">Back to submissions</a>{% endblock %}
 {% block page_content %}
 {% if form.non_field_errors %}<div class="workspace-notice workspace-notice--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+{% if submission.review_state == 'rejected' %}
+<section class="workspace-card submission-feedback" aria-labelledby="correction-heading">
+    <header class="workspace-card__header"><div><h2 id="correction-heading">Rejected · corrections requested</h2><p>This submission does not count towards product fulfilment. The submitted ZIP, QC evidence and review history are retained.</p></div></header>
+    <div class="workspace-card__body">
+        {% include "dashboard/submissions/feedback.html" with feedback=review_feedback only %}
+        {% if correction %}
+        <div class="submission-feedback__next">
+            <h3>Prepare your correction</h3>
+            <ol><li>Apply the requested changes and keep the exact filename <strong>{{ submission.delivery.filename }}</strong>.</li><li>Upload the corrected ZIP, then run QC for the same product and AOI.</li><li>When QC passes, choose <strong>Submit for review</strong> on the Deliveries page.</li></ol>
+            <p>Your original submission remains available here while the corrected delivery goes through a new review.</p>
+            <a class="btn btn-primary btn-qc-primary" href="{{ correction.upload_url }}">Upload correction</a>
+        </div>
+        {% elif can_review %}<p class="submission-feedback__next">The uploader can read this feedback from their Deliveries page and upload a corrected ZIP for a fresh QC check and review.</p>{% endif %}
+    </div>
+</section>
+{% endif %}
 <section class="workspace-card">
-    <header class="workspace-card__header"><div><h2>Verify the submitted delivery</h2><p>Review the retained ZIP and QC evidence before deciding. Files and previous decisions are preserved.</p></div></header>
+    <header class="workspace-card__header"><div><h2>Submitted delivery and QC evidence</h2><p>{% if can_decide %}Review the retained ZIP and QC evidence before deciding. {% endif %}Files and previous decisions are preserved.</p></div></header>
     <div class="workspace-card__body">
         <dl class="review-facts"><div><dt>Product</dt><dd><a href="{% url 'product_detail' submission.product_release.product.ident %}">{{ submission.product_release.product.name }}</a></dd></div><div><dt>Plan revision</dt><dd>{{ submission.product_release.revision }}</dd></div><div><dt>Submitted by</dt><dd>{{ submission.submitted_by_username }}</dd></div><div><dt>Submitted on</dt><dd>{{ submission.requested_at|date:"Y-m-d H:i T" }}</dd></div><div><dt>QC result</dt><dd>{% if submission.job.job_status == "ok" %}Passed{% else %}{{ submission.job.job_status }}{% endif %}</dd></div><div><dt>Files</dt><dd>{{ submission.get_publication_state_display }}</dd></div></dl>
         {% if storage_available %}<details open><summary>Retained files and QC evidence</summary><ul class="review-files">{% for file in files %}<li><a href="{{ file.url }}">{{ file.name }}</a> <span>{{ file.size|filesizeformat }}</span></li>{% endfor %}</ul></details>{% else %}<p class="workspace-notice workspace-notice--warning">The retained files are currently unavailable. Check publication or storage before approving this delivery.</p>{% endif %}
@@ -20,13 +36,13 @@
 {% if can_decide %}
 <form method="post" class="workspace-card review-form">
     {% csrf_token %}{{ form.expected_review_version }}{{ form.expected_conflict_version }}
-    <header class="workspace-card__header"><div><h2>Record your decision</h2><p>Approval counts this AOI towards fulfilment. A decline keeps the files and gives the uploader feedback.</p></div></header>
+    <header class="workspace-card__header"><div><h2>Record your decision</h2><p>Approve the delivery to count this AOI towards fulfilment, or request corrections with clear feedback for the uploader.</p></div></header>
     <div class="workspace-card__body">
         {{ form.expected_review_version.errors }}{{ form.expected_conflict_version.errors }}{{ form.decision.errors }}
-        <div class="review-form__field"><label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label><p>{{ form.notes.help_text }}</p>{{ form.notes }}{{ form.notes.errors }}</div>
-        <div class="review-actions">{% if not conflict or conflict.state != "open" %}<button class="btn btn-primary btn-qc-primary" type="submit" name="decision" value="approved">Approve submission</button>{% endif %}<button class="btn btn-qc-danger-outline" type="submit" name="decision" value="declined">Decline submission</button>{% if conflict and conflict.state == 'open' %}<button class="btn btn-default btn-qc-secondary" type="submit" name="decision" value="replace">Approve this and decline competing submissions</button>{% endif %}</div>
+        <div class="review-form__field"><label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label><p id="review-notes-help">{{ form.notes.help_text }}</p>{{ form.notes }}{{ form.notes.errors }}</div>
+        <div class="review-actions">{% if not conflict or conflict.state != "open" %}<button class="btn btn-primary btn-qc-primary" type="submit" name="decision" value="approved">Approve submission</button>{% endif %}<button class="btn btn-qc-danger-outline" type="submit" name="decision" value="declined">Reject and request corrections</button>{% if conflict and conflict.state == 'open' %}<button class="btn btn-default btn-qc-secondary" type="submit" name="decision" value="replace">Approve this and reject competing submissions</button>{% endif %}</div>
     </div>
 </form>
 {% endif %}
-<section class="workspace-card"><header class="workspace-card__header"><div><h2>Review history</h2><p>Each decision records its author, time and feedback.</p></div></header><div class="workspace-card__body">{% for event in events %}<article class="review-event"><strong>{{ event.get_decision_display }}</strong> · {{ event.actor_username }} · <time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"Y-m-d H:i T" }}</time><p>{{ event.notes|linebreaksbr }}</p></article>{% empty %}<p>No review decisions have been recorded.</p>{% endfor %}{% if submission.review_state == 'rejected' %}<p>To correct a declined delivery, upload a new ZIP, run QC and submit it for review. This submission remains in your history.</p>{% endif %}</div></section>
+<section class="workspace-card"><header class="workspace-card__header"><div><h2>Review history</h2><p>Each decision records its author, time and feedback.</p></div></header><div class="workspace-card__body">{% for event in events %}<article class="review-event"><strong>{% if event.decision == 'declined' %}Rejected{% else %}{{ event.get_decision_display }}{% endif %}</strong> · {{ event.actor_username }} · <time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"Y-m-d H:i T" }}</time><p>{{ event.notes|linebreaksbr }}</p></article>{% empty %}<p>No review decisions have been recorded.</p>{% endfor %}</div></section>
 {% endblock %}

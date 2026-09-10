@@ -38,7 +38,7 @@
         if (status === "failed") {
             label = "Review QC result";
         } else if (status === "running") {
-            label = "View current QC job";
+            label = "View QC progress";
         }
         actionLink(
             actionClasses(primary, "delivery-job-link"),
@@ -86,8 +86,19 @@
         var status = String(row.delivery_status || "failed");
         var actions = [];
 
+        // These stages are informational: keep the route to details visible,
+        // without competing calls to action while QC or review is underway.
+        if (["running", "submitted", "accepted"].indexOf(status) >= 0) {
+            if (status !== "running" && row.submission_url) {
+                return ["review"];
+            }
+            return row.job_result_url ? ["result"] : [];
+        }
         if (row.submission_url) {
             actions.push("review");
+        }
+        if (status === "needs_correction" && row.can_upload_correction && row.correction_upload_url) {
+            actions.push("correction");
         }
         if (status === "passed" && formatters.canSubmit(row)) {
             actions.push("submit");
@@ -119,16 +130,25 @@
         });
         var actions = plan(row);
         var primaryAssigned = false;
+        var needsAction = ["needs_correction", "failed", "not_validated", "passed"]
+            .indexOf(String(row.delivery_status || "failed")) >= 0;
 
         actions.forEach(function (action) {
-            var isPrimary = action !== "delete" && !primaryAssigned;
+            var isPrimary = needsAction && action !== "delete" && !primaryAssigned;
             var $container = isPrimary ? $primary : $secondary;
 
             if (action === "review") {
                 actionLink(
                     actionClasses(isPrimary, "delivery-review-link"),
-                    "send", "View submission", String(row.submission_url),
+                    "send", row.delivery_status === "needs_correction"
+                        ? "View feedback" : "View submission", String(row.submission_url),
                     "View submission and review feedback for " + filename
+                ).appendTo($container);
+            } else if (action === "correction") {
+                actionLink(
+                    actionClasses(isPrimary, "delivery-correction-link"),
+                    "upload", "Upload correction", String(row.correction_upload_url),
+                    "Upload a correction for " + filename
                 ).appendTo($container);
             } else if (action === "submit") {
                 appendSubmit($container, row, filename, isPrimary);

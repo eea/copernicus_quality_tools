@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.models import DeliverySubmission, SubmissionReviewEvent
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import Product, ProductRelease
 from qc_tool.frontend.dashboard.services.deliveries.listing.filters import (
@@ -14,11 +15,14 @@ from qc_tool.frontend.dashboard.services.deliveries.listing.filters import (
 from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
     delivery_status_sql,
 )
+from qc_tool.frontend.dashboard.services.deliveries.listing.workflows import (
+    DeliveryWorkflow, delivery_priority_sql, delivery_workflow_sql, parse_delivery_workflow,
+)
 
 from .columns import COLUMN_LOOKUP
 
 
-def _delivery_join_sql(database_connection):
+def _delivery_join_sql(database_connection, submission_join):
     """Resolve SQL identifiers from the same models used by ORM consumers."""
 
     quote_name = database_connection.ops.quote_name
@@ -37,8 +41,50 @@ def _delivery_join_sql(database_connection):
         ON d.user_id = u.id
         LEFT JOIN {profile_table} up
         ON d.user_id = up.user_id
+        {submission_join}
         WHERE d.is_deleted = FALSE
         """
+
+
+def _submission_join_sql(database_connection, account_access, user_id):
+    """Join only review receipts visible to the owner or assigned reviewers.
+
+    A region grant can reveal a delivery without granting access to its manager
+    correspondence. Keep that boundary in SQL so filters cannot disclose it.
+    """
+
+    quote_name = database_connection.ops.quote_name
+    submission_table = quote_name(DeliverySubmission._meta.db_table)
+    event_table = quote_name(SubmissionReviewEvent._meta.db_table)
+    visibility = ""
+    parameters = []
+    if not account_access.is_administrator:
+        clauses = ["d.user_id = %s"]
+        parameters.append(user_id)
+        if getattr(account_access, "is_product_manager", False):
+            products = sorted(account_access.reviewable_product_idents)
+            if products:
+                placeholders = ", ".join(["%s"] * len(products))
+                release_table = quote_name(ProductRelease._meta.db_table)
+                product_table = quote_name(Product._meta.db_table)
+                clauses.append(
+                    f"EXISTS (SELECT 1 FROM {release_table} review_release "
+                    f"JOIN {product_table} review_product "
+                    f"ON review_product.id = review_release.product_id "
+                    f"WHERE review_release.id = s.product_release_id "
+                    f"AND review_product.ident IN ({placeholders}))"
+                )
+                parameters.extend(products)
+        visibility = " AND ({})".format(" OR ".join(clauses))
+    return (
+        f"LEFT JOIN {submission_table} s ON s.delivery_id = d.id {visibility} "
+        f"LEFT JOIN {event_table} review_event "
+        "ON review_event.submission_id = s.submission_uuid "
+        "AND review_event.version = s.review_version "
+        "AND ((s.review_state = 'accepted' AND review_event.decision = 'approved') "
+        "OR (s.review_state = 'rejected' AND review_event.decision = 'declined'))",
+        parameters,
+    )
 
 
 DELIVERY_SELECT_SQL = """
@@ -51,7 +97,13 @@ DELIVERY_SELECT_SQL = """
         j.job_uuid AS last_job_uuid,
         j.date_created, j.date_started, j.date_finished,
         j.job_status as last_job_status,
-        up.country AS user_country
+        up.country AS user_country,
+        s.submission_uuid AS submission_id,
+        s.review_state AS submission_review_state,
+        s.publication_state AS submission_publication_state,
+        review_event.notes AS review_notes,
+        review_event.actor_username AS review_actor_username,
+        review_event.created_at AS review_created_at
         """
 
 
@@ -60,6 +112,7 @@ class DeliveryQueryPlan:
     count_sql: str
     rows_sql: str
     parameters: list
+    row_parameters: list
 
 
 def build_delivery_query_plan(
@@ -73,14 +126,29 @@ def build_delivery_query_plan(
     filter_expression,
     search,
     delivery_status,
+    delivery_view,
     database_connection,
 ):
     """Build parameterized count and row statements for one list request."""
 
+    delivery_view = parse_delivery_workflow(delivery_view)
     sort_column = COLUMN_LOOKUP.get(sort, "d.id")
     normalized_order = order.strip().lower()
     if normalized_order not in ("asc", "desc"):
         normalized_order = "desc"
+
+    sort_parameters = []
+    if sort == "priority" or delivery_view is DeliveryWorkflow.ACTION_REQUIRED:
+        priority_sql, sort_parameters = delivery_priority_sql()
+        ordering_sql = f"{priority_sql} ASC"
+        if sort != "priority":
+            ordering_sql += f", {sort_column} {normalized_order}"
+        if sort == "priority" or sort_column != "d.id":
+            ordering_sql += ", d.id DESC"
+    else:
+        ordering_sql = f"{sort_column} {normalized_order}"
+        if sort_column != "d.id":
+            ordering_sql += ", d.id DESC"
 
     filter_sql = ""
     filter_parameters = []
@@ -102,14 +170,23 @@ def build_delivery_query_plan(
         database_connection,
     )
     status_sql, status_parameters = delivery_status_sql(delivery_status)
-    constraints = visibility_sql + status_sql + filter_sql + search_sql
-    join_sql = _delivery_join_sql(database_connection)
+    workflow_sql, workflow_parameters = delivery_workflow_sql(delivery_view)
+    constraints = visibility_sql + workflow_sql + status_sql + filter_sql + search_sql
+    submission_join, submission_parameters = _submission_join_sql(
+        database_connection, account_access, user_id,
+    )
+    join_sql = _delivery_join_sql(database_connection, submission_join)
     parameters = (
-        visibility_parameters
+        submission_parameters
+        + visibility_parameters
+        + workflow_parameters
         + status_parameters
         + filter_parameters
         + search_parameters
     )
+    # Only the internal export iterator omits pagination. HTTP list callers
+    # still supply bounded integers through execute_delivery_query.
+    pagination_sql = f" LIMIT {limit} OFFSET {offset}" if limit is not None else ""
 
     return DeliveryQueryPlan(
         count_sql="SELECT COUNT(d.id)" + join_sql + constraints,
@@ -117,10 +194,11 @@ def build_delivery_query_plan(
             DELIVERY_SELECT_SQL
             + join_sql
             + constraints
-            + f" ORDER BY {sort_column} {normalized_order}"
-            + f" LIMIT {limit} OFFSET {offset};"
+            + f" ORDER BY {ordering_sql}"
+            + pagination_sql + ";"
         ),
         parameters=parameters,
+        row_parameters=parameters + sort_parameters,
     )
 
 

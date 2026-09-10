@@ -76,17 +76,11 @@
 }
 
 .job-result-card {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .job-result-table-region {
   max-width: 100%;
-  overflow-x: auto;
-}
-
-.job-result-table-region:focus-visible {
-  outline: 3px solid var(--qc-focus-ring);
-  outline-offset: -3px;
 }
 
 .job-result-page .bootstrap-table,

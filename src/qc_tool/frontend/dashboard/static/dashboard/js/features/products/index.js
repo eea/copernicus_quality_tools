@@ -5,6 +5,7 @@
     var dataTableUi = window.QcDataTableUi;
     var tableSelector = "#tbl-products";
     var announcementTimer;
+    var filters;
 
     function cellText(value) {
         return $.trim(
@@ -76,9 +77,10 @@
                 " of " + allRows.length + " matching products.";
         }
         $("#products-live-status").text(message);
-        $("#products-clear-filters").prop("hidden", !(
-            $("#products-search").val() || $("#products-plan-filter").val()
-        ));
+        filters.update({
+            active: Boolean($("#products-search").val() || $("#products-plan-filter").val()),
+            count: Number(Boolean($("#products-plan-filter").val()))
+        });
     }
 
     function scheduleAnnouncement($table) {
@@ -88,75 +90,67 @@
         }, 0);
     }
 
-    function enhance($table) {
-        dataTableUi.enhance($table, {
-            subject: "products",
-            region: "Product catalog table",
-            controls: "Product export",
-            export: "Export filtered products as CSV",
-            search: "Search products by name or identifier"
-        });
-    }
-
-    function exportButton($table) {
-        return dataTableUi.csvExportButton($table, {
-            filename: "products.csv",
-            text: "Export CSV",
-            label: "Export filtered products as CSV"
-        });
-    }
-
     function init() {
         var $table = $(tableSelector);
 
         if (!$table.length || !dataTableUi || !$.fn.bootstrapTable) {
             return;
         }
-        $table.on(
-            "post-body.bs.table column-switch.bs.table " +
-            "column-switch-all.bs.table",
-            function () {
-                enhance($table);
+        filters = window.QcTableFilters.create(document.getElementById("products-toolbar"), {
+            onClear: function () {
+                $("#products-plan-filter").val("");
+                $table.bootstrapTable("filterBy", {});
+                $table.bootstrapTable("resetSearch", "");
+                scheduleAnnouncement($table);
             }
-        );
+        });
         $table.on(
             "post-body.bs.table search.bs.table page-change.bs.table",
             function () {
                 scheduleAnnouncement($table);
             }
         );
-        $table.bootstrapTable(dataTableUi.options({
-            search: true,
-            searchSelector: "#products-search",
-            searchTimeOut: 150,
-            toolbar: "#products-toolbar",
-            customSearch: productSearch,
-            pagination: true,
-            showColumns: false,
-            buttons: function () {
-                return {exportView: exportButton($table)};
+        dataTableUi.create($table, {
+            labels: {subject: "products", region: "Product catalog table", search: "Search products by name or identifier"},
+            exports: {
+                filename: "products",
+                htmlFields: ["plan_status"],
+                values: {
+                    description: function (value) {
+                        return $("<div>").html(value).find(".product-table__title, .product-table__ident")
+                            .map(function () { return $(this).text(); }).get().join(" · ");
+                    },
+                    declared_expected: function (value) {
+                        var number = $("<div>").html(value).find(".product-table__metric").text();
+                        return number ? Number(number) : null;
+                    },
+                    completion_percentage: function (value) {
+                        var percentage = $("<div>").html(value).find("progress").attr("value");
+                        return percentage === undefined ? null : Number(percentage);
+                    }
+                }
             },
-            buttonsOrder: ["exportView"],
-            sortName: "description",
-            sortOrder: "asc",
-            pageSize: 20,
-            pageList: [20, 50, 100, 500],
-            formatNoMatches: function () {
-                return "No products match these filters. Try another name or delivery plan.";
+            options: {
+                search: true,
+                searchSelector: "#products-search",
+                searchTimeOut: 150,
+                toolbar: "#products-toolbar",
+                customSearch: productSearch,
+                pagination: true,
+                sortName: "description",
+                sortOrder: "asc",
+                pageSize: 20,
+                pageList: [20, 50, 100, 500],
+                formatNoMatches: function () {
+                    return "No products match these filters. Try another name or delivery plan.";
+                }
             }
-        }));
+        });
         $("#products-toolbar").prop("hidden", false);
         $("#products-plan-filter").on("change", function () {
             var plan = this.options[this.selectedIndex].getAttribute("data-plan-label");
             $table.bootstrapTable("filterBy", plan ? {plan: plan} : {});
         });
-        $("#products-clear-filters").on("click", function () {
-            $("#products-plan-filter").val("");
-            $table.bootstrapTable("filterBy", {});
-            $table.bootstrapTable("resetSearch", "");
-            $("#products-search").trigger("focus");
-        });
-        enhance($table);
         scheduleAnnouncement($table);
     }
 

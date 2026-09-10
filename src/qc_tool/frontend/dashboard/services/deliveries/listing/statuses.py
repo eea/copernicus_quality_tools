@@ -1,4 +1,4 @@
-"""Stable, mutually exclusive states used by the delivery-list UI."""
+"""Delivery states and aggregate views shared by listing consumers."""
 
 from dataclasses import dataclass
 from enum import Enum
@@ -12,20 +12,24 @@ class DeliveryStatus(str, Enum):
     """The complete public filter vocabulary for Delivery rows."""
 
     ALL = "all"
+    ATTENTION = "attention"
     NOT_VALIDATED = "not_validated"
     RUNNING = "running"
     PASSED = "passed"
     FAILED = "failed"
     SUBMITTED = "submitted"
+    ACCEPTED = "accepted"
+    NEEDS_CORRECTION = "needs_correction"
 
 
 STATUS_LABELS = (
-    (DeliveryStatus.ALL, "All"),
     (DeliveryStatus.NOT_VALIDATED, "Not validated"),
     (DeliveryStatus.RUNNING, "Running"),
-    (DeliveryStatus.PASSED, "Passed"),
+    (DeliveryStatus.PASSED, "Validated"),
     (DeliveryStatus.FAILED, "Failed"),
     (DeliveryStatus.SUBMITTED, "Submitted"),
+    (DeliveryStatus.ACCEPTED, "Accepted"),
+    (DeliveryStatus.NEEDS_CORRECTION, "Correction needed"),
 )
 
 
@@ -44,9 +48,15 @@ def parse_delivery_status(value):
         raise InvalidDeliveryStatus("Unknown delivery status filter.") from exc
 
 
-def classify_delivery_status(job_status, submitted_at=None):
+def classify_delivery_status(
+    job_status, submitted_at=None, review_state=None, publication_state=None,
+):
     """Return exactly one user-facing state for a Delivery and latest Job."""
 
+    if review_state == "rejected" and publication_state == "published":
+        return DeliveryStatus.NEEDS_CORRECTION
+    if review_state == "accepted" and publication_state == "published":
+        return DeliveryStatus.ACCEPTED
     if submitted_at is not None:
         return DeliveryStatus.SUBMITTED
     if job_status is None:
@@ -67,10 +77,24 @@ def delivery_status_sql(status):
     status = parse_delivery_status(status)
     if status is DeliveryStatus.ALL:
         return "", []
+    needs_correction = (
+        "COALESCE((s.review_state = 'rejected' "
+        "AND s.publication_state = 'published'), FALSE)"
+    )
+    accepted = (
+        "COALESCE((s.review_state = 'accepted' "
+        "AND s.publication_state = 'published'), FALSE)"
+    )
+    if status is DeliveryStatus.NEEDS_CORRECTION:
+        return " AND " + needs_correction, []
+    if status is DeliveryStatus.ACCEPTED:
+        return " AND " + accepted, []
+    if status is DeliveryStatus.ATTENTION:
+        return " AND (d.date_submitted IS NULL OR " + needs_correction + ") AND NOT " + accepted, []
     if status is DeliveryStatus.SUBMITTED:
-        return " AND d.date_submitted IS NOT NULL", []
+        return " AND d.date_submitted IS NOT NULL AND NOT " + needs_correction + " AND NOT " + accepted, []
 
-    unsubmitted = " AND d.date_submitted IS NULL"
+    unsubmitted = " AND d.date_submitted IS NULL AND NOT " + needs_correction + " AND NOT " + accepted
     if status is DeliveryStatus.NOT_VALIDATED:
         return unsubmitted + " AND j.job_status IS NULL", []
     if status is DeliveryStatus.RUNNING:
@@ -101,18 +125,29 @@ class DeliveryStatusCounts:
     passed: int
     failed: int
     submitted: int
+    needs_correction: int
+    accepted: int
+
+    @property
+    def attention(self):
+        """Unsubmitted work and rejected receipts whose corrections are due."""
+
+        return self.all - self.submitted - self.accepted
 
     def as_dict(self):
         return {
             "all": self.all,
+            "attention": self.attention,
             "not_validated": self.not_validated,
             "running": self.running,
             "passed": self.passed,
             "failed": self.failed,
             "submitted": self.submitted,
+            "accepted": self.accepted,
+            "needs_correction": self.needs_correction,
         }
 
-    def as_tabs(self):
+    def as_filters(self):
         values = self.as_dict()
         return tuple(
             {

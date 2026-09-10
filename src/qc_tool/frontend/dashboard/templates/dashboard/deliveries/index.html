@@ -9,7 +9,6 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/interactions.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/layout.css' %}" type="text/css" media="screen">
-<link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/filters.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/table.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/rows/overview.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/rows/status.css' %}" type="text/css" media="screen">
@@ -17,7 +16,7 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/features/deliveries/responsive.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
-{% block page_title %}{{ account_access.delivery_list_heading }}{% endblock page_title %}
+{% block page_title %}Deliveries{% endblock page_title %}
 {% block page_subtitle %}<p>{% if account_access.can_upload %}Upload, validate, and submit delivery packages.{% else %}Review delivery packages and their quality-control jobs.{% endif %}</p>{% endblock page_subtitle %}
 {% block page_actions %}
 {% if account_access.can_upload %}
@@ -37,55 +36,10 @@
     </div>
     {% endif %}
 
-    <nav id="delivery-status-filters" class="delivery-status-filters" aria-label="Filter deliveries by status">
-        <ul>
-            {% for tab in delivery_status_tabs %}
-            <li data-delivery-status-item="{{ tab.value }}">
-                <button class="delivery-status-filter{% if tab.value == 'all' %} is-active{% endif %}" type="button" data-delivery-status="{{ tab.value }}" aria-pressed="{% if tab.value == 'all' %}true{% else %}false{% endif %}">
-                    {% if tab.value != "all" %}<span class="delivery-status-filter__dot delivery-status-filter__dot--{{ tab.value }}" aria-hidden="true"></span>{% endif %}
-                    <span>{{ tab.label }}</span>
-                    <span class="delivery-status-filter__count" data-delivery-status-count="{{ tab.value }}">{{ tab.count }}</span>
-                </button>
-            </li>
-            {% endfor %}
-        </ul>
-    </nav>
-
-    <section class="delivery-filter-panel" aria-labelledby="delivery-filter-title">
-        <h2 id="delivery-filter-title" class="sr-only">Find deliveries</h2>
-        <div class="delivery-filter-field delivery-filter-field--search">
-            <label for="delivery-filter-search">Search deliveries</label>
-            <span class="delivery-filter-field__input">
-                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#search"></use></svg>
-                <input id="delivery-filter-search" class="form-control" type="search" maxlength="500" placeholder="Search by delivery name" autocomplete="off">
-            </span>
-        </div>
-        <div class="delivery-filter-field">
-            <label for="delivery-filter-product">Product</label>
-            <select id="delivery-filter-product" class="form-control">
-                <option value="">All products</option>
-                {% if product_catalog_available %}{% for product in product_catalog %}<option value="{{ product.description }}">{{ product.description }}</option>{% endfor %}{% endif %}
-            </select>
-        </div>
-        <div class="delivery-filter-field">
-            <label for="delivery-filter-aoi">AOI</label>
-            <input id="delivery-filter-aoi" class="form-control" type="search" maxlength="255" placeholder="All AOIs" autocomplete="off">
-        </div>
-        <div class="delivery-filter-actions" aria-label="Delivery filter actions">
-            <button id="btn-clear-filters" class="btn btn-qc-secondary" type="button" disabled>Clear filters</button>
-            <button id="btn-refresh-deliveries" class="btn btn-qc-icon" type="button" aria-label="Refresh deliveries" title="Refresh deliveries">
-                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#refresh"></use></svg>
-            </button>
-        </div>
-    </section>
-
     <section class="workspace-card deliveries-card" aria-labelledby="deliveries-table-title">
-        <header class="workspace-card__header deliveries-card__header">
-            <div>
-                <h2 id="deliveries-table-title">Deliveries and QC jobs</h2>
-                <p id="deliveries-table-description">Deliveries database with associated quality control jobs and job statuses</p>
-            </div>
-        </header>
+        {% include "dashboard/shared/section_tabs.html" with tabs=delivery_workflow_tabs label="Delivery workflow" id="delivery-workflow-tabs" data_attribute="delivery-view" controls="tbl-deliveries" only %}
+        <h2 id="deliveries-table-title" class="sr-only">{{ delivery_workflow_config.action_required.label }}</h2>
+        {% include "dashboard/shared/tables/toolbar.html" with id="delivery-table-toolbar" table_id="tbl-deliveries" search_id="delivery-filter-search" search_label="Search deliveries" search_placeholder="Search deliveries…" filters_template="dashboard/deliveries/table_filters.html" sort_template="dashboard/deliveries/table_sort.html" clear_id="btn-clear-filters" toggle_id="delivery-filter-toggle" panel_id="delivery-advanced-filters" summary_id="delivery-advanced-summary" %}
 
         <div class="workspace-card__body workspace-card__body--flush deliveries-card__body">
             {% if delivery_actions_enabled %}
@@ -110,8 +64,8 @@
 
             <p id="deliveries-live-status" class="sr-only" aria-live="polite"></p>
             <div class="deliveries-table-region qc-data-table-region">
-                <table id="tbl-deliveries" class="table qc-data-table" aria-describedby="deliveries-table-description" data-query-params="deliveryQueryParams" data-pagination="true" data-side-pagination="server" data-sort-name="id" data-sort-order="desc" data-checkbox-header="true">
-                    <caption class="sr-only">Deliveries with product and AOI context, upload details, job status, job history, and available actions</caption>
+                <table id="tbl-deliveries" class="table qc-data-table" aria-labelledby="deliveries-table-title" data-query-params="deliveryQueryParams" data-pagination="true" data-side-pagination="server" data-sort-name="priority" data-sort-order="asc" data-checkbox-header="true">
+                    <caption class="sr-only">Deliveries with product and AOI context, upload details, QC and review status, job history, and available actions</caption>
                     <thead>
                         <tr>
                             {% if delivery_actions_enabled %}<th data-checkbox="true" data-formatter="checkboxFormatter"></th>{% endif %}
@@ -122,20 +76,21 @@
                             <th class="delivery-source-cell" data-class="delivery-source-cell" data-field="type" data-sortable="true" data-visible="false" data-formatter="sourceFormatter">Source</th>
                             <th class="delivery-owner-cell" data-class="delivery-owner-cell" data-field="username" data-sortable="true" data-visible="false" data-formatter="ownerFormatter">Owner</th>
                             <th class="delivery-id-cell" data-class="delivery-id-cell" data-field="id" data-sortable="true" data-visible="false" data-formatter="idFormatter">ID</th>
-                            <th class="delivery-status-cell" data-class="delivery-status-cell" data-field="last_job_status" data-sortable="true" data-switchable="false" data-formatter="statusFormatter">Job status</th>
-                            <th class="delivery-actions-cell" data-class="delivery-actions-cell" data-field="actions" data-switchable="false" data-formatter="actionsFormatter">Actions</th>
+                            <th class="delivery-status-cell" data-class="delivery-status-cell" data-field="last_job_status" data-export-field="delivery_status" data-sortable="true" data-switchable="false" data-formatter="statusFormatter">QC &amp; review</th>
+                            <th class="delivery-actions-cell" data-class="delivery-actions-cell" data-field="actions" data-exportable="false" data-switchable="false" data-formatter="actionsFormatter">Actions</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
-            <footer class="workspace-card__footer deliveries-card__footer">QC Tool version {{ qc_tool_version }}</footer>
         </div>
     </section>
 {% endblock page_content %}
 
 {% block js %}
 {{ block.super }}
+{{ delivery_workflow_config|json_script:"delivery-workflow-config" }}
+{{ delivery_action_groups|json_script:"delivery-action-groups" }}
 <script>
 window.QC_DELIVERIES_CONFIG = {
     canUpload: {{ account_access.can_upload|yesno:"true,false" }},

@@ -1,0 +1,206 @@
+/* Search, filters, and table controls share one responsive table surface. */
+.qc-table-toolbar {
+    min-width: 0;
+    padding: 16px 24px;
+    background: var(--qc-color-surface);
+}
+
+.qc-table-toolbar[hidden],
+.qc-table-toolbar [hidden] {
+    display: none !important;
+}
+
+.qc-table-toolbar__main,
+.qc-table-toolbar__actions {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.qc-table-toolbar__main {
+    gap: 12px 16px;
+}
+
+.qc-table-toolbar__search {
+    flex: 1 1 240px;
+}
+
+.qc-table-toolbar__actions {
+    margin-left: auto;
+}
+
+.qc-table-toolbar__field {
+    min-width: 0;
+}
+
+.qc-table-toolbar__field label:not(.sr-only) {
+    display: block;
+    margin: 0 0 6px;
+    color: var(--qc-color-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.qc-table-toolbar__field .form-control {
+    width: 100%;
+    height: 40px;
+    border-color: var(--qc-color-border-strong);
+    border-radius: var(--qc-radius-small);
+    color: var(--qc-color-navy);
+    background: var(--qc-color-surface);
+    box-shadow: none;
+}
+
+.qc-table-toolbar__field .form-control:focus {
+    border-color: var(--qc-color-primary);
+    box-shadow: 0 0 0 3px var(--qc-focus-ring);
+}
+
+.qc-table-toolbar__input {
+    position: relative;
+    display: block;
+}
+
+.qc-table-toolbar__input .ui-icon {
+    position: absolute;
+    top: 11px;
+    left: 12px;
+    color: var(--qc-color-muted);
+    pointer-events: none;
+}
+
+.qc-table-toolbar__input .form-control {
+    padding-left: 39px;
+}
+
+.qc-table-toolbar__sort {
+    flex: 0 1 175px;
+    min-width: 145px;
+}
+
+.qc-table-toolbar__actions .btn {
+    min-height: 40px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    white-space: nowrap;
+}
+
+.qc-data-table .fixed-table-toolbar .qc-table-toolbar__toggle[aria-expanded="true"],
+.qc-data-table .fixed-table-toolbar .qc-table-toolbar__toggle.has-filters,
+.qc-table-toolbar__toggle[aria-expanded="true"],
+.qc-table-toolbar__toggle.has-filters {
+    border-color: var(--qc-color-primary);
+    color: var(--qc-color-primary);
+    background: var(--qc-color-primary-soft);
+}
+
+.qc-table-toolbar__toggle[aria-expanded="true"] .qc-table-toolbar__chevron {
+    transform: rotate(180deg);
+}
+
+.qc-table-toolbar__panel {
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--qc-color-border-subtle);
+    border-radius: var(--qc-radius-small);
+    background: var(--qc-color-surface-subtle);
+}
+
+.qc-table-toolbar__fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 16px;
+}
+
+/* Keep generated controls in their Bootstrap Table parent: column selection
+   resolves its buttons through that parent when the table refreshes. */
+.qc-data-table .fixed-table-toolbar.qc-data-table__toolbar--custom {
+    --qc-data-table-toolbar-min-height: 0;
+    --qc-data-table-toolbar-padding: 16px 24px;
+    --qc-data-table-toolbar-background: var(--qc-color-surface);
+    display: flex;
+    min-height: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 8px;
+    padding: 16px 24px;
+    background: var(--qc-color-surface);
+}
+
+.qc-data-table__toolbar--custom > .bs-bars,
+.qc-data-table__toolbar--custom .qc-table-toolbar,
+.qc-data-table__toolbar--custom .qc-table-toolbar__main,
+.qc-data-table__toolbar--custom .qc-table-toolbar__actions {
+    display: contents;
+}
+
+.qc-data-table__toolbar--custom .qc-table-toolbar__search {
+    order: 1;
+    margin-right: 8px;
+}
+
+.qc-data-table__toolbar--custom .qc-table-toolbar__actions > * {
+    order: 2;
+    flex-shrink: 0;
+}
+
+.qc-data-table .fixed-table-toolbar.qc-data-table__toolbar--custom > .columns {
+    display: flex;
+    order: 3;
+    width: auto;
+    align-items: center;
+    float: none;
+    margin: 0;
+}
+
+.qc-data-table__toolbar--custom > .columns .btn {
+    min-height: 40px;
+}
+
+.qc-data-table .fixed-table-toolbar .qc-table-toolbar__actions .btn-qc-quiet,
+.qc-data-table .fixed-table-toolbar .qc-table-toolbar__actions .btn-qc-icon {
+    border-color: transparent;
+}
+
+.qc-data-table__toolbar--custom .qc-table-toolbar__panel {
+    order: 4;
+    flex: 1 1 100%;
+    margin-top: 0;
+}
+
+@media (max-width: 767px) {
+    .qc-table-toolbar,
+    .qc-data-table .fixed-table-toolbar.qc-data-table__toolbar--custom {
+        --qc-data-table-toolbar-padding: 14px 16px;
+        padding: 14px 16px;
+    }
+
+    .qc-table-toolbar__search {
+        flex-basis: 100%;
+    }
+
+    .qc-data-table__toolbar--custom .qc-table-toolbar__search {
+        margin-right: 0;
+    }
+
+    .qc-table-toolbar__actions {
+        flex: 1 1 auto;
+        margin-left: 0;
+    }
+
+    .qc-table-toolbar__sort {
+        flex-grow: 1;
+    }
+}
+
+@media (forced-colors: active) {
+    .qc-data-table .fixed-table-toolbar .qc-table-toolbar__toggle[aria-expanded="true"],
+    .qc-data-table .fixed-table-toolbar .qc-table-toolbar__toggle.has-filters,
+    .qc-table-toolbar__toggle[aria-expanded="true"],
+    .qc-table-toolbar__toggle.has-filters {
+        border-color: Highlight;
+        color: Highlight;
+    }
+}

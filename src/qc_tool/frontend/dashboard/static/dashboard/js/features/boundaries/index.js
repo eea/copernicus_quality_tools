@@ -1,55 +1,40 @@
-$('#tbl-boundaries-raster').bootstrapTable({
-    cache: false,
-    striped: false,
-    search: false,
-    pagination: false,
-    showColumns: false,
-    sortName: 'filename',
-    sortOrder: 'asc',
-    url: $('#tbl-boundaries-raster').data('url'),
-    escape: true,
-    pageSize: 20,
-    pageList: [20, 50, 100, 500],
-    formatNoMatches: function () {
-        return $('#tbl-boundaries-raster').data('empty-message');
-    }
-});
+/* Each boundary family owns its data; controls share the table lifecycle. */
+(function (window, $) {
+    "use strict";
 
-$('#tbl-boundaries-vector').bootstrapTable({
-    cache: false,
-    striped: false,
-    search: false,
-    pagination: false,
-    showColumns: false,
-    sortName: 'filename',
-    sortOrder: 'asc',
-    url: $('#tbl-boundaries-vector').data('url'),
-    escape: true,
-    pageSize: 20,
-    pageList: [20, 50, 100, 500],
-    formatNoMatches: function () {
-        return $('#tbl-boundaries-vector').data('empty-message');
-    }
-});
+    window.fileSizeFormatter = function (value) {
+        if (value === null || value === undefined) return "—";
+        var bytes = Number(value);
+        if (!Number.isFinite(bytes) || bytes < 0) return "—";
+        if (!bytes) return "0 Bytes";
+        var units = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
+        var unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+        return Number((bytes / Math.pow(1024, unit)).toFixed(2)) + " " + units[unit];
+    };
 
-function fileSizeFormatter(value, row) {
-
-    function formatBytes(bytes,decimals) {
-       if(bytes == null) return null;
-       if(bytes == 0) return '0 Bytes';
-       var k = 1024,
-           dm = decimals || 2,
-           sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
-           i = Math.floor(Math.log(bytes) / Math.log(k));
-       return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-    }
-    return formatBytes(value, 2)
-}
-
-function dateFormatter(value, row) {
-   if (value) {
-        return moment(value).format('YYYY-MM-DD HH:mm:ss');
-   } else {
-        return null;
-   }
-}
+    $(function () {
+        ["raster", "vector"].forEach(function (family) {
+            var $table = $("#tbl-boundaries-" + family);
+            if (!$table.length) return;
+            window.QcDataTableUi.create($table, {
+                labels: {subject: family + " boundaries", regionLabelledBy: family + "-boundaries-title"},
+                exports: {filename: family + "-boundaries"},
+                options: {
+                    cache: false,
+                    search: true,
+                    pagination: true,
+                    sortName: "filename",
+                    sortOrder: "asc",
+                    url: $table.data("url"),
+                    escape: true,
+                    pageSize: 20,
+                    pageList: [20, 50, 100, 500],
+                    formatNoMatches: function () {
+                        var options = $table.bootstrapTable("getOptions") || {};
+                        return options.searchText ? "No boundaries match this search." : $table.data("empty-message");
+                    }
+                }
+            });
+        });
+    });
+}(window, window.jQuery));

@@ -8,6 +8,8 @@
 .qc-shell .btn-qc-icon {
   display: inline-flex;
   box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   min-height: 42px;
   align-items: center;
   justify-content: center;
@@ -21,6 +23,8 @@
   text-align: center;
   text-decoration: none;
   vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
   gap: 8px;
 }

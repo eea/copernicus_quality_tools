@@ -60,6 +60,7 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
     ),
 
     # Session-backed data endpoints return structured 401/403 responses.
+    "table_export": private_session_data(VIEW, "POST"),
     "deliveries_json": private_session_data(VIEW, "GET"),
     "job_history_json": private_session_data(VIEW, "GET"),
     "delivery_delete": private_session_data(
