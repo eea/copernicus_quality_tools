@@ -32,7 +32,7 @@ Service qc_tool_frontend
   * WORK_DIR, informs the frontend server where it should look for job output files;
   * SUBMISSION_DIR, if set instructs the frontend server where to put submissions, if not set or empty the feature is disabled;
   * FRONTEND_DB_PATH, informs the frontend server where to look for sqlite database, the database must exist;
-      the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite;
+      the original database file is created during docker build at /var/lib/qc_tool/frontend.sqlite; if using Postgres userdb, then this is ignored;
   * SHOW_LOGO, informs the frontend server to put the Copernicus logo at web pages;
   * UPDATE_JOB_STATUSES, instructs the frontend deliveries page to auto-refresh job status info (yes or no);
   * UPDATE_JOB_STATUSES_INTERVAL, interval to refresh job statuses on frontend deliveries page (30000 miliseconds);
