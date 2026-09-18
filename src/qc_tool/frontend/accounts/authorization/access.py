@@ -118,6 +118,12 @@ class AccountAccess:
         return self.allows(AccountPermission.MANAGE_CONFIGURATION)
 
     @property
+    def can_manage_product_catalog(self):
+        """Specification uploads, delivery plans and stopping are admin tasks."""
+
+        return self.is_authenticated and self.is_administrator
+
+    @property
     def can_access_django_admin(self):
         return self.is_authenticated and (
             self.is_administrator or self.is_product_manager

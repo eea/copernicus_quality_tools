@@ -10,8 +10,8 @@
 {% endblock workspace_css %}
 
 {% block page_breadcrumbs %}
-{% url 'products' as products_url %}
-{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label=product.name only %}
+
+{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=product_catalog_url current_label=product.name only %}
 {% endblock page_breadcrumbs %}
 
 {% block page_header_class %}workspace-page__header product-detail__header{% endblock page_header_class %}
@@ -25,11 +25,11 @@
     {% if product_is_active %}Upload revision{% else %}Restore product{% endif %}
 </a>
 {% if product.managed and product_is_active %}
-<a class="btn btn-default btn-qc-danger-outline" href="{% url 'product_remove' product.ident %}">Remove specification</a>
+<a class="btn btn-default btn-qc-danger-outline" href="{% url 'product_remove' product.ident %}">Stop product</a>
 {% endif %}
 {% endif %}
-<a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">
-    <span aria-hidden="true">←</span> All products
+<a class="btn btn-default btn-qc-secondary" href="{{ product_catalog_url }}">
+    <span aria-hidden="true">←</span> Back to {{ product_workflow_label|lower }} products
 </a>
 {% endblock page_actions %}
 
@@ -78,7 +78,7 @@
     <div class="workspace-notice workspace-notice--warning" role="status">
         <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#info"></use></svg>
         <div>
-            <h2>Removed from active use</h2>
+            <h2>Product stopped</h2>
             <p>This product is unavailable for new quality-control jobs. Its specifications, previous jobs, and submitted deliveries remain available.</p>
             {% if account_access.is_administrator %}<p>To restore it, upload a specification named <code>{{ product.ident }}.json</code>.</p>{% endif %}
         </div>

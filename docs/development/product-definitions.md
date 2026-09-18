@@ -65,7 +65,7 @@ A required unit is always tied to one immutable release revision.
 
 ## Add or update a product in the browser
 
-1. Sign in as an **administrator**. Uploading and removing specifications require
+1. Sign in as an **administrator**. Uploading specifications and stopping products require
    the administrator role; configuration or product-management permissions alone
    do not authorize these actions.
 2. Open **Products → Upload specification** (`/products/upload/`), or choose
@@ -74,12 +74,25 @@ A required unit is always tied to one immutable release revision.
    **Add all** for the ready files. Each request validates and saves one file;
    a failed file does not remove successful additions. An identical existing
    specification is explicitly marked **Already added**.
-3. After success, use **View product** to inspect its dated version history.
+3. The product appears in **Products → Draft**. After success, use **View product**
+   to inspect its dated version history.
    The product is also available in the QC product selector. Run a
    representative delivery through its checks before assigning it to users.
 4. Review the declared product units and use the [delivery-plan procedure](#approve-a-delivery-plan)
    when its expected deliverables are ready for approval. Uploading a recipe
    creates a draft or unknown scope; it does not approve final submissions.
+
+The Products tabs separate **Active**, **Draft**, **Stopped** and **Completed**
+products. Approving every current delivery plan moves a product from Draft to
+Active. An administrator can stop a product and restore it through a new
+specification upload. A product reaches Completed only after all required
+product units have accepted deliveries and its product manager explicitly marks
+it ready.
+
+Administrators see all four tabs. Other users, including product managers, see
+**Active** and only see **Completed** when a product they can access is completed.
+Draft and Stopped remain administrative views; product counts include only the
+user's accessible products.
 
 The filename becomes the lowercase product identifier. Use a stem of
 1–64 ASCII letters, digits, dots, underscores or hyphens, starting with a letter
@@ -98,8 +111,9 @@ bytes create the next immutable release revision. QC Tool records the creation
 date automatically; a date in the filename is unnecessary. The first upload of
 an imported specification creates an upload-managed release even when its bytes
 match the imported file. Repeating the current uploaded file without byte changes
-is a no-op, apart from completing an interrupted runtime activation. Previous
-definitions, releases, jobs and submitted
+is a no-op, apart from completing an interrupted runtime activation. It reports
+**Already added** and does not create another product or version, including when
+QC jobs are queued or running. Previous definitions, releases, jobs and submitted
 deliverables retain their original references. The administrator, action and
 source SHA-256 digest are recorded in Django's admin log.
 
@@ -107,23 +121,24 @@ The browser workflow supports a product with one release stream and one matching
 definition. Products grouping several specifications or release streams require
 the [reviewed catalog manifest](#approve-a-delivery-plan) workflow. Uploading a
 changed recipe derives a fresh draft or unknown product unit scope; it does not carry an
-older scope's business approval forward. Upload and removal operations are
+older scope's business approval forward. Revision, restoration and stop operations are
 blocked while the specification has queued or running QC jobs. Let those jobs
 finish before trying again.
 
-## Remove and restore a product
+## Stop and restore a product
 
-An administrator can choose **Remove specification** from the product detail
-page and confirm the action. Removal sets `catalog_product.is_active` to false
+An administrator can choose **Stop product** from the product detail
+page and confirm the action. Stopping sets `catalog_product.is_active` to false
 and publishes an inactive runtime marker. The product is hidden from active
 product lists and QC selection. It keeps its dated revision history, database
 references and stored version files; submitted deliverables remain intact.
-Directory synchronization does not reactivate a removed product.
+Directory synchronization does not reactivate a stopped product.
 
-Find it under **Removed products**, open its detail page, and select
+Find it under **Products → Stopped**, open its detail page, and select
 **Restore product** to upload a specification with the same filename. Restoration
 creates a new release revision, reactivates the product and selects the uploaded
-bytes for future QC. Review its product unit plan again before approving submissions.
+bytes for future QC. It returns to Draft; review and approve its product unit plan
+to move it to Active again.
 Grouped products and products with queued or running jobs follow the same
 restrictions as version uploads.
 
@@ -229,8 +244,10 @@ catalog data operation and does not generate migration files. Use
 
 Each row represents one product. Select its name to open the specification
 history and release details. Search by name or identifier, or filter by delivery
-plan status. **Export CSV** exports the filtered rows. Administrators can upload
-specifications and switch between **Active products** and **Removed products**.
+plan status. The **Active**, **Draft**, **Stopped** and **Completed** tabs show
+counts for the products the current user can access. **Export CSV** exports the
+filtered rows in the selected tab. Administrators can add specifications and
+stop products from their detail pages.
 
 **Required product units** shows the required product units, with provisional values
 identified as such. **Accepted coverage** shows accepted, published units out of

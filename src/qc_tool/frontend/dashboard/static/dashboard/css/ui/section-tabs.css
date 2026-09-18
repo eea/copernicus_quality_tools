@@ -87,6 +87,7 @@
     .qc-section-tabs__indicator.is-active { animation: none; }
 }
 
+.qc-section-tabs__item[aria-current="page"] .qc-section-tabs__count,
 .qc-section-tabs__item[aria-pressed="true"] .qc-section-tabs__count {
     background: var(--qc-color-primary-soft);
 }

@@ -42,7 +42,7 @@ def create_delivery_job(
         )
         Product = Job._meta.apps.get_model("dashboard", "Product")
         if Product.objects.filter(ident=product_ident, is_active=False).exists():
-            raise ValueError("This product specification has been removed from active use.")
+            raise ValueError("This product has been stopped and cannot start new quality-control jobs.")
         if product_ident not in available_product_idents():
             raise ValueError(
                 "The product specification is unavailable. An administrator must upload it before starting QC."

@@ -862,15 +862,16 @@ class SharedPageChromeTests(TestCase):
 
     def test_product_detail_is_a_child_of_the_product_catalog(self):
         url = reverse("product_detail", args=(self.product.ident,))
+        catalog_url = reverse("products") + "?product_view=active"
 
         self.assert_page_chrome(
             self.client.get(url),
             heading=self.product.name,
             breadcrumbs=(
-                ("Products", reverse("products")),
+                ("Products", catalog_url),
                 (self.product.name, None),
             ),
-            action=("All products", reverse("products")),
+            action=("Back to active products", catalog_url),
         )
 
     def test_feature_styles_do_not_override_the_shared_page_canvas(self):

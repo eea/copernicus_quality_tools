@@ -2,10 +2,11 @@
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.test import RequestFactory
 from django.test import SimpleTestCase
 from django.test import TestCase
@@ -321,7 +322,14 @@ class ManagedProductDetailAccessTests(TestCase):
             response.context["plan_filters"],
             ({"value": "restricted", "label": "Restricted", "count": 2},),
         )
-        self.assertContains(response, "Coverage restricted")
+        self.assertFalse(response.context["show_product_metrics"])
+        self.assertFalse(response.context["show_product_progress"])
+        self.assertContains(response, 'scope="col"', count=2)
+        self.assertContains(response, 'data-field="actions"')
+        self.assertNotContains(response, 'data-field="declared_expected"')
+        self.assertNotContains(response, 'data-field="completion_percentage"')
+        self.assertNotContains(response, "Coverage restricted")
+        self.assertNotContains(response, 'id="products-plan-filter"')
 
     def test_default_user_sees_metadata_without_aggregate_coverage(self):
         self.client.force_login(self.default_user)
@@ -397,6 +405,10 @@ class ManagedProductDetailAccessTests(TestCase):
                 {"value": "approved", "label": "Approved", "count": 1},
             ),
         )
+        self.assertContains(catalog_response, 'scope="col"', count=4)
+        self.assertContains(catalog_response, 'data-field="completion_percentage"')
+        self.assertNotContains(catalog_response, 'data-field="readiness"')
+        self.assertNotContains(catalog_response, 'id="products-plan-filter"')
 
     def test_administrator_sees_aggregate_coverage_for_any_product(self):
         administrator = get_user_model().objects.create_user(
@@ -485,7 +497,7 @@ class ManagedProductDetailAccessTests(TestCase):
         )
         self.login_administrator()
 
-        response = self.client.get(reverse("products"))
+        response = self.client.get(reverse("products"), {"product_view": "draft"})
 
         product = self.catalog_product(response)
         self.assertEqual(product["declared_expected"], 5)
@@ -494,8 +506,15 @@ class ManagedProductDetailAccessTests(TestCase):
             self.assertIsNone(product[field])
         self.assertEqual(product["plan_status"], "mixed")
         self.assertContains(response, "Mixed plans")
-        self.assertContains(response, "Review release plans")
+        self.assertContains(response, "Review delivery plans")
+        self.assertContains(
+            response,
+            'href="{}#delivery-plans-title"'.format(
+                reverse("product_detail", args=(PRODUCT_IDENT,)),
+            ),
+        )
         self.assertContains(response, "Includes unapproved scope")
+        self.assertNotContains(response, 'data-field="completion_percentage"')
 
         detail = self.detail(PRODUCT_IDENT)
         draft = next(
@@ -517,7 +536,7 @@ class ManagedProductDetailAccessTests(TestCase):
         )
         self.login_administrator()
 
-        response = self.client.get(reverse("products"))
+        response = self.client.get(reverse("products"), {"product_view": "draft"})
 
         product = self.catalog_product(response)
         self.assertIsNone(product["declared_expected"])
@@ -525,6 +544,79 @@ class ManagedProductDetailAccessTests(TestCase):
         self.assertIsNone(product["completion_percentage"])
         self.assertEqual(product["plan_status"], "mixed")
         self.assertEqual(product["expected_hint"], "Full scope unavailable")
+
+    def test_single_draft_product_links_directly_to_plan_setup(self):
+        ProductRelease.objects.filter(pk=self.release.pk).update(
+            coverage_state=ProductRelease.CoverageState.DRAFT,
+            approved_at=None,
+        )
+        self.login_administrator()
+
+        response = self.client.get(reverse("products"), {"product_view": "draft"})
+
+        plan_url = reverse("product_plan_edit", args=(PRODUCT_IDENT, self.release.pk))
+        self.assertContains(response, 'href="{}"'.format(plan_url))
+        self.assertContains(response, 'aria-label="Set up delivery plan for Managed Urban Atlas"')
+        self.assertContains(response, 'scope="col"', count=3)
+        self.assertContains(response, 'data-field="declared_expected"')
+        self.assertNotContains(response, 'data-field="completion_percentage"')
+        self.assertNotContains(response, 'data-field="readiness"')
+        self.assertNotContains(response, 'id="products-plan-filter"')
+        self.assertContains(response, 'id="products-live-status" class="sr-only" role="status"')
+
+    def test_plan_filters_appear_only_for_distinct_visible_plan_types(self):
+        ProductRelease.objects.filter(pk=self.release.pk).update(
+            coverage_state=ProductRelease.CoverageState.DRAFT, approved_at=None,
+        )
+        ProductRelease.objects.filter(pk=self.other_release.pk).update(
+            coverage_state=ProductRelease.CoverageState.UNKNOWN, approved_at=None,
+        )
+        self.login_administrator()
+
+        response = self.client.get(reverse("products"), {"product_view": "draft"})
+
+        self.assertContains(response, 'id="products-plan-filter"')
+        self.assertContains(response, 'data-plan-label="Draft"')
+        self.assertContains(response, 'data-plan-label="Not defined"')
+        self.assertEqual(len(response.context["plan_filters"]), 2)
+
+    def test_stopped_products_offer_details_without_current_progress(self):
+        Product.objects.filter(pk=self.product.pk).update(is_active=False)
+        self.login_administrator()
+
+        response = self.client.get(reverse("products"), {"product_view": "stopped"})
+
+        self.assertContains(response, 'scope="col"', count=3)
+        self.assertNotContains(response, 'data-field="completion_percentage"')
+        self.assertEqual(self.catalog_product(response)["next_action"], {
+            "label": "View product",
+            "url": reverse("product_detail", args=(PRODUCT_IDENT,)),
+            "hint": "",
+        })
+
+    def test_ready_product_action_requires_review_permission_even_with_report_access(self):
+        manager = get_user_model().objects.create_user(username="catalog-next-action-manager")
+        manager.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
+        UserProductGrant.objects.create(user=manager, product_ident=PRODUCT_IDENT)
+        self.default_user.user_permissions.add(Permission.objects.get(
+            content_type__app_label="accounts", codename="view_product_aggregate_report",
+        ))
+        readiness = SimpleNamespace(is_ready=False, can_finalize=True)
+        for user, action in ((manager, "Confirm readiness"), (self.default_user, "View product")):
+            with self.subTest(user=user.username), patch(
+                "qc_tool.frontend.dashboard.views.products.catalog.product_readiness_many",
+                return_value={self.product.pk: readiness, self.other_product.pk: readiness},
+            ):
+                self.client.force_login(user)
+                response = self.client.get(reverse("products"))
+                self.assertTrue(response.context["show_product_progress"])
+                self.assertEqual(self.catalog_product(response)["next_action"]["label"], action)
+                if user == manager:
+                    self.assertContains(response, 'href="{}#product-readiness-title"'.format(
+                        reverse("product_detail", args=(PRODUCT_IDENT,)),
+                    ))
+                else:
+                    self.assertNotContains(response, "Confirm readiness")
 
     def test_draft_counts_are_hidden_without_report_access(self):
         self.create_release(
@@ -536,17 +628,10 @@ class ManagedProductDetailAccessTests(TestCase):
         )
         self.client.force_login(self.default_user)
 
-        response = self.client.get(reverse("products"))
+        response = self.client.get(reverse("products"), {"product_view": "draft"})
         detail = self.detail(PRODUCT_IDENT)
 
-        product = self.catalog_product(response)
-        self.assertIsNone(product["declared_expected"])
-        self.assertTrue(all(
-            release["declared_expected"] is None
-            for release in product["releases"]
-        ))
-        self.assertFalse(product["scope_is_draft"])
-        self.assertNotContains(response, "Draft scope")
+        self.assertRedirects(response, reverse("products"))
         self.assertTrue(all(
             release.coverage is None
             for release in detail.context["product"].releases

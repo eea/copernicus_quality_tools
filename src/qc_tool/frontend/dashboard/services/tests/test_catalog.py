@@ -140,6 +140,10 @@ class ProductCatalogSynchronizationTests(TestCase):
                 "product_catalog": presented_rows,
                 "product_catalog_available": True,
                 "catalog_managed": True,
+                "product_view": "active",
+                "workflow_label": "Active",
+                "show_product_metrics": True,
+                "show_product_progress": True,
             },
         )
 

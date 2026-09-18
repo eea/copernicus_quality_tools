@@ -102,7 +102,6 @@ def add_product_specification(upload, *, actor):
             with transaction.atomic(durable=True):
                 lock_catalog_sync(wait=False)
                 latest = _editable_release(ident)
-                _require_no_active_jobs(ident)
                 product = Product.objects.filter(ident=ident).first()
                 was_inactive = product is not None and not product.is_active
                 matching_current = bool(
@@ -112,6 +111,7 @@ def add_product_specification(upload, *, actor):
                 )
                 created = not matching_current or was_inactive
                 if created:
+                    _require_no_active_jobs(ident)
                     snapshot = definition_release_snapshot(
                         definition, coverage,
                         latest.release_key if latest else "definition:" + ident,
@@ -159,13 +159,13 @@ def remove_product_specification(ident, *, actor):
                     product.is_active = False
                     product.save(update_fields=("is_active", "updated_at"))
                     invalidate_product_readiness(product.pk)
-                    _audit(actor, product, DELETION, "Removed specification from active QC use; revision history retained.")
+                    _audit(actor, product, DELETION, "Stopped product from active QC use; revision history retained.")
             publish_specification_state(directory, ident, {"active": False})
     except OSError as exc:
         logger.exception("Product specification removal storage failed for %s", ident)
         raise CatalogError(
             "specification_storage_unavailable",
-            "The catalog specification was disabled, but shared storage could not be updated. Retry removal to finish it.",
+            "The product was stopped in the catalog, but shared storage could not be updated. Retry stopping to finish it.",
         ) from exc
 
 

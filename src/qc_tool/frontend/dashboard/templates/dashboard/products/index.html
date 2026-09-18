@@ -11,9 +11,9 @@
 {% endblock workspace_css %}
 
 {% block page_title %}Products{% endblock page_title %}
-{% block page_subtitle %}<p>Browse product specifications and see how delivery plans are progressing.</p>{% endblock page_subtitle %}
+{% block page_subtitle %}<p>Follow products from specification upload through delivery and final acceptance.</p>{% endblock page_subtitle %}
 {% block page_actions %}
-{% if account_access.is_administrator %}
+{% if account_access.can_manage_product_catalog %}
 <a class="btn btn-primary btn-qc-primary" href="{% url 'product_upload' %}">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
     Upload specification
@@ -23,14 +23,21 @@
 
 {% block page_content %}
 <section class="workspace-card products-catalog" aria-labelledby="products-catalog-title">
-    {% if account_access.is_administrator %}
-    {% include "dashboard/shared/section_tabs.html" with tabs=catalog_tabs label="Product catalog" only %}
-    {% endif %}
+    {% include "dashboard/shared/section_tabs.html" with tabs=product_workflow_tabs label="Product workflow" id="product-workflow-tabs" data_attribute="product-view" only %}
     <header class="workspace-card__header products-catalog__header">
         <div>
-            <h2 id="products-catalog-title">{% if show_archived %}Removed products{% else %}Product catalog{% endif %}{% if product_catalog_available %}<span class="products-catalog__count">{{ product_count }}</span>{% endif %}</h2>
-            <p id="products-table-description">{% if show_archived %}These products are unavailable for new QC jobs. Open a product to view its history or restore its specification.{% else %}One row per product. Open a product to review its specifications and delivery plan.{% endif %}</p>
+            <h2 id="products-catalog-title">{{ workflow_label }} products</h2>
+            <p id="products-table-description">{{ workflow_description }}</p>
         </div>
+        {% if show_product_metrics %}
+        <details class="products-catalog__help">
+            <summary>About delivery plans</summary>
+            <div>
+                <p>A delivery plan defines the required product units. Draft plans need an administrator’s approval.</p>
+                <p>Accepted coverage counts units with an accepted delivery. Once every required unit is accepted, a product manager confirms that the product is ready.</p>
+            </div>
+        </details>
+        {% endif %}
     </header>
 
     {% if not product_catalog_available %}
@@ -39,44 +46,33 @@
         <p>Please try again later or ask an administrator to check the product configuration.</p>
     </div>
     {% elif product_catalog %}
-    <div class="products-catalog__guide">
-        <p><strong>Required product units</strong> come from the approved delivery plan. <strong>Accepted coverage</strong> counts units with an accepted delivery. A manager must confirm final readiness.</p>
-        <details class="products-catalog__help">
-            <summary>How to read this table</summary>
-            <dl>
-                <div><dt>Delivery plan</dt><dd>Draft plans need approval. “Not defined” means the specification does not provide a finite list of required product units.</dd></div>
-                <div><dt>Required product units</dt><dd>The number of units required by the plan. Draft numbers are provisional. For products with several release plans, a unit required in two plans counts twice.</dd></div>
-                <div><dt>Accepted coverage</dt><dd>Units with a published, accepted delivery out of the approved total. Repeat uploads do not increase coverage. Percentages appear when every release plan is approved; a competing upload does not revoke an accepted delivery.</dd></div>
-            </dl>
-        </details>
-    </div>
+    {% include "dashboard/shared/tables/toolbar.html" with id="products-toolbar" table_id="tbl-products" search_id="products-search" search_label="Search products" search_placeholder="Product name or identifier" filters_template=product_filters_template clear_id="products-clear-filters" toggle_id="products-filter-toggle" panel_id="products-filter-panel" summary_id="products-filter-summary" hidden=True %}
 
-    {% include "dashboard/shared/tables/toolbar.html" with id="products-toolbar" table_id="tbl-products" search_id="products-search" search_label="Search products" search_placeholder="Product name or identifier" filters_template="dashboard/products/table_filters.html" clear_id="products-clear-filters" toggle_id="products-filter-toggle" panel_id="products-filter-panel" summary_id="products-filter-summary" hidden=True %}
-
-    <div class="products-table-region qc-data-table-region">
+    <div class="products-table-region qc-data-table-region{% if not show_product_progress %} products-table-region--compact{% endif %}{% if not show_product_metrics %} products-table-region--simple{% endif %}">
         <table id="tbl-products" class="table qc-data-table" aria-describedby="products-table-description" data-pagination="true" data-side-pagination="client" data-sort-name="description" data-sort-order="asc">
-            <caption class="sr-only">Product specifications, delivery plan status, required product units and accepted coverage</caption>
+            <caption class="sr-only">{{ workflow_label }} products and their next actions</caption>
             <thead>
                 <tr>
                     <th class="product-name-column" data-class="product-name-column" data-field="description" data-sortable="true" data-sorter="productTextSorter" scope="col">Product</th>
-                    <th class="product-plan-column" data-class="product-plan-column" data-field="plan_status" data-sortable="true" data-sorter="productTextSorter" scope="col">Delivery plan</th>
-                    <th class="product-readiness-column" data-class="product-readiness-column" data-field="readiness" data-sortable="true" data-sorter="productTextSorter" scope="col">Readiness</th>
-                    <th class="product-total-column" data-class="product-total-column" data-field="declared_expected" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Required product units</th>
-                    <th class="product-coverage-column" data-class="product-coverage-column" data-field="completion_percentage" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Accepted coverage</th>
+                    {% if show_product_metrics %}<th class="product-total-column" data-class="product-total-column" data-field="declared_expected" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Required product units</th>{% endif %}
+                    {% if show_product_progress %}<th class="product-coverage-column" data-class="product-coverage-column" data-field="completion_percentage" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Accepted coverage</th>{% endif %}
+                    <th class="product-actions-column" data-class="product-actions-column" data-field="actions" data-exportable="false" data-switchable="false" data-searchable="false" scope="col">Next action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for product in product_catalog %}
                 <tr>
                     <td>
-                        <div class="product-table__identity">
+                        <div class="product-table__identity" data-plan-label="{{ product.plan_label }}">
+                            <span class="product-table__icon" aria-hidden="true"><svg class="ui-icon"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg></span>
+                            <div class="product-table__name">
                             <a class="product-table__title" href="{% url 'product_detail' product.ident %}">{{ product.description }}</a>
                             <code class="product-table__ident">{{ product.ident }}</code>
                             {% if product.release_count > 1 %}<span class="product-table__hint">{{ product.release_count }} release plans</span>{% endif %}
+                            </div>
                         </div>
                     </td>
-                    <td><span class="product-table__status product-table__status--{{ product.plan_status }}" title="{{ product.plan_hint }}">{{ product.plan_label }}</span></td>
-                    <td>{% if product.readiness %}<span class="product-table__status{% if product.readiness.is_ready %} product-table__status--approved{% endif %}" title="{{ product.readiness.message }}">{{ product.readiness.label }}</span>{% else %}<span class="product-table__missing">—</span>{% endif %}</td>
+                    {% if show_product_metrics %}
                     <td>
                         {% if product.declared_expected is not None %}
                         <span class="product-table__metric">{{ product.declared_expected|unlocalize }}</span>
@@ -85,6 +81,8 @@
                         {% endif %}
                         <span class="product-table__hint">{{ product.expected_hint }}</span>
                     </td>
+                    {% endif %}
+                    {% if show_product_progress %}
                     <td>
                         {% if product.expected %}
                         <div class="product-table__coverage">
@@ -96,21 +94,35 @@
                         <span class="product-table__pending">{{ product.progress_hint }}</span>
                         {% endif %}
                     </td>
+                    {% endif %}
+                    <td>
+                        <div class="product-table__action">
+                            <a class="btn btn-qc-secondary btn-qc--compact" href="{{ product.next_action.url }}" aria-label="{{ product.next_action.label }} for {{ product.description }}">
+                                {{ product.next_action.label }} <svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg>
+                            </a>
+                            {% if product.next_action.hint %}<span class="product-table__hint">{{ product.next_action.hint }}</span>{% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <p id="products-live-status" class="products-catalog__results" role="status" aria-live="polite" aria-atomic="true">{{ product_count }} product{{ product_count|pluralize }}.</p>
+    <p id="products-live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ product_count }} product{{ product_count|pluralize }}.</p>
     {% else %}
     <div class="products-empty">
-        {% if show_archived %}
-        <strong>No removed products</strong>
-        <p>Products you remove will appear here with their specifications and delivery history.</p>
-        <a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">View active products</a>
-        {% else %}
+        {% if not total_product_count %}
+        {% if account_access.can_manage_product_catalog %}
         <strong>Add your first product</strong>
-        <p>{% if account_access.is_administrator %}Upload a JSON specification to define its quality checks and required product units.{% else %}An administrator can upload a product specification to get started.{% endif %}</p>
+        <p>Upload a JSON specification to create a draft product, then review and approve its delivery plan.</p>
+        <a class="btn btn-primary btn-qc-primary" href="{% url 'product_upload' %}">Upload specification</a>
+        {% else %}
+        <strong>No products available</strong>
+        <p>Products appear here once their delivery plans are approved and your account has access.</p>
+        {% endif %}
+        {% else %}
+        <strong>No {{ workflow_label|lower }} products</strong>
+        <p>{{ workflow_empty_message }}</p>
         {% endif %}
     </div>
     {% endif %}

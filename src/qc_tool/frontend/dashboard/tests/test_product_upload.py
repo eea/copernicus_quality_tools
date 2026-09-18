@@ -131,6 +131,10 @@ class ProductSpecificationUploadTests(TestCase):
             [{"name": "new_product", "description": "Uploaded example product"}],
         )
         self.assertEqual(list(Product.objects.values_list("ident", flat=True)), ["new_product"])
+        self.assertFalse(self.client.get(reverse("products")).context["product_catalog"])
+        draft = self.client.get(reverse("products"), {"product_view": "draft"})
+        self.assertEqual(draft.context["product_view"], "draft")
+        self.assertEqual([row["ident"] for row in draft.context["product_catalog"]], ["new_product"])
         self.assertEqual(
             self.client.get(reverse("product_definition_json", args=("bundled",))).status_code,
             404,
@@ -171,7 +175,7 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertEqual(added.json(), {
             "status": "ok", "created": True, "product_ident": "new_product",
             "url": reverse("product_detail", args=("new_product",)),
-            "message": "Added to the product catalog.",
+            "message": "Added to Draft. Review and approve its delivery plan to activate it.",
         })
         repeated = self.client.post(
             self.url, {"definition_file": self.file()}, HTTP_ACCEPT="application/json",
@@ -180,6 +184,48 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertEqual(repeated.json()["status"], "ok")
         self.assertFalse(repeated.json()["created"])
         self.assertIn("Already added", repeated.json()["message"])
+        self.assertEqual(ProductRelease.objects.count(), 1)
+
+    def test_identical_upload_with_queued_or_running_jobs_keeps_the_existing_product(self):
+        self.assertEqual(self.post().status_code, 302)
+        product = Product.objects.get()
+        release = ProductRelease.objects.get()
+        definition = QcDefinition.objects.get()
+        job = self.start_job(self.create_delivery())
+
+        for state in (common.JOB_WAITING, common.JOB_RUNNING):
+            with self.subTest(state=state):
+                job.job_status = state
+                job.save(update_fields=("job_status",))
+                response = self.client.post(
+                    self.url, {"definition_file": self.file("NEW_PRODUCT.JSON")},
+                    HTTP_ACCEPT="application/json",
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(response.json()["created"])
+                self.assertIn("Already added", response.json()["message"])
+                self.assertEqual(list(Product.objects.values_list("pk", flat=True)), [product.pk])
+                self.assertEqual(list(ProductRelease.objects.values_list("pk", flat=True)), [release.pk])
+                self.assertEqual(list(QcDefinition.objects.values_list("pk", flat=True)), [definition.pk])
+                self.assertEqual(self.audit_entries().count(), 1)
+                self.assertFalse(self.audit_entries(CHANGE).exists())
+                self.assertEqual(self.version_path().read_bytes(), self.payload())
+                job.refresh_from_db()
+                self.assertEqual(job.job_status, state)
+                self.assertEqual(job.product_release_id, release.pk)
+                self.assertEqual(job.qc_definition_id, definition.pk)
+
+    def test_browser_identical_upload_explains_that_no_duplicate_was_created(self):
+        self.assertEqual(self.post().status_code, 302)
+
+        response = self.client.post(
+            self.url, {"definition_file": self.file()}, follow=True,
+        )
+
+        self.assertContains(response, "already has this specification")
+        self.assertContains(response, "No new product or specification version was created.")
+        self.assertEqual(Product.objects.count(), 1)
         self.assertEqual(ProductRelease.objects.count(), 1)
 
     def test_json_upload_validation_is_per_file_and_failure_keeps_other_successes(self):
@@ -254,7 +300,7 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.client.delete(self.url).status_code, 405)
 
-    def test_upload_stores_queryable_snapshot_draft_aois_and_exact_runtime_bytes(self):
+    def test_upload_stores_queryable_snapshot_draft_product_units_and_exact_runtime_bytes(self):
         payload = self.payload()
         response = self.post(name="NEW_Product.JSON", payload=payload)
 
@@ -486,7 +532,7 @@ class ProductSpecificationUploadTests(TestCase):
         response = client.post(
             self.remove_url(), HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
         )
-        self.assertRedirects(response, reverse("products"))
+        self.assertRedirects(response, reverse("products") + "?product_view=stopped")
         self.assertFalse(Product.objects.get().is_active)
         self.assertEqual(self.audit_entries(DELETION).get().user_id, self.administrator.pk)
 
@@ -522,8 +568,7 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertEqual(list_current_product_coverage(), ())
         catalog = self.client.get(reverse("products"))
         self.assertFalse(catalog.context["product_catalog"])
-        archive = self.client.get(reverse("products"), {"archived": "1"})
-        self.assertTrue(archive.context["show_archived"])
+        archive = self.client.get(reverse("products"), {"product_view": "stopped"})
         self.assertEqual([row["ident"] for row in archive.context["product_catalog"]], ["new_product"])
         detail = self.client.get(reverse("product_detail", args=("new_product",)))
         self.assertFalse(detail.context["product_is_active"])
@@ -553,15 +598,14 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertEqual(common.locate_product_definition("new_product"), self.version_path())
         self.assertEqual(len(list_current_product_coverage()), 1)
 
-    def test_non_administrator_cannot_list_archived_products(self):
+    def test_unassigned_user_cannot_list_stopped_products(self):
         self.assertEqual(self.post().status_code, 302)
         self.assertEqual(self.client.post(self.remove_url()).status_code, 302)
         self.client.force_login(self.manager)
 
-        response = self.client.get(reverse("products"), {"archived": "1"})
+        response = self.client.get(reverse("products"), {"product_view": "stopped"})
 
-        self.assertFalse(response.context["show_archived"])
-        self.assertFalse(response.context["product_catalog"])
+        self.assertRedirects(response, reverse("products"))
 
     def test_waiting_and_running_jobs_prevent_revision_changes_or_removal(self):
         self.assertEqual(self.post().status_code, 302)
@@ -626,7 +670,7 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertFalse(Job.objects.exists())
         self.assertEqual(self.post().status_code, 302)
         self.assertEqual(self.client.post(self.remove_url()).status_code, 302)
-        with self.assertRaisesRegex(ValueError, "removed from active use"):
+        with self.assertRaisesRegex(ValueError, "has been stopped"):
             self.start_job(delivery)
         self.assertFalse(Job.objects.exists())
 
@@ -638,14 +682,14 @@ class ProductSpecificationUploadTests(TestCase):
         ), self.assertLogs("qc_tool.frontend.dashboard.services.catalog.specification_upload", level="ERROR"):
             response = self.client.post(self.remove_url())
 
-        self.assertContains(response, "Retry removal")
+        self.assertContains(response, "Retry stopping")
         self.assertFalse(Product.objects.get().is_active)
         self.assertTrue(common.current_product_specification_state("new_product")["active"])
         pending = self.client.get(self.remove_url())
         self.assertTrue(pending.context["removal_pending"])
         self.assertContains(pending, 'name="csrfmiddlewaretoken"')
-        self.assertContains(pending, "Retry removal")
-        with self.assertRaisesRegex(ValueError, "removed from active use"):
+        self.assertContains(pending, "Retry stopping")
+        with self.assertRaisesRegex(ValueError, "has been stopped"):
             self.start_job(self.create_delivery())
         self.assertEqual(self.client.post(self.remove_url()).status_code, 302)
         self.assertEqual(common.current_product_specification_state("new_product"), {"active": False})

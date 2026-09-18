@@ -38,16 +38,18 @@ def product_upload(request):
                     "created": result.created,
                     "product_ident": result.product_ident,
                     "url": reverse("product_detail", args=(result.product_ident,)),
-                    "message": "Added to the product catalog." if result.created else "Already added. The same specification is available in the product catalog.",
+                    "message": "Added to Draft. Review and approve its delivery plan to activate it." if result.created else "Already added. No new product or specification version was created.",
                 })
-            messages.success(
-                request,
-                "Product '{}' is available for quality control. {}".format(
-                    result.product_ident,
-                    "Its declared product unit scope is ready for review."
-                    if result.created else "The same specification was already registered.",
-                ),
-            )
+            if result.created:
+                messages.success(
+                    request,
+                    "Product '{}' was added to Draft. Review and approve its delivery plan to activate it.".format(result.product_ident),
+                )
+            else:
+                messages.info(
+                    request,
+                    "Product '{}' already has this specification. No new product or specification version was created.".format(result.product_ident),
+                )
             return redirect("product_detail", product_ident=result.product_ident)
     if request.method == "POST" and json_response:
         return JsonResponse({
@@ -73,8 +75,8 @@ def product_remove(request, product_ident):
         except CatalogError as exc:
             error = exc.message
         else:
-            messages.success(request, "Specification '{}' was removed from active use. Its version history is retained.".format(product_ident))
-            return redirect("products")
+            messages.success(request, "Product '{}' was stopped. Its version history is retained.".format(product_ident))
+            return redirect(reverse("products") + "?product_view=stopped")
     try:
         state = current_product_specification_state(product_ident)
     except QCException:

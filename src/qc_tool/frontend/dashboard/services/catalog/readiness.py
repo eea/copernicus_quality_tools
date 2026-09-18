@@ -98,7 +98,7 @@ def _evaluate_readiness(product, releases):
 
     complete = False
     if not product.is_active:
-        label, message = "Archived", "Restore the product before confirming readiness."
+        label, message = "Stopped", "Restore the product before confirming readiness."
     elif not releases:
         label, message = "Delivery plan required", "Define and approve the required product units first."
     elif any(row[2] != ProductRelease.CoverageState.AUTHORITATIVE for row in releases):

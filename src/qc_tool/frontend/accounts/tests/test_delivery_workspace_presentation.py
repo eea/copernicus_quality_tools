@@ -16,6 +16,7 @@ from django.urls import Resolver404
 from django.urls import resolve
 from django.urls import reverse
 from django.utils.html import escape
+from django.utils import timezone
 
 from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
@@ -23,6 +24,7 @@ from qc_tool.frontend.accounts.authorization.permissions import (
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
+from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
 )
@@ -283,6 +285,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         unsafe_description = "<script>alert('catalog')</script>"
         managed_definition("safe-product", description="Safe product")
         managed_definition("escaped-product", description=unsafe_description)
+        ProductRelease.objects.update(coverage_state="authoritative", approved_at=timezone.now())
 
         response = self.client.get(reverse("products"))
 
@@ -292,12 +295,10 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertContains(response, escape(unsafe_description))
         self.assertNotContains(response, unsafe_description)
         self.assertContains(response, 'id="tbl-products"')
-        self.assertContains(response, 'scope="col"', count=5)
+        self.assertContains(response, 'scope="col"', count=2)
         for field, label in (
             ("description", "Product"),
-            ("plan_status", "Delivery plan"),
-            ("declared_expected", "Required product units"),
-            ("completion_percentage", "Accepted coverage"),
+            ("actions", "Next action"),
         ):
             with self.subTest(field=field):
                 self.assertContains(response, 'data-field="{}"'.format(field))
@@ -313,8 +314,11 @@ class DeliveryWorkspacePresentationTests(TestCase):
             response.context["plan_filters"],
             ({"value": "restricted", "label": "Restricted", "count": 2},),
         )
-        self.assertContains(response, "Restricted")
-        self.assertContains(response, "Coverage restricted")
+        self.assertNotContains(response, 'data-field="declared_expected"')
+        self.assertNotContains(response, 'data-field="completion_percentage"')
+        self.assertNotContains(response, 'id="products-plan-filter"')
+        self.assertNotContains(response, "Coverage restricted")
+        self.assertContains(response, 'aria-label="View product for {}"'.format(escape(unsafe_description)))
         self.assertNotContains(response, "Not available")
         self.assertNotContains(response, "API documentation")
         self.assertNotContains(response, reverse("api_homepage") + "#products")
@@ -334,6 +338,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             ("unsafe/product", "Unroutable product"),
         ):
             managed_definition(ident, description=description)
+        ProductRelease.objects.update(coverage_state="authoritative", approved_at=timezone.now())
 
         response = self.client.get(reverse("products"))
 

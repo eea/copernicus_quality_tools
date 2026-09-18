@@ -2,7 +2,8 @@
 
 import logging
 
-from django.shortcuts import render
+from django.http import HttpResponseBadRequest
+from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
@@ -13,8 +14,15 @@ from qc_tool.product_security import canonical_product_ident
 from qc_tool.frontend.dashboard.services.catalog import (
     list_current_product_coverage,
 )
-from qc_tool.frontend.dashboard.models import Product
+from qc_tool.frontend.dashboard.models import Product, ProductRelease
 from qc_tool.frontend.dashboard.services.catalog.readiness import product_readiness_many
+from qc_tool.frontend.dashboard.services.products.workflows import (
+    WORKFLOW_CONFIG,
+    InvalidProductWorkflow,
+    classify_product_workflow,
+    parse_product_workflow,
+    product_workflow_tabs,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -24,28 +32,72 @@ def render_product_catalog(request):
     """Render catalog metadata and only authorized aggregate coverage."""
 
     account_access = access_for_request(request)
-    show_archived = account_access.is_administrator and request.GET.get("archived") == "1"
-    product_catalog = list_current_product_coverage(include_inactive=show_archived)
-    if show_archived:
-        product_catalog = tuple(row for row in product_catalog if not row["is_active"])
+    requested_view = request.GET.get("product_view")
+    if not requested_view and request.GET.get("archived") == "1":
+        requested_view = "stopped"
+    try:
+        product_view = parse_product_workflow(requested_view)
+    except InvalidProductWorkflow as exc:
+        return HttpResponseBadRequest(str(exc))
+    product_catalog = list_current_product_coverage(include_inactive=True)
     product_catalog = _scope_coverage(product_catalog, account_access)
     product_catalog = tuple(
         {**product, **_plan_presentation(product, managed=True)}
         for product in product_catalog
         if account_access.can_browse_product(product["ident"])
     )
-    visible_products = Product.objects.filter(ident__in=(
-        product["ident"] for product in product_catalog if product["can_view_coverage"]
-    ))
-    visible_products = tuple(visible_products)
-    readiness_by_id = product_readiness_many(visible_products)
-    readiness_by_ident = {
-        product.ident: readiness_by_id[product.pk] for product in visible_products
+    # Lifecycle state belongs to the assigned catalog metadata. Readiness totals
+    # remain report-only, and a recipe grant never reveals hidden parent streams.
+    complete_scope = {
+        product["ident"] for product in product_catalog
+        if account_access.is_administrator
+        or product["ident"] in account_access.reportable_product_idents
     }
-    product_catalog = tuple(
-        {**product, "readiness": readiness_by_ident.get(product["ident"])}
-        for product in product_catalog
+    readiness_products = tuple(Product.objects.filter(ident__in=complete_scope))
+    readiness_by_id = product_readiness_many(readiness_products)
+    readiness_by_ident = {
+        product.ident: readiness_by_id[product.pk] for product in readiness_products
+    }
+    partial_scope = {product["ident"] for product in product_catalog} - complete_scope
+    assigned_release_ids = frozenset(
+        ProductRelease.objects.filter(
+            is_current=True,
+            product__ident__in=partial_scope,
+            definition_links__qc_definition__product_ident__in=account_access.product_idents,
+        ).values_list("pk", flat=True)
     )
+    classified_products = []
+    for product in product_catalog:
+        readiness = readiness_by_ident.get(product["ident"])
+        workflow = classify_product_workflow(
+            is_active=product["is_active"],
+            coverage_states=(
+                release["coverage_state"] for release in product["releases"]
+                if product["ident"] in complete_scope
+                or release["release_id"] in assigned_release_ids
+            ),
+            is_ready=bool(readiness and readiness.is_ready),
+        )
+        classified_products.append({
+            **product,
+            "readiness": readiness if product["can_view_coverage"] else None,
+            "workflow": workflow.value,
+            "workflow_label": WORKFLOW_CONFIG[workflow.value]["label"],
+        })
+    workflow_tabs = product_workflow_tabs(
+        classified_products, selected=product_view, base_url=reverse("products"),
+        account_access=account_access,
+    )
+    if product_view not in {tab["value"] for tab in workflow_tabs}:
+        return redirect("products")
+    product_catalog = tuple(
+        {**product, "next_action": _product_next_action(product, account_access)}
+        for product in classified_products
+        if product["workflow"] == product_view
+    )
+    show_product_metrics = any(product["can_view_coverage"] for product in product_catalog)
+    show_product_progress = show_product_metrics and product_view in {"active", "completed"}
+    workflow_config = WORKFLOW_CONFIG[product_view.value]
     plan_filters = tuple(
         {"value": status, "label": label, "count": count}
         for status, label in (
@@ -65,15 +117,47 @@ def render_product_catalog(request):
             "product_catalog": product_catalog,
             "product_catalog_available": True,
             "catalog_managed": True,
-            "show_archived": show_archived,
-            "catalog_tabs": (
-                {"label": "Active products", "url": reverse("products"), "active": not show_archived},
-                {"label": "Removed products", "url": reverse("products") + "?archived=1", "active": show_archived},
-            ),
+            "show_archived": product_view == "stopped",
+            "product_workflow_tabs": workflow_tabs,
+            "product_view": product_view.value,
+            "workflow_label": workflow_config["label"],
+            "workflow_description": workflow_config["description"],
+            "workflow_empty_message": workflow_config["empty_message"],
+            "total_product_count": sum(tab["count"] for tab in workflow_tabs),
             "product_count": len(product_catalog),
             "plan_filters": plan_filters,
+            "show_product_metrics": show_product_metrics,
+            "show_product_progress": show_product_progress,
+            "product_filters_template": (
+                "dashboard/products/table_filters.html"
+                if show_product_metrics and len(plan_filters) > 1 else ""
+            ),
         },
     )
+
+
+def _product_next_action(product, account_access):
+    """Offer one relevant destination without changing product state."""
+
+    url = reverse("product_detail", args=(product["ident"],))
+    if product["workflow"] == "draft" and account_access.can_manage_product_catalog:
+        if product["release_count"] == 1:
+            return {
+                "label": "Set up delivery plan",
+                "url": reverse("product_plan_edit", args=(product["ident"], product["releases"][0]["release_id"])),
+                "hint": "Review units and assign a product manager.",
+            }
+        return {
+            "label": "Review delivery plans", "url": url + "#delivery-plans-title",
+            "hint": "Approve each plan to activate this product.",
+        }
+    readiness = product["readiness"]
+    if readiness and readiness.can_finalize and account_access.can_review_product_submission(product["ident"]):
+        return {
+            "label": "Confirm readiness", "url": url + "#product-readiness-title",
+            "hint": "All required product units are accepted.",
+        }
+    return {"label": "View product", "url": url, "hint": ""}
 
 
 def _plan_presentation(product, *, managed):

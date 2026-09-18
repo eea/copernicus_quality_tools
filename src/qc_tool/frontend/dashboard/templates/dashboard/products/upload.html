@@ -20,7 +20,7 @@
 
 {% block upload_id %}product-definition-upload-card{% endblock upload_id %}
 {% block upload_title %}Product specification JSON{% endblock upload_title %}
-{% block upload_description %}Choose files first. A product is added only when you select Add or Add all.{% endblock upload_description %}
+{% block upload_description %}Choose files first. A draft product is created only when you select Add or Add all.{% endblock upload_description %}
 {% block upload_body %}
 <form id="product-definition-upload" class="workspace-card__body qc-upload-body" method="post" enctype="multipart/form-data" data-max-file-bytes="{{ max_file_bytes|default:1048576 }}">
     {% csrf_token %}
@@ -41,7 +41,7 @@
     <details class="qc-upload-guidance qc-upload-guidance--compact">
         <summary>How product specifications work</summary>
         <p>Name each file after its product, for example <code>my_product.json</code>. Use the same filename to add a new specification version.</p>
-        <p>Existing versions and quality-check results are retained. After adding a product, review and approve its delivery plan from the product page.</p>
+        <p>Uploading the same specification again does not create a duplicate. Existing versions and quality-check results are retained. After adding a product, review and approve its delivery plan from the product page.</p>
     </details>
 </form>
 {% endblock upload_body %}

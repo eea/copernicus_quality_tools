@@ -115,7 +115,7 @@ class ProductReadinessTests(TestCase):
         self.finalize(digest=digest)
         self.assertEqual(LogEntry.objects.count(), 1)
         self.assertNotContains(self.client.get(detail_url), "Mark product ready")
-        catalog = self.client.get(reverse("products"))
+        catalog = self.client.get(reverse("products"), {"product_view": "completed"})
         self.assertTrue(catalog.context["product_catalog"][0]["readiness"].is_ready)
 
     def test_only_assigned_manager_or_administrator_can_finalize(self):

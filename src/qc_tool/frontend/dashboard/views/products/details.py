@@ -4,11 +4,15 @@ from django.http import Http404
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.shortcuts import render
+from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.services.products import build_product_detail
 from qc_tool.frontend.dashboard.models import Product, QcDefinition, ProductReleaseDefinition, ProductRelease
 from qc_tool.frontend.dashboard.services.catalog.readiness import product_readiness
+from qc_tool.frontend.dashboard.services.products.workflows import (
+    WORKFLOW_CONFIG, ProductWorkflow, can_show_product_workflow, classify_product_workflow,
+)
 
 
 def product_detail(request, product_ident):
@@ -24,6 +28,24 @@ def product_detail(request, product_ident):
         raise Http404("Product not found.")
     catalog_product = Product.objects.filter(ident=product_ident).first()
     product_is_active = catalog_product.is_active if catalog_product else True
+    delivery_plans = ProductRelease.objects.filter(
+        product__ident=product_ident, is_current=True,
+    ).order_by("release_key")
+    complete_scope = account_access.is_administrator or product_ident in account_access.reportable_product_idents
+    readiness = product_readiness(catalog_product) if catalog_product and complete_scope else None
+    workflow_plans = delivery_plans if complete_scope else delivery_plans.filter(
+        definition_links__qc_definition__product_ident__in=account_access.product_idents,
+    )
+    workflow = classify_product_workflow(
+        is_active=product_is_active,
+        coverage_states=workflow_plans.values_list("coverage_state", flat=True),
+        is_ready=bool(readiness and readiness.is_ready),
+    )
+    if not can_show_product_workflow(
+        workflow, account_access=account_access,
+        has_completed_products=bool(readiness and readiness.is_ready),
+    ):
+        workflow = ProductWorkflow.ACTIVE
     current_digests = set(ProductReleaseDefinition.objects.filter(
         product_release__product__ident=product_ident,
         product_release__is_current=True,
@@ -45,12 +67,12 @@ def product_detail(request, product_ident):
             "product": product,
             "can_view_coverage": can_view_coverage,
             "product_is_active": product_is_active,
-            "readiness": product_readiness(catalog_product) if catalog_product and can_view_coverage else None,
+            "readiness": readiness if can_view_coverage else None,
+            "product_catalog_url": "{}?product_view={}".format(reverse("products"), workflow.value),
+            "product_workflow_label": WORKFLOW_CONFIG[workflow.value]["label"],
             "specification_versions": specification_versions,
             "specification_version_page": version_page,
             "can_review_submissions": account_access.can_review_product_submission(product_ident),
-            "delivery_plans": ProductRelease.objects.filter(
-                product__ident=product_ident, is_current=True,
-            ).order_by("release_key"),
+            "delivery_plans": delivery_plans,
         },
     )

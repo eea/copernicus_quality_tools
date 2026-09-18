@@ -45,10 +45,13 @@
         var query = String(text || "").trim().toLocaleLowerCase();
         var plan = filters && filters.plan;
         return data.filter(function (row) {
-            var identity = $("<div>").html(row.description)
+            var $description = $("<div>").html(row.description);
+            var identity = $description
                 .find(".product-table__title, .product-table__ident")
                 .map(function () { return $(this).text(); }).get().join(" ");
-            return (!plan || cellText(row.plan_status) === plan) &&
+            var planLabel = $description.find(".product-table__identity")
+                .attr("data-plan-label");
+            return (!plan || planLabel === plan) &&
                 identity.toLocaleLowerCase().indexOf(query) >= 0;
         });
     }
@@ -111,10 +114,9 @@
             }
         );
         dataTableUi.create($table, {
-            labels: {subject: "products", region: "Product catalog table", search: "Search products by name or identifier"},
+            labels: {subject: "products", region: "Product catalog table", search: "Search products by name or identifier", refresh: "Reload products"},
             exports: {
                 filename: "products",
-                htmlFields: ["plan_status"],
                 values: {
                     description: function (value) {
                         return $("<div>").html(value).find(".product-table__title, .product-table__ident")
@@ -136,13 +138,19 @@
                 searchTimeOut: 150,
                 toolbar: "#products-toolbar",
                 customSearch: productSearch,
+                showColumns: true,
+                showRefresh: true,
+                onRefresh: function () {
+                    // Catalog rows and workflow counts are rendered by Django.
+                    window.location.reload();
+                },
                 pagination: true,
                 sortName: "description",
                 sortOrder: "asc",
                 pageSize: 20,
                 pageList: [20, 50, 100, 500],
                 formatNoMatches: function () {
-                    return "No products match these filters. Try another name or delivery plan.";
+                    return "No products match these filters. Try another search or clear filters.";
                 }
             }
         });
