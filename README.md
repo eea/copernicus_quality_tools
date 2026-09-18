@@ -83,4 +83,8 @@ service operator and are intentionally not stored in this repository.
 
 # Product definitions
 
-QA check configurations for Copernicus products are defined in the [product_definitions](product_definitions) directory. Each product definition .json file contains a list of parametrized checks. For QC tool setup with editable product definitions, see instructions in [docker/NOTES.product_definitions](docker/NOTES.product_definitions.md).
+The product catalog starts empty. Administrators upload selected JSON specifications
+through **Products → Upload specification**, then assign their products to users.
+The [product_definitions](product_definitions) directory contains reference QC
+recipes; startup does not import them. Each JSON file contains a list of
+parameterized checks. See [Managing product specifications](docker/NOTES.product_definitions.md).

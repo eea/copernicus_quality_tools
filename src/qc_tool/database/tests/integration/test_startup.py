@@ -9,7 +9,7 @@ from django.test import SimpleTestCase
 
 
 class FrontendMigrationStartupTests(SimpleTestCase):
-    def run_startup(self, *, environment="production", auto_migrate="no", pending=False):
+    def run_startup(self, *, environment="production", auto_migrate="no", pending=False, demo_users="no"):
         source = Path(__file__).resolve().parents[5] / "docker" / "run_frontend.sh"
         with TemporaryDirectory(prefix="qc-startup-test-") as temporary:
             root = Path(temporary)
@@ -41,7 +41,7 @@ class FrontendMigrationStartupTests(SimpleTestCase):
                     "QC_STARTUP_TEST_PENDING": "1" if pending else "0",
                     "QC_TOOL_ENVIRONMENT": environment,
                     "QC_TOOL_MIGRATE_ON_STARTUP": auto_migrate,
-                    "QC_TOOL_BOOTSTRAP_DEMO_USERS": "no",
+                    "QC_TOOL_BOOTSTRAP_DEMO_USERS": demo_users,
                     "QC_TOOL_DEV_SERVER": "no",
                 },
             )
@@ -78,3 +78,16 @@ class FrontendMigrationStartupTests(SimpleTestCase):
         result, commands = self.run_startup(auto_migrate="perhaps")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(commands, [])
+
+    def test_development_demo_accounts_do_not_import_or_assign_products(self):
+        result, commands = self.run_startup(
+            environment="development", auto_migrate="yes", demo_users="yes",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            "-m qc_tool.frontend.manage create_default_user "
+            "--username product_manager --password product_manager --group product_manager",
+            commands,
+        )
+        self.assertFalse(any("--product" in command for command in commands))
+        self.assertFalse(any("sync_product" in command for command in commands))

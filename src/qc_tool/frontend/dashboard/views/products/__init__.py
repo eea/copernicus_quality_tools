@@ -20,10 +20,7 @@ def _workspace_product_catalog():
 
 
 def products(request):
-    return render_product_catalog(
-        request,
-        fallback_catalog=_workspace_product_catalog,
-    )
+    return render_product_catalog(request)
 
 
 __all__ = [

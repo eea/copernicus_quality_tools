@@ -17,7 +17,7 @@ from qc_tool.frontend.accounts.services.users import provision_user
 
 class UserProvisioningTests(TestCase):
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value={"clc2024": "CLC", "general_raster": "General raster"},
     )
     def test_service_validates_and_creates_product_grants_atomically(self, _get):
@@ -86,7 +86,7 @@ class UserProvisioningTests(TestCase):
         )
 
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value={"clc2024": "CLC", "general_raster": "General raster"},
     )
     def test_command_accepts_repeatable_exact_product_ids(self, _get):

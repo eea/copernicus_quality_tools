@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from qc_tool.frontend.accounts.services.products import available_product_idents
 from qc_tool.frontend.dashboard.access.deliveries import delivery_product_scope_matches
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.services.products import guess_product_ident
@@ -10,12 +11,13 @@ from ._resumable.errors import ResumableUploadError
 
 
 def require_upload_product(access, product_ident):
-    """Allow unclassified ZIPs only while the account has an assigned product."""
+    """Require an accessible managed product before accepting a delivery."""
 
+    available = available_product_idents()
     allowed = (
-        access.has_product_assignments
+        any(access.can_access_product(ident) for ident in available)
         if not product_ident
-        else access.can_access_product(product_ident)
+        else product_ident in available and access.can_access_product(product_ident)
     )
     if not allowed:
         raise _product_denied()

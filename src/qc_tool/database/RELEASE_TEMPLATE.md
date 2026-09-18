@@ -73,6 +73,7 @@ batch/checkpoint settings and completion assertions where applicable.
 - Allowed **and denied** user/region/product access:
 - Upload, delivery/job state and representative worker execution:
 - Catalog/product unit provenance and submission/filesystem consistency:
+- Empty-installation catalog remains empty until administrator upload or explicit reviewed import:
 - Migration state current; data assertions and backfill completeness:
 - Error rate, latency, queue age and database load within recorded limits:
 - Migration/deployment log location and operator decision:

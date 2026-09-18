@@ -7,7 +7,7 @@ from django.http import Http404
 from django.http import JsonResponse
 
 import qc_tool.frontend.dashboard.models as models
-from qc_tool.common import get_product_descriptions
+from qc_tool.frontend.accounts.services.products import available_product_descriptions
 from qc_tool.common import locate_product_definition
 from qc_tool.common import QCException
 from qc_tool.product_security import normalize_product_ident
@@ -17,7 +17,7 @@ from qc_tool.frontend.dashboard.access.delivery_querysets import visible_deliver
 
 def get_product_list(request):
     access = access_for_request(request)
-    product_infos = get_product_descriptions()
+    product_infos = available_product_descriptions()
     product_list = sorted(
         (
             {"name": product_ident, "description": description}
@@ -48,7 +48,10 @@ def get_product_definition(request, product_ident):
     access = access_for_request(request)
     if "digest" in request.GET:
         return _stored_definition(product_ident, request.GET.getlist("digest"), access)
-    if not access.can_access_product(product_ident):
+    if (
+        product_ident not in available_product_descriptions()
+        or not access.can_access_product(product_ident)
+    ):
         raise Http404("Product definition not found.")
     try:
         filepath = locate_product_definition(product_ident)

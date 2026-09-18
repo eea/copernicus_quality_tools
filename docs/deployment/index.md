@@ -176,7 +176,9 @@ The command overrides normal frontend startup. Stop on any error and follow
 Keep detailed migration output in restricted release logs. For a legacy data
 cutover, complete and validate the manual data import at this point,
 while frontend and workers remain stopped. For an empty installation no import
-is needed.
+is needed. Its product catalog stays empty until an administrator uploads the
+selected JSON specifications through **Products → Upload specification**.
+Bundled recipe directories do not populate products at startup.
 
 ```bash
 qc_compose run --rm --no-deps frontend \

@@ -12,10 +12,12 @@ from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 
 
 class ApiDeliveryRegistrationSecurityTests(TestCase):
     def setUp(self):
+        managed_definition("clc2012")
         self.user = get_user_model().objects.create_user(username="api-owner")
         UserProductGrant.objects.create(user=self.user, product_ident="clc2012")
         self.raw_key = issue_personal_access_token(

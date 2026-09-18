@@ -10,6 +10,16 @@ Administrators use `/admin/` for accounts and the dashboard configuration
 pages for operational data. Django Admin requires an active staff user; the QC
 Tool `admin` role synchronizes staff status.
 
+## Add products
+
+New installations have an empty product catalog. Open **Products → Upload
+specification** and add the reviewed JSON specifications your users need.
+Bundled recipe files do not appear automatically. A product becomes available
+for assignment and QC after it is added successfully.
+
+See [Product specifications](../development/product-definitions.md#add-or-update-a-product-in-the-browser)
+for validation, revisions, and delivery-plan approval.
+
 ## Create a user
 
 1. Open **Django Admin → Authentication and Authorization → Users**.
@@ -60,7 +70,7 @@ Cross-user scope permissions and scope rows are independent. Both are required.
 
 Administrators assign products in **Django Admin → Users → Product grants**.
 Both default users and product managers may have one or many grants, selected
-from currently available catalog products or QC definitions. Add one row per product. The
+from active catalog products or their registered QC definitions. Add one row per product. The
 product identifier is stored in canonical lowercase form and matched exactly
 to a delivery's product; assigning one product does not grant other products
 in the same family.

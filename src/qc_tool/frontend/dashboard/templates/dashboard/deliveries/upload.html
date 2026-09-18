@@ -29,7 +29,19 @@
 {% block upload_attributes %}data-check-url="{% url 'delivery_upload_check' %}" data-upload-url="{% url 'resumable_upload' %}" data-deliveries-url="{% url 'deliveries' %}" data-setup-job-url="{% url 'setup_job' %}" data-simultaneous-uploads="{{ resumable_simultaneous_uploads }}"{% if correction %} data-correction-submission="{{ correction.submission.pk }}" data-correction-filename="{{ correction.submission.delivery.filename }}" data-correction-delivery-id="{{ correction.submission.delivery_id }}"{% endif %}{% endblock upload_attributes %}
 {% block upload_body %}
 <div class="workspace-card__body qc-upload-body">
-    {% if not has_product_assignments %}
+    {% if not has_catalog_products %}
+    <section class="workspace-notice workspace-notice--warning" aria-labelledby="delivery-products-title">
+        <div>
+            <h2 id="delivery-products-title">No product specifications available</h2>
+            {% if can_upload_specifications %}
+            <p>Upload a product specification JSON before adding deliveries.</p>
+            <a class="btn btn-qc-secondary" href="{% url 'product_upload' %}">Upload product specification</a>
+            {% else %}
+            <p>Ask an administrator to upload a product specification and assign the product to your account before adding deliveries.</p>
+            {% endif %}
+        </div>
+    </section>
+    {% elif not has_product_assignments %}
     <section class="workspace-notice workspace-notice--warning" aria-labelledby="delivery-products-title">
         <div>
             <h2 id="delivery-products-title">No products assigned</h2>

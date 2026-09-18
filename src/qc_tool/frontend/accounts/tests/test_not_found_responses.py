@@ -19,6 +19,7 @@ from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
 from qc_tool.frontend.dashboard.authentication import worker_token_required
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 
 
 @override_settings(DEBUG=False, MAINTENANCE_MODE=False)
@@ -168,6 +169,7 @@ class NotFoundResponseTests(TestCase):
         self.assertIn("Authorization", response["Vary"])
 
     def test_explicit_protocol_404_is_not_rewritten(self):
+        managed_definition("example")
         UserProductGrant.objects.create(user=self.user, product_ident="example")
         self.client.force_login(self.user)
         parameters = {

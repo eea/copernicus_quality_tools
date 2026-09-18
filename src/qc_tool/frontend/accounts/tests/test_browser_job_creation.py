@@ -9,6 +9,7 @@ from django.urls import reverse
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 
 
 class BrowserJobCreationTests(TestCase):
@@ -16,6 +17,11 @@ class BrowserJobCreationTests(TestCase):
         self.user = get_user_model().objects.create_user(username="job-owner")
         UserProductGrant.objects.create(user=self.user, product_ident="product")
         self.client.force_login(self.user)
+        definition = managed_definition("product")
+        self.enterContext(patch(
+            "qc_tool.frontend.dashboard.services.product_units.jobs.creation._catalog_snapshot",
+            return_value=definition,
+        ))
         self.deliveries = [
             Delivery.objects.create(
                 user=self.user,

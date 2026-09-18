@@ -86,6 +86,13 @@ with no migration files or product import. It does not alter existing tables;
 use a fresh development database after schema changes. After release freeze
 it applies committed migrations; production uses an explicit deployment job. See [Database migrations](../development/database-migrations.md).
 
+The initial product catalog is empty. Add reviewed JSON specifications through
+**Products → Upload specification** as an administrator, then assign their
+products to users. Keeping recipe files in `product_definitions/` or `PRODUCT_DIRS`
+does not add them to the catalog, QC selector, or product-grant choices. Local
+demo accounts start without product assignments; restarts retain existing
+accounts and catalog data.
+
 Moving from a draft or incompatible legacy schema to a released schema requires
 a new database initialized from the frozen migrations. Preserve needed local
 data and use a new database/volume; import retained records through an explicit

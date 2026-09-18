@@ -6,6 +6,7 @@ from django.utils import timezone
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import QCException, validate_skip_steps
+from qc_tool.frontend.accounts.services.products import available_product_idents
 from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
 
@@ -39,6 +40,13 @@ def create_delivery_job(
             account_access=account_access,
             product_ident=product_ident,
         )
+        Product = Job._meta.apps.get_model("dashboard", "Product")
+        if Product.objects.filter(ident=product_ident, is_active=False).exists():
+            raise ValueError("This product specification has been removed from active use.")
+        if product_ident not in available_product_idents():
+            raise ValueError(
+                "The product specification is unavailable. An administrator must upload it before starting QC."
+            )
         qc_definition, product_release = _catalog_snapshot(
             product_ident,
             logger=logger,
@@ -86,10 +94,15 @@ def create_delivery_job(
 
 
 def _require_active_specification(product_ident, definition, Job):
-    Product = Job._meta.apps.get_model("dashboard", "Product")
     ProductRelease = Job._meta.apps.get_model("dashboard", "ProductRelease")
-    if Product.objects.filter(ident=product_ident, is_active=False).exists():
-        raise ValueError("This product specification has been removed from active use.")
+    if definition is None or not ProductRelease.objects.filter(
+        product__is_active=True,
+        is_current=True,
+        definition_links__qc_definition=definition,
+    ).exclude(coverage_state=ProductRelease.CoverageState.RETIRED).exists():
+        raise ValueError(
+            "This specification is awaiting activation in shared storage. Retry its upload before starting QC."
+        )
     uploaded = ProductRelease.objects.filter(
         product__ident=product_ident, is_current=True, source_kind="upload"
     )
@@ -143,14 +156,14 @@ def _catalog_snapshot(product_ident, *, logger):
 
     try:
         return snapshot_definition_for_job(product_ident)
-    except CatalogError:
-        # Compatibility for deployments not yet synchronized. Submission is
-        # still fail-closed because it requires an authoritative release/product unit.
+    except CatalogError as exc:
         logger.warning(
             "QC definition %s could not be snapshotted for the job.",
             product_ident,
         )
-        return None, None
+        raise ValueError(
+            "This specification is awaiting activation in shared storage. Retry its upload before starting QC."
+        ) from exc
 
 
 def _actor_username(actor):

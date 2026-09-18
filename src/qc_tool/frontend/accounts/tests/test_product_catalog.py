@@ -1,128 +1,88 @@
-import json
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.db import DatabaseError
+from django.test import TestCase
 
 from qc_tool.frontend.accounts.services import products
+from qc_tool.frontend.dashboard.models import (
+    Product,
+    ProductRelease,
+    ProductReleaseDefinition,
+    QcDefinition,
+)
 
 
-def json_error():
-    return json.JSONDecodeError("invalid definition", "", 0)
-
-
-class ProductCatalogFallbackTests(SimpleTestCase):
-    def scan(self, product_dirs):
-        with patch.object(
-            products,
-            "product_definition_directories",
-            return_value=product_dirs,
-        ), patch.object(
-            products,
-            "get_product_descriptions",
-            side_effect=json_error(),
-        ):
-            return products.available_product_descriptions()
-
-    def test_invalid_definition_does_not_hide_valid_definition(self):
-        with TemporaryDirectory() as temporary_dir:
-            product_dir = Path(temporary_dir)
-            valid_path = product_dir / "valid_product.json"
-            invalid_path = product_dir / "invalid_product.json"
-            valid_path.write_text('{"description": "Valid product"}')
-            invalid_path.write_text("<<<<<<< unresolved merge marker")
-
-            with self.assertLogs(products.__name__, level="WARNING") as logs:
-                descriptions = self.scan([product_dir])
-
-        self.assertEqual(descriptions["valid_product"], "Valid product")
-        self.assertEqual(
-            descriptions["invalid_product"],
-            products.INVALID_PRODUCT_DESCRIPTION,
-        )
-        self.assertIn(str(invalid_path), logs.output[0])
-        self.assertIn("Expecting value", logs.output[0])
-
-    def test_earlier_configured_directory_overrides_later_directory(self):
-        with TemporaryDirectory() as first, TemporaryDirectory() as second:
-            first_dir = Path(first)
-            second_dir = Path(second)
-            (first_dir / "shared.json").write_text(
-                '{"description": "First directory"}'
-            )
-            (second_dir / "shared.json").write_text(
-                '{"description": "Second directory"}'
-            )
-
-            descriptions = self.scan([first_dir, second_dir])
-
-        self.assertEqual(descriptions["shared"], "First directory")
-
-    def test_every_matching_stem_is_included_even_with_schema_errors(self):
-        with TemporaryDirectory() as temporary_dir:
-            product_dir = Path(temporary_dir)
-            (product_dir / "valid.json").write_text(
-                '{"description": "Valid"}'
-            )
-            (product_dir / "missing_description.json").write_text("{}")
-            (product_dir / "not_an_object.json").write_text("[]")
-            (product_dir / "ignored.txt").write_text("not a definition")
-
-            with self.assertLogs(products.__name__, level="WARNING"):
-                descriptions = self.scan([product_dir])
-
-        self.assertEqual(
-            set(descriptions),
-            {"valid", "missing_description", "not_an_object"},
-        )
-        self.assertEqual(
-            descriptions["missing_description"],
-            products.INVALID_PRODUCT_DESCRIPTION,
-        )
-        self.assertEqual(
-            descriptions["not_an_object"],
-            products.INVALID_PRODUCT_DESCRIPTION,
+class ManagedProductCatalogTests(TestCase):
+    def definition(self, ident, *, description=None, digest="a"):
+        return QcDefinition.objects.create(
+            product_ident=ident,
+            digest=digest * 64,
+            description=description or f"Specification for {ident}",
+            document={"description": description or ident, "steps": []},
+            source_path=f"/unavailable/{ident}.json",
         )
 
-    def test_invalid_description_type_from_shared_loader_triggers_scan(self):
-        with TemporaryDirectory() as temporary_dir:
-            product_dir = Path(temporary_dir)
-            (product_dir / "invalid_description.json").write_text(
-                '{"description": []}'
-            )
-
-            with patch.object(
-                products,
-                "product_definition_directories",
-                return_value=[product_dir],
-            ), patch.object(
-                products,
-                "get_product_descriptions",
-                return_value={"invalid_description": []},
-            ), self.assertLogs(products.__name__, level="WARNING"):
-                descriptions = products.available_product_descriptions()
-
-        self.assertEqual(
-            descriptions["invalid_description"],
-            products.INVALID_PRODUCT_DESCRIPTION,
+    def release(self, ident, definition, *, current=True, active=True, state="draft"):
+        product = Product.objects.create(ident=ident, name=f"Product {ident}", is_active=active)
+        release = ProductRelease.objects.create(
+            product=product,
+            release_key=f"upload:{ident}",
+            revision=1,
+            description=product.name,
+            catalog_digest="b" * 64,
+            source_kind=ProductRelease.SourceKind.UPLOAD,
+            coverage_state=state,
+            is_current=current,
         )
+        ProductReleaseDefinition.objects.create(
+            product_release=release, qc_definition=definition, is_primary=True,
+        )
+        return release
 
-    def test_fatal_directory_failure_remains_typed(self):
-        with TemporaryDirectory() as temporary_dir:
-            missing_dir = Path(temporary_dir) / "missing"
+    @patch("qc_tool.common.get_product_descriptions", return_value={"bundled": "Bundled recipe"})
+    def test_empty_catalog_stays_empty_despite_bundled_recipes(self, discover):
+        self.assertEqual(products.available_product_descriptions(), {})
+        self.assertEqual(products.available_product_idents(), frozenset())
+        self.assertEqual(products.product_ident_choices(), ())
+        discover.assert_not_called()
+        self.assertFalse(Product.objects.exists())
+        self.assertFalse(QcDefinition.objects.exists())
 
-            with self.assertRaises(products.ProductCatalogUnavailable):
-                self.scan([missing_dir])
+    def test_current_managed_definition_is_available_without_source_file(self):
+        definition = self.definition("uploaded_recipe", description="Stored uploaded specification")
+        self.release("uploaded_product", definition)
 
-    def test_healthy_shared_loader_remains_the_primary_path(self):
-        expected = {"clc2024": "CLC"}
-        with patch.object(
-            products,
-            "get_product_descriptions",
-            return_value=expected,
-        ), patch.object(products, "_scan_product_descriptions") as fallback:
-            descriptions = products.available_product_descriptions()
+        self.assertEqual(products.available_product_descriptions(), {
+            "uploaded_recipe": "Stored uploaded specification",
+        })
+        self.assertEqual(products.grantable_product_descriptions(), {
+            "uploaded_recipe": "Stored uploaded specification",
+            "uploaded_product": "Product uploaded_product",
+        })
 
-        self.assertIs(descriptions, expected)
-        fallback.assert_not_called()
+    def test_unlinked_historical_archived_and_retired_definitions_are_unavailable(self):
+        self.definition("unlinked")
+        self.release("historical", self.definition("historical_recipe"), current=False)
+        self.release("archived", self.definition("archived_recipe"), active=False)
+        self.release("retired", self.definition("retired_recipe"), state="retired")
+        Product.objects.create(ident="unconfigured", name="Unconfigured product")
+
+        self.assertEqual(products.available_product_descriptions(), {})
+        self.assertEqual(products.grantable_product_descriptions(), {})
+        self.assertEqual(dict(products.product_ident_choices(include=("archived",))), {
+            "archived": "archived — unavailable legacy product",
+        })
+
+    def test_historical_definition_revision_does_not_replace_current_description(self):
+        current = self.definition("recipe", description="Current specification")
+        self.release("managed", current)
+        self.definition("recipe", description="Unlinked newer specification", digest="c")
+
+        self.assertEqual(products.available_product_descriptions(), {"recipe": "Current specification"})
+
+    @patch.object(products, "_available_definition_links", side_effect=DatabaseError("offline"))
+    def test_database_failure_remains_typed_without_file_fallback(self, _links):
+        with self.assertRaises(products.ProductCatalogUnavailable):
+            products.available_product_descriptions()
+        with self.assertRaises(products.ProductCatalogUnavailable):
+            products.product_ident_choices()

@@ -1,6 +1,5 @@
 from io import StringIO
 from pathlib import Path
-from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -10,10 +9,6 @@ from qc_tool.frontend.accounts.authorization.access import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.authorization.permissions import DEFAULT_PERMISSIONS
 from qc_tool.frontend.accounts.authorization.roles import Role
-
-
-PRODUCT_MANAGER_PRODUCT = "clms_ua_lcuc_c2021-2024_v010ha"
-
 
 class StartupAccountCommandTests(TestCase):
     def run_command(self, *arguments):
@@ -45,8 +40,7 @@ class StartupAccountCommandTests(TestCase):
         self.assertIn(
             "python3 -m qc_tool.frontend.manage create_default_user "
             "--username product_manager --password product_manager "
-            "--group product_manager "
-            f"--product {PRODUCT_MANAGER_PRODUCT}",
+            "--group product_manager",
             startup_lines,
         )
         account_commands = {
@@ -109,11 +103,7 @@ class StartupAccountCommandTests(TestCase):
         self.assertFalse(access.is_product_manager)
         self.assertEqual(access.permissions, DEFAULT_PERMISSIONS)
 
-    @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
-        return_value={PRODUCT_MANAGER_PRODUCT: "Urban Atlas LCLU 2021-2024"},
-    )
-    def test_startup_product_manager_is_limited_to_one_product(self, _get):
+    def test_startup_product_manager_starts_without_product_assignments(self):
         output = self.run_command(
             "--username",
             "product_manager",
@@ -121,8 +111,6 @@ class StartupAccountCommandTests(TestCase):
             "product_manager",
             "--group",
             Role.PRODUCT_MANAGER.value,
-            "--product",
-            PRODUCT_MANAGER_PRODUCT,
         )
 
         user = get_user_model().objects.get(username="product_manager")
@@ -136,19 +124,19 @@ class StartupAccountCommandTests(TestCase):
         )
         self.assertEqual(
             set(user.product_grants.values_list("product_ident", flat=True)),
-            {PRODUCT_MANAGER_PRODUCT},
+            set(),
         )
 
         access = access_for(user)
         self.assertFalse(access.is_administrator)
         self.assertTrue(access.is_product_manager)
-        self.assertTrue(access.can_view_product_deliveries)
-        self.assertTrue(access.can_view_product_aggregate_report)
-        self.assertTrue(access.can_view_other_users_deliveries)
+        self.assertFalse(access.can_view_product_deliveries)
+        self.assertFalse(access.can_view_product_aggregate_report)
+        self.assertFalse(access.can_view_other_users_deliveries)
         self.assertFalse(access.can_manage_configuration)
         self.assertEqual(
             access.product_idents,
-            frozenset({PRODUCT_MANAGER_PRODUCT}),
+            frozenset(),
         )
 
     def test_duplicate_startup_command_preserves_the_existing_password(self):

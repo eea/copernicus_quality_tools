@@ -47,9 +47,9 @@ class Command(BaseCommand):
             action="append",
             default=[],
             help=(
-                "Assign an exact canonical lowercase product definition ID; "
+                "Assign an exact canonical product or QC definition ID; "
                 "may be supplied more than once. Each ID is validated against "
-                "the configured product definitions."
+                "the active managed product catalog."
             ),
         )
 

@@ -115,6 +115,27 @@ class ProductSpecificationUploadTests(TestCase):
             content_type=ContentType.objects.get_for_model(Product), action_flag=action,
         )
 
+    def test_catalog_starts_empty_and_only_uploaded_specifications_become_selectable(self):
+        (self.sources / "bundled.json").write_text(json.dumps(self.document()))
+        self.assertIn("bundled", common.get_product_descriptions())
+        self.assertEqual(
+            self.client.get(reverse("product_list_json")).json(),
+            {"product_list": []},
+        )
+
+        response = self.post()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.client.get(reverse("product_list_json")).json()["product_list"],
+            [{"name": "new_product", "description": "Uploaded example product"}],
+        )
+        self.assertEqual(list(Product.objects.values_list("ident", flat=True)), ["new_product"])
+        self.assertEqual(
+            self.client.get(reverse("product_definition_json", args=("bundled",))).status_code,
+            404,
+        )
+
     def test_administrator_page_uses_shared_workspace_and_native_upload_form(self):
         response = self.client.get(self.url)
 

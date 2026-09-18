@@ -13,7 +13,7 @@ same shared data through compatible container paths.
 
 | Variable | Default | Services | Purpose |
 | --- | --- | --- | --- |
-| `PRODUCT_DIRS` | packaged `product_definitions` | frontend, worker | Colon-separated product-definition directories |
+| `PRODUCT_DIRS` | packaged `product_definitions` | frontend, worker | Colon-separated recipe directories for explicitly imported products; does not populate the catalog |
 | `BOUNDARY_DIR` | `/mnt/qc_tool_boundary/boundaries` | frontend, worker | Immutable boundary generations |
 | `INCOMING_DIR` | test-data fallback | frontend, worker | Uploaded/materialized deliveries |
 | `WORK_DIR` | `/mnt/qc_tool_volume/work` | frontend, worker | Results, logs, job files, worker token |

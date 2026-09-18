@@ -3,12 +3,12 @@
 from django.http import JsonResponse
 from qc_tool.common import QCException
 from qc_tool.common import compile_job_form_data
-from qc_tool.common import get_product_descriptions
+from qc_tool.frontend.accounts.services.products import available_product_descriptions
 from qc_tool.product_security import normalize_product_ident
 
 
 def api_product_list(request):
-    product_infos = get_product_descriptions()
+    product_infos = available_product_descriptions()
     product_list = [
         {
             "product_ident": product_ident,
@@ -30,7 +30,11 @@ def api_product_info(request, product_ident):
     """
     try:
         product_ident = normalize_product_ident(product_ident)
-        if product_ident is None or not request.api_access.can_access_product(product_ident):
+        if (
+            product_ident is None
+            or product_ident not in available_product_descriptions()
+            or not request.api_access.can_access_product(product_ident)
+        ):
             raise QCException("Product identifier is not canonical.")
         job_form_data = compile_job_form_data(product_ident)
     except (KeyError, OSError, QCException, TypeError, UnicodeError, ValueError):

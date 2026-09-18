@@ -1,9 +1,5 @@
 """Map product sources to immutable, template-safe values."""
 
-from qc_tool.common import QCException
-from qc_tool.frontend.accounts.services.products import (
-    ProductCatalogUnavailable,
-)
 from qc_tool.frontend.dashboard.services.catalog import (
     get_remaining_product_unit_codes,
 )
@@ -83,42 +79,6 @@ def _managed_release_detail(release, *, coverage, include_coverage):
             and coverage.remaining is not None
             and coverage.remaining > len(remaining_units)
         ),
-    )
-
-
-def definition_backed_detail(
-    product_ident,
-    *,
-    load_descriptions,
-    load_definition,
-):
-    try:
-        descriptions = load_descriptions()
-    except ProductCatalogUnavailable:
-        return None
-    if product_ident not in descriptions:
-        return None
-    try:
-        document = load_definition(product_ident)
-    except (OSError, QCException, UnicodeError):
-        document = None
-    description = descriptions[product_ident]
-    return ProductDetail(
-        ident=product_ident,
-        name=description,
-        description=description,
-        managed=False,
-        releases=(),
-        releases_truncated=False,
-        definitions=(
-            ProductDefinitionSummary(
-                ident=product_ident,
-                description=description,
-                digest=None,
-                is_primary=True,
-            ),
-        ),
-        quality_checks=_quality_checks(document),
     )
 
 

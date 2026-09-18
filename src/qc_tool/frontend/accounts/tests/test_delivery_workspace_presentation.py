@@ -22,6 +22,7 @@ from qc_tool.frontend.accounts.authorization.permissions import (
 )
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
 )
@@ -256,18 +257,10 @@ class DeliveryWorkspacePresentationTests(TestCase):
                 ]
                 self.assertEqual(current_links, [reverse(route_name)])
 
-    @patch(
-        "qc_tool.frontend.dashboard.views.products.available_product_descriptions"
-    )
-    def test_products_page_lists_catalog_values_with_html_escaping(
-        self,
-        get_product_descriptions,
-    ):
+    def test_products_page_lists_catalog_values_with_html_escaping(self):
         unsafe_description = "<script>alert('catalog')</script>"
-        get_product_descriptions.return_value = {
-            "safe-product": "Safe product",
-            "escaped-product": unsafe_description,
-        }
+        managed_definition("safe-product", description="Safe product")
+        managed_definition("escaped-product", description=unsafe_description)
 
         response = self.client.get(reverse("products"))
 
@@ -296,10 +289,10 @@ class DeliveryWorkspacePresentationTests(TestCase):
                 )
         self.assertEqual(
             response.context["plan_filters"],
-            ({"value": "undefined", "label": "Not defined", "count": 2},),
+            ({"value": "restricted", "label": "Restricted", "count": 2},),
         )
-        self.assertContains(response, "Not defined")
-        self.assertContains(response, "Define expected product units")
+        self.assertContains(response, "Restricted")
+        self.assertContains(response, "Coverage restricted")
         self.assertNotContains(response, "Not available")
         self.assertNotContains(response, "API documentation")
         self.assertNotContains(response, reverse("api_homepage") + "#products")
@@ -312,18 +305,13 @@ class DeliveryWorkspacePresentationTests(TestCase):
             with self.subTest(asset=asset):
                 self.assertContains(response, asset)
 
-    @patch(
-        "qc_tool.frontend.dashboard.views.products.available_product_descriptions"
-    )
-    def test_products_page_omits_unroutable_definition_identifiers(
-        self,
-        get_product_descriptions,
-    ):
-        get_product_descriptions.return_value = {
-            "safe-product": "Safe product",
-            "list": "Reserved path",
-            "unsafe/product": "Unroutable product",
-        }
+    def test_products_page_omits_unroutable_catalog_identifiers(self):
+        for ident, description in (
+            ("safe-product", "Safe product"),
+            ("list", "Reserved path"),
+            ("unsafe/product", "Unroutable product"),
+        ):
+            managed_definition(ident, description=description)
 
         response = self.client.get(reverse("products"))
 
@@ -336,7 +324,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         "qc_tool.frontend.dashboard.views.products.available_product_descriptions",
         side_effect=ProductCatalogUnavailable("catalog unavailable"),
     )
-    def test_catalog_failure_keeps_dashboard_and_products_usable(self, _catalog):
+    def test_workspace_selector_failure_does_not_break_catalog_page(self, _catalog):
         dashboard_response = self.client.get(reverse("dashboard_home"))
         products_response = self.client.get(reverse("products"))
 
@@ -346,10 +334,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
             "Product catalog unavailable",
         )
         self.assertEqual(products_response.status_code, 200)
-        self.assertContains(
-            products_response,
-            "Product catalog temporarily unavailable",
-        )
+        self.assertEqual(products_response.context["product_count"], 0)
+        self.assertNotContains(products_response, "Product catalog temporarily unavailable")
 
     @patch(
         "qc_tool.frontend.dashboard.views.overview.get_boundary_version",

@@ -14,6 +14,10 @@ Schema initialization creates tables and standard permissions/roles without
 importing products. It does not alter or reset existing draft tables. Use fresh
 disposable databases for draft schema changes and preserve local data as needed.
 
+New catalogs remain empty until an administrator uploads product specifications
+through **Products → Upload specification**, or an operator deliberately runs a
+reviewed import. Bundled JSON recipes do not become catalog products at startup.
+
 Migration files are versioned in Git and packaged in release images. PostgreSQL
 stores the resulting schema, application data and record of applied migrations.
 

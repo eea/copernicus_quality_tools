@@ -15,6 +15,7 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.dashboard.services.tests.test_resumable_uploads import _descriptor, _parameters
 from qc_tool.frontend.dashboard.services.uploads import prepare_resumable_paths, store_chunk
 from qc_tool.frontend.dashboard.services.uploads.registration import receive_registered_chunk
@@ -23,6 +24,7 @@ from qc_tool.frontend.dashboard.services.uploads.registration import receive_reg
 class UploadRegistrationFixture:
     def setUp(self):
         super().setUp()
+        managed_definition("example")
         self.temporary = TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.media_root = Path(self.temporary.name)

@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from qc_tool.common import JOB_OK
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.models import UserProductGrant
@@ -27,9 +28,10 @@ class ProductWorkflowAccessTests(TestCase):
             "qc_tool.frontend.dashboard.models.find_product_description",
             return_value="Product",
         )
+        self.definitions = {ident: managed_definition(ident) for ident in ("first_product", "second_product")}
         snapshot = patch(
             "qc_tool.frontend.dashboard.services.product_units.jobs.creation._catalog_snapshot",
-            return_value=(None, None),
+            side_effect=lambda ident, **kwargs: self.definitions.get(ident, (None, None)),
         )
         description.start()
         snapshot.start()

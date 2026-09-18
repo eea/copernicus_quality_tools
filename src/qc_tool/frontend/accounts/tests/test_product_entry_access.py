@@ -14,6 +14,7 @@ from qc_tool.frontend.accounts.services.api_tokens import issue_personal_access_
 from qc_tool.frontend.dashboard.models import (
     Delivery, Product, ProductRelease, ProductReleaseDefinition, QcDefinition, S3Info,
 )
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.dashboard.services.s3 import S3Delivery
 from qc_tool.frontend.dashboard.services.tests.test_resumable_uploads import _parameters
 
@@ -31,10 +32,8 @@ class ProductEntryAccessTests(TestCase):
         self.media_root = Path(temporary.name)
         self.enterContext(override_settings(MEDIA_ROOT=self.media_root))
         self.descriptions = {ident: ident.title() for ident in ("product-a", "product-b", "product-c")}
-        self.enterContext(patch(
-            "qc_tool.frontend.dashboard.services.products.identification.get_product_descriptions",
-            return_value=self.descriptions,
-        ))
+        for ident, description in self.descriptions.items():
+            managed_definition(ident, description=description)
 
     def upload(self, filename="product-a_delivery.zip", **parameters):
         return self.client.post(reverse("resumable_upload"), {
@@ -138,16 +137,16 @@ class ProductEntryAccessTests(TestCase):
         inspect.assert_not_called()
 
     def test_browser_and_api_choices_include_only_assigned_products(self):
-        with patch("qc_tool.frontend.dashboard.views.products.data.get_product_descriptions", return_value=self.descriptions):
+        with patch("qc_tool.frontend.dashboard.views.products.data.available_product_descriptions", return_value=self.descriptions):
             browser = self.client.get(reverse("product_list_json"))
-        with patch("qc_tool.frontend.dashboard.views.api_access.products.get_product_descriptions", return_value=self.descriptions):
+        with patch("qc_tool.frontend.dashboard.views.api_access.products.available_product_descriptions", return_value=self.descriptions):
             api = self.client.get(reverse("api_product_list"), HTTP_AUTHORIZATION=self.authorization)
         self.assertEqual({item["name"] for item in browser.json()["product_list"]}, {"product-a", "product-b"})
         self.assertEqual({item["product_ident"] for item in api.json()["products"]}, {"product-a", "product-b"})
 
     def test_job_setup_filters_choices_and_rejects_unassigned_owned_delivery(self):
         delivery = Delivery.objects.create(user=self.user, filename="unknown.zip", size_bytes=4)
-        with patch("qc_tool.frontend.dashboard.views.jobs.setup.get_product_descriptions", return_value=self.descriptions):
+        with patch("qc_tool.frontend.dashboard.views.jobs.setup.available_product_descriptions", return_value=self.descriptions):
             response = self.client.get(reverse("setup_job"), {"deliveries": str(delivery.pk)})
         self.assertEqual(response.status_code, 200)
         self.assertEqual({item["product_ident"] for item in response.context["product_list"]}, {"product-a", "product-b"})

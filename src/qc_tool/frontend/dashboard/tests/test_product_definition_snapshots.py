@@ -58,6 +58,12 @@ class ProductDefinitionSnapshotTests(TestCase):
         locate.assert_not_called()
 
     def test_changed_file_does_not_replace_selected_snapshot(self):
+        product = Product.objects.create(ident="example", name="Example")
+        release = ProductRelease.objects.create(
+            product=product, release_key="example", revision=1,
+            catalog_digest=self.definition.digest, is_current=True,
+        )
+        ProductReleaseDefinition.objects.create(product_release=release, qc_definition=self.definition)
         with TemporaryDirectory() as directory:
             source = Path(directory, "example.json")
             source.write_text('{"description":"New executable definition","steps":[]}')

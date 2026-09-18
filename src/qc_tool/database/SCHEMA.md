@@ -51,6 +51,12 @@ An expected product unit is release-specific; a worker observation cannot add on
 catalog. Catalog synchronization is an explicit operation, separate from schema
 initialization.
 
+An initialized catalog is empty. Administrators add products by uploading JSON
+specifications; optional reviewed operator imports also create catalog records.
+Recipe files in `PRODUCT_DIRS` do not create products or appear as fallback
+catalog entries. Active current catalog relationships determine which products
+and definitions are available for grants and new QC work.
+
 `QcDefinition.document` is a Django `JSONField`, stored as `jsonb` on PostgreSQL.
 It retains the complete check configuration without imposing a common relational
 shape on every algorithm's parameters. `product_ident` identifies the definition

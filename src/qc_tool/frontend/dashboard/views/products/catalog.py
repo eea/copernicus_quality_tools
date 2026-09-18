@@ -13,7 +13,6 @@ from qc_tool.product_security import canonical_product_ident
 from qc_tool.frontend.dashboard.services.catalog import (
     list_current_product_coverage,
 )
-from qc_tool.frontend.dashboard.services.products.lookup import managed_catalog_exists
 from qc_tool.frontend.dashboard.models import Product
 from qc_tool.frontend.dashboard.services.catalog.readiness import product_readiness_many
 
@@ -21,22 +20,17 @@ from qc_tool.frontend.dashboard.services.catalog.readiness import product_readin
 logger = logging.getLogger(__name__)
 
 
-def render_product_catalog(request, *, fallback_catalog):
+def render_product_catalog(request):
     """Render catalog metadata and only authorized aggregate coverage."""
 
     account_access = access_for_request(request)
     show_archived = account_access.is_administrator and request.GET.get("archived") == "1"
     product_catalog = list_current_product_coverage(include_inactive=show_archived)
-    catalog_managed = bool(product_catalog) or managed_catalog_exists()
     if show_archived:
         product_catalog = tuple(row for row in product_catalog if not row["is_active"])
-    if catalog_managed:
-        product_catalog = _scope_coverage(product_catalog, account_access)
-        product_catalog_available = True
-    else:
-        product_catalog, product_catalog_available = fallback_catalog()
+    product_catalog = _scope_coverage(product_catalog, account_access)
     product_catalog = tuple(
-        {**product, **_plan_presentation(product, managed=catalog_managed)}
+        {**product, **_plan_presentation(product, managed=True)}
         for product in product_catalog
         if account_access.can_browse_product(product["ident"])
     )
@@ -69,8 +63,8 @@ def render_product_catalog(request, *, fallback_catalog):
         "dashboard/products/index.html",
         {
             "product_catalog": product_catalog,
-            "product_catalog_available": product_catalog_available,
-            "catalog_managed": catalog_managed,
+            "product_catalog_available": True,
+            "catalog_managed": True,
             "show_archived": show_archived,
             "catalog_tabs": (
                 {"label": "Active products", "url": reverse("products"), "active": not show_archived},

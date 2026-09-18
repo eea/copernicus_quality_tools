@@ -31,7 +31,7 @@ class UserProductGrantTests(TestCase):
         self.user = get_user_model().objects.create_user(username="product-user")
 
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value=CATALOG,
     )
     def test_service_validates_and_creates_multiple_canonical_grants(self, _get):
@@ -51,7 +51,7 @@ class UserProductGrantTests(TestCase):
         self.assertTrue(access.can_view_product_aggregate_report)
 
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value=CATALOG,
     )
     def test_new_values_must_exactly_match_current_canonical_keys(self, _get):
@@ -64,7 +64,7 @@ class UserProductGrantTests(TestCase):
                     )
 
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value=CATALOG,
     )
     def test_unchanged_unavailable_legacy_value_remains_editable(self, _get):
@@ -87,7 +87,7 @@ class UserProductGrantTests(TestCase):
             grant.full_clean()
 
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value=CATALOG,
     )
     def test_choices_label_stored_unavailable_legacy_values(self, _get):
@@ -100,8 +100,8 @@ class UserProductGrantTests(TestCase):
         )
 
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
-        side_effect=OSError("catalog offline"),
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
+        side_effect=ProductCatalogUnavailable("catalog offline"),
     )
     def test_catalog_failure_is_typed_and_model_validation_safe(self, _get):
         with self.assertRaises(ProductCatalogUnavailable):
@@ -144,7 +144,7 @@ class UserProductGrantTests(TestCase):
         self.assertIsNone(grant.created_by)
 
     @patch(
-        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value=CATALOG,
     )
     def test_shared_assignment_service_preserves_creator_and_validates_changes(self, _get):

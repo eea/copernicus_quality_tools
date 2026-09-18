@@ -109,15 +109,21 @@ The local configuration sets both `QC_TOOL_ENVIRONMENT=development` and
 | --- | --- | --- |
 | `admin` | `admin` | Django superuser and QC Tool administrator |
 | `guest` | `guest` | Ordinary local user |
-| `product_manager` | `product_manager` | Product manager for `clms_ua_lcuc_c2021-2024_v010ha` |
+| `product_manager` | `product_manager` | Product manager awaiting product assignments |
 
 On an empty local database, bootstrap creates exactly these three usernames.
 Reruns are non-destructive: they do not reset existing passwords, replace
 roles or grants, or delete accounts left by an earlier local configuration.
 
+The product catalog starts empty. Sign in as `admin`, open **Products → Upload
+specification**, and add the reviewed product JSON files you want to use. Bundled
+files in `product_definitions/` are examples to choose from; startup does not
+import them. Assign the resulting products to `guest` or `product_manager` in
+**Django Admin → Users → Product grants** before those accounts begin product work.
+
 The product manager keeps the ordinary `default` permissions and gains
-cross-user delivery and job visibility only for its assigned product. It can
-review that product's submissions and resolve its submission conflicts through
+cross-user delivery and job visibility only for its assigned products. It can
+review those products' submissions and resolve their submission conflicts through
 the scoped Admin pages. It cannot mutate another user's delivery outside that
 workflow, is not a QC Tool administrator, and cannot see other products.
 
@@ -139,6 +145,10 @@ In the browser, confirm that you can:
    from the workspace sidebar;
 3. open Django Admin as the local `admin` user;
 4. see both PostgreSQL and the worker as healthy in `docker compose ps`.
+
+Before adding specifications, **Products** should show an empty catalog. After
+an administrator uploads a JSON specification, only the added product should
+appear. Restarting the stack preserves the catalog without adding bundled products.
 
 This validates the application stack, not a complete QC run. The repository
 does not ship a ready-to-upload boundary package, and every job pins a boundary

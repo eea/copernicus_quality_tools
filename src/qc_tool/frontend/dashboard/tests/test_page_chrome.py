@@ -797,7 +797,7 @@ class SharedPageChromeTests(TestCase):
         }
         with patch(
             "qc_tool.frontend.dashboard.views.jobs.setup."
-            "get_product_descriptions",
+            "available_product_descriptions",
             return_value={self.product.ident: self.product.name},
         ), patch(
             "qc_tool.frontend.dashboard.views.jobs.results."

@@ -6,9 +6,14 @@ nav_order: 4
 
 # Product definitions and reporting
 
-Author executable recipes as reviewed JSON files. Manage product versions through
-the administrator upload page, or import a reviewed directory inventory. Both
-store immutable documents in PostgreSQL to query parameters and report product coverage.
+The product catalog starts empty. Administrators add reviewed JSON specifications
+through **Products → Upload specification** and manage their versions there.
+Bundled files in `product_definitions/` are reference recipes; their presence does
+not make them available in the catalog, product grants, or QC selectors. Startup
+and database initialization never import them.
+
+An operator can also explicitly import a reviewed directory inventory. Uploads
+and imports store immutable documents in PostgreSQL to query parameters and report product coverage.
 Keep the operational delivery plan explicit: a naming check's accepted product units
 do not necessarily describe the deliverables that must be submitted.
 
@@ -16,7 +21,7 @@ do not necessarily describe the deliverables that must be submitted.
 
 | Source | Responsibility |
 | --- | --- |
-| JSON files in `product_definitions/` or configured `PRODUCT_DIRS` | Reviewed executable recipes, distributed to the frontend and workers |
+| JSON files in `product_definitions/` or configured `PRODUCT_DIRS` | Reference recipes and execution files for explicitly imported products; never automatic catalog entries |
 | `WORK_DIR/product_definitions/.versions/<ident>/<digest>.json` | Immutable original bytes of uploaded specifications, shared by frontend and workers |
 | `WORK_DIR/product_definitions/.state/<ident>.json` | The active uploaded version or an archive marker used by runtime discovery |
 | `catalog_definition_revision.document` | Complete imported recipe, stored as PostgreSQL `jsonb` |
@@ -133,7 +138,9 @@ compatible access permissions. An atomically written
 State is checked on each read, so additions, version switches and removals need
 no process restart. Active version state takes precedence over configured
 `PRODUCT_DIRS`; an inactive marker prevents a bundled recipe from reappearing.
-Without version state, configured directory precedence still applies. The
+Without version state, configured directory precedence still applies to recipe
+resolution. The application only offers active products registered in the
+database catalog; a recipe file alone cannot enable new product work. The
 repository's `product_definitions/` remains unchanged.
 
 Catalog records are committed before immutable runtime bytes are published and
@@ -150,15 +157,21 @@ to recover an interrupted operation. Keep a backup of **both the database and
 the shared uploaded-specification directory**, and preserve it during worker
 scratch cleanup, including its hidden `.versions` and `.state` directories.
 
-## Import recipes locally
+## Optional operator import
+
+Use the administrator upload page for normal product setup. Directory import is
+an explicit bulk operation, never an installation or startup step. Import only
+the reviewed files intended for this catalog; importing the entire bundled
+directory creates a product for every recipe in it.
 
 Start the [local environment](../getting-started/local-development.md) and verify
-that its schema is ready. From the repository root, preview the import:
+that its schema is ready. Put the selected JSON files in a directory visible to
+the container. From the repository root, preview that directory's import:
 
 ```bash
 docker compose -f docker/compose.local.yaml run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage sync_product_definitions \
-  /usr/local/src/copernicus_quality_tools/product_definitions --dry-run
+  /path/in/container/to/reviewed-specifications --dry-run
 ```
 
 After reviewing the output, apply it and check that repeating the import would
@@ -167,11 +180,11 @@ make no changes:
 ```bash
 docker compose -f docker/compose.local.yaml run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage sync_product_definitions \
-  /usr/local/src/copernicus_quality_tools/product_definitions
+  /path/in/container/to/reviewed-specifications
 
 docker compose -f docker/compose.local.yaml run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage sync_product_definitions \
-  /usr/local/src/copernicus_quality_tools/product_definitions --check
+  /path/in/container/to/reviewed-specifications --check
 ```
 
 Pass additional directory arguments when importing more than one recipe source.

@@ -20,10 +20,16 @@ from qc_tool.frontend.dashboard.services.product_units import backfill_product_u
 from qc_tool.frontend.dashboard.services.jobs import serialize_job_history
 from qc_tool.frontend.dashboard.services.jobs import serialize_job_report
 from qc_tool.frontend.dashboard.views import query_deliveries
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 
 
 class ProductUnitPersistenceTests(TestCase):
     def setUp(self):
+        definitions = {ident: managed_definition(ident) for ident in ("product", "new-product")}
+        self.enterContext(patch(
+            "qc_tool.frontend.dashboard.services.product_units.jobs.creation._catalog_snapshot",
+            side_effect=lambda ident, **kwargs: definitions[ident],
+        ))
         self.user = get_user_model().objects.create_user(
             username="aoi-owner",
             password="test-password",

@@ -27,7 +27,3 @@ def current_product_releases(product_ident):
         .order_by("release_key", "pk")[: MAX_CURRENT_RELEASES + 1]
     )
     return releases[:MAX_CURRENT_RELEASES], len(releases) > MAX_CURRENT_RELEASES
-
-
-def managed_catalog_exists():
-    return ProductRelease.objects.filter(is_current=True).exists()

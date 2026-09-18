@@ -6,9 +6,12 @@ from django.test import TestCase
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.models import UserProductGrant
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
+
 
 class ResumableUploadTemplateTests(TestCase):
     def setUp(self):
+        managed_definition("example")
         user = get_user_model().objects.create_user(username="uploader")
         UserProductGrant.objects.create(user=user, product_ident="example")
         self.client.force_login(user)

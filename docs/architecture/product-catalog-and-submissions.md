@@ -50,9 +50,12 @@ able to publish competing candidates without overwriting one another.
 
 ## Catalog ownership
 
-Definitions describe executable QC checks. Reviewed recipes enter through
-directory import from `product_definitions/` or the administrator upload
-page at `/products/upload/`. `QcDefinition.document` stores the full imported
+Definitions describe executable QC checks. The catalog starts empty, and
+administrators add reviewed recipes through the upload page at
+`/products/upload/`. An explicit operator directory import is also supported.
+Bundled recipes alone never populate the catalog or authorize product work;
+active database catalog records control availability.
+`QcDefinition.document` stores the full imported
 document as PostgreSQL JSONB; its digest identifies the original file bytes.
 Recipes remain flexible while products, release links and expected product units have
 relational identities and constraints.

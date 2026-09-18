@@ -11,6 +11,7 @@ from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.dashboard.models import S3Info
 from qc_tool.frontend.dashboard.services.s3 import S3Delivery
 from qc_tool.frontend.dashboard.services.s3 import S3RegistrationError
@@ -27,6 +28,7 @@ ALLOWED_ENDPOINT = "https://objects.example.com"
 )
 class ApiS3RegistrationSecurityTests(TestCase):
     def setUp(self):
+        managed_definition("product")
         self.user = get_user_model().objects.create_user(username="s3-api-owner")
         UserProductGrant.objects.create(user=self.user, product_ident="product")
         self.raw_key = issue_personal_access_token(

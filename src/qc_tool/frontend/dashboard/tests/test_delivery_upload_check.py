@@ -7,12 +7,14 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 
 
 @override_settings(DEBUG=False, MAINTENANCE_MODE=False)
 class DeliveryUploadCheckTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        managed_definition("example")
         cls.owner = get_user_model().objects.create_user(username="duplicate-owner")
         UserProductGrant.objects.create(user=cls.owner, product_ident="example")
         cls.other = get_user_model().objects.create_user(username="duplicate-other")

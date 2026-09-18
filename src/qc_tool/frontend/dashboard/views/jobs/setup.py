@@ -7,8 +7,9 @@ from django.http import HttpResponseBadRequest
 from django.http import JsonResponse
 from django.shortcuts import render
 
-from qc_tool.common import compile_job_form_data
-from qc_tool.common import get_product_descriptions
+from qc_tool.common import QCException, compile_job_form_data
+from qc_tool.frontend.accounts.services.products import available_product_descriptions
+from qc_tool.product_security import normalize_product_ident
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard import models
 from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
@@ -74,15 +75,22 @@ def setup_job(request):
 def get_job_info(request, product_ident):
     """Return the job-step form definition for one product."""
 
-    if not access_for_request(request).can_access_product(product_ident):
+    product_ident = normalize_product_ident(product_ident)
+    if (
+        product_ident is None
+        or product_ident not in available_product_descriptions()
+        or not access_for_request(request).can_access_product(product_ident)
+    ):
         raise Http404("Product definition not found.")
-    return JsonResponse(
-        {"job_result": compile_job_form_data(product_ident)}
-    )
+    try:
+        data = compile_job_form_data(product_ident)
+    except (KeyError, OSError, QCException, TypeError, UnicodeError, ValueError) as exc:
+        raise Http404("Product definition not found.") from exc
+    return JsonResponse({"job_result": data})
 
 
 def _product_options(account_access):
-    descriptions = get_product_descriptions()
+    descriptions = available_product_descriptions()
     options = [
         {
             "product_ident": ident,

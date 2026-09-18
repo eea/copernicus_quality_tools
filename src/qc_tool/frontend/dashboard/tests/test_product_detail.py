@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
+from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.dashboard.models import Product
 from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
@@ -103,113 +104,31 @@ class ProductDetailRoutingTests(TestCase):
 
 
 @override_settings(DEBUG=False, MAINTENANCE_MODE=False)
-class DefinitionBackedProductDetailTests(TestCase):
+class EmptyProductDetailTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="definition-product-reader",
+        self.user = get_user_model().objects.create_superuser(
+            username="empty-catalog-admin", email="admin@example.test",
             password="test-password",
         )
         self.client.force_login(self.user)
-        UserProductGrant.objects.create(user=self.user, product_ident=PRODUCT_IDENT)
 
     @patch(
-        "qc_tool.frontend.dashboard.services.products.detail."
-        "load_product_definition",
-        return_value={
-            "description": "Urban Atlas Change 2021-2024",
-            "steps": [
-                {"check_ident": "required.check", "required": True},
-                {"check_ident": "optional.check", "required": False},
-            ],
-        },
+        "qc_tool.common.load_product_definition",
+        side_effect=AssertionError("Catalog pages must not discover bundled files"),
     )
-    @patch(
-        "qc_tool.frontend.dashboard.services.products.detail."
-        "available_product_descriptions",
-        return_value={PRODUCT_IDENT: "Urban Atlas Change 2021-2024"},
-    )
-    def test_known_definition_backed_product_renders_safe_metadata(
-        self,
-        _descriptions,
-        _definition,
-    ):
-        response = self.client.get(
-            reverse(
-                "product_detail",
-                kwargs={"product_ident": PRODUCT_IDENT},
-            )
-        )
-
+    def test_empty_catalog_does_not_expose_bundled_product_details(self, loader):
+        response = self.client.get(reverse("products"))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "dashboard/products/detail.html")
-        product = response.context["product"]
-        self.assertEqual(product.ident, PRODUCT_IDENT)
-        self.assertEqual(product.name, "Urban Atlas Change 2021-2024")
-        self.assertFalse(product.managed)
-        self.assertEqual(
-            (
-                product.quality_checks.total,
-                product.quality_checks.required,
-                product.quality_checks.optional,
-            ),
-            (2, 1, 1),
-        )
-        self.assertEqual(product.releases, ())
-        self.assertContains(response, PRODUCT_IDENT)
-        self.assertContains(response, "Urban Atlas Change 2021-2024")
-
-    @patch(
-        "qc_tool.frontend.dashboard.services.products.detail."
-        "available_product_descriptions",
-        return_value={PRODUCT_IDENT: "Urban Atlas Change 2021-2024"},
-    )
-    def test_unknown_and_noncanonical_product_identifiers_return_404(
-        self,
-        descriptions,
-    ):
-        UserProductGrant.objects.create(user=self.user, product_ident="unknown_product")
-        unknown = self.client.get(
-            reverse(
-                "product_detail",
-                kwargs={"product_ident": "unknown_product"},
-            )
-        )
-        malformed = self.client.get(
-            reverse(
-                "product_detail",
-                kwargs={"product_ident": PRODUCT_IDENT.upper()},
-            )
-        )
-
-        self.assertEqual(unknown.status_code, 404)
-        self.assertEqual(malformed.status_code, 404)
-        self.assertEqual(descriptions.call_count, 1)
-
-    @patch(
-        "qc_tool.frontend.dashboard.services.products.detail."
-        "load_product_definition",
-        side_effect=UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid"),
-    )
-    @patch(
-        "qc_tool.frontend.dashboard.services.products.detail."
-        "available_product_descriptions",
-        return_value={PRODUCT_IDENT: "Urban Atlas Change 2021-2024"},
-    )
-    def test_invalid_definition_encoding_keeps_metadata_page_available(
-        self,
-        _descriptions,
-        _definition,
-    ):
-        response = self.client.get(
-            reverse("product_detail", args=(PRODUCT_IDENT,))
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.context["product"].quality_checks)
-        self.assertContains(response, "Check totals are unavailable")
+        self.assertEqual(response.context["product_count"], 0)
+        self.assertContains(response, "Add your first product")
+        for ident in (PRODUCT_IDENT, "unknown_product", PRODUCT_IDENT.upper()):
+            with self.subTest(ident=ident):
+                detail = self.client.get(reverse("product_detail", args=(ident,)))
+                self.assertEqual(detail.status_code, 404)
+        loader.assert_not_called()
 
     def test_definition_data_route_normalizes_legacy_uppercase_identifiers(self):
-        UserProductGrant.objects.create(user=self.user, product_ident="product")
+        managed_definition("product")
         with TemporaryDirectory() as directory:
             definition_path = Path(directory, "product.json")
             definition_path.write_text("{}", encoding="utf-8")
@@ -635,8 +554,7 @@ class ManagedProductDetailAccessTests(TestCase):
         self.assertNotContains(detail, "Draft product units")
 
     @patch(
-        "qc_tool.frontend.dashboard.services.products.detail."
-        "load_product_definition",
+        "qc_tool.common.load_product_definition",
         side_effect=AssertionError("Managed pages must use stored definitions"),
     )
     @patch(

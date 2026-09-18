@@ -297,7 +297,7 @@ class GroupedProductAccessTests(TestCase):
         ))
         self.assertTrue(can_view_job(access_for(self.manager), job))
 
-    @patch("qc_tool.frontend.accounts.services.products.get_product_descriptions", return_value={"shared_recipe": "Shared recipe"})
+    @patch("qc_tool.frontend.accounts.services.products.available_product_descriptions", return_value={"shared_recipe": "Shared recipe"})
     def test_admin_grant_selectors_accept_catalog_products_without_adding_them_to_qc_choices(self, _descriptions):
         from qc_tool.frontend.accounts.services.products import available_product_descriptions
 

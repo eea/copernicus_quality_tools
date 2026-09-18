@@ -106,6 +106,10 @@ scope access but do not grant the required region permission. Prefer Django
 Admin or an interactive command when exposing a password on the process command
 line or shell history is unacceptable.
 
+Upload the product specification as an administrator before assigning it with
+`--product`. Files in the bundled recipe directory are not available assignments
+until explicitly added to the database catalog.
+
 The command is idempotent: it does not update an existing user's password,
 roles, or scopes. Use Admin or the appropriate password command for changes.
 

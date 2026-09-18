@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
+from qc_tool.frontend.accounts.services.products import available_product_idents
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.services.submissions.access import visible_submissions
 from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context
@@ -100,6 +101,7 @@ def resumable_upload_page(request):
     """Upload delivery ZIP files with recoverable registration."""
     correction = None
     access = access_for_request(request)
+    product_idents = available_product_idents()
     if "correction_for" in request.GET:
         try:
             submission_id = UUID(request.GET["correction_for"])
@@ -112,7 +114,9 @@ def resumable_upload_page(request):
     return render(request, 'dashboard/deliveries/upload.html', {
         'resumable_simultaneous_uploads': settings.RESUMABLE_SIMULTANEOUS_UPLOADS,
         'correction': correction,
-        'has_product_assignments': access.has_product_assignments,
+        'has_catalog_products': bool(product_idents),
+        'has_product_assignments': any(access.can_access_product(ident) for ident in product_idents),
+        'can_upload_specifications': access.is_administrator,
     })
 
 

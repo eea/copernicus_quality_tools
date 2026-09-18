@@ -43,8 +43,7 @@ if [ "${QC_TOOL_BOOTSTRAP_DEMO_USERS:-no}" = "yes" ]; then
     python3 -m qc_tool.frontend.manage create_default_user \
         --username product_manager \
         --password product_manager \
-        --group product_manager \
-        --product clms_ua_lcuc_c2021-2024_v010ha
+        --group product_manager
 fi
 
 if [ "${QC_TOOL_DEV_SERVER:-no}" = "yes" ]; then

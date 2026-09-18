@@ -158,8 +158,13 @@ class ApiDocumentationSecurityTests(SimpleTestCase):
         "compile_job_form_data",
         side_effect=QCException("internal definition path must stay private"),
     )
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.products.available_product_descriptions",
+        return_value={"unavailable": "Unavailable"},
+    )
     def test_unavailable_product_uses_the_documented_generic_json_404(
         self,
+        _available_descriptions,
         _compile_job_form_data,
     ):
         response = api_product_info(
@@ -183,8 +188,13 @@ class ApiDocumentationSecurityTests(SimpleTestCase):
         "compile_job_form_data",
         return_value={"description": "Canonical product", "steps": []},
     )
+    @patch(
+        "qc_tool.frontend.dashboard.views.api_access.products.available_product_descriptions",
+        return_value={"product": "Canonical product"},
+    )
     def test_product_info_keeps_case_insensitive_api_compatibility(
         self,
+        _available_descriptions,
         compile_job_form_data,
     ):
         response = api_product_info(

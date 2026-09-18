@@ -1,107 +1,41 @@
-import json
-import logging
-from pathlib import Path
-
 from django.core.exceptions import ValidationError
-
-from qc_tool.common import INVALID_PRODUCT_DESCRIPTION
-from qc_tool.common import PRODUCT_FILENAME_REGEX
-from qc_tool.common import get_product_descriptions
-from qc_tool.common import product_definition_directories
-from qc_tool.product_security import canonical_product_ident
-from qc_tool.product_security import normalize_product_ident
+from django.db import DatabaseError
 
 
 UNAVAILABLE_PRODUCT_LABEL = "unavailable legacy product"
-logger = logging.getLogger(__name__)
 
 
 class ProductCatalogUnavailable(Exception):
-    """The configured product definitions cannot currently be read."""
+    """The managed product catalog cannot currently be read."""
+
+
+def _available_definition_links():
+    from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
+
+    return ProductReleaseDefinition.objects.filter(
+        product_release__is_current=True,
+        product_release__product__is_active=True,
+    ).exclude(product_release__coverage_state="retired")
 
 
 def available_product_descriptions():
-    """Return canonical lowercase definition stems mapped to descriptions."""
+    """Return executable specifications explicitly added to the active catalog.
+
+    Files shipped with the application are recipes, not catalog registrations.
+    Only a current managed release makes its stored definitions available to
+    user workflows. Historical revisions and archived products stay unavailable.
+    """
 
     try:
-        descriptions = get_product_descriptions()
-    except (json.JSONDecodeError, KeyError, TypeError, UnicodeDecodeError):
-        return _scan_product_descriptions()
-    except Exception as error:
+        return dict(_available_definition_links().order_by(
+            "qc_definition__imported_at", "qc_definition_id",
+        ).values_list(
+            "qc_definition__product_ident", "qc_definition__description",
+        ))
+    except DatabaseError as error:
         raise ProductCatalogUnavailable(
-            "Configured product definitions are unavailable."
+            "The managed product catalog is unavailable."
         ) from error
-    if not _descriptions_are_valid(descriptions):
-        return _scan_product_descriptions()
-    return descriptions
-
-
-def _descriptions_are_valid(descriptions):
-    return bool(
-        isinstance(descriptions, dict)
-        and all(
-            isinstance(product_ident, str)
-            and product_ident
-            and canonical_product_ident(product_ident) is not None
-            and isinstance(description, str)
-            and description.strip()
-            for product_ident, description in descriptions.items()
-        )
-    )
-
-
-def _scan_product_descriptions():
-    """Load definitions independently so one invalid file cannot hide others."""
-
-    try:
-        product_dirs = tuple(product_definition_directories())
-    except (KeyError, TypeError) as error:
-        raise ProductCatalogUnavailable(
-            "Product definition directories are not configured."
-        ) from error
-    if not product_dirs:
-        raise ProductCatalogUnavailable(
-            "Product definition directories are not configured."
-        )
-
-    descriptions = {}
-    for configured_dir in reversed(product_dirs):
-        product_dir = Path(configured_dir)
-        try:
-            filepaths = tuple(product_dir.iterdir())
-        except OSError as error:
-            raise ProductCatalogUnavailable(
-                f"Product definition directory is unavailable: {product_dir}"
-            ) from error
-
-        for filepath in filepaths:
-            if not filepath.is_file():
-                continue
-            if PRODUCT_FILENAME_REGEX.match(filepath.name) is None:
-                continue
-
-            product_ident = normalize_product_ident(filepath.stem)
-            if product_ident is None:
-                logger.warning(
-                    "Ignoring product definition with an unroutable identifier: %s",
-                    filepath,
-                )
-                continue
-            try:
-                definition = json.loads(filepath.read_text())
-                description = definition["description"]
-                if not isinstance(description, str) or not description.strip():
-                    raise ValueError("description must be a non-empty string")
-            except (OSError, UnicodeError, ValueError, KeyError, TypeError) as error:
-                logger.warning(
-                    "Invalid product definition %s: %s",
-                    filepath,
-                    error,
-                )
-                description = INVALID_PRODUCT_DESCRIPTION
-            descriptions[product_ident] = description
-
-    return descriptions
 
 
 def available_product_idents():
@@ -139,17 +73,17 @@ def validate_new_product_ident(product_ident):
 
 
 def grantable_product_descriptions():
-    """Grant selectors include catalog groups without adding them to QC choices."""
+    """Grant selectors include active parent products and their QC definitions."""
 
-    from qc_tool.frontend.dashboard.models import Product
-
-    products = dict(Product.objects.filter(is_active=True).values_list("ident", "name"))
+    definitions = available_product_descriptions()
     try:
-        definitions = available_product_descriptions()
-    except ProductCatalogUnavailable:
-        if not products:
-            raise
-        definitions = {}
+        products = dict(_available_definition_links().values_list(
+            "product_release__product__ident", "product_release__product__name",
+        ))
+    except DatabaseError as error:
+        raise ProductCatalogUnavailable(
+            "The managed product catalog is unavailable."
+        ) from error
     return {**definitions, **products}
 
 
