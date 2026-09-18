@@ -7,6 +7,7 @@
 {% block workspace_css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-table.min.css' %}" type="text/css" media="screen">
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/entity-summary.css' %}" type="text/css" media="screen">
 <link rel="stylesheet" href="{% static 'dashboard/css/features/jobs/result.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
@@ -17,8 +18,7 @@
 {% endblock page_breadcrumbs %}
 
 {% block page_title %}QC job result{% endblock page_title %}
-{% block page_subtitle %}<p>Review the persisted QC outcome and supporting artifacts for <strong>{{ job_report.filename }}</strong>.</p>{% endblock page_subtitle %}
-{% block page_header_meta %}<code class="job-result-page__uuid">{{ job_report.job_uuid }}</code>{% endblock page_header_meta %}
+{% block page_subtitle %}<p>Review this run's outcome and individual checks.</p>{% endblock page_subtitle %}
 {% block page_actions %}
 <a class="btn btn-default btn-qc-secondary" href="{% url 'job_history' delivery.id %}">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
@@ -30,108 +30,28 @@
 {% if announcement %}
 <aside class="workspace-notice workspace-notice--warning" aria-labelledby="job-result-announcement-title">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
-    <div>
-        <h2 id="job-result-announcement-title">Announcement</h2>
-        <p>{{ announcement }}</p>
-    </div>
+    <div><h2 id="job-result-announcement-title">Announcement</h2><p>{{ announcement }}</p></div>
 </aside>
 {% endif %}
 
-<section class="workspace-card job-result-summary" aria-labelledby="job-result-summary-title">
-    <header class="workspace-card__header">
-        <div>
-            <h2 id="job-result-summary-title">Job overview</h2>
-            <p>The job identity, delivery metadata, and terminal job status.</p>
-        </div>
-        <span class="job-result-status job-result-status--{{ job_report.status|default:'unknown'|slugify }}">{{ job_report.status|default:"Unknown" }}</span>
-    </header>
-    <dl class="job-result-facts">
-        <div><dt>Product</dt><dd>{{ job_report.description }}</dd></div>
-        <div><dt>Product identifier</dt><dd><code>{{ job_report.product_ident }}</code></dd></div>
-        <div><dt>Product unit code</dt><dd>{{ job_report.product_unit_code|default:"Not available" }}</dd></div>
-        {% if job_report.submitted_product_unit_code %}<div><dt>Submitted product unit code</dt><dd>{{ job_report.submitted_product_unit_code }}</dd></div>{% endif %}
-        <div><dt>Reference year</dt><dd>{{ job_report.reference_year|default:"Not available" }}</dd></div>
-        {% if account_access.can_view_other_users_deliveries %}<div><dt>User</dt><dd>{{ delivery.user.username }}</dd></div>{% endif %}
-        <div>
-            <dt>Delivery file</dt>
-            <dd>
-                {% if delivery.is_deleted %}{{ job_report.filename }} <span class="job-result-facts__muted">(deleted)</span>{% else %}<a href="{% url 'download_delivery_file' delivery.id %}">{{ job_report.filename }}</a>{% endif %}
-            </dd>
-        </div>
-        <div><dt>Started</dt><dd>{{ job_report.job_start_date|default:"Not available" }}</dd></div>
-        <div><dt>Finished</dt><dd>{{ job_report.job_finish_date|default:"Not available" }}</dd></div>
-    </dl>
+{% include "dashboard/shared/entity_summary.html" with id="job-result-delivery" summary=result_view.summary only %}
 
-    {% if job_report.aborted_check %}
-    <div class="workspace-notice workspace-notice--danger job-result-alert" role="alert">
-        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+<section class="workspace-card job-result-card" aria-labelledby="job-result-outcome-title">
+    <div class="job-result-outcome" data-tone="{{ result_view.outcome.tone }}">
+        <svg class="ui-icon job-result-outcome__icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#{{ result_view.outcome.icon }}"></use></svg>
         <div>
-            <h2>QC job stopped early</h2>
-            <p>The <strong>{{ job_report.aborted_check }}</strong> check reported an error that could make later checks unreliable.</p>
+            <h2 id="job-result-outcome-title">{{ result_view.outcome.title }}</h2>
+            <p>{{ result_view.outcome.message }}</p>
+            {% if job_report.error_message %}<p class="job-result-error-message">{{ job_report.error_message }}</p>{% endif %}
         </div>
     </div>
-    {% endif %}
-    {% if job_report.status == "error" %}
-    <div class="workspace-notice workspace-notice--danger job-result-alert" role="alert">
-        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#x-circle"></use></svg>
+    <div class="job-result-checks-heading">
         <div>
-            <h2>QC job error:</h2>
-            <p>{{ job_report.error_message }}</p>
+            <h2 id="job-result-checks-title">Check results <span>{{ result_view.counters.total }}</span></h2>
+            <p>Each check, its result and the messages reported during this run.</p>
         </div>
-    </div>
-    {% endif %}
-</section>
-
-<section class="workspace-card job-result-card" aria-labelledby="job-result-checks-title">
-    <header class="workspace-card__header">
-        <div>
-            <h2 id="job-result-checks-title">Check results</h2>
-            <p id="job-result-checks-description">Each configured check, its execution state, messages, and downloadable attachments.</p>
-        </div>
-    </header>
-
-    {% if job_report.steps %}
-    <div class="job-result-table-region qc-data-table-region">
-        <table id="tbl-results" class="table qc-data-table" aria-describedby="job-result-checks-description" data-export-filename="qc-check-results-{{ job_report.job_uuid }}">
-            <caption class="sr-only">Quality-control checks for job {{ job_report.job_uuid }}</caption>
-            <thead>
-                <tr>
-                    <th data-field="step_nr" data-sortable="false">Step</th>
-                    <th data-field="check_ident" data-sortable="false">Check</th>
-                    <th data-field="layers" data-sortable="false">Layers</th>
-                    <th data-field="check_result" data-sortable="false">Status</th>
-                    <th data-field="check_attachments" data-sortable="false">Attachments</th>
-                    <th data-field="check_message" data-sortable="false">Comments</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for step in job_report.steps %}
-                <tr class="job-result-row job-result-row--{{ step.status|default:'unknown'|slugify }}">
-                    <td>{{ step.step_nr }}</td>
-                    <td><code>{{ step.check_ident }}</code><span>{{ step.description }}</span></td>
-                    <td>{% for layer in step.layers %}<span class="job-result-layer">{{ layer }}</span>{% empty %}<span class="job-result-empty-value">—</span>{% endfor %}</td>
-                    <td><span class="job-result-status job-result-status--{{ step.status|default:'unknown'|slugify }}">{{ step.status|default:"Not started" }}</span></td>
-                    <td>
-                        {% for attachment_filename in step.attachment_filenames %}
-                        <a class="job-result-attachment" href="{% url 'get_attachment' job_report.job_uuid attachment_filename %}">{{ attachment_filename }}</a>
-                        {% empty %}<span class="job-result-empty-value">—</span>{% endfor %}
-                    </td>
-                    <td>{% if step.messages %}<ul>{% for message in step.messages %}<li>{{ message }}</li>{% endfor %}</ul>{% else %}<span class="job-result-empty-value">—</span>{% endif %}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="job-result-empty">
-        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
-        <div><strong>No check results are available</strong><p>Review the job log for worker and system-level details.</p></div>
-    </div>
-    {% endif %}
-
-    <footer class="workspace-card__footer job-result-actions" aria-label="QC result downloads">
-        <div>
-            {% if job_report.job_finish_date %}
+        <nav class="job-result-downloads" aria-label="QC result downloads">
+            {% if result_view.can_download_pdf %}
             <a class="btn btn-default btn-qc-secondary" href="{% url 'job_report_pdf' job_report.job_uuid %}">
                 <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>
                 PDF report
@@ -139,10 +59,80 @@
             {% endif %}
             <a class="btn btn-default btn-qc-secondary" href="{% url 'job_report_json' job_report.job_uuid %}">JSON report</a>
             <a class="btn btn-default btn-qc-secondary" href="{% url 'job_combined_log' job_report.job_uuid %}">Job log</a>
-        </div>
-        <a href="{% url 'job_history' delivery.id %}">View complete job history</a>
-    </footer>
+        </nav>
+    </div>
+    {% if result_view.counters.total %}
+    <nav id="job-result-checks" class="qc-section-tabs job-result-filters" aria-label="Filter check results">
+        <ul class="qc-section-tabs__list">
+            {% for filter in result_view.filters %}
+            <li><a href="{{ filter.url }}" class="qc-section-tabs__item" data-check-filter="{{ filter.key }}"{% if filter.active %} aria-current="page"{% endif %}>
+                {{ filter.label }} <span class="qc-section-tabs__count">{{ filter.count }}</span>
+            </a></li>
+            {% endfor %}
+        </ul>
+    </nav>
+    <p id="job-result-checks-description" class="job-result-filter-description">{{ result_view.checks_description }}</p>
+    {% endif %}
+
+    {% if result_view.steps %}
+    <div class="job-result-table-region qc-data-table-region">
+        <table id="tbl-results" class="table qc-data-table" aria-describedby="job-result-checks-description" data-export-filename="qc-check-results-{{ job_report.job_uuid }}">
+            <caption class="sr-only">{{ result_view.checks_title }} for job {{ job_report.job_uuid }}</caption>
+            <thead>
+                <tr>
+                    <th data-field="step_nr" data-sortable="false" data-class="job-result-col--step">Step</th>
+                    <th data-field="check_ident" data-sortable="false" data-class="job-result-col--check">Check</th>
+                    <th data-field="layers" data-sortable="false" data-class="job-result-col--layers" data-visible="{{ result_view.has_layers|yesno:'true,false' }}">Layers</th>
+                    <th data-field="check_result" data-sortable="false" data-class="job-result-col--status">Result</th>
+                    <th data-field="check_message" data-sortable="false" data-class="job-result-col--messages">Messages</th>
+                    <th data-field="check_attachments" data-sortable="false" data-class="job-result-col--attachments" data-visible="{{ result_view.has_attachments|yesno:'true,false' }}">Attachments</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for step in result_view.steps %}
+                <tr class="job-result-row job-result-row--{{ step.category }}">
+                    <td class="job-result-col--step">{{ step.number }}</td>
+                    <td class="job-result-col--check">
+                        <strong class="job-result-check-title">{{ step.title }}</strong>
+                        <span class="job-result-check-description">{{ step.description }}</span>
+                        <code>{{ step.display_ident }}</code>
+                        {% if step.required %}<span class="job-result-required">Required check</span>{% endif %}
+                    </td>
+                    <td class="job-result-col--layers">{% for layer in step.layers %}<span class="job-result-layer">{{ layer }}</span>{% empty %}<span class="job-result-empty-value">—</span>{% endfor %}</td>
+                    <td class="job-result-col--status"><span class="job-result-status" data-tone="{{ step.status_tone }}">{{ step.status_label }}</span></td>
+                    <td class="job-result-col--messages">{% if step.messages %}<ul class="job-result-messages">{% for message in step.messages %}<li>{{ message }}</li>{% endfor %}</ul>{% else %}<span class="job-result-empty-value">—</span>{% endif %}</td>
+                    <td class="job-result-col--attachments">
+                        {% for attachment_filename in step.attachment_filenames %}
+                        <a class="job-result-attachment" href="{% url 'get_attachment' job_report.job_uuid attachment_filename %}">{{ attachment_filename }}</a>
+                        {% empty %}<span class="job-result-empty-value">—</span>{% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="job-result-empty">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#help-circle"></use></svg>
+        <div>{% if result_view.counters.total %}<strong>No checks in this view</strong><p>Select All checks to see the complete run.</p>{% else %}<strong>No check results yet</strong><p>The job log contains any available worker details. Reload this page for the latest results.</p>{% endif %}</div>
+    </div>
+    {% endif %}
 </section>
+
+<details class="workspace-card job-result-details">
+    <summary><span>Run details</span><span class="job-result-details__hint">Job identifier, specification and file information</span><svg class="ui-icon job-result-details__chevron" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-down"></use></svg></summary>
+    <dl class="job-result-details__facts">
+        <div><dt>Job identifier</dt><dd><code>{{ job_report.job_uuid }}</code></dd></div>
+        <div><dt>Product identifier</dt><dd><code>{{ job_report.product_ident }}</code></dd></div>
+        {% if job_report.reference_year %}<div><dt>Reference year</dt><dd>{{ job_report.reference_year }}</dd></div>{% endif %}
+        {% if job_report.submitted_product_unit_code %}<div><dt>Submitted product unit</dt><dd>{{ job_report.submitted_product_unit_code }}</dd></div>{% endif %}
+        {% if account_access.can_view_other_users_deliveries %}<div><dt>Uploaded by</dt><dd>{{ delivery.user.username }}</dd></div>{% endif %}
+        <div><dt>Delivery file</dt><dd>{% if delivery.is_deleted %}{{ job_report.filename }} (deleted){% else %}<a href="{% url 'download_delivery_file' delivery.id %}">{{ job_report.filename }}</a>{% endif %}</dd></div>
+        {% if job_report.qc_tool_version %}<div><dt>QC Tool version</dt><dd>{{ job_report.qc_tool_version }}</dd></div>{% endif %}
+        {% if job.qc_definition_id %}<div><dt>Specification SHA-256</dt><dd><code>{{ job.qc_definition.digest }}</code></dd></div>{% endif %}
+        {% if job.input_sha256 %}<div><dt>Delivery SHA-256</dt><dd><code>{{ job.input_sha256 }}</code></dd></div>{% endif %}
+    </dl>
+</details>
 {% endblock page_content %}
 
 {% block js %}

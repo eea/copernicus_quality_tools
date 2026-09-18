@@ -6,16 +6,22 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import patch
+from uuid import uuid4
 
 from qc_tool.common import CONFIG
 from qc_tool.common import INVALID_PRODUCT_DESCRIPTION
 from qc_tool.common import QCException
+from qc_tool.common import compile_job_report_data
+from qc_tool.common import compose_job_dir
+from qc_tool.common import copy_product_definition_to_job
 from qc_tool.common import current_product_specification_state
 from qc_tool.common import get_product_definitions
 from qc_tool.common import get_product_descriptions
 from qc_tool.common import load_product_definition
+from qc_tool.common import load_product_definition_from_job
 from qc_tool.common import locate_product_definition
 from qc_tool.common import product_definition_directories
+from qc_tool.common import store_job_result
 
 
 class ProductDefinitionStorageFixture:
@@ -265,3 +271,135 @@ class VersionedProductSpecificationDiscoveryTests(ProductDefinitionStorageFixtur
             )
         with self.assertLogs("qc_tool.common", level="WARNING"):
             self.assertEqual(get_product_definitions(), [])
+
+
+class JobProductSpecificationSnapshotTests(ProductDefinitionStorageFixture, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.job_uuid = str(uuid4())
+        self.job_dir = compose_job_dir(self.job_uuid)
+        self.job_dir.mkdir(parents=True)
+
+    def write_digest_snapshot(self, description="Historical recipe", payload=None):
+        if payload is None:
+            payload = json.dumps({"description": description, "steps": []}).encode("utf-8")
+        digest = hashlib.sha256(payload).hexdigest()
+        path = self.job_dir / (digest + ".json")
+        path.write_bytes(payload)
+        return path
+
+    def test_versioned_source_is_copied_under_canonical_product_name(self):
+        payload = b'{"description": "Uploaded recipe", "steps": []}'
+        digest = hashlib.sha256(payload).hexdigest()
+        versions = self.uploads / ".versions" / "product"
+        versions.mkdir(parents=True)
+        source = versions / (digest + ".json")
+        source.write_bytes(payload)
+        states = self.uploads / ".state"
+        states.mkdir()
+        (states / "product.json").write_text(json.dumps({"active": True, "digest": digest}))
+
+        copy_product_definition_to_job(self.job_uuid, "PRODUCT")
+
+        self.assertEqual((self.job_dir / "product.json").read_bytes(), payload)
+        self.assertFalse((self.job_dir / source.name).exists())
+        self.assertEqual(
+            load_product_definition_from_job(self.job_uuid, "product")["description"],
+            "Uploaded recipe",
+        )
+
+    def test_historical_digest_snapshot_compiles_without_current_product(self):
+        self.write_digest_snapshot()
+        store_job_result({
+            "job_uuid": self.job_uuid,
+            "product_ident": "product",
+            "filename": "delivery.zip",
+            "status": "ok",
+            "steps": [],
+        })
+        with patch("qc_tool.common.load_product_definition", side_effect=AssertionError("Current recipe must not be read")):
+            report = compile_job_report_data(self.job_uuid)
+
+        self.assertEqual(report["description"], "Historical recipe")
+        self.assertEqual(report["filename"], "delivery.zip")
+        self.assertEqual(report["status"], "ok")
+
+    def test_named_snapshot_is_case_insensitive_and_takes_precedence(self):
+        self.write_definition(self.job_dir, "PRODUCT", "Named historical recipe")
+        self.write_digest_snapshot()
+
+        definition = load_product_definition_from_job(self.job_uuid, "product")
+
+        self.assertEqual(definition["description"], "Named historical recipe")
+
+    def test_multiple_digest_snapshots_are_not_guessed(self):
+        self.write_digest_snapshot("First recipe")
+        self.write_digest_snapshot("Second recipe")
+
+        with self.assertRaisesRegex(QCException, "ambiguous"):
+            load_product_definition_from_job(self.job_uuid, "product")
+
+    def test_multiple_case_variants_are_not_guessed(self):
+        self.write_definition(self.job_dir, "PRODUCT", "Uppercase recipe")
+        if (self.job_dir / "product.json").exists():
+            self.skipTest("Duplicate case variants require a case-sensitive filesystem")
+        self.write_definition(self.job_dir, "product", "Lowercase recipe")
+
+        with self.assertRaisesRegex(QCException, "ambiguous"):
+            load_product_definition_from_job(self.job_uuid, "product")
+
+    def test_invalid_named_snapshot_does_not_fall_back_to_digest_snapshot(self):
+        (self.job_dir / "product.json").write_text("not JSON")
+        self.write_digest_snapshot()
+
+        with self.assertRaisesRegex(QCException, "unavailable or invalid"):
+            load_product_definition_from_job(self.job_uuid, "product")
+
+    def test_changed_digest_snapshot_is_rejected(self):
+        path = self.write_digest_snapshot()
+        path.write_text('{"description": "Changed recipe", "steps": []}')
+
+        with self.assertRaisesRegex(QCException, "unavailable or invalid"):
+            load_product_definition_from_job(self.job_uuid, "product")
+
+    def test_symlinked_snapshots_cannot_read_external_files(self):
+        for digest_named in (False, True):
+            with self.subTest(digest_named=digest_named):
+                path = (
+                    self.write_digest_snapshot() if digest_named else
+                    self.write_definition(self.job_dir, "product", "Recipe")
+                )
+                external = self.root / "external.json"
+                path.rename(external)
+                path.symlink_to(external)
+                with self.assertRaisesRegex(QCException, "unavailable or invalid"):
+                    load_product_definition_from_job(self.job_uuid, "product")
+                path.unlink()
+                external.unlink()
+
+    def test_digest_named_directory_is_rejected(self):
+        (self.job_dir / ("a" * 64 + ".json")).mkdir()
+
+        with self.assertRaisesRegex(QCException, "unavailable or invalid"):
+            load_product_definition_from_job(self.job_uuid, "product")
+
+    def test_invalid_snapshot_json_is_rejected_even_with_matching_digest(self):
+        for payload in (b"not JSON", b"[]", b'{}', b'\xff'):
+            with self.subTest(payload=payload):
+                path = self.write_digest_snapshot(payload=payload)
+                with self.assertRaisesRegex(QCException, "unavailable or invalid"):
+                    load_product_definition_from_job(self.job_uuid, "product")
+                path.unlink()
+
+    def test_missing_snapshot_never_uses_current_product(self):
+        self.write_definition(self.source, "product", "Today's recipe")
+        (self.job_dir / "result.json").write_text('{"product_ident": "product", "steps": []}')
+
+        with self.assertRaisesRegex(QCException, "has not been found"):
+            load_product_definition_from_job(self.job_uuid, "product")
+
+    def test_invalid_product_identifier_is_rejected(self):
+        for product_ident in ("../external", None, "pa\u00df"):
+            with self.subTest(product_ident=product_ident):
+                with self.assertRaisesRegex(QCException, "identifier is invalid"):
+                    load_product_definition_from_job(self.job_uuid, product_ident)

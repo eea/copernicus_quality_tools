@@ -493,24 +493,43 @@ def create_job_dir(job_uuid):
 
 def copy_product_definition_to_job(job_uuid, product_ident):
     src_filepath = locate_product_definition(product_ident)
-    dst_filepath = compose_job_dir(job_uuid).joinpath(src_filepath.name)
+    # Uploaded definitions are stored under their content digest. Job readers
+    # identify the snapshot by product, independently of its source filename.
+    dst_filepath = compose_job_dir(job_uuid).joinpath(
+        normalize_product_ident(product_ident) + ".json"
+    )
     copyfile(str(src_filepath), str(dst_filepath))
 
 def load_product_definition_from_job(job_uuid, product_ident):
-    # look for the product definition in the job directory.
-    # the product definition is a json file and file name is the same as the product ident.
-    # the product ident is case insensitive.
-    job_dir = compose_job_dir(job_uuid)
-    json_filepaths = job_dir.glob("*.json")
-    for json_filepath in json_filepaths:
-        if json_filepath.stem.lower() == product_ident.lower():
-            filepath = json_filepath
-            break
-    else:
-        raise QCException("Product definition file {:s}.json has not been found in the job working directory.".format(product_ident))
+    """Read the job's own snapshot, including older digest-named copies."""
 
-    data = filepath.read_text()
-    product_definition = json.loads(data)
+    ident = normalize_product_ident(product_ident)
+    if ident is None:
+        raise QCException("Product definition identifier is invalid.")
+    job_dir = compose_job_dir(job_uuid)
+    json_filepaths = list(job_dir.glob("*.json"))
+    candidates = [path for path in json_filepaths if path.stem.lower() == ident]
+    digest_named = not candidates
+    if digest_named:
+        # Older workers copied the immutable source filename verbatim. Only
+        # accept one verifiable snapshot; never use today's active definition.
+        candidates = [
+            path for path in json_filepaths
+            if re.fullmatch(r"[a-f0-9]{64}", path.stem)
+        ]
+    if not candidates:
+        raise QCException("Product definition file {:s}.json has not been found in the job working directory.".format(product_ident))
+    if len(candidates) != 1:
+        raise QCException("The job's product definition snapshot is ambiguous.")
+    filepath = candidates[0]
+    try:
+        payload = _read_regular_specification_file(filepath, 1024 * 1024)
+        if digest_named and hashlib.sha256(payload).hexdigest() != filepath.stem:
+            raise ValueError("Specification snapshot digest does not match")
+        product_definition = json.loads(payload.decode("utf-8"))
+        validate_executable_product_configuration(product_definition)
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise QCException("The job's product definition snapshot is unavailable or invalid.") from exc
     product_definition["product_ident"] = product_ident
     return product_definition
 

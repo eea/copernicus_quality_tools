@@ -13,6 +13,9 @@ from qc_tool.frontend.dashboard.services.configuration.presentation import (
     get_announcement_message,
 )
 from qc_tool.frontend.dashboard.services.jobs import serialize_job_report
+from qc_tool.frontend.dashboard.services.jobs.result_presentation import (
+    build_result_presentation,
+)
 
 
 def get_result(request, job_uuid):
@@ -20,14 +23,16 @@ def get_result(request, job_uuid):
 
     job = _get_authorized_job(request, job_uuid)
     job_report = _serialized_report(job, job_uuid)
-    if job_report.get("status") is None:
-        job_report["status"] = job.job_status
-    _normalize_report_steps(job_report)
+    result_view = build_result_presentation(
+        job, job_report, access_for_request(request), request.GET.get("checks", ""),
+    )
     return render(
         request,
         "dashboard/jobs/result.html",
         {
             "job_report": job_report,
+            "job": job,
+            "result_view": result_view,
             "delivery": job.delivery,
             "show_logo": settings.SHOW_LOGO,
             "announcement": get_announcement_message(),
@@ -53,12 +58,3 @@ def _serialized_report(job, job_uuid):
         compile_job_report_data(job_uuid, job.product_ident),
         job,
     )
-
-
-def _normalize_report_steps(job_report):
-    for step in job_report["steps"]:
-        check_ident = step["check_ident"]
-        if check_ident.startswith("qc_tool."):
-            step["check_ident"] = ".".join(check_ident.split(".")[1:])
-        if step["status"] == "aborted":
-            job_report["aborted_check"] = step["check_ident"]

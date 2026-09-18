@@ -157,12 +157,149 @@ class ResumableRegistrationTests(UploadRegistrationFixture, TestCase):
         self.assertEqual(first.json()["delivery_id"], repeated.json()["delivery_id"])
         self.assertEqual(Delivery.objects.count(), 1)
 
+    def test_identical_unregistered_file_is_recovered_without_replacing_it(self):
+        self.paths.target_path.write_bytes(b"abcd")
+        original_inode = self.paths.target_path.stat().st_ino
+        self.assertEqual(self.client.get(self.url, self.parameters).status_code, 404)
+
+        response = self.post_chunk()
+
+        self.assertEqual(response.status_code, 200)
+        delivery = Delivery.objects.get()
+        self.assertEqual(response.json()["delivery_id"], delivery.pk)
+        self.assertEqual(delivery.user_id, self.user.pk)
+        self.assertEqual(delivery.filename, self.descriptor.filename)
+        self.assertEqual(delivery.size_bytes, 4)
+        self.assertEqual(self.paths.target_path.stat().st_ino, original_inode)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"abcd")
+        self.assertEqual(self.client.get(self.url, self.parameters).status_code, 200)
+        self.assertEqual(self.post_chunk().json()["delivery_id"], delivery.pk)
+        self.assertEqual(Delivery.objects.count(), 1)
+
+    def test_failed_registration_can_resume_with_a_new_upload_identifier(self):
+        with patch("qc_tool.frontend.dashboard.services.uploads.registration.Delivery.objects.create", side_effect=RuntimeError("database temporarily unavailable")):
+            self.assertEqual(self.post_chunk().status_code, 500)
+        original_inode = self.paths.target_path.stat().st_ino
+        parameters = _parameters(identifier="upload-after-page-reload")
+        self.assertEqual(self.client.get(self.url, parameters).status_code, 404)
+
+        response = self.client.post(self.url, {
+            **parameters, "file": SimpleUploadedFile("chunk", b"abcd"),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["delivery_id"], Delivery.objects.get().pk)
+        self.assertEqual(self.paths.target_path.stat().st_ino, original_inode)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"abcd")
+        self.assertEqual(self.client.get(self.url, parameters).status_code, 200)
+
+    def test_missing_delivery_row_and_stale_receipt_do_not_block_identical_upload(self):
+        self.assertEqual(self.post_chunk().status_code, 200)
+        Delivery.objects.all().delete()
+        original_inode = self.paths.target_path.stat().st_ino
+        self.assertEqual(self.client.get(self.url, self.parameters).status_code, 404)
+
+        response = self.post_chunk()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["delivery_id"], Delivery.objects.get().pk)
+        self.assertEqual(self.paths.target_path.stat().st_ino, original_inode)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"abcd")
+        self.assertEqual(self.client.get(self.url, self.parameters).status_code, 200)
+
+    def test_recovered_file_remains_retryable_when_database_registration_fails(self):
+        self.paths.target_path.write_bytes(b"abcd")
+        original_inode = self.paths.target_path.stat().st_ino
+        with patch("qc_tool.frontend.dashboard.services.uploads.registration.Delivery.objects.create", side_effect=RuntimeError("database temporarily unavailable")):
+            failed = self.post_chunk()
+        self.assertEqual(failed.status_code, 500)
+        self.assertEqual(failed.json()["code"], "delivery_registration_failed")
+        self.assertFalse(Delivery.objects.exists())
+        self.assertEqual((self.paths.chunks_dir / ".assembled").stat().st_ino, original_inode)
+
+        response = self.post_chunk()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["delivery_id"], Delivery.objects.get().pk)
+        self.assertEqual(self.paths.target_path.stat().st_ino, original_inode)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"abcd")
+        self.assertFalse((self.paths.chunks_dir / ".assembled").exists())
+
+    def test_interrupted_orphan_recovery_preserves_file_and_can_retry(self):
+        self.paths.target_path.write_bytes(b"abcd")
+        original_inode = self.paths.target_path.stat().st_ino
+        replace = os.replace
+
+        def interrupt_recovery(source, destination, **kwargs):
+            if source == ".recovered":
+                raise OSError("interrupted ownership-link update")
+            return replace(source, destination, **kwargs)
+
+        with patch("qc_tool.frontend.dashboard.services.uploads._resumable.assembly.os.replace", side_effect=interrupt_recovery):
+            failed = self.post_chunk()
+
+        self.assertEqual(failed.status_code, 500)
+        self.assertEqual(failed.json()["code"], "upload_storage_error")
+        self.assertFalse(Delivery.objects.exists())
+        self.assertEqual(self.paths.target_path.stat().st_ino, original_inode)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"abcd")
+        self.assertFalse((self.paths.chunks_dir / ".recovered").exists())
+        response = self.post_chunk()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["delivery_id"], Delivery.objects.get().pk)
+        self.assertEqual(self.paths.target_path.stat().st_ino, original_inode)
+
+    def test_identical_orphan_requires_every_chunk_before_registration(self):
+        self.paths.target_path.write_bytes(b"abcdefghijkl")
+        final = _parameters(chunk_number=2, chunk_size=5, current_chunk_size=7, total_chunks=2, total_size=12)
+        first = {**final, "resumableChunkNumber": "1", "resumableCurrentChunkSize": "5"}
+
+        incomplete = self.client.post(self.url, {
+            **final, "file": SimpleUploadedFile("chunk", b"fghijkl"),
+        })
+
+        self.assertEqual(incomplete.status_code, 200)
+        self.assertIsNone(incomplete.json()["delivery_id"])
+        self.assertFalse(Delivery.objects.exists())
+        self.assertEqual(self.client.get(self.url, final).status_code, 404)
+        complete = self.client.post(self.url, {
+            **first, "file": SimpleUploadedFile("chunk", b"abcde"),
+        })
+        self.assertEqual(complete.status_code, 200)
+        self.assertEqual(complete.json()["delivery_id"], Delivery.objects.get().pk)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"abcdefghijkl")
+
     def test_unrelated_existing_file_is_never_registered_or_overwritten(self):
         self.paths.target_path.write_bytes(b"keep existing")
         response = self.post_chunk()
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json()["code"], "delivery_file_exists")
+        self.assertIn("not registered as a delivery", response.json()["message"])
         self.assertEqual(self.paths.target_path.read_bytes(), b"keep existing")
+        self.assertFalse(Delivery.objects.exists())
+
+    def test_same_size_different_file_is_never_registered_or_overwritten(self):
+        self.paths.target_path.write_bytes(b"abce")
+        original_inode = self.paths.target_path.stat().st_ino
+
+        response = self.post_chunk()
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "delivery_file_exists")
+        self.assertEqual(self.paths.target_path.stat().st_ino, original_inode)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"abce")
+        self.assertFalse(Delivery.objects.exists())
+
+    def test_symlink_to_identical_file_is_not_adopted(self):
+        outside = self.media_root / "outside.zip"
+        outside.write_bytes(b"abcd")
+        self.paths.target_path.symlink_to(outside)
+
+        response = self.post_chunk()
+
+        self.assertIn(response.status_code, (409, 500))
+        self.assertTrue(self.paths.target_path.is_symlink())
+        self.assertEqual(outside.read_bytes(), b"abcd")
         self.assertFalse(Delivery.objects.exists())
 
 
