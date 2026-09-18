@@ -2,7 +2,6 @@
 (function (window, $) {
     "use strict";
 
-    var config = window.QC_DELIVERIES_CONFIG || {};
     var formatters = window.QcDeliveryFormatters;
     var rowActions = window.QcDeliveryRowActions;
     var rowStatus = window.QcDeliveryRowStatus;
@@ -15,32 +14,30 @@
         row = row || {};
         var filename = String(row.filename || value || "Unnamed delivery");
         var $delivery = $("<div>", {"class": "delivery-cell"});
-        var $history = $("<a>", {
-            "class": "delivery-history-link",
-            href: String(row.job_history_url || "#"),
-            "aria-label": "View job history for " + filename
-        });
-
-        $("<strong>", {
+        var $name = $(row.job_history_url ? "<a>" : "<span>", {
             "class": "delivery-cell__filename",
             text: filename
-        }).appendTo($delivery);
-        $history.append(formatters.icon("history"));
-        $("<span>", {
-            "class": "delivery-history-link__label",
-            text: "Job history"
-        }).appendTo($history);
-        $history.appendTo($delivery);
+        });
+        if (row.job_history_url) {
+            $name.attr({
+                href: String(row.job_history_url),
+                title: "Open delivery and QC history",
+                "aria-label": "Open delivery and QC history for " + filename
+            });
+        }
+        $name.appendTo($delivery);
+        if (row.size_bytes !== undefined && row.size_bytes !== null) {
+            $("<span>", {"class": "delivery-cell__metadata", text: formatters.formatBytes(row.size_bytes)}).appendTo($delivery);
+        }
         return html($delivery);
     }
 
     function productFormatter(value, row) {
         row = row || {};
         var description = String(
-            row.product_description || value || "Product not identified"
+            row.product_display_name || row.product_description || value || "Product not identified"
         );
         var aoiCode = "";
-        var productUrl = String(config.productsUrl || "#");
         var $product = $("<div>", {"class": "delivery-product"});
         var $link;
 
@@ -50,25 +47,14 @@
             );
         }
 
-        if (row.product_ident && config.productDetailUrlTemplate) {
-            productUrl = String(config.productDetailUrlTemplate).replace(
-                "product-ident-placeholder",
-                encodeURIComponent(String(row.product_ident))
-            );
-        }
-        $link = $("<a>", {
+        $link = $(row.product_url ? "<a>" : "<span>", {
             "class": "delivery-product__link",
-            href: productUrl,
-            text: description,
-            "aria-label": "View product details for " + description
+            text: description
         });
-        $link.append(formatters.icon("chevron-right")).appendTo($product);
-        if (row.product_ident) {
-            $("<span>", {
-                "class": "delivery-product__ident",
-                text: String(row.product_ident)
-            }).appendTo($product);
+        if (row.product_url) {
+            $link.attr({href: String(row.product_url), "aria-label": "View product details for " + description});
         }
+        $link.appendTo($product);
         if (aoiCode) {
             $("<span>", {
                 "class": "delivery-aoi",
@@ -79,11 +65,17 @@
     }
 
     function uploadedFormatter(value, row) {
-        var uploadedAt = formatters.formatDate((row || {}).date_uploaded || value);
-        return html($("<span>", {
+        var rawDate = (row || {}).date_uploaded || value;
+        var uploadedAt = formatters.formatDate(rawDate);
+        var $date = $("<time>", {
             "class": "delivery-date" + (uploadedAt ? "" : " delivery-value--empty"),
-            text: uploadedAt || "Not available"
-        }));
+            text: window.moment && rawDate ? window.moment.utc(rawDate).local().format("D MMM YYYY") : uploadedAt || "Not available"
+        });
+        if (rawDate) $date.attr({datetime: String(rawDate), title: uploadedAt});
+        if (window.moment && rawDate) {
+            $("<span>", {"class": "delivery-date__time", text: window.moment.utc(rawDate).local().format("HH:mm")}).appendTo($date);
+        }
+        return html($date);
     }
 
     function sizeFormatter(value, row) {
@@ -137,10 +129,9 @@
         var $status = $("<div>", {"class": "delivery-status-block"});
 
         rowStatus.badge(status).appendTo($status);
-        $("<p>", {
-            "class": "delivery-status-block__detail",
-            text: status.detail
-        }).appendTo($status);
+        if (status.detail) {
+            $("<p>", {"class": "delivery-status-block__detail", text: status.detail}).appendTo($status);
+        }
         if (row.delivery_status === "needs_correction" && row.submission_url) {
             var $feedback = $("<div>", {"class": "delivery-review-feedback"});
             $("<p>", {
@@ -159,6 +150,21 @@
             }
             $feedback.appendTo($status);
         }
+        var $links = $("<div>", {"class": "delivery-status-block__links"});
+        if (row.job_result_url && row.delivery_status !== "failed") {
+            var resultLabel = row.delivery_status === "running" ? "QC progress" : "QC result";
+            var $result = $("<a>", {"class": "delivery-qc-link", href: String(row.job_result_url),
+                "aria-label": resultLabel + " for " + String(row.filename || "delivery")});
+            formatters.appendIconText($result, "file", resultLabel).appendTo($links);
+        }
+        if (row.job_history_url && row.last_job_uuid) {
+            var $history = $("<a>", {"class": "delivery-history-link", href: String(row.job_history_url),
+                "aria-label": "View QC history for " + String(row.filename || "delivery")});
+            $history.append(formatters.icon("history"));
+            $("<span>", {"class": "delivery-history-link__label", text: "QC history"}).appendTo($history);
+            $history.appendTo($links);
+        }
+        if ($links.children().length) $links.appendTo($status);
         return html($status);
     }
 
@@ -174,7 +180,8 @@
         if (!rowActions.populate($actions, row, filename)) {
             $("<span>", {
                 "class": "delivery-row-actions-empty",
-                text: "No additional actions available"
+                text: "—",
+                "aria-label": "No action required"
             }).appendTo($actions);
         }
         return html($actions);

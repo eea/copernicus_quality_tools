@@ -182,7 +182,6 @@ EXPECTED_POLICIES = {
         JSON,
     ),
     "delivery_upload_check": (PRIVATE, SESSION, ("POST",), UPLOAD, JSON),
-    "job_delete": (PRIVATE, SESSION, ("POST",), DELETE, JSON),
     "update_job": (PRIVATE, SESSION, ("POST",), VIEW, JSON),
     "boundaries_json": (
         PRIVATE,
@@ -427,7 +426,7 @@ class RoutePolicyRegistryTests(TestCase):
         )
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 62)
+        self.assertEqual(len(EXPECTED_POLICIES), 61)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

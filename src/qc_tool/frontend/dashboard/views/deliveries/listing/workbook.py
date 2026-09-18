@@ -2,18 +2,18 @@
 
 import io
 
-from qc_tool.common import JOB_WAITING
-from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import STATUS_LABELS
+from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
+    delivery_status_label,
+)
 from qc_tool.frontend.dashboard.services.deliveries.listing.workflows import WORKFLOW_CONFIG
 from qc_tool.frontend.dashboard.services.exports import ExportColumn
 from qc_tool.frontend.dashboard.services.exports.tabular import write_xlsx
 
 
 def _status_label(row):
-    status = row.get("delivery_status")
-    if status == "running":
-        return "In queue" if row.get("last_job_status") == JOB_WAITING else "In progress"
-    return dict(STATUS_LABELS).get(status, status or "")
+    return delivery_status_label(
+        row.get("delivery_status"), row.get("last_job_status"),
+    )
 
 
 # Newly added projection metadata, permissions and UI controls must not silently

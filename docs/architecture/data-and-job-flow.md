@@ -111,6 +111,15 @@ them. Retention and pruning must be an explicit operational policy.
 
 ## Storage and persistence
 
+QC jobs form a delivery's execution history. Individual jobs cannot be deleted
+through the UI, API or Django Admin, regardless of role. An explicit, permitted
+deletion of an unsubmitted delivery removes its associated job records.
+Submitted deliveries and their publication receipts remain protected.
+
+Replacement and correction uploads retain the previous delivery revision and
+its jobs. A retired delivery's `is_deleted` flag hides it from active work; the
+flag alone does not authorize erasing its history.
+
 | Data | Default local location | Consumers |
 | --- | --- | --- |
 | Django users, deliveries, jobs | PostgreSQL `userdb` | frontend |

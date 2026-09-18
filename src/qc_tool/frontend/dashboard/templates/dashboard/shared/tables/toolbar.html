@@ -18,7 +18,7 @@
             {% endif %}
             {% if clear_id %}<button id="{{ clear_id }}" class="btn btn-qc-quiet" type="button" data-table-filter-clear hidden>Clear filters</button>{% endif %}
             {% if refresh_id %}
-            <button id="{{ refresh_id }}" class="btn btn-qc-icon" type="button" aria-label="{{ refresh_label|default:'Refresh table' }}" title="{{ refresh_label|default:'Refresh table' }}" aria-controls="{{ table_id }}"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#refresh"></use></svg></button>
+            <button id="{{ refresh_id }}" class="btn btn-qc-icon qc-data-table__control--icon" type="button" aria-label="{{ refresh_label|default:'Refresh table' }}" title="{{ refresh_label|default:'Refresh table' }}" aria-controls="{{ table_id }}"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#refresh"></use></svg></button>
             {% endif %}
         </div>
     </div>

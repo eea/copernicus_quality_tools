@@ -1,4 +1,18 @@
 /* Shared, opt-in presentation for Bootstrap Table shells and controls. */
+.workspace-card.qc-data-table-card {
+    overflow: visible;
+}
+
+.workspace-card.qc-data-table-card > :first-child {
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+}
+
+.workspace-card.qc-data-table-card > :last-child {
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+
 .qc-data-table-region {
     max-width: 100%;
     overflow: visible;
@@ -121,6 +135,7 @@
 
 .qc-data-table-region .fixed-table-toolbar,
 .bootstrap-table.qc-data-table .fixed-table-toolbar {
+    position: relative;
     display: flex;
     min-height: var(--qc-data-table-toolbar-min-height, 60px);
     flex-wrap: wrap;
@@ -130,6 +145,11 @@
     border-bottom: 1px solid var(--qc-color-border-subtle);
     background: var(--qc-data-table-toolbar-background, var(--qc-color-surface-subtle));
     gap: 10px;
+}
+
+/* Keep an active menu above adjacent tables without clipping their bodies. */
+.bootstrap-table.qc-data-table .fixed-table-toolbar:focus-within {
+    z-index: 2;
 }
 
 .qc-data-table-region .fixed-table-toolbar::after,
@@ -193,6 +213,81 @@
     font-size: 12px;
     font-weight: 700;
     gap: 7px;
+}
+
+/* Consistent controls retain native buttons, dropdowns and focus behavior. */
+.bootstrap-table.qc-data-table .fixed-table-toolbar .qc-data-table__control,
+.bootstrap-table.qc-data-table .fixed-table-toolbar .qc-data-table__control--icon {
+    color: var(--qc-color-text);
+    font-weight: 500;
+    border-color: var(--qc-color-border);
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .btn .ui-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .btn .qc-data-table__control-chevron {
+    width: 12px;
+    height: 12px;
+    flex-basis: 12px;
+    color: var(--qc-color-muted);
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .btn.qc-data-table__control--icon {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+    flex: 0 0 40px;
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .open > .dropdown-toggle {
+    border-color: var(--qc-color-primary);
+    color: var(--qc-color-primary);
+    background: var(--qc-color-primary-soft);
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .open .qc-data-table__control-chevron {
+    transform: rotate(180deg);
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .qc-data-table__export .dropdown-menu {
+    min-width: 150px;
+    width: auto;
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .keep-open .dropdown-menu {
+    max-height: min(420px, 60vh);
+    overflow-y: auto;
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .keep-open input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    margin: 0;
+    accent-color: var(--qc-color-primary);
+}
+
+.bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu label:focus-within {
+    background: var(--qc-color-primary-soft);
+}
+
+.qc-data-table__control--icon[aria-busy="true"] .qc-data-table__export-icon {
+    animation: qc-export-working 1s ease-in-out infinite alternate;
+}
+
+@keyframes qc-export-working {
+    to { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qc-data-table__control--icon[aria-busy="true"] .qc-data-table__export-icon {
+        animation: none;
+    }
 }
 
 .qc-data-table-region .fixed-table-toolbar .columns .btn-group > .btn-group > .btn,
@@ -300,7 +395,7 @@
     .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group {
         width: auto;
         min-width: 0;
-        flex: 1 1 0;
+        flex: 0 1 auto;
     }
 
     .qc-data-table-region .fixed-table-toolbar .columns > .btn,
@@ -310,17 +405,37 @@
     .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group > .btn,
     .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group > .btn-group {
         min-width: 0;
-        flex: 1 1 0;
+        flex: 0 1 auto;
     }
 
     .qc-data-table-region .fixed-table-toolbar .columns > .btn-group > .btn-group > .btn,
     .bootstrap-table.qc-data-table .fixed-table-toolbar .columns > .btn-group > .btn-group > .btn {
-        width: 100%;
+        width: auto;
     }
 
     .qc-data-table-region .fixed-table-toolbar .dropdown-menu,
     .bootstrap-table.qc-data-table .fixed-table-toolbar .dropdown-menu {
-        width: 100%;
+        width: auto;
+    }
+
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .btn {
+        min-height: 44px;
+    }
+
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .btn.qc-data-table__control--icon {
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        flex-basis: 44px;
+    }
+
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .keep-open {
+        position: static;
+    }
+
+    .bootstrap-table.qc-data-table .fixed-table-toolbar .keep-open .dropdown-menu {
+        left: 0;
+        right: auto;
     }
 }
 

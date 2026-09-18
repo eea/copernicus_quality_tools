@@ -103,10 +103,15 @@ remains a direct JSON compatibility alias while consumers transition.
 | List/report data | `view_deliveries` plus object scope |
 | Upload chunks | `upload_delivery` |
 | Create job | `run_qc` plus owner/admin |
-| Delete delivery/job | `delete_delivery` plus owner/admin |
+| Delete unsubmitted delivery | `delete_delivery` plus owner/admin |
 | Submit delivery | `submit_delivery` plus owner/admin |
 | List boundary files | `view_deliveries` |
 | Upload and activate a replacement boundary package | `manage_configuration` |
+
+No role can delete a QC job independently, including administrators. An explicit,
+permitted delivery deletion removes its associated job records. Submitted
+deliveries and their publication history are protected; replacing or correcting a
+delivery preserves the previous revision and its jobs.
 
 ## API operations
 

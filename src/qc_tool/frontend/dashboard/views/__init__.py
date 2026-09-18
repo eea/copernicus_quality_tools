@@ -50,7 +50,6 @@ from qc_tool.frontend.dashboard.views.jobs import get_job_info
 from qc_tool.frontend.dashboard.views.jobs import get_job_report
 from qc_tool.frontend.dashboard.views.jobs import get_pdf_report
 from qc_tool.frontend.dashboard.views.jobs import get_result
-from qc_tool.frontend.dashboard.views.jobs import job_delete
 from qc_tool.frontend.dashboard.views.jobs import job_history_page
 from qc_tool.frontend.dashboard.views.jobs import refresh_job_statuses
 from qc_tool.frontend.dashboard.views.jobs import setup_job

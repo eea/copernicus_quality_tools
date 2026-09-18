@@ -7,7 +7,7 @@
 
 .deliveries-page #tbl-deliveries {
     width: 100%;
-    min-width: 1180px;
+    min-width: 940px;
     margin: 0;
     table-layout: auto;
 }
@@ -48,18 +48,18 @@
 }
 
 .delivery-identity-cell {
-    width: 260px;
-    min-width: 250px;
-}
-
-.delivery-product-cell {
-    width: 230px;
+    width: 28%;
     min-width: 220px;
 }
 
+.delivery-product-cell {
+    width: 23%;
+    min-width: 180px;
+}
+
 .delivery-uploaded-cell {
-    width: 160px;
-    min-width: 155px;
+    width: 110px;
+    min-width: 105px;
 }
 
 .delivery-size-cell {
@@ -83,11 +83,11 @@
 }
 
 .delivery-status-cell {
-    width: 215px;
-    min-width: 205px;
+    width: 210px;
+    min-width: 190px;
 }
 
 .delivery-actions-cell {
-    width: 290px;
-    min-width: 280px;
+    width: 200px;
+    min-width: 190px;
 }

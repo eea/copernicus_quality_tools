@@ -45,7 +45,7 @@ test("review outcomes stay distinct from the QC result", () => {
     const {window} = page();
     const status = window.QcDeliveryRowStatus.presentation;
     assert.equal(status(rejected).label, "Correction needed");
-    assert.match(status(rejected).detail, /Corrections requested/);
+    assert.equal(status(rejected).detail, "");
     assert.equal(status({...rejected, delivery_status: "accepted", submission_review_state: "accepted"}).label, "Accepted");
     assert.match(status({...rejected, delivery_status: "submitted", submission_review_state: "pending"}).detail, /Awaiting/);
     assert.equal(status({delivery_status: "passed", last_job_status: "ok"}).label, "Validated");
@@ -58,11 +58,11 @@ test("review outcomes stay distinct from the QC result", () => {
 test("rejected rows prioritize feedback and owner correction, keeping the original protected", () => {
     const {window} = page();
     const plan = row => Array.from(window.QcDeliveryFormatters.actionPlan(row));
-    assert.deepEqual(plan(rejected), ["review", "correction", "result"]);
-    assert.deepEqual(plan({...rejected, can_upload_correction: false}), ["review", "result"]);
-    assert.deepEqual(plan({...rejected, correction_upload_url: ""}), ["review", "result"]);
+    assert.deepEqual(plan(rejected), ["review", "correction"]);
+    assert.deepEqual(plan({...rejected, can_upload_correction: false}), ["review"]);
+    assert.deepEqual(plan({...rejected, correction_upload_url: ""}), ["review"]);
     const actions = window.actionsFormatter(null, rejected);
-    assert.match(actions.textContent, /View feedbackUpload correctionView QC result/);
+    assert.match(actions.textContent, /View feedbackUpload correction/);
     assert.equal(actions.querySelector(".delivery-correction-link").getAttribute("href"), rejected.correction_upload_url);
 });
 
@@ -78,10 +78,11 @@ test("running, in-review and accepted rows expose a quiet route to details", () 
         assert.equal(actions.querySelector(".delivery-review-link").getAttribute("href"), row.submission_url);
     }
     const running = {...rejected, delivery_status: "running", last_job_status: "running", date_submitted: null};
-    assert.deepEqual(plan(running), ["result"]);
+    assert.deepEqual(plan(running), []);
     const actions = window.actionsFormatter(null, running);
     assert.equal(actions.querySelector(".delivery-row-action--primary"), null);
-    assert.equal(actions.textContent, "View QC progress");
+    assert.equal(actions.textContent, "—");
+    assert.match(window.statusFormatter(null, running).textContent, /QC progress/);
     assert.deepEqual(plan({...running, job_result_url: ""}), []);
 });
 
@@ -109,6 +110,37 @@ test("feedback and reviewer names are literal text, with no disclosure without a
     assert.equal(status.querySelectorAll("img").length, 0);
     assert.equal(status.querySelectorAll("script").length, 0);
     assert.equal(window.statusFormatter(null, {...row, submission_url: ""}).querySelector(".delivery-review-feedback"), null);
+});
+
+test("delivery identity opens its stable history and products use only authorized server links", () => {
+    const {window} = page();
+    const row = {...rejected, filename: '<report>.zip', job_history_url: '/deliveries/jobs/4/',
+        product_ident: 'qc-recipe', product_description: 'Recipe',
+        product_display_name: 'Catalog product', product_url: '/products/catalog-product/'};
+    const identity = window.deliveryFormatter(null, row);
+    assert.equal(identity.querySelector('a').getAttribute('href'), row.job_history_url);
+    assert.equal(identity.querySelector('a').textContent, row.filename);
+    assert.equal(identity.querySelectorAll('report').length, 0);
+    const product = window.productFormatter(null, row);
+    assert.equal(product.querySelector('a').getAttribute('href'), row.product_url);
+    assert.equal(product.querySelector('a').textContent, 'Catalog product');
+    assert.equal(window.productFormatter(null, {...row, product_url: ''}).querySelector('a'), null);
+    assert.equal(window.deliveryFormatter(null, {...row, job_history_url: ''}).querySelector('a'), null);
+});
+
+test("QC links sit with status while the next action stays focused", () => {
+    const {window} = page();
+    const row = {...rejected, delivery_status: 'passed', date_submitted: null,
+        submission_url: '', last_job_uuid: 'current-job', job_history_url: '/deliveries/jobs/4/'};
+    const status = window.statusFormatter(null, row);
+    assert.equal(status.querySelector('.delivery-qc-link').getAttribute('href'), row.job_result_url);
+    assert.equal(status.querySelector('.delivery-history-link').getAttribute('href'), row.job_history_url);
+    const actions = window.actionsFormatter(null, row);
+    assert.equal(actions.querySelector('.delivery-row-action--primary').textContent, 'Submit for review');
+    assert.equal(actions.querySelector('.delivery-job-link'), null);
+    const failed = {...row, delivery_status: 'failed', last_job_status: 'failed'};
+    assert.equal(window.statusFormatter(null, failed).querySelector('.delivery-qc-link'), null);
+    assert.equal(window.actionsFormatter(null, failed).querySelector('.delivery-job-link').getAttribute('href'), row.job_result_url);
 });
 
 test("review updates reach empty attention views and respect selection, focus and visibility", () => {

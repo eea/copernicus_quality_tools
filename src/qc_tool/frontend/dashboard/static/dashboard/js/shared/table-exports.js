@@ -292,15 +292,15 @@
                     container.addEventListener("click", container.qcTableExportClick);
                 }
                 return '<div class="btn-group qc-data-table__export">' +
-                    '<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" ' +
+                    '<button type="button" class="btn btn-default dropdown-toggle qc-data-table__control--icon" data-toggle="dropdown" ' +
                     'data-qc-table-export="true" aria-haspopup="true" aria-expanded="false" ' +
                     (container && container.qcTableExportBusy ? 'disabled aria-busy="true" ' : '') +
                     'id="' + id + '" aria-label="' + escapeHtml(label) + '" title="' + escapeHtml(label) + '">' +
-                    '<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="' +
+                    '<svg class="ui-icon qc-data-table__export-icon" aria-hidden="true" focusable="false"><use href="' +
                     escapeHtml(shared.iconSprite + "#export") + '"></use></svg> ' +
-                    '<span class="qc-data-table__export-label">' +
+                    '<span class="sr-only qc-data-table__export-label" aria-live="polite">' +
                     (container && container.qcTableExportBusy ? "Creating export…" : "Export") + '</span> ' +
-                    '<span class="caret" aria-hidden="true"></span></button>' +
+                    '</button>' +
                     '<ul class="dropdown-menu dropdown-menu-right" role="menu" aria-labelledby="' + id + '">' +
                     formats.map(function (format) {
                         return '<li role="presentation"><a href="#" role="menuitem" data-qc-export-format="' +

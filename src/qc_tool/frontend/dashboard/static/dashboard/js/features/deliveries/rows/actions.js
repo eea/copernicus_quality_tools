@@ -42,7 +42,7 @@
         }
         actionLink(
             actionClasses(primary, "delivery-job-link"),
-            "history",
+            "file",
             label,
             String(row.job_result_url),
             label + " for " + filename
@@ -92,7 +92,7 @@
             if (status !== "running" && row.submission_url) {
                 return ["review"];
             }
-            return row.job_result_url ? ["result"] : [];
+            return [];
         }
         if (row.submission_url) {
             actions.push("review");
@@ -103,7 +103,7 @@
         if (status === "passed" && formatters.canSubmit(row)) {
             actions.push("submit");
         }
-        if (row.job_result_url && status !== "not_validated") {
+        if (row.job_result_url && status === "failed") {
             actions.push("result");
         }
         if (

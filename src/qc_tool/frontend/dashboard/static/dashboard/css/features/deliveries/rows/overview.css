@@ -13,31 +13,50 @@
 
 .delivery-cell__filename {
     max-width: 100%;
-    color: var(--qc-color-navy);
-    font-size: 14px;
-    font-weight: 700;
+    color: var(--qc-color-primary-dark);
+    font-size: 13px;
+    font-weight: 600;
     line-height: 1.45;
     overflow-wrap: anywhere;
+    text-decoration: none;
 }
 
-.delivery-history-link {
+.delivery-cell__filename:hover,
+.delivery-cell__filename:focus {
+    text-decoration: underline;
+}
+
+.delivery-cell__metadata,
+.delivery-date__time {
+    display: block;
+    color: var(--qc-color-muted);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.delivery-history-link,
+.delivery-qc-link {
     display: inline-flex;
     align-items: center;
     color: var(--qc-color-primary);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 400;
     line-height: 1.35;
     text-decoration: none;
     gap: 6px;
+    min-height: 28px;
 }
 
 .delivery-history-link:hover,
-.delivery-history-link:focus {
+.delivery-history-link:focus,
+.delivery-qc-link:hover,
+.delivery-qc-link:focus {
     color: var(--qc-color-primary-dark);
     text-decoration: underline;
 }
 
-.delivery-history-link .ui-icon {
+.delivery-history-link .ui-icon,
+.delivery-qc-link .ui-icon {
     width: 14px;
     height: 14px;
     flex: 0 0 14px;
@@ -53,8 +72,8 @@
     max-width: 100%;
     align-items: flex-start;
     color: var(--qc-color-primary);
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 400;
     line-height: 1.45;
     text-decoration: none;
     overflow-wrap: anywhere;
@@ -67,14 +86,11 @@
     text-decoration: underline;
 }
 
-.delivery-product__link .ui-icon {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 14px;
-    margin-top: 2px;
+.delivery-product__link:not(a) {
+    color: var(--qc-color-muted);
+    text-decoration: none;
 }
 
-.delivery-product__ident,
 .delivery-id {
     color: var(--qc-color-muted);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -84,14 +100,11 @@
 
 .delivery-aoi {
     display: inline-flex;
-    min-height: 26px;
+    min-height: 22px;
     align-items: center;
-    padding: 4px 9px;
-    border-radius: var(--qc-radius-pill);
-    color: var(--qc-color-success-dark);
-    background: var(--qc-color-success-soft);
+    color: var(--qc-color-muted);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 400;
 }
 
 .delivery-date,
@@ -115,7 +128,7 @@
     color: #4f5e74;
     background: #eef2f7;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 500;
     text-align: center;
 }
 

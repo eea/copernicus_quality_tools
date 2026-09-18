@@ -17,7 +17,6 @@ from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.dashboard.services.aoi import AoiResultUnavailable
 from qc_tool.frontend.dashboard.services.aoi import backfill_aoi_metadata
-from qc_tool.frontend.dashboard.services.jobs import delete_jobs_and_reproject
 from qc_tool.frontend.dashboard.services.jobs import serialize_job_history
 from qc_tool.frontend.dashboard.services.jobs import serialize_job_report
 from qc_tool.frontend.dashboard.views import query_deliveries
@@ -245,30 +244,6 @@ class AoiPersistenceTests(TestCase):
         self.delivery.refresh_from_db()
 
         self.assertEqual(self.delivery.aoi_code, "newer")
-
-    def test_deleting_latest_job_reprojects_the_remaining_history(self):
-        now = timezone.now()
-        older = self.create_job(
-            created_at=now - timedelta(hours=1),
-            aoi_code="older",
-            job_uuid=UUID(int=1),
-        )
-        latest = self.create_job(
-            created_at=now,
-            aoi_code="latest",
-            job_uuid=UUID(int=2),
-        )
-        Job.objects.filter(pk__in=(older.pk, latest.pk)).update(
-            job_status=JOB_OK
-        )
-        self.delivery.sync_from_latest_job()
-        access = SimpleNamespace(can_manage_user=lambda owner_id: True)
-
-        delete_jobs_and_reproject((latest.job_uuid,), access)
-        self.delivery.refresh_from_db()
-
-        self.assertTrue(Job.objects.filter(pk=older.pk).exists())
-        self.assertEqual(self.delivery.aoi_code, "older")
 
     def test_projection_uses_uuid_as_tie_breaker_for_equal_timestamps(self):
         created_at = timezone.now()

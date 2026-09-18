@@ -62,6 +62,16 @@ contains Bootstrap Table options; `labels` supplies accessible names. Omit
 sorting are added by the shared
 initializer and maintained after table refreshes and column changes.
 
+The initializer marks enclosing workspace cards with `qc-data-table-card` so
+toolbar menus can extend beyond the card. Keep overflow clipping off toolbar
+ancestors; horizontal scrolling belongs to the table body, below its controls.
+
+Refresh and Export use compact icon buttons with accessible names and hover
+labels. Columns keeps its label beside a table icon to make display settings
+recognizable. The shared initializer updates the plugin's existing buttons
+without replacing their event handlers. Use the shared SVG sprite and toolbar
+styles; page controllers should not add their own icons or visible button text.
+
 Do not put `data-toggle="table"` on a table initialized by a controller. The
 vendored plugin automatically initializes those elements at document-ready;
 mixing the two paths can ignore page options or initialize a table twice.
@@ -72,6 +82,43 @@ Keep simple contextual tables simple. A form's checkbox grid does not need
 column menus or export. QC result pages use the shared menu for their check
 results table; dedicated PDF/JSON reports and job logs remain separate artifact
 downloads.
+
+## Show record context above a table
+
+Use `dashboard/shared/entity_summary.html` for a record's identity and a few
+useful facts, such as the delivery whose QC history is being viewed. Load
+`dashboard/css/ui/entity-summary.css` alongside the shared workspace styles.
+
+```django
+{% include "dashboard/shared/entity_summary.html" with id="delivery-summary" summary=delivery_summary only %}
+```
+
+The summary has a `title`, a short `kind`, an optional `reference` and SVG
+`icon`, an optional `description` with `description_label` and authorized
+`description_url`, and a `facts` list. Each fact has a `label` and either a
+plain `value` or a `datetime`. Datetimes include the displayed timezone and a
+machine-readable `<time>` value. Supply a unique `id` for the heading.
+
+The optional `status` contains `value`, `label`, and `tone` (`neutral`, `primary`,
+`success`, `warning`, or `danger`), with `status_label` naming the field. An
+optional `action` contains `url`, `label`, and an SVG `icon`. Supply actions only
+when the server's authorization and lifecycle checks allow them.
+
+Show the filename or record name once. Use the description for its parent
+product or other context, and omit unavailable optional facts. When a summary
+shows changing state, load `shared/entity-summary.js` and call
+`QcEntitySummary.updateState(element, summary)` with fresh server data. It updates
+the status and permitted action without replacing the summary's identity or
+moving keyboard focus on an unchanged action.
+
+Job history requests `include_delivery=1` from its existing data endpoint to
+receive `{rows, delivery_summary}`. Refreshing the table also refreshes delivery
+status and first-run availability; filtering loaded rows never decides whether
+a delivery has previous runs. Requests without that flag keep the plain job
+array response.
+
+Resolve product links through the shared delivery product-link service, using
+the viewer's access scope and the selected catalog product.
 
 ## Compose the filter toolbar
 
@@ -131,12 +178,17 @@ count becomes zero.
 Column metadata belongs beside the table header or in its column options:
 
 ```html
-<th data-field="name" data-switchable="false">Name</th>
+<th data-field="name">Name</th>
 <th data-field="rendered_status" data-export-field="status">Status</th>
 <th data-field="actions" data-switchable="false" data-exportable="false">Actions</th>
 ```
 
-- Keep a meaningful identity column visible with `data-switchable="false"`.
+- Make every data column available in Columns, including identity, status, and
+  columns hidden by default with `data-visible="false"`. Keep identity columns
+  visible initially, and reserve `data-switchable="false"` for fixed action or
+  selection controls.
+- The shared chooser keeps at least one data column visible. Its All columns
+  option includes columns hidden by default.
 - Mark actions with `data-exportable="false"`. Selection checkboxes, radio
   controls, and action fields are excluded from export.
 - Use `data-export-field` when the displayed column represents a different raw

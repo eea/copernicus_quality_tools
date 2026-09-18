@@ -19,7 +19,7 @@ from qc_tool.frontend.dashboard.services.uploads import (
 
 
 def delivery_delete(request):
-    """Delete owned, unsubmitted deliveries and their local ZIP uploads."""
+    """Delete owned, unsubmitted deliveries, their uploads, and QC history."""
 
     try:
         delivery_ids = parse_positive_identifier_list(request.POST.get("ids"))
@@ -71,6 +71,10 @@ def delivery_delete(request):
         if upload_error is not None:
             return upload_error
 
+        # Keep job history until this explicit delivery deletion. Replacements
+        # also retire delivery rows, but must retain their previous QC evidence.
+        # The parent locks serialize this cleanup with QC and submission writes.
+        models.Job.objects.filter(delivery_id__in=delivery_ids).delete()
         models.Delivery.objects.filter(id__in=delivery_ids).update(
             is_deleted=True
         )

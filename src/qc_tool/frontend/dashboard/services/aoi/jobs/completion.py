@@ -28,6 +28,10 @@ def update_job_status(
         delivery = Delivery.objects.select_for_update().get(
             pk=job.delivery_id
         )
+        # A poll may have loaded this job before another request finished it
+        # and deleted its delivery. Ignore that stale update after the lock.
+        if delivery.is_deleted:
+            return
         job.refresh_from_db(
             fields=(
                 "job_status",

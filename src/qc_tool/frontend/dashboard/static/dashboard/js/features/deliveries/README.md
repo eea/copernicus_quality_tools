@@ -15,17 +15,22 @@ presentation and mutations:
 | `polling.js`       | Bounded refresh while QC jobs are active                                                  |
 | `index.js`         | Declarative feature startup only                                                          |
 
-The JSON endpoint remains presentation-neutral. Delivery, job status, and
-Actions are always-visible workflow columns. Product/AOI and Uploaded are
-shown initially; Size, Source, Owner, and ID are available from Bootstrap
-Table's Columns control. Keep the filename as plain text with a separate icon
-and `Job history` link beneath it. Render lifecycle status as text as well as
-color, highlight submitted rows with a light success background, and only show
-the verified AOI after the latest QC job succeeds. Put the most useful next
-action first, and keep Delete last in DOM and visual order. In Actions, promote
-exactly one non-destructive lifecycle action as the primary button. Keep the
-remaining actions visible as quiet icon-and-text controls, with Delete using
-restrained danger styling instead of competing with the primary task.
+Delivery, Status, and Next action are always-visible workflow columns.
+Product/AOI and Uploaded are shown initially; Size, Source, Owner, and ID
+are available from the Columns control. The filename is the primary link to
+the delivery's QC history, with file size as secondary metadata. Product names
+use the authorized catalog URL supplied by the JSON endpoint, which resolves
+the selected submission or QC run's product. Never build a product URL from a
+QC recipe identifier: one recipe can serve several catalog products.
+
+Use medium emphasis for filenames, normal text for product links and dates,
+and muted metadata. Render lifecycle status as text as well as color, and only
+show verified AOI after successful QC. Keep QC result/progress and history links
+beside status; a failed delivery's result is its primary next action instead.
+Promote one non-destructive workflow action, keep supporting actions quiet,
+and keep Delete last. Running deliveries need no action button; their progress
+is available with status. Submitted and accepted deliveries retain a quiet
+link to their submission.
 
 The matching styles use the same ownership under
 `css/features/deliveries/rows/`: cell content, status badges, and row actions.

@@ -2,11 +2,14 @@
 
 from django.urls import reverse
 
+from qc_tool.frontend.dashboard.services.deliveries.product_links import (
+    add_delivery_product_links,
+)
 from qc_tool.jobs import normalize_job_uuid
 
 
-def add_delivery_links(rows):
-    """Attach stable job history and result URLs to delivery rows in place."""
+def add_delivery_links(rows, account_access):
+    """Attach authorized destinations without changing recorded QC metadata."""
 
     for item in rows:
         item["job_history_url"] = reverse(
@@ -24,4 +27,5 @@ def add_delivery_links(rows):
             )
         else:
             item["job_result_url"] = None
+    add_delivery_product_links(rows, account_access)
     return rows

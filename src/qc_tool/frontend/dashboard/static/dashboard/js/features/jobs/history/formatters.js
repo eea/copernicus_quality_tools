@@ -122,18 +122,9 @@
         return outerHtml($link);
     }
 
-    function jobCheckboxFormatter(value, row) {
-        return {
-            disabled: row.job_status === "waiting" ||
-                row.job_status === "running",
-            checked: false
-        };
-    }
-
     history.icon = icon;
     window.dateFormatter = dateFormatter;
     window.stepsFormatter = stepsFormatter;
     window.aoiFormatter = aoiFormatter;
     window.statusFormatter = statusFormatter;
-    window.jobCheckboxFormatter = jobCheckboxFormatter;
 }(window, window.jQuery));

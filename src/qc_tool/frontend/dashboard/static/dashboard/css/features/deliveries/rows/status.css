@@ -18,9 +18,16 @@
     color: #526078;
     background: #f4f7fa;
     font-size: 11px;
+    font-weight: 600;
     line-height: 18px;
     white-space: nowrap;
     gap: 6px;
+}
+
+.delivery-status-block__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 12px;
 }
 
 .delivery-status .ui-icon {
@@ -68,10 +75,8 @@
 .delivery-review-feedback {
     width: 100%;
     max-width: 270px;
-    padding: 9px 11px;
-    border-left: 3px solid #dfb458;
-    border-radius: 0 6px 6px 0;
-    background: #fffaf0;
+    padding-left: 9px;
+    border-left: 2px solid #dfb458;
     color: var(--qc-color-text);
     font-size: 12px;
     line-height: 1.5;
@@ -89,7 +94,7 @@
     margin: 0;
     overflow: hidden;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     white-space: pre-line;
 }
 

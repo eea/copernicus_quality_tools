@@ -1,7 +1,7 @@
 """Compatibility exports for browser-facing QC job views.
 
 The implementation is split by HTTP responsibility so job setup, history,
-results, artifacts, mutations, and status polling can evolve independently.
+results, artifacts, and status polling can evolve independently.
 Importing views from this package keeps the former
 ``dashboard.views.jobs`` API stable for routes and integrations.
 """
@@ -14,7 +14,6 @@ from qc_tool.frontend.dashboard.views.jobs.artifacts import get_pdf_report
 from qc_tool.frontend.dashboard.views.jobs.creation import create_job
 from qc_tool.frontend.dashboard.views.jobs.history import get_job_history_json
 from qc_tool.frontend.dashboard.views.jobs.history import job_history_page
-from qc_tool.frontend.dashboard.views.jobs.mutations import job_delete
 from qc_tool.frontend.dashboard.views.jobs.results import get_job_report
 from qc_tool.frontend.dashboard.views.jobs.results import get_result
 from qc_tool.frontend.dashboard.views.jobs.setup import get_job_info
@@ -36,7 +35,6 @@ __all__ = (
     "get_job_report",
     "get_pdf_report",
     "get_result",
-    "job_delete",
     "job_history_page",
     "refresh_job_statuses",
     "setup_job",

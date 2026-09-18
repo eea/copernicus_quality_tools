@@ -69,15 +69,15 @@
                     <thead>
                         <tr>
                             {% if delivery_actions_enabled %}<th data-checkbox="true" data-formatter="checkboxFormatter"></th>{% endif %}
-                            <th class="delivery-identity-cell" data-class="delivery-identity-cell" data-field="filename" data-sortable="true" data-switchable="false" data-formatter="deliveryFormatter">Delivery</th>
+                            <th class="delivery-identity-cell" data-class="delivery-identity-cell" data-field="filename" data-sortable="true" data-formatter="deliveryFormatter">Delivery</th>
                             <th class="delivery-product-cell" data-class="delivery-product-cell" data-field="product_description" data-sortable="true" data-formatter="productFormatter">Product</th>
                             <th class="delivery-uploaded-cell" data-class="delivery-uploaded-cell" data-field="date_uploaded" data-sortable="true" data-formatter="uploadedFormatter">Uploaded</th>
                             <th class="delivery-size-cell" data-class="delivery-size-cell" data-field="size_bytes" data-sortable="true" data-visible="false" data-formatter="sizeFormatter">Size</th>
                             <th class="delivery-source-cell" data-class="delivery-source-cell" data-field="type" data-sortable="true" data-visible="false" data-formatter="sourceFormatter">Source</th>
                             <th class="delivery-owner-cell" data-class="delivery-owner-cell" data-field="username" data-sortable="true" data-visible="false" data-formatter="ownerFormatter">Owner</th>
                             <th class="delivery-id-cell" data-class="delivery-id-cell" data-field="id" data-sortable="true" data-visible="false" data-formatter="idFormatter">ID</th>
-                            <th class="delivery-status-cell" data-class="delivery-status-cell" data-field="last_job_status" data-export-field="delivery_status" data-sortable="true" data-switchable="false" data-formatter="statusFormatter">QC &amp; review</th>
-                            <th class="delivery-actions-cell" data-class="delivery-actions-cell" data-field="actions" data-exportable="false" data-switchable="false" data-formatter="actionsFormatter">Actions</th>
+                            <th class="delivery-status-cell" data-class="delivery-status-cell" data-field="last_job_status" data-export-field="delivery_status" data-sortable="true" data-formatter="statusFormatter">Status</th>
+                            <th class="delivery-actions-cell" data-class="delivery-actions-cell" data-field="actions" data-exportable="false" data-switchable="false" data-formatter="actionsFormatter">Next action</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -101,8 +101,6 @@ window.QC_DELIVERIES_CONFIG = {
     updateJobStatuses: {{ update_job_statuses|yesno:"true,false" }},
     updateInterval: {{ update_job_statuses_interval|default:30000 }},
     iconSprite: "{% static 'dashboard/icons/ui.svg' %}",
-    productsUrl: "{% url 'products' %}",
-    productDetailUrlTemplate: "{% url 'product_detail' 'product-ident-placeholder' %}",
     setupJobUrl: "{% url 'setup_job' %}",
     updateJobUrlTemplate: "{% url 'update_job' '00000000-0000-0000-0000-000000000000' %}",
     deliveriesDataUrl: "{% url 'deliveries_json' %}",

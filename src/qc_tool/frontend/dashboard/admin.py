@@ -60,8 +60,7 @@ class JobAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        # The job-history deletion workflow performs authorization, lock
-        # ordering, and delivery reprojection atomically.
+        # Jobs are retained logs. Only deleting their delivery removes them.
         return False
 
 

@@ -3,7 +3,7 @@
 These tests deliberately assert user-facing semantics instead of cosmetic
 whitespace or a particular CSS implementation.  The history page may evolve
 visually, but it must remain recognisably part of the Deliveries workspace and
-must not expose destructive controls to read-only viewers.
+must preserve its log history without standalone deletion controls for any role.
 """
 
 import html
@@ -177,7 +177,7 @@ class JobHistoryPresentationTests(TestCase):
         for expected in (
             "Product",
             self.delivery.product_description,
-            "Delivery file",
+            "Delivery",
             self.delivery.filename,
         ):
             with self.subTest(expected=expected):
@@ -241,6 +241,36 @@ class JobHistoryPresentationTests(TestCase):
         self.assertIn('tabindex: "0"', shared_script)
         self.assertIn('region: "QC job history table"', table_script)
 
+    def test_delivery_summary_uses_known_file_facts_without_duplicate_identity(self):
+        response, _document = self.response_document()
+        summary = response.context["delivery_summary"]
+
+        self.assertEqual(summary["kind"], "Delivery")
+        self.assertEqual(summary["reference"], f"#{self.delivery.pk}")
+        self.assertEqual(summary["title"], self.delivery.filename)
+        self.assertEqual(summary["description"], self.delivery.product_description)
+        self.assertEqual(summary["description_url"], "")
+        self.assertEqual(summary["facts"], [
+            {"label": "Size", "value": "2.0\u00a0KB"},
+            {"label": "Uploaded", "datetime": self.delivery.date_uploaded},
+        ])
+
+    def test_delivery_summary_preserves_zero_size_and_labels_expected_aoi(self):
+        self.delivery.size_bytes = 0
+        self.delivery.aoi_code = "CZ"
+        self.delivery.aoi_code_submitted = "SK"
+        self.delivery.product_description = None
+        self.delivery.save(update_fields=(
+            "size_bytes", "aoi_code", "aoi_code_submitted", "product_description",
+        ))
+
+        response, _document = self.response_document()
+        summary = response.context["delivery_summary"]
+
+        self.assertEqual(summary["description"], "Product not identified")
+        self.assertEqual(summary["facts"][0], {"label": "Size", "value": "0\u00a0bytes"})
+        self.assertEqual(summary["facts"][-1], {"label": "Expected AOI", "value": "CZ"})
+
     def test_history_table_uses_shared_columns_and_export_controls(self):
         """History opts into the same labelled toolbar as other data tables."""
 
@@ -282,11 +312,10 @@ class JobHistoryPresentationTests(TestCase):
             "showButtonText",
             "showColumnsToggleAll",
             "minimumCountColumns",
-            "exportButton",
+            "exportMenu",
         ):
             with self.subTest(common_option=common_option):
                 self.assertIn(common_option, shared_script)
-        self.assertRegex(shared_script, r'["\']Export["\']')
         self.assertIn('button[name=\'columns\']', shared_script)
         self.assertIn(".export", shared_script)
         self.assertIn('"aria-label"', shared_script)
@@ -335,42 +364,7 @@ class JobHistoryPresentationTests(TestCase):
                     styles,
                 )
 
-    def test_delete_controls_are_rendered_only_for_authorised_managers(self):
-        owner_response, owner_document = self.response_document()
-
-        self.assertIs(owner_response.context["can_delete_jobs"], True)
-        self.assertIsNotNone(
-            _opening_tag(
-                owner_document,
-                "button",
-                element_id="btn-delete-multi",
-            )
-        )
-        self.assertRegex(
-            owner_document,
-            r"\bdata-checkbox\s*=\s*['\"]true['\"]",
-        )
-        self.assertIsNotNone(
-            _opening_tag(owner_document, "div", element_id="confirm-delete")
-        )
-        confirm_button = _opening_tag(
-            owner_document,
-            "button",
-            element_id="confirm-delete-button",
-        )
-        self.assertIsNotNone(confirm_button)
-        self.assertEqual(
-            _attribute(
-                _opening_tag(
-                    owner_document,
-                    "div",
-                    element_id="confirm-delete",
-                ).group(0),
-                "aria-labelledby",
-            ),
-            "confirm-delete-title",
-        )
-
+    def test_history_has_no_job_deletion_or_selection_controls_for_any_role(self):
         product_manager = get_user_model().objects.create_user(
             username="job-history-read-only-product-manager",
             password="test-password",
@@ -383,22 +377,36 @@ class JobHistoryPresentationTests(TestCase):
             product_ident=self.delivery.product_ident,
         )
 
-        viewer_response, viewer_document = self.response_document(
-            product_manager
+        administrator = get_user_model().objects.create_user(
+            username="job-history-administrator",
+            password="test-password",
+        )
+        administrator.groups.add(Group.objects.get(name=Role.ADMIN.value))
+        superuser = get_user_model().objects.create_superuser(
+            username="job-history-superuser",
+            password="test-password",
         )
 
-        self.assertIs(viewer_response.context["can_delete_jobs"], False)
-        self.assertIsNone(
-            _opening_tag(
-                viewer_document,
-                "button",
-                element_id="btn-delete-multi",
-            )
-        )
-        self.assertNotRegex(
-            viewer_document,
-            r"\bdata-checkbox\s*=\s*['\"]true['\"]",
-        )
-        self.assertIsNone(
-            _opening_tag(viewer_document, "div", element_id="confirm-delete")
-        )
+        for user in (self.owner, product_manager, administrator, superuser):
+            with self.subTest(user=user.username):
+                response, document = self.response_document(user)
+                self.assertNotIn("can_delete_jobs", response.context)
+                for obsolete_control in (
+                    "btn-delete-multi",
+                    "confirm-delete",
+                    "job-selection",
+                    "jobCheckboxFormatter",
+                    "canDeleteJobs",
+                    "deleteUrl",
+                    "history/deletion.js",
+                    "history/selection.js",
+                ):
+                    self.assertNotIn(obsolete_control, document)
+                self.assertNotRegex(
+                    document,
+                    r"\bdata-checkbox\s*=\s*['\"]true['\"]",
+                )
+                table = _opening_tag(document, "table", element_id="tbl-history")
+                self.assertIsNone(_attribute(table.group(0), "data-toolbar"))
+                self.assertEqual(_attribute(table.group(0), "data-show-refresh"), "true")
+                self.assertEqual(_attribute(table.group(0), "data-show-columns"), "true")

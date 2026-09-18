@@ -21,10 +21,6 @@
     margin-top: 1px;
 }
 
-.deliveries-card {
-    overflow: hidden;
-}
-
 .deliveries-card__body {
     min-width: 0;
 }

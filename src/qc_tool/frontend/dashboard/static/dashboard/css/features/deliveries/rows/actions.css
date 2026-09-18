@@ -43,6 +43,7 @@
     color: var(--qc-color-primary);
     background: transparent;
     font-size: 12px;
+    font-weight: 400;
 }
 
 .deliveries-page .delivery-row-action--secondary:hover,

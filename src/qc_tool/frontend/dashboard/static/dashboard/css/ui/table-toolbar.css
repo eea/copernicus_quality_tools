@@ -159,8 +159,7 @@
     min-height: 40px;
 }
 
-.qc-data-table .fixed-table-toolbar .qc-table-toolbar__actions .btn-qc-quiet,
-.qc-data-table .fixed-table-toolbar .qc-table-toolbar__actions .btn-qc-icon {
+.qc-data-table .fixed-table-toolbar .qc-table-toolbar__actions .btn-qc-quiet {
     border-color: transparent;
 }
 
@@ -192,6 +191,11 @@
 
     .qc-table-toolbar__sort {
         flex-grow: 1;
+    }
+
+    .qc-data-table .fixed-table-toolbar.qc-data-table__toolbar--custom > .columns {
+        width: 100%;
+        flex-basis: 100%;
     }
 }
 

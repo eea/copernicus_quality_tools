@@ -4,45 +4,20 @@
 
     var commonOptions = {
         showColumns: true,
-        showButtonText: true,
+        showButtonText: false,
         showColumnsToggleAll: true,
-        minimumCountColumns: 0,
+        minimumCountColumns: 1,
         buttonsAlign: "right",
         formatColumns: function () {
             return "Columns";
         },
         formatColumnsToggleAll: function () {
-            return "All optional columns";
+            return "All columns";
         }
     };
 
     function options(overrides) {
         return $.extend(true, {}, commonOptions, overrides || {});
-    }
-
-    function exportButton(settings) {
-        var config = settings || {};
-        var text = config.text || "Export";
-        var label = config.label || text;
-        var attributes = $.extend({}, {
-            "aria-label": label,
-            title: config.title || label,
-            "data-qc-table-export": "true"
-        }, config.attributes || {});
-        var button = {
-            text: text,
-            icon: config.icon === undefined ? "glyphicon-export icon-share" : config.icon,
-            event: config.event || function () {},
-            attributes: attributes
-        };
-
-        if (config.className) {
-            button.attributes.class = config.className;
-        }
-        if (config.render !== undefined) {
-            button.render = config.render;
-        }
-        return button;
     }
 
     function exportMenu(table, settings) {
@@ -76,6 +51,37 @@
         $controls.find(".glyphicon, .fa, .bi").attr("aria-hidden", "true");
     }
 
+    function controlContent($control, symbol, text, dropdown) {
+        if (!$control.length || $control.attr("data-qc-control-icon") === symbol) return;
+        var configuration = window.document.getElementById("qc-table-export-config");
+        var sprite = configuration ? JSON.parse(configuration.textContent).iconSprite : "";
+        // Keep the original button and its plugin event handlers in place.
+        function icon(name, className) {
+            var svg = window.document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            var use = window.document.createElementNS("http://www.w3.org/2000/svg", "use");
+            svg.setAttribute("class", "ui-icon" + (className ? " " + className : ""));
+            svg.setAttribute("aria-hidden", "true");
+            svg.setAttribute("focusable", "false");
+            use.setAttribute("href", String(sprite || "") + "#" + name);
+            svg.appendChild(use);
+            return svg;
+        }
+        $control.empty().append(icon(symbol)).attr("data-qc-control-icon", symbol);
+        if (text) $control.append($("<span>", {text: text}));
+        if (dropdown) $control.append(icon("chevron-down", "qc-data-table__control-chevron"));
+        $control.addClass(text ? "qc-data-table__control--columns" : "qc-data-table__control--icon");
+    }
+
+    function syncColumnSelection($toolbar) {
+        var $columns = $toolbar.find(".keep-open input[data-field]");
+        var checked = $columns.filter(":checked").length;
+        // Fixed action columns are absent from the chooser and must not skew
+        // the native plugin's calculation of the select-all checkbox state.
+        $toolbar.find(".keep-open input.toggle-all")
+            .prop("checked", $columns.length > 0 && checked === $columns.length)
+            .prop("indeterminate", checked > 0 && checked < $columns.length);
+    }
+
     function enhanceControls($table, labels) {
         var $container = $table.closest(".bootstrap-table");
         var $toolbar;
@@ -93,6 +99,9 @@
         subject = labelValue(labels, "subject", "table");
         tableId = $table.attr("id") || "";
         $container.addClass("qc-data-table");
+        // Menus belong outside the scrolling table body. Mark enclosing cards
+        // too, so their rounded surfaces cannot clip the native dropdowns.
+        $container.parents(".workspace-card").addClass("qc-data-table-card");
         $toolbar = $container.find(".fixed-table-toolbar").first();
         if (!$toolbar.length) {
             return;
@@ -114,6 +123,7 @@
         $columnButton = $toolbar.find(
             ".keep-open > button.dropdown-toggle, button[name='columns']"
         ).first();
+        controlContent($columnButton, "columns", "Columns", true);
         controlAttributes(
             $columnButton,
             labelValue(labels, "columns", "Choose visible " + subject + " columns"),
@@ -134,6 +144,7 @@
         );
 
         $refreshButton = $toolbar.find("button[name='refresh']");
+        controlContent($refreshButton, "refresh");
         controlAttributes(
             $refreshButton,
             labelValue(labels, "refresh", "Refresh " + subject),
@@ -159,7 +170,7 @@
             labelValue(
                 labels,
                 "toggleAll",
-                "Show or hide all optional " + subject + " columns"
+                "Show or hide all " + subject + " columns"
             )
         );
         $toolbar.find(".keep-open input[data-field]").each(function () {
@@ -168,6 +179,12 @@
                 String($input.attr("data-field") || "table");
             $input.attr("aria-label", "Show or hide the " + columnName + " column");
         });
+        $toolbar.off("change.qcDataTableColumns").on(
+            "change.qcDataTableColumns",
+            ".keep-open input[type='checkbox']",
+            function () { syncColumnSelection($toolbar); }
+        );
+        syncColumnSelection($toolbar);
     }
 
     function enhanceSortControls($table) {
@@ -287,7 +304,6 @@
     window.QcDataTableUi = {
         create: create,
         options: options,
-        exportButton: exportButton,
         exportMenu: exportMenu,
         exportCsv: exportCsv,
         csvExportButton: csvExportButton,

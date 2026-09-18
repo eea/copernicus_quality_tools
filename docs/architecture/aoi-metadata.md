@@ -104,14 +104,16 @@ frontend/dashboard/services/aoi/
   against that immutable checksum before publication.
 - `DeliverySubmission.aoi_code` and `aoi_code_submitted` are immutable expected
   and observed snapshots, respectively.
-- Deleting the latest job reprojects from the remaining history.
+- Job history is retained for the lifetime of its delivery; individual jobs
+  cannot be deleted.
 - Conflicting observations produce `null`; the system never chooses one.
 
 Delivery projection changes lock the delivery row first. This is the shared
-lock order for creation, status updates, and job deletion, avoiding stale
+lock order for job creation, status updates, and delivery deletion, avoiding stale
 metadata and reducing deadlock risk during overlapping requests.
-Jobs are read-only in Django Admin because direct edits or deletes would bypass
-that lifecycle. Use the permission-checked job-history workflow for deletion.
+Jobs are read-only in Django Admin. Only an explicit, permitted deletion of an
+unsubmitted delivery removes its associated job records. Replacing or correcting
+a delivery retains the previous revision and its QC history.
 
 ## Security and trust boundary
 

@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import Permission
 from django.test import TestCase
+from django.urls import NoReverseMatch
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization.access import AccountAccess
@@ -168,7 +169,7 @@ class DashboardObjectAccessTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.client.logout()
 
-    def test_job_history_delete_ui_requires_owner_or_administrator(self):
+    def test_job_history_has_no_delete_controls_for_any_role(self):
         product_manager = self.create_user(
             "read-only-product-manager",
             role=Role.PRODUCT_MANAGER,
@@ -179,39 +180,55 @@ class DashboardObjectAccessTests(TestCase):
             role=Role.ADMIN,
         )
 
-        scenarios = (
-            (product_manager, False),
-            (self.owner, True),
-            (administrator, True),
+        users = (
+            product_manager,
+            self.owner,
+            administrator,
+            self.create_user("history-superuser", is_superuser=True),
         )
         url = reverse("job_history", args=[self.delivery.pk])
 
-        for user, can_delete_jobs in scenarios:
+        for user in users:
             with self.subTest(username=user.username):
                 self.client.force_login(user)
                 response = self.client.get(url)
 
                 self.assertEqual(response.status_code, 200)
-                self.assertIs(
-                    response.context["can_delete_jobs"],
-                    can_delete_jobs,
-                )
-                if can_delete_jobs:
-                    self.assertContains(response, 'id="btn-delete-multi"')
-                    self.assertContains(response, 'data-checkbox="true"')
-                    self.assertContains(response, 'id="confirm-delete"')
-                    self.assertContains(
-                        response,
-                        'aria-labelledby="confirm-delete-title"',
-                    )
-                    self.assertContains(
-                        response,
-                        'id="confirm-delete-button"',
-                    )
-                else:
-                    self.assertNotContains(response, 'id="btn-delete-multi"')
-                    self.assertNotContains(response, 'data-checkbox="true"')
-                    self.assertNotContains(response, 'id="confirm-delete"')
+                self.assertNotIn("can_delete_jobs", response.context)
+                self.assertNotContains(response, 'id="btn-delete-multi"')
+                self.assertNotContains(response, 'data-checkbox="true"')
+                self.assertNotContains(response, 'id="confirm-delete"')
+                self.assertNotContains(response, 'id="confirm-delete-button"')
+                self.client.logout()
+
+    def test_standalone_job_deletion_is_unavailable_to_every_role(self):
+        with self.assertRaises(NoReverseMatch):
+            reverse("job_delete")
+
+        users = (
+            None,
+            self.owner,
+            self.other,
+            self.create_user(
+                "delete-product-manager",
+                role=Role.PRODUCT_MANAGER,
+                product_idents=("clc2024",),
+            ),
+            self.create_user("delete-administrator", role=Role.ADMIN),
+            self.create_user("delete-superuser", is_superuser=True),
+        )
+        for user in users:
+            with self.subTest(username=user.username if user else "anonymous"):
+                if user is not None:
+                    self.client.force_login(user)
+                for method in ("get", "post", "delete"):
+                    with self.subTest(method=method):
+                        response = getattr(self.client, method)(
+                            "/job/delete/",
+                            {"uuids": str(self.job.pk)},
+                        )
+                        self.assertEqual(response.status_code, 404)
+                        self.assertTrue(Job.objects.filter(pk=self.job.pk).exists())
                 self.client.logout()
 
     def test_policy_scopes_direct_region_permission_and_product_role(self):

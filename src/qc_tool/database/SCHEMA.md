@@ -109,6 +109,15 @@ These models are discovered by `dashboard.models`. File bytes live in configured
 storage, not in PostgreSQL. Remote-source credentials are operational secrets;
 they do not constitute a retained copy of the input.
 
+Jobs are retained execution records. No user role can delete one independently;
+only an explicit, permitted deletion of its unsubmitted delivery removes the
+associated job records. Submitted deliveries and the jobs referenced by their
+publication receipts remain protected.
+
+Replacement and correction uploads retain the previous delivery revision and
+its jobs. `Delivery.is_deleted` also marks retired revisions, so it must not be
+used on its own as a signal to erase job history.
+
 ### Publication
 
 | Table | Model | Stored facts |

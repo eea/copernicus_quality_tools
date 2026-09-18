@@ -49,7 +49,7 @@ def get_deliveries_json(request):
         account_access=account_access,
         **parameters.as_query_kwargs(),
     )
-    add_delivery_links(data)
+    add_delivery_links(data, account_access)
 
     filter_mapping = (
         decode_filter_mapping(parameters.filter_expression)

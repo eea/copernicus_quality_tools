@@ -33,6 +33,33 @@ STATUS_LABELS = (
 )
 
 
+def delivery_status_label(status, job_status=None):
+    """Use the same lifecycle wording in page summaries and exports."""
+
+    if status == DeliveryStatus.RUNNING:
+        return "In queue" if job_status == JOB_WAITING else "In progress"
+    return dict(STATUS_LABELS).get(status, status or "")
+
+
+def delivery_status_presentation(status, job_status=None):
+    """Describe a classified delivery with the shared semantic badge tones."""
+
+    tones = {
+        DeliveryStatus.NOT_VALIDATED: "neutral",
+        DeliveryStatus.RUNNING: "warning",
+        DeliveryStatus.PASSED: "success",
+        DeliveryStatus.FAILED: "danger",
+        DeliveryStatus.SUBMITTED: "primary",
+        DeliveryStatus.ACCEPTED: "success",
+        DeliveryStatus.NEEDS_CORRECTION: "warning",
+    }
+    return {
+        "value": status.value,
+        "label": delivery_status_label(status, job_status),
+        "tone": tones[status],
+    }
+
+
 class InvalidDeliveryStatus(ValueError):
     """Raised when a request supplies an undeclared status filter."""
 

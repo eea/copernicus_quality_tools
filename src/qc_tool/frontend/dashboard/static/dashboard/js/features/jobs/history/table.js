@@ -41,6 +41,13 @@
                 sortName: "date_created",
                 sortOrder: "desc",
                 url: config.historyUrl,
+                responseHandler: function (response) {
+                    window.QcEntitySummary.updateState(
+                        window.document.getElementById(config.summaryId),
+                        response.delivery_summary
+                    );
+                    return response.rows;
+                },
                 pageSize: 20,
                 pageList: [20, 50, 100, 500],
                 formatLoadingMessage: function () {

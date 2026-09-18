@@ -12,6 +12,9 @@ from qc_tool.frontend.dashboard import models
 from qc_tool.frontend.dashboard.access import can_view_job
 from qc_tool.frontend.dashboard.access import require_delivery_view
 from qc_tool.frontend.dashboard.services.jobs import serialize_job_history
+from qc_tool.frontend.dashboard.services.jobs.presentation import (
+    job_history_delivery_summary,
+)
 
 
 def get_job_history_json(request, delivery_id):
@@ -33,7 +36,16 @@ def get_job_history_json(request, delivery_id):
         "-job_uuid",
     )
     _refresh_running_jobs(jobs)
-    return JsonResponse(serialize_job_history(jobs), safe=False)
+    rows = serialize_job_history(jobs)
+    if request.GET.get("include_delivery") == "1":
+        # Updating a running job can also refresh the delivery's projected
+        # product/AOI facts. Read them again before building the live header.
+        delivery.refresh_from_db()
+        return JsonResponse({
+            "rows": rows,
+            "delivery_summary": job_history_delivery_summary(delivery, account_access),
+        })
+    return JsonResponse(rows, safe=False)
 
 
 def job_history_page(request, delivery_id):
@@ -47,10 +59,7 @@ def job_history_page(request, delivery_id):
         "dashboard/jobs/history.html",
         {
             "delivery": delivery,
-            "can_delete_jobs": bool(
-                account_access.can_delete
-                and account_access.can_manage_user(delivery.user_id)
-            ),
+            "delivery_summary": job_history_delivery_summary(delivery, account_access),
         },
     )
 

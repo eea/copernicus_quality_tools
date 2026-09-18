@@ -148,7 +148,7 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn("delivery-history-link", script)
         self.assertIn('"class": "delivery-cell__filename"', script)
         self.assertIn('"class": "delivery-history-link__label"', script)
-        self.assertIn('text: "Job history"', script)
+        self.assertIn('text: "QC history"', script)
         self.assertIn('formatters.icon("history")', script)
         self.assertNotIn("delivery-history-link__filename", script)
         self.assertIn("delivery-job-link", script)
@@ -236,8 +236,8 @@ class DeliveryListPresentationTests(TestCase):
                 ("type", "Source"),
                 ("username", "Owner"),
                 ("id", "ID"),
-                ("last_job_status", "QC &amp; review"),
-                ("actions", "Actions"),
+                ("last_job_status", "Status"),
+                ("actions", "Next action"),
             ],
         )
         formatters = (
@@ -262,9 +262,12 @@ class DeliveryListPresentationTests(TestCase):
             field: attributes
             for field, _label, attributes in data_headers
         }
-        for field in ("filename", "last_job_status", "actions"):
-            with self.subTest(required_field=field):
-                self.assertIn('data-switchable="false"', by_field[field])
+        for field, attributes in by_field.items():
+            with self.subTest(column_field=field):
+                if field == "actions":
+                    self.assertIn('data-switchable="false"', attributes)
+                else:
+                    self.assertNotIn('data-switchable="false"', attributes)
         for field in ("size_bytes", "type", "username", "id"):
             with self.subTest(hidden_field=field):
                 self.assertIn('data-visible="false"', by_field[field])
@@ -312,11 +315,10 @@ class DeliveryListPresentationTests(TestCase):
             "showButtonText",
             "showColumnsToggleAll",
             "minimumCountColumns",
-            "exportButton",
+            "exportMenu",
         ):
             with self.subTest(common_option=common_option):
                 self.assertIn(common_option, shared_script)
-        self.assertRegex(shared_script, r'["\']Export["\']')
         self.assertIn("QcDataTableUi", table_script)
         self.assertIn("dataTableUi.create", table_script)
 
@@ -381,19 +383,16 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn("primaryAssigned = true", scripts)
         self.assertIn("appendDelete($destructive, row, filename)", scripts)
         self.assertIn("delivery-row-actions-empty", scripts)
-        self.assertIn("No additional actions available", scripts)
+        self.assertIn("No action required", scripts)
         self.assertIn('type: "button"', scripts)
         self.assertIn("row.delivery_status", scripts)
         self.assertIn("row.job_history_url", scripts)
         self.assertIn("row.job_result_url", scripts)
         self.assertIn("row.product_description", scripts)
-        self.assertIn("row.product_ident", scripts)
+        self.assertIn("row.product_url", scripts)
         self.assertIn("row.aoi_code", scripts)
-        self.assertIn("config.productDetailUrlTemplate", scripts)
-        self.assertIn(
-            "encodeURIComponent(String(row.product_ident))",
-            scripts,
-        )
+        self.assertIn("row.product_url", scripts)
+        self.assertIn("row.product_display_name", scripts)
         self.assertIn("text: status.label", scripts)
         self.assertIn("text: status.detail", scripts)
         self.assertNotIn("QC completed ", scripts)
@@ -445,7 +444,7 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn('"aria-label"', script)
         self.assertIn("title", script)
         self.assertIn("showColumns: true", script)
-        self.assertIn("showButtonText: true", script)
+        self.assertIn("showButtonText: false", script)
         self.assertIn("showColumnsToggleAll: true", script)
 
     def test_visible_result_count_is_removed_but_live_updates_remain(self):
@@ -478,7 +477,7 @@ class DeliveryListPresentationTests(TestCase):
 
         self.assertRegex(
             table_styles,
-            r"#tbl-deliveries\s*\{[^}]*\bmin-width\s*:\s*1180px",
+            r"#tbl-deliveries\s*\{[^}]*\bmin-width\s*:\s*940px",
         )
         shared_styles = self.static_source("dashboard/css/ui/data-table.css")
         self.assertIn(".qc-data-table-region", shared_styles)

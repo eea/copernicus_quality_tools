@@ -1,0 +1,41 @@
+{% load static %}
+<section id="{{ id }}" class="workspace-card workspace-summary" aria-labelledby="{{ id }}-title" data-icon-sprite="{% static 'dashboard/icons/ui.svg' %}">
+    <div class="workspace-card__body">
+        <p class="workspace-summary__eyebrow">
+            {% if summary.icon %}<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#{{ summary.icon }}"></use></svg>{% endif %}
+            <span>{{ summary.kind }}</span>
+            {% if summary.reference %}<span class="workspace-summary__reference">{{ summary.reference }}</span>{% endif %}
+        </p>
+        <h2 id="{{ id }}-title" class="workspace-summary__title" data-entity-summary-title tabindex="-1">{{ summary.title }}</h2>
+        {% if summary.description %}
+        <p class="workspace-summary__description">
+            {% if summary.description_label %}<span class="workspace-summary__label">{{ summary.description_label }}</span>{% endif %}
+            {% if summary.description_url %}<a href="{{ summary.description_url }}">{{ summary.description }}</a>{% else %}<span>{{ summary.description }}</span>{% endif %}
+        </p>
+        {% endif %}
+        <div class="workspace-summary__state" data-entity-summary-state{% if not summary.status and not summary.action %} hidden{% endif %}>
+            <dl class="workspace-summary__status" data-entity-summary-status-row{% if not summary.status %} hidden{% endif %}>
+                <dt class="workspace-summary__label" data-entity-summary-status-label>{{ summary.status_label|default:"Status" }}</dt>
+                <dd aria-live="polite" aria-atomic="true"><span class="workspace-summary__badge" data-entity-summary-status data-state="{{ summary.status.value }}" data-tone="{{ summary.status.tone }}">{{ summary.status.label }}</span></dd>
+            </dl>
+            <div class="workspace-summary__action" data-entity-summary-action{% if not summary.action %} hidden{% endif %}>
+                {% if summary.action %}
+                <a class="btn btn-primary btn-qc-primary" href="{{ summary.action.url }}">
+                    {% if summary.action.icon %}<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#{{ summary.action.icon }}"></use></svg>{% endif %}
+                    <span>{{ summary.action.label }}</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% if summary.facts %}
+    <dl class="workspace-summary__facts workspace-card__footer">
+        {% for fact in summary.facts %}
+        <div>
+            <dt>{{ fact.label }}</dt>
+            <dd>{% if fact.datetime %}<time datetime="{{ fact.datetime|date:'c' }}">{{ fact.datetime|date:"j M Y, H:i T" }}</time>{% else %}{{ fact.value }}{% endif %}</dd>
+        </div>
+        {% endfor %}
+    </dl>
+    {% endif %}
+</section>

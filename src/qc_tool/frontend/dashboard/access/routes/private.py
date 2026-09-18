@@ -90,10 +90,6 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
         AccountPermission.UPLOAD_DELIVERY,
         "POST",
     ),
-    "job_delete": private_session_data(
-        AccountPermission.DELETE_DELIVERY,
-        "POST",
-    ),
     "update_job": private_session_data(VIEW, "POST"),
     "boundaries_json": private_session_data(VIEW, "GET"),
     "boundaries_upload_data": private_session_data(
