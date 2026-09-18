@@ -51,7 +51,7 @@ def read_specification_upload(uploaded_file):
     if ident is None:
         raise CatalogError(
             "invalid_product_ident",
-            "Use a filename of up to 64 ASCII letters, digits, dots, underscores or hyphens before .json, starting with a letter or digit. The names list and upload are reserved.",
+            "Use a filename of up to 64 ASCII letters, digits, dots, underscores or hyphens before .json, starting with a letter or digit. The names list, upload and submissions are reserved.",
         )
     if uploaded_file.size > MAX_DEFINITION_BYTES:
         raise CatalogError("definition_too_large", "The JSON file must be 1 MiB or smaller.")

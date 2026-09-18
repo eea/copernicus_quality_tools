@@ -96,7 +96,7 @@ user's accessible products.
 
 The filename becomes the lowercase product identifier. Use a stem of
 1–64 ASCII letters, digits, dots, underscores or hyphens, starting with a letter
-or digit, followed by `.json`. `list` and `upload` are reserved. The limit is
+or digit, followed by `.json`. `list`, `upload` and `submissions` are reserved. The limit is
 **1 MiB per file**. JSON must be UTF-8, contain a nonempty description and at
 least one QC step, and have no duplicate keys or non-finite numbers. Each step
 must name an installed `qc_tool.raster.*` or `qc_tool.vector.*` check and declare
@@ -333,7 +333,7 @@ and submission receipts retain their original references.
 2. QC Tool stores the ZIP and QC evidence, then marks the receipt **Awaiting
    review**. This does not yet count towards product fulfilment. The delivery's
    **View submission** link under **Deliveries → In review** shows its status.
-3. An assigned manager or administrator opens **Submission review**, selects a delivery,
+3. An assigned manager or administrator opens **Products → Submission review**, selects a delivery,
    and downloads its retained files to verify them. File downloads enforce
    product/owner access and compare their checksums with the stored receipt.
    Use **Approve submission** or **Decline submission**. A decline requires

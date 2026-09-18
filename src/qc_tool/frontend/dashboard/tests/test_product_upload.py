@@ -435,6 +435,8 @@ class ProductSpecificationUploadTests(TestCase):
             {"definition_file": self.file("specification.txt")},
             {"definition_file": self.file("list.json")},
             {"definition_file": self.file("upload.json")},
+            {"definition_file": self.file("submissions.json")},
+            {"definition_file": self.file("Submissions.json")},
             {"definition_file": self.file("unsafe name.json")},
         ]
         for index, files in enumerate(cases):

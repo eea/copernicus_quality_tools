@@ -241,7 +241,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
             self.workspace_links(administrator_response)[-1],
             (reverse("admin:index"), "Admin panel", False),
         )
-        self.assertEqual(len(self.workspace_links(administrator_response)), 7)
+        self.assertEqual(len(self.workspace_links(administrator_response)), 6)
+        self.assertNotIn(reverse("submission_queue"), administrator_sidebar)
         self.assertIn('role="separator"', administrator_sidebar)
 
     def test_each_workspace_page_marks_only_its_own_sidebar_link_current(self):
@@ -261,24 +262,21 @@ class DeliveryWorkspacePresentationTests(TestCase):
                 ]
                 self.assertEqual(current_links, [reverse(route_name)])
 
-    def test_managers_keep_review_and_boundary_navigation(self):
+    def test_managers_review_submissions_inside_products_navigation(self):
         self.user.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
         for route_name in ("submission_queue", "boundaries"):
             with self.subTest(route_name=route_name):
                 response = self.client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)
                 links = self.workspace_links(response)
-                self.assertIn(
-                    (reverse("submission_queue"), "Submission review", route_name == "submission_queue"),
-                    links,
-                )
+                self.assertNotIn(reverse("submission_queue"), self.workspace_sidebar(response))
                 self.assertIn(
                     (reverse("boundaries"), "Boundaries", route_name == "boundaries"),
                     links,
                 )
                 self.assertEqual(
                     [href for href, _label, current in links if current],
-                    [reverse(route_name)],
+                    [reverse("products" if route_name == "submission_queue" else route_name)],
                 )
 
     def test_products_page_lists_catalog_values_with_html_escaping(self):

@@ -14,8 +14,9 @@ After signing in, **Dashboard** is the default starting page. The workspace
 sidebar provides **Deliveries**, **Products**, and the public **API Access**
 reference. Default users track submitted deliveries under **Deliveries → In
 review** and open individual submissions there to read feedback. Managers and
-administrators also see **Submission review** and **Boundaries**. Boundary
-navigation is also available to users granted configuration management.
+administrators open **Submission review** from **Products**, where a warning
+shows products awaiting review. They also see **Boundaries** in the sidebar.
+Boundary navigation is also available to users granted configuration management.
 
 The normal delivery workflow is:
 

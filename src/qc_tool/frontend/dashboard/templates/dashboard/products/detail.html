@@ -1,255 +1,116 @@
 {% extends "dashboard/layouts/workspace_page.html" %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}{{ product.name }} | Products | CLMS QC Tool{% endblock title %}
 {% block main_class %}workspace-page products-page product-detail-page{% endblock main_class %}
-
 {% block workspace_css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/features/products/detail.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
-
 {% block page_breadcrumbs %}
-
 {% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=product_catalog_url current_label=product.name only %}
 {% endblock page_breadcrumbs %}
-
 {% block page_header_class %}workspace-page__header product-detail__header{% endblock page_header_class %}
 {% block page_title %}{{ product.name }}{% endblock page_title %}
-{% block page_subtitle %}<p>{{ product.description }}</p>{% endblock page_subtitle %}
-{% block page_header_meta %}<code class="product-detail__ident">{{ product.ident }}</code>{% endblock page_header_meta %}
+{% block page_subtitle %}{% if product.description and product.description != product.name %}<p>{{ product.description }}</p>{% endif %}{% endblock page_subtitle %}
+{% block page_header_meta %}
+<div class="product-detail__meta">
+    <code class="product-detail__ident">{{ product.ident }}</code>
+    <span class="product-detail__status product-detail__status--{{ product_workflow }}">{{ product_lifecycle_label }}</span>
+</div>
+{% endblock page_header_meta %}
 {% block page_actions %}
-{% if account_access.is_administrator %}
-<a class="btn btn-primary btn-qc-primary" href="{% url 'product_upload' %}">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
-    {% if product_is_active %}Upload revision{% else %}Restore product{% endif %}
-</a>
-{% if product.managed and product_is_active %}
-<a class="btn btn-default btn-qc-danger-outline" href="{% url 'product_remove' product.ident %}">Stop product</a>
-{% endif %}
-{% endif %}
-<a class="btn btn-default btn-qc-secondary" href="{{ product_catalog_url }}">
-    <span aria-hidden="true">←</span> Back to {{ product_workflow_label|lower }} products
-</a>
+<a class="btn btn-default btn-qc-secondary" href="{{ product_catalog_url }}"><span aria-hidden="true">←</span> Back to {{ product_workflow_label|lower }} products</a>
 {% endblock page_actions %}
 
 {% block page_content %}
-
-    {% if readiness %}
-    <section class="workspace-card product-detail__section" aria-labelledby="product-readiness-title">
-        <header class="workspace-card__header">
-            <div><h2 id="product-readiness-title">Product readiness</h2><p>{{ readiness.message }}</p></div>
-            <span class="product-detail__status">{{ readiness.label }}</span>
-        </header>
-        <div class="product-detail__body">
-            <p><strong>{{ readiness.accepted_units }} / {{ readiness.required_units }}</strong> required product units have accepted deliveries.</p>
-            {% if readiness.is_ready %}
-            <p>Confirmed by <strong>{{ readiness.ready_by_username }}</strong> on {{ readiness.ready_at|date:"j M Y, H:i" }}.</p>
-            {% elif readiness.can_finalize and can_review_submissions %}
-            <form method="post" action="{% url 'product_finalize' product.ident %}">
-                {% csrf_token %}
-                <input type="hidden" name="expected_scope_digest" value="{{ readiness.scope_digest }}">
-                <button type="submit" class="btn btn-primary btn-qc-primary">Mark product ready</button>
-            </form>
-            {% endif %}
-        </div>
-    </section>
-    {% endif %}
-
-    {% if product_is_active and product.managed %}
-    <section class="workspace-card product-detail__section" aria-labelledby="delivery-plans-title">
-        <header class="workspace-card__header">
-            <div><h2 id="delivery-plans-title">Delivery plans</h2><p>An approved plan defines the expected product units. Submitted deliveries contribute to fulfilment after a manager approves them.</p></div>
-            {% if can_review_submissions %}<a class="btn btn-primary btn-qc-primary" href="{% url 'submission_queue' %}?product={{ product.ident|urlencode }}">Review submissions</a>{% endif %}
-        </header>
-        <div class="workspace-card__body">
-        {% for plan in delivery_plans %}
-            <div class="product-detail__plan">
-                <div><strong>{{ plan.description }}</strong><p>{% if plan.coverage_state == 'authoritative' %}Open for submissions · Plan revision {{ plan.revision }}{% else %}Plan approval required before users can submit deliveries.{% endif %}</p></div>
-                {% if account_access.is_administrator %}<a class="btn btn-default btn-qc-secondary" href="{% url 'product_plan_edit' product.ident plan.pk %}">{% if plan.coverage_state == 'authoritative' %}Update delivery plan{% else %}Set up delivery plan{% endif %}</a>{% endif %}
-            </div>
-        {% endfor %}
-        {% if not account_access.is_administrator and not account_access.is_product_manager %}<p>Upload a delivery, run its QC checks, then choose <strong>Submit for review</strong> from Deliveries.</p><a href="{% url 'file_upload' %}">Upload a delivery</a>{% endif %}
-        </div>
-    </section>
-    {% endif %}
-
-    {% if not product_is_active %}
-    <div class="workspace-notice workspace-notice--warning" role="status">
-        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#info"></use></svg>
+<section class="workspace-card product-detail__section product-detail__overview" aria-labelledby="product-readiness-title">
+    <div class="product-detail__overview-heading">
         <div>
-            <h2>Product stopped</h2>
-            <p>This product is unavailable for new quality-control jobs. Its specifications, previous jobs, and submitted deliveries remain available.</p>
-            {% if account_access.is_administrator %}<p>To restore it, upload a specification named <code>{{ product.ident }}.json</code>.</p>{% endif %}
+            <h2 id="product-readiness-title">{{ overview.title }}</h2>
+            <p>{{ overview.message }}</p>
         </div>
+        {% if overview.can_finalize %}
+        <form method="post" action="{% url 'product_finalize' product.ident %}" class="product-detail__primary-action">
+            {% csrf_token %}
+            <input type="hidden" name="expected_scope_digest" value="{{ readiness.scope_digest }}">
+            <button type="submit" class="btn btn-primary btn-qc-primary">Mark product ready</button>
+        </form>
+        {% elif overview.action_url %}
+        <a class="btn btn-primary btn-qc-primary product-detail__primary-action" href="{{ overview.action_url }}">{{ overview.action_label }} <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg></a>
+        {% endif %}
+    </div>
+    {% if overview.show_progress %}
+    <dl class="product-detail__totals">
+        <div><dt>Required product units</dt><dd>{{ overview.required }}</dd></div>
+        <div><dt>Accepted</dt><dd>{{ overview.accepted }}</dd></div>
+        <div><dt>Awaiting acceptance</dt><dd>{{ overview.remaining }}</dd></div>
+    </dl>
+    <div class="product-detail__progress">
+        <div><span>Accepted coverage</span><strong>{{ overview.percentage|floatformat:"-2" }}%</strong></div>
+        <progress max="100" value="{{ overview.percentage|unlocalize }}" aria-label="{{ overview.accepted }} of {{ overview.required }} required product units accepted">{{ overview.percentage|floatformat:"-2" }}%</progress>
     </div>
     {% endif %}
-
-    {% if specification_versions %}
-    <section class="workspace-card product-detail__section" id="specification-history" aria-labelledby="product-specification-history-title">
-        <header class="workspace-card__header">
-            <div>
-                <h2 id="product-specification-history-title">Specification version history</h2>
-                <p>Each stored version has a date and a fingerprint identifying its exact content.</p>
-            </div>
-        </header>
-        <div class="product-detail__version-table-region" tabindex="0" role="region" aria-label="Specification versions">
-            <table class="product-detail__version-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Stored on</th>
-                        <th scope="col">Content fingerprint (SHA-256)</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Specification</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for version in specification_versions %}
-                    <tr>
-                        <td><time datetime="{{ version.imported_at|date:'c' }}">{{ version.imported_at|date:"Y-m-d H:i T" }}</time></td>
-                        <td><code class="product-detail__digest">{{ version.digest }}</code></td>
-                        <td>{% if version.is_current %}<span class="product-detail__status">Current</span>{% else %}<span class="product-detail__history-label">Retained</span>{% endif %}</td>
-                        <td><a href="{% url 'product_definition_json' version.ident %}?digest={{ version.digest }}" aria-label="View JSON specification stored {{ version.imported_at|date:'Y-m-d H:i T' }} with fingerprint {{ version.digest }}">View JSON</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% if specification_version_page.has_other_pages %}
-        <nav class="product-detail__version-pagination" aria-label="Specification history pages">
-            {% if specification_version_page.has_previous %}<a class="btn btn-default btn-qc-secondary" href="?versions_page={{ specification_version_page.previous_page_number }}#specification-history">Newer versions</a>{% endif %}
-            <span>Page {{ specification_version_page.number }} of {{ specification_version_page.paginator.num_pages }}</span>
-            {% if specification_version_page.has_next %}<a class="btn btn-default btn-qc-secondary" href="?versions_page={{ specification_version_page.next_page_number }}#specification-history">Older versions</a>{% endif %}
-        </nav>
-        {% endif %}
-    </section>
+    {% if readiness.is_ready %}
+    <p class="product-detail__confirmation">Confirmed by <strong>{{ readiness.ready_by_username }}</strong> on <time datetime="{{ readiness.ready_at|date:'c' }}">{{ readiness.ready_at|date:"j M Y, H:i T" }}</time>.</p>
     {% endif %}
+</section>
 
-    {% if product.managed %}
-        {% if product.releases_truncated %}
-        <div class="workspace-notice" role="status">
-            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#info"></use></svg>
-            <div>
-                <h2>Additional release streams exist</h2>
-                <p>This page shows the first {{ product.releases|length }} current releases in stable release-key order.</p>
-            </div>
-        </div>
-        {% endif %}
-
-        {% for release_detail in product.releases %}
-        <section class="workspace-card product-detail__section" aria-labelledby="product-release-title-{{ forloop.counter }}">
-            <header class="workspace-card__header">
-                <div>
-                    <h2 id="product-release-title-{{ forloop.counter }}">{{ release_detail.release.key }}</h2>
-                    <p>{{ release_detail.release.description }}</p>
-                </div>
-                <span class="product-detail__status">{{ release_detail.release.coverage_state_label }}</span>
-            </header>
-
-            <dl class="product-detail__facts">
-                <div><dt>Release</dt><dd>{{ release_detail.release.key }}</dd></div>
-                <div><dt>Revision</dt><dd>{{ release_detail.release.revision }}</dd></div>
-                <div><dt>Approved</dt><dd>{% if release_detail.release.approved_at %}{{ release_detail.release.approved_at|date:"Y-m-d H:i T" }}{% else %}Not approved{% endif %}</dd></div>
-                <div><dt>QC definitions</dt><dd>{{ release_detail.definitions|length }}</dd></div>
-            </dl>
-
-            <div class="product-detail__subsection" aria-labelledby="product-checks-title-{{ forloop.counter }}">
-                <div class="product-detail__subheading">
-                    <h3 id="product-checks-title-{{ forloop.counter }}">Quality-control definition</h3>
-                    <p>Checks from the immutable primary definition snapshot.</p>
-                </div>
-                {% if release_detail.quality_checks %}
-                <dl class="product-detail__metrics">
-                    <div><dt>Total checks</dt><dd>{{ release_detail.quality_checks.total }}</dd></div>
-                    <div><dt>Required</dt><dd>{{ release_detail.quality_checks.required }}</dd></div>
-                    <div><dt>Optional</dt><dd>{{ release_detail.quality_checks.optional }}</dd></div>
-                </dl>
-                {% else %}
-                <p class="product-detail__empty">Check totals are unavailable for this release.</p>
-                {% endif %}
-                {% if release_detail.definitions %}
-                <p class="product-detail__empty">View stored definition JSON:</p>
-                <ul aria-label="Stored definitions for {{ release_detail.release.key }}">
-                    {% for definition in release_detail.definitions %}
-                    <li>
-                        <a href="{% url 'product_definition_json' definition.ident %}?digest={{ definition.digest }}">{{ definition.ident }}</a>
-                        {% if definition.is_primary %}<span>(primary)</span>{% endif %}
-                        <span>Source digest <code>{{ definition.digest|slice:":12" }}</code></span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </div>
-
-            <div class="product-detail__subsection" aria-labelledby="product-coverage-title-{{ forloop.counter }}">
-                <div class="product-detail__subheading">
-                    <h3 id="product-coverage-title-{{ forloop.counter }}">Delivery coverage</h3>
-                    <p>Progress across the product units expected for this release.</p>
-                </div>
-                {% if not can_view_coverage %}
-                <div class="product-detail__restricted" role="note">
-                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#lock"></use></svg>
-                    <p>Coverage is available to administrators and product managers assigned to this product.</p>
-                </div>
-                {% elif release_detail.coverage.expected is not None %}
-                <div class="product-detail__coverage">
-                    <dl class="product-detail__metrics product-detail__metrics--coverage">
-                        <div><dt>Expected product units</dt><dd>{{ release_detail.coverage.expected }}</dd></div>
-                        <div><dt>Approved product units</dt><dd>{{ release_detail.coverage.accepted }}</dd></div>
-                        <div><dt>Remaining</dt><dd>{{ release_detail.coverage.remaining }}</dd></div>
-                        <div><dt>Open conflicts</dt><dd>{{ release_detail.coverage.conflicts }}</dd></div>
-                    </dl>
-                    <div class="product-detail__progress">
-                        <div><strong>Completion</strong><span>{{ release_detail.coverage.completion_percentage }}%</span></div>
-                        <progress max="100" value="{{ release_detail.coverage.completion_percentage }}">{{ release_detail.coverage.completion_percentage }}%</progress>
-                    </div>
-                    {% if release_detail.remaining_units %}
-                    <div class="product-detail__remaining">
-                        <h4>product units still requiring an accepted delivery</h4>
-                        <ul aria-label="Remaining product unit codes for {{ release_detail.release.key }}">
-                            {% for product_unit_code in release_detail.remaining_units %}<li><code>{{ product_unit_code }}</code></li>{% endfor %}
-                        </ul>
-                        {% if release_detail.remaining_units_truncated %}<p>Showing the first {{ release_detail.remaining_units|length }} product units.</p>{% endif %}
-                    </div>
-                    {% elif release_detail.coverage.remaining == 0 %}
-                    <p class="product-detail__complete">All expected product units have an accepted delivery.</p>
-                    {% endif %}
-                </div>
-                {% elif release_detail.coverage.declared_expected is not None %}
-                <dl class="product-detail__metrics">
-                    <div><dt>Draft product units</dt><dd>{{ release_detail.coverage.declared_expected }}</dd></div>
-                </dl>
-                <p class="product-detail__empty">The declared scope is a draft. Submitted coverage and completion become available when the release scope is authoritative.</p>
-                {% else %}
-                <p class="product-detail__empty">This release does not yet have an authoritative product unit denominator.</p>
-                {% endif %}
-            </div>
-        </section>
-        {% endfor %}
-    {% else %}
-    <section class="workspace-card product-detail__section" aria-labelledby="product-checks-title">
-        <header class="workspace-card__header">
-            <div>
-                <h2 id="product-checks-title">Quality-control definition</h2>
-                <p>The checks configured for this definition-backed product.</p>
-            </div>
-            {% if product.definitions %}<a href="{% url 'product_definition_json' product.definitions.0.ident %}">View definition JSON</a>{% endif %}
-        </header>
-        {% if product.quality_checks %}
-        <dl class="product-detail__metrics">
-            <div><dt>Total checks</dt><dd>{{ product.quality_checks.total }}</dd></div>
-            <div><dt>Required</dt><dd>{{ product.quality_checks.required }}</dd></div>
-            <div><dt>Optional</dt><dd>{{ product.quality_checks.optional }}</dd></div>
-        </dl>
-        {% else %}
-        <p class="product-detail__empty">Check totals are unavailable for this definition.</p>
-        {% endif %}
-        <div class="product-detail__subsection">
-            <div class="product-detail__subheading">
-                <h3>Delivery coverage</h3>
-                <p>Coverage becomes available when this product is linked to a managed release catalog.</p>
-            </div>
-        </div>
-    </section>
+{% if detail_plans %}
+<section class="product-detail__section" aria-labelledby="delivery-plans-title">
+    <div class="product-detail__section-heading">
+        <div><h2 id="delivery-plans-title">Delivery plan{% if release_count != 1 %}s{% endif %}</h2><p>Required product units and the QC specifications used to check deliveries.</p></div>
+        {% if release_page.has_other_pages %}<span>{{ release_count }} plans</span>{% endif %}
+    </div>
+    {% for plan in detail_plans %}
+    {% include "dashboard/products/detail_plan.html" %}
+    {% endfor %}
+    {% if release_page.has_other_pages %}
+    <nav class="product-detail__pagination" aria-label="Delivery plan pages">
+        {% if previous_releases_url %}<a class="btn btn-qc-secondary" href="{{ previous_releases_url }}">Previous plans</a>{% endif %}
+        <span>Plans {{ release_page.start_index }}–{{ release_page.end_index }} of {{ release_count }}</span>
+        {% if next_releases_url %}<a class="btn btn-qc-secondary" href="{{ next_releases_url }}">Next plans</a>{% endif %}
+    </nav>
     {% endif %}
+</section>
+{% endif %}
+
+{% if specification_versions %}
+<details class="workspace-card product-detail__section product-detail__disclosure" id="specification-history"{% if specification_version_page.number > 1 %} open{% endif %}>
+    <summary><span>Specification version history</span> <span class="product-detail__summary-note">{{ specification_version_page.paginator.count }} version{{ specification_version_page.paginator.count|pluralize }}</span></summary>
+    <div class="product-detail__version-table-region" tabindex="0" role="region" aria-label="Specification versions">
+        <table class="product-detail__version-table">
+            <caption class="sr-only">Stored product specifications and their exact content fingerprints</caption>
+            <thead><tr><th scope="col">Stored on</th><th scope="col">Status</th><th scope="col">Specification</th><th scope="col">Content fingerprint</th></tr></thead>
+            <tbody>
+                {% for version in specification_versions %}
+                <tr>
+                    <td><time datetime="{{ version.imported_at|date:'c' }}">{{ version.imported_at|date:"j M Y, H:i T" }}</time></td>
+                    <td>{% if version.is_current %}<span class="product-detail__status">Current</span>{% else %}<span class="product-detail__muted">Retained</span>{% endif %}</td>
+                    <td><a href="{% url 'product_definition_json' version.ident %}?digest={{ version.digest }}" aria-label="View JSON specification stored {{ version.imported_at|date:'Y-m-d H:i T' }} with fingerprint {{ version.digest }}">View JSON</a></td>
+                    <td><details class="product-detail__fingerprint"><summary><code>{{ version.digest|slice:":12" }}…</code></summary><p>SHA-256 <code>{{ version.digest }}</code></p></details></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if specification_version_page.has_other_pages %}
+    <nav class="product-detail__pagination" aria-label="Specification history pages">
+        {% if specification_version_page.has_previous %}<a class="btn btn-qc-secondary" href="{{ previous_versions_url }}">Newer versions</a>{% endif %}
+        <span>Page {{ specification_version_page.number }} of {{ specification_version_page.paginator.num_pages }}</span>
+        {% if specification_version_page.has_next %}<a class="btn btn-qc-secondary" href="{{ next_versions_url }}">Older versions</a>{% endif %}
+    </nav>
+    {% endif %}
+</details>
+{% endif %}
+
+{% if account_access.can_manage_product_catalog and product_is_active %}
+<details class="workspace-card product-detail__section product-detail__disclosure">
+    <summary><span>Product administration</span> <span class="product-detail__summary-note">Specifications and availability</span></summary>
+    <div class="product-detail__administration">
+        <div><div><h3>Upload a specification revision</h3><p>Upload an updated <code>{{ product.ident }}.json</code>. Previous versions remain available in the history.</p></div><a class="btn btn-qc-secondary" href="{% url 'product_upload' %}">Upload revision</a></div>
+        <div><div><h3>Stop this product</h3><p>Prevent new QC jobs while keeping existing deliveries, results, and specifications.</p></div><a class="btn btn-qc-danger-outline" href="{% url 'product_remove' product.ident %}">Stop product</a></div>
+    </div>
+</details>
+{% endif %}
 {% endblock page_content %}

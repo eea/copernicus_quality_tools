@@ -300,7 +300,7 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         page = self.client.get(reverse("submission_queue"), {"state": "all", "delivery": self.delivery.pk})
         self.assertEqual(list(page.context["review_items"]), [submission])
 
-    def test_default_user_legacy_submission_queue_opens_deliveries_in_review(self):
+    def test_default_user_submission_queue_opens_deliveries_in_review(self):
         self.client.force_login(self.owner)
         for query in ({}, {"state": "all"}, {"product": self.product.ident, "delivery": self.delivery.pk}):
             with self.subTest(query=query):
@@ -308,6 +308,17 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
                     self.client.get(reverse("submission_queue"), query),
                     self.deliveries_url("in_review"),
                     fetch_redirect_response=False,
+                )
+
+    def test_old_submission_queue_redirects_to_products_preserving_filters(self):
+        self.client.force_login(self.manager)
+        query = "?state=all&product=test-definition&delivery={}&page=2".format(self.delivery.pk)
+        for old_path in ("/submissions/", "/products/submissions/"):
+            with self.subTest(old_path=old_path):
+                response = self.client.get(old_path + query)
+                self.assertRedirects(
+                    response, "/products/submissions" + query,
+                    status_code=301, fetch_redirect_response=False,
                 )
 
     def test_owner_submission_receipt_returns_to_matching_delivery_workflow(self):
@@ -333,13 +344,15 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
             with self.subTest(reviewer=reviewer.username):
                 self.client.force_login(reviewer)
                 response = self.client.get(self.review_url(submission))
-                self.assertContains(response, "Back to submissions")
+                self.assertContains(response, "Back to submission review")
                 self.assertEqual(response.context["submission_workspace_url"], reverse("submission_queue"))
                 self.assertContains(response, '<span aria-current="page">Review</span>', html=True)
-                self.assert_current_workspace_link(response, "submission_queue")
+                self.assert_current_workspace_link(response, "products")
                 queue = self.client.get(reverse("submission_queue"))
                 self.assertContains(queue, "Submission review")
                 self.assertEqual(queue.context["selected_state"], "pending")
+                self.assert_current_workspace_link(queue, "products")
+                self.assertContains(queue, "Back to products")
 
 
 @override_settings(SUBMISSION_ENABLED=True)

@@ -1,6 +1,7 @@
 """Product catalog browser page."""
 
 import logging
+from urllib.parse import urlencode
 
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
@@ -16,6 +17,7 @@ from qc_tool.frontend.dashboard.services.catalog import (
 )
 from qc_tool.frontend.dashboard.models import Product, ProductRelease
 from qc_tool.frontend.dashboard.services.catalog.readiness import product_readiness_many
+from qc_tool.frontend.dashboard.services.submissions.access import pending_review_counts
 from qc_tool.frontend.dashboard.services.products.workflows import (
     WORKFLOW_CONFIG,
     InvalidProductWorkflow,
@@ -90,10 +92,19 @@ def render_product_catalog(request):
     )
     if product_view not in {tab["value"] for tab in workflow_tabs}:
         return redirect("products")
+    selected_products = tuple(
+        product for product in classified_products if product["workflow"] == product_view
+    )
+    review_counts = pending_review_counts(
+        account_access, product_idents=tuple(product["ident"] for product in selected_products),
+    ) if product_view == "active" else {}
+    product_catalog = tuple(
+        {**product, "pending_review_count": review_counts.get(product["ident"], 0)}
+        for product in selected_products
+    )
     product_catalog = tuple(
         {**product, "next_action": _product_next_action(product, account_access)}
-        for product in classified_products
-        if product["workflow"] == product_view
+        for product in product_catalog
     )
     show_product_metrics = any(product["can_view_coverage"] for product in product_catalog)
     show_product_progress = show_product_metrics and product_view in {"active", "completed"}
@@ -125,6 +136,8 @@ def render_product_catalog(request):
             "workflow_empty_message": workflow_config["empty_message"],
             "total_product_count": sum(tab["count"] for tab in workflow_tabs),
             "product_count": len(product_catalog),
+            "pending_review_product_count": len(review_counts),
+            "pending_review_submission_count": sum(review_counts.values()),
             "plan_filters": plan_filters,
             "show_product_metrics": show_product_metrics,
             "show_product_progress": show_product_progress,
@@ -150,6 +163,14 @@ def _product_next_action(product, account_access):
         return {
             "label": "Review delivery plans", "url": url + "#delivery-plans-title",
             "hint": "Approve each plan to activate this product.",
+        }
+    if product.get("pending_review_count") and account_access.can_review_product_submission(product["ident"]):
+        return {
+            "label": "Review submissions",
+            "url": "{}?{}".format(
+                reverse("submission_queue"), urlencode({"product": product["ident"]}),
+            ),
+            "hint": "",
         }
     readiness = product["readiness"]
     if readiness and readiness.can_finalize and account_access.can_review_product_submission(product["ident"]):

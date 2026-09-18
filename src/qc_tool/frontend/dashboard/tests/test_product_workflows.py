@@ -1,6 +1,7 @@
 """Products move between scoped workflow tabs as real catalog state changes."""
 
 import hashlib
+from urllib.parse import parse_qs, urlsplit
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -57,10 +58,14 @@ class ProductWorkflowTests(TestCase):
         return release
 
     def accept_release(self, release):
+        return self.make_submission(release, review_state="accepted")
+
+    def make_submission(self, release, *, review_state="pending", publication_state="published", owner=None):
+        owner = owner or self.user
         definition = release.definition_links.get().qc_definition
         unit = release.product_units.get()
         delivery = Delivery.objects.create(
-            user=self.user, filename="delivery.zip", size_bytes=1,
+            user=owner, filename="delivery.zip", size_bytes=1,
             product_ident=definition.product_ident,
         )
         job = Job.objects.create(
@@ -70,9 +75,9 @@ class ProductWorkflowTests(TestCase):
         return DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=release,
             product_unit=unit, product_unit_code=unit.product_unit_code,
-            submitted_product_unit_code=unit.product_unit_code, submitted_by=self.user,
-            submitted_by_username=self.user.username, request_channel="browser",
-            publication_state="published", review_state="accepted", review_version=1,
+            submitted_product_unit_code=unit.product_unit_code, submitted_by=owner,
+            submitted_by_username=owner.username, request_channel="browser",
+            publication_state=publication_state, review_state=review_state, review_version=1,
             published_at=timezone.now(), artifact_path="/retained/fixture",
             artifact_digest="b" * 64, input_digest="c" * 64,
         )
@@ -178,6 +183,93 @@ class ProductWorkflowTests(TestCase):
                 self.assertEqual(self.counts(response), {"active": 0})
                 for workflow in ("draft", "stopped", "completed"):
                     self.assertNotContains(response, "?product_view=" + workflow)
+
+    def test_active_review_signal_counts_distinct_products_and_published_candidates(self):
+        first, first_release = self.make_product("needs-review")
+        second, second_release = self.make_product("also-needs-review")
+        _, clean_release = self.make_product("no-pending-review")
+        first_pending = self.make_submission(first_release)
+        first_conflict = self.make_submission(first_release, review_state="conflict")
+        second_pending = self.make_submission(second_release)
+        self.make_submission(clean_release, review_state="accepted")
+        self.make_submission(clean_release, review_state="rejected")
+        for publication_state in ("pending", "publishing", "failed"):
+            self.make_submission(clean_release, publication_state=publication_state)
+        for state, active in (("draft", True), ("authoritative", False)):
+            _, release = self.make_product("inactive-" + state, state=state, active=active)
+            self.make_submission(release)
+
+        response = self.page(product_view="active")
+        self.assertEqual(response.context["pending_review_product_count"], 2)
+        self.assertEqual(response.context["pending_review_submission_count"], 3)
+        rows = {row["ident"]: row for row in response.context["product_catalog"]}
+        self.assertEqual(rows[first.ident]["pending_review_count"], 2)
+        self.assertEqual(rows[second.ident]["pending_review_count"], 1)
+        self.assertEqual(rows["no-pending-review"]["pending_review_count"], 0)
+        self.assertContains(response, "2 products have submissions awaiting review")
+        self.assertContains(response, "3 submitted deliveries need a decision.")
+        for product, expected in ((first, {first_pending.pk, first_conflict.pk}), (second, {second_pending.pk})):
+            action = rows[product.ident]["next_action"]
+            self.assertEqual(action["label"], "Review submissions")
+            target = urlsplit(action["url"])
+            self.assertEqual(target.path, reverse("submission_queue"))
+            self.assertEqual(parse_qs(target.query)["product"], [product.ident])
+            queue = self.client.get(action["url"])
+            self.assertEqual({item.pk for item in queue.context["review_items"]}, expected)
+
+    def test_review_signal_is_scoped_to_manager_assignments_and_hidden_from_default_users(self):
+        product, release = self.make_product("assigned-review")
+        _, other_release = self.make_product("unassigned-review")
+        UserProductGrant.objects.create(user=self.manager, product_ident=product.ident)
+        UserProductGrant.objects.create(user=self.user, product_ident=product.ident)
+        self.make_submission(release)
+        self.make_submission(other_release)
+
+        response = self.page(self.manager)
+        self.assertEqual(response.context["pending_review_product_count"], 1)
+        self.assertEqual(response.context["pending_review_submission_count"], 1)
+        self.assertEqual(self.idents(response), {product.ident})
+        self.assertEqual(response.context["product_catalog"][0]["pending_review_count"], 1)
+        response = self.page(self.user)
+        self.assertEqual(response.context["pending_review_product_count"], 0)
+        self.assertEqual(response.context["pending_review_submission_count"], 0)
+        self.assertEqual(response.context["product_catalog"][0]["pending_review_count"], 0)
+        self.assertNotContains(response, 'class="products-review-notice"')
+        self.assertNotContains(response, 'class="product-table__review-warning"')
+        self.assertNotContains(response, "Review submissions")
+
+    def test_own_receipt_with_partial_recipe_grant_does_not_enter_manager_review_queue(self):
+        product = Product.objects.create(ident="partial-parent", name="Partial parent")
+        release = self.make_release(product, "assigned-stream")
+        self.make_release(product, "unassigned-stream")
+        UserProductGrant.objects.create(user=self.manager, product_ident="assigned-stream")
+        submission = self.make_submission(release, owner=self.manager)
+        response = self.page(self.manager)
+        self.assertEqual(self.idents(response), {product.ident})
+        self.assertEqual(response.context["pending_review_product_count"], 0)
+        self.assertEqual(response.context["product_catalog"][0]["pending_review_count"], 0)
+        for state in ("pending", "all"):
+            queue = self.client.get(reverse("submission_queue"), {"state": state})
+            self.assertEqual(list(queue.context["review_items"]), [])
+        # Ownership still permits the retained receipt without review authority.
+        receipt = self.client.get(reverse("submission_review", args=(submission.pk,)))
+        self.assertEqual(receipt.status_code, 200)
+        self.assertFalse(receipt.context["can_review"])
+
+    def test_review_signal_includes_historical_candidates_but_only_appears_in_active_view(self):
+        product, _ = self.make_product("historical-review")
+        old = self.make_release(product, "historical-review-old", current=False)
+        pending = self.make_submission(old)
+        response = self.page()
+        self.assertEqual(response.context["pending_review_product_count"], 1)
+        self.assertEqual(response.context["pending_review_submission_count"], 1)
+        action = response.context["product_catalog"][0]["next_action"]
+        self.assertEqual(list(self.client.get(action["url"]).context["review_items"]), [pending])
+        for view in ("draft", "stopped", "completed"):
+            response = self.page(product_view=view)
+            self.assertEqual(response.context["pending_review_product_count"], 0)
+            self.assertEqual(response.context["pending_review_submission_count"], 0)
+            self.assertNotContains(response, 'class="products-review-notice"')
 
     def test_accepted_scope_needs_manager_confirmation_and_stale_readiness_is_active(self):
         product, release = self.make_product("ready-product")

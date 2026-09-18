@@ -16,7 +16,11 @@ from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
 from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import classify_delivery_status
 from qc_tool.frontend.dashboard.services.deliveries.listing.workflows import classify_delivery_workflow
 from qc_tool.frontend.dashboard.services.submissions import SubmissionError, resolve_submission_conflict
-from qc_tool.frontend.dashboard.services.submissions.access import visible_submissions
+from qc_tool.frontend.dashboard.services.submissions.access import (
+    awaiting_review_submissions,
+    reviewable_submissions,
+    visible_submissions,
+)
 from qc_tool.frontend.dashboard.services.submissions.artifacts import submission_inventory, open_submission_file
 from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context, current_review_feedback
 from qc_tool.frontend.dashboard.services.submissions.review import review_submission
@@ -26,20 +30,21 @@ def submission_queue(request):
     access = access_for_request(request)
     if not access.can_view_submission_queue:
         return redirect(_deliveries_workflow_url("in_review"))
-    queryset = visible_submissions(access)
+    state = request.GET.get("state", "pending")
+    if state not in {"pending", "accepted", "rejected", "all"}:
+        state = "pending"
+    if state == "pending":
+        queryset = awaiting_review_submissions(access)
+    else:
+        queryset = reviewable_submissions(access)
+        if state != "all":
+            queryset = queryset.filter(review_state=state)
     product = request.GET.get("product", "")
     if product:
         queryset = queryset.filter(product_release__product__ident=product)
     delivery = request.GET.get("delivery", "")
     if delivery:
         queryset = queryset.filter(delivery_id=int(delivery)) if delivery.isdecimal() and len(delivery) < 19 else queryset.none()
-    state = request.GET.get("state", "pending")
-    if state not in {"pending", "accepted", "rejected", "all"}:
-        state = "pending"
-    if state == "pending":
-        queryset = queryset.filter(review_state__in=("pending", "conflict"))
-    elif state != "all":
-        queryset = queryset.filter(review_state=state)
     page = Paginator(queryset.order_by("requested_at", "pk"), 30).get_page(request.GET.get("page"))
     return render(request, "dashboard/submissions/index.html", {
         "review_items": page, "selected_state": state, "selected_product": product,
@@ -55,9 +60,11 @@ def _deliveries_workflow_url(workflow):
 def _submission_workspace_navigation(access, submission):
     if access.can_view_submission_queue:
         return {
+            "submission_section_url": reverse("products"),
+            "submission_section_label": "Products",
             "submission_workspace_url": reverse("submission_queue"),
-            "submission_workspace_label": "Submissions",
-            "submission_return_label": "Back to submissions",
+            "submission_workspace_label": "Submission review",
+            "submission_return_label": "Back to submission review",
             "submission_breadcrumb_label": "Review",
         }
     status = classify_delivery_status(

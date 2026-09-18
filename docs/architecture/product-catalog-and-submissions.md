@@ -217,7 +217,10 @@ Publication and approval are independent. A successfully stored submission start
 as **Awaiting review**, including submissions made by an administrator. Successful
 QC and safe storage do not approve a delivery automatically. The uploader can
 follow the submission's status and feedback; an assigned product manager or an
-administrator reviews it in the submission pages.
+administrator reviews it from **Products → Submission review** at
+`/products/submissions`. The former `/submissions/` queue address redirects to
+this page and preserves filters. Individual submission receipts and retained
+file links keep their existing addresses.
 
 The reviewer can approve a published candidate or decline it with a required
 reason. An archived product cannot receive new approvals. A declined delivery's

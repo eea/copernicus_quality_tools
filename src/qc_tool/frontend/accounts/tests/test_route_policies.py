@@ -64,6 +64,8 @@ EXPECTED_POLICIES = {
     "product_plan_edit": (PRIVATE, SESSION, ("GET", "POST"), MANAGE_CONFIGURATION, LOGIN_REDIRECT),
     "product_finalize": (PRIVATE, SESSION, ("POST",), VIEW, LOGIN_REDIRECT),
     "submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "submission_queue_slash": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "legacy_submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "submission_review": (PRIVATE, SESSION, ("GET", "POST"), VIEW, LOGIN_REDIRECT),
     "submission_file": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "export_deliveries_excel": (
@@ -374,6 +376,7 @@ class RoutePolicyRegistryTests(TestCase):
         self.assertEqual(reverse("dashboard_home"), "/")
         self.assertEqual(reverse("deliveries"), "/deliveries/")
         self.assertEqual(reverse("products"), "/products/")
+        self.assertEqual(reverse("submission_queue"), "/products/submissions")
         self.assertEqual(reverse("product_upload"), "/products/upload/")
         self.assertEqual(reverse("product_list_json"), "/products/list/")
         self.assertEqual(
@@ -401,6 +404,8 @@ class RoutePolicyRegistryTests(TestCase):
         job_uuid = "00000000-0000-0000-0000-000000000001"
 
         self.assertEqual(reverse("legacy_file_upload"), "/upload/")
+        self.assertEqual(reverse("legacy_submission_queue"), "/submissions/")
+        self.assertEqual(reverse("submission_queue_slash"), "/products/submissions/")
         self.assertEqual(reverse("legacy_setup_job"), "/setup_job")
         self.assertEqual(
             reverse("legacy_boundaries_upload"),
@@ -428,7 +433,7 @@ class RoutePolicyRegistryTests(TestCase):
         )
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 62)
+        self.assertEqual(len(EXPECTED_POLICIES), 64)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():
@@ -510,6 +515,8 @@ class CompatibilityRedirectTests(TestCase):
             ("legacy_file_upload", "file_upload"),
             ("legacy_setup_job", "setup_job"),
             ("legacy_boundaries_upload", "boundaries_upload"),
+            ("legacy_submission_queue", "submission_queue"),
+            ("submission_queue_slash", "submission_queue"),
         )
 
         for legacy_name, canonical_name in aliases:

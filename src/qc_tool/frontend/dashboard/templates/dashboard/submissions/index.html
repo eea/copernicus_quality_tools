@@ -1,10 +1,12 @@
 {% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
-{% block title %}Submissions | CLMS QC Tool{% endblock %}
+{% block title %}Submission review | Products | CLMS QC Tool{% endblock %}
 {% block main_class %}workspace-page submission-review-page{% endblock %}
 {% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}">{% endblock %}
+{% block page_breadcrumbs %}{% url 'products' as products_url %}{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label="Submission review" only %}{% endblock %}
 {% block page_title %}Submission review{% endblock %}
 {% block page_subtitle %}<p>Verify deliveries for your products, approve them or request corrections. Only approved product units count towards fulfilment.</p>{% endblock %}
+{% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">Back to products</a>{% endblock %}
 {% block page_content %}
 <section class="workspace-card">
     <header class="workspace-card__header"><div><h2>{% if selected_product %}Submissions for {{ selected_product }}{% else %}Deliveries submitted for review{% endif %}</h2><p>{{ review_items.paginator.count }} submission{{ review_items.paginator.count|pluralize }} in this view.</p></div></header>

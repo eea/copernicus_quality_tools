@@ -1,0 +1,62 @@
+{% load static l10n %}
+<article class="workspace-card product-detail__plan" aria-labelledby="plan-title-{{ plan.id }}">
+    <header class="workspace-card__header">
+        <div>
+            <div class="product-detail__plan-heading"><h3 id="plan-title-{{ plan.id }}">{{ plan.label }}</h3><span class="product-detail__status product-detail__status--{{ plan.detail.release.coverage_state }}">{{ plan.status_label }}</span></div>
+            <p class="product-detail__plan-meta">Revision {{ plan.detail.release.revision }}{% if plan.detail.release.approved_at %} <span aria-hidden="true">·</span> Approved <time datetime="{{ plan.detail.release.approved_at|date:'c' }}">{{ plan.detail.release.approved_at|date:"j M Y, H:i T" }}</time>{% endif %}</p>
+        </div>
+        {% if plan.edit_url %}<a class="btn btn-qc-secondary btn-qc--compact" href="{{ plan.edit_url }}">{% if plan.detail.release.coverage_state == 'authoritative' %}Update delivery plan{% else %}Set up delivery plan{% endif %}</a>{% endif %}
+    </header>
+    <div class="product-detail__plan-body">
+        {% if can_view_coverage %}
+            {% if plan.detail.coverage.expected is not None %}
+                {% if release_count > 1 or not overview.show_progress %}
+                <div class="product-detail__plan-progress"><span><strong>{{ plan.detail.coverage.accepted }} / {{ plan.detail.coverage.expected }}</strong> product units accepted</span><span>{{ plan.detail.coverage.completion_percentage|floatformat:"-2" }}%</span></div>
+                <progress class="product-detail__plan-progress-bar" max="100" value="{{ plan.detail.coverage.completion_percentage|unlocalize }}" aria-label="{{ plan.detail.coverage.accepted }} of {{ plan.detail.coverage.expected }} required units accepted for {{ plan.label }}"></progress>
+                {% endif %}
+                {% if plan.detail.coverage.conflicts %}<p class="product-detail__attention">{{ plan.detail.coverage.conflicts }} product unit{{ plan.detail.coverage.conflicts|pluralize }} ha{{ plan.detail.coverage.conflicts|pluralize:"s,ve" }} competing submissions.{% if can_review_submissions %} Review competing submissions to resolve them.{% endif %}</p>{% endif %}
+                {% if plan.detail.coverage.remaining == 0 and plan.detail.coverage.expected %}<p class="product-detail__complete"><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg> All required product units have an accepted delivery.</p>{% endif %}
+            {% elif plan.detail.coverage.declared_expected is not None %}
+                <p class="product-detail__plan-note"><strong>{{ plan.detail.coverage.declared_expected }} required product units</strong> in the draft plan. Review and approve this scope before submissions can be accepted.</p>
+            {% else %}
+                <p class="product-detail__plan-note">The required product units have not been approved for this plan.</p>
+            {% endif %}
+            {% if plan.units_page is not None %}
+            <details class="product-detail__units product-detail__disclosure" id="product-units-{{ plan.id }}"{% if plan.units_expanded %} open{% endif %}>
+                <summary><span>{% if plan.units_kind == 'remaining' %}Product units awaiting acceptance{% else %}Required product units{% endif %}</span> <span class="product-detail__summary-note">{{ plan.units_page.paginator.count }}</span></summary>
+                {% if plan.all_units_url %}
+                <nav class="product-detail__unit-scopes" aria-label="Product unit scope for {{ plan.label }}">
+                    {% if plan.units_kind == 'required' %}<strong aria-current="true">All required units</strong>{% else %}<a href="{{ plan.all_units_url }}">All required units</a>{% endif %}
+                    {% if plan.units_kind == 'remaining' %}<strong aria-current="true">Awaiting acceptance</strong>{% else %}<a href="{{ plan.remaining_units_url }}">Awaiting acceptance</a>{% endif %}
+                </nav>
+                {% endif %}
+                <ul class="product-detail__unit-list" aria-label="{% if plan.units_kind == 'remaining' %}Remaining{% else %}Required{% endif %} product unit codes for {{ plan.label }}">
+                    {% for unit in plan.units_page %}<li><code>{{ unit }}</code></li>{% empty %}<li>{% if plan.units_kind == 'remaining' %}No product units are awaiting acceptance.{% else %}No product units are defined in this plan.{% endif %}</li>{% endfor %}
+                </ul>
+                {% if plan.units_page.has_other_pages %}
+                <nav class="product-detail__pagination" aria-label="Product unit pages for {{ plan.label }}">
+                    {% if plan.previous_units_url %}<a class="btn btn-qc-secondary btn-qc--compact" href="{{ plan.previous_units_url }}">Previous units</a>{% endif %}
+                    <span>{{ plan.units_page.start_index }}–{{ plan.units_page.end_index }} of {{ plan.units_page.paginator.count }} product units</span>
+                    {% if plan.next_units_url %}<a class="btn btn-qc-secondary btn-qc--compact" href="{{ plan.next_units_url }}">Next units</a>{% endif %}
+                </nav>
+                {% endif %}
+            </details>
+            {% endif %}
+        {% endif %}
+        <div class="product-detail__checks">
+            <div><h4>Quality checks</h4>{% if plan.detail.quality_checks %}<p><strong>{{ plan.detail.quality_checks.total }}</strong> checks <span aria-hidden="true">·</span> {{ plan.detail.quality_checks.required }} required <span aria-hidden="true">·</span> {{ plan.detail.quality_checks.optional }} optional</p>{% else %}<p>No check summary is available. Refer to the stored specification.</p>{% endif %}</div>
+            {% if plan.detail.definitions|length == 1 %}{% with definition=plan.detail.definitions.0 %}<a class="product-detail__spec-link" href="{% url 'product_definition_json' definition.ident %}?digest={{ definition.digest }}" aria-label="View JSON specification for {{ plan.label }}">View specification <span aria-hidden="true">↗</span></a>{% endwith %}{% endif %}
+        </div>
+        <details class="product-detail__specification product-detail__disclosure">
+            <summary><span>Plan and specification details</span></summary>
+            <dl class="product-detail__facts"><div><dt>Plan reference</dt><dd><code>{{ plan.detail.release.key }}</code></dd></div></dl>
+            {% if plan.detail.definitions %}
+            <ul class="product-detail__definitions" aria-label="Stored definitions for {{ plan.detail.release.key }}">
+                {% for definition in plan.detail.definitions %}
+                <li><div><a href="{% url 'product_definition_json' definition.ident %}?digest={{ definition.digest }}">{{ definition.description|default:definition.ident }}</a>{% if definition.is_primary %}<span class="product-detail__summary-note">Primary</span>{% endif %}</div><code>{{ definition.ident }}</code><details class="product-detail__fingerprint"><summary>Content fingerprint <code>{{ definition.digest|slice:":12" }}…</code></summary><p>SHA-256 <code>{{ definition.digest }}</code></p></details></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </details>
+    </div>
+</article>

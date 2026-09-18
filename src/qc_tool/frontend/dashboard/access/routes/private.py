@@ -27,6 +27,8 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
     "product_plan_edit": private_session_page(MANAGE_CONFIGURATION, "GET", "POST"),
     "product_finalize": private_session_page(VIEW, "POST"),
     "submission_queue": private_session_page(VIEW, "GET"),
+    "submission_queue_slash": private_session_page(VIEW, "GET"),
+    "legacy_submission_queue": private_session_page(VIEW, "GET"),
     "submission_review": private_session_page(VIEW, "GET", "POST"),
     "submission_file": private_session_page(VIEW, "GET"),
     "product_detail": private_session_page(VIEW, "GET"),

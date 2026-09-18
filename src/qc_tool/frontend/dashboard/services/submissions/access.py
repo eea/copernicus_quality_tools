@@ -1,6 +1,6 @@
 """Submission receipt visibility, independent of delivery browsing grants."""
 
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.db.models.functions import Lower, Trim
 
 from qc_tool.frontend.dashboard.models import DeliverySubmission
@@ -42,3 +42,41 @@ def visible_submissions(access):
     if access.is_product_manager:
         scope |= Q(product_release__product__ident__in=access.reviewable_product_idents)
     return queryset.filter(scope)
+
+
+def reviewable_submissions(access):
+    """Keep the review queue within the user's decision-making scope."""
+
+    queryset = visible_submissions(access)
+    if not access.can_view_submission_queue:
+        return queryset.none()
+    if access.is_administrator:
+        return queryset
+    return queryset.filter(
+        product_release__product__ident__in=access.reviewable_product_idents,
+    )
+
+
+def awaiting_review_submissions(access):
+    """Published candidates needing a decision, shared by queues and badges."""
+
+    return reviewable_submissions(access).filter(
+        publication_state=DeliverySubmission.PublicationState.PUBLISHED,
+        review_state__in=(
+            DeliverySubmission.ReviewState.PENDING,
+            DeliverySubmission.ReviewState.CONFLICT,
+        ),
+    )
+
+
+def pending_review_counts(access, *, product_idents):
+    """Count candidates by catalog product in one permission-scoped query."""
+
+    return dict(
+        awaiting_review_submissions(access)
+        .filter(product_release__product__ident__in=product_idents)
+        .order_by()
+        .values("product_release__product__ident")
+        .annotate(pending_count=Count("pk"))
+        .values_list("product_release__product__ident", "pending_count")
+    )

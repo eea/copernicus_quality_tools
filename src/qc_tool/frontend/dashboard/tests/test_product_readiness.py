@@ -102,6 +102,8 @@ class ProductReadinessTests(TestCase):
         detail_url = reverse("product_detail", args=(self.product.ident,))
         page = self.client.get(detail_url)
         self.assertContains(page, "Mark product ready")
+        self.assertTrue(page.context["overview"]["can_finalize"])
+        self.assertContains(page, 'action="{}"'.format(reverse("product_finalize", args=(self.product.ident,))))
         digest = page.context["readiness"].scope_digest
         response = self.client.post(reverse("product_finalize", args=(self.product.ident,)), {
             "expected_scope_digest": digest,
@@ -114,7 +116,12 @@ class ProductReadinessTests(TestCase):
         self.assertIn(digest, LogEntry.objects.get().change_message)
         self.finalize(digest=digest)
         self.assertEqual(LogEntry.objects.count(), 1)
-        self.assertNotContains(self.client.get(detail_url), "Mark product ready")
+        completed = self.client.get(detail_url)
+        self.assertNotContains(completed, "Mark product ready")
+        self.assertFalse(completed.context["overview"]["can_finalize"])
+        self.assertEqual(completed.context["product_lifecycle_label"], "Completed")
+        self.assertContains(completed, self.manager.username)
+        self.assertNotContains(completed, "Review submissions")
         catalog = self.client.get(reverse("products"), {"product_view": "completed"})
         self.assertTrue(catalog.context["product_catalog"][0]["readiness"].is_ready)
 
@@ -127,6 +134,9 @@ class ProductReadinessTests(TestCase):
         page = self.client.get(reverse("product_detail", args=(self.product.ident,)))
         self.assertContains(page, "Awaiting final confirmation")
         self.assertNotContains(page, "Mark product ready")
+        self.assertFalse(page.context["overview"]["can_finalize"])
+        self.assertNotContains(page, 'action="{}"'.format(reverse("product_finalize", args=(self.product.ident,))))
+        self.assertNotContains(page, "Review submissions")
         for actor in (self.owner, self.unassigned_manager):
             with self.subTest(actor=actor.username):
                 with self.assertRaises(PermissionDenied):
@@ -182,6 +192,32 @@ class ProductReadinessTests(TestCase):
         with self.assertNumQueries(1):
             facts = product_readiness_many((self.product,))
         self.assertEqual(facts[self.product.pk].accepted_units, 2)
+
+    def test_detail_keeps_accepted_units_accessible_alongside_remaining_units(self):
+        self.candidate()
+        pending = ProductUnit.objects.create(
+            product_release=self.release, product_unit_code="required-2", provenance="administrator",
+        )
+        self.client.force_login(self.manager)
+        url = reverse("product_detail", args=(self.product.ident,))
+
+        response = self.client.get(url)
+        plan = response.context["detail_plans"][0]
+        self.assertEqual(tuple(plan["units_page"]), (pending.product_unit_code,))
+        self.assertEqual(plan["units_kind"], "remaining")
+        self.assertContains(response, plan["all_units_url"])
+        all_units = self.client.get(url + plan["all_units_url"])
+        required_plan = all_units.context["detail_plans"][0]
+        self.assertEqual(required_plan["units_kind"], "required")
+        self.assertEqual(tuple(required_plan["units_page"]), (self.unit.product_unit_code, pending.product_unit_code))
+        self.assertEqual(all_units.context["overview"]["remaining"], 1)
+
+        self.candidate(unit=pending)
+        complete = self.client.get(url)
+        completed_plan = complete.context["detail_plans"][0]
+        self.assertEqual(completed_plan["units_kind"], "required")
+        self.assertEqual(completed_plan["units_page"].paginator.count, 2)
+        self.assertTrue(complete.context["overview"]["can_finalize"])
 
     def test_repeat_unreviewed_candidates_do_not_inflate_accepted_unit_count(self):
         self.candidate()

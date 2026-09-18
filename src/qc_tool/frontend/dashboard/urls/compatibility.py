@@ -23,6 +23,11 @@ def _redirect_to(route_name):
 
 urlpatterns = [
     protected_path(
+        "submissions/",
+        _redirect_to("submission_queue"),
+        name="legacy_submission_queue",
+    ),
+    protected_path(
         "upload/",
         _redirect_to("file_upload"),
         name="legacy_file_upload",

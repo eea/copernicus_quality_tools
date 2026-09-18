@@ -13,6 +13,9 @@
 {% block page_title %}Products{% endblock page_title %}
 {% block page_subtitle %}<p>Follow products from specification upload through delivery and final acceptance.</p>{% endblock page_subtitle %}
 {% block page_actions %}
+{% if account_access.can_view_submission_queue %}
+<a class="btn btn-qc-secondary" href="{% url 'submission_queue' %}">Review submissions</a>
+{% endif %}
 {% if account_access.can_manage_product_catalog %}
 <a class="btn btn-primary btn-qc-primary" href="{% url 'product_upload' %}">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
@@ -39,6 +42,16 @@
         </details>
         {% endif %}
     </header>
+
+    {% if pending_review_product_count %}
+    <div class="products-review-notice" role="status">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+        <div>
+            <strong>{{ pending_review_product_count }} product{{ pending_review_product_count|pluralize }} ha{{ pending_review_product_count|pluralize:"s,ve" }} submissions awaiting review</strong>
+            <p>{{ pending_review_submission_count }} submitted deliver{{ pending_review_submission_count|pluralize:"y,ies" }} need{{ pending_review_submission_count|pluralize:"s," }} a decision. Review each delivery to accept it or request corrections.</p>
+        </div>
+    </div>
+    {% endif %}
 
     {% if not product_catalog_available %}
     <div class="products-empty" role="status">
@@ -97,6 +110,12 @@
                     {% endif %}
                     <td>
                         <div class="product-table__action">
+                            {% if product.pending_review_count %}
+                            <span class="product-table__review-warning" aria-label="{{ product.pending_review_count }} submission{{ product.pending_review_count|pluralize }} awaiting review">
+                                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#clock"></use></svg>
+                                {{ product.pending_review_count }} awaiting review
+                            </span>
+                            {% endif %}
                             <a class="btn btn-qc-secondary btn-qc--compact" href="{{ product.next_action.url }}" aria-label="{{ product.next_action.label }} for {{ product.description }}">
                                 {{ product.next_action.label }} <svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg>
                             </a>

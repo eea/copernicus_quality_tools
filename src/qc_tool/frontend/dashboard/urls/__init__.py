@@ -35,8 +35,8 @@ from qc_tool.frontend.dashboard.urls.tables import urlpatterns as table_patterns
 urlpatterns = [
     *overview_patterns,
     *delivery_patterns,
-    *product_patterns,
     *submission_patterns,
+    *product_patterns,
     *table_patterns,
     *job_patterns,
     *boundary_patterns,

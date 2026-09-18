@@ -96,7 +96,9 @@ def _coverage_by_release(releases, *, include):
             remaining=row["remaining"],
             completion_percentage=row["completion_percentage"],
         )
-        for row in list_current_product_coverage(release_ids=release_ids)
+        for row in list_current_product_coverage(
+            release_ids=release_ids, include_inactive=True,
+        )
     }
 
 

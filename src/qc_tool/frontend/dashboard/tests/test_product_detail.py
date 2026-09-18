@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
@@ -524,8 +525,8 @@ class ManagedProductDetailAccessTests(TestCase):
         self.assertEqual(draft.coverage.declared_expected, 3)
         self.assertIsNone(draft.coverage.completion_percentage)
         self.assertIsNone(draft.remaining_units)
-        self.assertContains(detail, "Draft product units")
-        self.assertContains(detail, "The declared scope is a draft.")
+        self.assertContains(detail, "3 required product units")
+        self.assertContains(detail, "Review and approve this scope")
 
     def test_unknown_stream_prevents_partial_product_scope_total(self):
         self.create_release(
@@ -636,7 +637,7 @@ class ManagedProductDetailAccessTests(TestCase):
             release.coverage is None
             for release in detail.context["product"].releases
         ))
-        self.assertNotContains(detail, "Draft product units")
+        self.assertNotContains(detail, "fr001l")
 
     @patch(
         "qc_tool.common.load_product_definition",
@@ -688,7 +689,7 @@ class ManagedProductDetailAccessTests(TestCase):
             if product["ident"] == PRODUCT_IDENT
         )
 
-    def test_release_streams_are_bounded_and_truncation_is_visible(self):
+    def test_every_release_is_reachable_without_expanding_the_page_limit(self):
         for index in range(MAX_CURRENT_RELEASES):
             self.create_release(
                 self.product,
@@ -697,9 +698,169 @@ class ManagedProductDetailAccessTests(TestCase):
             )
         self.client.force_login(self.default_user)
 
-        response = self.detail(PRODUCT_IDENT)
+        url = reverse("product_detail", args=(PRODUCT_IDENT,))
+        response = self.client.get(url, {"versions_page": "2"})
 
         product = response.context["product"]
         self.assertEqual(len(product.releases), MAX_CURRENT_RELEASES)
-        self.assertTrue(product.releases_truncated)
-        self.assertContains(response, "Additional release streams exist")
+        self.assertEqual(response.context["release_count"], MAX_CURRENT_RELEASES + 1)
+        next_url = response.context["next_releases_url"]
+        self.assertEqual(parse_qs(urlsplit(next_url).query)["versions_page"], ["2"])
+        second_page = self.client.get(url + next_url)
+        self.assertEqual(second_page.status_code, 200)
+        self.assertContains(second_page, self.release.release_key)
+        self.assertEqual(second_page.context["release_page"].number, 2)
+        first_keys = {item.release.key for item in product.releases}
+        second_keys = {item.release.key for item in second_page.context["product"].releases}
+        self.assertFalse(first_keys & second_keys)
+        self.assertEqual(len(first_keys | second_keys), MAX_CURRENT_RELEASES + 1)
+
+    def test_all_required_or_remaining_units_are_reachable_with_full_counts(self):
+        ProductUnit.objects.bulk_create([
+            ProductUnit(product_release=self.release, product_unit_code=f"tile-{index:03d}")
+            for index in range(205)
+        ])
+        self.login_administrator()
+        url = reverse("product_detail", args=(PRODUCT_IDENT,))
+
+        for state, kind in (("authoritative", "remaining"), ("draft", "required")):
+            with self.subTest(state=state):
+                ProductRelease.objects.filter(pk=self.release.pk).update(coverage_state=state)
+                first = self.client.get(url, {"versions_page": "2"})
+                plan = first.context["detail_plans"][0]
+                self.assertEqual(plan["units_kind"], kind)
+                self.assertEqual(plan["units_page"].paginator.count, 207)
+                self.assertEqual(len(plan["units_page"]), 200)
+                next_url = plan["next_units_url"]
+                self.assertEqual(parse_qs(urlsplit(next_url).query)["versions_page"], ["2"])
+                second = self.client.get(url + next_url)
+                other = second.context["detail_plans"][0]
+                self.assertEqual(other["units_page"].number, 2)
+                self.assertEqual(len(other["units_page"]), 7)
+                self.assertContains(second, "tile-204")
+                codes = set(plan["units_page"]) | set(other["units_page"])
+                self.assertEqual(codes, set(self.release.product_units.values_list("product_unit_code", flat=True)))
+                self.assertEqual(second.context["overview"]["required"], 207)
+
+    def test_unit_pagination_cannot_reveal_coverage_to_a_default_user(self):
+        self.client.force_login(self.default_user)
+
+        response = self.client.get(reverse("product_detail", args=(PRODUCT_IDENT,)), {
+            f"units_page_{self.release.pk}": "2",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["detail_plans"][0]["units_page"])
+        self.assertNotContains(response, "cz001l")
+        self.assertNotContains(response, "cz002l")
+
+    def test_draft_admin_action_opens_the_plan_and_avoids_premature_progress(self):
+        ProductRelease.objects.filter(pk=self.release.pk).update(
+            coverage_state=ProductRelease.CoverageState.DRAFT, approved_at=None,
+        )
+        self.login_administrator()
+
+        response = self.detail(PRODUCT_IDENT)
+
+        plan_url = reverse("product_plan_edit", args=(PRODUCT_IDENT, self.release.pk))
+        overview = response.context["overview"]
+        self.assertEqual(overview["action_url"], plan_url)
+        self.assertFalse(overview["show_progress"])
+        self.assertFalse(overview["can_finalize"])
+        self.assertContains(response, f'href="{plan_url}"')
+        self.assertNotContains(response, '<progress')
+        self.assertNotContains(response, "Review submissions")
+
+    def test_upload_action_requires_an_open_product_and_upload_permission(self):
+        definition = QcDefinition.objects.create(
+            product_ident=PRODUCT_IDENT, digest="a" * 64,
+            description="Delivery specification", document={"steps": []},
+            source_path="fixture:delivery",
+        )
+        ProductReleaseDefinition.objects.create(
+            product_release=self.release, qc_definition=definition, is_primary=True,
+        )
+        self.client.force_login(self.default_user)
+        upload_url = reverse("file_upload")
+
+        active = self.detail(PRODUCT_IDENT)
+        self.assertEqual(active.context["overview"]["action_url"], upload_url)
+        self.assertContains(active, f'href="{upload_url}"')
+        for state, active in (("draft", True), ("retired", True), ("authoritative", False)):
+            with self.subTest(state=state, active=active):
+                ProductRelease.objects.filter(pk=self.release.pk).update(coverage_state=state)
+                Product.objects.filter(pk=self.product.pk).update(is_active=active)
+                response = self.detail(PRODUCT_IDENT)
+                self.assertNotEqual(response.context["overview"]["action_url"], upload_url)
+                self.assertNotContains(response, f'href="{upload_url}"')
+
+        Product.objects.filter(pk=self.product.pk).update(is_active=True)
+        Group.objects.get(name=Role.DEFAULT.value).permissions.remove(Permission.objects.get(
+            content_type__app_label="accounts", codename="upload_delivery",
+        ))
+        response = self.detail(PRODUCT_IDENT)
+        self.assertNotEqual(response.context["overview"]["action_url"], upload_url)
+        self.assertNotContains(response, f'href="{upload_url}"')
+
+    def test_recipe_grant_shows_only_assigned_plan_and_definition_metadata(self):
+        secondary = self.create_release(
+            self.product, release_key="private-release", description="Private delivery scope",
+            product_unit_codes=("private-unit",),
+        )
+        for index, (ident, release) in enumerate((
+            ("assigned-recipe", self.release),
+            ("unassigned-recipe", self.release),
+            ("private-recipe", secondary),
+        )):
+            definition = QcDefinition.objects.create(
+                product_ident=ident, digest=f"{index:064x}", description=ident,
+                document={"description": ident, "steps": []}, source_path="fixture:" + ident,
+            )
+            ProductReleaseDefinition.objects.create(
+                product_release=release, qc_definition=definition, is_primary=index != 1,
+            )
+        self.default_user.product_grants.all().delete()
+        UserProductGrant.objects.create(user=self.default_user, product_ident="assigned-recipe")
+        self.default_user.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
+        self.client.force_login(self.default_user)
+
+        response = self.detail(PRODUCT_IDENT)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "assigned-recipe")
+        self.assertNotContains(response, "unassigned-recipe")
+        self.assertNotContains(response, "private-recipe")
+        self.assertNotContains(response, "private-release")
+        self.assertNotContains(response, "private-unit")
+        self.assertNotContains(response, "cz001l")
+        self.assertEqual(response.context["release_count"], 1)
+        self.assertFalse(response.context["can_view_coverage"])
+        self.assertFalse(response.context["can_review_submissions"])
+
+    def test_specification_history_preserves_full_fingerprints_and_stored_downloads(self):
+        versions = [QcDefinition.objects.create(
+            product_ident=PRODUCT_IDENT,
+            digest=f"{index:064x}",
+            description=f"Specification {index}",
+            document={"description": f"Specification {index}", "steps": []},
+            source_path=f"fixture:{index}",
+        ) for index in range(21)]
+        ProductReleaseDefinition.objects.create(
+            product_release=self.release, qc_definition=versions[-1], is_primary=True,
+        )
+        self.client.force_login(self.default_user)
+        detail_url = reverse("product_detail", args=(PRODUCT_IDENT,))
+        definition_url = reverse("product_definition_json", args=(PRODUCT_IDENT,))
+
+        first = self.client.get(detail_url)
+        self.assertEqual(len(first.context["specification_versions"]), 20)
+        self.assertContains(first, f'href="{definition_url}?digest={versions[-1].digest}"')
+        self.assertTrue(first.context["specification_versions"][0]["is_current"])
+        second = self.client.get(detail_url, {"versions_page": "2"})
+        self.assertEqual(second.context["specification_version_page"].number, 2)
+        self.assertContains(second, versions[0].digest)
+        self.assertContains(second, f'href="{definition_url}?digest={versions[0].digest}"')
+        self.assertFalse(second.context["specification_versions"][0]["is_current"])
+        stored = self.client.get(definition_url, {"digest": versions[0].digest})
+        self.assertEqual(stored.status_code, 200)
+        self.assertEqual(stored.json(), versions[0].document)
