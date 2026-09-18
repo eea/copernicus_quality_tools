@@ -9,7 +9,7 @@
                 </a>
             </li>
             <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'deliveries' %}"{% if request.resolver_match.url_name == 'deliveries' or request.resolver_match.url_name == 'file_upload' or request.resolver_match.url_name == 'setup_job' or request.resolver_match.url_name == 'job_history' or request.resolver_match.url_name == 'show_result' %} aria-current="page"{% endif %}>
+                <a class="workspace-sidebar__link" href="{% url 'deliveries' %}"{% if request.resolver_match.url_name == 'deliveries' or request.resolver_match.url_name == 'file_upload' or request.resolver_match.url_name == 'setup_job' or request.resolver_match.url_name == 'job_history' or request.resolver_match.url_name == 'show_result' or request.resolver_match.url_name == 'submission_review' and not account_access.can_view_submission_queue %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
                     Deliveries
                 </a>
@@ -20,18 +20,22 @@
                     Products
                 </a>
             </li>
+            {% if account_access.can_view_submission_queue %}
             <li class="workspace-sidebar__item">
                 <a class="workspace-sidebar__link" href="{% url 'submission_queue' %}"{% if request.resolver_match.url_name == 'submission_queue' or request.resolver_match.url_name == 'submission_review' %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#send"></use></svg>
-                    {% if account_access.is_administrator or account_access.is_product_manager %}Submission review{% else %}My submissions{% endif %}
+                    Submission review
                 </a>
             </li>
+            {% endif %}
+            {% if account_access.show_boundaries_navigation %}
             <li class="workspace-sidebar__item">
                 <a class="workspace-sidebar__link" href="{% url 'boundaries' %}"{% if request.resolver_match.url_name == 'boundaries' or request.resolver_match.url_name == 'boundaries_upload' %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg>
                     Boundaries
                 </a>
             </li>
+            {% endif %}
             <li class="workspace-sidebar__item">
                 <a class="workspace-sidebar__link" href="{% url 'api_homepage' %}"{% if request.resolver_match.url_name == 'api_homepage' %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>
@@ -49,7 +53,7 @@
             {% endif %}
         </ul>
     </nav>
-    {% if request.resolver_match.url_name == 'dashboard_home' %}
+    {% if request.resolver_match.url_name == 'dashboard_home' and account_access.show_boundaries_navigation %}
     <div class="workspace-sidebar__boundary" aria-label="Boundary package status">
         <span aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg></span>
         <div>

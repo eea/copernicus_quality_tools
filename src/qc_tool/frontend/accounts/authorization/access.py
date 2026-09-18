@@ -124,6 +124,23 @@ class AccountAccess:
         )
 
     @property
+    def can_view_submission_queue(self):
+        """Reviewers use the queue; uploaders track reviews in Deliveries."""
+
+        return self.is_authenticated and (
+            self.is_administrator or self.is_product_manager
+        )
+
+    @property
+    def show_boundaries_navigation(self):
+        """Keep package navigation in the management workspace."""
+
+        return self.is_authenticated and (
+            self.is_administrator or self.is_product_manager
+            or self.can_manage_configuration
+        )
+
+    @property
     def can_view_region_deliveries(self):
         return bool(
             self.allows(AccountPermission.VIEW_REGION_DELIVERIES)

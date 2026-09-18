@@ -315,8 +315,8 @@ and submission receipts retain their original references.
    deployment operator.
 2. QC Tool stores the ZIP and QC evidence, then marks the receipt **Awaiting
    review**. This does not yet count towards product fulfilment. The delivery's
-   **View submission** link and **My submissions** navigation show its status.
-3. An assigned manager or administrator opens **Submissions**, selects a delivery,
+   **View submission** link under **Deliveries → In review** shows its status.
+3. An assigned manager or administrator opens **Submission review**, selects a delivery,
    and downloads its retained files to verify them. File downloads enforce
    product/owner access and compare their checksums with the stored receipt.
    Use **Approve submission** or **Decline submission**. A decline requires
@@ -326,8 +326,9 @@ and submission receipts retain their original references.
    submissions** and explain the selection. A previous approved delivery keeps
    contributing until a reviewer replaces it. Concurrent decisions invalidate
    stale review forms.
-5. The uploader can read the decision and notes under **My submissions**; use
-   its status filter to find approved or declined items. To correct a decline,
+5. The uploader opens **View submission** from **Deliveries** to read the
+   decision and notes. Accepted deliveries appear under **Completed**; rejected
+   deliveries appear under **Action required → Review changes**. To correct a decline,
    upload a new ZIP, run QC and submit again. Original files, receipts and dated
    review decisions remain retained, including after product removal or worker
    scratch cleanup.

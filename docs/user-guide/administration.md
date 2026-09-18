@@ -145,8 +145,10 @@ while later grants require a new token.
 
 ## Boundary packages
 
-Authenticated delivery viewers can inspect the active package on
-**Boundaries**. Replacing the package remains restricted to users with
+The **Boundaries** navigation is shown to administrators, product managers,
+and users with `manage_configuration`. Default users work through Deliveries
+without a separate boundary page in their navigation. Authenticated delivery
+viewers retain read access to the active package; replacing it requires
 `manage_configuration`.
 
 A boundary package must be a ZIP with this logical layout:

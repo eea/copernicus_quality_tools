@@ -145,8 +145,6 @@ class DeliveryWorkspacePresentationTests(TestCase):
                 (reverse("dashboard_home"), "Dashboard", False),
                 (reverse("deliveries"), "Deliveries", True),
                 (reverse("products"), "Products", False),
-                (reverse("submission_queue"), "My submissions", False),
-                (reverse("boundaries"), "Boundaries", False),
                 (reverse("api_homepage"), "API Access", False),
             ],
         )
@@ -160,6 +158,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
             sidebar,
         )
         self.assertNotIn('role="separator"', sidebar)
+        self.assertNotIn(reverse("submission_queue"), sidebar)
+        self.assertNotIn(reverse("boundaries"), sidebar)
         self.assertContains(
             response,
             '<a class="skip-link" href="#workspace-content">',
@@ -215,7 +215,11 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         configuration_response = self.client.get(reverse("deliveries"))
         configuration_sidebar = self.workspace_sidebar(configuration_response)
-        self.assertEqual(len(self.workspace_links(configuration_response)), 6)
+        self.assertEqual(len(self.workspace_links(configuration_response)), 5)
+        self.assertIn(
+            (reverse("boundaries"), "Boundaries", False),
+            self.workspace_links(configuration_response),
+        )
         self.assertNotIn(
             'href="{}"'.format(reverse("admin:index")),
             configuration_sidebar,
@@ -243,8 +247,6 @@ class DeliveryWorkspacePresentationTests(TestCase):
             "dashboard_home",
             "deliveries",
             "products",
-            "submission_queue",
-            "boundaries",
         ):
             with self.subTest(route_name=route_name):
                 response = self.client.get(reverse(route_name))
@@ -256,6 +258,26 @@ class DeliveryWorkspacePresentationTests(TestCase):
                     if is_current
                 ]
                 self.assertEqual(current_links, [reverse(route_name)])
+
+    def test_managers_keep_review_and_boundary_navigation(self):
+        self.user.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
+        for route_name in ("submission_queue", "boundaries"):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+                links = self.workspace_links(response)
+                self.assertIn(
+                    (reverse("submission_queue"), "Submission review", route_name == "submission_queue"),
+                    links,
+                )
+                self.assertIn(
+                    (reverse("boundaries"), "Boundaries", route_name == "boundaries"),
+                    links,
+                )
+                self.assertEqual(
+                    [href for href, _label, current in links if current],
+                    [reverse(route_name)],
+                )
 
     def test_products_page_lists_catalog_values_with_html_escaping(self):
         unsafe_description = "<script>alert('catalog')</script>"
@@ -349,7 +371,9 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Boundary package unavailable")
-        self.assertContains(response, "Boundary package date")
+        self.assertContains(response, "Contact an administrator")
+        self.assertNotContains(response, "Boundary package date")
+        self.assertNotContains(response, 'href="{}"'.format(reverse("boundaries")))
         self.assertNotContains(response, "from Unavailable")
 
     @override_settings(SUBMISSION_ENABLED=True)

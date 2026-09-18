@@ -141,7 +141,7 @@
                 <article class="dashboard-attention-item dashboard-attention-item--neutral">
                     <span class="dashboard-attention-item__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg></span>
                     <div><h3>Boundary package unavailable</h3><p>QC jobs require an active boundary package.</p></div>
-                    <a href="{% url 'boundaries' %}">View boundaries <span aria-hidden="true">→</span></a>
+                    {% if account_access.show_boundaries_navigation %}<a href="{% url 'boundaries' %}">View boundaries <span aria-hidden="true">→</span></a>{% else %}<p>Contact an administrator to restore the boundary package.</p>{% endif %}
                 </article>
                 {% endif %}
                 {% if token_count == 0 %}

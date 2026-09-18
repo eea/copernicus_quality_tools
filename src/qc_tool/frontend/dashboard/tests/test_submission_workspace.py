@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from dataclasses import replace
+import re
 import shutil
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -45,6 +46,19 @@ class SubmissionWorkspaceFixtureMixin(SubmissionFixtureMixin):
 
     def review_url(self, submission):
         return reverse("submission_review", args=(submission.pk,))
+
+    def deliveries_url(self, workflow):
+        return "{}?delivery_view={}".format(reverse("deliveries"), workflow)
+
+    def assert_current_workspace_link(self, response, route_name):
+        navigation = re.search(
+            r'<nav\b[^>]*aria-label="QC Tool workspace"[^>]*>(.*?)</nav>',
+            response.content.decode(response.charset), flags=re.DOTALL,
+        )
+        self.assertIsNotNone(navigation)
+        current_links = re.findall(r'<a\b[^>]*aria-current="page"[^>]*>', navigation.group(1))
+        self.assertEqual(len(current_links), 1)
+        self.assertIn('href="{}"'.format(reverse(route_name)), current_links[0])
 
     def decision(self, submission, decision, *, notes="", version=None):
         return self.client.post(self.review_url(submission), {
@@ -107,10 +121,7 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertContains(response, 'datetime="{}"'.format(event.created_at.isoformat()))
         self.assertLess(response.content.index(b"correction-heading"), response.content.index(b"Submitted delivery and QC evidence"))
         self.assertNotContains(response, "Reject and request corrections")
-        queue = self.client.get(reverse("submission_queue"))
-        self.assertEqual(queue.context["selected_state"], "all")
-        self.assertEqual(list(queue.context["review_items"]), [submission])
-        self.assertContains(queue, "Read feedback")
+        self.assertContains(response, 'href="{}"'.format(self.deliveries_url("action_required")))
 
     def test_correction_upload_keeps_feedback_and_limits_access_to_rejected_owner(self):
         submission = self.published()
@@ -206,7 +217,11 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertFalse(visible_submissions(access).exists())
         self.assertEqual(self.client.get(self.review_url(submission)).status_code, 404)
         self.assertEqual(self.client.get(download_url).status_code, 404)
-        self.assertNotContains(self.client.get(reverse("submission_queue")), self.delivery.filename)
+        self.assertRedirects(
+            self.client.get(reverse("submission_queue")),
+            self.deliveries_url("in_review"),
+            fetch_redirect_response=False,
+        )
 
         for reviewer in (self.manager, self.admin):
             with self.subTest(reviewer=reviewer.username):
@@ -273,12 +288,58 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertNotContains(self.client.get(reverse("products")), "Test product")
         self.assertEqual(self.client.get(reverse("product_detail", args=(self.product.ident,))).status_code, 403)
         self.client.force_login(self.owner)
-        self.assertContains(self.client.get(reverse("submission_queue")), "My submissions")
-        own = self.client.get(reverse("submission_queue"), {"state": "all"})
-        self.assertEqual(list(own.context["review_items"]), [submission])
+        self.assertRedirects(
+            self.client.get(reverse("submission_queue")),
+            self.deliveries_url("in_review"),
+        )
+        own = self.client.get(reverse("deliveries_json"), {"delivery_view": "in_review"})
+        self.assertEqual(own.status_code, 200)
+        self.assertEqual([row["id"] for row in own.json()["rows"]], [self.delivery.pk])
+        self.assertEqual(own.json()["rows"][0]["submission_url"], self.review_url(submission))
         self.client.force_login(self.manager)
         page = self.client.get(reverse("submission_queue"), {"state": "all", "delivery": self.delivery.pk})
         self.assertEqual(list(page.context["review_items"]), [submission])
+
+    def test_default_user_legacy_submission_queue_opens_deliveries_in_review(self):
+        self.client.force_login(self.owner)
+        for query in ({}, {"state": "all"}, {"product": self.product.ident, "delivery": self.delivery.pk}):
+            with self.subTest(query=query):
+                self.assertRedirects(
+                    self.client.get(reverse("submission_queue"), query),
+                    self.deliveries_url("in_review"),
+                    fetch_redirect_response=False,
+                )
+
+    def test_owner_submission_receipt_returns_to_matching_delivery_workflow(self):
+        submission = self.published()
+        self.client.force_login(self.owner)
+        for state, workflow in (
+            ("pending", "in_review"), ("conflict", "in_review"),
+            ("accepted", "completed"), ("rejected", "action_required"),
+        ):
+            with self.subTest(state=state):
+                DeliverySubmission.objects.filter(pk=submission.pk).update(review_state=state)
+                response = self.client.get(self.review_url(submission))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "Back to deliveries")
+                self.assertContains(response, 'href="{}"'.format(self.deliveries_url(workflow)), count=2)
+                self.assertContains(response, '<span aria-current="page">Submission</span>', html=True)
+                self.assertNotContains(response, 'href="{}"'.format(reverse("submission_queue")))
+                self.assert_current_workspace_link(response, "deliveries")
+
+    def test_reviewer_submission_receipt_keeps_review_queue_navigation(self):
+        submission = self.published()
+        for reviewer in (self.manager, self.admin):
+            with self.subTest(reviewer=reviewer.username):
+                self.client.force_login(reviewer)
+                response = self.client.get(self.review_url(submission))
+                self.assertContains(response, "Back to submissions")
+                self.assertEqual(response.context["submission_workspace_url"], reverse("submission_queue"))
+                self.assertContains(response, '<span aria-current="page">Review</span>', html=True)
+                self.assert_current_workspace_link(response, "submission_queue")
+                queue = self.client.get(reverse("submission_queue"))
+                self.assertContains(queue, "Submission review")
+                self.assertEqual(queue.context["selected_state"], "pending")
 
 
 @override_settings(SUBMISSION_ENABLED=True)

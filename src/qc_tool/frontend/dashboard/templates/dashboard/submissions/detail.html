@@ -3,10 +3,10 @@
 {% block title %}Submission | {{ submission.delivery.filename }} | CLMS QC Tool{% endblock %}
 {% block main_class %}workspace-page submission-review-page{% endblock %}
 {% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/ui/review-feedback.css' %}">{% endblock %}
-{% block page_breadcrumbs %}{% url 'submission_queue' as submissions_url %}{% include "dashboard/shared/breadcrumbs.html" with parent_label="Submissions" parent_url=submissions_url current_label="Review" only %}{% endblock %}
+{% block page_breadcrumbs %}{% include "dashboard/shared/breadcrumbs.html" with parent_label=submission_workspace_label parent_url=submission_workspace_url current_label=submission_breadcrumb_label only %}{% endblock %}
 {% block page_title %}{{ submission.delivery.filename }}{% endblock %}
 {% block page_subtitle %}<p>{{ submission.product_release.product.name }} · product unit {{ submission.product_unit_code }} · <strong>{% if submission.review_state == 'rejected' %}Rejected{% else %}{{ submission.get_review_state_display }}{% endif %}</strong></p>{% endblock %}
-{% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'submission_queue' %}">Back to submissions</a>{% endblock %}
+{% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{{ submission_workspace_url }}">{{ submission_return_label }}</a>{% endblock %}
 {% block page_content %}
 {% if form.non_field_errors %}<div class="workspace-notice workspace-notice--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
 {% if submission.review_state == 'rejected' %}

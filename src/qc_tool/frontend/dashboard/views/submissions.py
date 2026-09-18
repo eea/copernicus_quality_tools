@@ -1,4 +1,4 @@
-"""Owner submission tracking and assigned-manager review workspace."""
+"""Delivery submission receipts and the assigned-manager review workspace."""
 
 from pathlib import PurePosixPath
 
@@ -13,6 +13,8 @@ from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.forms.submission_reviews import SubmissionReviewForm
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
+from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import classify_delivery_status
+from qc_tool.frontend.dashboard.services.deliveries.listing.workflows import classify_delivery_workflow
 from qc_tool.frontend.dashboard.services.submissions import SubmissionError, resolve_submission_conflict
 from qc_tool.frontend.dashboard.services.submissions.access import visible_submissions
 from qc_tool.frontend.dashboard.services.submissions.artifacts import submission_inventory, open_submission_file
@@ -22,7 +24,8 @@ from qc_tool.frontend.dashboard.services.submissions.review import review_submis
 
 def submission_queue(request):
     access = access_for_request(request)
-    can_review = access.is_administrator or access.is_product_manager
+    if not access.can_view_submission_queue:
+        return redirect(_deliveries_workflow_url("in_review"))
     queryset = visible_submissions(access)
     product = request.GET.get("product", "")
     if product:
@@ -30,7 +33,7 @@ def submission_queue(request):
     delivery = request.GET.get("delivery", "")
     if delivery:
         queryset = queryset.filter(delivery_id=int(delivery)) if delivery.isdecimal() and len(delivery) < 19 else queryset.none()
-    state = request.GET.get("state", "pending" if can_review else "all")
+    state = request.GET.get("state", "pending")
     if state not in {"pending", "accepted", "rejected", "all"}:
         state = "pending"
     if state == "pending":
@@ -41,8 +44,32 @@ def submission_queue(request):
     return render(request, "dashboard/submissions/index.html", {
         "review_items": page, "selected_state": state, "selected_product": product,
         "selected_delivery": delivery,
-        "can_review": can_review,
+        "can_review": True,
     })
+
+
+def _deliveries_workflow_url(workflow):
+    return "{}?delivery_view={}".format(reverse("deliveries"), workflow)
+
+
+def _submission_workspace_navigation(access, submission):
+    if access.can_view_submission_queue:
+        return {
+            "submission_workspace_url": reverse("submission_queue"),
+            "submission_workspace_label": "Submissions",
+            "submission_return_label": "Back to submissions",
+            "submission_breadcrumb_label": "Review",
+        }
+    status = classify_delivery_status(
+        submission.job.job_status, submission.delivery.date_submitted,
+        submission.review_state, submission.publication_state,
+    )
+    return {
+        "submission_workspace_url": _deliveries_workflow_url(classify_delivery_workflow(status)),
+        "submission_workspace_label": "Deliveries",
+        "submission_return_label": "Back to deliveries",
+        "submission_breadcrumb_label": "Submission",
+    }
 
 
 def submission_review(request, submission_id):
@@ -99,6 +126,7 @@ def submission_review(request, submission_id):
         pass
     events = list(submission.review_events.select_related("actor").order_by("created_at", "pk"))
     return render(request, "dashboard/submissions/detail.html", {
+        **_submission_workspace_navigation(access, submission),
         "submission": submission, "form": form, "can_review": can_review,
         "can_decide": can_review and submission.publication_state == "published"
             and submission.review_state in {"pending", "conflict"},
