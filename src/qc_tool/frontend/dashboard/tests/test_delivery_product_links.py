@@ -25,6 +25,13 @@ class DeliveryProductLinkTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(username="product-link-owner")
+        UserProductGrant.objects.bulk_create([
+            UserProductGrant(user=cls.owner, product_ident=ident)
+            for ident in (
+                "shared-recipe", "first-product", "missing-product",
+                "historical-product", "no-release-product",
+            )
+        ])
         cls.manager = get_user_model().objects.create_user(username="product-link-manager")
         cls.manager.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
         cls.definition = QcDefinition.objects.create(
@@ -159,11 +166,11 @@ class DeliveryProductLinkTests(TestCase):
         delivery = self.create_delivery("manager-owned.zip", owner=self.manager)
         self.create_job(delivery, self.first)
 
-        row = self.rows(self.manager)[0]
-
-        self.assertEqual(row["product_url"], "")
-        self.assertEqual(row["product_display_name"], "")
-        self.assert_history_destination(delivery, row, self.manager)
+        self.assertEqual(self.rows(self.manager), [])
+        self.client.force_login(self.manager)
+        self.assertEqual(self.client.get(
+            reverse("job_history", args=(delivery.pk,)),
+        ).status_code, 403)
         UserProductGrant.objects.create(user=self.manager, product_ident=self.first.product.ident)
         row = self.rows(self.manager)[0]
         self.assertEqual(row["product_url"], reverse("product_detail", args=(self.first.product.ident,)))
@@ -182,6 +189,7 @@ class DeliveryProductLinkTests(TestCase):
         viewer.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))
+        UserProductGrant.objects.create(user=viewer, product_ident=self.second.product.ident)
 
         row = self.rows(viewer)[0]
 
@@ -197,6 +205,7 @@ class DeliveryProductLinkTests(TestCase):
                 self.create_submission(delivery, job)
         access = access_for(self.owner)
         rows = query_deliveries(self.owner, account_access=access)[1]
+        access.browsable_product_idents
 
         with self.assertNumQueries(3):
             add_delivery_links(rows, access)

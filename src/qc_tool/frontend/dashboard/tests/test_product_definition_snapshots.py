@@ -11,6 +11,7 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Product
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
@@ -25,6 +26,7 @@ class ProductDefinitionSnapshotTests(TestCase):
             password="test-password",
         )
         self.client.force_login(self.user)
+        UserProductGrant.objects.create(user=self.user, product_ident="example")
         self.document = {
             "description": "Stored product definition",
             "steps": [{
@@ -104,6 +106,7 @@ class ProductDefinitionSnapshotTests(TestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_managed_detail_links_each_exact_stored_definition(self):
+        UserProductGrant.objects.create(user=self.user, product_ident="business")
         product = Product.objects.create(ident="business", name="Business product")
         release = ProductRelease.objects.create(
             product=product,

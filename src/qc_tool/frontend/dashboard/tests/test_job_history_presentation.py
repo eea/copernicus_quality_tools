@@ -73,6 +73,7 @@ class JobHistoryPresentationTests(TestCase):
             product_ident="clc2024",
             product_description="Corine Land Cover 2024",
         )
+        UserProductGrant.objects.create(user=self.owner, product_ident="clc2024")
         self.url = reverse("job_history", args=(self.delivery.pk,))
         self.client.force_login(self.owner)
 

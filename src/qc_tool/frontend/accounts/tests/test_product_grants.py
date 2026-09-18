@@ -12,6 +12,7 @@ from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.product_grants import (
     create_product_grant,
+    save_product_grant,
 )
 from qc_tool.frontend.accounts.services.products import (
     ProductCatalogUnavailable,
@@ -141,3 +142,26 @@ class UserProductGrantTests(TestCase):
         grant.refresh_from_db()
 
         self.assertIsNone(grant.created_by)
+
+    @patch(
+        "qc_tool.frontend.accounts.services.products.get_product_descriptions",
+        return_value=CATALOG,
+    )
+    def test_shared_assignment_service_preserves_creator_and_validates_changes(self, _get):
+        creator = get_user_model().objects.create_user(username="assigning-admin")
+        editor = get_user_model().objects.create_user(username="editing-admin")
+        grant = save_product_grant(
+            UserProductGrant(user=self.user, product_ident="clc2024"),
+            created_by=creator,
+        )
+        self.assertEqual(grant.created_by, creator)
+        grant.product_ident = "general_raster"
+        save_product_grant(grant, created_by=editor)
+        grant.refresh_from_db()
+        self.assertEqual(grant.created_by, creator)
+        self.assertEqual(grant.product_ident, "general_raster")
+        grant.product_ident = "unavailable"
+        with self.assertRaises(ValidationError):
+            save_product_grant(grant, created_by=editor)
+        grant.refresh_from_db()
+        self.assertEqual(grant.product_ident, "general_raster")

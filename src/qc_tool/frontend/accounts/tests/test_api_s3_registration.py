@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
@@ -27,6 +28,7 @@ ALLOWED_ENDPOINT = "https://objects.example.com"
 class ApiS3RegistrationSecurityTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="s3-api-owner")
+        UserProductGrant.objects.create(user=self.user, product_ident="product")
         self.raw_key = issue_personal_access_token(
             self.user,
             "S3 registration tests",

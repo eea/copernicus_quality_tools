@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 
 
@@ -13,6 +14,7 @@ class DeliveryUploadCheckTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(username="duplicate-owner")
+        UserProductGrant.objects.create(user=cls.owner, product_ident="example")
         cls.other = get_user_model().objects.create_user(username="duplicate-other")
         cls.admin = get_user_model().objects.create_superuser(username="duplicate-admin", email="admin@example.test", password="unused")
         cls.own = Delivery.objects.create(user=cls.owner, filename="same.zip", size_bytes=10)
@@ -48,7 +50,7 @@ class DeliveryUploadCheckTests(TestCase):
         self.own.save(update_fields=("date_submitted",))
         row = self.check(["same.zip"]).json()["files"][0]
         self.assertFalse(row["can_overwrite"])
-        self.assertIn("submission", row["overwrite_reason"])
+        self.assertIn("submitted", row["overwrite_reason"])
         Delivery.objects.create(user=self.owner, filename="same.zip", size_bytes=11)
         row = self.check(["same.zip"]).json()["files"][0]
         self.assertFalse(row["can_overwrite"])

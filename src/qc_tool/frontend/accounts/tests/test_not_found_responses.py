@@ -14,6 +14,7 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.authentication.decorators import api_key_required
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
@@ -167,6 +168,7 @@ class NotFoundResponseTests(TestCase):
         self.assertIn("Authorization", response["Vary"])
 
     def test_explicit_protocol_404_is_not_rewritten(self):
+        UserProductGrant.objects.create(user=self.user, product_ident="example")
         self.client.force_login(self.user)
         parameters = {
             "resumableIdentifier": "missing-chunk",

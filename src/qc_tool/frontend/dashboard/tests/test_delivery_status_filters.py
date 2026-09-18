@@ -21,6 +21,7 @@ from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_TIMEOUT
 from qc_tool.common import JOB_WAITING
 from qc_tool.frontend.accounts.authorization import access_for
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.services.deliveries import (
@@ -44,6 +45,7 @@ class DeliveryStatusFilterTests(TestCase):
             username="hidden-delivery-filter-user",
             password="test-password",
         )
+        UserProductGrant.objects.create(user=self.user, product_ident="test_product")
         self.client.force_login(self.user)
         self.now = timezone.now()
 
@@ -320,6 +322,7 @@ class DeliveryStatusFilterTests(TestCase):
     def test_status_counts_use_one_query_and_submitted_first_precedence(self):
         self.create_status_matrix()
         account_access = access_for(self.user)
+        account_access.operable_product_idents
 
         with self.assertNumQueries(1):
             counts = count_delivery_statuses(account_access)

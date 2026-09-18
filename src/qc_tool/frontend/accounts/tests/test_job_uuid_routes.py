@@ -9,6 +9,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from qc_tool.common import CONFIG
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
@@ -21,6 +22,7 @@ class JobUUIDRouteTests(TestCase):
         self.owner = get_user_model().objects.create_user(
             username="uuid-route-owner",
         )
+        UserProductGrant.objects.create(user=self.owner, product_ident="test-product")
         self.delivery = Delivery.objects.create(
             user=self.owner,
             filename="delivery.zip",

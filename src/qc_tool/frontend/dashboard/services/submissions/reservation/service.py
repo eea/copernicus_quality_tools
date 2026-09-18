@@ -2,6 +2,7 @@
 
 from django.db import transaction
 
+from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
@@ -29,7 +30,10 @@ def reserve_submission(
 
     lock_catalog_sync()
     delivery = _locked_delivery(delivery_id)
-    if not account_access.can_manage_user(delivery.user_id):
+    if not (
+        account_access.can_submit
+        and can_manage_delivery(account_access, delivery)
+    ):
         raise SubmissionError(
             "object_permission_denied",
             "The account cannot submit this delivery.",
@@ -38,13 +42,16 @@ def reserve_submission(
 
     existing = _existing_submission(delivery)
     if existing is not None:
+        _require_submission_product(account_access, existing.job, existing.product_release)
         return reserved_contract(existing, already_existed=True)
 
     validate_delivery(delivery, request_channel=request_channel)
     latest_job = latest_successful_job(delivery)
+    _require_submission_product(account_access, latest_job, latest_job.product_release)
     submitted_aoi = validated_submitted_aoi(delivery, latest_job)
     input_digest = validated_input_digest(latest_job)
     release, product_aoi = catalog_target(latest_job, submitted_aoi)
+    _require_submission_product(account_access, latest_job, release)
     _persist_delivery_identity(delivery, submitted_aoi)
 
     submission = DeliverySubmission.objects.create(
@@ -64,6 +71,16 @@ def reserve_submission(
         input_digest=input_digest,
     )
     return reserved_contract(submission, already_existed=False)
+
+
+def _require_submission_product(account_access, job, release):
+    if account_access.can_access_product_snapshot(
+        job.product_ident, release.product.ident if release is not None else None,
+    ):
+        return
+    raise SubmissionError(
+        "object_permission_denied", "The account is not assigned to this product.", 403,
+    )
 
 
 def _locked_delivery(delivery_id):

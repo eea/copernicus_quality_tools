@@ -1,10 +1,13 @@
 """Database-row projection for delivery-list consumers."""
 
 from uuid import UUID
+from types import SimpleNamespace
 
 from django.urls import reverse
 
-from qc_tool.frontend.dashboard.access import delivery_action_capabilities
+from qc_tool.frontend.dashboard.access import (
+    delivery_action_capabilities, delivery_product_scope_matches,
+)
 from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
     classify_delivery_status,
 )
@@ -26,9 +29,16 @@ def project_delivery_rows(rows, account_access, include_capabilities):
     for item in rows:
         item["type"] = "s3" if item["s3_id"] else "local"
         owner_id = item.pop("action_owner_id")
+        delivery = SimpleNamespace(
+            user_id=owner_id,
+            product_ident=item.get("product_ident"),
+            _scope_job_id=item.get("last_job_uuid"),
+            _scope_job_product_ident=item.pop("action_job_product_ident", None),
+            _scope_catalog_ident=item.pop("action_catalog_product_ident", None),
+        )
         if include_capabilities:
             item.update(
-                delivery_action_capabilities(account_access, owner_id)
+                delivery_action_capabilities(account_access, delivery)
             )
         if "last_job_status" in item:
             item["delivery_status"] = classify_delivery_status(
@@ -54,6 +64,7 @@ def project_delivery_rows(rows, account_access, include_capabilities):
                 and item.get("delivery_status") == "needs_correction"
                 and account_access.user_id == owner_id
                 and account_access.can_upload
+                and delivery_product_scope_matches(account_access, delivery)
             )
             item["correction_upload_url"] = (
                 "{}?correction_for={}".format(reverse("file_upload"), submission_id)

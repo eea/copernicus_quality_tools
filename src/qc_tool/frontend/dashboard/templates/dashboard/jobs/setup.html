@@ -67,8 +67,16 @@
             </div>
         </section>
 
+        {% if not product_list %}
+        <section class="workspace-notice workspace-notice--warning" aria-labelledby="job-products-title">
+            <div>
+                <h3 id="job-products-title">No assigned products available</h3>
+                <p>Contact an administrator to assign an available product definition before running quality checks.</p>
+            </div>
+        </section>
+        {% endif %}
         <form id="check_form" class="job-setup-form">
-            <fieldset>
+            <fieldset{% if not product_list %} disabled{% endif %}>
                 <legend class="sr-only">Configure quality-control checks</legend>
                 <input id="preselected_product" type="hidden" value="{{ product_ident|default:'' }}">
                 <input id="preselected_file" type="hidden" value="{{ filename|default:'' }}">

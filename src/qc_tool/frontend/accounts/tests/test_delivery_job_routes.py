@@ -14,6 +14,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from qc_tool.common import CONFIG
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 
@@ -23,6 +24,7 @@ class DeliveryJobRouteTests(TestCase):
         self.owner = get_user_model().objects.create_user(
             username="delivery-job-route-owner",
         )
+        UserProductGrant.objects.create(user=self.owner, product_ident="test-product")
         self.delivery = Delivery.objects.create(
             user=self.owner,
             filename="delivery.zip",

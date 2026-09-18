@@ -5,10 +5,12 @@ from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.models import UserProductGrant
 
 class ResumableUploadTemplateTests(TestCase):
     def setUp(self):
         user = get_user_model().objects.create_user(username="uploader")
+        UserProductGrant.objects.create(user=user, product_ident="example")
         self.client.force_login(user)
 
     def test_upload_page_uses_shared_layout_and_loads_each_runtime_once(self):

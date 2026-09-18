@@ -239,3 +239,39 @@ class AccountAccessTests(TestCase):
         self.assertFalse(access.is_authenticated)
         self.assertEqual(access.roles, frozenset())
         self.assertFalse(access.can_view_other_users_deliveries)
+
+    def test_default_user_requires_product_assignments_without_gaining_review_rights(self):
+        self.assertFalse(access_for(self.user).can_access_product("clc2024"))
+        self.assertFalse(access_for(self.user).can_browse_product("clc2024"))
+        for ident in ("clc2024", "clc2018"):
+            UserProductGrant.objects.create(user=self.user, product_ident=ident)
+
+        access = access_for(self.user)
+        for ident in ("clc2024", "clc2018"):
+            self.assertTrue(access.can_access_product(ident))
+            self.assertTrue(access.can_browse_product(ident))
+            self.assertFalse(access.can_review_product_submission(ident))
+        self.assertFalse(access.can_access_product("other_product"))
+        self.assertFalse(access.can_access_product(""))
+        self.assertFalse(access.can_view_other_users_deliveries)
+
+    def test_product_scope_snapshot_excludes_later_grants_and_revocations(self):
+        UserProductGrant.objects.create(user=self.user, product_ident="clc2024")
+        original = access_for(self.user)
+        UserProductGrant.objects.create(user=self.user, product_ident="clc2018")
+
+        def restricted():
+            return access_for(self.user).restricted_to_snapshot(
+                permissions=[permission.value for permission in original.permissions],
+                roles=[role.value for role in original.roles], region_codes=[],
+                product_idents=list(original.product_idents), is_administrator=False,
+            )
+
+        self.assertTrue(restricted().can_access_product("clc2024"))
+        self.assertFalse(restricted().can_access_product("clc2018"))
+        self.user.product_grants.filter(product_ident="clc2024").delete()
+        self.assertFalse(restricted().can_access_product("clc2024"))
+
+    def test_administrator_can_access_products_without_assignments(self):
+        self.add_roles(Role.ADMIN)
+        self.assertTrue(access_for(self.user).can_access_product("any_product"))

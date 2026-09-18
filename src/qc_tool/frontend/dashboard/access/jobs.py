@@ -1,13 +1,34 @@
-from qc_tool.frontend.dashboard.access.deliveries import can_view_delivery
-from qc_tool.frontend.dashboard.access.deliveries import require_delivery_view
+from django.core.exceptions import PermissionDenied
+
+from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
+from qc_tool.frontend.dashboard.access.deliveries import _region_scope_matches
 
 
 def can_view_job(account_access, job):
-    """Jobs inherit the access policy of their delivery."""
+    """Read a job only within its recorded product or trusted regional scope.
 
-    return can_view_delivery(account_access, job.delivery)
+    Rerunning a delivery under another product cannot transfer access to older
+    QC artifacts after the original product assignment is revoked.
+    """
+
+    if not account_access.allows(AccountPermission.VIEW_DELIVERIES):
+        return False
+    if account_access.is_administrator:
+        return True
+    if _region_scope_matches(account_access, job.delivery):
+        return True
+    if not (
+        account_access.user_id == job.delivery.user_id
+        or account_access.can_view_product_deliveries
+    ):
+        return False
+    parent_ident = (
+        job.product_release.product.ident if job.product_release_id else None
+    )
+    return account_access.can_access_product_snapshot(job.product_ident, parent_ident)
 
 
 def require_job_view(account_access, job):
-    require_delivery_view(account_access, job.delivery)
+    if not can_view_job(account_access, job):
+        raise PermissionDenied("You are not permitted to view this job.")
     return job

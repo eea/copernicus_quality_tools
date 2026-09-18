@@ -19,6 +19,7 @@ from django.utils import timezone
 import qc_tool.common as common
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.role_permissions import capability_content_type
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductAOI, ProductRelease,
@@ -473,6 +474,7 @@ class ProductSpecificationUploadTests(TestCase):
         detail_url = reverse("product_detail", args=("new_product",))
         for user in (self.viewer, self.manager):
             with self.subTest(user=user.username):
+                UserProductGrant.objects.create(user=user, product_ident="new_product")
                 self.client.force_login(user)
                 self.assertNotContains(self.client.get(reverse("products")), self.url)
                 detail = self.client.get(detail_url)

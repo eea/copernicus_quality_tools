@@ -26,6 +26,7 @@ class JobHistoryDeliveryStatusTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(username="history-state-owner")
+        UserProductGrant.objects.create(user=cls.owner, product_ident="history-product")
         cls.administrator = get_user_model().objects.create_superuser(
             username="history-state-administrator", password="test-password",
         )
@@ -55,6 +56,7 @@ class JobHistoryDeliveryStatusTests(TestCase):
         )
 
     def create_job(self, status, *, delivery=None, **fields):
+        fields.setdefault("product_ident", self.product.ident)
         return Job.objects.create(
             delivery=delivery or self.delivery, job_status=status, **fields,
         )
@@ -66,6 +68,9 @@ class JobHistoryDeliveryStatusTests(TestCase):
             submitted_by=self.owner, submitted_by_username=self.owner.username,
             request_channel="browser", review_state=review_state,
             publication_state=publication_state,
+            published_at=timezone.now() if publication_state == "published" else None,
+            artifact_path="/published/history.zip", artifact_digest="a" * 64,
+            input_digest="b" * 64,
         )
 
     def test_no_runs_shows_not_validated_and_first_run_for_owner_and_admin(self):
@@ -188,7 +193,8 @@ class JobHistoryDeliveryStatusTests(TestCase):
         ) as reservations:
             reservations.return_value.exists.return_value = True
             self.assertIsNone(self.summary()["action"])
-            reservations.assert_called_once_with(delivery_id=self.delivery.pk)
+            reservations.assert_any_call(delivery_id=self.delivery.pk)
+            reservations.return_value.exists.assert_called_once_with()
 
     def test_envelope_is_opt_in_and_default_json_contract_is_preserved(self):
         job = self.create_job(JOB_OK)
@@ -218,6 +224,7 @@ class JobHistoryDeliveryStatusTests(TestCase):
         return_value=JOB_OK,
     )
     def test_refresh_returns_completed_status_and_updated_delivery_facts(self, check_job, _load_result):
+        UserProductGrant.objects.create(user=self.owner, product_ident="fresh-definition")
         job = self.create_job(
             JOB_RUNNING, product_ident="fresh-definition",
             product_description="Fresh QC product description",
@@ -230,7 +237,7 @@ class JobHistoryDeliveryStatusTests(TestCase):
         self.assertEqual(payload["rows"][0]["job_status"], JOB_OK)
         self.assertEqual(payload["delivery_summary"]["status"]["label"], "Validated")
         self.assertEqual(payload["delivery_summary"]["description"], "Fresh QC product description")
-        self.assertEqual(payload["delivery_summary"]["facts"][-1], {"label": "Expected AOI", "value": "CZ"})
+        self.assertEqual(payload["delivery_summary"]["facts"][-1], {"label": "Expected AOI", "value": "cz"})
         self.assertIsNone(payload["delivery_summary"]["action"])
         self.assertEqual(check_job.call_args.args[0], str(job.pk))
 
@@ -241,4 +248,3 @@ class JobHistoryDeliveryStatusTests(TestCase):
         response = self.client.get(self.json_url, {"include_delivery": "1"})
 
         self.assertEqual(response.status_code, 403)
-

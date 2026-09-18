@@ -6,6 +6,7 @@ from django.test import SimpleTestCase
 from django.urls import reverse
 
 from qc_tool.common import QCException
+from qc_tool.frontend.accounts.authorization import AccountAccess
 from qc_tool.frontend.dashboard.views import api_product_info
 
 
@@ -24,6 +25,14 @@ EXPECTED_OPERATIONS = {
 
 
 class ApiDocumentationSecurityTests(SimpleTestCase):
+    def product_request(self, path):
+        request = RequestFactory().get(path)
+        request.api_access = AccountAccess(
+            user_id=1, is_authenticated=True, is_administrator=True,
+            roles=frozenset(), permissions=frozenset(),
+        )
+        return request
+
     def test_documentation_is_anonymous_and_uses_only_bundled_assets(self):
         response = self.client.get(reverse("api_homepage"))
 
@@ -154,7 +163,7 @@ class ApiDocumentationSecurityTests(SimpleTestCase):
         _compile_job_form_data,
     ):
         response = api_product_info(
-            RequestFactory().get("/api/product-info/unavailable"),
+            self.product_request("/api/product-info/unavailable"),
             "unavailable",
         )
 
@@ -179,7 +188,7 @@ class ApiDocumentationSecurityTests(SimpleTestCase):
         compile_job_form_data,
     ):
         response = api_product_info(
-            RequestFactory().get("/api/product-info/PRODUCT"),
+            self.product_request("/api/product-info/PRODUCT"),
             "PRODUCT",
         )
 

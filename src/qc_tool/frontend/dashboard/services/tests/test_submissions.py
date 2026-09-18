@@ -26,7 +26,8 @@ from qc_tool.common import JOB_OK
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import Job
-from qc_tool.frontend.accounts.models import PersonalAccessToken
+from qc_tool.frontend.accounts.authorization import access_for
+from qc_tool.frontend.accounts.models import PersonalAccessToken, UserProductGrant
 from qc_tool.frontend.dashboard.models import Product
 from qc_tool.frontend.dashboard.models import ProductAOI
 from qc_tool.frontend.dashboard.models import ProductRelease
@@ -98,6 +99,7 @@ class SubmissionFixtureMixin:
             username=username,
             password="password",
         )
+        UserProductGrant.objects.create(user=user, product_ident=self.definition.product_ident)
         user_root = self.media_root / username
         user_root.mkdir()
         zip_payload = ("delivery for {}".format(username)).encode("utf-8")
@@ -135,12 +137,7 @@ class SubmissionFixtureMixin:
         return user, delivery, job, job_root
 
     def owner_access(self, user):
-        return SimpleNamespace(
-            can_manage_user=lambda owner_id: owner_id == user.pk,
-            is_administrator=False,
-            is_product_manager=False,
-            product_idents=frozenset(),
-        )
+        return access_for(user)
 
     def submit(self, user, delivery, job_root):
         with patch(
@@ -172,6 +169,31 @@ class SubmissionFixtureMixin:
 
 
 class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
+    def test_product_revocation_blocks_submission_and_idempotent_retry(self):
+        user, delivery, job, job_root = self.create_candidate("revoked-owner")
+        user.product_grants.all().delete()
+        with self.assertRaises(SubmissionError) as error:
+            self.submit(user, delivery, job_root)
+        self.assertEqual(error.exception.status_code, 403)
+        self.assertFalse(DeliverySubmission.objects.exists())
+
+        UserProductGrant.objects.create(user=user, product_ident=self.definition.product_ident)
+        self.submit(user, delivery, job_root)
+        user.product_grants.all().delete()
+        with self.assertRaises(SubmissionError) as error:
+            self.submit(user, delivery, job_root)
+        self.assertEqual(error.exception.status_code, 403)
+        self.assertEqual(DeliverySubmission.objects.count(), 1)
+
+    def test_unrelated_grant_cannot_submit_a_job_with_missing_delivery_projection(self):
+        user, delivery, job, job_root = self.create_candidate("wrong-product-owner")
+        user.product_grants.update(product_ident="another_product")
+        self.assertIsNone(delivery.product_ident)
+        with self.assertRaises(SubmissionError) as error:
+            self.submit(user, delivery, job_root)
+        self.assertEqual(error.exception.status_code, 403)
+        self.assertFalse(DeliverySubmission.objects.exists())
+
     def test_successful_submission_is_atomic_and_idempotent(self):
         user, delivery, job, job_root = self.create_candidate("first-owner")
 
@@ -1013,6 +1035,7 @@ class ConcurrentSubmissionTests(TransactionTestCase):
 
     def _candidate(self, username, definition, release):
         user = get_user_model().objects.create_user(username=username)
+        UserProductGrant.objects.create(user=user, product_ident=definition.product_ident)
         user_root = self.media_root / username
         user_root.mkdir()
         payload = username.encode("utf-8")
@@ -1054,9 +1077,7 @@ class ConcurrentSubmissionTests(TransactionTestCase):
                 return submit_delivery(
                     delivery_id=delivery.pk,
                     actor=user,
-                    account_access=SimpleNamespace(
-                        can_manage_user=lambda owner_id: owner_id == user.pk,
-                    ),
+                    account_access=access_for(user),
                     request_channel=(
                         DeliverySubmission.RequestChannel.BROWSER
                     ),
@@ -1092,9 +1113,7 @@ class ConcurrentSubmissionTests(TransactionTestCase):
                     return submit_delivery(
                         delivery_id=delivery.pk,
                         actor=user,
-                        account_access=SimpleNamespace(
-                            can_manage_user=lambda owner_id: owner_id == user.pk,
-                        ),
+                        account_access=access_for(user),
                         request_channel=(
                             DeliverySubmission.RequestChannel.BROWSER
                         ),

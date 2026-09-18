@@ -30,6 +30,8 @@ def _delivery_join_sql(database_connection, submission_join):
     job_table = quote_name(Job._meta.db_table)
     user_table = quote_name(get_user_model()._meta.db_table)
     profile_table = quote_name(UserProfile._meta.db_table)
+    release_table = quote_name(ProductRelease._meta.db_table)
+    product_table = quote_name(Product._meta.db_table)
     return f"""
         FROM {delivery_table} d
         LEFT JOIN {job_table} j
@@ -37,6 +39,10 @@ def _delivery_join_sql(database_connection, submission_join):
           SELECT job_uuid FROM {job_table} j
           WHERE j.delivery_id = d.id
           ORDER BY j.date_created DESC, j.job_uuid DESC LIMIT 1)
+        LEFT JOIN {release_table} scoped_release
+        ON scoped_release.id = j.product_release_id
+        LEFT JOIN {product_table} scoped_product
+        ON scoped_product.id = scoped_release.product_id
         INNER JOIN {user_table} u
         ON d.user_id = u.id
         LEFT JOIN {profile_table} up
@@ -59,14 +65,29 @@ def _submission_join_sql(database_connection, account_access, user_id):
     visibility = ""
     parameters = []
     if not account_access.is_administrator:
-        clauses = ["d.user_id = %s"]
-        parameters.append(user_id)
+        clauses = ["FALSE"]
+        release_table = quote_name(ProductRelease._meta.db_table)
+        product_table = quote_name(Product._meta.db_table)
+        owner_products = sorted(account_access.product_idents)
+        if owner_products:
+            placeholders = ", ".join(["%s"] * len(owner_products))
+            job_table = quote_name(Job._meta.db_table)
+            clauses = [
+                "(d.user_id = %s AND EXISTS ("
+                f"SELECT 1 FROM {job_table} submission_job "
+                f"JOIN {release_table} owner_release "
+                "ON owner_release.id = s.product_release_id "
+                f"JOIN {product_table} owner_product "
+                "ON owner_product.id = owner_release.product_id "
+                "WHERE submission_job.job_uuid = s.job_id AND ("
+                f"LOWER(TRIM(submission_job.product_ident)) IN ({placeholders}) "
+                f"OR LOWER(TRIM(owner_product.ident)) IN ({placeholders}))))"
+            ]
+            parameters.extend([user_id] + owner_products * 2)
         if getattr(account_access, "is_product_manager", False):
             products = sorted(account_access.reviewable_product_idents)
             if products:
                 placeholders = ", ".join(["%s"] * len(products))
-                release_table = quote_name(ProductRelease._meta.db_table)
-                product_table = quote_name(Product._meta.db_table)
                 clauses.append(
                     f"EXISTS (SELECT 1 FROM {release_table} review_release "
                     f"JOIN {product_table} review_product "
@@ -95,6 +116,8 @@ DELIVERY_SELECT_SQL = """
         d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,
+        j.product_ident AS action_job_product_ident,
+        scoped_product.ident AS action_catalog_product_ident,
         j.date_created, j.date_started, j.date_finished,
         j.job_status as last_job_status,
         up.country AS user_country,
@@ -206,27 +229,44 @@ def _visibility_clause(user_id, account_access, database_connection):
     if account_access.is_administrator:
         return "", []
 
-    clauses = ["d.user_id = %s"]
-    parameters = [user_id]
+    product_sql, product_parameters = _product_scope_clause(account_access)
+    owner_scope_sql = product_sql
+    if account_access.product_idents:
+        owner_scope_sql += (
+            " OR (NULLIF(TRIM(d.product_ident), '') IS NULL AND j.job_uuid IS NULL)"
+        )
+    clauses = [f"(d.user_id = %s AND ({owner_scope_sql}))"]
+    parameters = [user_id] + product_parameters
     if account_access.can_view_region_deliveries:
         region_codes = sorted(account_access.region_codes)
         placeholders = ", ".join(["%s"] * len(region_codes))
         clauses.append(f"up.country IN ({placeholders})")
         parameters.extend(region_codes)
     if account_access.can_view_product_deliveries:
-        product_idents = sorted(account_access.product_idents)
-        placeholders = ", ".join(["%s"] * len(product_idents))
-        clauses.append(f"LOWER(d.product_ident) IN ({placeholders})")
-        parameters.extend(product_idents)
-        quote_name = database_connection.ops.quote_name
-        release_table = quote_name(ProductRelease._meta.db_table)
-        product_table = quote_name(Product._meta.db_table)
-        clauses.append(
-            f"EXISTS (SELECT 1 FROM {release_table} scoped_release "
-            f"JOIN {product_table} scoped_product ON scoped_product.id = scoped_release.product_id "
-            f"WHERE scoped_release.id = j.product_release_id "
-            f"AND scoped_product.ident IN ({placeholders}))"
-        )
-        parameters.extend(product_idents)
+        clauses.append(f"({product_sql})")
+        parameters.extend(product_parameters)
 
     return " AND ({})".format(" OR ".join(clauses)), parameters
+
+
+def _product_scope_clause(account_access):
+    product_idents = sorted(account_access.product_idents)
+    if not product_idents:
+        return "FALSE", []
+    placeholders = ", ".join(["%s"] * len(product_idents))
+    clauses = [
+        f"LOWER(TRIM(d.product_ident)) IN ({placeholders})",
+        f"LOWER(TRIM(scoped_product.ident)) IN ({placeholders})",
+        "(NULLIF(TRIM(d.product_ident), '') IS NULL "
+        f"AND LOWER(TRIM(j.product_ident)) IN ({placeholders}))",
+    ]
+    parameters = product_idents * 3
+    derived_idents = sorted(account_access.operable_product_idents - account_access.product_idents)
+    if derived_idents:
+        placeholders = ", ".join(["%s"] * len(derived_idents))
+        clauses.append(
+            "(j.job_uuid IS NULL "
+            f"AND LOWER(TRIM(d.product_ident)) IN ({placeholders}))"
+        )
+        parameters.extend(derived_idents)
+    return " OR ".join(clauses), parameters

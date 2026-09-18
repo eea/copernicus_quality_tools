@@ -29,6 +29,14 @@
 {% block upload_attributes %}data-check-url="{% url 'delivery_upload_check' %}" data-upload-url="{% url 'resumable_upload' %}" data-deliveries-url="{% url 'deliveries' %}" data-setup-job-url="{% url 'setup_job' %}" data-simultaneous-uploads="{{ resumable_simultaneous_uploads }}"{% if correction %} data-correction-submission="{{ correction.submission.pk }}" data-correction-filename="{{ correction.submission.delivery.filename }}" data-correction-delivery-id="{{ correction.submission.delivery_id }}"{% endif %}{% endblock upload_attributes %}
 {% block upload_body %}
 <div class="workspace-card__body qc-upload-body">
+    {% if not has_product_assignments %}
+    <section class="workspace-notice workspace-notice--warning" aria-labelledby="delivery-products-title">
+        <div>
+            <h2 id="delivery-products-title">No products assigned</h2>
+            <p>Contact an administrator to assign the products you work with. You can then upload deliveries, run quality checks, and submit them for review.</p>
+        </div>
+    </section>
+    {% else %}
     {% if correction %}
     <section class="workspace-notice workspace-notice--warning" aria-labelledby="delivery-correction-title">
         <div>
@@ -56,11 +64,14 @@
     <noscript><p class="qc-upload-error">Enable JavaScript to upload delivery files.</p></noscript>
     {% include "dashboard/shared/uploads/queue.html" only %}
     <p class="qc-upload-hint">{% if correction %}Your correction needs new quality checks before you can submit it for review. The original submission and its review history remain available.{% else %}After uploading, open Deliveries to run quality checks. Replaced deliveries keep their previous history and need new checks.{% endif %}</p>
+    {% endif %}
 </div>
 {% endblock upload_body %}
 
 {% block js %}
 {{ block.super }}
+{% if has_product_assignments %}
 <script src="{% static 'dashboard/js/vendor/resumable.js' %}"></script>
 <script src="{% static 'dashboard/js/features/deliveries/upload.js' %}"></script>
+{% endif %}
 {% endblock js %}

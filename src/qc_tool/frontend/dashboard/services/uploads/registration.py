@@ -6,6 +6,7 @@ import stat
 
 from django.db import transaction
 
+from qc_tool.frontend.accounts.authorization import AccountAccess
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.services.products import find_product_description, guess_product_ident
 
@@ -19,11 +20,16 @@ from ._resumable.filesystem import open_directory, read_flags, write_once_flags
 from ._resumable.locks import upload_lock
 from ._resumable.paths import expected_chunk_paths
 from .locking import delivery_filename_lock, require_available_filename
+from .access import require_upload_delivery, require_upload_filename
 
 
 def probe_registered_chunk(descriptor, paths, *, user):
     """A final chunk is complete only after a live delivery was registered."""
 
+    require_upload_filename(
+        AccountAccess.from_user(user), descriptor.filename,
+        overwrite_delivery_id=descriptor.overwrite_delivery_id,
+    )
     if not paths.chunks_dir.exists():
         return False
     with delivery_filename_lock(paths.user_root, descriptor.filename) as filename_directory, upload_lock(paths.chunks_dir) as directory:
@@ -52,6 +58,10 @@ def probe_registered_chunk(descriptor, paths, *, user):
 def receive_registered_chunk(descriptor, paths, *, user, uploaded_chunk):
     """Store, assemble and register once; retries recover any prior publication."""
 
+    require_upload_filename(
+        AccountAccess.from_user(user), descriptor.filename,
+        overwrite_delivery_id=descriptor.overwrite_delivery_id,
+    )
     with delivery_filename_lock(paths.user_root, descriptor.filename) as filename_directory, upload_lock(paths.chunks_dir) as directory:
         require_available_filename(filename_directory, storage_key=descriptor.storage_key if descriptor.overwrite_delivery_id else None)
         if descriptor.overwrite_delivery_id is not None:
@@ -144,10 +154,13 @@ def _registered_delivery(receipt, paths, user):
             return None
     finally:
         os.close(target_directory)
-    return Delivery.objects.filter(
+    delivery = Delivery.objects.filter(
         pk=receipt["delivery_id"], user_id=user.pk,
         filename=paths.target_path.name, is_deleted=False,
     ).first()
+    if delivery is not None:
+        require_upload_delivery(AccountAccess.from_user(user), delivery)
+    return delivery
 
 
 def _read_receipt(directory, *, filename=".registered"):

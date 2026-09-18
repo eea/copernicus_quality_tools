@@ -2,6 +2,7 @@
 
 from django.urls import reverse
 
+from qc_tool.frontend.dashboard.access.deliveries import delivery_product_scope_matches
 from qc_tool.frontend.dashboard.models import DeliverySubmission, SubmissionReviewEvent
 
 
@@ -29,6 +30,7 @@ def correction_context(submission, account_access, *, events=None):
     if not (
         account_access.is_authenticated and account_access.can_upload
         and account_access.user_id == submission.delivery.user_id
+        and delivery_product_scope_matches(account_access, submission.delivery)
         and submission.review_state == DeliverySubmission.ReviewState.REJECTED
         and submission.publication_state == DeliverySubmission.PublicationState.PUBLISHED
         and not submission.delivery.is_deleted

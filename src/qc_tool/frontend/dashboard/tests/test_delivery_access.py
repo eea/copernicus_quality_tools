@@ -11,6 +11,9 @@ from qc_tool.frontend.dashboard.views import query_deliveries
 class DeliveryAccessTests(TestCase):
     def test_actions_require_both_account_capability_and_owner_access(self):
         access = SimpleNamespace(
+            is_authenticated=True,
+            is_administrator=False,
+            product_idents=frozenset({"clc"}),
             can_run_qc=True,
             can_delete=True,
             can_submit=False,
@@ -18,7 +21,9 @@ class DeliveryAccessTests(TestCase):
         )
 
         self.assertEqual(
-            delivery_action_capabilities(access, 7),
+            delivery_action_capabilities(
+                access, SimpleNamespace(user_id=7, product_ident="clc"),
+            ),
             {
                 "can_run_qc": True,
                 "can_delete": True,
@@ -26,7 +31,9 @@ class DeliveryAccessTests(TestCase):
             },
         )
         self.assertEqual(
-            delivery_action_capabilities(access, 8),
+            delivery_action_capabilities(
+                access, SimpleNamespace(user_id=8, product_ident="clc"),
+            ),
             {
                 "can_run_qc": False,
                 "can_delete": False,
@@ -36,6 +43,7 @@ class DeliveryAccessTests(TestCase):
 
     def test_delivery_query_includes_server_derived_ui_flags(self):
         access = SimpleNamespace(
+            is_authenticated=True,
             is_administrator=True,
             can_run_qc=True,
             can_delete=True,
@@ -86,12 +94,14 @@ class DeliveryAccessTests(TestCase):
     def test_region_and_product_scopes_are_additive(self):
         access = SimpleNamespace(
             allows=lambda permission: True,
+            is_authenticated=True,
             is_administrator=False,
             user_id=99,
             can_view_region_deliveries=True,
             region_codes=frozenset({"CZ", "DE"}),
             can_view_product_deliveries=True,
             product_idents=frozenset({"clc", "water"}),
+            operable_product_idents=frozenset({"clc", "water"}),
         )
         first_region_delivery = SimpleNamespace(
             user_id=1,
@@ -147,6 +157,7 @@ class DeliveryAccessTests(TestCase):
         )
         base_access = {
             "allows": lambda permission: True,
+            "is_authenticated": True,
             "is_administrator": False,
             "user_id": 99,
             "can_view_region_deliveries": False,
@@ -173,6 +184,7 @@ class DeliveryAccessTests(TestCase):
     def test_legacy_region_matching_is_exact(self):
         access = SimpleNamespace(
             allows=lambda permission: True,
+            is_authenticated=True,
             is_administrator=False,
             user_id=99,
             can_view_region_deliveries=True,
@@ -194,11 +206,13 @@ class DeliveryAccessTests(TestCase):
 
     def test_delivery_query_uses_additive_bound_scope_parameters(self):
         access = SimpleNamespace(
+            is_authenticated=True,
             is_administrator=False,
             can_view_region_deliveries=True,
             region_codes=frozenset({"DE", "CZ"}),
             can_view_product_deliveries=True,
             product_idents=frozenset({"water", "clc"}),
+            operable_product_idents=frozenset({"water", "clc"}),
             can_manage_user=lambda owner_id: False,
         )
         cursor = MagicMock()
@@ -227,17 +241,29 @@ class DeliveryAccessTests(TestCase):
         for call in (total_call, rows_call):
             sql, params = call.args
             self.assertIn(
-                "d.user_id = %s OR up.country IN (%s, %s) "
-                "OR LOWER(d.product_ident) IN (%s, %s)",
+                "d.user_id = %s AND (LOWER(TRIM(d.product_ident)) IN (%s, %s)",
                 sql,
             )
+            self.assertIn("OR up.country IN (%s, %s)", sql)
             self.assertEqual(
                 params,
                 [
                     7,  # Submission feedback is independently restricted to its owner.
+                    "clc",
+                    "water",
+                    "clc",
+                    "water",
                     7,
+                    "clc",
+                    "water",
+                    "clc",
+                    "water",
+                    "clc",
+                    "water",
                     "CZ",
                     "DE",
+                    "clc",
+                    "water",
                     "clc",
                     "water",
                     "clc",

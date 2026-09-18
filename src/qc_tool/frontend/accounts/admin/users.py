@@ -13,6 +13,7 @@ from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.models import UserRegionGrant
+from qc_tool.frontend.accounts.services.product_grants import save_product_grant
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_permissions,
 )
@@ -173,6 +174,9 @@ class AccountUserAdmin(BaseUserAdmin):
         for deleted in formset.deleted_objects:
             deleted.delete()
         for instance in instances:
+            if isinstance(instance, UserProductGrant):
+                save_product_grant(instance, created_by=request.user)
+                continue
             if instance._state.adding:
                 instance.created_by = request.user
             instance.save()

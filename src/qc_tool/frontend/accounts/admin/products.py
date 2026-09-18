@@ -33,7 +33,16 @@ def _catalog_choices():
 
 
 class UserProductGrantForm(forms.ModelForm):
-    product_ident = forms.ChoiceField(choices=())
+    product_ident = forms.ChoiceField(
+        choices=(),
+        label="Product",
+        help_text=(
+            "Assign one or more products to default users and product managers. "
+            "Default users can upload deliveries, run QC, and submit their own "
+            "deliveries for assigned products. Review decisions require the "
+            "product-manager or administrator role."
+        ),
+    )
 
     class Meta:
         model = UserProductGrant

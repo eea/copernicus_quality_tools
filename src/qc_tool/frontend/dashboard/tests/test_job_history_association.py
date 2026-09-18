@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from qc_tool.common import JOB_FAILED
 from qc_tool.common import JOB_OK
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
@@ -27,6 +28,10 @@ class JobHistoryAssociationTests(TestCase):
             password="test-password",
         )
         self.client.force_login(self.user)
+        UserProductGrant.objects.bulk_create([
+            UserProductGrant(user=self.user, product_ident=ident)
+            for ident in ("first", "second")
+        ])
 
     def test_duplicate_filenames_do_not_merge_distinct_delivery_histories(self):
         now = timezone.now()

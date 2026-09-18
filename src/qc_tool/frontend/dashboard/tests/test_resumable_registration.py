@@ -13,6 +13,7 @@ from django.db import close_old_connections
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.services.tests.test_resumable_uploads import _descriptor, _parameters
 from qc_tool.frontend.dashboard.services.uploads import prepare_resumable_paths, store_chunk
@@ -29,6 +30,7 @@ class UploadRegistrationFixture:
         settings.enable()
         self.addCleanup(settings.disable)
         self.user = get_user_model().objects.create_user(username="resumable-owner")
+        UserProductGrant.objects.create(user=self.user, product_ident="example")
         self.client.force_login(self.user)
         self.url = reverse("resumable_upload")
         self.parameters = _parameters()

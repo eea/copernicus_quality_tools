@@ -65,14 +65,17 @@ The job result page may provide:
 - combined text log;
 - generated GeoPackage or other attachments.
 
-Access to every artifact is checked through the parent delivery. Sharing an
-artifact URL does not bypass authentication or object scope.
+Access to every artifact is checked against its owner and the product recorded
+by that QC run, or an explicit manager/region viewing scope. Revoking a product
+assignment also removes access to its historical results. Sharing an artifact
+URL does not bypass authentication or object scope.
 
 ## Delete and submit
 
 Default users can delete or submit their own deliveries when the corresponding
-permission is present. Product/region scope alone is read-only. Administrators
-can manage records across owners.
+permission and product assignment are present. Assignments do not allow users
+to change other users' deliveries. Administrators can manage records across
+owners.
 
 A Delivery delete is a domain action; user deletion is disabled in Django Admin
 because Django's current ownership relationships would cascade into delivery

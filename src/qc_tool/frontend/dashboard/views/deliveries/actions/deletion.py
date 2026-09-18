@@ -8,6 +8,7 @@ from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard import models
+from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.services.requests import IdentifierListError
 from qc_tool.frontend.dashboard.services.requests import (
     parse_positive_identifier_list,
@@ -44,8 +45,8 @@ def delivery_delete(request):
                 status=404,
             )
         if any(
-            not account_access.can_manage_user(
-                deliveries_by_id[delivery_id].user_id
+            not can_manage_delivery(
+                account_access, deliveries_by_id[delivery_id]
             )
             for delivery_id in delivery_ids
         ):

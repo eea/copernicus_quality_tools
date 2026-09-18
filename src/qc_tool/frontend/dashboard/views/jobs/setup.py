@@ -11,6 +11,7 @@ from qc_tool.common import compile_job_form_data
 from qc_tool.common import get_product_descriptions
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard import models
+from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.services.configuration.presentation import (
     get_announcement_message,
 )
@@ -30,7 +31,8 @@ def setup_job(request):
     except IdentifierListError as exc:
         return HttpResponseBadRequest(exc.message)
 
-    product_list = _product_options()
+    account_access = access_for_request(request)
+    product_list = _product_options(account_access)
     deliveries_by_id = {
         delivery.id: delivery
         for delivery in models.Delivery.objects.filter(
@@ -41,7 +43,6 @@ def setup_job(request):
     if len(deliveries_by_id) != len(delivery_ids):
         raise Http404("One or more selected deliveries do not exist.")
 
-    account_access = access_for_request(request)
     deliveries = []
     for delivery_id in delivery_ids:
         delivery = deliveries_by_id[delivery_id]
@@ -49,9 +50,10 @@ def setup_job(request):
             raise PermissionDenied(
                 "Starting a new QC job on submitted delivery is not permitted."
             )
-        if not account_access.can_manage_user(delivery.user_id):
+        if not can_manage_delivery(account_access, delivery):
             raise PermissionDenied(
-                "A selected delivery belongs to another user."
+                "You can run quality checks only on deliveries you manage for assigned products. "
+                "Contact an administrator to update your product assignments."
             )
         deliveries.append(delivery)
 
@@ -72,12 +74,14 @@ def setup_job(request):
 def get_job_info(request, product_ident):
     """Return the job-step form definition for one product."""
 
+    if not access_for_request(request).can_access_product(product_ident):
+        raise Http404("Product definition not found.")
     return JsonResponse(
         {"job_result": compile_job_form_data(product_ident)}
     )
 
 
-def _product_options():
+def _product_options(account_access):
     descriptions = get_product_descriptions()
     options = [
         {
@@ -85,5 +89,6 @@ def _product_options():
             "product_description": description,
         }
         for ident, description in descriptions.items()
+        if account_access.can_access_product(ident)
     ]
     return sorted(options, key=lambda item: item["product_description"])

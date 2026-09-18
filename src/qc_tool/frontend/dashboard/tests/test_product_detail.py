@@ -110,6 +110,7 @@ class DefinitionBackedProductDetailTests(TestCase):
             password="test-password",
         )
         self.client.force_login(self.user)
+        UserProductGrant.objects.create(user=self.user, product_ident=PRODUCT_IDENT)
 
     @patch(
         "qc_tool.frontend.dashboard.services.products.detail."
@@ -166,6 +167,7 @@ class DefinitionBackedProductDetailTests(TestCase):
         self,
         descriptions,
     ):
+        UserProductGrant.objects.create(user=self.user, product_ident="unknown_product")
         unknown = self.client.get(
             reverse(
                 "product_detail",
@@ -207,6 +209,7 @@ class DefinitionBackedProductDetailTests(TestCase):
         self.assertContains(response, "Check totals are unavailable")
 
     def test_definition_data_route_normalizes_legacy_uppercase_identifiers(self):
+        UserProductGrant.objects.create(user=self.user, product_ident="product")
         with TemporaryDirectory() as directory:
             definition_path = Path(directory, "product.json")
             definition_path.write_text("{}", encoding="utf-8")
@@ -215,12 +218,11 @@ class DefinitionBackedProductDetailTests(TestCase):
                 "locate_product_definition",
                 return_value=definition_path,
             ) as locate_definition:
-                response = get_product_definition(
-                    RequestFactory().get(
-                        reverse("product_definition_json", args=("PRODUCT",))
-                    ),
-                    "PRODUCT",
+                request = RequestFactory().get(
+                    reverse("product_definition_json", args=("PRODUCT",)),
                 )
+                request.user = self.user
+                response = get_product_definition(request, "PRODUCT")
 
                 self.assertEqual(response.status_code, 200)
                 locate_definition.assert_called_once_with("product")
@@ -234,6 +236,8 @@ class ManagedProductDetailAccessTests(TestCase):
             username="product-detail-default-user",
             password="test-password",
         )
+        UserProductGrant.objects.create(user=self.default_user, product_ident=PRODUCT_IDENT)
+        UserProductGrant.objects.create(user=self.default_user, product_ident=OTHER_PRODUCT_IDENT)
         self.product, self.release = self.create_product_release(
             PRODUCT_IDENT,
             name="Managed Urban Atlas",

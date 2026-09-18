@@ -179,13 +179,49 @@ class AccountAccess:
         )
 
     def can_browse_product(self, product_ident):
-        """Managers browse assigned products; uploaders browse active choices."""
+        """Browse assigned products and the parent metadata of assigned recipes."""
 
         ident = normalize_product_ident(product_ident)
         return bool(self.is_authenticated and ident is not None and (
-            self.is_administrator or not self.is_product_manager
-            or ident in self.browsable_product_idents
+            self.is_administrator or ident in self.browsable_product_idents
         ))
+
+    def can_access_product(self, product_ident):
+        """Allow an assigned product or its unambiguously associated QC recipe."""
+
+        ident = normalize_product_ident(product_ident)
+        return bool(
+            self.is_authenticated and ident is not None and (
+                self.is_administrator or ident in self.operable_product_idents
+            )
+        )
+
+    def can_access_product_snapshot(self, product_ident, catalog_product_ident=None):
+        """Check recorded product identities without deriving a new association.
+
+        Jobs and submissions retain the release selected when QC ran. A later
+        catalog change must not authorize their artifacts under another product.
+        """
+
+        identities = {
+            normalize_product_ident(product_ident),
+            normalize_product_ident(catalog_product_ident),
+        } - {None}
+        return bool(self.is_authenticated and identities and (
+            self.is_administrator or self.product_idents.intersection(identities)
+        ))
+
+    @property
+    def has_product_assignments(self):
+        """Whether the account may begin a delivery before identifying its product."""
+
+        return bool(self.is_authenticated and (self.is_administrator or self.product_idents))
+
+    @cached_property
+    def operable_product_idents(self):
+        from qc_tool.frontend.accounts.services.products import operable_product_scope
+
+        return operable_product_scope(self.product_idents)
 
     @cached_property
     def _catalog_product_scope(self):

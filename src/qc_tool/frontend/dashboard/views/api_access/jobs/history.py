@@ -33,7 +33,7 @@ def job_history(
     # Delivery identity, not filename, defines the job-history boundary.
     candidate_jobs = model_module.Job.objects.filter(
         delivery_id=delivery.pk,
-    ).select_related("delivery__user__userprofile")
+    ).select_related("delivery__user__userprofile", "product_release__product")
     visible_job_ids = [
         job.pk
         for job in candidate_jobs

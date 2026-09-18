@@ -14,6 +14,7 @@ from qc_tool.common import JOB_FAILED
 from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import Job
@@ -32,6 +33,7 @@ class DeliveryDeletionTests(TestCase):
         settings.enable()
         self.addCleanup(settings.disable)
         self.owner = get_user_model().objects.create_user(username="owner")
+        UserProductGrant.objects.create(user=self.owner, product_ident="test-product")
         self.other = get_user_model().objects.create_user(username="other")
         self.delivery = self.create_delivery(self.owner)
         self.jobs = [
@@ -42,7 +44,7 @@ class DeliveryDeletionTests(TestCase):
 
     def create_delivery(self, user, filename="delivery.zip"):
         delivery = Delivery.objects.create(
-            user=user, filename=filename, size_bytes=4,
+            user=user, filename=filename, size_bytes=4, product_ident="test-product",
         )
         path = self.upload_path(delivery)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -155,6 +157,14 @@ class DeliveryDeletionTests(TestCase):
         self.assert_history_intact()
         self.assertTrue(Job.objects.filter(pk=other_job.pk).exists())
         self.assertEqual(self.upload_path(other).read_bytes(), b"data")
+
+    def test_revoked_product_assignment_preserves_delivery_and_job_history(self):
+        self.owner.product_grants.all().delete()
+
+        response = self.delete(self.delivery)
+
+        self.assertEqual(response.status_code, 403)
+        self.assert_history_intact()
 
     def test_storage_failure_preserves_delivery_and_job_records(self):
         with patch(

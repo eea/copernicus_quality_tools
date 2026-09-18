@@ -20,7 +20,7 @@ from qc_tool.frontend.dashboard.views import query_deliveries
 
 class DashboardObjectAccessTests(TestCase):
     def setUp(self):
-        self.owner = self.create_user("owner", country="CZ")
+        self.owner = self.create_user("owner", country="CZ", product_idents=("clc2024",))
         self.other = self.create_user("other", country="SK")
         self.delivery = self.create_delivery(
             self.owner,

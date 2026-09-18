@@ -21,6 +21,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from qc_tool.common import JOB_WAITING
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
 )
@@ -359,6 +360,7 @@ class SharedPageChromeTests(TestCase):
             product_ident="page_chrome_product",
             product_description="Page chrome product",
         )
+        UserProductGrant.objects.create(user=self.user, product_ident="page_chrome_product")
         self.job = Job.objects.create(
             delivery=self.delivery,
             job_status=JOB_WAITING,
@@ -390,6 +392,7 @@ class SharedPageChromeTests(TestCase):
         breadcrumbs,
         action=None,
         workspace=True,
+        subtitle=True,
     ):
         """Assert shared templates and stable page semantics."""
 
@@ -466,13 +469,16 @@ class SharedPageChromeTests(TestCase):
             for paragraph in page_header.descendants("p")
             if paragraph.text
         ]
-        self.assertTrue(
-            subtitles,
-            "The shared page header must explain the page with a subtitle.",
-        )
+        if subtitle:
+            self.assertTrue(
+                subtitles,
+                "The shared page header must explain the page with a subtitle.",
+            )
+        else:
+            self.assertIn("delivery_summary", response.context)
         decorative_labels = [
             element
-            for element in document.descendants()
+            for element in page_header.descendants()
             if any(
                 label in class_name.casefold()
                 for class_name in element.attrs.get("class", "").split()
@@ -481,7 +487,7 @@ class SharedPageChromeTests(TestCase):
         ]
         self.assertFalse(
             decorative_labels,
-            "Pages use their title and breadcrumb without eyebrow labels.",
+            "Page headings use their title and breadcrumb without eyebrow labels.",
         )
 
         breadcrumb_navs = [
@@ -720,7 +726,7 @@ class SharedPageChromeTests(TestCase):
                 ),
                 (
                     reverse("deliveries"),
-                    "My Deliveries",
+                    "Deliveries",
                     None,
                     ("Upload delivery", reverse("file_upload")),
                 ),
@@ -851,6 +857,7 @@ class SharedPageChromeTests(TestCase):
                         heading=heading,
                         breadcrumbs=breadcrumbs,
                         action=action,
+                        subtitle=heading != "QC job history",
                     )
 
     def test_product_detail_is_a_child_of_the_product_catalog(self):

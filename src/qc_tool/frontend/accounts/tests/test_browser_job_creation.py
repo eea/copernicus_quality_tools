@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 
@@ -13,6 +14,7 @@ from qc_tool.frontend.dashboard.models import Job
 class BrowserJobCreationTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="job-owner")
+        UserProductGrant.objects.create(user=self.user, product_ident="product")
         self.client.force_login(self.user)
         self.deliveries = [
             Delivery.objects.create(
@@ -69,11 +71,11 @@ class BrowserJobCreationTests(TestCase):
         original_create_job = Delivery.create_job
         calls = {"count": 0}
 
-        def fail_second(delivery, product_ident, skip_steps):
+        def fail_second(delivery, product_ident, skip_steps, **kwargs):
             calls["count"] += 1
             if calls["count"] == 2:
                 raise RuntimeError("simulated database-side failure")
-            return original_create_job(delivery, product_ident, skip_steps)
+            return original_create_job(delivery, product_ident, skip_steps, **kwargs)
 
         temporary, definition = self._definition_context()
         with temporary, definition, patch(

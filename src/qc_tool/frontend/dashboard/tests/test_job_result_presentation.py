@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from qc_tool.common import JOB_ERROR
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.services.jobs.serializers import (
@@ -39,6 +40,7 @@ class MissingWorkerResultPresentationTests(TestCase):
             product_description="General raster checks",
         )
         self.client.force_login(self.user)
+        UserProductGrant.objects.create(user=self.user, product_ident="general_raster")
 
     @patch(
         "qc_tool.frontend.dashboard.views.jobs.results."

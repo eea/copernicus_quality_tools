@@ -27,6 +27,7 @@ from qc_tool.frontend.accounts.authorization.permissions import (
 )
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.authorization import access_for
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
 )
@@ -88,6 +89,7 @@ class DashboardHomeContractTests(TestCase):
             password="test-password",
         )
         self.client.force_login(self.user)
+        UserProductGrant.objects.create(user=self.user, product_ident="test-product")
 
     def permission(self, permission):
         return Permission.objects.get(
@@ -112,6 +114,12 @@ class DashboardHomeContractTests(TestCase):
         product_description=None,
         is_deleted=False,
     ):
+        # Every uploader in this presentation fixture has the products used by
+        # its deliveries; cross-owner reads still require a separate capability.
+        if (user is None or user == self.user) and product_ident:
+            UserProductGrant.objects.get_or_create(
+                user=self.user, product_ident=product_ident.casefold(),
+            )
         return Delivery.objects.create(
             user=self.user if user is None else user,
             filename=filename,
@@ -399,7 +407,7 @@ class DashboardHomeContractTests(TestCase):
         announcement.return_value = unsafe_announcement
         delivery = self.create_delivery(
             filename=unsafe_filename,
-            product_ident=unsafe_product,
+            product_ident="test-product",
             product_description=unsafe_product,
         )
         self.create_job(
@@ -513,7 +521,8 @@ class DashboardHomeContractTests(TestCase):
         with CaptureQueriesContext(connection) as queries:
             dashboard = build_workspace_overview(account_access)
 
-        self.assertLessEqual(len(queries), 5)
+        # Product scope is resolved once; the remaining five queries stay bounded.
+        self.assertLessEqual(len(queries), 6)
         self.assertEqual(dashboard.summary.total_deliveries, 30)
         self.assertLessEqual(len(dashboard.product_attention), 5)
         self.assertLessEqual(len(dashboard.recent_activity), 5)

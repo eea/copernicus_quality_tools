@@ -13,6 +13,7 @@ from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.services.deliveries import summarize_deliveries
@@ -26,6 +27,7 @@ class DeliverySummaryTests(TestCase):
             username="delivery-summary-user",
             password="test-password",
         )
+        UserProductGrant.objects.create(user=self.user, product_ident="test-product")
 
     def create_delivery(self, *, user, filename, is_deleted=False):
         return Delivery.objects.create(
@@ -102,6 +104,8 @@ class DeliverySummaryTests(TestCase):
         self.create_job(delivery=hidden, status=JOB_OK, created_at=now)
 
         account_access = access_for(self.user)
+        # Resolve the account's catalog scope once, then aggregate in one query.
+        account_access.operable_product_idents
         with self.assertNumQueries(1):
             summary = summarize_deliveries(account_access)
 

@@ -21,6 +21,7 @@ from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
 )
 from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
 )
@@ -38,6 +39,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
             username="delivery-workspace-user",
             password="test-password",
         )
+        for product_ident in ("safe-product", "escaped-product"):
+            UserProductGrant.objects.create(user=self.user, product_ident=product_ident)
         self.client.force_login(self.user)
 
     def workspace_sidebar(self, response):

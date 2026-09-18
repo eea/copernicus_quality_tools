@@ -4,6 +4,8 @@ from pathlib import Path
 from pathlib import PurePosixPath
 
 from django.http import JsonResponse
+from qc_tool.frontend.dashboard.services.uploads.access import require_upload_product
+from qc_tool.frontend.dashboard.services.uploads.resumable import ResumableUploadError
 
 
 def register_s3_delivery(
@@ -38,13 +40,14 @@ def register_s3_delivery(
             body_json,
             allowed_endpoints=settings_module.S3_ALLOWED_ENDPOINTS,
         )
+        require_upload_product(request.api_access, None)
         delivery = inspect_delivery(
             registration,
             connect_timeout=settings_module.S3_CONNECT_TIMEOUT_SECONDS,
             read_timeout=settings_module.S3_READ_TIMEOUT_SECONDS,
             maximum_objects=settings_module.S3_MAX_LISTED_OBJECTS,
         )
-    except registration_error_type as exc:
+    except (registration_error_type, ResumableUploadError) as exc:
         return JsonResponse(
             {
                 "status": "error",
@@ -56,6 +59,13 @@ def register_s3_delivery(
 
     delivery_filename = PurePosixPath(delivery.filename).name
     product_ident = guess_product(Path(delivery_filename))
+    try:
+        require_upload_product(request.api_access, product_ident)
+    except ResumableUploadError as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=exc.status_code,
+        )
     endpoint_logger.debug(product_ident)
     product_description = find_product(product_ident)
 

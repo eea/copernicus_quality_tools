@@ -27,7 +27,7 @@ def get_job_history_json(request, delivery_id):
     # Filenames are not unique and must never be an association boundary.
     candidate_jobs = models.Job.objects.filter(
         delivery_id=delivery.pk
-    ).select_related("delivery__user__userprofile")
+    ).select_related("delivery__user__userprofile", "product_release__product")
     visible_job_ids = [
         job.pk for job in candidate_jobs if can_view_job(account_access, job)
     ]

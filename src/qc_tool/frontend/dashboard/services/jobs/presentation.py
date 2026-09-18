@@ -3,6 +3,7 @@
 from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 
+from qc_tool.frontend.dashboard.access import can_manage_delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission, Job
 from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import (
     classify_delivery_status,
@@ -77,7 +78,7 @@ def _first_qc_action(delivery, account_access, latest_job):
         or delivery.is_deleted
         or delivery.date_submitted is not None
         or not account_access.can_run_qc
-        or not account_access.can_manage_user(delivery.user_id)
+        or not can_manage_delivery(account_access, delivery)
         # A receipt also reserves a delivery before publication completes.
         # Its visibility must not weaken the start-job restriction.
         or DeliverySubmission.objects.filter(delivery_id=delivery.pk).exists()

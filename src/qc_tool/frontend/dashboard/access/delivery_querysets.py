@@ -6,7 +6,7 @@ explicit scope grants are already resolved into ``AccountAccess``.
 """
 
 from django.db.models import OuterRef, Q, Subquery
-from django.db.models.functions import Lower
+from django.db.models.functions import Lower, Trim
 
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.dashboard.models import Delivery, Job
@@ -26,7 +26,39 @@ def visible_deliveries(account_access):
     if account_access.is_administrator:
         return queryset
 
-    visibility = Q(user_id=account_access.user_id)
+    latest_job = Job.objects.filter(delivery_id=OuterRef("pk")).order_by(
+        "-date_created", "-job_uuid",
+    )
+    queryset = queryset.annotate(
+        _scope_product_ident=Lower(Trim("product_ident")),
+        _scope_job_id=Subquery(latest_job.values("job_uuid")[:1]),
+        _scope_job_product_ident=Lower(Trim(Subquery(
+            latest_job.values("product_ident")[:1],
+        ))),
+        _scope_catalog_ident=Lower(Trim(Subquery(
+            latest_job.values("product_release__product__ident")[:1],
+        ))),
+    )
+    unidentified_product = (
+        Q(_scope_product_ident__isnull=True) | Q(_scope_product_ident="")
+    )
+    product_scope = Q(
+        _scope_product_ident__in=account_access.product_idents
+    ) | Q(
+        _scope_catalog_ident__in=account_access.product_idents
+    ) | (
+        unidentified_product
+        & Q(_scope_job_product_ident__in=account_access.product_idents)
+    ) | Q(
+        _scope_job_id__isnull=True,
+        _scope_product_ident__in=account_access.operable_product_idents,
+    )
+    owner_product_scope = product_scope
+    if account_access.product_idents:
+        owner_product_scope |= (
+            unidentified_product & Q(_scope_job_id__isnull=True)
+        )
+    visibility = Q(user_id=account_access.user_id) & owner_product_scope
     if account_access.can_view_region_deliveries:
         # Delivery.aoi_code is reporting metadata until every product has an
         # authoritative spatial validator. Do not use uploader-controlled
@@ -35,18 +67,6 @@ def visible_deliveries(account_access):
             user__userprofile__country__in=account_access.region_codes
         )
     if account_access.can_view_product_deliveries:
-        queryset = queryset.annotate(
-            _scope_product_ident=Lower("product_ident"),
-            _scope_catalog_ident=Subquery(
-                Job.objects.filter(delivery_id=OuterRef("pk"))
-                .order_by("-date_created", "-job_uuid")
-                .values("product_release__product__ident")[:1]
-            ),
-        )
-        visibility |= Q(
-            _scope_product_ident__in=account_access.product_idents
-        ) | Q(
-            _scope_catalog_ident__in=account_access.product_idents
-        )
+        visibility |= product_scope
 
     return queryset.filter(visibility).distinct()

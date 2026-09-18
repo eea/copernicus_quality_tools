@@ -15,6 +15,7 @@ def api_product_list(request):
             "description": product_description,
         }
         for product_ident, product_description in product_infos.items()
+        if request.api_access.can_access_product(product_ident)
     ]
     product_list = sorted(product_list, key=lambda x: x["product_ident"])
     return JsonResponse({"products": product_list})
@@ -29,7 +30,7 @@ def api_product_info(request, product_ident):
     """
     try:
         product_ident = normalize_product_ident(product_ident)
-        if product_ident is None:
+        if product_ident is None or not request.api_access.can_access_product(product_ident):
             raise QCException("Product identifier is not canonical.")
         job_form_data = compile_job_form_data(product_ident)
     except (KeyError, OSError, QCException, TypeError, UnicodeError, ValueError):

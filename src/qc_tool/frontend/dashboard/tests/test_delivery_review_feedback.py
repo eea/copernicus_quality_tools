@@ -38,6 +38,7 @@ class DeliveryReviewFeedbackTests(TestCase):
             product_release=cls.release, aoi_code="CZ", provenance="manifest",
         )
         UserProductGrant.objects.create(user=cls.manager, product_ident=cls.product.ident)
+        UserProductGrant.objects.create(user=cls.owner, product_ident=cls.product.ident)
 
     def submission(self, name, *, owner=None, state="rejected", version=1, publication_state="published"):
         owner = owner or self.owner
@@ -76,6 +77,7 @@ class DeliveryReviewFeedbackTests(TestCase):
         event = self.event(submission, version=2, notes="Correct the geometry and upload again.")
 
         access = access_for(self.owner)
+        access.operable_product_idents
         with self.assertNumQueries(2):
             total, rows = query_deliveries(self.owner, account_access=access)
 
@@ -103,6 +105,7 @@ class DeliveryReviewFeedbackTests(TestCase):
         self.submission("hidden-correction", owner=self.other)
 
         access = access_for(self.owner)
+        access.operable_product_idents
         with self.assertNumQueries(1):
             counts = count_delivery_statuses(access).as_dict()
         self.assertEqual(counts["all"], 4)
@@ -164,12 +167,30 @@ class DeliveryReviewFeedbackTests(TestCase):
         self.assertEqual({row["delivery_status"] for row in rows.values()}, {"submitted", "accepted"})
         self.assertEqual(len(self.rows(self.owner, limit=1, offset=1)), 1)
 
-    def test_owner_who_is_manager_can_see_their_own_unassigned_review(self):
+    def test_owner_who_is_manager_can_see_their_own_assigned_review(self):
         self.owner.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
         submission = self.submission("manager-own-submission")
         self.event(submission)
 
         self.assertEqual(self.rows(self.owner)[0]["review_notes"], "Correct the missing geometry.")
+
+    def test_revoked_owner_with_region_read_cannot_see_review_feedback_or_correct(self):
+        submission = self.submission("revoked-owner")
+        self.event(submission, notes="Private product correspondence.")
+        UserProfile.objects.create(user=self.owner, country="CZ")
+        UserRegionGrant.objects.create(user=self.owner, aoi_code="CZ")
+        self.owner.user_permissions.add(Permission.objects.get(
+            content_type__app_label="accounts", codename="view_region_deliveries",
+        ))
+        self.owner.product_grants.all().delete()
+
+        rows = self.rows(self.owner, include_capabilities=True)
+        self.assertEqual(len(rows), 1)
+        self.assertIsNone(rows[0]["submission_id"])
+        self.assertIsNone(rows[0]["review_notes"])
+        self.assertFalse(rows[0]["can_upload_correction"])
+        self.assertFalse(rows[0]["can_run_qc"])
+        self.assertFalse(rows[0]["can_submit"])
 
     def test_rejection_is_first_in_attention_without_accepted_history(self):
         rejected = self.submission("older-rejected")
@@ -225,6 +246,10 @@ class DeliveryReviewFeedbackTests(TestCase):
                 self.assertEqual(payload["workflow_counts"]["completed"], int(visible))
                 self.assertEqual(payload["status_counts"]["accepted"], int(visible))
                 self.assertEqual(payload["workflow_counts"]["in_review"], int(not visible))
+                self.assertEqual(payload["status_counts"]["all"], 1)
+                if not visible:
+                    self.assertFalse(viewer.product_grants.exists())
+                    self.assertEqual(payload["status_counts"]["submitted"], 1)
 
     def test_completed_requires_published_acceptance_and_is_exclusive_without_submission_date(self):
         accepted = self.submission("accepted-without-date", state="accepted")

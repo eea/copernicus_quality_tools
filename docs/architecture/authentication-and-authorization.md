@@ -56,7 +56,7 @@ roles with capabilities and object scope; views and services reuse that policy.
 
 | Role | Purpose | Permission bundle |
 | --- | --- | --- |
-| `default` | Baseline for every active user | view, upload, run QC, delete own, submit own, change password |
+| `default` | Baseline for every active user | view, upload, run QC, delete own, submit own within assigned products; change password |
 | `product_manager` | View assigned products, track fulfilment, and review their submissions | product visibility plus approval/decline within the assigned business-product scope |
 | `admin` | Manage products, delivery plans, users and reviews | all QC Tool capabilities; synchronized to Django staff access |
 
@@ -80,27 +80,35 @@ Cross-user visibility requires both a capability and a matching scope grant:
 
 ```text
 visible delivery =
-    own delivery
-    OR administrator
+    administrator
+    OR (own delivery AND assigned product)
     OR (region-view permission AND matching region grant)
     OR (product-view permission AND matching product grant)
 ```
 
-- Product grants use canonical product-definition identifiers.
+- Product grants use exact canonical product-definition identifiers. Both
+  default users and product managers may have one or many assignments.
 - Region grants currently store exact, opaque AOI codes.
 - The current delivery-region resolver still reads the uploader's legacy
   profile country. `Delivery.aoi_code` now exists, but remains reported
   metadata until every supported product has authoritative spatial AOI
   validation; see [AOI metadata](aoi-metadata.md).
-- A grant without its permission is inert.
-- A permission without a grant is inert.
+- Cross-user visibility requires both the relevant permission and its grant.
+- Default users already receive delivery-work capabilities through their role;
+  product grants define where those capabilities apply.
 
 Managers may read cross-user records in scope. Delivery upload, QC requests,
-deletion and submission remain owner-or-admin operations. Reviewing a submitted
-delivery is a separate permission: an administrator may review any product; a
-product manager may review only the canonical business products assigned to
-them. A recipe grant or region-based visibility does not authorize review of a
-different business product.
+deletion and submission require an assigned product and remain owner-or-admin
+operations. A generic ZIP whose product is not yet known can be uploaded when
+the user has at least one product grant; QC product selection must match an
+assignment. Users without product grants cannot start delivery work.
+
+Only administrators can manage users' product assignments. A product grant
+does not confer a management role or allow the user to edit their own grants.
+Reviewing a submitted delivery is a separate permission: an administrator may
+review any product; a product manager may review only within their assigned
+catalog scope. A partial recipe assignment does not authorize review of other
+streams, and region-based visibility alone does not authorize review.
 
 Only administrators may create products by uploading JSON specifications, upload
 specification revisions, remove products, or configure and activate delivery
@@ -115,6 +123,28 @@ not revoke an existing approval; replacing the approved candidate requires an
 explicit decision. Each decision retains its actor, time and feedback in the
 database audit history.
 
+## Shared product assignment policy
+
+`UserProductGrant` stores the same assignments for default users and product
+managers. Programmatic assignment uses `accounts.services.product_grants.create_product_grant`;
+Admin edits use `save_product_grant` in the same module. These services validate
+the catalog identifier and uniqueness and preserve the creator audit. Callers
+must first authorize the administrator performing the assignment.
+
+`AccountAccess.can_access_product` checks new work against the current catalog,
+including an assigned business product's unambiguous QC recipes.
+`AccountAccess.can_access_product_snapshot` checks a recorded recipe and its
+recorded business product without deriving a new association from the current
+catalog. Use the snapshot policy for existing jobs and submissions so later
+catalog edits cannot move their access scope.
+
+`dashboard.access.deliveries.can_manage_delivery` combines ownership with the
+delivery's product scope, retaining the administrator exception. Mutation
+services combine it with the required capability, such as `can_run_qc` or
+`can_submit`. Roles supply capabilities; browser views, API endpoints, and
+services share the same assignment policy. API callers pass their effective
+token-restricted `AccountAccess` through these helpers.
+
 ## Request-time behavior
 
 Django stores identity—not QC permissions—in the session. On every request,
@@ -122,6 +152,11 @@ Django stores identity—not QC permissions—in the session. On every request,
 grants, and region grants, then caches that immutable snapshot only on the
 request object. Admin changes therefore take effect on the user's next request
 without requiring logout.
+
+Owners need a current grant for a submission's recorded QC definition or
+business product to read its receipt and retained files. Revoking that grant
+also removes access to previously submitted evidence. Reviewer access continues
+to use the submission's recorded business product.
 
 ## Adding a protected endpoint
 

@@ -6,6 +6,7 @@ from django.utils import timezone
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import QCException, validate_skip_steps
+from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
 
 from ..projections import sync_locked_delivery_from_latest_job
@@ -36,11 +37,17 @@ def create_delivery_job(
             locked_delivery,
             Job,
             account_access=account_access,
+            product_ident=product_ident,
         )
         qc_definition, product_release = _catalog_snapshot(
             product_ident,
             logger=logger,
         )
+        if account_access is not None and not account_access.can_access_product_snapshot(
+            product_ident,
+            product_release.product.ident if product_release is not None else None,
+        ):
+            raise PermissionError("The account is not assigned to this product.")
         _require_active_specification(product_ident, qc_definition, Job)
         if qc_definition is not None and skip_steps:
             try:
@@ -106,11 +113,13 @@ def refresh_delivery_projection(delivery):
     return updated_fields
 
 
-def _require_job_creation_allowed(delivery, Job, *, account_access):
+def _require_job_creation_allowed(delivery, Job, *, account_access, product_ident):
     if delivery.is_deleted:
         raise ValueError("A deleted delivery cannot start a QC job.")
-    if account_access is not None and not account_access.can_manage_user(
-        delivery.user_id
+    if account_access is not None and not (
+        account_access.can_run_qc
+        and can_manage_delivery(account_access, delivery)
+        and account_access.can_access_product(product_ident)
     ):
         raise PermissionError(
             "The account cannot create a QC job for this delivery."

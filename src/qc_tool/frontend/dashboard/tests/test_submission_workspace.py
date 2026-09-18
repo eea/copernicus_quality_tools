@@ -16,7 +16,7 @@ from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import DeliverySubmission, ProductRelease
 from qc_tool.frontend.dashboard.services.catalog import get_product_coverage
 from qc_tool.frontend.dashboard.services.submissions import SubmissionError
-from qc_tool.frontend.dashboard.services.submissions.access import can_view_submission
+from qc_tool.frontend.dashboard.services.submissions.access import can_view_submission, visible_submissions
 from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context, current_review_feedback
 from qc_tool.frontend.dashboard.services.tests.test_submissions import SubmissionFixtureMixin
 
@@ -163,15 +163,57 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertIsNone(correction_context(submission, replace(owner_access, permissions=frozenset())))
         self.assertIsNone(correction_context(submission, AccountAccess.anonymous()))
 
-    def test_manager_can_track_own_submission_without_product_review_assignment(self):
+    def test_manager_cannot_track_own_submission_after_assignment_is_revoked(self):
         submission = self.published()
         self.owner.groups.add(Group.objects.get(name="product_manager"))
+        self.owner.product_grants.all().delete()
         self.client.force_login(self.owner)
         response = self.client.get(self.review_url(submission))
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context["can_review"])
-        self.assertIsNone(response.context["correction"])
-        self.assertEqual(self.decision(submission, "approved").status_code, 403)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.decision(submission, "approved").status_code, 404)
+        queue = self.client.get(reverse("submission_queue"), {"state": "all"})
+        self.assertEqual(list(queue.context["review_items"]), [])
+
+    def test_owner_receipt_and_retained_files_require_recipe_or_recorded_parent_grant(self):
+        self.product.ident = "catalog-parent"
+        self.product.save(update_fields=("ident",))
+        submission = self.published()
+        download_url = reverse(
+            "submission_file", args=(submission.pk, "output.d/report.txt"),
+        )
+        self.client.force_login(self.owner)
+        for granted in (self.job.product_ident, self.product.ident):
+            with self.subTest(granted=granted):
+                self.owner.product_grants.update(product_ident=granted)
+                access = AccountAccess.from_user(self.owner)
+                self.assertTrue(can_view_submission(
+                    access, owner_id=self.owner.pk,
+                    product_ident=self.product.ident,
+                    recipe_ident=self.job.product_ident,
+                ))
+                self.assertEqual(list(visible_submissions(access)), [submission])
+                self.assertEqual(self.client.get(self.review_url(submission)).status_code, 200)
+                response = self.client.get(download_url)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(b"".join(response.streaming_content), b"validated")
+
+        self.owner.product_grants.update(product_ident="unrelated-product")
+        access = AccountAccess.from_user(self.owner)
+        self.assertFalse(can_view_submission(
+            access, owner_id=self.owner.pk,
+            product_ident=self.product.ident, recipe_ident=self.job.product_ident,
+        ))
+        self.assertFalse(visible_submissions(access).exists())
+        self.assertEqual(self.client.get(self.review_url(submission)).status_code, 404)
+        self.assertEqual(self.client.get(download_url).status_code, 404)
+        self.assertNotContains(self.client.get(reverse("submission_queue")), self.delivery.filename)
+
+        for reviewer in (self.manager, self.admin):
+            with self.subTest(reviewer=reviewer.username):
+                self.client.force_login(reviewer)
+                response = self.client.get(download_url)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(b"".join(response.streaming_content), b"validated")
 
     def test_feedback_matches_current_decision_and_version(self):
         old_rejection = SimpleNamespace(version=1, decision="declined", notes="Old feedback")

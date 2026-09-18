@@ -188,3 +188,31 @@ def catalog_product_scope(product_idents):
         if definitions and None not in definitions and definitions.issubset(granted)
     )
     return browsable, complete, reviewable
+
+
+def operable_product_scope(product_idents):
+    """Include executable recipes only when their current release is unambiguous.
+
+    Shared recipes must not turn a parent assignment into access to another
+    product. Job creation also checks the actual snapshotted release.
+    """
+
+    from qc_tool.frontend.dashboard.models import ProductRelease
+
+    granted = frozenset(product_idents)
+    if not granted:
+        return granted
+    recipes = {}
+    for recipe, release_id, parent, active in ProductRelease.objects.filter(
+        is_current=True,
+    ).values_list(
+        "definition_links__qc_definition__product_ident", "pk",
+        "product__ident", "product__is_active",
+    ):
+        if recipe is not None:
+            recipes.setdefault(recipe, {})[release_id] = (parent, active)
+    return granted | frozenset(
+        recipe for recipe, releases in recipes.items()
+        if len(releases) == 1
+        and any(active and parent in granted for parent, active in releases.values())
+    )

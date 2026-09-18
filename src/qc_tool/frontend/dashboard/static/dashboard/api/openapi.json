@@ -39,7 +39,7 @@
         "operationId": "registerDelivery",
         "tags": ["Deliveries"],
         "summary": "Register an uploaded ZIP delivery",
-        "description": "Registers a ZIP file that already exists directly inside the token owner's incoming directory. Supply either its filename or its full path. Nested paths, traversal, symlinks, directories, files outside the owner's storage, and non-ZIP files are rejected. Registration creates a database record; it does not upload file bytes. A filename already registered to this owner, or reserved by an unfinished browser overwrite, returns 409. Use the browser overwrite workflow to replace a delivery.",
+        "description": "Registers a ZIP file that already exists directly inside the token owner's incoming directory. Supply either its filename or its full path. The product identified from the filename must be assigned within the token's effective access. Unclassified ZIPs require at least one product assignment; choose an assigned product when starting QC. Administrators have access to all products. Nested paths, traversal, symlinks, directories, files outside the owner's storage, and non-ZIP files are rejected. Registration creates a database record; it does not upload file bytes. A filename already registered to this owner, or reserved by an unfinished browser overwrite, returns 409. Use the browser overwrite workflow to replace a delivery.",
         "x-required-permission-label": "Upload deliveries",
         "requestBody": {
           "required": true,
@@ -74,7 +74,7 @@
         "operationId": "registerDeliveryFromS3",
         "tags": ["Deliveries"],
         "summary": "Register an S3-backed delivery",
-        "description": "Validates an S3 delivery and records its location. The endpoint must be an exact HTTPS origin from the server administrator's allowlist. URL paths, query strings, fragments, embedded credentials, redirects to unapproved origins, and an excessive number of listed objects are rejected. S3 credentials are used for the configured storage operation and must never be placed in a URL.",
+        "description": "Validates an S3 delivery and records its location. The detected product must be assigned within the token's effective access, or the token must have administrator access. An unclassified delivery requires at least one product assignment. The endpoint must be an exact HTTPS origin from the server administrator's allowlist. URL paths, query strings, fragments, embedded credentials, redirects to unapproved origins, and an excessive number of listed objects are rejected. S3 credentials are used for the configured storage operation and must never be placed in a URL.",
         "x-required-permission-label": "Upload deliveries",
         "requestBody": {
           "required": true,
@@ -114,7 +114,7 @@
         "operationId": "listDeliveries",
         "tags": ["Deliveries"],
         "summary": "List visible deliveries",
-        "description": "Returns active deliveries visible through both the token's issuance snapshot and the owner's current account scope. Ordinary users see their own deliveries. Administrators and accounts with product or region grants may also see deliveries within those grants. Results are paginated; no API filter or free-text search parameter is supported.",
+        "description": "Returns active deliveries visible through both the token's issuance snapshot and the owner's current account scope. Ordinary users see their own deliveries for assigned products, plus unclassified uploads while they have at least one assignment. Administrators and accounts with product or region management permissions may also see deliveries within their authorized scope. Results are paginated; no API filter or free-text search parameter is supported.",
         "x-required-permission-label": "View deliveries",
         "parameters": [
           {
@@ -173,7 +173,7 @@
         "operationId": "listProducts",
         "tags": ["Products"],
         "summary": "List available products",
-        "description": "Returns the product identifiers currently available to the QC Tool. Use product_ident exactly as returned when requesting product details or creating a job.",
+        "description": "Returns available product identifiers within the token's effective product assignments. Administrators can see all available products. Use product_ident exactly as returned when requesting product details or creating a job.",
         "x-required-permission-label": "View deliveries",
         "responses": {
           "200": {
@@ -194,7 +194,7 @@
         "operationId": "getProductInformation",
         "tags": ["Products"],
         "summary": "Describe a product's QC checks",
-        "description": "Builds a read-only QC job blueprint for one available product. The response explains the ordered checks, which checks are required, which are system-managed, and any configured layer parameters. It does not create a job.",
+        "description": "Builds a read-only QC job blueprint for one product available within the token's effective assignments. Unassigned or unavailable products return 404. The response explains the ordered checks, which checks are required, which are system-managed, and any configured layer parameters. It does not create a job.",
         "x-required-permission-label": "View deliveries",
         "parameters": [
           {
@@ -226,7 +226,7 @@
         "operationId": "createJob",
         "tags": ["QC jobs"],
         "summary": "Start a QC job",
-        "description": "Creates one QC job for an existing delivery. The PAT snapshot and token owner must allow Run QC, and the owner must be allowed to manage the delivery owner. product_ident must resolve to an available definition. skip_steps may include only optional step numbers permitted by that definition.",
+        "description": "Creates one QC job for an existing delivery. The PAT snapshot and token owner must allow Run QC, and the owner must be allowed to manage the delivery owner. Both the delivery and the selected product must be within the token's effective product assignments; administrators may use all products. product_ident must resolve to an available definition. skip_steps may include only optional step numbers permitted by that definition.",
         "x-required-permission-label": "Run QC",
         "requestBody": {
           "required": true,
@@ -260,7 +260,7 @@
         "operationId": "getJobResult",
         "tags": ["QC jobs"],
         "summary": "Get a QC job report as JSON",
-        "description": "Returns the compiled report for one visible job, including overall status and the ordered check results. Access is evaluated against the job's delivery using the intersection of the token snapshot and the owner's current ownership, administrator status, product grants, and region grants.",
+        "description": "Returns the compiled report for one visible job, including overall status and the ordered check results. Access uses the job's recorded product and delivery owner with the intersection of the token snapshot and the account's current administrator status, product grants, and region grants. Rerunning a delivery for another product does not transfer access to earlier QC results.",
         "x-required-permission-label": "View deliveries",
         "parameters": [{"$ref": "#/components/parameters/JobUuid"}],
         "responses": {
@@ -328,7 +328,7 @@
         "operationId": "submitDeliveryToEea",
         "tags": ["Submission"],
         "summary": "Submit a successful delivery to EEA",
-        "description": "Reserves and atomically publishes the latest eligible successful QC job for one delivery. The job must have verified exactly one submitted AOI and reference an authoritative catalog release containing that AOI. Requests are idempotent. Competing deliveries for the same expected AOI remain published for product-manager resolution.",
+        "description": "Reserves and atomically publishes the latest eligible successful QC job for one owned delivery within the token's effective product assignments, or any eligible delivery for an administrator. The job must have verified exactly one submitted AOI and reference an authoritative catalog release containing that AOI. Requests are idempotent. Competing deliveries for the same expected AOI remain published for product-manager resolution.",
         "x-required-permission-label": "Submit deliveries",
         "requestBody": {
           "required": true,

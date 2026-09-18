@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from qc_tool.common import JOB_FAILED, JOB_OK, JOB_RUNNING
-from qc_tool.frontend.accounts.models import UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductAOI, ProductRelease,
     SubmissionReviewEvent,
@@ -28,6 +28,7 @@ class DeliveryExportTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(username="export-owner")
+        UserProductGrant.objects.create(user=cls.user, product_ident="test")
         cls.other = get_user_model().objects.create_user(username="other-export-owner")
 
     def setUp(self):

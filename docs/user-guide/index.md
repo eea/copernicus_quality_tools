@@ -7,7 +7,8 @@ has_children: true
 # User guide
 
 QC Tool has no public registration. An administrator creates an account and
-assigns roles, direct permissions, and optional product or region scopes.
+assigns the products the user may work with, plus roles, direct permissions,
+and optional region scopes.
 
 After signing in, **Dashboard** is the default starting page. The workspace
 sidebar provides **Deliveries**, **Products**, **Boundaries**, and the public
@@ -39,7 +40,9 @@ The navigation reflects server-side permissions, but hiding a control is not
 the security boundary. Every page, data endpoint, and object is checked again
 on the server.
 
-- A default user works with their own deliveries and jobs.
+- A default user works with their own deliveries and jobs for explicitly
+  assigned products. The same assignments allow uploading, running QC, and
+  submitting successful deliveries for review.
 - A product manager can read deliveries for explicitly assigned products.
 - An administrator can access all products/countries and Django Admin.
 - A user-specific exception can be granted as an Additional QC permission,

@@ -22,6 +22,7 @@ from qc_tool.frontend.dashboard.services.uploads.registration import probe_regis
 from qc_tool.frontend.dashboard.services.uploads.resumable import validate_delivery_filename
 from qc_tool.frontend.dashboard.services.uploads.overwrite import overwrite_reason
 from qc_tool.frontend.dashboard.services.uploads.corrections import correction_identifier, require_correction_submission
+from qc_tool.frontend.dashboard.services.uploads.access import require_upload_delivery, require_upload_filename
 
 
 MAX_CHECK_BYTES = 64 * 1024
@@ -31,6 +32,7 @@ def delivery_upload_check(request):
     """Check filename collisions in the authenticated user's deliveries only."""
 
     correction_id = None
+    access = access_for_request(request)
     try:
         if request.content_type != "application/json":
             raise ResumableUploadError("invalid_upload_check", "Send the filenames as JSON.", 400)
@@ -54,6 +56,8 @@ def delivery_upload_check(request):
                     raise ResumableUploadError(
                         "correction_not_available", "A correction has already been uploaded. Open Deliveries to continue with its quality checks.", 409,
                     )
+        for filename in filenames:
+            require_upload_filename(access, filename)
     except RequestDataTooBig:
         return JsonResponse({"status": "error", "code": "upload_check_too_large", "message": "Check at most 100 filenames at a time."}, status=413)
     except (ValueError, UnicodeError):
@@ -65,7 +69,11 @@ def delivery_upload_check(request):
     ambiguous = set()
     for delivery in Delivery.objects.filter(
         user_id=request.user.pk, is_deleted=False, filename__in=set(filenames),
-    ).only("pk", "filename", "date_uploaded", "date_submitted", "s3_id").order_by("-date_uploaded", "-pk"):
+    ).only("pk", "filename", "date_uploaded", "date_submitted", "s3_id", "product_ident").order_by("-date_uploaded", "-pk"):
+        try:
+            require_upload_delivery(access, delivery)
+        except ResumableUploadError as exc:
+            return JsonResponse({"status": "error", "code": exc.code, "message": exc.message}, status=exc.status_code)
         if delivery.filename in existing:
             ambiguous.add(delivery.filename)
         existing.setdefault(delivery.filename, delivery)
@@ -91,12 +99,12 @@ def delivery_upload_check(request):
 def resumable_upload_page(request):
     """Upload delivery ZIP files with recoverable registration."""
     correction = None
+    access = access_for_request(request)
     if "correction_for" in request.GET:
         try:
             submission_id = UUID(request.GET["correction_for"])
         except (ValueError, TypeError, AttributeError):
             raise Http404("Correction unavailable.") from None
-        access = access_for_request(request)
         submission = get_object_or_404(visible_submissions(access), pk=submission_id)
         correction = correction_context(submission, access)
         if correction is None:
@@ -104,6 +112,7 @@ def resumable_upload_page(request):
     return render(request, 'dashboard/deliveries/upload.html', {
         'resumable_simultaneous_uploads': settings.RESUMABLE_SIMULTANEOUS_UPLOADS,
         'correction': correction,
+        'has_product_assignments': access.has_product_assignments,
     })
 
 
@@ -118,6 +127,10 @@ def resumable_upload(request):
                 filename=descriptor.filename, delivery_id=descriptor.overwrite_delivery_id,
                 allow_retired=True,
             )
+        require_upload_filename(
+            access_for_request(request), descriptor.filename,
+            overwrite_delivery_id=descriptor.overwrite_delivery_id,
+        )
 
         if request.method == "GET":
             paths = prepare_resumable_paths(

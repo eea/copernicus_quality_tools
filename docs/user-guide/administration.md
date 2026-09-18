@@ -16,7 +16,8 @@ Tool `admin` role synchronizes staff status.
 2. Select **Add user**.
 3. Enter username and a strong password.
 4. Save and continue editing.
-5. Assign roles, direct permissions, and optional grants.
+5. Assign one or more **Product grants** for the products the user will work on.
+6. Assign additional roles, direct permissions, or region grants as needed.
 
 Every newly created user automatically receives the `default` role. There is no
 public registration.
@@ -32,7 +33,7 @@ docker compose -f <deployment-compose.yml> exec frontend \
 
 | Role | Use |
 | --- | --- |
-| `default` | Baseline application access; automatically retained |
+| `default` | Work with own deliveries and jobs for assigned products; automatically retained |
 | `product_manager` | Product-scoped cross-user read/report capabilities |
 | `admin` | All QC capabilities and Django Admin access |
 
@@ -53,13 +54,40 @@ Examples:
 - grant `view_product_deliveries` plus Product grants without assigning the
   complete product-manager role.
 
-Scope permissions and scope rows are independent. Both are required.
+Cross-user scope permissions and scope rows are independent. Both are required.
 
 ## Product grants
 
-Product grants are selected from currently available product definitions. A
-product manager may have one or many. The product identifier is stored in
-canonical lowercase form and matched to a delivery's product.
+Administrators assign products in **Django Admin → Users → Product grants**.
+Both default users and product managers may have one or many grants, selected
+from currently available catalog products or QC definitions. Add one row per product. The
+product identifier is stored in canonical lowercase form and matched exactly
+to a delivery's product; assigning one product does not grant other products
+in the same family.
+
+A catalog-product assignment covers its recorded releases. QC choices include
+definitions associated with one unambiguous current release of that product;
+shared definitions require an explicit definition assignment for execution.
+
+A default user can upload deliveries, run QC jobs, and submit their own
+successful deliveries for review within those assigned products. Grants do not
+give access to another user's deliveries or permission to approve or decline
+submissions. The product-manager role adds its existing cross-user access and
+review capabilities within the assigned scope. Only administrators can assign
+or remove users' product grants.
+
+A non-administrator with no product grants cannot start product work. Assign
+products to existing default users before they resume work; their old product
+family setting does not replace explicit grants. Administrators retain access
+to every product.
+
+Removing the last matching product grant takes effect on the user's next request, including
+access to previous jobs, submission feedback, and retained submission files
+for that product. Records remain available to assigned reviewers and
+administrators.
+
+Personal API tokens retain the scope captured when issued. Issue a new token
+to use newly assigned products; revocations also restrict existing tokens.
 
 If definitions are unavailable, Admin fails closed: existing unavailable
 values remain visible/deletable, while new or changed grants are rejected.

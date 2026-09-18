@@ -734,45 +734,96 @@ class ProductGrantAdminTests(TestCase):
         },
     )
     def test_add_view_creates_multiple_validated_grants(self, _catalog):
-        product_manager = Group.objects.get(name=Role.PRODUCT_MANAGER.value)
         url = reverse("admin:auth_user_add")
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "clc2024 — CORINE Land Cover 2024")
         self.assertContains(response, "Legacy product family")
-
-        response = self.client.post(
-            url,
-            {
-                "username": "product-user",
-                "password1": "sufficient-password",
-                "password2": "sufficient-password",
-                "groups": [str(product_manager.pk)],
-                "product_grants-0-product_ident": "clc2024",
-                "product_grants-1-product_ident": "hrl2021",
-                **self.inline_management_data(
-                    product_total=2,
-                    product_initial=0,
-                ),
-                "_save": "Save",
-            },
+        self.assertContains(
+            response,
+            "Assign one or more products to default users and product managers.",
         )
 
-        self.assertEqual(response.status_code, 302)
-        user = self.user_model.objects.get(username="product-user")
-        self.assertEqual(
-            set(user.groups.values_list("name", flat=True)),
-            {Role.DEFAULT.value, Role.PRODUCT_MANAGER.value},
-        )
-        self.assertEqual(
-            list(user.product_grants.values_list("product_ident", flat=True)),
-            ["clc2024", "hrl2021"],
-        )
-        self.assertEqual(
-            set(user.product_grants.values_list("created_by_id", flat=True)),
-            {self.actor.pk},
-        )
+        for role in (Role.DEFAULT, Role.PRODUCT_MANAGER):
+            with self.subTest(role=role):
+                group = Group.objects.get(name=role.value)
+                username = f"product-user-{role.value}"
+                response = self.client.post(
+                    url,
+                    {
+                        "username": username,
+                        "password1": "sufficient-password",
+                        "password2": "sufficient-password",
+                        "groups": [str(group.pk)],
+                        "product_grants-0-product_ident": "clc2024",
+                        "product_grants-1-product_ident": "hrl2021",
+                        **self.inline_management_data(
+                            product_total=2,
+                            product_initial=0,
+                        ),
+                        "_save": "Save",
+                    },
+                )
+
+                self.assertEqual(response.status_code, 302)
+                user = self.user_model.objects.get(username=username)
+                self.assertEqual(
+                    set(user.groups.values_list("name", flat=True)),
+                    {Role.DEFAULT.value, role.value},
+                )
+                self.assertEqual(
+                    list(
+                        user.product_grants.values_list("product_ident", flat=True),
+                    ),
+                    ["clc2024", "hrl2021"],
+                )
+                self.assertEqual(
+                    set(
+                        user.product_grants.values_list("created_by_id", flat=True),
+                    ),
+                    {self.actor.pk},
+                )
+                if role is Role.DEFAULT:
+                    self.assertFalse(user.is_staff)
+                    self.assertFalse(user.user_permissions.exists())
+                    self.assertFalse(
+                        access_for(user).can_review_product_submission("clc2024"),
+                    )
+
+    def test_non_administrators_cannot_assign_themselves_products(self):
+        for role in (Role.DEFAULT, Role.PRODUCT_MANAGER):
+            with self.subTest(role=role):
+                user = self.user_model.objects.create_user(
+                    username=f"unprivileged-{role.value}",
+                    password="password",
+                )
+                user.groups.add(Group.objects.get(name=role.value))
+                self.client.force_login(user)
+
+                response = self.client.post(
+                    reverse("admin:auth_user_change", args=(user.pk,)),
+                    {
+                        "username": user.username,
+                        "product_grants-0-product_ident": "clc2024",
+                        **self.inline_management_data(
+                            product_total=1,
+                            product_initial=0,
+                        ),
+                        "_save": "Save",
+                    },
+                )
+
+                if role is Role.DEFAULT:
+                    self.assertRedirects(
+                        response,
+                        f"{reverse('admin:login')}?next="
+                        f"{reverse('admin:auth_user_change', args=(user.pk,))}",
+                        fetch_redirect_response=False,
+                    )
+                else:
+                    self.assertEqual(response.status_code, 403)
+                self.assertFalse(user.product_grants.exists())
 
     @patch(
         "qc_tool.frontend.accounts.services.products."

@@ -13,6 +13,7 @@ from django.urls import path
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_protect
 
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery
 
 
@@ -66,6 +67,7 @@ class ProductionMutationCsrfTests(TestCase):
     def test_delivery_delete_requires_token_from_deliveries_page(self):
         client = Client(enforce_csrf_checks=True)
         user = get_user_model().objects.create_user(username="delivery-owner")
+        UserProductGrant.objects.create(user=user, product_ident="example")
         delivery = Delivery.objects.create(
             user=user,
             filename="file-that-does-not-exist.zip",
