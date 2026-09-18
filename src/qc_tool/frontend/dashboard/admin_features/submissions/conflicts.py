@@ -13,7 +13,7 @@ from ..scope import ScopedCatalogHistoryAdmin
 class SubmissionConflictAdmin(ScopedCatalogHistoryAdmin):
     list_display = (
         "id",
-        "product_aoi",
+        "product_unit",
         "state",
         "version",
         "selected_submission",
@@ -23,8 +23,8 @@ class SubmissionConflictAdmin(ScopedCatalogHistoryAdmin):
     )
     list_filter = ("state",)
     search_fields = (
-        "product_aoi__aoi_code",
-        "product_aoi__product_release__release_key",
+        "product_unit__product_unit_code",
+        "product_unit__product_release__release_key",
     )
     readonly_fields = tuple(
         field.name for field in SubmissionConflict._meta.fields
@@ -33,14 +33,14 @@ class SubmissionConflictAdmin(ScopedCatalogHistoryAdmin):
     def get_queryset(self, request):
         return release_scope(
             super().get_queryset(request).select_related(
-                "product_aoi__product_release__product"
+                "product_unit__product_release__product"
             ),
             request,
-            prefix="product_aoi__product_release__",
+            prefix="product_unit__product_release__",
         )
 
-    def _product_aoi_for_object(self, obj):
-        return obj.product_aoi
+    def _product_unit_for_object(self, obj):
+        return obj.product_unit
 
 
 @admin.register(SubmissionConflictEvent)
@@ -61,11 +61,11 @@ class SubmissionConflictEventAdmin(ScopedCatalogHistoryAdmin):
     def get_queryset(self, request):
         return release_scope(
             super().get_queryset(request).select_related(
-                "conflict__product_aoi__product_release__product"
+                "conflict__product_unit__product_release__product"
             ),
             request,
-            prefix="conflict__product_aoi__product_release__",
+            prefix="conflict__product_unit__product_release__",
         )
 
-    def _product_aoi_for_object(self, obj):
-        return obj.conflict.product_aoi
+    def _product_unit_for_object(self, obj):
+        return obj.conflict.product_unit

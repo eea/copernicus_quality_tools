@@ -140,7 +140,7 @@
             "description": "Delivery property used for ordering. Unknown values safely fall back to id.",
             "schema": {
               "type": "string",
-              "enum": ["id", "filename", "date_uploaded", "size_bytes", "product_ident", "product_description", "aoi_code", "aoi_code_submitted", "content_sha256", "date_submitted", "last_job_status", "username"],
+              "enum": ["id", "filename", "date_uploaded", "size_bytes", "product_ident", "product_description", "product_unit_code", "submitted_product_unit_code", "content_sha256", "date_submitted", "last_job_status", "username"],
               "default": "id"
             },
             "example": "date_uploaded"
@@ -328,7 +328,7 @@
         "operationId": "submitDeliveryToEea",
         "tags": ["Submission"],
         "summary": "Submit a successful delivery to EEA",
-        "description": "Reserves and atomically publishes the latest eligible successful QC job for one owned delivery within the token's effective product assignments, or any eligible delivery for an administrator. The job must have verified exactly one submitted AOI and reference an authoritative catalog release containing that AOI. Requests are idempotent. Competing deliveries for the same expected AOI remain published for product-manager resolution.",
+        "description": "Reserves and atomically publishes the latest eligible successful QC job for one owned delivery within the token's effective product assignments, or any eligible delivery for an administrator. The job must have verified exactly one submitted product unit and reference an authoritative catalog release containing that product unit. Requests are idempotent. Competing deliveries for the same expected product unit remain published for product-manager resolution.",
         "x-required-permission-label": "Submit deliveries",
         "requestBody": {
           "required": true,
@@ -350,7 +350,7 @@
           "403": {"$ref": "#/components/responses/PermissionDenied"},
           "404": {"$ref": "#/components/responses/NotFound"},
           "409": {
-            "description": "The latest QC job, submitted AOI, verified input checksum, catalog release, publication claim, or delivery lifecycle is not eligible for submission.",
+            "description": "The latest QC job, submitted product unit, verified input checksum, catalog release, publication claim, or delivery lifecycle is not eligible for submission.",
             "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
           },
           "413": {"$ref": "#/components/responses/RequestTooLarge"},
@@ -549,7 +549,7 @@
       },
       "Delivery": {
         "type": "object",
-        "required": ["id", "filename", "username", "date_uploaded", "size_bytes", "type", "aoi_code", "aoi_code_submitted"],
+        "required": ["id", "filename", "username", "date_uploaded", "size_bytes", "type", "product_unit_code", "submitted_product_unit_code"],
         "properties": {
           "id": {"type": "integer", "minimum": 1},
           "filename": {"type": "string"},
@@ -558,8 +558,8 @@
           "size_bytes": {"type": "integer", "minimum": 0},
           "product_ident": {"type": "string", "nullable": true},
           "product_description": {"type": "string", "nullable": true},
-          "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code projected from the latest QC job. Product-specific input aliases are never exposed."},
-          "aoi_code_submitted": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI identity verified inside this one-ZIP delivery. It is preserved across later jobs."},
+          "product_unit_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical product unit code projected from the latest QC job. Product-specific input aliases are never exposed."},
+          "submitted_product_unit_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical product unit identity verified inside this one-ZIP delivery. It is preserved across later jobs."},
           "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "nullable": true, "description": "Verified SHA-256 of the submitted input when available."},
           "date_submitted": {"type": "string", "format": "date-time", "nullable": true},
           "is_deleted": {"type": "boolean", "example": false},
@@ -596,7 +596,7 @@
       },
       "JobHistoryItem": {
         "type": "object",
-        "required": ["job_uuid", "delivery_id", "date_created", "job_status", "product_ident", "product_description", "aoi_code", "aoi_code_submitted"],
+        "required": ["job_uuid", "delivery_id", "date_created", "job_status", "product_ident", "product_description", "product_unit_code", "submitted_product_unit_code"],
         "properties": {
           "job_uuid": {"type": "string", "description": "Compact UUID without hyphens in the history response.", "example": "00000000000000000000000000000001"},
           "delivery_id": {"type": "integer", "minimum": 1},
@@ -606,8 +606,8 @@
           "job_status": {"type": "string"},
           "product_ident": {"type": "string"},
           "product_description": {"type": "string"},
-          "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code reported by this job, or null when unavailable or ambiguous."},
-          "aoi_code_submitted": {"type": "string", "maxLength": 255, "nullable": true, "description": "Explicit canonical AOI verified from the ZIP; aoi_code remains a compatibility alias."},
+          "product_unit_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical product unit code reported by this job, or null when unavailable or ambiguous."},
+          "submitted_product_unit_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical product unit identity verified inside the ZIP by this execution."},
           "skip_steps": {"type": "string", "nullable": true}
         }
       },
@@ -622,13 +622,13 @@
       },
       "JobReport": {
         "type": "object",
-        "required": ["aoi_code", "aoi_code_submitted"],
+        "required": ["product_unit_code", "submitted_product_unit_code"],
         "properties": {
           "job_uuid": {"type": "string", "format": "uuid", "nullable": true},
           "status": {"type": "string", "nullable": true},
           "description": {"type": "string", "nullable": true},
-          "aoi_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical AOI code reported by the job, or null when unavailable or ambiguous."},
-          "aoi_code_submitted": {"type": "string", "maxLength": 255, "nullable": true, "description": "Explicit canonical AOI verified from the ZIP; aoi_code remains a compatibility alias."},
+          "product_unit_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical product unit code reported by the job, or null when unavailable or ambiguous."},
+          "submitted_product_unit_code": {"type": "string", "maxLength": 255, "nullable": true, "description": "Canonical product unit identity verified inside the ZIP by this execution."},
           "user_name": {"type": "string", "nullable": true},
           "job_start_date": {"type": "string", "format": "date-time", "nullable": true},
           "job_finish_date": {"type": "string", "format": "date-time", "nullable": true},

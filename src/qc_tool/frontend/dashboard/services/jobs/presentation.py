@@ -49,8 +49,8 @@ def job_history_delivery_summary(delivery, account_access):
     facts = [{"label": "Size", "value": filesizeformat(delivery.size_bytes)}]
     if delivery.date_uploaded:
         facts.append({"label": "Uploaded", "datetime": delivery.date_uploaded})
-    if delivery.aoi_code:
-        facts.append({"label": "Expected AOI", "value": delivery.aoi_code})
+    if delivery.product_unit_code:
+        facts.append({"label": "Reported product unit", "value": delivery.product_unit_code})
     return {
         "kind": "Delivery",
         "reference": f"#{delivery.pk}",

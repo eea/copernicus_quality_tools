@@ -145,7 +145,7 @@ def _catalog_snapshot(product_ident, *, logger):
         return snapshot_definition_for_job(product_ident)
     except CatalogError:
         # Compatibility for deployments not yet synchronized. Submission is
-        # still fail-closed because it requires an authoritative release/AOI.
+        # still fail-closed because it requires an authoritative release/product unit.
         logger.warning(
             "QC definition %s could not be snapshotted for the job.",
             product_ident,
@@ -166,7 +166,7 @@ def _copy_projection(source, destination):
     for field_name in (
         "product_ident",
         "product_description",
-        "aoi_code",
-        "aoi_code_submitted",
+        "product_unit_code",
+        "submitted_product_unit_code",
     ):
         setattr(destination, field_name, getattr(source, field_name))

@@ -21,7 +21,7 @@ stores the resulting schema, application data and record of applied migrations.
 
 | Your task | Procedure |
 | --- | --- |
-| Review tables, model ownership and retained publication data | [Application schema](SCHEMA.md) |
+| Review tables, model ownership and retained publication data | [Application schema](SCHEMA.md) and [database audit](AUDIT.md) |
 | Understand what belongs in Git versus PostgreSQL | [Migration philosophy](MIGRATIONS.md#migration-philosophy) |
 | Develop a draft schema | [Models-only development](MIGRATIONS.md#draft-schema-development) |
 | Check a change on a disposable database | [Local verification](MIGRATIONS.md#local-verification) |

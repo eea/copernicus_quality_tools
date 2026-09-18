@@ -19,7 +19,7 @@ from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.services.uploads import DeliveryUploadPathError
 
@@ -133,10 +133,10 @@ class DeliveryDeletionTests(TestCase):
             product=product, release_key="2026", revision=1,
             catalog_digest="a" * 64, description="Retained",
         )
-        aoi = ProductAOI.objects.create(product_release=release, aoi_code="CZ")
+        aoi = ProductUnit.objects.create(product_release=release, product_unit_code="CZ")
         submission = DeliverySubmission.objects.create(
             delivery=self.delivery, job=self.jobs[-1], product_release=release,
-            product_aoi=aoi, aoi_code="CZ", aoi_code_submitted="CZ",
+            product_unit=aoi, product_unit_code="CZ", submitted_product_unit_code="CZ",
             submitted_by_username=self.owner.username, request_channel="browser",
         )
 

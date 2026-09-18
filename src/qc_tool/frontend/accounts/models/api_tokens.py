@@ -11,6 +11,7 @@ class PersonalAccessToken(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="personal_access_tokens",
+        db_index=False,  # Covered by account_token_user_name_uniq.
     )
     name = models.CharField(max_length=80)
     secret_digest = models.CharField(max_length=71, unique=True, editable=False)

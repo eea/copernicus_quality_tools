@@ -12,7 +12,7 @@ from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
 from qc_tool.frontend.dashboard.models import QcDefinition
@@ -70,9 +70,9 @@ class SubmissionAdminScopeTests(TestCase):
             qc_definition=definition,
             is_primary=True,
         )
-        product_aoi = ProductAOI.objects.create(
+        product_unit = ProductUnit.objects.create(
             product_release=release,
-            aoi_code="{}-aoi".format(suffix),
+            product_unit_code="{}-aoi".format(suffix),
             provenance="manifest",
         )
         owner = get_user_model().objects.create_user(
@@ -82,7 +82,7 @@ class SubmissionAdminScopeTests(TestCase):
             user=owner,
             filename="{}.zip".format(suffix),
             size_bytes=1,
-            aoi_code_submitted=product_aoi.aoi_code,
+            submitted_product_unit_code=product_unit.product_unit_code,
             date_submitted=timezone.now(),
         )
         job = Job.objects.create(
@@ -90,8 +90,8 @@ class SubmissionAdminScopeTests(TestCase):
             job_status="ok",
             product_ident=product_ident,
             product_description=suffix,
-            aoi_code=product_aoi.aoi_code,
-            aoi_code_submitted=product_aoi.aoi_code,
+            product_unit_code=product_unit.product_unit_code,
+            submitted_product_unit_code=product_unit.product_unit_code,
             product_release=release,
             qc_definition=definition,
             input_sha256=("1" if suffix == "visible" else "2") * 64,
@@ -100,9 +100,9 @@ class SubmissionAdminScopeTests(TestCase):
             delivery=delivery,
             job=job,
             product_release=release,
-            product_aoi=product_aoi,
-            aoi_code=product_aoi.aoi_code,
-            aoi_code_submitted=product_aoi.aoi_code,
+            product_unit=product_unit,
+            product_unit_code=product_unit.product_unit_code,
+            submitted_product_unit_code=product_unit.product_unit_code,
             submitted_by=owner,
             submitted_by_username=owner.username,
             request_channel=DeliverySubmission.RequestChannel.BROWSER,

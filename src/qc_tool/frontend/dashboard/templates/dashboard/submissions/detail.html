@@ -5,7 +5,7 @@
 {% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/ui/review-feedback.css' %}">{% endblock %}
 {% block page_breadcrumbs %}{% url 'submission_queue' as submissions_url %}{% include "dashboard/shared/breadcrumbs.html" with parent_label="Submissions" parent_url=submissions_url current_label="Review" only %}{% endblock %}
 {% block page_title %}{{ submission.delivery.filename }}{% endblock %}
-{% block page_subtitle %}<p>{{ submission.product_release.product.name }} · AOI {{ submission.aoi_code }} · <strong>{% if submission.review_state == 'rejected' %}Rejected{% else %}{{ submission.get_review_state_display }}{% endif %}</strong></p>{% endblock %}
+{% block page_subtitle %}<p>{{ submission.product_release.product.name }} · product unit {{ submission.product_unit_code }} · <strong>{% if submission.review_state == 'rejected' %}Rejected{% else %}{{ submission.get_review_state_display }}{% endif %}</strong></p>{% endblock %}
 {% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'submission_queue' %}">Back to submissions</a>{% endblock %}
 {% block page_content %}
 {% if form.non_field_errors %}<div class="workspace-notice workspace-notice--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
@@ -17,7 +17,7 @@
         {% if correction %}
         <div class="submission-feedback__next">
             <h3>Prepare your correction</h3>
-            <ol><li>Apply the requested changes and keep the exact filename <strong>{{ submission.delivery.filename }}</strong>.</li><li>Upload the corrected ZIP, then run QC for the same product and AOI.</li><li>When QC passes, choose <strong>Submit for review</strong> on the Deliveries page.</li></ol>
+            <ol><li>Apply the requested changes and keep the exact filename <strong>{{ submission.delivery.filename }}</strong>.</li><li>Upload the corrected ZIP, then run QC for the same product and product unit.</li><li>When QC passes, choose <strong>Submit for review</strong> on the Deliveries page.</li></ol>
             <p>Your original submission remains available here while the corrected delivery goes through a new review.</p>
             <a class="btn btn-primary btn-qc-primary" href="{{ correction.upload_url }}">Upload correction</a>
         </div>
@@ -32,11 +32,11 @@
         {% if storage_available %}<details open><summary>Retained files and QC evidence</summary><ul class="review-files">{% for file in files %}<li><a href="{{ file.url }}">{{ file.name }}</a> <span>{{ file.size|filesizeformat }}</span></li>{% endfor %}</ul></details>{% else %}<p class="workspace-notice workspace-notice--warning">The retained files are currently unavailable. Check publication or storage before approving this delivery.</p>{% endif %}
     </div>
 </section>
-{% if can_review and candidates %}<section class="workspace-card"><header class="workspace-card__header"><div><h2>Other submissions for this AOI</h2><p>An existing approved delivery keeps contributing until a reviewer explicitly selects a replacement.</p></div></header><ul class="review-files">{% for candidate in candidates %}<li><a href="{% url 'submission_review' candidate.pk %}">{{ candidate.delivery.filename }}</a> — {{ candidate.submitted_by_username }} · {{ candidate.get_review_state_display }}</li>{% endfor %}</ul></section>{% endif %}
+{% if can_review and candidates %}<section class="workspace-card"><header class="workspace-card__header"><div><h2>Other submissions for this product unit</h2><p>An existing approved delivery keeps contributing until a reviewer explicitly selects a replacement.</p></div></header><ul class="review-files">{% for candidate in candidates %}<li><a href="{% url 'submission_review' candidate.pk %}">{{ candidate.delivery.filename }}</a> — {{ candidate.submitted_by_username }} · {{ candidate.get_review_state_display }}</li>{% endfor %}</ul></section>{% endif %}
 {% if can_decide %}
 <form method="post" class="workspace-card review-form">
     {% csrf_token %}{{ form.expected_review_version }}{{ form.expected_conflict_version }}
-    <header class="workspace-card__header"><div><h2>Record your decision</h2><p>Approve the delivery to count this AOI towards fulfilment, or request corrections with clear feedback for the uploader.</p></div></header>
+    <header class="workspace-card__header"><div><h2>Record your decision</h2><p>Approve the delivery to count this product unit towards fulfilment, or request corrections with clear feedback for the uploader.</p></div></header>
     <div class="workspace-card__body">
         {{ form.expected_review_version.errors }}{{ form.expected_conflict_version.errors }}{{ form.decision.errors }}
         <div class="review-form__field"><label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label><p id="review-notes-help">{{ form.notes.help_text }}</p>{{ form.notes }}{{ form.notes.errors }}</div>

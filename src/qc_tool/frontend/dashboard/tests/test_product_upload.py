@@ -22,10 +22,10 @@ from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.role_permissions import capability_content_type
 from qc_tool.frontend.dashboard.models import (
-    Delivery, DeliverySubmission, Job, Product, ProductAOI, ProductRelease,
+    Delivery, DeliverySubmission, Job, Product, ProductUnit, ProductRelease,
     ProductReleaseDefinition, QcDefinition,
 )
-from qc_tool.frontend.dashboard.services.aoi import create_delivery_job
+from qc_tool.frontend.dashboard.services.product_units import create_delivery_job
 from qc_tool.frontend.dashboard.services.catalog import list_current_product_coverage
 from qc_tool.frontend.dashboard.services.catalog.definition_import import synchronize_definition_directories
 from qc_tool.frontend.dashboard.services.catalog.manifest.definitions import MAX_DEFINITION_BYTES
@@ -248,7 +248,7 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertEqual(release.coverage_state, ProductRelease.CoverageState.DRAFT)
         self.assertTrue(release.is_current)
         self.assertIsNone(release.approved_at)
-        self.assertEqual(list(ProductAOI.objects.values_list("aoi_code", flat=True)), ["cz", "sk"])
+        self.assertEqual(list(ProductUnit.objects.values_list("product_unit_code", flat=True)), ["cz", "sk"])
         report = list_current_product_coverage()[0]
         self.assertEqual(report["declared_expected"], 2)
         self.assertIsNone(report["expected"])
@@ -272,7 +272,7 @@ class ProductSpecificationUploadTests(TestCase):
 
         self.assertEqual(self.post(payload=json.dumps(document).encode()).status_code, 302)
         self.assertEqual(ProductRelease.objects.get().coverage_state, "unknown")
-        self.assertFalse(ProductAOI.objects.exists())
+        self.assertFalse(ProductUnit.objects.exists())
 
     def test_identical_retry_is_idempotent_and_changed_content_creates_dated_revision(self):
         payload = self.payload()
@@ -439,7 +439,7 @@ class ProductSpecificationUploadTests(TestCase):
         current = ProductRelease.objects.get(is_current=True)
         self.assertEqual(current.pk, original.pk)
         self.assertEqual(current.source_kind, ProductRelease.SourceKind.UPLOAD)
-        self.assertEqual(list(current.aois.values_list("aoi_code", flat=True)), ["cz", "sk"])
+        self.assertEqual(list(current.product_units.values_list("product_unit_code", flat=True)), ["cz", "sk"])
         self.assertEqual(self.version_path().read_bytes(), self.payload())
 
     def test_removal_requires_administrator_role_csrf_and_explicit_post(self):
@@ -571,8 +571,8 @@ class ProductSpecificationUploadTests(TestCase):
         artifact.write_bytes(b"retained publication fixture")
         submission = DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=original_release,
-            product_aoi=original_release.aois.get(aoi_code="cz"),
-            aoi_code="cz", aoi_code_submitted="cz", submitted_by=self.administrator,
+            product_unit=original_release.product_units.get(product_unit_code="cz"),
+            product_unit_code="cz", submitted_product_unit_code="cz", submitted_by=self.administrator,
             submitted_by_username=self.administrator.username, request_channel="browser",
             publication_state="published", published_at=timezone.now(),
             artifact_path=str(artifact), artifact_digest="a" * 64, input_digest="b" * 64,

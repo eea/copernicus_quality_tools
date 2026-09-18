@@ -71,7 +71,7 @@ class AccountAccessTests(TestCase):
             user=self.user,
             product_ident="clc2024",
         )
-        UserRegionGrant.objects.create(user=self.user, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
 
         access = access_for(self.user)
 
@@ -140,7 +140,7 @@ class AccountAccessTests(TestCase):
 
     def test_region_scope_permission_does_not_depend_on_default_bundle(self):
         self.grant_permissions(AccountPermission.VIEW_REGION_DELIVERIES)
-        UserRegionGrant.objects.create(user=self.user, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
         membership_model = self.user.groups.through
         default_group = Group.objects.get(name=Role.DEFAULT.value)
         membership_model.objects.filter(
@@ -162,7 +162,7 @@ class AccountAccessTests(TestCase):
             user=self.user,
             product_ident="clc2024",
         )
-        UserRegionGrant.objects.create(user=self.user, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
         content_type = capability_content_type()
         direct_permissions = Permission.objects.filter(
             content_type=content_type,
@@ -230,7 +230,7 @@ class AccountAccessTests(TestCase):
 
     def test_inactive_user_has_anonymous_access(self):
         self.grant_permissions(AccountPermission.VIEW_REGION_DELIVERIES)
-        UserRegionGrant.objects.create(user=self.user, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
         self.user.is_active = False
         self.user.save(update_fields=["is_active"])
 

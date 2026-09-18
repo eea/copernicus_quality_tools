@@ -5,7 +5,7 @@ from qc_tool.frontend.accounts.services.products import (
     ProductCatalogUnavailable,
 )
 from qc_tool.frontend.dashboard.services.catalog import (
-    get_remaining_aoi_codes,
+    get_remaining_product_unit_codes,
 )
 from qc_tool.frontend.dashboard.services.catalog import (
     list_current_product_coverage,
@@ -19,7 +19,7 @@ from .contracts import ProductReleaseSummary
 from .contracts import QualityCheckSummary
 
 
-REMAINING_AOI_PAGE_SIZE = 200
+REMAINING_UNIT_PAGE_SIZE = 200
 
 
 def managed_product_detail(
@@ -56,10 +56,10 @@ def _managed_release_detail(release, *, coverage, include_coverage):
         _definition_summary(link.qc_definition, primary=link.is_primary)
         for link in definition_links
     )
-    remaining_aois = (
-        get_remaining_aoi_codes(
+    remaining_units = (
+        get_remaining_product_unit_codes(
             release,
-            limit=REMAINING_AOI_PAGE_SIZE,
+            limit=REMAINING_UNIT_PAGE_SIZE,
         )
         if include_coverage and coverage is not None
         else None
@@ -76,12 +76,12 @@ def _managed_release_detail(release, *, coverage, include_coverage):
         definitions=definitions,
         quality_checks=_quality_checks(_primary_document(definition_links)),
         coverage=coverage,
-        remaining_aois=remaining_aois,
-        remaining_aois_truncated=bool(
-            remaining_aois is not None
+        remaining_units=remaining_units,
+        remaining_units_truncated=bool(
+            remaining_units is not None
             and coverage is not None
             and coverage.remaining is not None
-            and coverage.remaining > len(remaining_aois)
+            and coverage.remaining > len(remaining_units)
         ),
     )
 
@@ -131,7 +131,7 @@ def _coverage_by_release(releases, *, include):
             state=row["coverage_state"],
             declared_expected=row["declared_expected"],
             expected=row["expected"],
-            submitted=row["submitted"],
+            accepted=row["accepted"],
             conflicts=row["conflicts"],
             remaining=row["remaining"],
             completion_percentage=row["completion_percentage"],

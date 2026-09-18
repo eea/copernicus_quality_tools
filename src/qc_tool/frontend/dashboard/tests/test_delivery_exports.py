@@ -16,7 +16,7 @@ from django.utils import timezone
 from qc_tool.common import JOB_FAILED, JOB_OK, JOB_RUNNING
 from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
 from qc_tool.frontend.dashboard.models import (
-    Delivery, DeliverySubmission, Job, Product, ProductAOI, ProductRelease,
+    Delivery, DeliverySubmission, Job, Product, ProductUnit, ProductRelease,
     SubmissionReviewEvent,
 )
 from qc_tool.frontend.dashboard.services.exports import EXPORT_FORMATS
@@ -83,11 +83,11 @@ class DeliveryExportTests(TestCase):
         return result
 
     def test_all_formats_default_to_complete_public_schema(self):
-        delivery = self.delivery("owned.zip", aoi_code="CZ", aoi_code_submitted="CZ01")
+        delivery = self.delivery("owned.zip", product_unit_code="CZ", submitted_product_unit_code="CZ01")
         self.delivery("another-owner.zip", user=self.other)
         fields = [column.field for column in DELIVERY_EXPORT_COLUMNS]
         labels = [column.label for column in DELIVERY_EXPORT_COLUMNS]
-        for field in ("size_bytes", "id", "aoi_code", "review_notes", "review_actor_username"):
+        for field in ("size_bytes", "id", "product_unit_code", "review_notes", "review_actor_username"):
             self.assertIn(field, fields)
         for field in ("actions", "can_delete", "action_owner_id", "submission_url", "s3_id"):
             self.assertNotIn(field, fields)
@@ -102,8 +102,8 @@ class DeliveryExportTests(TestCase):
                 self.assertEqual(record["filename"], delivery.filename)
                 self.assertEqual(str(record["id"]), str(delivery.pk))
                 self.assertEqual(str(record["size_bytes"]), "1024")
-                self.assertEqual(record["aoi_code"], "CZ")
-                self.assertEqual(record["aoi_code_submitted"], "CZ01")
+                self.assertEqual(record["product_unit_code"], "CZ")
+                self.assertEqual(record["submitted_product_unit_code"], "CZ01")
 
     def test_complete_exports_keep_review_feedback_access_scope(self):
         product = Product.objects.create(ident="test", name="Test product")
@@ -111,15 +111,15 @@ class DeliveryExportTests(TestCase):
             product=product, release_key="export-v1", revision=1,
             catalog_digest="a" * 64, is_current=True,
         )
-        aoi = ProductAOI.objects.create(product_release=release, aoi_code="CZ", provenance="manifest")
+        aoi = ProductUnit.objects.create(product_release=release, product_unit_code="CZ", provenance="manifest")
         delivery = self.delivery("reviewed.zip", date_submitted=timezone.now())
         job = Job.objects.create(
             delivery=delivery, product_ident=product.ident,
             product_release=release, job_status=JOB_OK,
         )
         submission = DeliverySubmission.objects.create(
-            delivery=delivery, job=job, product_release=release, product_aoi=aoi,
-            aoi_code="CZ", aoi_code_submitted="CZ", submitted_by=self.user,
+            delivery=delivery, job=job, product_release=release, product_unit=aoi,
+            product_unit_code="CZ", submitted_product_unit_code="CZ", submitted_by=self.user,
             submitted_by_username=self.user.username, request_channel="browser",
             publication_state="published", review_state="rejected", review_version=1,
             published_at=timezone.now(), artifact_path="/published/reviewed.zip",
@@ -131,7 +131,7 @@ class DeliveryExportTests(TestCase):
         )
         # Region access permits the delivery row, but not its review correspondence.
         UserProfile.objects.create(user=self.user, country="CZ")
-        UserRegionGrant.objects.create(user=self.other, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.other, region_code="CZ")
         self.other.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))

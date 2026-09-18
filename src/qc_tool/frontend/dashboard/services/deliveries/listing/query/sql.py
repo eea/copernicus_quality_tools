@@ -111,8 +111,8 @@ def _submission_join_sql(database_connection, account_access, user_id):
 DELIVERY_SELECT_SQL = """
         SELECT d.id, d.user_id AS action_owner_id, d.filename, u.username,
         d.date_uploaded, d.size_bytes,
-        d.product_ident, d.product_description, d.aoi_code,
-        d.aoi_code_submitted, d.content_sha256,
+        d.product_ident, d.product_description, d.product_unit_code,
+        d.submitted_product_unit_code, d.content_sha256,
         d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,

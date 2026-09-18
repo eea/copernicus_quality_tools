@@ -16,7 +16,7 @@ presentation and mutations:
 | `index.js`         | Declarative feature startup only                                                          |
 
 Delivery, Status, and Next action are always-visible workflow columns.
-Product/AOI and Uploaded are shown initially; Size, Source, Owner, and ID
+Product/product unit and Uploaded are shown initially; Size, Source, Owner, and ID
 are available from the Columns control. The filename is the primary link to
 the delivery's QC history, with file size as secondary metadata. Product names
 use the authorized catalog URL supplied by the JSON endpoint, which resolves
@@ -25,7 +25,7 @@ QC recipe identifier: one recipe can serve several catalog products.
 
 Use medium emphasis for filenames, normal text for product links and dates,
 and muted metadata. Render lifecycle status as text as well as color, and only
-show verified AOI after successful QC. Keep QC result/progress and history links
+show verified product unit after successful QC. Keep QC result/progress and history links
 beside status; a failed delivery's result is its primary next action instead.
 Promote one non-destructive workflow action, keep supporting actions quiet,
 and keep Delete last. Running deliveries need no action button; their progress

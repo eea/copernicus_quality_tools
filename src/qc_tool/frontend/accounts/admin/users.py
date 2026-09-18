@@ -88,7 +88,7 @@ class AccountUserAdmin(BaseUserAdmin):
     )
     list_filter = (
         RoleListFilter,
-        ("region_grants__aoi_code", admin.AllValuesFieldListFilter),
+        ("region_grants__region_code", admin.AllValuesFieldListFilter),
         ("product_grants__product_ident", admin.AllValuesFieldListFilter),
         "is_active",
     )
@@ -97,7 +97,7 @@ class AccountUserAdmin(BaseUserAdmin):
         "email",
         "first_name",
         "last_name",
-        "region_grants__aoi_code__exact",
+        "region_grants__region_code__exact",
         "product_grants__product_ident__exact",
     )
     ordering = ("username",)
@@ -152,7 +152,7 @@ class AccountUserAdmin(BaseUserAdmin):
                 ),
                 Prefetch(
                     "region_grants",
-                    queryset=UserRegionGrant.objects.order_by("aoi_code", "pk"),
+                    queryset=UserRegionGrant.objects.order_by("region_code", "pk"),
                     to_attr="assigned_region_grants",
                 ),
                 Prefetch(
@@ -257,8 +257,8 @@ class AccountUserAdmin(BaseUserAdmin):
     def region_codes(self, user):
         grants = getattr(user, "assigned_region_grants", None)
         if grants is None:
-            grants = user.region_grants.order_by("aoi_code", "pk")
-        return ", ".join(grant.aoi_code for grant in grants) or "—"
+            grants = user.region_grants.order_by("region_code", "pk")
+        return ", ".join(grant.region_code for grant in grants) or "—"
 
     @admin.display(description="Product grants")
     def product_idents(self, user):

@@ -16,7 +16,7 @@
 
 @media (forced-colors: active) {
     .job-history-status,
-    .job-history-aoi > strong {
+    .job-history-product-unit > strong {
         border: 1px solid CanvasText;
     }
 }

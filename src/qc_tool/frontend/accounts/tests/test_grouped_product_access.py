@@ -237,7 +237,7 @@ class GroupedProductAccessTests(TestCase):
     def test_region_visible_unassigned_owner_delivery_has_no_mutation_actions(self):
         UserProductGrant.objects.create(user=self.owner, product_ident="grouped_product")
         UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.owner, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.owner, region_code="CZ")
         self.owner.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))
@@ -291,7 +291,7 @@ class GroupedProductAccessTests(TestCase):
         delivery = self.delivery(self.unassigned, "region-history.zip")
         job = delivery.job_set.get()
         UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.manager, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.manager, region_code="CZ")
         self.manager.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))

@@ -154,8 +154,11 @@ def remove_product_specification(ident, *, actor):
                 if product is None:
                     raise CatalogError("unknown_product", "Product not found.")
                 if product.is_active:
+                    from .readiness import invalidate_product_readiness
+
                     product.is_active = False
                     product.save(update_fields=("is_active", "updated_at"))
+                    invalidate_product_readiness(product.pk)
                     _audit(actor, product, DELETION, "Removed specification from active QC use; revision history retained.")
             publish_specification_state(directory, ident, {"active": False})
     except OSError as exc:

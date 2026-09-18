@@ -1,8 +1,8 @@
-"""Bounded, idempotent historical AOI metadata backfill.
+"""Bounded, idempotent historical product unit metadata backfill.
 
 Filesystem result documents cannot be read safely from a schema migration.
 Operators may run the accompanying management command after deployment; live
-jobs continue to populate AOI metadata through the normal status lifecycle.
+jobs continue to populate product unit metadata through the normal status lifecycle.
 """
 
 from dataclasses import dataclass
@@ -13,15 +13,15 @@ from django.db.models import Q
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 
-from .artifacts import load_aoi_result_document
-from .contracts import AoiUpdateAction
-from .errors import AoiResultUnavailable
+from .artifacts import load_product_unit_result_document
+from .contracts import ProductUnitUpdateAction
+from .errors import ProductUnitResultUnavailable
 from .projections import sync_locked_delivery_from_latest_job
-from .results import aoi_update_from_result
+from .results import product_unit_update_from_result
 
 
 @dataclass(frozen=True)
-class AoiBackfillResult:
+class ProductUnitBackfillResult:
     scanned_jobs: int = 0
     candidate_jobs: int = 0
     updated_jobs: int = 0
@@ -30,11 +30,11 @@ class AoiBackfillResult:
     unavailable_metadata: int = 0
 
 
-def backfill_aoi_metadata(*, batch_size=100, limit=None, dry_run=False):
-    """Populate missing Job AOIs from existing result documents.
+def backfill_product_unit_metadata(*, batch_size=100, limit=None, dry_run=False):
+    """Populate missing Job product units from existing result documents.
 
     Work is ordered, bounded, and safe to repeat. Only terminal jobs with a
-    currently null AOI are considered. A malformed, missing, or explicit-null
+    currently null product unit are considered. A malformed, missing, or explicit-null
     value is left unavailable rather than guessed from a filename.
     """
 
@@ -45,8 +45,8 @@ def backfill_aoi_metadata(*, batch_size=100, limit=None, dry_run=False):
     queryset = (
         Job.objects.exclude(job_status__in=(JOB_WAITING, JOB_RUNNING))
         .filter(
-            Q(aoi_code_submitted__isnull=True)
-            | Q(aoi_code_submitted="")
+            Q(submitted_product_unit_code__isnull=True)
+            | Q(submitted_product_unit_code="")
         )
         .only("job_uuid", "delivery_id")
         .order_by("date_created", "job_uuid")
@@ -59,12 +59,12 @@ def backfill_aoi_metadata(*, batch_size=100, limit=None, dry_run=False):
     for job in queryset.iterator(chunk_size=batch_size):
         scanned += 1
         try:
-            result = load_aoi_result_document(job.job_uuid)
-        except AoiResultUnavailable:
+            result = load_product_unit_result_document(job.job_uuid)
+        except ProductUnitResultUnavailable:
             unreadable += 1
             continue
-        update = aoi_update_from_result(result)
-        if update.action is not AoiUpdateAction.SET:
+        update = product_unit_update_from_result(result)
+        if update.action is not ProductUnitUpdateAction.SET:
             unavailable += 1
             continue
         candidates += 1
@@ -91,7 +91,7 @@ def backfill_aoi_metadata(*, batch_size=100, limit=None, dry_run=False):
         updated += count
         projected += projected_count
 
-    return AoiBackfillResult(
+    return ProductUnitBackfillResult(
         scanned_jobs=scanned,
         candidate_jobs=candidates,
         updated_jobs=updated,
@@ -122,10 +122,10 @@ def _apply_batch(Job, Delivery, updates, *, dry_run):
         changed_delivery_ids = set()
         for job_id, delivery_id, value in updates:
             changed = Job.objects.filter(
-                Q(aoi_code_submitted__isnull=True)
-                | Q(aoi_code_submitted=""),
+                Q(submitted_product_unit_code__isnull=True)
+                | Q(submitted_product_unit_code=""),
                 pk=job_id,
-            ).update(aoi_code=value, aoi_code_submitted=value)
+            ).update(product_unit_code=value, submitted_product_unit_code=value)
             if changed:
                 updated += 1
                 changed_delivery_ids.add(delivery_id)

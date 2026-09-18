@@ -8,6 +8,7 @@ from django.shortcuts import render
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.services.products import build_product_detail
 from qc_tool.frontend.dashboard.models import Product, QcDefinition, ProductReleaseDefinition, ProductRelease
+from qc_tool.frontend.dashboard.services.catalog.readiness import product_readiness
 
 
 def product_detail(request, product_ident):
@@ -44,6 +45,7 @@ def product_detail(request, product_ident):
             "product": product,
             "can_view_coverage": can_view_coverage,
             "product_is_active": product_is_active,
+            "readiness": product_readiness(catalog_product) if catalog_product and can_view_coverage else None,
             "specification_versions": specification_versions,
             "specification_version_page": version_page,
             "can_review_submissions": account_access.can_review_product_submission(product_ident),

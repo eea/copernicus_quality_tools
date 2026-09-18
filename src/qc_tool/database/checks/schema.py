@@ -7,6 +7,8 @@ explicit disposable DB settings. This command never resets an existing database.
 import os
 import sys
 
+from django.utils import timezone
+
 
 def seed_baseline(apps):
     """Keep historical input fixed; evolve successor assertions for schema changes."""
@@ -31,11 +33,12 @@ def seed_baseline(apps):
         release_key="migration_probe_2026", revision=1,
         description="Migration probe", catalog_digest="c" * 64,
         coverage_state="authoritative", is_current=True,
+        approved_at=timezone.now(),
     )
-    aoi_code = "AOI-" + "x" * 251
-    aoi = create(
-        "dashboard", "ProductAOI", product_release_id=release.pk,
-        aoi_code=aoi_code, provenance="migration-test",
+    product_unit_code = "unit-" + "x" * 250
+    product_unit = create(
+        "dashboard", "ProductUnit", product_release_id=release.pk,
+        product_unit_code=product_unit_code, provenance="migration-test",
     )
     definition = create(
         "dashboard", "QcDefinition", product_ident=product.ident,
@@ -47,7 +50,7 @@ def seed_baseline(apps):
         qc_definition_id=definition.pk, is_primary=True,
     )
     create(
-        "accounts", "UserRegionGrant", user_id=user.pk, aoi_code="CZ-001",
+        "accounts", "UserRegionGrant", user_id=user.pk, region_code="CZ-001",
     )
     create(
         "accounts", "UserProductGrant", user_id=user.pk,
@@ -62,22 +65,22 @@ def seed_baseline(apps):
     delivery = create(
         "dashboard", "Delivery", user_id=user.pk, filename="migration-probe.zip",
         size_bytes=2 ** 33, product_ident=product.ident,
-        aoi_code=aoi_code, aoi_code_submitted=aoi_code, content_sha256="a" * 64,
+        product_unit_code=product_unit_code, submitted_product_unit_code=product_unit_code, content_sha256="a" * 64,
     )
     job = create(
         "dashboard", "Job", delivery_id=delivery.pk, product_ident=product.ident,
         product_description="Migration probe", job_status="ok",
-        aoi_code=aoi_code, aoi_code_submitted=aoi_code,
+        product_unit_code=product_unit_code, submitted_product_unit_code=product_unit_code,
         requested_by_id=user.pk, requested_by_username=user.username,
         request_source="api", requested_api_token_id=token.pk,
         requested_api_token_name=token.name,
         product_release_id=release.pk, qc_definition_id=definition.pk,
-        input_sha256="a" * 64, result_metadata={"aoi_code": aoi_code},
+        input_sha256="a" * 64, result_metadata={"product_unit_code": product_unit_code},
     )
     create(
         "dashboard", "DeliverySubmission", delivery_id=delivery.pk, job_id=job.pk,
-        product_release_id=release.pk, product_aoi_id=aoi.pk,
-        aoi_code=aoi_code, aoi_code_submitted=aoi_code,
+        product_release_id=release.pk, product_unit_id=product_unit.pk,
+        product_unit_code=product_unit_code, submitted_product_unit_code=product_unit_code,
         submitted_by_id=user.pk, submitted_by_username=user.username,
         request_channel="api", api_token_id=token.pk, api_token_name=token.name,
         publication_state="pending",
@@ -117,6 +120,24 @@ def verify_account_bootstrap():
         raise RuntimeError("Account bootstrap unexpectedly granted hard user deletion.")
 
 
+def verify_declared_constraints_and_indexes():
+    """Inspect the fresh schema for every named first-party integrity rule."""
+
+    from django.apps import apps
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        for model in apps.get_models():
+            if model._meta.app_label not in {"accounts", "dashboard"} or not model._meta.managed:
+                continue
+            table = model._meta.db_table
+            actual = connection.introspection.get_constraints(cursor, table)
+            declared = {rule.name for rule in (*model._meta.constraints, *model._meta.indexes)}
+            missing = declared - actual.keys()
+            if missing:
+                raise RuntimeError(f"Missing constraints or indexes in {table}: {sorted(missing)}")
+
+
 def baseline_targets(graph, baselines, first_party_apps):
     """Seed before all later first-party work, including newly introduced apps."""
     return list(baselines) + [
@@ -153,6 +174,7 @@ def main():
         call_command("database", "check", verbosity=0)
         verify_rows(snapshots)
         verify_account_bootstrap()
+        verify_declared_constraints_and_indexes()
         print(f"{connection.vendor}: draft model schema, synthetic data, repeat initialization and roles passed.")
         return
 
@@ -176,6 +198,7 @@ def main():
     call_command("database", "apply", verbosity=0)
     verify_rows(snapshots)
     verify_account_bootstrap()
+    verify_declared_constraints_and_indexes()
     call_command("database", "apply", verbosity=0)
     call_command("database", "check", verbosity=0)
     call_command(

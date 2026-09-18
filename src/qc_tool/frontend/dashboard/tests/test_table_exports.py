@@ -24,7 +24,7 @@ class BrowserTableExportTests(TestCase):
         self.url = reverse("table_export")
         self.payload = {
             "format": "json", "filename": "products",
-            "columns": [{"field": "name", "label": "Product"}, {"field": "count", "label": "Expected AOIs"}],
+            "columns": [{"field": "name", "label": "Product"}, {"field": "count", "label": "Required product units"}],
             "rows": [{"name": "Český <product> & region", "count": 42}, {"name": "=1+1", "count": None}],
         }
 
@@ -43,11 +43,11 @@ class BrowserTableExportTests(TestCase):
                     self.assertEqual(json.loads(content), self.payload["rows"])
                 elif format == "csv":
                     rows = list(csv.reader(io.StringIO(content.decode("utf-8-sig"))))
-                    self.assertEqual(rows, [["Product", "Expected AOIs"], [self.payload["rows"][0]["name"], "42"], ["'=1+1", ""]])
+                    self.assertEqual(rows, [["Product", "Required product units"], [self.payload["rows"][0]["name"], "42"], ["'=1+1", ""]])
                 elif format == "xlsx":
                     workbook = openpyxl.load_workbook(io.BytesIO(content))
                     try:
-                        self.assertEqual(list(workbook.active.values), [("Product", "Expected AOIs"),
+                        self.assertEqual(list(workbook.active.values), [("Product", "Required product units"),
                             (self.payload["rows"][0]["name"], 42), ("'=1+1", None)])
                         self.assertNotEqual(workbook.active["A3"].data_type, "f")
                     finally:

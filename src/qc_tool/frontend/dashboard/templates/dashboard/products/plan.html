@@ -5,18 +5,18 @@
 {% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}">{% endblock %}
 {% block page_breadcrumbs %}{% url 'product_detail' product.ident as product_url %}{% include "dashboard/shared/breadcrumbs.html" with parent_label=product.name parent_url=product_url current_label="Delivery plan" only %}{% endblock %}
 {% block page_title %}Set up delivery plan{% endblock %}
-{% block page_subtitle %}<p>Define the areas users must deliver for {{ product.name }} and who will review their submissions.</p>{% endblock %}
+{% block page_subtitle %}<p>Define the product units users must deliver for {{ product.name }} and who will review their submissions.</p>{% endblock %}
 {% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">Back to product</a>{% endblock %}
 {% block page_content %}
 <form method="post" class="workspace-card review-form">
     {% csrf_token %}{{ form.expected_release_id }}{{ form.expected_manager_digest }}
-    <header class="workspace-card__header"><div><h2>Expected delivery areas</h2><p>{{ expected_aoi_count }} AOIs in the current plan. Approval opens this product for submissions.</p></div></header>
+    <header class="workspace-card__header"><div><h2>Required product units</h2><p>{{ required_unit_count }} product units in the current plan. Approval opens this product for submissions.</p></div></header>
     <div class="workspace-card__body">
         {% if form.non_field_errors %}<div class="workspace-notice workspace-notice--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
         <div class="review-form__field">
-            <label for="{{ form.aoi_codes.id_for_label }}">{{ form.aoi_codes.label }}</label>
-            <p id="plan-aoi-help">{{ form.aoi_codes.help_text }} Use the AOI codes checked by the product specification; this plan does not change the QC rules.</p>
-            {{ form.aoi_codes }}{{ form.aoi_codes.errors }}
+            <label for="{{ form.product_unit_codes.id_for_label }}">{{ form.product_unit_codes.label }}</label>
+            <p id="plan-unit-help">{{ form.product_unit_codes.help_text }} Use the product unit codes checked by the product specification; this plan does not change the QC rules.</p>
+            {{ form.product_unit_codes }}{{ form.product_unit_codes.errors }}
         </div>
         <fieldset class="review-form__field">
             <legend>Assign product managers</legend>
@@ -25,7 +25,7 @@
             {{ form.product_managers.errors }}
         </fieldset>
         <div class="review-form__field"><label>{{ form.confirm_approval }} {{ form.confirm_approval.label }}</label>{{ form.confirm_approval.errors }}</div>
-        <p>Changing the expected AOIs creates a new plan revision. Existing submissions and approvals remain in their original plan and do not count towards the new plan. Changing only the assigned managers keeps the current plan and its progress.</p>
+        <p>Changing the expected product units creates a new plan revision. Existing submissions and approvals remain in their original plan and do not count towards the new plan. Changing only the assigned managers keeps the current plan and its progress.</p>
         <div class="review-actions"><button class="btn btn-primary btn-qc-primary" type="submit">Approve and activate plan</button><a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">Cancel</a></div>
     </div>
 </form>

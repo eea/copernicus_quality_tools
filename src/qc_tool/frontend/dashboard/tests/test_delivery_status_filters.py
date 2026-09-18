@@ -58,7 +58,7 @@ class DeliveryStatusFilterTests(TestCase):
         user=None,
         created_at=None,
         product_description="Test product",
-        aoi_code="test-aoi",
+        product_unit_code="test-aoi",
     ):
         delivery = Delivery.objects.create(
             user=user or self.user,
@@ -67,7 +67,7 @@ class DeliveryStatusFilterTests(TestCase):
             date_submitted=self.now if submitted else None,
             product_ident="TEST_PRODUCT",
             product_description=product_description,
-            aoi_code=aoi_code,
+            product_unit_code=product_unit_code,
         )
         if status is not None:
             Job.objects.create(
@@ -76,7 +76,7 @@ class DeliveryStatusFilterTests(TestCase):
                 job_status=status,
                 product_ident="TEST_PRODUCT",
                 product_description="Test product",
-                aoi_code="test-aoi",
+                product_unit_code="test-aoi",
             )
         return delivery
 
@@ -229,19 +229,19 @@ class DeliveryStatusFilterTests(TestCase):
             "matching-passed.zip",
             status=JOB_OK,
             product_description="Target product",
-            aoi_code="target-aoi",
+            product_unit_code="target-aoi",
         )
         self.create_delivery(
             "matching-failed.zip",
             status=JOB_FAILED,
             product_description="Target product",
-            aoi_code="target-aoi",
+            product_unit_code="target-aoi",
         )
         self.create_delivery(
             "outside.zip",
             status=JOB_OK,
             product_description="Other product",
-            aoi_code="other-aoi",
+            product_unit_code="other-aoi",
         )
 
         search_response = self.client.get(
@@ -277,7 +277,7 @@ class DeliveryStatusFilterTests(TestCase):
                 "filter": json.dumps(
                     {
                         "product_description": "Target product",
-                        "aoi_code": "target-aoi",
+                        "product_unit_code": "target-aoi",
                     }
                 ),
                 "limit": 100,
@@ -309,7 +309,7 @@ class DeliveryStatusFilterTests(TestCase):
                 "filter": json.dumps(
                     {
                         "product_description": [],
-                        "aoi_code": {"unexpected": "shape"},
+                        "product_unit_code": {"unexpected": "shape"},
                     }
                 )
             },

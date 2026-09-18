@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 
 from ..conflicts import reconcile_published_submission
 from ..errors import SubmissionError
@@ -19,12 +19,12 @@ def finalize_publication(reserved, token, receipt, *, idempotent):
 
     # All delivery mutators acquire the Delivery row first.
     delivery = Delivery.objects.select_for_update().get(pk=reserved.delivery_id)
-    # Review and publication serialize on the AOI before locking candidates.
-    # Holding a candidate before the AOI could deadlock two publishers/reviewers.
-    ProductAOI.objects.select_for_update().get(pk=reserved.product_aoi_id)
+    # Review and publication serialize on the product unit before locking candidates.
+    # Holding a candidate before the product unit could deadlock two publishers/reviewers.
+    ProductUnit.objects.select_for_update().get(pk=reserved.product_unit_id)
     submission = (
         DeliverySubmission.objects.select_for_update()
-        .select_related("product_aoi")
+        .select_related("product_unit")
         .get(pk=reserved.submission_uuid)
     )
     if submission.publication_state == DeliverySubmission.PublicationState.PUBLISHED:

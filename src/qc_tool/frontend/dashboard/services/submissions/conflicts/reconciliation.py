@@ -12,7 +12,7 @@ def reconcile_published_submission(submission, now):
 
     candidates = list(
         DeliverySubmission.objects.filter(
-            product_aoi_id=submission.product_aoi_id,
+            product_unit_id=submission.product_unit_id,
             publication_state=DeliverySubmission.PublicationState.PUBLISHED,
         )
         .exclude(review_state=DeliverySubmission.ReviewState.REJECTED)
@@ -24,11 +24,11 @@ def reconcile_published_submission(submission, now):
 
     conflict = (
         SubmissionConflict.objects.select_for_update()
-        .filter(product_aoi_id=submission.product_aoi_id)
+        .filter(product_unit_id=submission.product_unit_id)
         .first()
     )
     if conflict is None:
-        conflict = _open_conflict(submission.product_aoi_id, now)
+        conflict = _open_conflict(submission.product_unit_id, now)
     elif conflict.state != SubmissionConflict.State.OPEN:
         _reopen_conflict(conflict)
     else:
@@ -48,9 +48,9 @@ def reconcile_published_submission(submission, now):
     return conflict.pk
 
 
-def _open_conflict(product_aoi_id, now):
+def _open_conflict(product_unit_id, now):
     conflict = SubmissionConflict.objects.create(
-        product_aoi_id=product_aoi_id,
+        product_unit_id=product_unit_id,
         state=SubmissionConflict.State.OPEN,
         version=1,
         opened_at=now,

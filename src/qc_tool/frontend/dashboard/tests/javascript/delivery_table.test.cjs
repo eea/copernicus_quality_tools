@@ -66,7 +66,7 @@ function page(url = "http://localhost/deliveries/") {
     for (const [id, hook] of [["delivery-filter-toggle", "toggle"], ["delivery-advanced-filters", "panel"], ["delivery-advanced-summary", "summary"], ["btn-clear-filters", "clear"], ["delivery-filter-search", "search"]]) {
         const element = node("#" + id); element.setAttribute("data-table-filter-" + hook, ""); toolbar.appendChild(element);
     }
-    node("#delivery-advanced-filters").appendChild(node("#delivery-filter-aoi"));
+    node("#delivery-advanced-filters").appendChild(node("#delivery-filter-product-unit"));
     const window = {document, QcDataTableUi: {create(table, config) { table.bootstrapTable(config.options); }, enhance() {}}, jQuery: $, location: {href: url}, history: {replaceState(_a, _b, value) { window.location.href = new URL(value, url).href; }},
         QC_DELIVERIES_CONFIG: {}, setTimeout(callback) { timers.set(++timerId, callback); return timerId; }, clearTimeout(id) { timers.delete(id); }};
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../static/dashboard/js/shared/table-filters.js"), "utf8"), {window});
@@ -196,7 +196,7 @@ test("optional filters preserve applied values when collapsed and clear returns 
     p.change("#delivery-filter-product", "Land cover");
     assert.equal(clear.hidden, false);
     assert.equal(p.node("#delivery-advanced-summary").textContent, "Filters (1)");
-    p.node("#delivery-filter-aoi").focus();
+    p.node("#delivery-filter-product-unit").focus();
     panel.events.keydown({key: "Escape", preventDefault() {}});
     assert.equal(p.document.activeElement, toggle);
     assert.equal(panel.hidden, true);

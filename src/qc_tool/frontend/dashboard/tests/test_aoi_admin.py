@@ -5,11 +5,11 @@ from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 
 
-class AoiAdminBoundaryTests(SimpleTestCase):
+class ProductUnitAdminBoundaryTests(SimpleTestCase):
     def test_delivery_aoi_is_not_editable_in_admin(self):
         delivery_admin = admin.site._registry[Delivery]
 
-        self.assertIn("aoi_code", delivery_admin.readonly_fields)
+        self.assertIn("product_unit_code", delivery_admin.readonly_fields)
 
     def test_job_admin_cannot_bypass_lifecycle_services(self):
         job_admin = admin.site._registry[Job]

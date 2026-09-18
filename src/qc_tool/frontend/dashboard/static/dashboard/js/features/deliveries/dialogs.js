@@ -127,7 +127,7 @@
             title: count === 1 ? "Submit this delivery for review?" : "Submit " + count + " deliveries for review?",
             message: filenameList(
                 rows,
-                "The ZIP and successful QC evidence will be stored for product manager review. Approval adds the AOI to product fulfilment."
+                "The ZIP and successful QC evidence will be stored for product manager review. Approval adds the product unit to product fulfilment."
             ),
             buttons: [{
                 label: count === 1 ? "Submit delivery" : "Submit " + count + " deliveries",

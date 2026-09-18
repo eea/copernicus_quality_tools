@@ -1,17 +1,13 @@
-"""Validate definition directories and their explicitly declared AOI scope."""
+"""Validate definition directories and their explicitly declared product unit scope."""
 
 from pathlib import Path
 
-from qc_tool.aoi import normalize_aoi_code
 from qc_tool.product_security import normalize_product_ident
 
 from .errors import CatalogError
-from .manifest.constants import MAX_AOIS_PER_RELEASE
 from .manifest.constants import MAX_RELEASES
-from .manifest.constants import NAMING_CHECK_SUFFIXES
-from .manifest.coverage import extract_definition_aoi_codes
+from .manifest.coverage import extract_definition_product_unit_codes, naming_unit_scopes
 from .manifest.definitions import build_definition_snapshot
-from .manifest.validation import invalid_manifest
 
 
 def read_definition_directories(directories):
@@ -58,23 +54,10 @@ def read_definition_directories(directories):
 def declared_coverage(definition):
     """Finite naming values are candidates, never automatic business approval."""
 
-    lists = []
-    for step in definition.document["steps"]:
-        if not step["check_ident"].endswith(NAMING_CHECK_SUFFIXES):
-            continue
-        parameters = step.get("parameters", {})
-        if "aoi_codes" not in parameters:
-            continue
-        values = parameters["aoi_codes"]
-        if not isinstance(values, list) or len(values) > MAX_AOIS_PER_RELEASE:
-            raise invalid_manifest("definition aoi_codes must be a bounded list")
-        if any(
-            value != "*" and normalize_aoi_code(value) is None
-            for value in values
-        ):
-            raise invalid_manifest("definition contains an invalid AOI")
-        lists.append(values)
-    if not lists or any(not values or "*" in values for values in lists):
+    document = definition.document
+    scopes, _declared, unbounded = naming_unit_scopes(document)
+    explicit = any(key in document for key in ("product_units", "product_unit_codes", "aoi_codes"))
+    if not explicit and (not scopes or unbounded):
         return {"state": "unknown"}
-    extract_definition_aoi_codes(definition.document)
+    extract_definition_product_unit_codes(document)
     return {"state": "draft", "source_definition": definition.product_ident}

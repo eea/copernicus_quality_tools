@@ -19,6 +19,7 @@ class SubmissionReviewEvent(models.Model):
     submission = models.ForeignKey(
         "dashboard.DeliverySubmission", on_delete=models.PROTECT,
         related_name="review_events",
+        db_index=False,  # Covered by pub_review_event_version_uniq.
     )
     version = models.PositiveIntegerField()
     decision = models.CharField(max_length=10, choices=Decision.choices)
@@ -36,6 +37,14 @@ class SubmissionReviewEvent(models.Model):
         base_manager_name = "objects"
         ordering = ("created_at", "pk")
         constraints = (
+            models.CheckConstraint(
+                condition=models.Q(decision__in=("approved", "declined")),
+                name="pub_review_decision_valid",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(decision="declined") | ~models.Q(notes=""),
+                name="pub_review_decline_reason",
+            ),
             models.UniqueConstraint(
                 fields=("submission", "version"),
                 name="pub_review_event_version_uniq",

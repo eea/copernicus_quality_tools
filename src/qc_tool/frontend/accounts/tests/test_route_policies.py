@@ -62,6 +62,7 @@ EXPECTED_POLICIES = {
     ),
     "product_detail": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "product_plan_edit": (PRIVATE, SESSION, ("GET", "POST"), MANAGE_CONFIGURATION, LOGIN_REDIRECT),
+    "product_finalize": (PRIVATE, SESSION, ("POST",), VIEW, LOGIN_REDIRECT),
     "submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "submission_review": (PRIVATE, SESSION, ("GET", "POST"), VIEW, LOGIN_REDIRECT),
     "submission_file": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
@@ -224,6 +225,7 @@ ROUTE_ARGS = {
     "product_detail": ("fixtureless",),
     "product_remove": ("fixtureless",),
     "product_plan_edit": ("fixtureless", 1),
+    "product_finalize": ("fixtureless",),
     "submission_review": ("00000000-0000-0000-0000-000000000001",),
     "submission_file": ("00000000-0000-0000-0000-000000000001", "results.pdf"),
     "api_product_info": ("fixtureless",),
@@ -426,7 +428,7 @@ class RoutePolicyRegistryTests(TestCase):
         )
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 61)
+        self.assertEqual(len(EXPECTED_POLICIES), 62)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

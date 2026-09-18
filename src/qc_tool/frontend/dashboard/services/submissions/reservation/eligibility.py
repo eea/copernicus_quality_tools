@@ -1,12 +1,12 @@
-"""Fail-closed delivery, job, AOI, and catalog submission eligibility."""
+"""Fail-closed delivery, job, product unit, and catalog submission eligibility."""
 
 import re
 
-from qc_tool.aoi import normalize_aoi_code
+from qc_tool.product_units import normalize_product_unit_code
 from qc_tool.common import JOB_OK
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import Job
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 
 from ..errors import SubmissionError
@@ -66,23 +66,23 @@ def latest_successful_job(delivery):
     return latest_job
 
 
-def validated_submitted_aoi(delivery, latest_job):
-    submitted_aoi = normalize_aoi_code(latest_job.aoi_code_submitted)
-    if submitted_aoi is None:
+def validated_submitted_product_unit(delivery, latest_job):
+    submitted_unit = normalize_product_unit_code(latest_job.submitted_product_unit_code)
+    if submitted_unit is None:
         raise SubmissionError(
-            "aoi_unavailable",
-            "The successful QC job did not verify exactly one AOI.",
+            "product_unit_unavailable",
+            "The successful QC job did not verify exactly one product unit.",
             409,
         )
-    delivery_aoi = normalize_aoi_code(delivery.aoi_code_submitted)
-    if delivery_aoi is not None and delivery_aoi != submitted_aoi:
+    delivery_unit = normalize_product_unit_code(delivery.submitted_product_unit_code)
+    if delivery_unit is not None and delivery_unit != submitted_unit:
         raise SubmissionError(
-            "delivery_aoi_mismatch",
-            "The latest QC result conflicts with the AOI already verified "
+            "delivery_product_unit_mismatch",
+            "The latest QC result conflicts with the product unit already verified "
             "for this ZIP.",
             409,
         )
-    return submitted_aoi
+    return submitted_unit
 
 
 def validated_input_digest(latest_job):
@@ -101,7 +101,7 @@ def validated_input_digest(latest_job):
     return value.casefold()
 
 
-def catalog_target(latest_job, submitted_aoi):
+def catalog_target(latest_job, submitted_unit):
     release = latest_job.product_release
     if release is None or latest_job.qc_definition_id is None:
         raise SubmissionError(
@@ -140,15 +140,15 @@ def catalog_target(latest_job, submitted_aoi):
             409,
         )
     try:
-        product_aoi = ProductAOI.objects.get(
+        product_unit = ProductUnit.objects.get(
             product_release=release,
-            aoi_code=submitted_aoi,
+            product_unit_code=submitted_unit,
         )
-    except ProductAOI.DoesNotExist as exc:
+    except ProductUnit.DoesNotExist as exc:
         raise SubmissionError(
-            "submitted_aoi_not_expected",
-            "The AOI verified in the ZIP is not expected by this product "
+            "submitted_product_unit_not_expected",
+            "The product unit verified in the ZIP is not expected by this product "
             "release.",
             409,
         ) from exc
-    return release, product_aoi
+    return release, product_unit

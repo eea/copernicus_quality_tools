@@ -16,7 +16,7 @@ from .secure_copy import sync_directory
 
 MANIFEST_FILENAME = "submission-manifest.json"
 SUBMITTED_MARKER = "SUBMITTED"
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION = 2
 MAX_MANIFEST_BYTES = 2 * 1024 * 1024
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -30,9 +30,9 @@ def build_manifest(reserved, *, input_digest, file_inventory):
         "delivery_id": reserved.delivery_id,
         "job_id": str(reserved.job_uuid),
         "product_release_id": reserved.product_release_id,
-        "product_aoi_id": reserved.product_aoi_id,
-        "aoi_code": reserved.aoi_code,
-        "aoi_code_submitted": reserved.aoi_code_submitted,
+        "product_unit_id": reserved.product_unit_id,
+        "product_unit_code": reserved.product_unit_code,
+        "submitted_product_unit_code": reserved.submitted_product_unit_code,
         "input_sha256": input_digest,
         "storage": "s3" if reserved.is_s3 else "local",
         "requested_at": reserved.requested_at_iso,
@@ -73,20 +73,35 @@ def receipt_from_existing(final_directory, reserved):
             409,
         ) from exc
 
+    version = manifest.get("schema_version") if isinstance(manifest, dict) else None
+    if type(version) is not int or version not in (1, MANIFEST_SCHEMA_VERSION):
+        raise PublicationError(
+            "publication_manifest_mismatch", "The existing publication uses an unsupported manifest version.", 409,
+        )
+    # Version 1 bytes remain immutable. Translate only the expected field
+    # names, then verify the original signed body without rewriting its keys.
+    unit_keys = (
+        ("product_aoi_id", "aoi_code", "aoi_code_submitted")
+        if version == 1 else ("product_unit_id", "product_unit_code", "submitted_product_unit_code")
+    )
+    foreign_keys = (
+        ("product_unit_id", "product_unit_code", "submitted_product_unit_code")
+        if version == 1 else ("product_aoi_id", "aoi_code", "aoi_code_submitted")
+    )
     expected_identity = {
-        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "schema_version": version,
         "submission_id": str(reserved.submission_uuid),
         "delivery_id": reserved.delivery_id,
         "job_id": str(reserved.job_uuid),
         "product_release_id": reserved.product_release_id,
-        "product_aoi_id": reserved.product_aoi_id,
-        "aoi_code": reserved.aoi_code,
-        "aoi_code_submitted": reserved.aoi_code_submitted,
+        unit_keys[0]: reserved.product_unit_id,
+        unit_keys[1]: reserved.product_unit_code,
+        unit_keys[2]: reserved.submitted_product_unit_code,
         "input_sha256": reserved.expected_input_digest,
         "storage": "s3" if reserved.is_s3 else "local",
         "requested_at": reserved.requested_at_iso,
     }
-    if not isinstance(manifest, dict) or any(
+    if any(key in manifest for key in foreign_keys) or any(
         manifest.get(key) != value for key, value in expected_identity.items()
     ):
         raise PublicationError(

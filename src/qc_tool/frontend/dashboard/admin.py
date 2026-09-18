@@ -14,11 +14,11 @@ class DeliveryAdmin(admin.ModelAdmin):
         "filename",
         "user",
         "product_ident",
-        "aoi_code",
+        "product_unit_code",
         "date_uploaded",
         "is_deleted",
     )
-    search_fields = ("filename", "product_ident", "aoi_code", "user__username")
+    search_fields = ("filename", "product_ident", "product_unit_code", "user__username")
     readonly_fields = tuple(field.name for field in Delivery._meta.fields)
 
     def has_add_permission(self, request):
@@ -39,7 +39,7 @@ class JobAdmin(admin.ModelAdmin):
         "job_uuid",
         "delivery",
         "product_ident",
-        "aoi_code",
+        "product_unit_code",
         "job_status",
         "date_created",
     )
@@ -47,7 +47,7 @@ class JobAdmin(admin.ModelAdmin):
         "job_uuid",
         "delivery__filename",
         "product_ident",
-        "aoi_code",
+        "product_unit_code",
     )
     readonly_fields = tuple(field.name for field in Job._meta.fields)
 
@@ -56,7 +56,7 @@ class JobAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         # Job lifecycle changes must acquire the Delivery lock and refresh its
-        # denormalized AOI/product projection through the domain service.
+        # denormalized product unit/product projection through the domain service.
         return False
 
     def has_delete_permission(self, request, obj=None):

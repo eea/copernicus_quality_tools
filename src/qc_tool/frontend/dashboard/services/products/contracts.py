@@ -36,7 +36,7 @@ class ProductCoverageSummary:
     state: str
     declared_expected: Optional[int]
     expected: Optional[int]
-    submitted: Optional[int]
+    accepted: Optional[int]
     conflicts: Optional[int]
     remaining: Optional[int]
     completion_percentage: Optional[float]
@@ -48,8 +48,8 @@ class ProductReleaseDetail:
     definitions: Tuple[ProductDefinitionSummary, ...]
     quality_checks: Optional[QualityCheckSummary]
     coverage: Optional[ProductCoverageSummary]
-    remaining_aois: Optional[Tuple[str, ...]]
-    remaining_aois_truncated: bool
+    remaining_units: Optional[Tuple[str, ...]]
+    remaining_units_truncated: bool
 
 
 @dataclass(frozen=True)

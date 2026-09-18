@@ -9,15 +9,15 @@ nav_order: 6
 The submission lifecycle answers three different questions without conflating
 them:
 
-1. What AOIs are expected for this immutable product release?
-2. Which validated ZIP candidates have users published for each expected AOI?
+1. What product units are expected for this immutable product release?
+2. Which validated ZIP candidates have users published for each expected product unit?
 3. Which candidates have assigned product managers or administrators approved?
 
-`ProductAOI.aoi_code` records the declared scope; it answers the first question
+`ProductUnit.product_unit_code` records the declared scope; it answers the first question
 when its release is authoritative. It is never created from a delivery filename
 or worker observation.
-`Job.aoi_code_submitted` answers what QC verified inside one ZIP.
-`DeliverySubmission` links an exact successful Job to an exact ProductAOI and
+`Job.submitted_product_unit_code` answers what QC verified inside one ZIP.
+`DeliverySubmission` links an exact successful Job to an exact ProductUnit and
 stores immutable snapshots of both values.
 Job and submission provenance also snapshots the requesting/submitting user,
 API-token identifier, and token name. Token identifiers are intentionally not
@@ -31,21 +31,21 @@ models to the `catalog_*`, `execution_*` and `publication_*` tables in one datab
 ```mermaid
 erDiagram
     Product ||--o{ ProductRelease : versions
-    ProductRelease ||--o{ ProductAOI : expects
+    ProductRelease ||--o{ ProductUnit : expects
     ProductRelease ||--o{ ProductReleaseDefinition : executes
     QcDefinition ||--o{ ProductReleaseDefinition : snapshots
     Delivery ||--o{ Job : validates
     Delivery ||--o| DeliverySubmission : publishes
     Job ||--o| DeliverySubmission : authorizes
-    ProductAOI ||--o{ DeliverySubmission : receives_candidates
-    ProductAOI ||--o| SubmissionConflict : reviews
+    ProductUnit ||--o{ DeliverySubmission : receives_candidates
+    ProductUnit ||--o| SubmissionConflict : reviews
     SubmissionConflict ||--o{ SubmissionConflictEvent : audits
     DeliverySubmission ||--o{ SubmissionReviewEvent : decisions
 ```
 
 One-to-one constraints ensure a Delivery and its authorizing Job can each
 produce at most one durable submission. There is intentionally no uniqueness
-constraint from `DeliverySubmission` to `ProductAOI`: multiple users must be
+constraint from `DeliverySubmission` to `ProductUnit`: multiple users must be
 able to publish competing candidates without overwriting one another.
 
 ## Catalog ownership
@@ -54,14 +54,14 @@ Definitions describe executable QC checks. Reviewed recipes enter through
 directory import from `product_definitions/` or the administrator upload
 page at `/products/upload/`. `QcDefinition.document` stores the full imported
 document as PostgreSQL JSONB; its digest identifies the original file bytes.
-Recipes remain flexible while products, release links and expected AOIs have
+Recipes remain flexible while products, release links and expected product units have
 relational identities and constraints.
 
 `sync_product_definitions` imports a directory inventory into immutable
 definition revisions. It creates one business product per canonical filename
 stem and an initial release stream `definition:<ident>`. A consistent finite
-naming AOI list becomes a draft scope; missing, wildcard or empty lists remain
-unknown. These records make definition attributes and declared AOI counts
+naming product unit list becomes a draft scope; missing, wildcard or empty lists remain
+unknown. These records make definition attributes and declared product unit counts
 queryable without implying that a delivery plan has been approved.
 
 Browser uploads use the same product/release representation and scope rules.
@@ -91,21 +91,21 @@ Removal sets `Product.is_active` to false and publishes an inactive runtime
 marker. This hides the product from active reports and QC selectors while
 retaining its version history, jobs and final submissions. Directory imports
 cannot reactivate it. Uploading the same filename restores it through a new
-release revision; its AOI scope again requires review. If removal cannot publish
+release revision; its product unit scope again requires review. If removal cannot publish
 the marker after committing, the database product remains inactive and the
 operator retries removal once storage is available.
 
-An `aoi_codes` naming parameter is not automatically an authoritative completion
+A legacy `aoi_codes` naming parameter is not automatically an authoritative completion
 plan. For example, CLC accepts individual country codes and combined-country
 codes that can represent alternative delivery groupings. Administrators use
-**Products → product → Set up delivery plan** to approve explicit expected AOIs
+**Products → product → Set up delivery plan** to approve explicit expected product units
 and assign product managers. A changed scope creates a new revision; changing
 only managers preserves the existing plan and its approved progress. Historical
 submissions remain attached to their original plan. The browser records the
 approving administrator and rejects stale plan or assignment forms.
 
 A reviewed `sync_product_catalog` manifest can also define business grouping and
-authoritative scope. It supplies explicit `aoi_codes`, or a `source_definition` only when that
+authoritative scope. It supplies explicit `product_unit_codes`, or a `source_definition` only when that
 entire finite list is the intended delivery plan. Wildcards cannot define a
 denominator.
 
@@ -119,7 +119,7 @@ uploaded stream by supplying a higher revision of the same `definition:<ident>` 
 key represents an additional stream, not a replacement.
 
 Both import services validate input before writing, normalize and deduplicate
-AOIs, and use the same PostgreSQL transaction advisory lock. They create complete
+product units, and use the same PostgreSQL transaction advisory lock. They create complete
 immutable revisions before moving current pointers. Changed catalog content
 creates a higher revision linked to its predecessor; unchanged imports are
 idempotent. Removing a recipe file never deletes historical catalog rows.
@@ -138,13 +138,13 @@ sequenceDiagram
     participant Store as Submission storage
     actor Manager as Product manager
 
-    User->>UI: Upload one-AOI ZIP
+    User->>UI: Upload ZIP for one product unit
     UI->>DB: Create Delivery
     User->>UI: Request QC for explicit definition
     UI->>DB: Create Job + actor/definition/release snapshot
     Worker->>DB: Claim and complete Job
-    Worker-->>UI: result.json with aoi_code
-    UI->>DB: Store aoi_code_submitted + result metadata
+    Worker-->>UI: result.json with product_unit_code
+    UI->>DB: Store submitted_product_unit_code + result metadata
     User->>UI: Submit delivery
     UI->>DB: Lock Delivery/latest Job and reserve DeliverySubmission
     UI->>Store: Copy to private staging directory
@@ -159,14 +159,14 @@ sequenceDiagram
 
 Browser and API endpoints are thin adapters over the same service. Reservation
 requires the deterministically latest Job to be successful, to contain one
-canonical submitted AOI, and to reference an authoritative release and exact
+canonical submitted product unit, and to reference an authoritative release and exact
 QC definition revision. It also requires a valid SHA-256 snapshot binding the
 archived input to the exact ZIP inspected by QC. S3 registration and QC remain
 available, but final submission rejects remote inputs with `s3_input_not_archived`
 because their source objects are not copied into publication storage. Upload the
 ZIP and run QC on that upload before publishing a retained deliverable. A successful
 older Job never overrides a newer failed or running Job. Once a Job reaches a
-terminal state, later polling cannot rewrite its terminal status, AOI, result
+terminal state, later polling cannot rewrite its terminal status, product unit, result
 metadata, or input digest.
 
 Workers resolve the shared active-version marker when execution starts. The
@@ -181,7 +181,7 @@ execute different content from its stored snapshot.
 Publication uses a deterministic directory keyed by the server-generated
 submission UUID. Files are copied without following symbolic links into a
 same-filesystem staging directory. A manifest records the delivery, Job,
-release, both AOI values, input checksum, and hashes of published files. One
+release, both product unit values, input checksum, and hashes of published files. One
 atomic rename exposes the complete directory. A retry accepts an existing
 directory only if its bounded manifest identifies the same submission and
 the no-follow file inventory still matches every recorded path, size, and
@@ -199,7 +199,7 @@ The database and filesystem form a recoverable saga:
   legacy Delivery field;
 - PostgreSQL rejects a `published` row without publication and input digests;
 - one Delivery and authorizing Job have at most one DeliverySubmission;
-- many deliveries may point to one ProductAOI.
+- many deliveries may point to one ProductUnit.
 
 Ordinary model and queryset operations cannot delete submission history or
 rewrite finalized receipt fields. Review and conflict events are append-only;
@@ -236,9 +236,9 @@ Its primary navigation follows the uploader's workflow:
 
 **All deliveries** is a secondary view for searching across the entire workflow.
 Status badges describe the delivery inside its stage; backend status names are
-not the main navigation. Search, product and AOI filters apply to every view and
+not the main navigation. Search, product and product unit filters apply to every view and
 update their counts. Search and sorting sit directly below the workflow tabs.
-**Filters** expands Status, Product and AOI controls in the same table area,
+**Filters** expands Status, Product and product unit controls in the same table area,
 and shows how many of those filters are applied when collapsed. **Clear filters**
 appears only while a filter is applied and keeps the selected workflow.
 Exports use the current workflow, filters and ordering. Column sorting within
@@ -262,11 +262,11 @@ and writes the changes needed in the feedback field. The uploader then:
    original filename, including letter case. The correction page accepts only
    this filename and checks that the rejected submission still belongs to them.
 3. Chooses **Upload correction**, then **Run quality checks** and checks the same
-   product and AOI. After QC passes, they choose **Submit for review**.
+   product and product unit. After QC passes, they choose **Submit for review**.
    Uploading alone does not request review.
 
-The corrected delivery is a new submission for its product and AOI. Managers can
-compare it with the other retained submissions for that AOI. The rejected receipt
+The corrected delivery is a new submission for its product and product unit. Managers can
+compare it with the other retained submissions for that product unit. The rejected receipt
 remains rejected in the history; it is not silently replaced or approved when a
 new file arrives. A correction creates a fresh delivery while preserving the
 original ZIP, QC evidence and review events. The upload page's `correction_for`
@@ -292,7 +292,7 @@ administrator; reviewing a user's delivery does not make the manager its owner.
 ## Competing submissions and coverage
 
 Several deliveries, including deliveries from the same user, may target one
-ProductAOI. Unreviewed competitors open one durable `SubmissionConflict`; no
+ProductUnit. Unreviewed competitors open one durable `SubmissionConflict`; no
 candidate overwrites another. Approving one candidate selects it and records why
 the others were declined. Declining every candidate closes the conflict without
 contributing to fulfilment.
@@ -305,28 +305,41 @@ conflict-resolution event; all earlier decisions and files remain. Every new
 candidate or review change advances the conflict version, so a reviewer must
 refresh if the candidate set changed after the page was loaded.
 
-Publication and review acquire the AOI row before locking its submission
+Publication and review acquire the product unit row before locking its submission
 candidates. Review also participates in the catalog transaction lock, serializing
 decisions with product removal and plan changes. This prevents simultaneous
 decisions from approving competing candidates through stale projections.
 
-Coverage counts distinct expected ProductAOI rows, never submission rows:
+Coverage counts distinct expected ProductUnit rows, never submission rows:
 
-- `declared_expected`: AOIs declared in draft or authoritative scopes;
-- `expected`: AOIs in an authoritative release;
-- `submitted`: AOIs with a published, approved candidate;
-- `conflicts`: AOIs with unresolved competing candidates;
-- `remaining`: expected minus submitted.
+- `declared_expected`: product units declared in draft or authoritative scopes;
+- `expected`: product units in an authoritative release;
+- `accepted`: product units with a published, approved candidate;
+- `conflicts`: product units with unresolved competing candidates;
+- `remaining`: expected minus accepted.
 
-The `submitted` compatibility field represents approved fulfilment, not the
-number of pending review requests. Open conflicts can coexist with an approved
+The `accepted` field counts units with an accepted delivery. Open conflicts can coexist with an approved
 candidate and therefore do not subtract an existing contribution.
 
 Draft scope counts support planning and are labeled separately in `/products`.
-Expected, submitted and completion figures remain unavailable until the scope
+Expected, accepted and completion figures remain unavailable until the scope
 is authoritative. Unknown scopes have no finite count. Product-level totals
 combine current release streams and remain unavailable if any included scope
 does not supply the required denominator. Duplicates cannot inflate completion.
+
+## Final product readiness
+
+Complete accepted coverage enables a separate manager action; it never marks
+a product ready automatically. The shared readiness service evaluates every
+current stream and requires authoritative, nonempty plans with every unit
+accepted. An assigned manager or administrator confirms the exact current
+scope from the product page. The product retains the confirmation timestamp,
+actor snapshot and scope fingerprint; Django admin history retains the action.
+
+Catalog revisions, acceptance changes and product removal invalidate readiness
+and old confirmation forms. Restoring an earlier state cannot resurrect its
+old final approval. Finalization, review and catalog edits use the same catalog
+transaction lock.
 
 ## Deployment order
 
@@ -336,8 +349,8 @@ python3 -m qc_tool.frontend.manage sync_product_definitions path/to/definitions 
 python3 -m qc_tool.frontend.manage sync_product_definitions path/to/definitions
 python3 -m qc_tool.frontend.manage sync_product_catalog path/to/catalog.json --dry-run
 python3 -m qc_tool.frontend.manage sync_product_catalog path/to/catalog.json
-python3 -m qc_tool.frontend.manage backfill_aoi_metadata --dry-run
-python3 -m qc_tool.frontend.manage backfill_aoi_metadata --batch-size 100
+python3 -m qc_tool.frontend.manage backfill_product_unit_metadata --dry-run
+python3 -m qc_tool.frontend.manage backfill_product_unit_metadata --batch-size 100
 ```
 
 Paths above refer to reviewed files visible in the frontend runtime; use the

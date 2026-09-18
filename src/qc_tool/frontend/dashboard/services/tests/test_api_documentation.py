@@ -107,8 +107,8 @@ class ApiDocumentationContractTests(SimpleTestCase):
         for schema_name in ("Delivery", "JobHistoryItem", "JobReport"):
             with self.subTest(schema=schema_name):
                 schema = schemas[schema_name]
-                self.assertIn("aoi_code", schema["required"])
-                aoi_schema = schema["properties"]["aoi_code"]
+                self.assertIn("product_unit_code", schema["required"])
+                aoi_schema = schema["properties"]["product_unit_code"]
                 self.assertTrue(aoi_schema["nullable"])
                 self.assertEqual(aoi_schema["maxLength"], 255)
 

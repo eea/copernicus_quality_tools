@@ -32,6 +32,9 @@ services:
       args:
         VERSION: "${QC_TOOL_SOURCE_VERSION:-master}"
     image: "copernicus-qctool-frontend-local:${QC_TOOL_IMAGE_TAG:-dev}"
+    # Keep local startup checks in sync with the mounted checkout as well as
+    # Python code, even when the cached image contains an older startup script.
+    command: ["sh", "/usr/local/src/copernicus_quality_tools/docker/run_frontend.sh"]
     # Published QC Tool images are currently linux/amd64-only. Docker Desktop
     # uses emulation on ARM hosts; the variable allows future native images.
     platform: "${QC_TOOL_PLATFORM:-linux/amd64}"

@@ -1,11 +1,11 @@
-"""Explicit review of expected delivery AOIs and product-manager assignments."""
+"""Explicit review of expected delivery product units and product-manager assignments."""
 
 import re
 
 from django import forms
 
 from qc_tool.frontend.dashboard.services.catalog.delivery_plans import (
-    delivery_plan_managers, validate_delivery_plan_aois,
+    delivery_plan_managers, validate_delivery_plan_units,
 )
 from qc_tool.frontend.dashboard.services.catalog.errors import CatalogError
 
@@ -13,10 +13,10 @@ from qc_tool.frontend.dashboard.services.catalog.errors import CatalogError
 class ProductDeliveryPlanForm(forms.Form):
     expected_release_id = forms.IntegerField(min_value=1, widget=forms.HiddenInput)
     expected_manager_digest = forms.RegexField(r"\A[0-9a-f]{64}\Z", widget=forms.HiddenInput)
-    aoi_codes = forms.CharField(
-        label="Expected AOI codes",
+    product_unit_codes = forms.CharField(
+        label="Expected product unit codes",
         max_length=1024 * 1024,
-        help_text="Enter one AOI per line, or separate codes with commas. Equivalent codes count once.",
+        help_text="Enter one product unit per line, or separate codes with commas. Equivalent codes count once.",
         widget=forms.Textarea(attrs={"rows": 14, "spellcheck": "false"}),
     )
     product_managers = forms.ModelMultipleChoiceField(
@@ -35,10 +35,10 @@ class ProductDeliveryPlanForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["product_managers"].queryset = delivery_plan_managers()
 
-    def clean_aoi_codes(self):
-        values = [value.strip() for value in re.split(r"[,\r\n]+", self.cleaned_data["aoi_codes"]) if value.strip()]
+    def clean_product_unit_codes(self):
+        values = [value.strip() for value in re.split(r"[,\r\n]+", self.cleaned_data["product_unit_codes"]) if value.strip()]
         try:
-            _codes, sources = validate_delivery_plan_aois(values)
+            _codes, sources = validate_delivery_plan_units(values)
         except CatalogError as exc:
             raise forms.ValidationError(exc.message, code=exc.code) from exc
         return list(sources)

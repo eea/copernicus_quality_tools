@@ -88,11 +88,10 @@ visible delivery =
 
 - Product grants use exact canonical product-definition identifiers. Both
   default users and product managers may have one or many assignments.
-- Region grants currently store exact, opaque AOI codes.
+- Region grants currently store exact, opaque region codes.
 - The current delivery-region resolver still reads the uploader's legacy
-  profile country. `Delivery.aoi_code` now exists, but remains reported
-  metadata until every supported product has authoritative spatial AOI
-  validation; see [AOI metadata](aoi-metadata.md).
+  profile country. `Delivery.product_unit_code` now exists, but remains reported
+  metadata until every supported product has authoritative geographic validation; see [Product unit metadata](product-unit-metadata.md).
 - Cross-user visibility requires both the relevant permission and its grant.
 - Default users already receive delivery-work capabilities through their role;
   product grants define where those capabilities apply.

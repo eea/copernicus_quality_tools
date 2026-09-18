@@ -46,7 +46,7 @@ sequenceDiagram
     Worker->>Store: Read delivery and pinned boundaries
     Worker->>Worker: Run configured QC steps
     Worker->>Store: Write JSON, PDF, logs, attachments
-    UI->>DB: Persist terminal Job AOI and project latest AOI to Delivery
+    UI->>DB: Persist terminal Job product unit and project latest product unit to Delivery
     UI->>Store: Read result for authorized user
 ```
 
@@ -65,8 +65,8 @@ chunks are discarded only after that receipt is durable. If the delivery was
 deleted, its receipt no longer proves completion and reuploading starts with
 fresh chunks, even when the browser reuses its upload identifier.
 
-Canonical AOI metadata is stored only after a terminal result is available;
-see [AOI metadata](aoi-metadata.md) for aliases, projection, and trust rules.
+Canonical product unit metadata is stored only after a terminal result is available;
+see [product unit metadata](product-unit-metadata.md) for aliases, projection, and trust rules.
 
 ## S3 delivery
 

@@ -439,8 +439,8 @@ class DashboardHomeContractTests(TestCase):
         self.assertEqual(response.status_code, 200)
         document = response.content.decode(response.charset).casefold()
         for unsupported_claim in (
-            "expected aois",
-            "remaining aois",
+            "expected product_units",
+            "remaining product_units",
             "this week",
             "expires in",
         ):

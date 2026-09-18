@@ -1,4 +1,4 @@
-"""Durable submission, publication, and duplicate-AOI decision tests."""
+"""Durable submission, publication, and duplicate-product unit decision tests."""
 
 import hashlib
 import json
@@ -29,7 +29,7 @@ from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.models import PersonalAccessToken, UserProductGrant
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
 from qc_tool.frontend.dashboard.models import QcDefinition
@@ -38,7 +38,7 @@ from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.models import SubmissionConflictEvent
 from qc_tool.frontend.dashboard.models import SubmissionReviewEvent
 from qc_tool.frontend.dashboard.services.catalog import get_product_coverage
-from qc_tool.frontend.dashboard.services.catalog import get_remaining_aoi_codes
+from qc_tool.frontend.dashboard.services.catalog import get_remaining_product_unit_codes
 from qc_tool.frontend.dashboard.services.submissions import PublicationError
 from qc_tool.frontend.dashboard.services.submissions import SubmissionError
 from qc_tool.frontend.dashboard.services.submissions import (
@@ -87,9 +87,9 @@ class SubmissionFixtureMixin:
             qc_definition=self.definition,
             is_primary=True,
         )
-        self.product_aoi = ProductAOI.objects.create(
+        self.product_unit = ProductUnit.objects.create(
             product_release=self.release,
-            aoi_code="ee001l",
+            product_unit_code="ee001l",
             source_value="EE001L1",
             provenance="manifest",
         )
@@ -110,15 +110,15 @@ class SubmissionFixtureMixin:
             user=user,
             filename=zip_path.name,
             size_bytes=len(zip_payload),
-            aoi_code_submitted=aoi,
+            submitted_product_unit_code=aoi,
         )
         job = Job.objects.create(
             delivery=delivery,
             job_status=status,
             product_ident=self.definition.product_ident,
             product_description=self.definition.description,
-            aoi_code=aoi,
-            aoi_code_submitted=aoi,
+            product_unit_code=aoi,
+            submitted_product_unit_code=aoi,
             input_sha256=digest,
             product_release=self.release,
             qc_definition=self.definition,
@@ -130,7 +130,7 @@ class SubmissionFixtureMixin:
         output = job_root / "output.d"
         output.mkdir(parents=True)
         (job_root / "result.json").write_text(
-            json.dumps({"status": "ok", "aoi_code": aoi}),
+            json.dumps({"status": "ok", "product_unit_code": aoi}),
             encoding="utf-8",
         )
         (output / "report.txt").write_text("validated", encoding="utf-8")
@@ -214,7 +214,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertEqual(delivery.content_sha256, job.input_sha256)
         self.assertEqual(submission.review_state, DeliverySubmission.ReviewState.PENDING)
         self.assertEqual(submission.review_version, 0)
-        self.assertEqual(get_product_coverage(self.release).submitted, 0)
+        self.assertEqual(get_product_coverage(self.release).accepted, 0)
         final_directory = Path(submission.artifact_path)
         self.assertTrue(final_directory.is_dir())
         self.assertTrue((final_directory / "submission-manifest.json").is_file())
@@ -231,9 +231,9 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
                 delivery=delivery,
                 job=job,
                 product_release=self.release,
-                product_aoi=self.product_aoi,
-                aoi_code=self.product_aoi.aoi_code,
-                aoi_code_submitted=self.product_aoi.aoi_code,
+                product_unit=self.product_unit,
+                product_unit_code=self.product_unit.product_unit_code,
+                submitted_product_unit_code=self.product_unit.product_unit_code,
                 submitted_by=user,
                 submitted_by_username=user.username,
                 request_channel=DeliverySubmission.RequestChannel.BROWSER,
@@ -282,7 +282,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         user, delivery, job, job_root = self.create_candidate("protected-owner")
         self.submit(user, delivery, job_root)
         submission = DeliverySubmission.objects.get()
-        for record in (user, delivery, job, self.product_aoi, self.release):
+        for record in (user, delivery, job, self.product_unit, self.release):
             with self.subTest(model=type(record).__name__):
                 with self.assertRaises(ProtectedError):
                     type(record).objects.filter(pk=record.pk).delete()
@@ -633,9 +633,9 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         with self.assertRaises(SubmissionError) as raised:
             self.submit(user, delivery, job_root)
 
-        self.assertEqual(raised.exception.code, "submitted_aoi_not_expected")
+        self.assertEqual(raised.exception.code, "submitted_product_unit_not_expected")
         self.assertFalse(
-            ProductAOI.objects.filter(aoi_code="ee999l").exists()
+            ProductUnit.objects.filter(product_unit_code="ee999l").exists()
         )
 
     def test_different_users_open_conflict_without_losing_candidates(self):
@@ -652,7 +652,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertIsNone(first.conflict_id)
         self.assertIsNotNone(second.conflict_id)
         self.assertEqual(DeliverySubmission.objects.count(), 2)
-        conflict = SubmissionConflict.objects.get(product_aoi=self.product_aoi)
+        conflict = SubmissionConflict.objects.get(product_unit=self.product_unit)
         self.assertEqual(conflict.state, SubmissionConflict.State.OPEN)
         self.assertEqual(
             set(
@@ -668,11 +668,11 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         )
         coverage = get_product_coverage(self.release)
         self.assertEqual(coverage.expected, 1)
-        self.assertEqual(coverage.submitted, 0)
+        self.assertEqual(coverage.accepted, 0)
         self.assertEqual(coverage.conflicts, 1)
         self.assertEqual(coverage.remaining, 1)
         self.assertEqual(
-            get_remaining_aoi_codes(self.release),
+            get_remaining_product_unit_codes(self.release),
             ("ee001l",),
         )
 
@@ -704,8 +704,8 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
             first_result.submission_uuid,
         )
         self.assertEqual(resolution.version, 2)
-        self.assertEqual(get_product_coverage(self.release).submitted, 1)
-        self.assertEqual(get_remaining_aoi_codes(self.release), ())
+        self.assertEqual(get_product_coverage(self.release).accepted, 1)
+        self.assertEqual(get_remaining_product_unit_codes(self.release), ())
 
         third_user, third_delivery, _third_job, third_root = (
             self.create_candidate("resolution-three")
@@ -716,10 +716,10 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertIsNone(conflict.selected_submission_id)
         self.assertEqual(conflict.version, 3)
         self.assertEqual(
-            get_remaining_aoi_codes(self.release),
+            get_remaining_product_unit_codes(self.release),
             (),
         )
-        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_product_coverage(self.release).accepted, 1)
         self.assertEqual(
             list(conflict.events.values_list("event_type", flat=True)),
             [
@@ -742,8 +742,8 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertEqual(submission.review_state, "accepted")
         self.assertEqual(submission.review_version, 1)
         self.assertEqual((event.decision, event.version, event.actor_username), ("approved", 1, user.username))
-        self.assertEqual(get_product_coverage(self.release).submitted, 1)
-        self.assertEqual(get_remaining_aoi_codes(self.release), ())
+        self.assertEqual(get_product_coverage(self.release).accepted, 1)
+        self.assertEqual(get_remaining_product_unit_codes(self.release), ())
         self.assertEqual((submission.artifact_path, submission.artifact_digest, submission.input_digest, submission.published_at), receipt)
         self.assertTrue(Path(submission.artifact_path).is_dir())
 
@@ -760,7 +760,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         submission.refresh_from_db()
         self.assertEqual(submission.review_state, "rejected")
         self.assertEqual(submission.review_events.get().notes, "The submitted metadata is incomplete.")
-        self.assertEqual(get_product_coverage(self.release).submitted, 0)
+        self.assertEqual(get_product_coverage(self.release).accepted, 0)
         self.assertTrue(Path(submission.artifact_path).is_dir())
 
     def test_review_denies_unassigned_accounts_and_stale_versions(self):
@@ -816,7 +816,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertEqual(conflict.state, SubmissionConflict.State.DISMISSED)
         self.assertIsNone(conflict.selected_submission_id)
         self.assertEqual(get_product_coverage(self.release).conflicts, 0)
-        self.assertEqual(get_product_coverage(self.release).submitted, 0)
+        self.assertEqual(get_product_coverage(self.release).accepted, 0)
         self.assertEqual(SubmissionReviewEvent.objects.count(), 2)
 
     def test_new_candidate_does_not_revoke_approval_and_replacement_is_explicit(self):
@@ -829,7 +829,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         second = DeliverySubmission.objects.get(delivery=second_delivery)
         first.refresh_from_db()
         self.assertEqual(first.review_state, "accepted")
-        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_product_coverage(self.release).accepted, 1)
         with self.assertRaises(SubmissionError) as raised:
             self.review(second, first_user)
         self.assertEqual(raised.exception.code, "approved_candidate_exists")
@@ -844,7 +844,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertEqual((first.review_state, second.review_state), ("rejected", "accepted"))
         self.assertEqual(list(first.review_events.values_list("decision", flat=True)), ["approved", "declined"])
         self.assertEqual(second.review_events.get().decision, "approved")
-        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_product_coverage(self.release).accepted, 1)
 
     def test_review_audit_survives_actor_removal_and_rejects_rewrites(self):
         user, delivery, _job, job_root = self.create_candidate("review-history-owner")
@@ -923,7 +923,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         conflict = SubmissionConflict.objects.get()
         self.assertEqual(conflict.state, SubmissionConflict.State.RESOLVED)
         self.assertEqual(conflict.selected_submission_id, first.pk)
-        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_product_coverage(self.release).accepted, 1)
         self.assertEqual(get_product_coverage(self.release).conflicts, 0)
         self.assertEqual(first.review_events.count(), 1)
 
@@ -1023,9 +1023,9 @@ class ConcurrentSubmissionTests(TransactionTestCase):
             qc_definition=definition,
             is_primary=True,
         )
-        self.product_aoi = ProductAOI.objects.create(
+        self.product_unit = ProductUnit.objects.create(
             product_release=release,
-            aoi_code="ee010l",
+            product_unit_code="ee010l",
             provenance="manifest",
         )
         self.candidates = [
@@ -1044,15 +1044,15 @@ class ConcurrentSubmissionTests(TransactionTestCase):
             user=user,
             filename="delivery.zip",
             size_bytes=len(payload),
-            aoi_code_submitted=self.product_aoi.aoi_code,
+            submitted_product_unit_code=self.product_unit.product_unit_code,
         )
         job = Job.objects.create(
             delivery=delivery,
             job_status=JOB_OK,
             product_ident=definition.product_ident,
             product_description=definition.description,
-            aoi_code=self.product_aoi.aoi_code,
-            aoi_code_submitted=self.product_aoi.aoi_code,
+            product_unit_code=self.product_unit.product_unit_code,
+            submitted_product_unit_code=self.product_unit.product_unit_code,
             input_sha256=hashlib.sha256(payload).hexdigest(),
             product_release=release,
             qc_definition=definition,
@@ -1096,7 +1096,7 @@ class ConcurrentSubmissionTests(TransactionTestCase):
 
         self.assertEqual(len(results), 2)
         self.assertEqual(DeliverySubmission.objects.count(), 2)
-        conflict = SubmissionConflict.objects.get(product_aoi=self.product_aoi)
+        conflict = SubmissionConflict.objects.get(product_unit=self.product_unit)
         self.assertEqual(conflict.state, SubmissionConflict.State.OPEN)
         self.assertEqual(conflict.events.count(), 1)
 

@@ -1,6 +1,7 @@
 """Lightweight result contract shared by QC checks and the dispatcher."""
 
 from qc_tool.worker.aoi import set_aoi_status_property
+from qc_tool.worker.product_units import set_product_unit_status_property
 
 
 class CheckStatus:
@@ -50,7 +51,7 @@ class CheckStatus:
         self.params.update(params_dict)
 
     def set_status_property(self, key, value):
-        if not set_aoi_status_property(self, key, value):
+        if not set_product_unit_status_property(self, key, value) and not set_aoi_status_property(self, key, value):
             self.status_properties[key] = value
 
     def __repr__(self):

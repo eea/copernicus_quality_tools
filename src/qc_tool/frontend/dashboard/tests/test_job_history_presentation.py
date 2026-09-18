@@ -258,11 +258,11 @@ class JobHistoryPresentationTests(TestCase):
 
     def test_delivery_summary_preserves_zero_size_and_labels_expected_aoi(self):
         self.delivery.size_bytes = 0
-        self.delivery.aoi_code = "CZ"
-        self.delivery.aoi_code_submitted = "SK"
+        self.delivery.product_unit_code = "CZ"
+        self.delivery.submitted_product_unit_code = "SK"
         self.delivery.product_description = None
         self.delivery.save(update_fields=(
-            "size_bytes", "aoi_code", "aoi_code_submitted", "product_description",
+            "size_bytes", "product_unit_code", "submitted_product_unit_code", "product_description",
         ))
 
         response, _document = self.response_document()
@@ -270,7 +270,7 @@ class JobHistoryPresentationTests(TestCase):
 
         self.assertEqual(summary["description"], "Product not identified")
         self.assertEqual(summary["facts"][0], {"label": "Size", "value": "0\u00a0bytes"})
-        self.assertEqual(summary["facts"][-1], {"label": "Expected AOI", "value": "CZ"})
+        self.assertEqual(summary["facts"][-1], {"label": "Reported product unit", "value": "CZ"})
 
     def test_history_table_uses_shared_columns_and_export_controls(self):
         """History opts into the same labelled toolbar as other data tables."""

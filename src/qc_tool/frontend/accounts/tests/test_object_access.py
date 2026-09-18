@@ -58,7 +58,7 @@ class DashboardObjectAccessTests(TestCase):
             )
         UserRegionGrant.objects.bulk_create(
             [
-                UserRegionGrant(user=user, aoi_code=region_code)
+                UserRegionGrant(user=user, region_code=region_code)
                 for region_code in region_codes
             ]
         )

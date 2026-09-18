@@ -207,7 +207,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertEqual(corrected.filename, self.delivery.filename)
         self.assertEqual(corrected.user_id, self.owner.pk)
         self.assertIsNone(corrected.date_submitted)
-        self.assertIsNone(corrected.aoi_code_submitted)
+        self.assertIsNone(corrected.submitted_product_unit_code)
         self.assertFalse(Job.objects.filter(delivery=corrected).exists())
         self.delivery.refresh_from_db()
         self.assertTrue(self.delivery.is_deleted)
@@ -276,7 +276,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
             delivery=corrected, job_status=JOB_OK,
             product_ident=self.definition.product_ident,
             product_description=self.definition.description,
-            aoi_code=self.product_aoi.aoi_code, aoi_code_submitted=self.product_aoi.aoi_code,
+            product_unit_code=self.product_unit.product_unit_code, submitted_product_unit_code=self.product_unit.product_unit_code,
             input_sha256=hashlib.sha256(self.corrected_bytes).hexdigest(),
             product_release=self.release, qc_definition=self.definition,
             requested_by=self.owner, requested_by_username=self.owner.username,
@@ -284,7 +284,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
         )
         job_root = self.jobs_root / str(job.job_uuid)
         (job_root / "output.d").mkdir(parents=True)
-        (job_root / "result.json").write_text(json.dumps({"status": "ok", "aoi_code": self.product_aoi.aoi_code}), encoding="utf-8")
+        (job_root / "result.json").write_text(json.dumps({"status": "ok", "product_unit_code": self.product_unit.product_unit_code}), encoding="utf-8")
         (job_root / "output.d" / "report.txt").write_text("corrected and validated", encoding="utf-8")
         result = self.submit(self.owner, corrected, job_root)
         resubmission = DeliverySubmission.objects.get(pk=result.submission_uuid)
@@ -293,11 +293,11 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertEqual(resubmission.review_state, DeliverySubmission.ReviewState.PENDING)
         self.assertEqual(resubmission.input_digest, job.input_sha256)
         self.assertEqual((Path(resubmission.artifact_path) / "input.d" / corrected.filename).read_bytes(), self.corrected_bytes)
-        self.assertEqual(get_product_coverage(self.release).submitted, 0)
+        self.assertEqual(get_product_coverage(self.release).accepted, 0)
         self.assert_retained_receipt()
 
         self.review(resubmission, self.manager, notes="The corrected boundary is approved.")
         resubmission.refresh_from_db()
         self.assertEqual(resubmission.review_state, DeliverySubmission.ReviewState.ACCEPTED)
-        self.assertEqual(get_product_coverage(self.release).submitted, 1)
+        self.assertEqual(get_product_coverage(self.release).accepted, 1)
         self.assert_retained_receipt()

@@ -1,11 +1,11 @@
-"""Product-manager selection of one published duplicate-AOI candidate."""
+"""Product-manager selection of one published duplicate-product unit candidate."""
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from qc_tool.frontend.dashboard.models import DeliverySubmission
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.models import SubmissionConflictEvent
 from qc_tool.frontend.dashboard.models import SubmissionReviewEvent
@@ -28,28 +28,28 @@ def resolve_submission_conflict(
 ):
     """Select one candidate without deleting or rewriting competing history."""
 
-    product_aoi_id = _conflict_product_aoi_id(conflict_id)
+    product_unit_id = _conflict_product_unit_id(conflict_id)
     with transaction.atomic():
         lock_catalog_sync()
-        product_aoi = (
-            ProductAOI.objects.select_for_update(of=("self",))
+        product_unit = (
+            ProductUnit.objects.select_for_update(of=("self",))
             .select_related("product_release__product")
-            .get(pk=product_aoi_id)
+            .get(pk=product_unit_id)
         )
         conflict = SubmissionConflict.objects.select_for_update().get(
             pk=conflict_id
         )
-        require_resolution_scope(account_access, product_aoi)
+        require_resolution_scope(account_access, product_unit)
         _require_current_version(conflict, expected_version)
-        selected = _published_candidate(selected_submission_id, product_aoi)
+        selected = _published_candidate(selected_submission_id, product_unit)
         from ..review import require_approvable_product
 
-        require_approvable_product(product_aoi)
+        require_approvable_product(product_unit)
         notes = str(notes or "").strip()
         if len(notes) > 5_000:
             raise SubmissionError("review_notes_too_long", "Review notes must be at most 5,000 characters.", 400)
         if not notes and DeliverySubmission.objects.filter(
-            product_aoi=product_aoi, review_state=DeliverySubmission.ReviewState.ACCEPTED,
+            product_unit=product_unit, review_state=DeliverySubmission.ReviewState.ACCEPTED,
         ).exclude(pk=selected.pk).exists():
             raise SubmissionError("review_reason_required", "Explain why this delivery replaces the approved submission.", 400)
 
@@ -60,15 +60,15 @@ def resolve_submission_conflict(
             return _resolution_result(conflict, selected)
 
         _apply_resolution(conflict, selected, actor=actor, notes=notes)
-        _select_candidate(product_aoi, selected, actor=actor, notes=conflict.resolution_notes)
+        _select_candidate(product_unit, selected, actor=actor, notes=conflict.resolution_notes)
         _append_resolution_event(conflict, selected, actor=actor)
         return _resolution_result(conflict, selected)
 
 
-def _conflict_product_aoi_id(conflict_id):
+def _conflict_product_unit_id(conflict_id):
     try:
         return SubmissionConflict.objects.values_list(
-            "product_aoi_id", flat=True
+            "product_unit_id", flat=True
         ).get(pk=conflict_id)
     except SubmissionConflict.DoesNotExist as exc:
         raise SubmissionError(
@@ -91,7 +91,7 @@ def _require_current_version(conflict, expected_version):
         )
 
 
-def _published_candidate(selected_submission_id, product_aoi):
+def _published_candidate(selected_submission_id, product_unit):
     try:
         selected = DeliverySubmission.objects.select_for_update().get(
             pk=selected_submission_id
@@ -102,10 +102,10 @@ def _published_candidate(selected_submission_id, product_aoi):
             "The selected submission candidate does not exist.",
             404,
         ) from exc
-    if selected.product_aoi_id != product_aoi.pk:
+    if selected.product_unit_id != product_unit.pk:
         raise SubmissionError(
             "submission_candidate_mismatch",
-            "The selected candidate does not belong to this AOI conflict.",
+            "The selected candidate does not belong to this product unit conflict.",
             409,
         )
     if selected.publication_state != DeliverySubmission.PublicationState.PUBLISHED:
@@ -139,19 +139,24 @@ def _apply_resolution(conflict, selected, *, actor, notes):
     )
 
 
-def _select_candidate(product_aoi, selected, *, actor, notes):
+def _select_candidate(product_unit, selected, *, actor, notes):
     candidates = DeliverySubmission.objects.select_for_update().filter(
-        product_aoi=product_aoi,
+        product_unit=product_unit,
         publication_state=DeliverySubmission.PublicationState.PUBLISHED,
     )
-    for candidate in candidates.order_by("submission_uuid"):
-        approved = candidate.pk == selected.pk
+    # Release an existing approval before accepting its replacement. The
+    # database enforces one accepted published candidate per product unit.
+    for candidate in candidates.exclude(pk=selected.pk).order_by("submission_uuid"):
         record_review_decision(
             candidate,
-            decision=(SubmissionReviewEvent.Decision.APPROVED if approved else SubmissionReviewEvent.Decision.DECLINED),
+            decision=SubmissionReviewEvent.Decision.DECLINED,
             actor=actor,
-            notes=(notes if approved else "Another delivery was selected for this AOI." + (" " + notes if notes else "")),
+            notes="Another delivery was selected for this product unit." + (" " + notes if notes else ""),
         )
+    record_review_decision(
+        selected, decision=SubmissionReviewEvent.Decision.APPROVED,
+        actor=actor, notes=notes,
+    )
 
 
 def _append_resolution_event(conflict, selected, *, actor):

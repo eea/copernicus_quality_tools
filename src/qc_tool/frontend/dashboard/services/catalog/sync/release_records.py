@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from django.utils import timezone
 
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
 
@@ -43,11 +43,11 @@ def create_release(snapshot, *, product, definitions, result):
         ),
     )
     _create_definition_links(release, snapshot, definitions)
-    _create_expected_aois(release, snapshot)
+    _create_required_units(release, snapshot)
     result = replace(
         result,
         releases_created=result.releases_created + 1,
-        aois_created=result.aois_created + len(snapshot.aoi_codes),
+        product_units_created=result.product_units_created + len(snapshot.product_unit_codes),
     )
     return release, result
 
@@ -78,18 +78,18 @@ def _create_definition_links(release, snapshot, definitions):
     )
 
 
-def _create_expected_aois(release, snapshot):
-    ProductAOI.objects.bulk_create(
+def _create_required_units(release, snapshot):
+    ProductUnit.objects.bulk_create(
         [
-            ProductAOI(
+            ProductUnit(
                 product_release=release,
-                aoi_code=aoi_code,
+                product_unit_code=product_unit_code,
                 source_value=source_value,
-                provenance=snapshot.aoi_provenance,
+                provenance=snapshot.product_unit_provenance,
             )
-            for aoi_code, source_value in zip(
-                snapshot.aoi_codes,
-                snapshot.aoi_source_values,
+            for product_unit_code, source_value in zip(
+                snapshot.product_unit_codes,
+                snapshot.product_unit_source_values,
             )
         ],
         batch_size=1_000,

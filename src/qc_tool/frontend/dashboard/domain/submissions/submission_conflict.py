@@ -1,4 +1,4 @@
-"""Current product-manager decision for duplicate AOI submissions."""
+"""Current product-manager decision for duplicate product unit submissions."""
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -8,15 +8,15 @@ from .delivery_submission import DeliverySubmission
 
 
 class SubmissionConflict(models.Model):
-    """Current manager decision for competing submissions of one expected AOI."""
+    """Current manager decision for competing submissions of one expected product unit."""
 
     class State(models.TextChoices):
         OPEN = "open", "Open"
         RESOLVED = "resolved", "Resolved"
         DISMISSED = "dismissed", "Closed"
 
-    product_aoi = models.OneToOneField(
-        "dashboard.ProductAOI",
+    product_unit = models.OneToOneField(
+        "dashboard.ProductUnit",
         on_delete=models.PROTECT,
         related_name="submission_conflict",
     )
@@ -82,9 +82,9 @@ class SubmissionConflict(models.Model):
         selected = self.selected_submission
         if selected is None:
             return
-        if selected.product_aoi_id != self.product_aoi_id:
+        if selected.product_unit_id != self.product_unit_id:
             raise ValidationError(
-                {"selected_submission": "Select a submission for this AOI."}
+                {"selected_submission": "Select a submission for this product unit."}
             )
         if selected.publication_state != DeliverySubmission.PublicationState.PUBLISHED:
             raise ValidationError(
@@ -92,4 +92,4 @@ class SubmissionConflict(models.Model):
             )
 
     def __str__(self):
-        return "{} ({})".format(self.product_aoi, self.state)
+        return "{} ({})".format(self.product_unit, self.state)

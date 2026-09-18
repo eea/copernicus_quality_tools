@@ -2,7 +2,7 @@
 
 import logging
 import json
-from qc_tool.aoi import AOI_CODE_MAX_LENGTH
+from qc_tool.product_units import PRODUCT_UNIT_CODE_MAX_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ MAX_DELIVERY_OFFSET = 10_000_000
 
 DELIVERY_FILTER_VALUE_LIMITS = {
     "product_description": 500,
-    "aoi_code": AOI_CODE_MAX_LENGTH,
+    "product_unit_code": PRODUCT_UNIT_CODE_MAX_LENGTH,
 }
 
 

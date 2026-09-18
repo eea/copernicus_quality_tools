@@ -56,26 +56,26 @@
         }));
     }
 
-    function aoiFormatter(value, row) {
-        var expected = value ? String(value) : "";
-        var submitted = row.aoi_code_submitted
-            ? String(row.aoi_code_submitted)
+    function productUnitFormatter(value, row) {
+        var reported = value ? String(value) : "";
+        var submitted = row.submitted_product_unit_code
+            ? String(row.submitted_product_unit_code)
             : "";
-        var $aoi;
+        var $unit;
 
-        if (!expected && !submitted) {
+        if (!reported && !submitted) {
             return emptyValue();
         }
-        $aoi = $("<span>", {"class": "job-history-aoi"});
+        $unit = $("<span>", {"class": "job-history-product-unit"});
         $("<strong>", {
-            text: expected
-                ? "Expected: " + expected
-                : "Expected: Not available"
-        }).appendTo($aoi);
+            text: reported
+                ? "Reported: " + reported
+                : "Reported: Not available"
+        }).appendTo($unit);
         if (submitted) {
-            $("<small>", {text: "ZIP AOI: " + submitted}).appendTo($aoi);
+            $("<small>", {text: "Verified ZIP unit: " + submitted}).appendTo($unit);
         }
-        return outerHtml($aoi);
+        return outerHtml($unit);
     }
 
     function statusPresentation(value) {
@@ -125,6 +125,6 @@
     history.icon = icon;
     window.dateFormatter = dateFormatter;
     window.stepsFormatter = stepsFormatter;
-    window.aoiFormatter = aoiFormatter;
+    window.productUnitFormatter = productUnitFormatter;
     window.statusFormatter = statusFormatter;
 }(window, window.jQuery));

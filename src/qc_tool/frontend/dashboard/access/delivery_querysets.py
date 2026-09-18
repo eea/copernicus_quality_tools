@@ -60,7 +60,7 @@ def visible_deliveries(account_access):
         )
     visibility = Q(user_id=account_access.user_id) & owner_product_scope
     if account_access.can_view_region_deliveries:
-        # Delivery.aoi_code is reporting metadata until every product has an
+        # Delivery.product_unit_code is reporting metadata until every product has an
         # authoritative spatial validator. Do not use uploader-controlled
         # naming metadata as an authorization fact.
         visibility |= Q(

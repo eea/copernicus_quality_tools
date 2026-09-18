@@ -24,9 +24,9 @@ class ReleaseSnapshot:
     is_current: bool
     definitions: tuple
     primary_definition_ident: str
-    aoi_codes: tuple
-    aoi_source_values: tuple
-    aoi_provenance: str
+    product_unit_codes: tuple
+    product_unit_source_values: tuple
+    product_unit_provenance: str
     catalog_digest: str
     source_kind: str = "manifest"
 
@@ -43,7 +43,7 @@ class CatalogSyncResult:
     products_created: int = 0
     products_updated: int = 0
     releases_created: int = 0
-    aois_created: int = 0
+    product_units_created: int = 0
     current_pointers_changed: int = 0
 
     @property
@@ -54,7 +54,7 @@ class CatalogSyncResult:
                 self.products_created,
                 self.products_updated,
                 self.releases_created,
-                self.aois_created,
+                self.product_units_created,
                 self.current_pointers_changed,
             )
         )
@@ -65,7 +65,7 @@ class ProductCoverage:
     release_id: int
     coverage_state: str
     expected: int | None
-    submitted: int | None
+    accepted: int | None
     conflicts: int | None
     remaining: int | None
     completion_percentage: float | None

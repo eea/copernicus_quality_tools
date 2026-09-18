@@ -35,10 +35,31 @@
 
 {% block page_content %}
 
+    {% if readiness %}
+    <section class="workspace-card product-detail__section" aria-labelledby="product-readiness-title">
+        <header class="workspace-card__header">
+            <div><h2 id="product-readiness-title">Product readiness</h2><p>{{ readiness.message }}</p></div>
+            <span class="product-detail__status">{{ readiness.label }}</span>
+        </header>
+        <div class="product-detail__body">
+            <p><strong>{{ readiness.accepted_units }} / {{ readiness.required_units }}</strong> required product units have accepted deliveries.</p>
+            {% if readiness.is_ready %}
+            <p>Confirmed by <strong>{{ readiness.ready_by_username }}</strong> on {{ readiness.ready_at|date:"j M Y, H:i" }}.</p>
+            {% elif readiness.can_finalize and can_review_submissions %}
+            <form method="post" action="{% url 'product_finalize' product.ident %}">
+                {% csrf_token %}
+                <input type="hidden" name="expected_scope_digest" value="{{ readiness.scope_digest }}">
+                <button type="submit" class="btn btn-primary btn-qc-primary">Mark product ready</button>
+            </form>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
     {% if product_is_active and product.managed %}
     <section class="workspace-card product-detail__section" aria-labelledby="delivery-plans-title">
         <header class="workspace-card__header">
-            <div><h2 id="delivery-plans-title">Delivery plans</h2><p>An approved plan defines the expected AOIs. Submitted deliveries contribute to fulfilment after a manager approves them.</p></div>
+            <div><h2 id="delivery-plans-title">Delivery plans</h2><p>An approved plan defines the expected product units. Submitted deliveries contribute to fulfilment after a manager approves them.</p></div>
             {% if can_review_submissions %}<a class="btn btn-primary btn-qc-primary" href="{% url 'submission_queue' %}?product={{ product.ident|urlencode }}">Review submissions</a>{% endif %}
         </header>
         <div class="workspace-card__body">
@@ -163,7 +184,7 @@
             <div class="product-detail__subsection" aria-labelledby="product-coverage-title-{{ forloop.counter }}">
                 <div class="product-detail__subheading">
                     <h3 id="product-coverage-title-{{ forloop.counter }}">Delivery coverage</h3>
-                    <p>Progress across the AOIs expected for this release.</p>
+                    <p>Progress across the product units expected for this release.</p>
                 </div>
                 {% if not can_view_coverage %}
                 <div class="product-detail__restricted" role="note">
@@ -173,8 +194,8 @@
                 {% elif release_detail.coverage.expected is not None %}
                 <div class="product-detail__coverage">
                     <dl class="product-detail__metrics product-detail__metrics--coverage">
-                        <div><dt>Expected AOIs</dt><dd>{{ release_detail.coverage.expected }}</dd></div>
-                        <div><dt>Approved AOIs</dt><dd>{{ release_detail.coverage.submitted }}</dd></div>
+                        <div><dt>Expected product units</dt><dd>{{ release_detail.coverage.expected }}</dd></div>
+                        <div><dt>Approved product units</dt><dd>{{ release_detail.coverage.accepted }}</dd></div>
                         <div><dt>Remaining</dt><dd>{{ release_detail.coverage.remaining }}</dd></div>
                         <div><dt>Open conflicts</dt><dd>{{ release_detail.coverage.conflicts }}</dd></div>
                     </dl>
@@ -182,25 +203,25 @@
                         <div><strong>Completion</strong><span>{{ release_detail.coverage.completion_percentage }}%</span></div>
                         <progress max="100" value="{{ release_detail.coverage.completion_percentage }}">{{ release_detail.coverage.completion_percentage }}%</progress>
                     </div>
-                    {% if release_detail.remaining_aois %}
+                    {% if release_detail.remaining_units %}
                     <div class="product-detail__remaining">
-                        <h4>AOIs still requiring an accepted delivery</h4>
-                        <ul aria-label="Remaining AOI codes for {{ release_detail.release.key }}">
-                            {% for aoi_code in release_detail.remaining_aois %}<li><code>{{ aoi_code }}</code></li>{% endfor %}
+                        <h4>product units still requiring an accepted delivery</h4>
+                        <ul aria-label="Remaining product unit codes for {{ release_detail.release.key }}">
+                            {% for product_unit_code in release_detail.remaining_units %}<li><code>{{ product_unit_code }}</code></li>{% endfor %}
                         </ul>
-                        {% if release_detail.remaining_aois_truncated %}<p>Showing the first {{ release_detail.remaining_aois|length }} AOIs.</p>{% endif %}
+                        {% if release_detail.remaining_units_truncated %}<p>Showing the first {{ release_detail.remaining_units|length }} product units.</p>{% endif %}
                     </div>
                     {% elif release_detail.coverage.remaining == 0 %}
-                    <p class="product-detail__complete">All expected AOIs have an accepted delivery.</p>
+                    <p class="product-detail__complete">All expected product units have an accepted delivery.</p>
                     {% endif %}
                 </div>
                 {% elif release_detail.coverage.declared_expected is not None %}
                 <dl class="product-detail__metrics">
-                    <div><dt>Draft AOIs</dt><dd>{{ release_detail.coverage.declared_expected }}</dd></div>
+                    <div><dt>Draft product units</dt><dd>{{ release_detail.coverage.declared_expected }}</dd></div>
                 </dl>
                 <p class="product-detail__empty">The declared scope is a draft. Submitted coverage and completion become available when the release scope is authoritative.</p>
                 {% else %}
-                <p class="product-detail__empty">This release does not yet have an authoritative AOI denominator.</p>
+                <p class="product-detail__empty">This release does not yet have an authoritative product unit denominator.</p>
                 {% endif %}
             </div>
         </section>

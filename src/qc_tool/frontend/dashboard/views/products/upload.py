@@ -44,7 +44,7 @@ def product_upload(request):
                 request,
                 "Product '{}' is available for quality control. {}".format(
                     result.product_ident,
-                    "Its declared AOI scope is ready for review."
+                    "Its declared product unit scope is ready for review."
                     if result.created else "The same specification was already registered.",
                 ),
             )

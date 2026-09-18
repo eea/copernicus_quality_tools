@@ -11,7 +11,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import QcDefinition
 from qc_tool.frontend.dashboard.services.catalog import CatalogError
@@ -61,7 +61,7 @@ class DefinitionDirectoryImportTests(TestCase):
         result = self.sync()
         self.assertEqual(result.catalog.definitions_created, 1)
         self.assertEqual(result.catalog.products_created, 1)
-        self.assertEqual(result.catalog.aois_created, 2)
+        self.assertEqual(result.catalog.product_units_created, 2)
         definition = QcDefinition.objects.get(
             document__steps__0__parameters__reference_year="2024",
         )
@@ -70,7 +70,7 @@ class DefinitionDirectoryImportTests(TestCase):
         self.assertEqual(release.source_kind, "definition")
         self.assertEqual(release.coverage_state, "draft")
         self.assertIsNone(release.approved_at)
-        self.assertEqual(list(release.aois.values_list("aoi_code", flat=True)), ["cz", "sk"])
+        self.assertEqual(list(release.product_units.values_list("product_unit_code", flat=True)), ["cz", "sk"])
         report = list_current_product_coverage()[0]
         self.assertEqual(report["declared_expected"], 2)
         self.assertIsNone(report["expected"])
@@ -97,7 +97,7 @@ class DefinitionDirectoryImportTests(TestCase):
         self.assertEqual(result.catalog.definitions_created, 1)
         self.assertEqual(current.revision, 2)
         self.assertEqual(current.supersedes_id, previous.pk)
-        self.assertEqual(list(previous.aois.values_list("aoi_code", flat=True)), ["cz", "sk"])
+        self.assertEqual(list(previous.product_units.values_list("product_unit_code", flat=True)), ["cz", "sk"])
         old_definition.refresh_from_db()
         self.assertEqual(old_definition.document["steps"][0]["parameters"]["aoi_codes"], ["CZ", "cz", "SK"])
         self.assertFalse(self.sync().changed)
@@ -151,7 +151,7 @@ class DefinitionDirectoryImportTests(TestCase):
         self.assertEqual(result.unknown_scopes, 3)
         for release in ProductRelease.objects.exclude(product__ident="example"):
             self.assertEqual(release.coverage_state, "unknown")
-            self.assertFalse(release.aois.exists())
+            self.assertFalse(release.product_units.exists())
 
     def test_integer_required_flags_are_preserved(self):
         self.write_definition(document={
@@ -229,7 +229,7 @@ class DefinitionDirectoryImportTests(TestCase):
             self.sync()
         self.assertFalse(QcDefinition.objects.exists())
         self.assertFalse(Product.objects.exists())
-        self.assertFalse(ProductAOI.objects.exists())
+        self.assertFalse(ProductUnit.objects.exists())
 
     def test_dry_run_and_check_do_not_persist_records(self):
         self.assertTrue(self.sync(dry_run=True).changed)
@@ -275,7 +275,7 @@ class DefinitionDirectoryImportTests(TestCase):
                 self.assertEqual(current.source_kind, "manifest")
                 self.assertEqual(current.revision, revision)
                 self.assertEqual(current.definition_links.get().qc_definition.digest, definition.digest)
-                self.assertEqual(list(current.aois.values_list("aoi_code", flat=True)), ["cz"])
+                self.assertEqual(list(current.product_units.values_list("product_unit_code", flat=True)), ["cz"])
                 self.assertEqual(current.product.name, "Curated product name")
                 self.assertFalse(self.sync().changed)
 

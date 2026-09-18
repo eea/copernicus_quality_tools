@@ -63,11 +63,11 @@ class AccountAdminConfigurationTests(SimpleTestCase):
         self.assertIn("groups", user_admin.filter_horizontal)
         self.assertIn("user_permissions", user_admin.filter_horizontal)
         self.assertIn(
-            ("region_grants__aoi_code", admin.AllValuesFieldListFilter),
+            ("region_grants__region_code", admin.AllValuesFieldListFilter),
             user_admin.list_filter,
         )
         self.assertIn(
-            "region_grants__aoi_code__exact",
+            "region_grants__region_code__exact",
             user_admin.search_fields,
         )
         self.assertIn(
@@ -573,8 +573,8 @@ class RegionGrantAdminTests(TestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Region grants — exact AOI codes")
-        self.assertContains(response, "AOI catalog PR")
+        self.assertContains(response, "Region grants — exact region codes")
+        self.assertContains(response, "Region codes are stored as opaque")
         self.assertContains(response, "does not grant it")
         self.assertContains(response, "Legacy delivery region")
 
@@ -587,8 +587,8 @@ class RegionGrantAdminTests(TestCase):
                 "user_permissions": [
                     str(permission.pk) for permission in region_permissions
                 ],
-                "region_grants-0-aoi_code": "AOI-ONE",
-                "region_grants-1-aoi_code": "aoi:two/2",
+                "region_grants-0-region_code": "REGION-ONE",
+                "region_grants-1-region_code": "region:two/2",
                 **self.inline_management_data(
                     region_total=2,
                     region_initial=0,
@@ -611,8 +611,8 @@ class RegionGrantAdminTests(TestCase):
             },
         )
         self.assertEqual(
-            list(user.region_grants.values_list("aoi_code", flat=True)),
-            ["AOI-ONE", "aoi:two/2"],
+            list(user.region_grants.values_list("region_code", flat=True)),
+            ["REGION-ONE", "region:two/2"],
         )
         self.assertEqual(
             set(user.region_grants.values_list("created_by_id", flat=True)),
@@ -629,7 +629,7 @@ class RegionGrantAdminTests(TestCase):
         )
         existing = UserRegionGrant.objects.create(
             user=user,
-            aoi_code="AOI-EXISTING",
+            region_code="REGION-EXISTING",
             created_by=user,
         )
         url = reverse("admin:auth_user_change", args=(user.pk,))
@@ -647,8 +647,8 @@ class RegionGrantAdminTests(TestCase):
                     for group in user.groups.filter(name__in=Role.values())
                 ],
                 "region_grants-0-id": str(existing.pk),
-                "region_grants-0-aoi_code": existing.aoi_code,
-                "region_grants-1-aoi_code": "AOI-NEW",
+                "region_grants-0-region_code": existing.region_code,
+                "region_grants-1-region_code": "REGION-NEW",
                 **self.inline_management_data(
                     region_total=2,
                     region_initial=1,
@@ -659,7 +659,7 @@ class RegionGrantAdminTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         existing.refresh_from_db()
-        added = user.region_grants.get(aoi_code="AOI-NEW")
+        added = user.region_grants.get(region_code="REGION-NEW")
         self.assertEqual(existing.created_by_id, user.pk)
         self.assertEqual(added.created_by_id, self.actor.pk)
 
@@ -674,9 +674,9 @@ class RegionGrantAdminTests(TestCase):
         )
         UserRegionGrant.objects.bulk_create(
             [
-                UserRegionGrant(user=first, aoi_code="AOI-20"),
-                UserRegionGrant(user=first, aoi_code="AOI-10"),
-                UserRegionGrant(user=second, aoi_code="AOI-OTHER"),
+                UserRegionGrant(user=first, region_code="REGION-20"),
+                UserRegionGrant(user=first, region_code="REGION-10"),
+                UserRegionGrant(user=second, region_code="REGION-OTHER"),
             ]
         )
         request = RequestFactory().get("/admin/auth/user/")
@@ -685,13 +685,13 @@ class RegionGrantAdminTests(TestCase):
         searched, may_duplicate = self.user_admin.get_search_results(
             request,
             queryset,
-            "AOI-10",
+            "REGION-10",
         )
 
         self.assertEqual(list(searched), [first])
         self.assertTrue(may_duplicate)
         listed = queryset.get(pk=first.pk)
-        self.assertEqual(self.user_admin.region_codes(listed), "AOI-10, AOI-20")
+        self.assertEqual(self.user_admin.region_codes(listed), "REGION-10, REGION-20")
 
 
 class ProductGrantAdminTests(TestCase):

@@ -6,7 +6,7 @@ from django.db.models import F
 from django.utils import timezone
 
 from qc_tool.frontend.dashboard.models import DeliverySubmission
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.models import SubmissionConflictEvent
@@ -33,17 +33,17 @@ def review_submission(
     if decision == SubmissionReviewEvent.Decision.DECLINED and not notes:
         raise SubmissionError("review_reason_required", "Explain why this delivery is declined.", 400)
     try:
-        aoi_id = DeliverySubmission.objects.values_list("product_aoi_id", flat=True).get(pk=submission_id)
+        unit_id = DeliverySubmission.objects.values_list("product_unit_id", flat=True).get(pk=submission_id)
     except (DeliverySubmission.DoesNotExist, ValidationError, ValueError) as exc:
         raise SubmissionError("submission_not_found", "The submission does not exist.", 404) from exc
 
     with transaction.atomic():
         lock_catalog_sync()
-        product_aoi = (
-            ProductAOI.objects.select_for_update(of=("self",))
-            .select_related("product_release__product").get(pk=aoi_id)
+        product_unit = (
+            ProductUnit.objects.select_for_update(of=("self",))
+            .select_related("product_release__product").get(pk=unit_id)
         )
-        require_resolution_scope(account_access, product_aoi)
+        require_resolution_scope(account_access, product_unit)
         submission = DeliverySubmission.objects.select_for_update().get(pk=submission_id)
         _require_current_version(submission, expected_review_version)
         if submission.publication_state != DeliverySubmission.PublicationState.PUBLISHED:
@@ -53,18 +53,18 @@ def review_submission(
         ):
             raise SubmissionError("submission_already_reviewed", "This submission has already been reviewed. Refresh to see the decision.")
         if decision == SubmissionReviewEvent.Decision.APPROVED:
-            require_approvable_product(product_aoi)
+            require_approvable_product(product_unit)
             competing_approval = DeliverySubmission.objects.filter(
-                product_aoi=product_aoi,
+                product_unit=product_unit,
                 publication_state=DeliverySubmission.PublicationState.PUBLISHED,
                 review_state=DeliverySubmission.ReviewState.ACCEPTED,
             ).exclude(pk=submission.pk).exists()
             if competing_approval:
                 raise SubmissionError(
                     "approved_candidate_exists",
-                    "A delivery is already approved for this AOI. Resolve the competing submissions to replace it.",
+                    "A delivery is already approved for this product unit. Resolve the competing submissions to replace it.",
                 )
-            conflict = SubmissionConflict.objects.filter(product_aoi=product_aoi).first()
+            conflict = SubmissionConflict.objects.filter(product_unit=product_unit).first()
             if conflict is not None:
                 from .conflicts.resolution import resolve_submission_conflict
 
@@ -76,12 +76,12 @@ def review_submission(
                 submission.refresh_from_db()
                 return submission
         record_review_decision(submission, decision=decision, actor=actor, notes=notes)
-        _close_reviewed_conflict(product_aoi, actor=actor)
+        _close_reviewed_conflict(product_unit, actor=actor)
         return submission
 
 
-def require_approvable_product(product_aoi):
-    release = product_aoi.product_release
+def require_approvable_product(product_unit):
+    release = product_unit.product_release
     if not release.product.is_active:
         raise SubmissionError("product_archived", "An archived product cannot receive new approvals.")
     if release.coverage_state != ProductRelease.CoverageState.AUTHORITATIVE:
@@ -99,14 +99,14 @@ def _require_current_version(submission, expected_version):
         )
 
 
-def _close_reviewed_conflict(product_aoi, *, actor):
+def _close_reviewed_conflict(product_unit, *, actor):
     conflict = SubmissionConflict.objects.select_for_update().filter(
-        product_aoi=product_aoi, state=SubmissionConflict.State.OPEN,
+        product_unit=product_unit, state=SubmissionConflict.State.OPEN,
     ).first()
     if conflict is None:
         return
     candidates = DeliverySubmission.objects.filter(
-        product_aoi=product_aoi,
+        product_unit=product_unit,
         publication_state=DeliverySubmission.PublicationState.PUBLISHED,
     )
     if candidates.filter(review_state__in=(

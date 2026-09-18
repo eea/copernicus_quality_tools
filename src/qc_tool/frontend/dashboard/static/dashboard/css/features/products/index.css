@@ -62,32 +62,41 @@
   --qc-data-table-header-padding: 14px 24px;
   --qc-data-table-cell-vertical-align: middle;
   --qc-data-table-empty-padding: 48px 20px;
-  --qc-data-table-min-width: 740px;
+  --qc-data-table-min-width: 940px;
 }
 
 .products-page #tbl-products {
-  min-width: 740px;
+  min-width: 940px;
   width: 100%;
   margin: 0;
 }
 
 .products-page #tbl-products .product-name-column {
-  width: 43%;
+  width: 32%;
   min-width: 250px;
 }
 
 .products-page #tbl-products .product-plan-column {
-  width: 16%;
+  width: 14%;
   min-width: 125px;
 }
 
+.products-page #tbl-products .product-readiness-column {
+  width: 16%;
+  min-width: 150px;
+}
+
+.products-page #tbl-products .product-readiness-column .product-table__status {
+  white-space: normal;
+}
+
 .products-page #tbl-products .product-total-column {
-  width: 17%;
+  width: 16%;
   min-width: 145px;
 }
 
 .products-page #tbl-products .product-coverage-column {
-  width: 24%;
+  width: 22%;
   min-width: 190px;
 }
 

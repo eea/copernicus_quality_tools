@@ -102,7 +102,7 @@ class DeliveryListPresentationTests(TestCase):
         for control_id, label in (
             ("delivery-filter-search", "Search deliveries"),
             ("delivery-filter-product", "Product"),
-            ("delivery-filter-aoi", "AOI"),
+            ("delivery-filter-product-unit", "Product unit"),
         ):
             with self.subTest(control_id=control_id):
                 self.assertRegex(
@@ -159,13 +159,13 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn("row.job_result_url", script)
         self.assertNotIn("'/result/' +", script)
 
-        # Untrusted filenames, product names, and AOI values must be assigned as
+        # Untrusted filenames, product names, and product unit values must be assigned as
         # text or escaped by bootstrap-table, never interpolated into HTML.
         self.assertNotIn(".innerHTML", script)
         self.assertNotRegex(script, r"\.html\(\s*(?:row|value)\b")
 
-    def test_product_aoi_only_appears_after_successful_qc(self):
-        """Do not imply that an unavailable or failed AOI was validated."""
+    def test_product_unit_only_appears_after_successful_qc(self):
+        """Do not imply that an unavailable or failed product unit was validated."""
 
         script = self.static_source(
             "dashboard/js/features/deliveries/rows/overview.js"
@@ -175,10 +175,10 @@ class DeliveryListPresentationTests(TestCase):
             'String(row.last_job_status || "").toLowerCase() === "ok"',
             script,
         )
-        self.assertIn("row.aoi_code_submitted || row.aoi_code", script)
-        self.assertIn('text: "AOI: " + aoiCode', script)
-        self.assertNotIn("AOI not available", script)
-        self.assertNotIn("delivery-aoi--empty", script)
+        self.assertIn("row.submitted_product_unit_code || row.product_unit_code", script)
+        self.assertIn('text: "Product unit: " + productUnitCode', script)
+        self.assertNotIn("product unit not available", script)
+        self.assertNotIn("delivery-product-unit--empty", script)
 
     def test_workflow_navigation_keeps_history_secondary_and_actions_grouped(self):
         response = self.client.get(reverse("deliveries"))
@@ -390,7 +390,7 @@ class DeliveryListPresentationTests(TestCase):
         self.assertIn("row.job_result_url", scripts)
         self.assertIn("row.product_description", scripts)
         self.assertIn("row.product_url", scripts)
-        self.assertIn("row.aoi_code", scripts)
+        self.assertIn("row.product_unit_code", scripts)
         self.assertIn("row.product_url", scripts)
         self.assertIn("row.product_display_name", scripts)
         self.assertIn("text: status.label", scripts)

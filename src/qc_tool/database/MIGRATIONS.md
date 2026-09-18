@@ -111,7 +111,7 @@ they must not introduce independent component release procedures.
 | --- | --- |
 | Django `auth`, `contenttypes`, `sessions`, `admin` | Users, groups, permissions, sessions, admin audit history |
 | `accounts` | Profiles, personal API tokens, account capability declarations and product/region grants |
-| `dashboard` domain packages | Catalog releases, AOIs and QC definitions; deliveries, jobs, storage references, submissions and conflict history |
+| `dashboard` domain packages | Catalog releases, product units and QC definitions; deliveries, jobs, storage references, submissions and conflict history |
 | Worker and shared storage | Delivery ZIPs, job artifacts, published submissions and boundary generations; worker scratch PostGIS schemas are disposable job state |
 
 The [application schema](SCHEMA.md) is the table ownership reference. Models
@@ -177,17 +177,19 @@ The import reconciliation must cover:
   do not copy legacy plaintext API credentials or live sessions. Coordinate
   client credential replacement and worker authentication with the target
   `WORK_DIR`.
-- **Catalog and AOIs:** reconcile canonical product identifiers, authoritative
-  releases, expected AOIs and QC-definition snapshots. Observed delivery AOIs
-  must not manufacture authoritative `ProductAOI` rows. Normalize observed
-  identifiers through the current AOI contract.
+- **Catalog and product units:** reconcile canonical product identifiers, authoritative
+  releases, expected product units and QC-definition snapshots. Observed delivery product units
+  must not manufacture authoritative `ProductUnit` rows. Normalize observed
+  identifiers through the current product unit contract, using the explicit
+  legacy adapter for historical AOI fields. Keep geographic normalization out
+  of new opaque product-unit codes.
 - **Deliveries and jobs:** retain ownership and foreign-key relationships,
   timestamps, job state, release/definition provenance, immutable results and
-  checksums. Preserve the distinction between the ZIP's verified AOI and the
+  checksums. Preserve the distinction between the ZIP's verified product unit and the
   latest-job display projection. Do not import an active job as runnable unless
   its execution and boundary-generation dependencies have been reconciled.
 - **Submissions and files:** verify published copies, authorizing jobs, expected
-  and observed AOI snapshots, digests, conflict decisions and audit events.
+  and observed product unit snapshots, digests, conflict decisions and audit events.
   Copy incoming/work/submission storage and boundary generations consistently
   with their database references. Keep unverifiable historical submissions
   fail-closed; do not invent missing provenance or a successful QC result.
@@ -366,7 +368,7 @@ provide a valid reverse operation or explicitly document irreversibility.
 
 Long-running or external-data work belongs in a separately invoked management
 command. Make it bounded, resumable and idempotent, with a dry run and progress
-reporting that excludes secrets. `backfill_aoi_metadata` is the current example
+reporting that excludes secrets. `backfill_product_unit_metadata` is the current example
 for historical job artifacts; `sync_product_catalog` explicitly imports an
 operator-provided catalog. Neither replaces the manual legacy data transfer.
 

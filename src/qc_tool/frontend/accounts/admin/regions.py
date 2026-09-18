@@ -6,18 +6,18 @@ from qc_tool.frontend.accounts.models import UserRegionGrant
 class UserRegionGrantInline(admin.TabularInline):
     model = UserRegionGrant
     fk_name = "user"
-    fields = ("aoi_code", "created_at", "created_by")
+    fields = ("region_code", "created_at", "created_by")
     readonly_fields = ("created_at", "created_by")
     extra = 1
     verbose_name = "Region grant"
-    verbose_name_plural = "Region grants — exact AOI codes"
+    verbose_name_plural = "Region grants — exact region codes"
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         field = super().formfield_for_dbfield(db_field, request, **kwargs)
-        if db_field.name == "aoi_code":
-            field.label = "Exact AOI code"
+        if db_field.name == "region_code":
+            field.label = "Exact region code"
             field.help_text = (
-                "Pending the AOI catalog PR, codes are stored as opaque "
+                "Region codes are stored as opaque "
                 "identifiers without validation or normalization. A region "
                 "grant scopes access but does not grant it; assign the needed "
                 "Additional QC permissions separately."

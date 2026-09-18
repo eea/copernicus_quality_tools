@@ -27,15 +27,15 @@ def _current_releases(*, release_ids, include_inactive):
         ProductRelease.objects.filter(is_current=True)
         .select_related("product")
         .annotate(
-            expected_count=Count("aois", distinct=True),
-            submitted_count=Count(
-                "aois",
+            expected_count=Count("product_units", distinct=True),
+            accepted_count=Count(
+                "product_units",
                 filter=(
                     Q(
-                        aois__submissions__publication_state=(
+                        product_units__submissions__publication_state=(
                             DeliverySubmission.PublicationState.PUBLISHED
                         ),
-                        aois__submissions__review_state=(
+                        product_units__submissions__review_state=(
                             DeliverySubmission.ReviewState.ACCEPTED
                         ),
                     )
@@ -43,9 +43,9 @@ def _current_releases(*, release_ids, include_inactive):
                 distinct=True,
             ),
             conflict_count=Count(
-                "aois",
+                "product_units",
                 filter=Q(
-                    aois__submission_conflict__state=(
+                    product_units__submission_conflict__state=(
                         SubmissionConflict.State.OPEN
                     )
                 ),
@@ -86,7 +86,7 @@ def _row(release):
         )
         else None
     )
-    submitted = release.submitted_count if authoritative else None
+    accepted = release.accepted_count if authoritative else None
     conflicts = release.conflict_count if authoritative else None
     return {
         "release_id": release.pk,
@@ -98,18 +98,18 @@ def _row(release):
         "coverage_state": release.coverage_state,
         "declared_expected": declared_expected,
         "expected": expected,
-        "submitted": submitted,
+        "accepted": accepted,
         "conflicts": conflicts,
-        "remaining": expected - submitted if authoritative else None,
+        "remaining": expected - accepted if authoritative else None,
         "completion_percentage": _completion(
             expected,
-            submitted,
+            accepted,
             authoritative=authoritative,
         ),
     }
 
 
-def _completion(expected, submitted, *, authoritative):
+def _completion(expected, accepted, *, authoritative):
     if not authoritative:
         return None
-    return round((submitted / expected) * 100, 2) if expected else 0.0
+    return round((accepted / expected) * 100, 2) if expected else 0.0

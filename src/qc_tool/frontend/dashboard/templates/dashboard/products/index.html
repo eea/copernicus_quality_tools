@@ -40,13 +40,13 @@
     </div>
     {% elif product_catalog %}
     <div class="products-catalog__guide">
-        <p><strong>Expected AOIs</strong> are required delivery areas. <strong>Accepted coverage</strong> counts areas with an accepted submission.</p>
+        <p><strong>Required product units</strong> come from the approved delivery plan. <strong>Accepted coverage</strong> counts units with an accepted delivery. A manager must confirm final readiness.</p>
         <details class="products-catalog__help">
             <summary>How to read this table</summary>
             <dl>
-                <div><dt>Delivery plan</dt><dd>Draft plans need approval. “Not defined” means the specification does not provide a finite list of expected areas of interest (AOIs).</dd></div>
-                <div><dt>Expected AOIs</dt><dd>The number of areas required by the plan. Draft numbers are provisional. For products with several release plans, an area required in two plans counts twice.</dd></div>
-                <div><dt>Accepted coverage</dt><dd>Areas with a published, accepted delivery out of the approved total. Repeat uploads do not increase coverage. Percentages appear when every release plan is approved; unresolved conflicts are excluded.</dd></div>
+                <div><dt>Delivery plan</dt><dd>Draft plans need approval. “Not defined” means the specification does not provide a finite list of required product units.</dd></div>
+                <div><dt>Required product units</dt><dd>The number of units required by the plan. Draft numbers are provisional. For products with several release plans, a unit required in two plans counts twice.</dd></div>
+                <div><dt>Accepted coverage</dt><dd>Units with a published, accepted delivery out of the approved total. Repeat uploads do not increase coverage. Percentages appear when every release plan is approved; a competing upload does not revoke an accepted delivery.</dd></div>
             </dl>
         </details>
     </div>
@@ -55,12 +55,13 @@
 
     <div class="products-table-region qc-data-table-region">
         <table id="tbl-products" class="table qc-data-table" aria-describedby="products-table-description" data-pagination="true" data-side-pagination="client" data-sort-name="description" data-sort-order="asc">
-            <caption class="sr-only">Product specifications, delivery plan status, expected areas of interest and accepted coverage</caption>
+            <caption class="sr-only">Product specifications, delivery plan status, required product units and accepted coverage</caption>
             <thead>
                 <tr>
                     <th class="product-name-column" data-class="product-name-column" data-field="description" data-sortable="true" data-sorter="productTextSorter" scope="col">Product</th>
                     <th class="product-plan-column" data-class="product-plan-column" data-field="plan_status" data-sortable="true" data-sorter="productTextSorter" scope="col">Delivery plan</th>
-                    <th class="product-total-column" data-class="product-total-column" data-field="declared_expected" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Expected AOIs</th>
+                    <th class="product-readiness-column" data-class="product-readiness-column" data-field="readiness" data-sortable="true" data-sorter="productTextSorter" scope="col">Readiness</th>
+                    <th class="product-total-column" data-class="product-total-column" data-field="declared_expected" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Required product units</th>
                     <th class="product-coverage-column" data-class="product-coverage-column" data-field="completion_percentage" data-sortable="true" data-sorter="productMetricSorter" data-searchable="false" scope="col">Accepted coverage</th>
                 </tr>
             </thead>
@@ -75,20 +76,21 @@
                         </div>
                     </td>
                     <td><span class="product-table__status product-table__status--{{ product.plan_status }}" title="{{ product.plan_hint }}">{{ product.plan_label }}</span></td>
+                    <td>{% if product.readiness %}<span class="product-table__status{% if product.readiness.is_ready %} product-table__status--approved{% endif %}" title="{{ product.readiness.message }}">{{ product.readiness.label }}</span>{% else %}<span class="product-table__missing">—</span>{% endif %}</td>
                     <td>
                         {% if product.declared_expected is not None %}
                         <span class="product-table__metric">{{ product.declared_expected|unlocalize }}</span>
                         {% else %}
-                        <span class="product-table__missing" aria-label="Expected AOIs unavailable">—</span>
+                        <span class="product-table__missing" aria-label="Required product units unavailable">—</span>
                         {% endif %}
                         <span class="product-table__hint">{{ product.expected_hint }}</span>
                     </td>
                     <td>
                         {% if product.expected %}
                         <div class="product-table__coverage">
-                            <span class="product-table__fraction"><strong>{{ product.submitted|unlocalize }}</strong> / {{ product.expected|unlocalize }} <span>AOIs</span></span>
+                            <span class="product-table__fraction"><strong>{{ product.accepted|unlocalize }}</strong> / {{ product.expected|unlocalize }} <span>product units</span></span>
                             <span class="product-table__percentage">{{ product.completion_percentage|floatformat:"-2" }}%</span>
-                            <progress max="100" value="{{ product.completion_percentage|unlocalize }}" aria-label="{{ product.submitted }} of {{ product.expected }} expected AOIs have an accepted submission for {{ product.description }}"></progress>
+                            <progress max="100" value="{{ product.completion_percentage|unlocalize }}" aria-label="{{ product.accepted }} of {{ product.expected }} expected product units have an accepted submission for {{ product.description }}"></progress>
                         </div>
                         {% else %}
                         <span class="product-table__pending">{{ product.progress_hint }}</span>
@@ -108,7 +110,7 @@
         <a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">View active products</a>
         {% else %}
         <strong>Add your first product</strong>
-        <p>{% if account_access.is_administrator %}Upload a JSON specification to define its quality checks and delivery areas.{% else %}An administrator can upload a product specification to get started.{% endif %}</p>
+        <p>{% if account_access.is_administrator %}Upload a JSON specification to define its quality checks and required product units.{% else %}An administrator can upload a product specification to get started.{% endif %}</p>
         {% endif %}
     </div>
     {% endif %}

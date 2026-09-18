@@ -146,7 +146,7 @@ allocates a hidden successor. A private journal records both identities and
 inodes. The archive is replaced atomically, then the successor is activated in
 a second transaction. This order ensures old QC cannot authorize replacement
 bytes after a process interruption. The replacement starts without QC results
-or submitted AOI state. The old QC history and original ZIP are retained; the
+or submitted product unit state. The old QC history and original ZIP are retained; the
 ZIP is a private `.previous` hard link in the upload's staging directory.
 
 Ordinary caught failures restore the original when the successor has not

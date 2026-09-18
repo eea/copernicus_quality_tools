@@ -1,4 +1,4 @@
-"""Append-only duplicate-AOI decision history."""
+"""Append-only duplicate-product unit decision history."""
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -25,6 +25,7 @@ class SubmissionConflictEvent(models.Model):
         SubmissionConflict,
         on_delete=models.PROTECT,
         related_name="events",
+        db_index=False,  # Covered by pub_conflict_event_version_uniq.
     )
     version = models.PositiveIntegerField()
     event_type = models.CharField(max_length=10, choices=EventType.choices)
@@ -52,6 +53,14 @@ class SubmissionConflictEvent(models.Model):
         base_manager_name = "objects"
         ordering = ("conflict_id", "version", "created_at", "pk")
         constraints = (
+            models.CheckConstraint(
+                condition=models.Q(event_type__in=("opened", "reopened", "resolved", "dismissed", "candidate")),
+                name="pub_conflict_event_type_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gt=0),
+                name="pub_conflict_event_version_gt0",
+            ),
             models.UniqueConstraint(
                 fields=("conflict", "version", "event_type"),
                 name="pub_conflict_event_version_uniq",

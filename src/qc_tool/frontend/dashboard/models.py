@@ -6,7 +6,7 @@ the accounts app through :mod:`qc_tool.frontend.accounts.models`.
 """
 
 from qc_tool.frontend.dashboard.domain.catalog import Product
-from qc_tool.frontend.dashboard.domain.catalog import ProductAOI
+from qc_tool.frontend.dashboard.domain.catalog import ProductUnit
 from qc_tool.frontend.dashboard.domain.catalog import ProductRelease
 from qc_tool.frontend.dashboard.domain.catalog import ProductReleaseDefinition
 from qc_tool.frontend.dashboard.domain.catalog import QcDefinition
@@ -26,7 +26,7 @@ __all__ = (
     "DeliverySubmission",
     "Job",
     "Product",
-    "ProductAOI",
+    "ProductUnit",
     "ProductRelease",
     "ProductReleaseDefinition",
     "QcDefinition",

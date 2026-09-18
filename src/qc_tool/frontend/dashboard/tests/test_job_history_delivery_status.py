@@ -16,7 +16,7 @@ from qc_tool.frontend.accounts.authorization.permissions import AccountPermissio
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
 from qc_tool.frontend.dashboard.models import (
-    Delivery, DeliverySubmission, Job, Product, ProductAOI, ProductRelease,
+    Delivery, DeliverySubmission, Job, Product, ProductUnit, ProductRelease,
 )
 from qc_tool.frontend.dashboard.services.jobs.presentation import job_history_delivery_summary
 
@@ -38,8 +38,8 @@ class JobHistoryDeliveryStatusTests(TestCase):
             product=cls.product, release_key="history-v1", revision=1,
             catalog_digest="c" * 64, is_current=True,
         )
-        cls.aoi = ProductAOI.objects.create(
-            product_release=cls.release, aoi_code="CZ", provenance="manifest",
+        cls.aoi = ProductUnit.objects.create(
+            product_release=cls.release, product_unit_code="CZ", provenance="manifest",
         )
 
     def setUp(self):
@@ -64,7 +64,7 @@ class JobHistoryDeliveryStatusTests(TestCase):
     def create_submission(self, job, *, review_state="pending", publication_state="published"):
         return DeliverySubmission.objects.create(
             delivery=job.delivery, job=job, product_release=self.release,
-            product_aoi=self.aoi, aoi_code="CZ", aoi_code_submitted="CZ",
+            product_unit=self.aoi, product_unit_code="CZ", submitted_product_unit_code="CZ",
             submitted_by=self.owner, submitted_by_username=self.owner.username,
             request_channel="browser", review_state=review_state,
             publication_state=publication_state,
@@ -155,7 +155,7 @@ class JobHistoryDeliveryStatusTests(TestCase):
         self.delivery.save(update_fields=("date_submitted",))
         viewer = get_user_model().objects.create_user(username="history-state-region-viewer")
         UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=viewer, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=viewer, region_code="CZ")
         viewer.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))
@@ -216,8 +216,8 @@ class JobHistoryDeliveryStatusTests(TestCase):
         self.assertEqual(response.json()["delivery_summary"]["action"]["label"], "Run QC")
 
     @patch(
-        "qc_tool.frontend.dashboard.services.aoi.lifecycle.load_aoi_result_document",
-        return_value={"aoi_code": "CZ", "status": "ok"},
+        "qc_tool.frontend.dashboard.services.product_units.lifecycle.load_product_unit_result_document",
+        return_value={"product_unit_code": "CZ", "status": "ok"},
     )
     @patch(
         "qc_tool.frontend.dashboard.views.jobs.history.check_running_job",
@@ -237,7 +237,7 @@ class JobHistoryDeliveryStatusTests(TestCase):
         self.assertEqual(payload["rows"][0]["job_status"], JOB_OK)
         self.assertEqual(payload["delivery_summary"]["status"]["label"], "Validated")
         self.assertEqual(payload["delivery_summary"]["description"], "Fresh QC product description")
-        self.assertEqual(payload["delivery_summary"]["facts"][-1], {"label": "Expected AOI", "value": "cz"})
+        self.assertEqual(payload["delivery_summary"]["facts"][-1], {"label": "Reported product unit", "value": "cz"})
         self.assertIsNone(payload["delivery_summary"]["action"])
         self.assertEqual(check_job.call_args.args[0], str(job.pk))
 

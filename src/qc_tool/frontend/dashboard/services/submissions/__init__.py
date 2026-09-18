@@ -1,6 +1,6 @@
 """Public delivery-submission application service."""
 
-from .conflicts import can_resolve_product_aoi
+from .conflicts import can_resolve_product_unit
 from .conflicts import resolve_submission_conflict
 from .contracts import ConflictResolutionResult
 from .contracts import PublicationReceipt
@@ -16,7 +16,7 @@ __all__ = [
     "PublicationReceipt",
     "SubmissionError",
     "SubmissionResult",
-    "can_resolve_product_aoi",
+    "can_resolve_product_unit",
     "resolve_submission_conflict",
     "review_submission",
     "submit_delivery",

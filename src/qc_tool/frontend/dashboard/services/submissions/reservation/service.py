@@ -12,7 +12,7 @@ from .eligibility import catalog_target
 from .eligibility import latest_successful_job
 from .eligibility import validate_delivery
 from .eligibility import validated_input_digest
-from .eligibility import validated_submitted_aoi
+from .eligibility import validated_submitted_product_unit
 from .mapping import actor_username
 from .mapping import reserved_contract
 
@@ -48,19 +48,19 @@ def reserve_submission(
     validate_delivery(delivery, request_channel=request_channel)
     latest_job = latest_successful_job(delivery)
     _require_submission_product(account_access, latest_job, latest_job.product_release)
-    submitted_aoi = validated_submitted_aoi(delivery, latest_job)
+    submitted_unit = validated_submitted_product_unit(delivery, latest_job)
     input_digest = validated_input_digest(latest_job)
-    release, product_aoi = catalog_target(latest_job, submitted_aoi)
+    release, product_unit = catalog_target(latest_job, submitted_unit)
     _require_submission_product(account_access, latest_job, release)
-    _persist_delivery_identity(delivery, submitted_aoi)
+    _persist_delivery_identity(delivery, submitted_unit)
 
     submission = DeliverySubmission.objects.create(
         delivery=delivery,
         job=latest_job,
         product_release=release,
-        product_aoi=product_aoi,
-        aoi_code=product_aoi.aoi_code,
-        aoi_code_submitted=submitted_aoi,
+        product_unit=product_unit,
+        product_unit_code=product_unit.product_unit_code,
+        submitted_product_unit_code=submitted_unit,
         submitted_by=actor if getattr(actor, "pk", None) else None,
         submitted_by_username=actor_username(actor),
         request_channel=request_channel,
@@ -103,14 +103,14 @@ def _existing_submission(delivery):
             "delivery__user",
             "job",
             "product_release",
-            "product_aoi",
+            "product_unit",
         )
         .filter(delivery=delivery)
         .first()
     )
 
 
-def _persist_delivery_identity(delivery, submitted_aoi):
-    if delivery.aoi_code_submitted != submitted_aoi:
-        delivery.aoi_code_submitted = submitted_aoi
-        delivery.save(update_fields=("aoi_code_submitted",))
+def _persist_delivery_identity(delivery, submitted_unit):
+    if delivery.submitted_product_unit_code != submitted_unit:
+        delivery.submitted_product_unit_code = submitted_unit
+        delivery.save(update_fields=("submitted_product_unit_code",))

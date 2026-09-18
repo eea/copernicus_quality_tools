@@ -41,15 +41,30 @@ def publication_layout(reserved, *, submission_root):
         reserved.product_release_id,
         _safe_component(reserved.release_key),
     )
-    aoi_component = "aoi-{}-{}".format(
-        reserved.product_aoi_id,
-        _safe_component(reserved.aoi_code),
+    unit_component = "product-unit-{}-{}".format(
+        reserved.product_unit_id,
+        _safe_component(reserved.product_unit_code),
     )
-    parent = _ensure_owned_directories(root, release_component, aoi_component)
     identifier = str(reserved.submission_uuid)
+    final_name = "submission-{}.d".format(identifier)
+    legacy_component = "aoi-{}-{}".format(reserved.product_unit_id, _safe_component(reserved.product_unit_code))
+    legacy_final = root / release_component / legacy_component / final_name
+    current_final = root / release_component / unit_component / final_name
+    recorded_path = getattr(reserved, "artifact_path", "")
+    if recorded_path:
+        recorded = Path(recorded_path)
+        if recorded not in (legacy_final, current_final):
+            raise PublicationError("publication_path_conflict", "The stored publication path does not match this submission.", 409)
+        if recorded == legacy_final:
+            unit_component = legacy_component
+    elif legacy_final.exists() or legacy_final.is_symlink():
+        # Recover an old atomic rename whose database receipt was interrupted.
+        # Its exact versioned manifest is checked before it can be adopted.
+        unit_component = legacy_component
+    parent = _ensure_owned_directories(root, release_component, unit_component)
     return PublicationLayout(
         root=root,
-        final_directory=parent / "submission-{}.d".format(identifier),
+        final_directory=parent / final_name,
         staging_directory=parent / ".submission-{}.pending".format(identifier),
     )
 

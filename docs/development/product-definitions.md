@@ -9,7 +9,7 @@ nav_order: 4
 Author executable recipes as reviewed JSON files. Manage product versions through
 the administrator upload page, or import a reviewed directory inventory. Both
 store immutable documents in PostgreSQL to query parameters and report product coverage.
-Keep the operational delivery plan explicit: a naming check's accepted AOIs
+Keep the operational delivery plan explicit: a naming check's accepted product units
 do not necessarily describe the deliverables that must be submitted.
 
 ## Sources and responsibilities
@@ -23,11 +23,11 @@ do not necessarily describe the deliverables that must be submitted.
 | `catalog_definition_revision.digest` | SHA-256 of the original file bytes, identifying that revision |
 | `catalog_product` and `catalog_release_revision` | Product identity and active status, dated revision history, scope ownership and selected release scope |
 | `catalog_release_definition` | Exact definition revisions belonging to each release |
-| `catalog_release_aoi` | Normalized, deduplicated AOIs for a release's declared or approved scope |
+| `catalog_product_unit` | Normalized, deduplicated product units for a release's declared or approved scope |
 | Reviewed catalog manifest | Business grouping and authoritative expected-delivery plan |
 
 The document stays flexible because different QC checks need different
-parameters. Relationships, identities and coverage AOIs are relational so they
+parameters. Relationships, identities and coverage product units are relational so they
 can be constrained and aggregated. Do not split arbitrary check parameters into
 generic key/value tables or edit imported snapshots directly in pgAdmin.
 [Django's JSONField](https://docs.djangoproject.com/en/5.2/ref/models/fields/#jsonfield)
@@ -41,6 +41,22 @@ equivalent exponent and expanded numeric values do not create false collisions.
 Keep the reviewed source commit with deployment evidence. The stored
 `source_path` is import provenance; moving an identical file does not create a
 different definition or require that path to exist when querying the database.
+
+## Declare required product units
+
+Use an explicit top-level list in the product specification:
+
+```json
+"product_units": ["unit-001", "unit-002", "unit-003"]
+```
+
+This member belongs alongside `description` and `steps` in the complete JSON
+specification. Codes are case-insensitive, trimmed identifiers; numeric padding
+and suffixes are preserved. The list creates a draft scope for administrator
+approval. If finite geographic naming rules also exist, the declared units must
+be supported by them. Legacy naming checks keep `parameters.aoi_codes` unchanged;
+the import adapter translates their geographic identifiers into product units.
+A required unit is always tied to one immutable release revision.
 
 ## Add or update a product in the browser
 
@@ -56,7 +72,7 @@ different definition or require that path to exist when querying the database.
 3. After success, use **View product** to inspect its dated version history.
    The product is also available in the QC product selector. Run a
    representative delivery through its checks before assigning it to users.
-4. Review the declared AOIs and use the [delivery-plan procedure](#approve-a-delivery-plan)
+4. Review the declared product units and use the [delivery-plan procedure](#approve-a-delivery-plan)
    when its expected deliverables are ready for approval. Uploading a recipe
    creates a draft or unknown scope; it does not approve final submissions.
 
@@ -67,7 +83,7 @@ or digit, followed by `.json`. `list` and `upload` are reserved. The limit is
 least one QC step, and have no duplicate keys or non-finite numbers. Each step
 must name an installed `qc_tool.raster.*` or `qc_tool.vector.*` check and declare
 `required` as a Boolean; existing numeric `0`/`1` flags are accepted too.
-Parameters and naming AOIs pass the same catalog validation as directory imports.
+Parameters and naming product units pass the same catalog validation as directory imports.
 Validation checks the specification structure; use representative QC fixtures to
 verify that its check parameters implement the intended product rules.
 
@@ -85,7 +101,7 @@ source SHA-256 digest are recorded in Django's admin log.
 The browser workflow supports a product with one release stream and one matching
 definition. Products grouping several specifications or release streams require
 the [reviewed catalog manifest](#approve-a-delivery-plan) workflow. Uploading a
-changed recipe derives a fresh draft or unknown AOI scope; it does not carry an
+changed recipe derives a fresh draft or unknown product unit scope; it does not carry an
 older scope's business approval forward. Upload and removal operations are
 blocked while the specification has queued or running QC jobs. Let those jobs
 finish before trying again.
@@ -102,7 +118,7 @@ Directory synchronization does not reactivate a removed product.
 Find it under **Removed products**, open its detail page, and select
 **Restore product** to upload a specification with the same filename. Restoration
 creates a new release revision, reactivates the product and selects the uploaded
-bytes for future QC. Review its AOI plan again before approving submissions.
+bytes for future QC. Review its product unit plan again before approving submissions.
 Grouped products and products with queued or running jobs follow the same
 restrictions as version uploads.
 
@@ -178,12 +194,12 @@ transaction and the same PostgreSQL catalog advisory lock as
 1. Stores each new definition revision without changing older documents.
 2. Creates a business product for each canonical filename stem, with a default
    release stream named `definition:<ident>`.
-3. Projects a consistent, finite, nonempty naming AOI list into a `draft` scope.
+3. Projects a consistent, finite, nonempty naming product unit list into a `draft` scope.
    Missing, wildcard or empty lists produce `unknown` coverage. Invalid codes
    or naming checks that disagree require correction.
 4. Creates a higher revision when an automatically managed scope changes.
    A reviewed manifest's current scope is preserved; importing a changed recipe
-   does not silently replace curated release definitions or approved AOIs.
+   does not silently replace curated release definitions or approved product units.
 5. Retains previous revisions and records whose source files have been removed.
 
 `ProductRelease.source_kind` distinguishes directory-managed (`definition`),
@@ -203,8 +219,8 @@ history and release details. Search by name or identifier, or filter by delivery
 plan status. **Export CSV** exports the filtered rows. Administrators can upload
 specifications and switch between **Active products** and **Removed products**.
 
-**Expected AOIs** shows the required areas of interest, with provisional values
-identified as such. **Accepted coverage** shows accepted, published areas out of
+**Required product units** shows the required product units, with provisional values
+identified as such. **Accepted coverage** shows accepted, published units out of
 the approved total, rather than the number of uploaded files. Draft, undefined
 and mixed plans explain why coverage cannot yet be calculated. Restricted
 coverage stays hidden, including its plan status. **How to read this table**
@@ -212,15 +228,15 @@ explains the counting rules on the page.
 
 | Scope | What the report means |
 | --- | --- |
-| Draft scope | Declared AOI count is available for planning; authoritative expected/completed counts are unavailable |
-| Authoritative scope | Expected AOIs are approved; submitted, conflicting, remaining and completion figures can be calculated |
+| Draft scope | Declared product unit count is available for planning; authoritative expected/completed counts are unavailable |
+| Authoritative scope | Required product units are approved; accepted, conflicting, remaining and completion figures can be calculated |
 | Unknown scope | No finite denominator is available; unavailable counts remain null |
 
-`declared_expected` counts AOIs in draft or authoritative scopes. It does not
+`declared_expected` counts product units in draft or authoritative scopes. It does not
 authorize submission. If a product has multiple current release streams, the
 product totals combine their scopes; an unknown stream prevents a complete
 product denominator. The report counts expected delivery slots across releases,
-so the same AOI in two distinct releases represents two slots.
+so the same product unit in two distinct releases represents two slots.
 
 Active product reports omit products with `is_active = false`. Their detail and
 version history remain available to authorized users for historical review.
@@ -247,20 +263,20 @@ approve either a plan or a delivery.
 1. Open **Products**, select the product name, and choose **Set up delivery
    plan** in its **Delivery plans** card. An already approved plan has an
    **Update delivery plan** action instead.
-2. Enter the expected AOI codes, one per line or separated by commas. Imported
+2. Enter the expected product unit codes, one per line or separated by commas. Imported
    finite scopes are prefilled. Select the actual contracted delivery areas;
    permitted naming alternatives are not necessarily additional deliverables.
-   Every listed AOI must be supported by a linked specification. Wildcard
-   specifications still need an explicit expected AOI list for progress reports.
+   Every listed product unit must be supported by a linked specification. Wildcard
+   specifications still need an explicit expected product unit list for progress reports.
 3. Select the product managers responsible for the product. Accounts must have
    the `product_manager` role before they appear here; use **Admin panel →
    Users** to assign that role. Assignments apply to the whole product, including
    its release streams. Administrators can review even without assigned managers.
 4. Confirm the plan and select **Approve and activate plan**. Its status becomes
-   **Open for submissions**. The product page shows expected and approved AOIs,
+   **Open for submissions**. The product page shows expected and approved product units,
    and assigned managers can open **Review submissions**.
 
-Changing the AOI set creates an immutable plan revision. Submissions and
+Changing the product unit set creates an immutable plan revision. Submissions and
 approvals remain attached to their original revision and do not automatically
 fulfil the new plan. Review this consequence before changing an active scope.
 Changing only the assigned managers preserves the current plan and progress.
@@ -268,7 +284,7 @@ A stale form is rejected; reopen the current plan before retrying.
 
 A QC job run before plan approval can be submitted against the current plan
 when that plan still contains the exact specification used by the job and the
-verified AOI. A changed specification requires a new QC run. Historical QC jobs
+verified product unit. A changed specification requires a new QC run. Historical QC jobs
 and submission receipts retain their original references.
 
 ### Submit, review and follow up
@@ -282,7 +298,7 @@ and submission receipts retain their original references.
 1. The user uploads a ZIP through **Deliveries → Upload delivery**, selects its
    product specification and runs QC. Once it passes, choose **Submit for
    review** on the delivery row. The product must have an approved plan, and the
-   verified AOI must belong to it. Submission storage must be configured by the
+   verified product unit must belong to it. Submission storage must be configured by the
    deployment operator.
 2. QC Tool stores the ZIP and QC evidence, then marks the receipt **Awaiting
    review**. This does not yet count towards product fulfilment. The delivery's
@@ -292,7 +308,7 @@ and submission receipts retain their original references.
    product/owner access and compare their checksums with the stored receipt.
    Use **Approve submission** or **Decline submission**. A decline requires
    feedback describing what the uploader should correct.
-4. Approval counts the AOI once for that plan. If there are competing
+4. Approval counts the product unit once for that plan. If there are competing
    submissions, explicitly choose **Approve this and decline competing
    submissions** and explain the selection. A previous approved delivery keeps
    contributing until a reviewer replaces it. Concurrent decisions invalidate
@@ -303,11 +319,24 @@ and submission receipts retain their original references.
    review decisions remain retained, including after product removal or worker
    scratch cleanup.
 
+### Confirm the product is ready
+
+After all required units have accepted deliveries, open the product detail
+page and select **Mark product ready**. This final action requires an assigned
+product manager or administrator. Full accepted coverage alone leaves the
+product awaiting confirmation. All current release streams must have approved,
+nonempty plans; the action checks the whole product, not only visible rows.
+
+The product records who confirmed it and when. Changing its current plan,
+reversing or replacing a relevant acceptance, or archiving the product clears
+readiness. Review the changed product and confirm again after its requirements
+are fulfilled. Stale confirmation forms cannot finalize a changed scope.
+
 ### Maintain a reviewed catalog manifest
 
 Keep the catalog manifest in version control with its review evidence. It can
 group multiple definitions under one business product and explicitly list its
-expected AOIs. Preserve the product identifier used for authorization grants;
+expected product units. Preserve the product identifier used for authorization grants;
 changing business grouping also requires reviewing the granted report scope.
 
 To replace an imported scope, use the same `definition:<ident>` release key and
@@ -321,7 +350,7 @@ WHERE release_key = 'definition:clc2024'
 ORDER BY revision DESC;
 ```
 
-This illustrative manifest approves only the `CZ` delivery. Replace its AOI list,
+This illustrative manifest approves only the `CZ` delivery. Replace its product unit list,
 description and revision with the reviewed plan; revision `2` applies only when
 the highest existing revision is `1`:
 
@@ -339,14 +368,14 @@ the highest existing revision is `1`:
       "is_current": true,
       "definition_idents": ["clc2024"],
       "primary_definition": "clc2024",
-      "coverage": {"state": "authoritative", "aoi_codes": ["CZ"]}
+      "coverage": {"state": "authoritative", "product_unit_codes": ["CZ"]}
     }]
   }]
 }
 ```
 
-Use `coverage.source_definition` instead of `aoi_codes` only when the entire
-finite naming list has been reviewed as the delivery plan. The two AOI sources
+Use `coverage.source_definition` instead of `product_unit_codes` only when the entire
+finite naming list has been reviewed as the delivery plan. The two product unit sources
 are mutually exclusive. A separate release key represents an additional stream,
 so it can add another denominator rather than superseding the imported scope.
 
@@ -423,8 +452,8 @@ use a JSONPath such as `$.steps[*].parameters.boundary_source` with the `@?`
 operator. Do not assume all check families use the same parameter names or units.
 See [PostgreSQL JSON functions and operators](https://www.postgresql.org/docs/14/functions-json.html).
 
-For product totals, aggregate normalized AOIs instead of expanding raw JSON
-arrays. This preserves unknown/draft semantics and avoids multiplying AOI counts
+For product totals, aggregate normalized product units instead of expanding raw JSON
+arrays. This preserves unknown/draft semantics and avoids multiplying product unit counts
 by a release's number of linked definitions:
 
 ```sql
@@ -436,7 +465,7 @@ SELECT p.ident,
             THEN count(a.id) END AS expected
 FROM catalog_product AS p
 JOIN catalog_release_revision AS r ON r.product_id = p.id AND r.is_current
-LEFT JOIN catalog_release_aoi AS a ON a.product_release_id = r.id
+LEFT JOIN catalog_product_unit AS a ON a.product_release_id = r.id
 WHERE p.is_active
 GROUP BY p.id, p.ident
 ORDER BY p.ident;
@@ -454,7 +483,7 @@ adding either through the central schema workflow.
 
 ## Deploy and maintain
 
-1. Review recipes, expected AOIs, check implementation and representative QC
+1. Review recipes, expected product units, check implementation and representative QC
    fixtures together. Record the source commit and matched frontend/worker
    images in the [release record](../../src/qc_tool/database/RELEASE_TEMPLATE.md).
 2. Before replacing executable files, stop accepting new QC requests and drain

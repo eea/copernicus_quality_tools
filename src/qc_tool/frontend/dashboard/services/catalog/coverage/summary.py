@@ -6,7 +6,7 @@ from django.db.models import OuterRef
 from django.db.models import Q
 
 from qc_tool.frontend.dashboard.models import DeliverySubmission
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 
@@ -22,30 +22,30 @@ def get_product_coverage(product_release):
             release_id=release.pk,
             coverage_state=release.coverage_state,
             expected=None,
-            submitted=None,
+            accepted=None,
             conflicts=None,
             remaining=None,
             completion_percentage=None,
         )
 
     published = DeliverySubmission.objects.filter(
-        product_aoi_id=OuterRef("pk"),
+        product_unit_id=OuterRef("pk"),
         publication_state=DeliverySubmission.PublicationState.PUBLISHED,
         review_state=DeliverySubmission.ReviewState.ACCEPTED,
     )
     open_conflict = SubmissionConflict.objects.filter(
-        product_aoi_id=OuterRef("pk"),
+        product_unit_id=OuterRef("pk"),
         state=SubmissionConflict.State.OPEN,
     )
     counts = (
-        ProductAOI.objects.filter(product_release=release)
+        ProductUnit.objects.filter(product_release=release)
         .annotate(
             has_published=Exists(published),
             has_open_conflict=Exists(open_conflict),
         )
         .aggregate(
             expected=Count("pk"),
-            submitted=Count(
+            accepted=Count(
                 "pk",
                 filter=Q(has_published=True),
             ),
@@ -53,17 +53,17 @@ def get_product_coverage(product_release):
         )
     )
     expected = counts["expected"]
-    submitted = counts["submitted"]
+    accepted = counts["accepted"]
     conflicts = counts["conflicts"]
     return ProductCoverage(
         release_id=release.pk,
         coverage_state=release.coverage_state,
         expected=expected,
-        submitted=submitted,
+        accepted=accepted,
         conflicts=conflicts,
-        remaining=expected - submitted,
+        remaining=expected - accepted,
         completion_percentage=(
-            round((submitted / expected) * 100, 2) if expected else 0.0
+            round((accepted / expected) * 100, 2) if expected else 0.0
         ),
     )
 

@@ -1,4 +1,4 @@
-"""Import executable JSON snapshots and draft AOI scopes explicitly."""
+"""Import executable JSON snapshots and draft product unit scopes explicitly."""
 
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
@@ -10,7 +10,7 @@ from qc_tool.frontend.dashboard.services.catalog.errors import CatalogError
 
 
 class Command(BaseCommand):
-    help = "Store definition JSON revisions and declared AOI scopes for product reporting."
+    help = "Store definition JSON revisions and declared product unit scopes for product reporting."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -41,7 +41,7 @@ class Command(BaseCommand):
         catalog = result.catalog
         self.stdout.write(
             "{}: definitions={}, new_revisions={}, products_created={}, "
-            "products_updated={}, releases_created={}, aois_created={}, "
+            "products_updated={}, releases_created={}, product_units_created={}, "
             "current_changes={}, managed_scopes_retained={}, "
             "unknown_scopes={}.".format(
                 "Import preview" if options["dry_run"] or options["check"] else "Definitions synchronized",
@@ -50,7 +50,7 @@ class Command(BaseCommand):
                 catalog.products_created,
                 catalog.products_updated,
                 catalog.releases_created,
-                catalog.aois_created,
+                catalog.product_units_created,
                 catalog.current_pointers_changed,
                 result.managed_definitions,
                 result.unknown_scopes,

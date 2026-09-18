@@ -6,10 +6,10 @@ from django.core.management import call_command
 from django.test import SimpleTestCase
 
 
-class AoiBackfillCommandTests(SimpleTestCase):
+class ProductUnitBackfillCommandTests(SimpleTestCase):
     @patch(
         "qc_tool.frontend.dashboard.management.commands."
-        "backfill_aoi_metadata.backfill_aoi_metadata"
+        "backfill_product_unit_metadata.backfill_product_unit_metadata"
     )
     def test_dry_run_distinguishes_candidates_from_database_updates(
         self,
@@ -26,7 +26,7 @@ class AoiBackfillCommandTests(SimpleTestCase):
         output = StringIO()
 
         call_command(
-            "backfill_aoi_metadata",
+            "backfill_product_unit_metadata",
             "--dry-run",
             "--limit=4",
             stdout=output,

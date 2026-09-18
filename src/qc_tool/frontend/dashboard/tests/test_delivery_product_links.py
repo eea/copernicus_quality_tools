@@ -13,7 +13,7 @@ from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
 from qc_tool.frontend.dashboard.models import (
-    Delivery, DeliverySubmission, Job, Product, ProductAOI,
+    Delivery, DeliverySubmission, Job, Product, ProductUnit,
     ProductRelease, ProductReleaseDefinition, QcDefinition,
 )
 from qc_tool.frontend.dashboard.services.deliveries.listing import query_deliveries
@@ -67,12 +67,12 @@ class DeliveryProductLinkTests(TestCase):
         )
 
     def create_submission(self, delivery, job):
-        aoi = ProductAOI.objects.create(
-            product_release=job.product_release, aoi_code="CZ", provenance="manifest",
+        aoi = ProductUnit.objects.create(
+            product_release=job.product_release, product_unit_code="CZ", provenance="manifest",
         )
         return DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=job.product_release,
-            product_aoi=aoi, aoi_code="CZ", aoi_code_submitted="CZ",
+            product_unit=aoi, product_unit_code="CZ", submitted_product_unit_code="CZ",
             submitted_by=delivery.user, submitted_by_username=delivery.user.username,
             request_channel="browser",
         )
@@ -185,7 +185,7 @@ class DeliveryProductLinkTests(TestCase):
         self.create_job(delivery, self.second)
         viewer = get_user_model().objects.create_user(username="product-link-region-viewer")
         UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=viewer, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=viewer, region_code="CZ")
         viewer.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))

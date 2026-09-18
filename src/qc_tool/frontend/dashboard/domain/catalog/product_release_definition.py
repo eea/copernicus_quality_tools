@@ -14,6 +14,7 @@ class ProductReleaseDefinition(models.Model):
         ProductRelease,
         on_delete=models.PROTECT,
         related_name="definition_links",
+        db_index=False,  # Covered by catalog_release_def_uniq.
     )
     qc_definition = models.ForeignKey(
         QcDefinition,

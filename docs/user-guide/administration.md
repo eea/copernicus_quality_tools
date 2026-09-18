@@ -92,17 +92,26 @@ to use newly assigned products; revocations also restrict existing tokens.
 If definitions are unavailable, Admin fails closed: existing unavailable
 values remain visible/deletable, while new or changed grants are rejected.
 
+## Product readiness
+
+The administrator approves the required product units in the delivery plan.
+Assigned product managers review the users’ deliveries. When every required
+unit has an accepted delivery, an assigned manager or administrator opens the
+product and selects **Mark product ready**. Full coverage alone does not perform
+this final action. Changes to the scope or acceptance decisions clear readiness
+so the revised product must be confirmed again.
+
 ## Region grants
 
-Region grants currently store exact opaque AOI codes and do not normalize or
+Region grants currently store exact opaque region codes and do not normalize or
 validate against a catalogue. Each value is unique per user. Assign the related
 Additional QC permission separately.
 
 The delivery-side region value is still resolved from the uploader's legacy
-profile country. Jobs and deliveries now record canonical AOI reporting
+profile country. Jobs and deliveries now record canonical product unit reporting
 metadata, but it is not an authorization fact until every supported product
 has authoritative spatial validation. See
-[AOI metadata](../architecture/aoi-metadata.md) for that trust boundary.
+[Product unit metadata](../architecture/product-unit-metadata.md) for that trust boundary.
 
 ## Deactivate instead of delete
 

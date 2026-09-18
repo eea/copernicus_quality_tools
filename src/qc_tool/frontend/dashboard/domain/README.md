@@ -12,9 +12,9 @@ and persistence boundaries. Account models belong to `accounts.models`.
 - `deliveries/` owns the one-ZIP upload aggregate.
 - `jobs/` owns persisted QC history, provenance, and the worker queue seam.
 - `catalog/` owns products, immutable QC-definition snapshots, versioned
-  releases, explicit definition links, and authoritative expected AOIs.
+  releases, explicit definition links, and authoritative expected product units.
 - `submissions/` owns publication records and the current plus historical
-  state of duplicate-AOI decisions.
+  state of duplicate-product unit decisions.
 
 Each model concept has its own module. Package `__init__.py` files are the
 public import boundary; application code should import models from

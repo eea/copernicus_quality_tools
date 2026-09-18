@@ -277,11 +277,11 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self.assertContains(response, escape(unsafe_description))
         self.assertNotContains(response, unsafe_description)
         self.assertContains(response, 'id="tbl-products"')
-        self.assertContains(response, 'scope="col"', count=4)
+        self.assertContains(response, 'scope="col"', count=5)
         for field, label in (
             ("description", "Product"),
             ("plan_status", "Delivery plan"),
-            ("declared_expected", "Expected AOIs"),
+            ("declared_expected", "Required product units"),
             ("completion_percentage", "Accepted coverage"),
         ):
             with self.subTest(field=field):
@@ -299,7 +299,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
             ({"value": "undefined", "label": "Not defined", "count": 2},),
         )
         self.assertContains(response, "Not defined")
-        self.assertContains(response, "Define expected AOIs")
+        self.assertContains(response, "Define expected product units")
         self.assertNotContains(response, "Not available")
         self.assertNotContains(response, "API documentation")
         self.assertNotContains(response, reverse("api_homepage") + "#products")
@@ -552,7 +552,7 @@ class DeliveryWorkspacePresentationTests(TestCase):
         table_end = document.find("</table>", table.end())
         self.assertNotEqual(table_end, -1)
         self.assertIn(
-            '<caption class="sr-only">Deliveries with product and AOI context, '
+            '<caption class="sr-only">Deliveries with product and product unit context, '
             "upload details, QC and review status, job history, and available actions</caption>",
             document[table.end() : table_end],
         )

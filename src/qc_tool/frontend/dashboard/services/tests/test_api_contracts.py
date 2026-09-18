@@ -214,7 +214,7 @@ class JobSerializationTests(SimpleTestCase):
             job_status="ok",
             product_ident="product",
             product_description="Product",
-            aoi_code="ee003l",
+            product_unit_code="ee003l",
             skip_steps=None,
             worker_url="http://worker.internal:8000/",
         )
@@ -222,7 +222,7 @@ class JobSerializationTests(SimpleTestCase):
         serialized = serialize_job_history([job])[0]
 
         self.assertNotIn("worker_url", serialized)
-        self.assertEqual(serialized["aoi_code"], "ee003l")
+        self.assertEqual(serialized["product_unit_code"], "ee003l")
         self.assertEqual(
             serialized["job_uuid"],
             "00000000-0000-0000-0000-000000000001",

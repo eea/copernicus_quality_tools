@@ -8,13 +8,13 @@ from django.db import models
 from django.db import router
 from django.db import transaction
 
-from qc_tool.aoi import AOI_CODE_MAX_LENGTH
+from qc_tool.product_units import PRODUCT_UNIT_CODE_MAX_LENGTH
 
 from .retention import SubmissionQuerySet
 
 
 class DeliverySubmission(models.Model):
-    """Immutable association between an upload, its successful job, and AOI."""
+    """Immutable association between an upload, its successful job, and product unit."""
 
     objects = SubmissionQuerySet.as_manager()
 
@@ -54,15 +54,17 @@ class DeliverySubmission(models.Model):
         "dashboard.ProductRelease",
         on_delete=models.PROTECT,
         related_name="submissions",
+        db_index=False,  # Covered by pub_submission_release_idx.
     )
-    product_aoi = models.ForeignKey(
-        "dashboard.ProductAOI",
+    product_unit = models.ForeignKey(
+        "dashboard.ProductUnit",
         on_delete=models.PROTECT,
         related_name="submissions",
+        db_index=False,  # Covered by pub_submission_unit_state_idx.
     )
-    aoi_code = models.CharField(max_length=AOI_CODE_MAX_LENGTH, editable=False)
-    aoi_code_submitted = models.CharField(
-        max_length=AOI_CODE_MAX_LENGTH,
+    product_unit_code = models.CharField(max_length=PRODUCT_UNIT_CODE_MAX_LENGTH, editable=False)
+    submitted_product_unit_code = models.CharField(
+        max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         editable=False,
     )
     submitted_by = models.ForeignKey(
@@ -115,13 +117,30 @@ class DeliverySubmission(models.Model):
         base_manager_name = "objects"
         ordering = ("-requested_at", "submission_uuid")
         constraints = (
-            models.CheckConstraint(
-                condition=~models.Q(aoi_code=""),
-                name="pub_submission_aoi_not_empty",
+            models.UniqueConstraint(
+                fields=("product_unit",),
+                condition=models.Q(publication_state="published", review_state="accepted"),
+                name="pub_unit_accepted_uniq",
             ),
             models.CheckConstraint(
-                condition=~models.Q(aoi_code_submitted=""),
-                name="pub_submission_zip_aoi_present",
+                condition=models.Q(publication_state__in=("pending", "publishing", "published", "failed")),
+                name="pub_submission_state_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(review_state__in=("pending", "accepted", "conflict", "rejected")),
+                name="pub_submission_review_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(request_channel__in=("browser", "api", "legacy")),
+                name="pub_submission_channel_valid",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(product_unit_code=""),
+                name="pub_submission_unit_not_empty",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(submitted_product_unit_code=""),
+                name="pub_submission_zip_unit_present",
             ),
             models.CheckConstraint(
                 condition=(
@@ -138,8 +157,8 @@ class DeliverySubmission(models.Model):
         )
         indexes = (
             models.Index(
-                fields=("product_aoi", "publication_state", "review_state"),
-                name="pub_submission_aoi_state_idx",
+                fields=("product_unit", "publication_state", "review_state"),
+                name="pub_submission_unit_state_idx",
             ),
             models.Index(
                 fields=("product_release", "publication_state"),
@@ -149,16 +168,16 @@ class DeliverySubmission(models.Model):
 
     def clean(self):
         super().clean()
-        if not self.product_aoi_id:
+        if not self.product_unit_id:
             return
-        expected_release_id = self.product_aoi.product_release_id
+        expected_release_id = self.product_unit.product_release_id
         if self.product_release_id != expected_release_id:
             raise ValidationError(
-                {"product_aoi": "The AOI does not belong to this product release."}
+                {"product_unit": "The product unit does not belong to this product release."}
             )
-        if self.aoi_code != self.product_aoi.aoi_code:
+        if self.product_unit_code != self.product_unit.product_unit_code:
             raise ValidationError(
-                {"aoi_code": "Expected AOI snapshot differs from the catalog."}
+                {"product_unit_code": "Expected product unit snapshot differs from the catalog."}
             )
 
     def save(self, *args, **kwargs):
@@ -179,9 +198,9 @@ class DeliverySubmission(models.Model):
             delivery_id=self.delivery_id,
             job_id=self.job_id,
             product_release_id=self.product_release_id,
-            product_aoi_id=self.product_aoi_id,
-            aoi_code=self.aoi_code,
-            aoi_code_submitted=self.aoi_code_submitted,
+            product_unit_id=self.product_unit_id,
+            product_unit_code=self.product_unit_code,
+            submitted_product_unit_code=self.submitted_product_unit_code,
             submitted_by_id=self.submitted_by_id,
             submitted_by_username=self.submitted_by_username,
             request_channel=self.request_channel,
@@ -207,6 +226,6 @@ class DeliverySubmission(models.Model):
     def __str__(self):
         return "{} / {} / {}".format(
             self.product_release.release_key,
-            self.aoi_code,
+            self.product_unit_code,
             self.submission_uuid,
         )

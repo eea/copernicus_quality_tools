@@ -29,14 +29,14 @@ classifies rows in this order:
 
 Success is deliberately allow-listed. A future or legacy worker state therefore
 appears under **Failed** rather than silently disappearing. Filter counts apply
-the user's access scope plus the current search, product, and AOI filters before
+the user's access scope plus the current search, product, and product unit filters before
 the selected status filter.
 
 ## Request and presentation flow
 
 ```mermaid
 flowchart LR
-    UI[Status, search, product, AOI controls]
+    UI[Status, search, product, product unit controls]
     JSON[Session JSON endpoint]
     Access[Visible-delivery policy]
     Query[Latest-job list query]
@@ -81,7 +81,7 @@ dashboard/static/dashboard/css/pages/deliveries/
 ```
 
 The template keeps stable IDs used by the table and action modules. Untrusted
-filenames, product descriptions, AOI codes, usernames, and server messages are
+filenames, product descriptions, product unit codes, usernames, and server messages are
 inserted through text APIs rather than HTML interpolation.
 
 ## Action rules

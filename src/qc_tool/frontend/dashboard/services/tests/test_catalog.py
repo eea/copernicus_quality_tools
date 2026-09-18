@@ -10,7 +10,7 @@ from django.test import TestCase
 from django.template.loader import render_to_string
 
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import QcDefinition
 from qc_tool.frontend.dashboard.services.catalog import CatalogError
@@ -96,13 +96,13 @@ class ProductCatalogSynchronizationTests(TestCase):
         ):
             return load_catalog_manifest(path)
 
-    def test_manifest_normalizes_and_deduplicates_expected_aois(self):
+    def test_manifest_normalizes_and_deduplicates_required_units(self):
         snapshot = self.load(self.write_manifest())
 
         release = snapshot.releases[0]
         self.assertEqual(release.product_ident, "test_definition")
-        self.assertEqual(release.aoi_codes, ("ee001l", "ee002l"))
-        self.assertEqual(release.aoi_provenance, "definition")
+        self.assertEqual(release.product_unit_codes, ("ee001l", "ee002l"))
+        self.assertEqual(release.product_unit_provenance, "definition")
 
     def test_sync_is_idempotent_and_creates_immutable_rows(self):
         snapshot = self.load(self.write_manifest())
@@ -116,7 +116,7 @@ class ProductCatalogSynchronizationTests(TestCase):
         self.assertEqual(QcDefinition.objects.count(), 1)
         self.assertEqual(ProductRelease.objects.count(), 1)
         self.assertEqual(
-            list(ProductAOI.objects.values_list("aoi_code", flat=True)),
+            list(ProductUnit.objects.values_list("product_unit_code", flat=True)),
             ["ee001l", "ee002l"],
         )
 
@@ -144,13 +144,13 @@ class ProductCatalogSynchronizationTests(TestCase):
         )
 
         self.assertEqual(rows[0]["expected"], 2)
-        self.assertEqual(rows[0]["submitted"], 0)
+        self.assertEqual(rows[0]["accepted"], 0)
         self.assertIn('id="tbl-products"', rendered)
-        self.assertIn("Expected AOIs", rendered)
+        self.assertIn("Required product units", rendered)
         self.assertIn("Accepted coverage", rendered)
         self.assertIn('value="0.0"', rendered)
         self.assertIn('class="product-table__percentage">0%</span>', rendered)
-        self.assertIn('aria-label="0 of 2 expected AOIs', rendered)
+        self.assertIn('aria-label="0 of 2 expected product units', rendered)
 
     def test_changed_content_requires_a_higher_release_revision(self):
         first = self.load(self.write_manifest(revision=1))
@@ -288,7 +288,7 @@ class ProductCatalogSynchronizationTests(TestCase):
             self.write_manifest(source_definition="TEST_DEFINITION")
         )
 
-        self.assertEqual(snapshot.releases[0].aoi_provenance, "definition")
+        self.assertEqual(snapshot.releases[0].product_unit_provenance, "definition")
 
     def test_manifest_rejects_unsafe_coverage_source_identifiers(self):
         unsafe_idents = (

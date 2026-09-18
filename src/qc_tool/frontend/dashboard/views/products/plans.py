@@ -24,7 +24,7 @@ def product_plan_edit(request, product_ident, release_id):
         initial={
             "expected_release_id": release.pk,
             "expected_manager_digest": manager_assignment_digest(assigned_ids),
-            "aoi_codes": "\n".join(release.aois.values_list("aoi_code", flat=True)),
+            "product_unit_codes": "\n".join(release.product_units.values_list("product_unit_code", flat=True)),
             "product_managers": sorted(assigned_ids),
         },
     )
@@ -34,19 +34,19 @@ def product_plan_edit(request, product_ident, release_id):
                 product_ident, release_id,
                 expected_release_id=form.cleaned_data["expected_release_id"],
                 expected_manager_digest=form.cleaned_data["expected_manager_digest"],
-                aoi_codes=form.cleaned_data["aoi_codes"],
+                product_unit_codes=form.cleaned_data["product_unit_codes"],
                 product_managers=form.cleaned_data["product_managers"],
                 actor=request.user,
             )
         except CatalogError as exc:
             form.add_error(None, exc.message)
         else:
-            messages.success(request, "Delivery plan saved: {} expected AOIs. Users can submit successful QC deliveries for review.".format(approved.aois.count()))
+            messages.success(request, "Delivery plan saved: {} expected product units. Users can submit successful QC deliveries for review.".format(approved.product_units.count()))
             return redirect("product_detail", product_ident=product_ident)
     return render(request, "dashboard/products/plan.html", {
         "product": release.product,
         "release": release,
         "form": form,
-        "expected_aoi_count": release.aois.count(),
+        "required_unit_count": release.product_units.count(),
         "manager_count": form.fields["product_managers"].queryset.count(),
     })

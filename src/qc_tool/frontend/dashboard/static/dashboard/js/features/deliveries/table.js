@@ -35,7 +35,7 @@
         }
         if (allowedStatuses.indexOf(status) < 0 ||
             (status !== "all" && workflows[view].statuses.indexOf(status) < 0)) status = "all";
-        return {view: view, deliveryStatus: status, search: "", product: "", aoi: ""};
+        return {view: view, deliveryStatus: status, search: "", product: "", productUnit: ""};
     }
 
     function currentFilter() {
@@ -43,8 +43,8 @@
         if (state.product) {
             filter.product_description = state.product;
         }
-        if (state.aoi) {
-            filter.aoi_code = state.aoi;
+        if (state.productUnit) {
+            filter.product_unit_code = state.productUnit;
         }
         return filter;
     }
@@ -162,11 +162,11 @@
     }
 
     function filtersActive() {
-        return state.deliveryStatus !== "all" || Boolean(state.search || state.product || state.aoi);
+        return state.deliveryStatus !== "all" || Boolean(state.search || state.product || state.productUnit);
     }
 
     function updateClearButton() {
-        var extra = Number(Boolean(state.product)) + Number(Boolean(state.aoi)) + Number(state.deliveryStatus !== "all");
+        var extra = Number(Boolean(state.product)) + Number(Boolean(state.productUnit)) + Number(state.deliveryStatus !== "all");
         filters.update({active: filtersActive(), count: extra});
     }
 
@@ -227,8 +227,8 @@
         state.deliveryStatus = "all";
         state.search = "";
         state.product = "";
-        state.aoi = "";
-        $("#delivery-filter-search, #delivery-filter-aoi").val("");
+        state.productUnit = "";
+        $("#delivery-filter-search, #delivery-filter-product-unit").val("");
         $("#delivery-filter-product").val("");
         updateStatusControls();
         updateViewPresentation();
@@ -264,8 +264,8 @@
             updateClearButton();
             refresh();
         });
-        $("#delivery-filter-aoi").on("input", function () {
-            scheduleInputFilter("aoi", String($(this).val() || "").trim());
+        $("#delivery-filter-product-unit").on("input", function () {
+            scheduleInputFilter("productUnit", String($(this).val() || "").trim());
         });
 
     }

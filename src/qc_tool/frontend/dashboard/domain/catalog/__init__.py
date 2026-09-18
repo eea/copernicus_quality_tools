@@ -6,14 +6,14 @@ large model module.
 """
 
 from .product import Product
-from .product_aoi import ProductAOI
+from .product_unit import ProductUnit
 from .product_release import ProductRelease
 from .product_release_definition import ProductReleaseDefinition
 from .qc_definition import QcDefinition
 
 __all__ = (
     "Product",
-    "ProductAOI",
+    "ProductUnit",
     "ProductRelease",
     "ProductReleaseDefinition",
     "QcDefinition",

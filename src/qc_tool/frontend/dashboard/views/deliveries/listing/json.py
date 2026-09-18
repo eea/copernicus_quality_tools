@@ -60,7 +60,7 @@ def get_deliveries_json(request):
         account_access,
         search=parameters.search,
         product_description=filter_mapping.get("product_description"),
-        aoi_code=filter_mapping.get("aoi_code"),
+        product_unit_code=filter_mapping.get("product_unit_code"),
     )
     return JsonResponse(
         {

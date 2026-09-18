@@ -14,6 +14,8 @@ from qc_tool.frontend.dashboard.services.catalog import (
     list_current_product_coverage,
 )
 from qc_tool.frontend.dashboard.services.products.lookup import managed_catalog_exists
+from qc_tool.frontend.dashboard.models import Product
+from qc_tool.frontend.dashboard.services.catalog.readiness import product_readiness_many
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +39,18 @@ def render_product_catalog(request, *, fallback_catalog):
         {**product, **_plan_presentation(product, managed=catalog_managed)}
         for product in product_catalog
         if account_access.can_browse_product(product["ident"])
+    )
+    visible_products = Product.objects.filter(ident__in=(
+        product["ident"] for product in product_catalog if product["can_view_coverage"]
+    ))
+    visible_products = tuple(visible_products)
+    readiness_by_id = product_readiness_many(visible_products)
+    readiness_by_ident = {
+        product.ident: readiness_by_id[product.pk] for product in visible_products
+    }
+    product_catalog = tuple(
+        {**product, "readiness": readiness_by_ident.get(product["ident"])}
+        for product in product_catalog
     )
     plan_filters = tuple(
         {"value": status, "label": label, "count": count}
@@ -89,12 +103,12 @@ def _plan_presentation(product, *, managed):
     presentation = {
         "approved": (
             "Approved",
-            "The expected areas of interest are approved for delivery.",
+            "The required product units are approved for delivery.",
             "Approved scope",
             (
                 "Accepted submissions against the approved plan"
                 if product.get("expected")
-                else "No AOIs in the approved plan"
+                else "No product units in the approved plan"
             ),
         ),
         "draft": (
@@ -106,8 +120,8 @@ def _plan_presentation(product, *, managed):
         "undefined": (
             "Not defined",
             "An expected delivery scope has not been defined.",
-            "AOIs not specified",
-            "Define expected AOIs",
+            "product units not specified",
+            "Define expected product units",
         ),
         "mixed": (
             "Mixed plans",
@@ -158,7 +172,7 @@ def workspace_product_catalog(load_descriptions):
                 "can_view_coverage": False,
                 "declared_expected": None,
                 "expected": None,
-                "submitted": None,
+                "accepted": None,
                 "completion_percentage": None,
             }
             for product_ident, description in sorted(
@@ -187,7 +201,7 @@ def _scope_coverage(product_catalog, account_access):
             for field in (
                 "declared_expected",
                 "expected",
-                "submitted",
+                "accepted",
                 "conflicts",
                 "remaining",
                 "completion_percentage",
@@ -232,7 +246,7 @@ def _aggregate_coverage(releases, can_view_coverage):
     unavailable = {
         "declared_expected": None,
         "expected": None,
-        "submitted": None,
+        "accepted": None,
         "conflicts": None,
         "remaining": None,
         "completion_percentage": None,
@@ -245,21 +259,21 @@ def _aggregate_coverage(releases, can_view_coverage):
         )
     if any(
         release.get("expected") is None
-        or release.get("submitted") is None
+        or release.get("accepted") is None
         for release in releases
     ):
         return unavailable
 
     expected = sum(release["expected"] for release in releases)
-    submitted = sum(release["submitted"] for release in releases)
+    accepted = sum(release["accepted"] for release in releases)
     conflicts = sum(release.get("conflicts") or 0 for release in releases)
     return {
         "declared_expected": unavailable["declared_expected"],
         "expected": expected,
-        "submitted": submitted,
+        "accepted": accepted,
         "conflicts": conflicts,
-        "remaining": expected - submitted,
+        "remaining": expected - accepted,
         "completion_percentage": (
-            round((submitted / expected) * 100, 2) if expected else 0.0
+            round((accepted / expected) * 100, 2) if expected else 0.0
         ),
     }

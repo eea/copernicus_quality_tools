@@ -18,29 +18,29 @@ def validate_existing_release(release, snapshot, *, product):
                 snapshot.revision,
             ),
         )
-    _validate_aoi_records(release, snapshot)
+    _validate_product_unit_records(release, snapshot)
     _validate_definition_links(release, snapshot)
 
 
-def _validate_aoi_records(release, snapshot):
+def _validate_product_unit_records(release, snapshot):
     stored = set(
-        release.aois.values_list(
-            "aoi_code",
+        release.product_units.values_list(
+            "product_unit_code",
             "source_value",
             "provenance",
         )
     )
     expected = {
-        (aoi_code, source_value, snapshot.aoi_provenance)
-        for aoi_code, source_value in zip(
-            snapshot.aoi_codes,
-            snapshot.aoi_source_values,
+        (product_unit_code, source_value, snapshot.product_unit_provenance)
+        for product_unit_code, source_value in zip(
+            snapshot.product_unit_codes,
+            snapshot.product_unit_source_values,
         )
     }
     if stored != expected:
         raise CatalogError(
-            "release_aoi_drift",
-            "Stored AOIs differ from the immutable release snapshot.",
+            "release_product_unit_drift",
+            "Stored product units differ from the immutable release snapshot.",
         )
 
 

@@ -8,7 +8,7 @@ from .product import Product
 
 
 class ProductRelease(models.Model):
-    """Immutable revision of the business scope whose coverage reaches 100%."""
+    """Immutable revision of required units and executable specifications."""
 
     class CoverageState(models.TextChoices):
         UNKNOWN = "unknown", "Coverage unknown"
@@ -25,6 +25,7 @@ class ProductRelease(models.Model):
         Product,
         on_delete=models.PROTECT,
         related_name="releases",
+        db_index=False,  # Covered by catalog_release_coverage_idx.
     )
     release_key = models.CharField(max_length=100)
     revision = models.PositiveIntegerField()
@@ -63,6 +64,21 @@ class ProductRelease(models.Model):
         db_table = "catalog_release_revision"
         ordering = ("release_key", "-revision")
         constraints = (
+            models.CheckConstraint(
+                condition=models.Q(coverage_state__in=("unknown", "draft", "authoritative", "retired")),
+                name="catalog_release_state_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(source_kind__in=("definition", "manifest", "upload")),
+                name="catalog_release_source_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(coverage_state="authoritative")
+                    | models.Q(approved_at__isnull=False)
+                ),
+                name="catalog_release_approved",
+            ),
             models.CheckConstraint(
                 condition=~models.Q(release_key=""),
                 name="catalog_release_key_present",

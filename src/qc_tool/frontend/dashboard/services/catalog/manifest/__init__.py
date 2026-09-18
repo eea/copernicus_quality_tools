@@ -2,7 +2,7 @@
 
 from qc_tool.common import locate_product_definition
 
-from .constants import MAX_AOIS_PER_RELEASE
+from .constants import MAX_PRODUCT_UNITS_PER_RELEASE
 from .constants import MAX_MANIFEST_BYTES
 from .constants import MAX_RELEASES
 from .constants import NAMING_CHECK_SUFFIXES
@@ -38,7 +38,7 @@ def load_catalog_manifest(path, *, maximum_bytes=MAX_MANIFEST_BYTES):
 
 
 __all__ = [
-    "MAX_AOIS_PER_RELEASE",
+    "MAX_PRODUCT_UNITS_PER_RELEASE",
     "MAX_MANIFEST_BYTES",
     "MAX_RELEASES",
     "NAMING_CHECK_SUFFIXES",

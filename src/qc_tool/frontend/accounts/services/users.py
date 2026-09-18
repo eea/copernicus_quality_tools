@@ -60,12 +60,12 @@ def provision_user(
             defaults={"country": country},
         )
 
-    for aoi_code in dict.fromkeys(region_codes):
-        if not isinstance(aoi_code, str) or not aoi_code:
-            raise ValueError("Region grants require a non-empty AOI code.")
+    for region_code in dict.fromkeys(region_codes):
+        if not isinstance(region_code, str) or not region_code:
+            raise ValueError("Region grants require a non-empty region code.")
         UserRegionGrant.objects.get_or_create(
             user=user,
-            aoi_code=aoi_code,
+            region_code=region_code,
         )
 
     for role in sorted(roles, key=lambda item: item.value):

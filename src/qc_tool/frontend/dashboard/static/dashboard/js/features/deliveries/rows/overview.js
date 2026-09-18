@@ -37,13 +37,13 @@
         var description = String(
             row.product_display_name || row.product_description || value || "Product not identified"
         );
-        var aoiCode = "";
+        var productUnitCode = "";
         var $product = $("<div>", {"class": "delivery-product"});
         var $link;
 
         if (String(row.last_job_status || "").toLowerCase() === "ok") {
-            aoiCode = String(
-                row.aoi_code_submitted || row.aoi_code || ""
+            productUnitCode = String(
+                row.submitted_product_unit_code || row.product_unit_code || ""
             );
         }
 
@@ -55,10 +55,10 @@
             $link.attr({href: String(row.product_url), "aria-label": "View product details for " + description});
         }
         $link.appendTo($product);
-        if (aoiCode) {
+        if (productUnitCode) {
             $("<span>", {
-                "class": "delivery-aoi",
-                text: "AOI: " + aoiCode
+                "class": "delivery-product-unit",
+                text: "Product unit: " + productUnitCode
             }).appendTo($product);
         }
         return html($product);

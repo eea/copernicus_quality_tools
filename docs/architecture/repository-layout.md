@@ -25,7 +25,8 @@ copernicus_quality_tools/
 │   │   ├── urls.py           # Root URL composition
 │   │   └── wsgi.py           # Gunicorn/Django entrypoint
 │   ├── worker/               # Queue polling and job execution adapters
-│   ├── aoi/                  # Shared canonical AOI identifier contract
+│   ├── product_units.py      # Canonical product-unit identifiers and legacy adapters
+│   ├── aoi/                  # Legacy geographic identifier contract
 │   ├── worker_auth/          # Shared WorkerToken header contract
 │   ├── archive_security/     # Bounded no-traversal ZIP extraction
 │   ├── product_security/     # Safe product identifier/definition loading
@@ -73,7 +74,7 @@ frontend/dashboard/
 ├── domain/            # Catalog, delivery, job, storage and publication models
 ├── services/
 │   ├── api/           # Stable JSON request handling
-│   ├── aoi/           # AOI persistence, projection, artifact backfill
+│   ├── product_units/ # Product unit persistence, projection, artifact backfill
 │   ├── artifacts/     # Confined downloads and attachments
 │   ├── boundaries/    # Validated immutable boundary generations
 │   ├── configuration/ # Announcement/configuration use cases
@@ -134,7 +135,7 @@ The worker's scheduler, dispatcher, job contracts, and S3 materialization are
 under `src/qc_tool/worker/`. Reusable trust-boundary behavior is intentionally
 outside raster/vector QC modules:
 
-- `aoi/` normalizes external AOI aliases without product dependencies;
+- `product_units.py` normalizes business identifiers and adapts legacy AOI metadata;
 - `archive_security/` validates resource limits and paths before extraction;
 - `product_security/` validates product identifiers and definition files;
 - `s3_security/` canonicalizes and allowlists exact HTTPS origins;

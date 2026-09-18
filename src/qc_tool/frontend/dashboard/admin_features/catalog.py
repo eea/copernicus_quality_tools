@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
 from qc_tool.frontend.dashboard.models import QcDefinition
@@ -117,16 +117,16 @@ class ProductReleaseDefinitionAdmin(ScopedCatalogHistoryAdmin):
         return (obj.qc_definition.product_ident,)
 
 
-@admin.register(ProductAOI)
-class ProductAOIAdmin(ScopedCatalogHistoryAdmin):
+@admin.register(ProductUnit)
+class ProductUnitAdmin(ScopedCatalogHistoryAdmin):
     list_display = (
-        "aoi_code",
+        "product_unit_code",
         "product_release",
         "provenance",
         "created_at",
     )
-    search_fields = ("aoi_code", "product_release__release_key")
-    readonly_fields = tuple(field.name for field in ProductAOI._meta.fields)
+    search_fields = ("product_unit_code", "product_release__release_key")
+    readonly_fields = tuple(field.name for field in ProductUnit._meta.fields)
 
     def get_queryset(self, request):
         return release_scope(
@@ -137,5 +137,5 @@ class ProductAOIAdmin(ScopedCatalogHistoryAdmin):
             prefix="product_release__",
         )
 
-    def _product_aoi_for_object(self, obj):
+    def _product_unit_for_object(self, obj):
         return obj

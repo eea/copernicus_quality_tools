@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.services.submissions import (
-    can_resolve_product_aoi,
+    can_resolve_product_unit,
 )
 
 
@@ -24,9 +24,9 @@ class ScopedCatalogHistoryAdmin(admin.ModelAdmin):
             return False
         if obj is None:
             return True
-        product_aoi = self._product_aoi_for_object(obj)
-        if product_aoi is not None:
-            return can_resolve_product_aoi(access, product_aoi)
+        product_unit = self._product_unit_for_object(obj)
+        if product_unit is not None:
+            return can_resolve_product_unit(access, product_unit)
         product_idents = self._product_idents_for_object(obj)
         return bool(
             {value.casefold() for value in access.product_idents}
@@ -42,7 +42,7 @@ class ScopedCatalogHistoryAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
-    def _product_aoi_for_object(self, _obj):
+    def _product_unit_for_object(self, _obj):
         return None
 
     def _product_idents_for_object(self, _obj):

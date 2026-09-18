@@ -1,15 +1,15 @@
-"""Bounded stable pages of AOIs still needing an accepted candidate."""
+"""Bounded stable pages of product units still needing an accepted candidate."""
 
 from django.db.models import Exists
 from django.db.models import OuterRef
 
 from qc_tool.frontend.dashboard.models import DeliverySubmission
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 
 
-def get_remaining_aoi_codes(product_release, *, offset=0, limit=200):
-    """Return AOIs without a safely published, approved candidate."""
+def get_remaining_product_unit_codes(product_release, *, offset=0, limit=200):
+    """Return product units without a safely published, approved candidate."""
 
     release = (
         product_release
@@ -20,18 +20,18 @@ def get_remaining_aoi_codes(product_release, *, offset=0, limit=200):
         return None
     _validate_page(offset, limit)
     published = DeliverySubmission.objects.filter(
-        product_aoi_id=OuterRef("pk"),
+        product_unit_id=OuterRef("pk"),
         publication_state=DeliverySubmission.PublicationState.PUBLISHED,
         review_state=DeliverySubmission.ReviewState.ACCEPTED,
     )
     return tuple(
-        ProductAOI.objects.filter(product_release=release)
+        ProductUnit.objects.filter(product_release=release)
         .annotate(
             has_published=Exists(published),
         )
         .filter(has_published=False)
-        .order_by("aoi_code")
-        .values_list("aoi_code", flat=True)[offset : offset + limit]
+        .order_by("product_unit_code")
+        .values_list("product_unit_code", flat=True)[offset : offset + limit]
     )
 
 

@@ -75,7 +75,7 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertEqual(submission.review_state, "pending")
         response = self.decision(submission, "declined", notes="Please correct the boundary extent.")
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(get_product_coverage(self.release).submitted, 0)
+        self.assertEqual(get_product_coverage(self.release).accepted, 0)
         shutil.rmtree(self.job_root)
         shutil.rmtree(self.media_root / self.owner.username)
         self.client.force_login(self.owner)
@@ -294,7 +294,7 @@ class PlanActivationWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         response = self.client.post(plan_url, {
             "expected_manager_digest": plan_form.initial["expected_manager_digest"],
             "expected_release_id": self.release.pk,
-            "aoi_codes": "EE001L1",
+            "product_unit_codes": "ee001l",
             "product_managers": [self.manager.pk],
             "confirm_approval": "on",
         })
@@ -305,12 +305,12 @@ class PlanActivationWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.job.refresh_from_db()
         self.assertEqual(self.job.product_release_id, self.release.pk)
         self.assertEqual(submission.product_release_id, active.pk)
-        self.assertEqual(get_product_coverage(active).submitted, 0)
+        self.assertEqual(get_product_coverage(active).accepted, 0)
         self.client.force_login(self.manager)
         self.assertContains(self.client.get(self.review_url(submission)), "Approve submission")
         response = self.decision(submission, "approved", notes="Verified retained ZIP and QC report.")
         self.assertRedirects(response, self.review_url(submission))
-        self.assertEqual(get_product_coverage(active).submitted, 1)
+        self.assertEqual(get_product_coverage(active).accepted, 1)
         self.client.force_login(self.owner)
         response = self.client.get(self.review_url(submission))
         self.assertContains(response, "Verified retained ZIP and QC report.")

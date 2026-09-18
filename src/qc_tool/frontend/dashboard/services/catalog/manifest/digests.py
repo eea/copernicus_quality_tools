@@ -13,7 +13,7 @@ def calculate_release_digest(
     coverage_state,
     definitions,
     primary_definition_ident,
-    aoi_codes,
+    product_unit_codes,
     source_kind="manifest",
 ):
     document = {
@@ -27,7 +27,7 @@ def calculate_release_digest(
             for definition in definitions
         ],
         "primary_definition": primary_definition_ident,
-        "aoi_codes": aoi_codes,
+        "product_unit_codes": product_unit_codes,
         "source_kind": source_kind,
     }
     encoded = json.dumps(

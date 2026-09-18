@@ -23,7 +23,7 @@ def build_workspace_overview(
 ):
     """Return bounded dashboard facts restricted to ``account_access``.
 
-    The service intentionally avoids forecasts, target AOIs, trends, and token
+    The service intentionally avoids forecasts, target product units, trends, and token
     expiry because those concepts do not exist in the current data model.
     """
 

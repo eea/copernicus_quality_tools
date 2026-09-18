@@ -109,7 +109,7 @@
     background: #fce4e2;
 }
 
-.job-history-aoi {
+.job-history-product-unit {
     display: flex;
     min-width: 115px;
     flex-direction: column;
@@ -117,7 +117,7 @@
     gap: 4px;
 }
 
-.job-history-aoi > strong {
+.job-history-product-unit > strong {
     display: inline-flex;
     min-height: 26px;
     align-items: center;
@@ -128,7 +128,7 @@
     font-size: 11px;
 }
 
-.job-history-aoi > small {
+.job-history-product-unit > small {
     color: var(--qc-color-muted);
     font-size: 10px;
 }

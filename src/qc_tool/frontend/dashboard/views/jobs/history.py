@@ -39,7 +39,7 @@ def get_job_history_json(request, delivery_id):
     rows = serialize_job_history(jobs)
     if request.GET.get("include_delivery") == "1":
         # Updating a running job can also refresh the delivery's projected
-        # product/AOI facts. Read them again before building the live header.
+        # product/product unit facts. Read them again before building the live header.
         delivery.refresh_from_db()
         return JsonResponse({
             "rows": rows,

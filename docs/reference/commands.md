@@ -63,14 +63,14 @@ application-wide `database apply` once in the documented deployment job before
 frontend startup. Never use `migrate <app> zero` to create the baseline; that
 command unapplies migrations.
 
-### Historical AOI metadata
+### Historical product unit metadata
 
 After importing and reconciling historical jobs into the baseline schema,
 preview the bounded historical result scan:
 
 ```bash
 docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage backfill_aoi_metadata \
+  python3 -m qc_tool.frontend.manage backfill_product_unit_metadata \
   --dry-run --limit 100
 ```
 
@@ -78,13 +78,13 @@ Then run the idempotent backfill while shared job storage is mounted:
 
 ```bash
 docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage backfill_aoi_metadata \
+  python3 -m qc_tool.frontend.manage backfill_product_unit_metadata \
   --batch-size 100
 ```
 
-The command never infers an AOI from a filename. Missing, malformed, and
+The command never infers a product unit from a filename. Missing, malformed, and
 ambiguous result metadata remains unavailable. See
-[AOI metadata](../architecture/aoi-metadata.md) for the lifecycle and trust
+[Product unit metadata](../architecture/product-unit-metadata.md) for the lifecycle and trust
 boundary.
 
 ## QC Tool user provisioning

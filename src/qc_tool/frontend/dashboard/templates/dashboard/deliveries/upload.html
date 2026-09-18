@@ -41,7 +41,7 @@
     <section class="workspace-notice workspace-notice--warning" aria-labelledby="delivery-correction-title">
         <div>
             <h2 id="delivery-correction-title">Upload a correction</h2>
-            <p><strong>{{ correction.submission.delivery.filename }}</strong> was rejected for {{ correction.submission.product_release.product.name }} · {{ correction.submission.aoi_code }}.</p>
+            <p><strong>{{ correction.submission.delivery.filename }}</strong> was rejected for {{ correction.submission.product_release.product.name }} · {{ correction.submission.product_unit_code }}.</p>
             {% include "dashboard/submissions/feedback.html" with feedback=correction.feedback only %}
             <ol>
                 <li>Address the feedback and keep the exact filename <strong>{{ correction.submission.delivery.filename }}</strong>.</li>

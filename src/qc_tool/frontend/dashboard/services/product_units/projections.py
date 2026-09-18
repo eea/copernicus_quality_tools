@@ -1,6 +1,6 @@
-"""Maintain the denormalized AOI/product projection on Delivery."""
+"""Maintain the denormalized product unit/product projection on Delivery."""
 
-from qc_tool.aoi import normalize_aoi_code
+from qc_tool.product_units import normalize_product_unit_code
 
 
 def sync_locked_delivery_from_latest_job(delivery):
@@ -16,8 +16,8 @@ def sync_locked_delivery_from_latest_job(delivery):
         Job.objects.filter(delivery_id=delivery.pk)
         .order_by("-date_created", "-job_uuid")
         .only(
-            "aoi_code",
-            "aoi_code_submitted",
+            "product_unit_code",
+            "submitted_product_unit_code",
             "product_ident",
             "product_description",
         )
@@ -25,28 +25,28 @@ def sync_locked_delivery_from_latest_job(delivery):
     )
 
     updated_fields = []
-    aoi_code = (
-        normalize_aoi_code(latest_job.aoi_code)
+    product_unit_code = (
+        normalize_product_unit_code(latest_job.product_unit_code)
         if latest_job is not None
         else None
     )
-    if delivery.aoi_code != aoi_code:
-        delivery.aoi_code = aoi_code
-        updated_fields.append("aoi_code")
+    if delivery.product_unit_code != product_unit_code:
+        delivery.product_unit_code = product_unit_code
+        updated_fields.append("product_unit_code")
 
-    # The explicit submitted AOI is the identity verified from this one-ZIP,
-    # one-AOI upload.  Preserve it while a newer job is waiting and reject
+    # The explicit submitted product unit is the identity verified from this one-ZIP,
+    # one-product unit upload.  Preserve it while a newer job is waiting and reject
     # conflicting terminal observations in the lifecycle service.
-    submitted_aoi = delivery.aoi_code_submitted
+    submitted_unit = delivery.submitted_product_unit_code
     if (
-        submitted_aoi is None
+        submitted_unit is None
         and latest_job is not None
-        and latest_job.aoi_code_submitted
+        and latest_job.submitted_product_unit_code
     ):
-        submitted_aoi = normalize_aoi_code(latest_job.aoi_code_submitted)
-    if delivery.aoi_code_submitted != submitted_aoi:
-        delivery.aoi_code_submitted = submitted_aoi
-        updated_fields.append("aoi_code_submitted")
+        submitted_unit = normalize_product_unit_code(latest_job.submitted_product_unit_code)
+    if delivery.submitted_product_unit_code != submitted_unit:
+        delivery.submitted_product_unit_code = submitted_unit
+        updated_fields.append("submitted_product_unit_code")
 
     if latest_job is not None:
         for field_name in ("product_ident", "product_description"):

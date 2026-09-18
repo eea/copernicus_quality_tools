@@ -1,15 +1,15 @@
-"""Backfill canonical AOI metadata from historical QC result documents."""
+"""Backfill canonical product unit metadata from historical QC result documents."""
 
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
 
-from qc_tool.frontend.dashboard.services.aoi import backfill_aoi_metadata
+from qc_tool.frontend.dashboard.services.product_units import backfill_product_unit_metadata
 
 
 class Command(BaseCommand):
     help = (
-        "Backfill null Job.aoi_code_submitted values from terminal result.json "
-        "files and refresh Delivery submitted-AOI projections."
+        "Backfill null Job.submitted_product_unit_code values from terminal result.json "
+        "files and refresh Delivery submitted-product unit projections."
     )
 
     def add_arguments(self, parser):
@@ -33,7 +33,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            result = backfill_aoi_metadata(
+            result = backfill_product_unit_metadata(
                 batch_size=options["batch_size"],
                 limit=options["limit"],
                 dry_run=options["dry_run"],

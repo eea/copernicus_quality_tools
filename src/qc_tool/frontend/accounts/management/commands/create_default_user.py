@@ -18,16 +18,17 @@ class Command(BaseCommand):
         parser.add_argument("--email")
         parser.add_argument(
             "--country",
-            help="Legacy profile field retained until AOI integration lands.",
+            help="Profile country used for legacy region access.",
         )
         parser.add_argument(
             "--region",
+            "--region-code",
             "--aoi-code",
             dest="region_codes",
             action="append",
             default=[],
             help=(
-                "Assign one exact, opaque AOI code; may be supplied more than "
+                "Assign one exact, opaque region code; may be supplied more than "
                 "once. No catalog validation or normalization is performed. "
                 "This scopes region access but does not grant region "
                 "permissions."

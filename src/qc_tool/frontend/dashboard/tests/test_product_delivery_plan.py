@@ -16,7 +16,7 @@ from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.role_permissions import capability_content_type
 from qc_tool.frontend.dashboard.forms.product_delivery_plan import ProductDeliveryPlanForm
 from qc_tool.frontend.dashboard.models import (
-    Delivery, DeliverySubmission, Job, ProductAOI, ProductRelease, ProductReleaseDefinition, QcDefinition,
+    Delivery, DeliverySubmission, Job, ProductUnit, ProductRelease, ProductReleaseDefinition, QcDefinition,
 )
 from qc_tool.frontend.dashboard.services.catalog import list_current_product_coverage
 from qc_tool.frontend.dashboard.services.catalog.contracts import CatalogSnapshot
@@ -70,7 +70,7 @@ class ProductDeliveryPlanTests(TestCase):
             "planned_product", release.pk,
             expected_release_id=release.pk if expected is None else expected,
             expected_manager_digest=manager_digest or manager_assignment_digest(current_product_manager_ids("planned_product")),
-            aoi_codes=["CZ", "SK"] if codes is None else codes,
+            product_unit_codes=["CZ", "SK"] if codes is None else codes,
             actor=actor or self.admin, product_managers=managers,
         )
 
@@ -78,7 +78,7 @@ class ProductDeliveryPlanTests(TestCase):
         return {
             "expected_release_id": self.release.pk,
             "expected_manager_digest": manager_assignment_digest(current_product_manager_ids("planned_product")),
-            "aoi_codes": "CZ\nSK", "confirm_approval": "on",
+            "product_unit_codes": "CZ\nSK", "confirm_approval": "on",
             "product_managers": [str(self.manager.pk)], **overrides,
         }
 
@@ -89,9 +89,9 @@ class ProductDeliveryPlanTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dashboard/products/plan.html")
         self.assertContains(response, 'name="csrfmiddlewaretoken"')
-        self.assertEqual(response.context["form"].initial["aoi_codes"], "at\ncz\nsk")
+        self.assertEqual(response.context["form"].initial["product_unit_codes"], "at\ncz\nsk")
         self.assertEqual(list(response.context["form"].initial["product_managers"]), [self.manager.pk])
-        self.assertEqual(response.context["expected_aoi_count"], 3)
+        self.assertEqual(response.context["required_unit_count"], 3)
         self.assertEqual(ProductRelease.objects.count(), 1)
 
     def test_only_administrators_can_access_or_approve_plans(self):
@@ -136,8 +136,8 @@ class ProductDeliveryPlanTests(TestCase):
         self.assertEqual(approved.supersedes_id, self.release.pk)
         self.assertEqual(approved.approved_by_id, self.admin.pk)
         self.assertIsNotNone(approved.approved_at)
-        self.assertEqual(list(approved.aois.values_list("aoi_code", flat=True)), ["cz", "sk"])
-        self.assertEqual(set(approved.aois.values_list("provenance", flat=True)), {"administrator"})
+        self.assertEqual(list(approved.product_units.values_list("product_unit_code", flat=True)), ["cz", "sk"])
+        self.assertEqual(set(approved.product_units.values_list("provenance", flat=True)), {"administrator"})
         self.assertEqual(approved.definition_links.get().qc_definition_id, self.release.definition_links.get().qc_definition_id)
         self.assertEqual(QcDefinition.objects.count(), 1)
         self.assertEqual(LogEntry.objects.get().user_id, self.admin.pk)
@@ -151,7 +151,7 @@ class ProductDeliveryPlanTests(TestCase):
             lambda: approve_delivery_plan(
                 "another_product", approved.pk, expected_release_id=approved.pk,
                 expected_manager_digest=manager_assignment_digest(()),
-                aoi_codes=["CZ"], actor=self.admin,
+                product_unit_codes=["CZ"], actor=self.admin,
             ),
         ):
             with self.assertRaises(CatalogError):
@@ -161,12 +161,12 @@ class ProductDeliveryPlanTests(TestCase):
         self.assertEqual(self.client.get(reverse("product_plan_edit", args=("another_product", approved.pk))).status_code, 404)
 
     def test_unknown_scope_can_be_defined_explicitly(self):
-        ProductAOI.objects.filter(product_release=self.release).delete()
+        ProductUnit.objects.filter(product_release=self.release).delete()
         ProductRelease.objects.filter(pk=self.release.pk).update(coverage_state="unknown")
         approved = self.approve(codes=["AT"])
 
         self.assertEqual(approved.coverage_state, "authoritative")
-        self.assertEqual(list(approved.aois.values_list("aoi_code", flat=True)), ["at"])
+        self.assertEqual(list(approved.product_units.values_list("product_unit_code", flat=True)), ["at"])
 
     def test_empty_invalid_or_unsupported_aoi_scopes_are_rejected(self):
         for codes in ([], ["*"], ["CZ", "*"], ["../escape"], ["a\\b"], ["bad\x00code"], ["x" * 256], ["DE"]):
@@ -178,7 +178,7 @@ class ProductDeliveryPlanTests(TestCase):
     def test_wildcard_naming_allows_an_explicit_plan(self):
         self._replace_naming_steps([["*"]])
         approved = self.approve(codes=["DE"])
-        self.assertEqual(list(approved.aois.values_list("aoi_code", flat=True)), ["de"])
+        self.assertEqual(list(approved.product_units.values_list("product_unit_code", flat=True)), ["de"])
 
     def test_wildcard_check_does_not_override_another_finite_naming_check(self):
         self._replace_naming_steps([["CZ", "SK"], ["*"]])
@@ -237,10 +237,10 @@ class ProductDeliveryPlanTests(TestCase):
         self.assertTrue(UserProductGrant.objects.filter(user=self.other_manager, product_ident="another_product").exists())
         self.assertTrue(UserProductGrant.objects.filter(user=self.user, product_ident="planned_product").exists())
         manager_digest = manager_assignment_digest(current_product_manager_ids("planned_product"))
-        aoi_ids = list(approved.aois.values_list("pk", flat=True))
+        aoi_ids = list(approved.product_units.values_list("pk", flat=True))
         revised = self.approve(release=approved, managers=(self.other_manager,))
         self.assertEqual(revised.pk, approved.pk)
-        self.assertEqual(list(revised.aois.values_list("pk", flat=True)), aoi_ids)
+        self.assertEqual(list(revised.product_units.values_list("pk", flat=True)), aoi_ids)
         self.assertEqual(ProductRelease.objects.count(), 2)
         with self.assertRaisesRegex(CatalogError, "assignments have changed"):
             self.approve(release=approved, managers=(self.manager,), manager_digest=manager_digest)
@@ -263,8 +263,8 @@ class ProductDeliveryPlanTests(TestCase):
         )
         submission = DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=approved,
-            product_aoi=approved.aois.get(aoi_code="cz"),
-            aoi_code="cz", aoi_code_submitted="cz", submitted_by=self.user,
+            product_unit=approved.product_units.get(product_unit_code="cz"),
+            product_unit_code="cz", submitted_product_unit_code="cz", submitted_by=self.user,
             submitted_by_username=self.user.username, request_channel="browser",
             publication_state="published", review_state="accepted",
             published_at=timezone.now(), artifact_path="/retained/accepted",
@@ -275,29 +275,29 @@ class ProductDeliveryPlanTests(TestCase):
 
         self.assertEqual(updated.pk, approved.pk)
         self.assertEqual(list_current_product_coverage(release_ids=(approved.pk,)), before)
-        self.assertEqual(before[0]["submitted"], 1)
+        self.assertEqual(before[0]["accepted"], 1)
         self.assertEqual(before[0]["completion_percentage"], 50.0)
         submission.refresh_from_db()
         self.assertEqual(submission.product_release_id, approved.pk)
         self.assertEqual(submission.review_state, "accepted")
 
-    def test_scope_changes_preserve_existing_job_and_aoi_provenance(self):
+    def test_scope_changes_preserve_existing_job_and_product_unit_provenance(self):
         delivery = Delivery.objects.create(user=self.user, filename="delivery.zip", size_bytes=12)
         job = Job.objects.create(
             delivery=delivery, requested_by=self.user, product_ident="planned_product",
             product_release=self.release, qc_definition=self.release.definition_links.get().qc_definition,
         )
-        previous_aoi_ids = list(self.release.aois.values_list("pk", flat=True))
+        previous_aoi_ids = list(self.release.product_units.values_list("pk", flat=True))
         self.approve(codes=["AT"])
 
         job.refresh_from_db()
         self.assertEqual(job.product_release_id, self.release.pk)
         self.assertEqual(job.qc_definition_id, self.release.definition_links.get().qc_definition_id)
-        self.assertEqual(list(self.release.aois.values_list("pk", flat=True)), previous_aoi_ids)
+        self.assertEqual(list(self.release.product_units.values_list("pk", flat=True)), previous_aoi_ids)
         self.assertTrue(Delivery.objects.filter(pk=delivery.pk).exists())
 
     def test_form_handles_commas_and_uses_shared_canonical_codes(self):
-        form = ProductDeliveryPlanForm(self.post_data(aoi_codes="CZ, cz\nSK\r\nAT"))
+        form = ProductDeliveryPlanForm(self.post_data(product_unit_codes="CZ, cz\nSK\r\nAT"))
         self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.cleaned_data["aoi_codes"], ["AT", "CZ", "SK"])
+        self.assertEqual(form.cleaned_data["product_unit_codes"], ["AT", "CZ", "SK"])
         self.assertEqual(list(form.cleaned_data["product_managers"]), [self.manager])

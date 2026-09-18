@@ -7,16 +7,16 @@ from qc_tool.common import JOB_RESULT_FILENAME
 from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
 from qc_tool.frontend.dashboard.services.artifacts import open_regular_artifact
 
-from .errors import AoiResultUnavailable
+from .errors import ProductUnitResultUnavailable
 
 
-MAX_AOI_RESULT_BYTES = 16 * 1024 * 1024
+MAX_PRODUCT_UNIT_RESULT_BYTES = 16 * 1024 * 1024
 
 
-def load_aoi_result_document(
+def load_product_unit_result_document(
     job_uuid,
     *,
-    maximum_bytes=MAX_AOI_RESULT_BYTES,
+    maximum_bytes=MAX_PRODUCT_UNIT_RESULT_BYTES,
 ):
     """Return one bounded JSON object from a regular result artifact."""
 
@@ -34,10 +34,10 @@ def load_aoi_result_document(
         ) as artifact:
             payload = artifact.read(maximum_bytes + 1)
         if len(payload) > maximum_bytes:
-            raise AoiResultUnavailable("result metadata exceeds the size limit")
+            raise ProductUnitResultUnavailable("result metadata exceeds the size limit")
         document = json.loads(payload.decode("utf-8"))
     except (ArtifactUnavailable, OSError, UnicodeError, ValueError) as exc:
-        raise AoiResultUnavailable from exc
+        raise ProductUnitResultUnavailable from exc
     if not isinstance(document, dict):
-        raise AoiResultUnavailable("result metadata is not a JSON object")
+        raise ProductUnitResultUnavailable("result metadata is not a JSON object")
     return document

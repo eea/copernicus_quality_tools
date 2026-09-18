@@ -20,7 +20,7 @@ def can_view_submission(access, *, owner_id, product_ident, recipe_ident=None):
 
 def visible_submissions(access):
     queryset = DeliverySubmission.objects.select_related(
-        "delivery__user", "job", "product_release__product", "product_aoi",
+        "delivery__user", "job", "product_release__product", "product_unit",
     )
     if not access.is_authenticated:
         return queryset.none()

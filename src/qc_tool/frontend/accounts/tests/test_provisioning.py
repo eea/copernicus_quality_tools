@@ -64,7 +64,7 @@ class UserProvisioningTests(TestCase):
         self.assertEqual(result.user.email, "service@example.test")
         self.assertEqual(result.user.userprofile.country, "CZ")
         self.assertEqual(
-            set(result.user.region_grants.values_list("aoi_code", flat=True)),
+            set(result.user.region_grants.values_list("region_code", flat=True)),
             {"CZ", "FUA-001"},
         )
         self.assertEqual(
@@ -187,7 +187,7 @@ class UserProvisioningTests(TestCase):
         self.assertIn("created successfully", output.getvalue())
         self.assertEqual(user.userprofile.country, "SK")
         self.assertEqual(
-            set(user.region_grants.values_list("aoi_code", flat=True)),
+            set(user.region_grants.values_list("region_code", flat=True)),
             {"SK", "FUA-002"},
         )
         self.assertEqual(
@@ -228,7 +228,7 @@ class UserProvisioningTests(TestCase):
     def test_service_rejects_empty_region_codes_atomically(self):
         with self.assertRaisesMessage(
             ValueError,
-            "Region grants require a non-empty AOI code.",
+            "Region grants require a non-empty region code.",
         ):
             provision_user(
                 username="invalid-region-user",

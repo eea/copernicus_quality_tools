@@ -17,7 +17,7 @@ templates, browser assets, and services:
 | Deliveries | `urls/deliveries.py` | `views/deliveries/` | `templates/dashboard/deliveries/` | `*/features/deliveries/` | `services/deliveries/`, `services/uploads/`, `services/submissions/` |
 | Products | `urls/products.py` | `views/products/` | `templates/dashboard/products/` | `*/features/products/` | `services/products/`, `services/catalog/` |
 | Boundaries | `urls/boundaries.py` | `views/boundaries.py` | `templates/dashboard/boundaries/` | `*/features/boundaries/` | `services/boundaries/` |
-| QC jobs | `urls/deliveries.py`, `urls/jobs.py` | `views/jobs/` | `templates/dashboard/jobs/` | `*/features/jobs/` | `services/jobs/`, `services/aoi/`, `services/catalog/definitions.py` |
+| QC jobs | `urls/deliveries.py`, `urls/jobs.py` | `views/jobs/` | `templates/dashboard/jobs/` | `*/features/jobs/` | `services/jobs/`, `services/product_units/`, `services/catalog/definitions.py` |
 | API access | `urls/api_access.py` | `views/api_access/` | `templates/dashboard/api_access/` | `*/features/api_access/` | `services/api/`, `services/s3/` |
 | Configuration | `urls/configuration.py` | `views/configuration.py` | `templates/dashboard/configuration/` | `*/features/configuration/` | `services/configuration/` |
 | Worker callbacks | `urls/workers.py` | `views/workers.py` | — | — | worker services |
@@ -79,8 +79,8 @@ grow into one service module:
 | Manifest parsing and definition validation | `services/catalog/manifest/` |
 | Idempotent immutable catalog synchronization | `services/catalog/sync/` |
 | Job definition/release snapshots | `services/catalog/definitions.py` |
-| Product completion and remaining-AOI queries | `services/catalog/coverage/` |
-| QC job creation and result persistence | `services/aoi/jobs/` |
+| Product completion and remaining-product unit queries | `services/catalog/coverage/` |
+| QC job creation and result persistence | `services/product_units/jobs/` |
 | Browser QC job adapters | `views/jobs/` |
 | Overview queries and section builders | `services/overview/sections/` |
 | Delivery SQL planning and row projection | `services/deliveries/listing/query/` |

@@ -11,7 +11,7 @@ from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
 from qc_tool.frontend.dashboard.models import (
-    Delivery, DeliverySubmission, Job, Product, ProductAOI, ProductRelease,
+    Delivery, DeliverySubmission, Job, Product, ProductUnit, ProductRelease,
     SubmissionReviewEvent,
 )
 from qc_tool.frontend.dashboard.services.deliveries.listing import (
@@ -34,8 +34,8 @@ class DeliveryReviewFeedbackTests(TestCase):
             product=cls.product, release_key="feedback-v1", revision=1,
             catalog_digest="a" * 64, is_current=True,
         )
-        cls.aoi = ProductAOI.objects.create(
-            product_release=cls.release, aoi_code="CZ", provenance="manifest",
+        cls.aoi = ProductUnit.objects.create(
+            product_release=cls.release, product_unit_code="CZ", provenance="manifest",
         )
         UserProductGrant.objects.create(user=cls.manager, product_ident=cls.product.ident)
         UserProductGrant.objects.create(user=cls.owner, product_ident=cls.product.ident)
@@ -53,8 +53,8 @@ class DeliveryReviewFeedbackTests(TestCase):
         )
         submission = DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=self.release,
-            product_aoi=self.aoi, aoi_code=self.aoi.aoi_code,
-            aoi_code_submitted=self.aoi.aoi_code, submitted_by=owner,
+            product_unit=self.aoi, product_unit_code=self.aoi.product_unit_code,
+            submitted_product_unit_code=self.aoi.product_unit_code, submitted_by=owner,
             submitted_by_username=owner.username, request_channel="browser",
             publication_state=publication_state, review_state=state, review_version=version,
             published_at=now, artifact_path="/published/" + name,
@@ -137,7 +137,7 @@ class DeliveryReviewFeedbackTests(TestCase):
         submission = self.submission("private-correspondence")
         self.event(submission, notes="Private manager correspondence.")
         UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.other, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.other, region_code="CZ")
         self.other.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))
@@ -178,7 +178,7 @@ class DeliveryReviewFeedbackTests(TestCase):
         submission = self.submission("revoked-owner")
         self.event(submission, notes="Private product correspondence.")
         UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.owner, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.owner, region_code="CZ")
         self.owner.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))
@@ -232,7 +232,7 @@ class DeliveryReviewFeedbackTests(TestCase):
         accepted = self.submission("private-acceptance", state="accepted")
         self.event(accepted, decision="approved", notes="Review completed.")
         UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.other, aoi_code="CZ")
+        UserRegionGrant.objects.create(user=self.other, region_code="CZ")
         self.other.user_permissions.add(Permission.objects.get(
             content_type__app_label="accounts", codename="view_region_deliveries",
         ))

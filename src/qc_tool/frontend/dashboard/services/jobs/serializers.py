@@ -1,6 +1,6 @@
 """Explicit public projections for job records and reports."""
 
-from qc_tool.aoi import is_aoi_input_alias
+from qc_tool.product_units import is_product_unit_input_alias
 from qc_tool.common import JOB_ERROR
 
 
@@ -27,8 +27,8 @@ def serialize_job_history(jobs, *, compact_uuid=False):
             "job_status": job.job_status,
             "product_ident": job.product_ident,
             "product_description": job.product_description,
-            "aoi_code": job.aoi_code,
-            "aoi_code_submitted": getattr(job, "aoi_code_submitted", None),
+            "product_unit_code": job.product_unit_code,
+            "submitted_product_unit_code": getattr(job, "submitted_product_unit_code", None),
             "skip_steps": job.skip_steps,
         }
         for job in jobs
@@ -48,7 +48,7 @@ def serialize_job_report(job_report, job):
         {
             key: value
             for key, value in job_report.items()
-            if not is_aoi_input_alias(key)
+            if not is_product_unit_input_alias(key)
         }
         if isinstance(job_report, dict)
         else {}
@@ -76,10 +76,10 @@ def serialize_job_report(job_report, job):
         and not _has_message(serialized.get("error_message"))
     ):
         serialized["error_message"] = MISSING_RESULT_ERROR_MESSAGE
-    serialized["aoi_code"] = job.aoi_code
-    serialized["aoi_code_submitted"] = getattr(
+    serialized["product_unit_code"] = job.product_unit_code
+    serialized["submitted_product_unit_code"] = getattr(
         job,
-        "aoi_code_submitted",
+        "submitted_product_unit_code",
         None,
     )
     return serialized

@@ -8,7 +8,7 @@ from ..contracts import SubmissionResult
 
 def published_result(submission_uuid, *, idempotent):
     submission = (
-        DeliverySubmission.objects.select_related("product_aoi")
+        DeliverySubmission.objects.select_related("product_unit")
         .filter(
             pk=submission_uuid,
             publication_state=DeliverySubmission.PublicationState.PUBLISHED,
@@ -23,7 +23,7 @@ def published_result(submission_uuid, *, idempotent):
 def result_from_submission(submission, *, idempotent):
     conflict_id = (
         SubmissionConflict.objects.filter(
-            product_aoi_id=submission.product_aoi_id
+            product_unit_id=submission.product_unit_id
         )
         .values_list("pk", flat=True)
         .first()

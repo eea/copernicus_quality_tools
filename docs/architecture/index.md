@@ -98,7 +98,7 @@ Continue with:
 - [Repository layout](repository-layout.md)
 - [Delivery and job flow](data-and-job-flow.md)
 - [Deliveries workspace](deliveries-workspace.md)
-- [AOI metadata](aoi-metadata.md)
+- [product unit metadata](product-unit-metadata.md)
 - [Product catalog and submissions](product-catalog-and-submissions.md)
 - [Authentication and authorization](authentication-and-authorization.md)
 - [Application schema and table ownership](../../src/qc_tool/database/SCHEMA.md)

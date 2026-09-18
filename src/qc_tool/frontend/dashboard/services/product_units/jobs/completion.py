@@ -1,4 +1,4 @@
-"""Atomic terminal QC result processing and one-ZIP AOI enforcement."""
+"""Atomic terminal QC result processing and one-ZIP product unit enforcement."""
 
 from django.db import transaction
 from django.utils import timezone
@@ -8,9 +8,9 @@ from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 
-from ..errors import AoiResultUnavailable
+from ..errors import ProductUnitResultUnavailable
 from ..projections import sync_locked_delivery_from_latest_job
-from ..results import apply_result_aoi
+from ..results import apply_result_product_unit, product_unit_update_from_result
 from .metadata import apply_result_metadata
 
 
@@ -35,8 +35,8 @@ def update_job_status(
         job.refresh_from_db(
             fields=(
                 "job_status",
-                "aoi_code",
-                "aoi_code_submitted",
+                "product_unit_code",
+                "submitted_product_unit_code",
                 "date_finished",
             )
         )
@@ -82,35 +82,38 @@ def _apply_terminal_result(
 ):
     try:
         job_result = load_result_document(job.job_uuid)
-    except AoiResultUnavailable as exc:
+    except ProductUnitResultUnavailable as exc:
         logger.warning(
             "Could not load result metadata for job %s: %s",
             job.job_uuid,
             exc,
         )
     else:
-        updated_fields.extend(apply_result_aoi(job, job_result))
+        updated_fields.extend(apply_result_product_unit(job, job_result))
         updated_fields.extend(apply_result_metadata(job, job_result))
-        _reject_contradictory_aoi(job, delivery, logger=logger)
+        if product_unit_update_from_result(job_result).conflicted:
+            logger.error("Conflicting product-unit result aliases for job %s.", job.job_uuid)
+            job.job_status = JOB_ERROR
+        _reject_contradictory_product_unit(job, delivery, logger=logger)
 
-    if job.job_status == JOB_OK and not job.aoi_code_submitted:
+    if job.job_status == JOB_OK and not job.submitted_product_unit_code:
         logger.error(
-            "Successful job %s did not report one submitted AOI.",
+            "Successful job %s did not report one submitted product unit.",
             job.job_uuid,
         )
         job.job_status = JOB_ERROR
 
 
-def _reject_contradictory_aoi(job, delivery, *, logger):
+def _reject_contradictory_product_unit(job, delivery, *, logger):
     if (
-        delivery.aoi_code_submitted
-        and job.aoi_code_submitted
-        and delivery.aoi_code_submitted != job.aoi_code_submitted
+        delivery.submitted_product_unit_code
+        and job.submitted_product_unit_code
+        and delivery.submitted_product_unit_code != job.submitted_product_unit_code
     ):
         logger.error(
-            "Conflicting submitted AOI for delivery %s: %s != %s",
+            "Conflicting submitted product unit for delivery %s: %s != %s",
             delivery.pk,
-            delivery.aoi_code_submitted,
-            job.aoi_code_submitted,
+            delivery.submitted_product_unit_code,
+            job.submitted_product_unit_code,
         )
         job.job_status = JOB_ERROR

@@ -21,8 +21,8 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
 
     list_display = (
         "submission_uuid",
-        "aoi_code",
-        "aoi_code_submitted",
+        "product_unit_code",
+        "submitted_product_unit_code",
         "delivery_filename",
         "uploader",
         "qc_requester",
@@ -38,8 +38,8 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
         "delivery__filename",
         "delivery__user__username",
         "job__job_uuid",
-        "aoi_code",
-        "aoi_code_submitted",
+        "product_unit_code",
+        "submitted_product_unit_code",
         "input_digest",
     )
     readonly_fields = tuple(
@@ -52,14 +52,14 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
             super().get_queryset(request).select_related(
                 "delivery__user",
                 "job__requested_by",
-                "product_aoi__product_release__product",
+                "product_unit__product_release__product",
             ),
             request,
             prefix="product_release__",
         )
 
-    def _product_aoi_for_object(self, obj):
-        return obj.product_aoi
+    def _product_unit_for_object(self, obj):
+        return obj.product_unit
 
     @admin.display(description="File")
     def delivery_filename(self, obj):
@@ -79,7 +79,7 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
             return "Checksum unavailable"
         has_exact_duplicate = (
             DeliverySubmission.objects.filter(
-                product_aoi_id=obj.product_aoi_id,
+                product_unit_id=obj.product_unit_id,
                 publication_state=(
                     DeliverySubmission.PublicationState.PUBLISHED
                 ),
@@ -97,7 +97,7 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
         return bool(access.is_administrator or access.is_product_manager)
 
     @admin.action(
-        description="Resolve AOI conflict using the selected candidate",
+        description="Resolve product unit conflict using the selected candidate",
         permissions=("resolve",),
     )
     def resolve_with_selected_candidate(self, request, queryset):
@@ -105,13 +105,13 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
         if candidate is None:
             return
         conflict = SubmissionConflict.objects.filter(
-            product_aoi_id=candidate.product_aoi_id,
+            product_unit_id=candidate.product_unit_id,
             state=SubmissionConflict.State.OPEN,
         ).first()
         if conflict is None:
             self.message_user(
                 request,
-                "The selected candidate has no open AOI conflict.",
+                "The selected candidate has no open product unit conflict.",
                 level=messages.ERROR,
             )
             return

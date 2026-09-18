@@ -18,6 +18,9 @@ def synchronize_current_pointer(release, snapshot, result):
         release.save(update_fields=("is_current",))
     else:
         return result
+    from ..readiness import invalidate_product_readiness
+
+    invalidate_product_readiness(release.product_id)
     return replace(
         result,
         current_pointers_changed=result.current_pointers_changed + 1,

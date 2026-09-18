@@ -28,7 +28,7 @@ class ProductWorkflowAccessTests(TestCase):
             return_value="Product",
         )
         snapshot = patch(
-            "qc_tool.frontend.dashboard.services.aoi.jobs.creation._catalog_snapshot",
+            "qc_tool.frontend.dashboard.services.product_units.jobs.creation._catalog_snapshot",
             return_value=(None, None),
         )
         description.start()
@@ -123,7 +123,7 @@ class ProductWorkflowAccessTests(TestCase):
         self.assertFalse(Job.objects.exists())
 
         with patch(
-            "qc_tool.frontend.dashboard.services.aoi.jobs.creation._catalog_snapshot",
+            "qc_tool.frontend.dashboard.services.product_units.jobs.creation._catalog_snapshot",
             return_value=(definition, release),
         ):
             self.run_qc("parent_recipe")

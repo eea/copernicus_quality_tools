@@ -40,14 +40,14 @@ and are discovered by the `dashboard` app.
 
 | Table | Model | Stored facts |
 | --- | --- | --- |
-| `catalog_product` | [Product](../frontend/dashboard/domain/catalog/product.py) | Business product identity, active/archive status and display metadata |
+| `catalog_product` | [Product](../frontend/dashboard/domain/catalog/product.py) | Business product identity, active/archive status, display metadata and final manager readiness approval |
 | `catalog_release_revision` | [ProductRelease](../frontend/dashboard/domain/catalog/product_release.py) | A versioned release scope, directory/upload/manifest provenance, coverage state and current-revision selection |
 | `catalog_definition_revision` | [QcDefinition](../frontend/dashboard/domain/catalog/qc_definition.py) | An immutable executable definition document and digest |
 | `catalog_release_definition` | [ProductReleaseDefinition](../frontend/dashboard/domain/catalog/product_release_definition.py) | Explicit release-to-definition revision mapping |
-| `catalog_release_aoi` | [ProductAOI](../frontend/dashboard/domain/catalog/product_aoi.py) | One declared or approved AOI within a specific release revision |
+| `catalog_product_unit` | [ProductUnit](../frontend/dashboard/domain/catalog/product_unit.py) | One declared or approved product unit within a specific release revision |
 
-Business products, executable definitions and expected AOIs are distinct facts.
-An expected AOI is release-specific; a worker observation cannot add one to the
+Business products, executable definitions and expected product units are distinct facts.
+An expected product unit is release-specific; a worker observation cannot add one to the
 catalog. Catalog synchronization is an explicit operation, separate from schema
 initialization.
 
@@ -66,7 +66,7 @@ or curated scope, including one that is still draft, or reactivate a product
 whose `is_active` flag is false. A reviewed manifest approves the delivery plan.
 
 `sync_product_definitions` imports reviewed files and projects finite naming
-AOIs into draft scopes. Draft AOIs support planning, but only an explicitly
+product units into draft scopes. Draft product units support planning, but only an explicitly
 authoritative release supplies a completion denominator or authorizes final
 submission. Wildcard/missing scopes remain unknown. A reviewed
 `sync_product_catalog` manifest defines the approved delivery plan. These commands
@@ -122,7 +122,7 @@ used on its own as a signal to erase job history.
 
 | Table | Model | Stored facts |
 | --- | --- | --- |
-| `publication_submission` | [DeliverySubmission](../frontend/dashboard/domain/submissions/delivery_submission.py) | Authorizing job, expected and verified AOIs, actor snapshots and final storage receipt |
+| `publication_submission` | [DeliverySubmission](../frontend/dashboard/domain/submissions/delivery_submission.py) | Authorizing job, expected and verified product units, actor snapshots and final storage receipt |
 | `publication_conflict` | [SubmissionConflict](../frontend/dashboard/domain/submissions/submission_conflict.py) | Current review state for competing candidates |
 | `publication_conflict_event` | [SubmissionConflictEvent](../frontend/dashboard/domain/submissions/submission_conflict_event.py) | Retained history of conflict opening and resolution |
 | `publication_review_event` | [SubmissionReviewEvent](../frontend/dashboard/domain/submissions/submission_review_event.py) | Append-only approval/decline decisions, reviewer snapshot, notes and timestamp |
@@ -142,12 +142,26 @@ leaves an earlier approval in force until explicit replacement. Conflict rows
 track open, resolved or closed-without-selection states independently of each
 candidate's decision history.
 
+## Product readiness
+
+Accepted coverage and final readiness are distinct. An assigned product manager
+or administrator explicitly marks an active product ready after all units in
+all current, authoritative, nonempty release scopes have accepted, published
+deliveries. The shared readiness service locks the catalog and product, checks
+the current acceptance fingerprint and records the actor, timestamp and scope.
+Scope changes, acceptance changes and product removal invalidate this approval.
+A partial page of release history cannot serve as the completion denominator.
+
+The database permits at most one published, accepted candidate per product unit;
+other candidate receipts remain retained. See the [database audit](AUDIT.md) for
+index decisions and the observed table inventory.
+
 ## Retaining verified deliverables
 
 The [submission service](../frontend/dashboard/services/submissions/lifecycle.py)
 uses this sequence:
 
-1. Reserve the exact latest successful job and its input digest, release and AOI.
+1. Reserve the exact latest successful job and its input digest, release and product unit.
 2. Copy the uploaded ZIP and QC artifacts into private staging under
    `SUBMISSION_DIR`. Verify the ZIP against the reserved QC checksum.
 3. Write a manifest containing file paths, sizes and SHA-256 checksums. Flush

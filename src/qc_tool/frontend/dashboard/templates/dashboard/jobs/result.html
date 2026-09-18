@@ -48,8 +48,8 @@
     <dl class="job-result-facts">
         <div><dt>Product</dt><dd>{{ job_report.description }}</dd></div>
         <div><dt>Product identifier</dt><dd><code>{{ job_report.product_ident }}</code></dd></div>
-        <div><dt>AOI code</dt><dd>{{ job_report.aoi_code|default:"Not available" }}</dd></div>
-        {% if job_report.aoi_code_submitted %}<div><dt>Submitted AOI code</dt><dd>{{ job_report.aoi_code_submitted }}</dd></div>{% endif %}
+        <div><dt>Product unit code</dt><dd>{{ job_report.product_unit_code|default:"Not available" }}</dd></div>
+        {% if job_report.submitted_product_unit_code %}<div><dt>Submitted product unit code</dt><dd>{{ job_report.submitted_product_unit_code }}</dd></div>{% endif %}
         <div><dt>Reference year</dt><dd>{{ job_report.reference_year|default:"Not available" }}</dd></div>
         {% if account_access.can_view_other_users_deliveries %}<div><dt>User</dt><dd>{{ delivery.user.username }}</dd></div>{% endif %}
         <div>

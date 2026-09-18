@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from qc_tool.aoi import AOI_CODE_MAX_LENGTH
+from qc_tool.product_units import PRODUCT_UNIT_CODE_MAX_LENGTH
 from qc_tool.common import JOB_OK
 
 
@@ -30,23 +30,23 @@ class Delivery(models.Model):
         blank=True,
         null=True,
     )
-    aoi_code = models.CharField(
-        max_length=AOI_CODE_MAX_LENGTH,
+    product_unit_code = models.CharField(
+        max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         default=None,
         blank=True,
         null=True,
         editable=False,
-        help_text="Canonical AOI code projected from the latest delivery job.",
+        help_text="Canonical product unit code projected from the latest delivery job.",
     )
-    aoi_code_submitted = models.CharField(
-        max_length=AOI_CODE_MAX_LENGTH,
+    submitted_product_unit_code = models.CharField(
+        max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         default=None,
         blank=True,
         null=True,
         editable=False,
         help_text=(
-            "Canonical AOI code verified from the ZIP by the latest QC job. "
-            "ProductAOI.aoi_code is the authoritative expected value."
+            "Canonical product unit code verified from the ZIP by the latest QC job. "
+            "ProductUnit.product_unit_code is the authoritative expected value."
         ),
     )
     content_sha256 = models.CharField(
@@ -68,11 +68,17 @@ class Delivery(models.Model):
         db_table = "execution_delivery"
         verbose_name = "Delivery"
         verbose_name_plural = "Deliveries"
+        constraints = (
+            models.CheckConstraint(
+                condition=models.Q(size_bytes__gte=0),
+                name="execution_delivery_size_valid",
+            ),
+        )
         indexes = (
-            models.Index(fields=("aoi_code",), name="execution_delivery_aoi_idx"),
+            models.Index(fields=("product_unit_code",), name="execution_delivery_unit_idx"),
             models.Index(
-                fields=("aoi_code_submitted",),
-                name="execution_delivery_zip_aoi_idx",
+                fields=("submitted_product_unit_code",),
+                name="execution_delivery_zipunit_idx",
             ),
             models.Index(
                 fields=("content_sha256",),
@@ -99,7 +105,7 @@ class Delivery(models.Model):
         # Import through the compatibility boundary so existing integrations
         # can still replace product-description lookup in dashboard.models.
         import qc_tool.frontend.dashboard.models as dashboard_models
-        from qc_tool.frontend.dashboard.services.aoi import create_delivery_job
+        from qc_tool.frontend.dashboard.services.product_units import create_delivery_job
 
         job = create_delivery_job(
             self,
@@ -116,7 +122,7 @@ class Delivery(models.Model):
         return str(job.job_uuid).lower().replace("-", "")
 
     def sync_from_latest_job(self):
-        from qc_tool.frontend.dashboard.services.aoi import (
+        from qc_tool.frontend.dashboard.services.product_units import (
             refresh_delivery_projection,
         )
 

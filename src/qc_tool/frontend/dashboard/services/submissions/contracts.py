@@ -11,16 +11,17 @@ class ReservedSubmission:
     delivery_id: int
     job_uuid: UUID
     product_release_id: int
-    product_aoi_id: int
+    product_unit_id: int
     release_key: str
-    aoi_code: str
-    aoi_code_submitted: str
+    product_unit_code: str
+    submitted_product_unit_code: str
     username: str
     filename: str
     is_s3: bool
     expected_input_digest: str
     requested_at_iso: str
     already_existed: bool
+    artifact_path: str = ""
 
 
 @dataclass(frozen=True)

@@ -31,6 +31,7 @@ from qc_tool.common import store_job_result
 from qc_tool.common import get_timeout
 from qc_tool.worker.report import generate_pdf_report
 from qc_tool.worker.aoi import merge_step_aoi_metadata
+from qc_tool.worker.product_units import merge_result_metadata, merge_step_product_unit_metadata
 from qc_tool.worker.status import CheckStatus
 from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
@@ -214,6 +215,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                                              "(the implemented timeout is {to} seconds).".format(to=str(task_timeout["seconds"])))
 
                 merge_step_aoi_metadata(job_params, check_status)
+                merge_step_product_unit_metadata(job_params, check_status)
 
                 step_result["status"] = check_status.status
                 step_result["messages"] = check_status.messages
@@ -238,7 +240,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                     step_result["attachment_filenames"].append(attachment_filename)
 
                 # Update job status properties.
-                job_result.update(check_status.status_properties)
+                merge_result_metadata(job_result, job_params, check_status)
 
                 # Update job params.
                 job_params.update(check_status.status_properties)

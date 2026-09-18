@@ -5,7 +5,7 @@ from qc_tool.product_security import normalize_product_ident
 from ..contracts import ReleaseSnapshot
 from .constants import MAX_DEFINITIONS_PER_RELEASE
 from .constants import VALID_COVERAGE_STATES
-from .coverage import extract_coverage_aois
+from .coverage import extract_coverage_product_units
 from .digests import calculate_release_digest
 from .validation import invalid_manifest
 from .validation import required_text
@@ -41,7 +41,7 @@ def parse_release_document(
     coverage_state = coverage.get("state", "unknown")
     if coverage_state not in VALID_COVERAGE_STATES:
         raise invalid_manifest("coverage state is invalid")
-    aoi_codes, source_values, provenance = extract_coverage_aois(
+    product_unit_codes, source_values, provenance = extract_coverage_product_units(
         coverage,
         definitions,
         state=coverage_state,
@@ -54,7 +54,7 @@ def parse_release_document(
         coverage_state=coverage_state,
         definitions=definitions,
         primary_definition_ident=primary_ident,
-        aoi_codes=aoi_codes,
+        product_unit_codes=product_unit_codes,
         source_kind=source_kind,
     )
     return ReleaseSnapshot(
@@ -68,9 +68,9 @@ def parse_release_document(
         is_current=is_current,
         definitions=definitions,
         primary_definition_ident=primary_ident,
-        aoi_codes=tuple(aoi_codes),
-        aoi_source_values=tuple(source_values),
-        aoi_provenance=provenance,
+        product_unit_codes=tuple(product_unit_codes),
+        product_unit_source_values=tuple(source_values),
+        product_unit_provenance=provenance,
         catalog_digest=catalog_digest,
         source_kind=source_kind,
     )

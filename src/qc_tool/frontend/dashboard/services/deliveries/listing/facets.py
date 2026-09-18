@@ -22,7 +22,7 @@ def count_delivery_statuses(
     *,
     search="",
     product_description=None,
-    aoi_code=None,
+    product_unit_code=None,
 ):
     """Count each visible Delivery once before applying the active status."""
 
@@ -31,8 +31,8 @@ def count_delivery_statuses(
         queryset = queryset.filter(filename__contains=search)
     if product_description is not None:
         queryset = queryset.filter(product_description=product_description)
-    if aoi_code is not None:
-        queryset = queryset.filter(aoi_code__contains=aoi_code)
+    if product_unit_code is not None:
+        queryset = queryset.filter(product_unit_code__contains=product_unit_code)
 
     needs_correction = Q(
         submission__in=visible_submissions(account_access).filter(

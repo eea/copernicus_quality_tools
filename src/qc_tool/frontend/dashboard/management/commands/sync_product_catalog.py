@@ -9,7 +9,7 @@ from qc_tool.frontend.dashboard.services.catalog import synchronize_product_cata
 
 
 class Command(BaseCommand):
-    help = "Synchronize immutable product-release and expected-AOI revisions."
+    help = "Synchronize immutable product-release and expected-product unit revisions."
 
     def add_arguments(self, parser):
         parser.add_argument("manifest", help="Path to the versioned catalog JSON.")
@@ -39,13 +39,13 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 "Catalog synchronized: releases={}, definitions_created={}, "
                 "products_created={}, products_updated={}, "
-                "releases_created={}, aois_created={}, current_changes={}.".format(
+                "releases_created={}, product_units_created={}, current_changes={}.".format(
                     result.releases_scanned,
                     result.definitions_created,
                     result.products_created,
                     result.products_updated,
                     result.releases_created,
-                    result.aois_created,
+                    result.product_units_created,
                     result.current_pointers_changed,
                 )
             )

@@ -40,8 +40,8 @@ class AccountAccess:
             user.is_superuser or Role.ADMIN in roles
         )
         region_codes = frozenset(
-            user.region_grants.exclude(aoi_code="").values_list(
-                "aoi_code",
+            user.region_grants.exclude(region_code="").values_list(
+                "region_code",
                 flat=True,
             )
         )

@@ -49,7 +49,7 @@ def submission_review(request, submission_id):
     access = access_for_request(request)
     submission = get_object_or_404(visible_submissions(access), pk=submission_id)
     can_review = access.can_review_product_submission(submission.product_release.product.ident)
-    conflict = SubmissionConflict.objects.filter(product_aoi=submission.product_aoi).first()
+    conflict = SubmissionConflict.objects.filter(product_unit=submission.product_unit).first()
     form = SubmissionReviewForm(
         request.POST if request.method == "POST" else None,
         initial={
@@ -104,7 +104,7 @@ def submission_review(request, submission_id):
             and submission.review_state in {"pending", "conflict"},
         "conflict": conflict,
         "candidates": visible_submissions(access).filter(
-            product_aoi=submission.product_aoi, publication_state="published",
+            product_unit=submission.product_unit, publication_state="published",
         ).exclude(pk=submission.pk).order_by("requested_at"),
         "events": events,
         "review_feedback": current_review_feedback(submission, events=events),

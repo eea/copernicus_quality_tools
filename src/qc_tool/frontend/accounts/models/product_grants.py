@@ -9,6 +9,7 @@ class UserProductGrant(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="product_grants",
+        db_index=False,  # Covered by account_product_user_key_uniq.
     )
     product_ident = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)

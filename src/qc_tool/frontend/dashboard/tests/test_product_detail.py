@@ -17,7 +17,7 @@ from django.utils import timezone
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Product
-from qc_tool.frontend.dashboard.models import ProductAOI
+from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import ProductReleaseDefinition
 from qc_tool.frontend.dashboard.models import QcDefinition
@@ -41,13 +41,13 @@ class ProductPlanPresentationTests(SimpleTestCase):
     def test_plan_labels_distinguish_provisional_and_approved_scope(self):
         for states, expected, status, label, progress_hint in (
             (("authoritative",), 2, "approved", "Approved", None),
-            (("authoritative",), 0, "approved", "Approved", "No AOIs in the approved plan"),
+            (("authoritative",), 0, "approved", "Approved", "No product units in the approved plan"),
             (("draft",), None, "draft", "Draft", "Awaiting plan approval"),
-            (("unknown",), None, "undefined", "Not defined", "Define expected AOIs"),
+            (("unknown",), None, "undefined", "Not defined", "Define expected product units"),
             (("draft", "authoritative"), None, "mixed", "Mixed plans", "Review release plans"),
             (("unknown", "draft"), None, "mixed", "Mixed plans", "Review release plans"),
             (("retired",), None, "retired", "Retired", "Plan retired"),
-            ((), None, "undefined", "Not defined", "Define expected AOIs"),
+            ((), None, "undefined", "Not defined", "Define expected product units"),
         ):
             with self.subTest(states=states, expected=expected):
                 display = _plan_presentation(
@@ -241,15 +241,15 @@ class ManagedProductDetailAccessTests(TestCase):
         self.product, self.release = self.create_product_release(
             PRODUCT_IDENT,
             name="Managed Urban Atlas",
-            aoi_codes=("cz001l", "cz002l"),
+            product_unit_codes=("cz001l", "cz002l"),
         )
         self.other_product, self.other_release = self.create_product_release(
             OTHER_PRODUCT_IDENT,
             name="Other managed product",
-            aoi_codes=("de001l",),
+            product_unit_codes=("de001l",),
         )
 
-    def create_product_release(self, product_ident, *, name, aoi_codes):
+    def create_product_release(self, product_ident, *, name, product_unit_codes):
         product = Product.objects.create(
             ident=product_ident,
             name=name,
@@ -259,7 +259,7 @@ class ManagedProductDetailAccessTests(TestCase):
             product,
             release_key="{}_release".format(product_ident),
             description="{} release".format(name),
-            aoi_codes=aoi_codes,
+            product_unit_codes=product_unit_codes,
         )
         return product, release
 
@@ -269,7 +269,7 @@ class ManagedProductDetailAccessTests(TestCase):
         *,
         release_key,
         description,
-        aoi_codes=(),
+        product_unit_codes=(),
         coverage_state=ProductRelease.CoverageState.AUTHORITATIVE,
     ):
         release = ProductRelease.objects.create(
@@ -286,11 +286,11 @@ class ManagedProductDetailAccessTests(TestCase):
                 else None
             ),
         )
-        for aoi_code in aoi_codes:
-            ProductAOI.objects.create(
+        for product_unit_code in product_unit_codes:
+            ProductUnit.objects.create(
                 product_release=release,
-                aoi_code=aoi_code,
-                source_value=aoi_code,
+                product_unit_code=product_unit_code,
+                source_value=product_unit_code,
                 provenance="product-detail-test",
             )
         return release
@@ -309,13 +309,13 @@ class ManagedProductDetailAccessTests(TestCase):
                 {
                     "declared_expected": 2,
                     "expected": 2,
-                    "submitted": 1,
+                    "accepted": 1,
                     "conflicts": 0,
                 },
                 {
                     "declared_expected": 3,
                     "expected": 3,
-                    "submitted": 2,
+                    "accepted": 2,
                     "conflicts": 1,
                 },
             ),
@@ -327,7 +327,7 @@ class ManagedProductDetailAccessTests(TestCase):
             {
                 "declared_expected": 5,
                 "expected": 5,
-                "submitted": 3,
+                "accepted": 3,
                 "conflicts": 1,
                 "remaining": 2,
                 "completion_percentage": 60.0,
@@ -337,11 +337,11 @@ class ManagedProductDetailAccessTests(TestCase):
     def test_product_coverage_is_unavailable_for_non_authoritative_stream(self):
         coverage = _aggregate_coverage(
             (
-                {"declared_expected": 2, "expected": 2, "submitted": 1},
+                {"declared_expected": 2, "expected": 2, "accepted": 1},
                 {
                     "declared_expected": None,
                     "expected": None,
-                    "submitted": None,
+                    "accepted": None,
                 },
             ),
             True,
@@ -355,7 +355,7 @@ class ManagedProductDetailAccessTests(TestCase):
                 {
                     "declared_expected": 2,
                     "expected": 2,
-                    "submitted": 1,
+                    "accepted": 1,
                     "conflicts": 0,
                 },
             ),
@@ -394,7 +394,7 @@ class ManagedProductDetailAccessTests(TestCase):
                 self.assertFalse(product["can_view_coverage"])
                 self.assertIsNone(product["declared_expected"])
                 self.assertIsNone(product["expected"])
-                self.assertIsNone(product["submitted"])
+                self.assertIsNone(product["accepted"])
                 self.assertIsNone(product["completion_percentage"])
                 self.assertEqual(product["plan_status"], "restricted")
         self.assertEqual(response.context["product_count"], 2)
@@ -414,7 +414,7 @@ class ManagedProductDetailAccessTests(TestCase):
         self.assertEqual(product.name, "Managed Urban Atlas")
         self.assertEqual(len(product.releases), 1)
         self.assertIsNone(product.releases[0].coverage)
-        self.assertIsNone(product.releases[0].remaining_aois)
+        self.assertIsNone(product.releases[0].remaining_units)
         self.assertNotContains(response, "cz001l")
         self.assertNotContains(response, "cz002l")
 
@@ -442,7 +442,7 @@ class ManagedProductDetailAccessTests(TestCase):
             (
                 granted_coverage.state,
                 granted_coverage.expected,
-                granted_coverage.submitted,
+                granted_coverage.accepted,
                 granted_coverage.conflicts,
                 granted_coverage.remaining,
                 granted_coverage.completion_percentage,
@@ -457,7 +457,7 @@ class ManagedProductDetailAccessTests(TestCase):
             ),
         )
         self.assertEqual(
-            granted_release.remaining_aois,
+            granted_release.remaining_units,
             ("cz001l", "cz002l"),
         )
         self.assertEqual(unrelated_response.status_code, 403)
@@ -493,14 +493,14 @@ class ManagedProductDetailAccessTests(TestCase):
         release = product.releases[0]
         self.assertEqual(release.coverage.expected, 1)
         self.assertEqual(release.coverage.remaining, 1)
-        self.assertEqual(release.remaining_aois, ("de001l",))
+        self.assertEqual(release.remaining_units, ("de001l",))
 
     def test_every_current_release_stream_has_separate_coverage(self):
         second = self.create_release(
             self.product,
             release_key="urban_atlas_secondary",
             description="Secondary delivery scope",
-            aoi_codes=("fr001l",),
+            product_unit_codes=("fr001l",),
         )
         administrator = get_user_model().objects.create_user(
             username="multi-release-administrator",
@@ -530,7 +530,7 @@ class ManagedProductDetailAccessTests(TestCase):
             self.product,
             release_key="urban_atlas_secondary",
             description="Secondary delivery scope",
-            aoi_codes=("fr001l",),
+            product_unit_codes=("fr001l",),
         )
         administrator = get_user_model().objects.create_user(
             username="product-catalog-administrator",
@@ -550,7 +550,7 @@ class ManagedProductDetailAccessTests(TestCase):
         self.assertEqual(urban_atlas["release_count"], 2)
         self.assertEqual(urban_atlas["declared_expected"], 3)
         self.assertEqual(urban_atlas["expected"], 3)
-        self.assertEqual(urban_atlas["submitted"], 0)
+        self.assertEqual(urban_atlas["accepted"], 0)
         self.assertEqual(urban_atlas["completion_percentage"], 0.0)
         self.assertEqual(urban_atlas["plan_status"], "approved")
         self.assertEqual(len(products), 2)
@@ -561,7 +561,7 @@ class ManagedProductDetailAccessTests(TestCase):
             self.product,
             release_key="urban_atlas_draft",
             description="Draft delivery scope",
-            aoi_codes=("fr001l", "fr002l", "fr003l"),
+            product_unit_codes=("fr001l", "fr002l", "fr003l"),
             coverage_state=ProductRelease.CoverageState.DRAFT,
         )
         self.login_administrator()
@@ -571,7 +571,7 @@ class ManagedProductDetailAccessTests(TestCase):
         product = self.catalog_product(response)
         self.assertEqual(product["declared_expected"], 5)
         self.assertTrue(product["scope_is_draft"])
-        for field in ("expected", "submitted", "remaining", "completion_percentage"):
+        for field in ("expected", "accepted", "remaining", "completion_percentage"):
             self.assertIsNone(product[field])
         self.assertEqual(product["plan_status"], "mixed")
         self.assertContains(response, "Mixed plans")
@@ -585,8 +585,8 @@ class ManagedProductDetailAccessTests(TestCase):
         )
         self.assertEqual(draft.coverage.declared_expected, 3)
         self.assertIsNone(draft.coverage.completion_percentage)
-        self.assertIsNone(draft.remaining_aois)
-        self.assertContains(detail, "Draft AOIs")
+        self.assertIsNone(draft.remaining_units)
+        self.assertContains(detail, "Draft product units")
         self.assertContains(detail, "The declared scope is a draft.")
 
     def test_unknown_stream_prevents_partial_product_scope_total(self):
@@ -612,7 +612,7 @@ class ManagedProductDetailAccessTests(TestCase):
             self.product,
             release_key="urban_atlas_draft",
             description="Draft delivery scope",
-            aoi_codes=("fr001l",),
+            product_unit_codes=("fr001l",),
             coverage_state=ProductRelease.CoverageState.DRAFT,
         )
         self.client.force_login(self.default_user)
@@ -632,7 +632,7 @@ class ManagedProductDetailAccessTests(TestCase):
             release.coverage is None
             for release in detail.context["product"].releases
         ))
-        self.assertNotContains(detail, "Draft AOIs")
+        self.assertNotContains(detail, "Draft product units")
 
     @patch(
         "qc_tool.frontend.dashboard.services.products.detail."

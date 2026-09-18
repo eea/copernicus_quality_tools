@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from qc_tool.aoi import AOI_CODE_MAX_LENGTH
+from qc_tool.product_units import PRODUCT_UNIT_CODE_MAX_LENGTH
 from qc_tool.common import JOB_WAITING
 
 
@@ -15,6 +15,7 @@ class Job(models.Model):
     delivery = models.ForeignKey(
         "dashboard.Delivery",
         on_delete=models.CASCADE,
+        db_index=False,  # Covered by execution_job_latest_idx.
     )
     date_created = models.DateTimeField(default=timezone.now)
     date_started = models.DateTimeField(blank=True, null=True)
@@ -22,21 +23,21 @@ class Job(models.Model):
     job_status = models.CharField(max_length=64, default=JOB_WAITING)
     product_ident = models.CharField(max_length=64)
     product_description = models.CharField(max_length=500)
-    aoi_code = models.CharField(
-        max_length=AOI_CODE_MAX_LENGTH,
+    product_unit_code = models.CharField(
+        max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         default=None,
         blank=True,
         null=True,
         editable=False,
-        help_text="Canonical AOI code reported by the delivery job result.",
+        help_text="Canonical product unit code reported by the delivery job result.",
     )
-    aoi_code_submitted = models.CharField(
-        max_length=AOI_CODE_MAX_LENGTH,
+    submitted_product_unit_code = models.CharField(
+        max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         default=None,
         blank=True,
         null=True,
         editable=False,
-        help_text="Canonical AOI code verified from the submitted ZIP.",
+        help_text="Canonical product unit code verified from the submitted ZIP.",
     )
     skip_steps = models.CharField(
         max_length=100,
@@ -107,10 +108,10 @@ class Job(models.Model):
         app_label = "dashboard"
         db_table = "execution_job"
         indexes = (
-            models.Index(fields=("aoi_code",), name="execution_job_aoi_idx"),
+            models.Index(fields=("product_unit_code",), name="execution_job_unit_idx"),
             models.Index(
-                fields=("aoi_code_submitted",),
-                name="execution_job_zip_aoi_idx",
+                fields=("submitted_product_unit_code",),
+                name="execution_job_zip_unit_idx",
             ),
             models.Index(
                 fields=("delivery", "-date_created", "-job_uuid"),
@@ -130,11 +131,11 @@ class Job(models.Model):
         )
 
     def apply_result_metadata(self, job_result):
-        from qc_tool.frontend.dashboard.services.aoi import apply_result_aoi
+        from qc_tool.frontend.dashboard.services.product_units import apply_result_product_unit
 
-        return apply_result_aoi(self, job_result)
+        return apply_result_product_unit(self, job_result)
 
     def update_status(self, job_status):
-        from qc_tool.frontend.dashboard.services.aoi import update_job_status
+        from qc_tool.frontend.dashboard.services.product_units import update_job_status
 
         update_job_status(self, job_status)

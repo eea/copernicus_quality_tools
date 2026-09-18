@@ -3,7 +3,7 @@
 from .contracts import CatalogSyncResult
 from .contracts import ProductCoverage
 from .coverage import get_product_coverage
-from .coverage import get_remaining_aoi_codes
+from .coverage import get_remaining_product_unit_codes
 from .coverage import list_current_product_coverage
 from .definitions import snapshot_definition_for_job
 from .errors import CatalogError
@@ -16,7 +16,7 @@ __all__ = [
     "CatalogSyncResult",
     "ProductCoverage",
     "get_product_coverage",
-    "get_remaining_aoi_codes",
+    "get_remaining_product_unit_codes",
     "list_current_product_coverage",
     "load_catalog_manifest",
     "load_definition_snapshot",
