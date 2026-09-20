@@ -1,3 +1,9 @@
+# Product specifications
+
+Never modify product specification files or uploaded specification snapshots.
+Keep filename identification rules and other QC Tool integration configuration
+outside the specifications; consume their original bytes without rewriting them.
+
 # Database changes
 
 Read `src/qc_tool/database/README.md`, `src/qc_tool/database/policy.json`, and

@@ -8,7 +8,7 @@ from django.db import transaction
 
 from qc_tool.frontend.accounts.authorization import AccountAccess
 from qc_tool.frontend.dashboard.models import Delivery
-from qc_tool.frontend.dashboard.services.products import find_product_description, guess_product_ident
+from qc_tool.frontend.dashboard.services.products import find_product_description
 
 from ._resumable.assembly import (
     _best_effort_unlink, _discard_published_chunks, owned_publication,
@@ -105,7 +105,9 @@ def receive_registered_chunk(descriptor, paths, *, user, uploaded_chunk):
                             or _registered_delivery(pending, paths, user) is None):
                         raise _delivery_exists()
                 else:
-                    product_ident = guess_product_ident(target)
+                    product_ident = require_upload_filename(
+                        AccountAccess.from_user(user), target.name,
+                    ).product_ident
                     delivery = Delivery.objects.create(
                         filename=target.name, size_bytes=target.stat().st_size,
                         product_ident=product_ident,

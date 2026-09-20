@@ -2,6 +2,7 @@
 
 from .identification import find_product_description
 from .identification import guess_product_ident
+from .identification import identify_delivery, identification_preview
 
 
 def build_product_detail(*args, **kwargs):
@@ -15,4 +16,6 @@ __all__ = [
     "build_product_detail",
     "find_product_description",
     "guess_product_ident",
+    "identify_delivery",
+    "identification_preview",
 ]

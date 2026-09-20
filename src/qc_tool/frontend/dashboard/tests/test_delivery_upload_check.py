@@ -1,5 +1,6 @@
 """Filename warnings never reveal another uploader's deliveries."""
 import json
+from unittest.mock import patch, sentinel
 
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
@@ -45,6 +46,29 @@ class DeliveryUploadCheckTests(TestCase):
             self.assertIsNone(row["date_uploaded"])
             self.assertIsNone(row["url"])
             self.assertFalse(row["can_overwrite"])
+
+    def test_preflight_includes_authorized_filename_hints_without_persisting_them(self):
+        preview = {
+            "status": "matched", "parsed_status": "recognized",
+            "product_ident": "example", "product_description": "Example product",
+            "summary": "Example product · 2024 · CZ",
+            "fields": {"area_code": "CZ"}, "message": "",
+        }
+        with patch(
+            "qc_tool.frontend.dashboard.views.uploads.require_upload_filename",
+            return_value=sentinel.identification,
+        ), patch(
+            "qc_tool.frontend.dashboard.views.uploads.identification_preview",
+            return_value=preview,
+        ) as present:
+            response = self.check(["same.zip"])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["files"][0]["identification"], preview)
+        self.assertIs(present.call_args.args[0], sentinel.identification)
+        self.own.refresh_from_db()
+        self.assertIsNone(self.own.product_ident)
+        self.assertFalse(self.own.product_unit_code)
 
     def test_submitted_and_ambiguous_filenames_explain_why_overwrite_is_unavailable(self):
         from django.utils import timezone

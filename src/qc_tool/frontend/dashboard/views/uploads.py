@@ -24,6 +24,7 @@ from qc_tool.frontend.dashboard.services.uploads.resumable import validate_deliv
 from qc_tool.frontend.dashboard.services.uploads.overwrite import overwrite_reason
 from qc_tool.frontend.dashboard.services.uploads.corrections import correction_identifier, require_correction_submission
 from qc_tool.frontend.dashboard.services.uploads.access import require_upload_delivery, require_upload_filename
+from qc_tool.frontend.dashboard.services.products.identification import identification_preview
 
 
 MAX_CHECK_BYTES = 64 * 1024
@@ -34,6 +35,7 @@ def delivery_upload_check(request):
 
     correction_id = None
     access = access_for_request(request)
+    identifications = {}
     try:
         if request.content_type != "application/json":
             raise ResumableUploadError("invalid_upload_check", "Send the filenames as JSON.", 400)
@@ -58,7 +60,8 @@ def delivery_upload_check(request):
                         "correction_not_available", "A correction has already been uploaded. Open Deliveries to continue with its quality checks.", 409,
                     )
         for filename in filenames:
-            require_upload_filename(access, filename)
+            if filename not in identifications:
+                identifications[filename] = require_upload_filename(access, filename)
     except RequestDataTooBig:
         return JsonResponse({"status": "error", "code": "upload_check_too_large", "message": "Check at most 100 filenames at a time."}, status=413)
     except (ValueError, UnicodeError):
@@ -91,6 +94,7 @@ def delivery_upload_check(request):
             "can_overwrite": delivery is not None and not reason,
             "overwrite_reason": reason,
             "url": reverse("job_history", kwargs={"delivery_id": delivery.pk}) if delivery is not None else None,
+            "identification": identification_preview(identifications[filename], access),
         })
     response = JsonResponse({"status": "ok", "files": files})
     response["Cache-Control"] = "private, no-store"

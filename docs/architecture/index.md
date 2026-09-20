@@ -97,6 +97,7 @@ Continue with:
 
 - [Repository layout](repository-layout.md)
 - [Delivery and job flow](data-and-job-flow.md)
+- [Delivery filename identification](delivery-identification.md)
 - [Deliveries workspace](deliveries-workspace.md)
 - [product unit metadata](product-unit-metadata.md)
 - [Product catalog and submissions](product-catalog-and-submissions.md)

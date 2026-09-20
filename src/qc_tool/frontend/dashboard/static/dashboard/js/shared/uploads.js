@@ -186,7 +186,8 @@
         name.id = "qc-upload-file-" + (++nextFileId);
         row.setAttribute("aria-labelledby", name.id);
         element("span", "qc-upload-file__size", heading, formatSize(options.size));
-        if (options.detail) element("span", "qc-upload-file__detail", identity, options.detail);
+        var detail = element("span", "qc-upload-file__detail", identity, options.detail || "");
+        detail.hidden = !options.detail;
         var details = element("div", "qc-upload-file__feedback", row);
         var status = element("span", "qc-upload-file__status", details);
         status.id = name.id + "-status";
@@ -237,6 +238,10 @@
         return {
             element: row,
             update: function(value) {
+                if (typeof value.detail === "string") {
+                    detail.textContent = value.detail;
+                    detail.hidden = !value.detail;
+                }
                 var phase = value.state + ":" + (value.error || "");
                 row.setAttribute("data-state", value.state);
                 status.textContent = value.label;

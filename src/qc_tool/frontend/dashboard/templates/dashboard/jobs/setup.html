@@ -62,12 +62,26 @@
             <div>
                 <h3 id="selected-deliveries-title">Selected delivery package{{ deliveries|length|pluralize }}</h3>
                 <ul>
-                    {% for delivery in deliveries %}<li>{{ delivery.filename }}</li>{% endfor %}
+                    {% for item in delivery_identifications %}
+                    <li>
+                        <span>{{ item.delivery.filename }}</span>
+                        {% if item.identification.summary %}<p class="job-setup-summary__metadata"><strong>{% if item.identification.parsed_status == 'recognized' %}Filename details{% else %}Detected product{% endif %}:</strong> {{ item.identification.summary }}</p>{% endif %}
+                        {% if item.identification.message %}<p>{{ item.identification.message }}</p>{% endif %}
+                    </li>
+                    {% endfor %}
                 </ul>
+                {% if has_filename_hints %}<p class="job-setup-summary__hint">Filename details are hints. QC verifies the delivery contents and product unit.</p>{% endif %}
             </div>
         </section>
 
-        {% if not product_list %}
+        {% if identification_notice %}
+        <section class="workspace-notice workspace-notice--warning" aria-labelledby="job-identification-title" role="status">
+            <div>
+                <h3 id="job-identification-title">{% if identification_blocks_jobs %}Check the selected deliveries{% else %}Choose the product specification{% endif %}</h3>
+                <p>{{ identification_notice }}</p>
+            </div>
+        </section>
+        {% elif not product_list %}
         <section class="workspace-notice workspace-notice--warning" aria-labelledby="job-products-title">
             <div>
                 <h3 id="job-products-title">No assigned products available</h3>

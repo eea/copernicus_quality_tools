@@ -1,6 +1,8 @@
 # Runtime dependencies and their transitive graph are pinned together. Update
 # this file only after building both supported architectures and running the
 # Django/deploy regression suite.
+# parsEO develop snapshot: reviewed source and packaged naming schemas, no Git at runtime.
+parseo @ https://codeload.github.com/copernicus-land/parsEO/tar.gz/17725f320c35a270fafcf9dbe03f992a045fd1bc#sha256=6e721d1038f896595357a7b9bd606c2b18a4596668eff7033dff0571f893294b
 Django==5.2.17
 asgiref==3.12.1
 sqlparse==0.6.0

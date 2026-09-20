@@ -8,6 +8,15 @@
     var correctionFilename = root.dataset.correctionFilename;
     var correctionDeliveryId = Number(root.dataset.correctionDeliveryId);
 
+    function identificationDetail(identification) {
+        if (!identification || typeof identification.summary !== "string" || !identification.summary) return "";
+        var recognized = identification.parsed_status === "recognized";
+        var detail = (recognized ? "Filename details: " : "Detected product: ") + identification.summary;
+        if (recognized) detail += " · Unverified until QC";
+        if (identification.status === "ambiguous") detail += " · Choose the product when starting QC.";
+        return detail;
+    }
+
     function check(entry) {
         if (correctionId && entry.file.name !== correctionFilename) {
             return Promise.resolve({blocked: true,
@@ -32,17 +41,28 @@
                 var payload = xhr.response;
                 if (xhr.status !== 200 || !payload || payload.status !== "ok" || !Array.isArray(payload.files) || payload.files.length !== 1 || !payload.files[0] ||
                         payload.files[0].filename !== entry.file.name || typeof payload.files[0].exists !== "boolean") {
-                    reject(new Error(payload && payload.message || "Could not check for an existing delivery. Retry to continue."));
+                    var error = new Error(payload && payload.message || "Could not check for an existing delivery. Retry to continue.");
+                    var blockedLabels = {
+                        delivery_name_invalid: "Check the filename",
+                        product_not_configured: "Product unavailable",
+                        product_permission_denied: "Product access required"
+                    };
+                    if (payload && Object.prototype.hasOwnProperty.call(blockedLabels, payload.code)) {
+                        error.blocked = true;
+                        error.label = blockedLabels[payload.code];
+                    }
+                    reject(error);
                     return;
                 }
                 var existing = payload.files[0];
+                var detail = identificationDetail(existing.identification);
                 var canOverwrite = existing.exists && existing.can_overwrite === true && Number.isSafeInteger(existing.delivery_id) && existing.delivery_id > 0;
                 if (correctionId && (!canOverwrite || existing.delivery_id !== correctionDeliveryId)) {
-                    resolve({blocked: true, message: existing.overwrite_reason || "This submission can no longer receive a correction. Open the original submission to check its current status.",
+                    resolve({blocked: true, detail: detail, message: existing.overwrite_reason || "This submission can no longer receive a correction. Open the original submission to check its current status.",
                         url: existing.url, linkLabel: "View existing delivery"});
                     return;
                 }
-                resolve({blocked: existing.exists,
+                resolve({blocked: existing.exists, detail: detail,
                     label: correctionId ? "Ready for correction" : undefined,
                     overwriteKey: canOverwrite ? existing.delivery_id : null,
                     message: canOverwrite ? (correctionId ? "Ready to upload your correction. The rejected submission and its files will stay in your history." : "You have a delivery with this name. Replacing it keeps its history and requires new quality checks.") :

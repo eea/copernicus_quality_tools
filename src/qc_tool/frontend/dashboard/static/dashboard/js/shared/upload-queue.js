@@ -30,6 +30,7 @@
             Object.assign(entry, value);
             entry.row.update({
                 state: entry.state, label: entry.label, percent: entry.percent,
+                detail: entry.detail,
                 error: entry.message, url: entry.url, linkLabel: entry.linkLabel,
                 canPause: Boolean(entry.controls && entry.controls.pause),
                 canCancel: Boolean(entry.controls && entry.controls.cancel),
@@ -75,7 +76,7 @@
                 }
                 present(entry, {
                     state: error.canceled ? "canceled" : error.blocked ? "blocked" : "failed",
-                    label: error.canceled ? "Canceled" : error.blocked ? "Already uploaded" : labels.failed,
+                    label: error.label || (error.canceled ? "Canceled" : error.blocked ? "Already uploaded" : labels.failed),
                     message: error.message || "The file could not be added. Try again.",
                     percent: null, url: error.url || "", linkLabel: error.linkLabel || ""
                 });
@@ -87,6 +88,7 @@
             try {
                 var result = await options.check(entry);
                 if (entries.indexOf(entry) === -1) return false;
+                if (result && typeof result.detail === "string") entry.detail = result.detail;
                 if (result && result.blocked) {
                     var replaceable = result.overwriteKey !== undefined && result.overwriteKey !== null;
                     if (replaceable && entry.overwriteKey === result.overwriteKey) return true;
@@ -119,11 +121,11 @@
             files.forEach(function(file) {
                 var key = options.key ? options.key(file) : file.name;
                 var duplicate = entries.some(function(entry) { return entry.key === key && !entry.duplicate; });
-                var entry = {id: ++serial, file: file, key: key, state: "selected", label: labels.ready, percent: null, message: "", meta: {}, attempted: false, duplicate: duplicate, overwriteKey: null, availableOverwriteKey: null};
+                var entry = {id: ++serial, file: file, key: key, state: "selected", label: labels.ready, percent: null, message: "", detail: options.describe ? options.describe(file) : "", meta: {}, attempted: false, duplicate: duplicate, overwriteKey: null, availableOverwriteKey: null};
                 entries.push(entry);
                 entry.row = ui.createFile(list, {
                     name: file.name, size: file.size, announcement: announcement, labels: labels,
-                    detail: options.describe ? options.describe(file) : "",
+                    detail: entry.detail,
                     add: function() { add(entry); }, overwrite: function() { overwrite(entry); }, retry: function() { add(entry); }, retryStates: ["failed", "canceled"],
                     remove: function() { remove(entry); }, removalStates: ["selected", "replaceable", "blocked", "failed", "canceled", "checking", "queued"],
                     pause: function() { if (entry.controls) entry.controls.pause(); },

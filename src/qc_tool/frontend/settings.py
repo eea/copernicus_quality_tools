@@ -19,8 +19,12 @@ from django.core.exceptions import ImproperlyConfigured
 
 from qc_tool.common import CONFIG
 from qc_tool.database.policy import migration_modules
+from qc_tool.frontend.delivery_filename_rules import DEFAULT_DELIVERY_FILENAME_RULES
 
 MIGRATION_MODULES = migration_modules()
+
+# Filename routing belongs to application configuration, not product specifications.
+DELIVERY_FILENAME_RULES = DEFAULT_DELIVERY_FILENAME_RULES
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)

@@ -1,10 +1,9 @@
 """Registration of a validated S3-backed delivery."""
 
-from pathlib import Path
 from pathlib import PurePosixPath
 
 from django.http import JsonResponse
-from qc_tool.frontend.dashboard.services.uploads.access import require_upload_product
+from qc_tool.frontend.dashboard.services.uploads.access import require_upload_product, require_upload_filename
 from qc_tool.frontend.dashboard.services.uploads.resumable import ResumableUploadError
 
 
@@ -19,7 +18,6 @@ def register_s3_delivery(
     inspect_delivery,
     registration_error_type,
     settings_module,
-    guess_product,
     find_product,
     model_module,
     atomic,
@@ -58,8 +56,10 @@ def register_s3_delivery(
         )
 
     delivery_filename = PurePosixPath(delivery.filename).name
-    product_ident = guess_product(Path(delivery_filename))
     try:
+        product_ident = require_upload_filename(
+            request.api_access, delivery_filename,
+        ).product_ident
         require_upload_product(request.api_access, product_ident)
     except ResumableUploadError as exc:
         return JsonResponse(

@@ -1,11 +1,10 @@
 """Product assignment checks shared by delivery registration endpoints."""
 
-from pathlib import Path
-
 from qc_tool.frontend.accounts.services.products import available_product_idents
 from qc_tool.frontend.dashboard.access.deliveries import delivery_product_scope_matches
 from qc_tool.frontend.dashboard.models import Delivery
-from qc_tool.frontend.dashboard.services.products import guess_product_ident
+from qc_tool.delivery_names import DeliveryNameParserUnavailable
+from qc_tool.frontend.dashboard.services.products import identify_delivery
 
 from ._resumable.errors import ResumableUploadError
 
@@ -24,7 +23,19 @@ def require_upload_product(access, product_ident):
 
 
 def require_upload_filename(access, filename, *, overwrite_delivery_id=None):
-    require_upload_product(access, guess_product_ident(Path(filename)))
+    try:
+        identification = identify_delivery(filename)
+    except DeliveryNameParserUnavailable as exc:
+        raise ResumableUploadError("filename_recognition_unavailable", str(exc), 503) from exc
+    if identification.status == "invalid":
+        raise ResumableUploadError("delivery_name_invalid", identification.message, 400)
+    if identification.status == "unconfigured":
+        raise ResumableUploadError("product_not_configured", identification.message, 400)
+    if identification.candidates:
+        if not any(access.can_access_product(ident) for ident in identification.candidates):
+            raise _product_denied()
+    else:
+        require_upload_product(access, None)
     if overwrite_delivery_id is not None:
         # Include a retired original so interrupted overwrite recovery cannot
         # bypass a product assignment revoked since its initial request.
@@ -33,6 +44,7 @@ def require_upload_filename(access, filename, *, overwrite_delivery_id=None):
         ).first()
         if original is not None:
             require_upload_delivery(access, original)
+    return identification
 
 
 def require_upload_delivery(access, delivery):

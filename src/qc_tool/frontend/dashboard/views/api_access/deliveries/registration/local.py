@@ -1,7 +1,7 @@
 """Registration of an uploaded local delivery archive."""
 
 from django.http import JsonResponse
-from qc_tool.frontend.dashboard.services.uploads.access import require_upload_product
+from qc_tool.frontend.dashboard.services.uploads.access import require_upload_product, require_upload_filename
 from qc_tool.frontend.dashboard.services.uploads.locking import delivery_filename_lock, require_available_filename
 from qc_tool.frontend.dashboard.services.uploads.resumable import ResumableUploadError
 
@@ -16,7 +16,6 @@ def register_local_delivery(
     resolve_upload,
     upload_path_error_type,
     settings_module,
-    guess_product,
     find_product,
     model_module,
     now,
@@ -50,7 +49,9 @@ def register_local_delivery(
                 raise ResumableUploadError("delivery_exists", "A delivery with this filename is already registered. Use the browser overwrite action or a different filename.", 409)
             # Revalidate after acquiring the browser's filename lock.
             target_filepath = resolve_upload(body_json.get("uploaded_file"), media_root=settings_module.MEDIA_ROOT, username=user.username)
-            product_ident = guess_product(target_filepath)
+            product_ident = require_upload_filename(
+                request.api_access, target_filepath.name,
+            ).product_ident
             require_upload_product(request.api_access, product_ident)
             endpoint_logger.debug(product_ident)
             product_description = find_product(product_ident)

@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "parseo @ https://codeload.github.com/copernicus-land/parsEO/tar.gz/17725f320c35a270fafcf9dbe03f992a045fd1bc#sha256=6e721d1038f896595357a7b9bd606c2b18a4596668eff7033dff0571f893294b",
     "fiona>=1.10.1",
     "geopandas>=1.1.4",
     "requests>=2.34.2",

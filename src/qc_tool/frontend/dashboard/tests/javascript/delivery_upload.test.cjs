@@ -28,6 +28,60 @@ test("delivery selection checks own filenames without uploading until Add", asyn
     assert.equal(upload.uploadCalls, 1);
 });
 
+test("detected filename hints are plain text and remain visible during upload", async () => {
+    const page = queuePage("deliveries");
+    const identification = {
+        status: "matched", parsed_status: "recognized",
+        summary: 'Urban Atlas · 2024 · <img src=x onerror="alert(1)">'
+    };
+    page.choose([file()]);
+    page.checked(0, false, {identification}); await tick();
+    const entry = page.queue.entries[0];
+    const detail = entry.row.element.querySelector(".qc-upload-file__detail");
+    assert.equal(detail.hidden, false);
+    assert.equal(detail.textContent, "Filename details: " + identification.summary + " · Unverified until QC");
+    assert.equal(detail.querySelector("img"), null);
+    assert.equal(entry.state, "selected");
+    page.click(entry, "add");
+    page.checked(1, false, {identification}); await tick();
+    assert.equal(page.transports.length, 1);
+    assert.match(detail.textContent, /Unverified until QC/);
+    page.transports[0].success(9); await tick();
+    assert.match(detail.textContent, /Unverified until QC/);
+});
+
+test("ambiguous filename matches remain uploadable and request a QC product choice", async () => {
+    const page = queuePage("deliveries");
+    page.choose([file()]);
+    page.checked(0, false, {identification: {
+        status: "ambiguous", parsed_status: "recognized", summary: "Urban Atlas · 2024"
+    }}); await tick();
+    const entry = page.queue.entries[0];
+    assert.equal(entry.state, "selected");
+    assert.match(entry.row.element.querySelector(".qc-upload-file__detail").textContent, /Choose the product when starting QC/);
+    assert.equal(entry.row.element.querySelector("[data-upload-add]").hidden, false);
+});
+
+test("invalid, unconfigured, and forbidden filenames cannot start a transfer", async () => {
+    for (const [code, label, status] of [
+        ["delivery_name_invalid", "Check the filename", 400],
+        ["product_not_configured", "Product unavailable", 400],
+        ["product_permission_denied", "Product access required", 403]
+    ]) {
+        const page = queuePage("deliveries");
+        page.choose([file()]);
+        page.requests[0].respond(status, {status: "error", code, message: "Correct the product or filename before uploading."});
+        await tick();
+        const entry = page.queue.entries[0];
+        assert.equal(entry.state, "blocked");
+        assert.equal(entry.label, label);
+        assert.match(entry.message, /Correct the product/);
+        assert.equal(entry.row.element.querySelector("[data-upload-add]").hidden, true);
+        assert.equal(entry.row.element.querySelector("[data-upload-retry]").hidden, true);
+        assert.equal(page.transports.length, 0);
+    }
+});
+
 test("existing filename offers explicit Overwrite with a warning and link", async () => {
     const page = queuePage("deliveries");
     page.choose([file()]); page.checked(0, true); await tick();

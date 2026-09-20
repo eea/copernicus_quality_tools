@@ -72,6 +72,10 @@
   overflow-wrap: anywhere;
 }
 
+.job-setup-summary li + li {
+  margin-top: 12px;
+}
+
 .job-setup-summary strong {
   color: var(--qc-color-navy);
 }
@@ -82,9 +86,23 @@
   line-height: 1.5;
 }
 
+.job-setup-summary .job-setup-summary__metadata {
+  font-size: 13px;
+}
+
+.job-setup-summary .job-setup-summary__hint {
+  margin-top: 12px;
+  font-size: 12px;
+}
+
 .job-setup-form {
   display: grid;
+  min-width: 0;
   gap: 24px;
+}
+
+.job-setup-checks {
+  min-width: 0;
 }
 
 .job-setup-form fieldset {

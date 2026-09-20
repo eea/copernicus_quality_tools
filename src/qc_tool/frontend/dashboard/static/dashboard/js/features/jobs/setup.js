@@ -235,9 +235,11 @@ function create_job() {
         },
         error: function(result) {
             $("#modal-spinner").modal("hide");
+            var payload = result.responseJSON;
             BootstrapDialog.show({
                 title: "Error",
-                message: "Error running job. Please try later.",
+                message: textDialogMessage(payload && typeof payload.message === "string" ?
+                    payload.message : "Error running job. Please try later."),
                 buttons: [{
                     label: "OK",
                     cssClass: "btn-qc-secondary",

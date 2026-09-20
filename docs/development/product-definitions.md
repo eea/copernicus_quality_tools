@@ -19,6 +19,11 @@ do not necessarily describe the deliverables that must be submitted.
 
 ## Sources and responsibilities
 
+Product specifications must remain unchanged. QC Tool keeps parsEO filename
+matching rules in separate application configuration. See
+[delivery filename identification](../architecture/delivery-identification.md#application-matching-rules)
+for the configuration format, supported conventions and validation boundaries.
+
 | Source | Responsibility |
 | --- | --- |
 | JSON files in `product_definitions/` or configured `PRODUCT_DIRS` | Reference recipes and execution files for explicitly imported products; never automatic catalog entries |

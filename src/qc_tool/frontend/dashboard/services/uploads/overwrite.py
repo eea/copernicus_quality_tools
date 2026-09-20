@@ -12,8 +12,10 @@ from dataclasses import asdict
 from django.db import transaction
 
 from qc_tool.common import JOB_RUNNING, JOB_WAITING
+from qc_tool.frontend.accounts.authorization import AccountAccess
 from qc_tool.frontend.dashboard.models import Delivery, DeliverySubmission, Job
-from qc_tool.frontend.dashboard.services.products import find_product_description, guess_product_ident
+from qc_tool.frontend.dashboard.services.products import find_product_description
+from .access import require_upload_filename
 from ._resumable.assembly import _discard_stale_assembly, _write_assembly, _discard_published_chunks
 from ._resumable.chunks import is_chunk_stored, is_upload_complete, store_chunk
 from ._resumable.errors import ResumableUploadError
@@ -181,7 +183,10 @@ def receive_overwrite_chunk(descriptor, paths, *, user, uploaded_chunk, director
                 original = _require_original(descriptor, paths, user, locked=True)
                 if _identity(target_directory, descriptor.filename) != previous:
                     raise _changed()
-                product_ident = guess_product_ident(paths.target_path)
+                product_ident = require_upload_filename(
+                    AccountAccess.from_user(user), descriptor.filename,
+                    overwrite_delivery_id=descriptor.overwrite_delivery_id,
+                ).product_ident
                 replacement = Delivery.objects.create(
                     user=user, filename=descriptor.filename, size_bytes=descriptor.total_size,
                     product_ident=product_ident, product_description=find_product_description(product_ident), is_deleted=True,

@@ -6,6 +6,7 @@ from django.utils import timezone
 from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import QCException, validate_skip_steps
+from qc_tool.delivery_names import DeliveryNameParserUnavailable
 from qc_tool.frontend.accounts.services.products import available_product_idents
 from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
@@ -51,6 +52,12 @@ def create_delivery_job(
             product_ident,
             logger=logger,
         )
+        from qc_tool.frontend.dashboard.services.products.identification import require_matching_product
+
+        try:
+            require_matching_product(locked_delivery.filename, product_ident, definition=qc_definition)
+        except DeliveryNameParserUnavailable as exc:
+            raise ValueError("Delivery filename recognition is unavailable. Contact an administrator before starting QC.") from exc
         if account_access is not None and not account_access.can_access_product_snapshot(
             product_ident,
             product_release.product.ident if product_release is not None else None,
