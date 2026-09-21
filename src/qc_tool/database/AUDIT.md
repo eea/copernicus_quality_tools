@@ -6,8 +6,9 @@ the two `0001_major_release` baselines. The verified released PostgreSQL schema
 contains **24 tables, 193 columns, 120 constraints and 91 indexes**; see the
 [complete dictionary](TABLES.md).
 
-**Next step: record the release commit and CI results, then build and verify the
-release images.** Publication is on hold until registry access is available.
+**Next step: obtain registry access and complete the production image pair.**
+The freeze commit and CI are recorded; an ARM64 frontend artifact is verified.
+Publication is on hold until registry access is available.
 The [3.0.0 release record](releases/3.0.0.md) separates verified source checks
 from pending packaged-artifact checks, publication and production cutover.
 No existing local or production database was upgraded by this freeze.
@@ -20,11 +21,11 @@ what remains to be done.
 
 ### Before publication
 
-- [ ] **Record the committed candidate and CI results.** Commit policy and both
-  reviewed snapshots together in the separate freeze change. Record its immutable
-  source SHA and passing CI for that exact revision in the
-  [release record](releases/3.0.0.md). Local checks below passed against mounted
-  candidate source; they do not prove the content of a published image.
+- [x] **Record the committed candidate and CI results.** Policy and both reviewed
+  snapshots were committed together as `e7a699d9e182ceda7f2906549461c83807bf1b74`
+  and pushed only to `release/v3.0.0`. Both backend jobs passed in
+  [CI run 35612383745](https://github.com/eea/copernicus_quality_tools/actions/runs/35612383745).
+  See the [release record](releases/3.0.0.md) for source and artifact evidence.
 - [ ] **Confirm registry access and publication configuration.** Publication
   remains on hold at the user's request until access is available. Record the
   intended registries and immutable frontend/worker image references before
@@ -109,10 +110,14 @@ Verified on disposable targets using the mounted release-candidate source:
   inventory; the three Django membership-table row IDs are `bigint` in the
   released schema.
 
-These are source and disposable-database checks. Exact-commit CI, packaged-image
-verification, registry publication, release-image import rehearsal and production
-cutover remain separate checklist items above. Freeze does not adopt or fake the
-new migration history onto an existing draft or legacy database.
+After these source checks, exact-commit GitHub CI passed on both backends. An
+ARM64 frontend image built from that commit passed packaged-source, policy,
+migration, static-file, empty-installation and role checks without a checkout
+bind mount. The real legacy import and field reconciliation also passed against
+that packaged frontend. The production-architecture frontend/worker pair,
+registry publication and deployment acceptance remain pending; see the release
+record. Freeze does not adopt or fake migration history onto a draft or legacy
+database.
 
 ## Column and metadata review: 2026-09-21
 
