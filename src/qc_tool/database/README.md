@@ -30,7 +30,7 @@ stores the resulting schema, application data and record of applied migrations.
 | Develop a draft schema | [Models-only development](MIGRATIONS.md#draft-schema-development) |
 | Check a change on a disposable database | [Local verification](MIGRATIONS.md#local-verification) |
 | Prepare the first release | [Create and freeze the first snapshots](MIGRATIONS.md#freeze-the-first-release) |
-| Transfer legacy production data | [The zero step](MIGRATIONS.md#one-time-manual-production-cutover) |
+| Transfer legacy production data | [SQL dump importer](LEGACY_IMPORT.md) and [the zero step](MIGRATIONS.md#one-time-manual-production-cutover) |
 | Maintain migrations after the release | [Developer workflow](MIGRATIONS.md#development-after-the-major-release-is-frozen) |
 | Build and deploy a release | [Release preparation](MIGRATIONS.md#prepare-a-release) and [release record](RELEASE_TEMPLATE.md) |
 | Upgrade PostgreSQL with minimal interruption | [Online rollout](MIGRATIONS.md#online-rollout-sequence) |
@@ -50,8 +50,10 @@ src/qc_tool/database/
 ├── policy.json                     # Lifecycle phase and baseline identities
 ├── policy.py                       # Policy and Django migration-module selection
 ├── deployment.py                   # Draft initialization / released apply and locks
+├── legacy/                         # Offline legacy SQL-dump conversion
 ├── apps.py                         # Django command discovery
 ├── management/commands/database.py # database plan|check|apply
+├── management/commands/import_legacy_dump.py # Explicit dry run / fresh-target import
 ├── migrations/                    # No migration definitions during draft
 │   ├── accounts/                  # Accounts migration module
 │   └── dashboard/                 # Dashboard migration module

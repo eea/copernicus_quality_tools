@@ -120,3 +120,6 @@ docker-compose.shiva.yml
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Local database backups contain account and storage credentials.
+/src/qc_tool/database/backups/

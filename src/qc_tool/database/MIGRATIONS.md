@@ -130,8 +130,10 @@ and artifact backfills remain explicit management operations.
 ## One-time manual production cutover
 
 The "zero" step transfers legacy data into a fresh released schema. Finalize
-and freeze that schema before implementing and rehearsing the conversion against
-legacy records and storage. Schema initialization must not populate products;
+and freeze that schema before the production cutover rehearsal against
+legacy records and storage. The [legacy dump converter](LEGACY_IMPORT.md) can be
+developed and tested on disposable draft schemas; repeat the rehearsal against
+the frozen release before cutover. Schema initialization must not populate products;
 product data enters through the reviewed import or catalog synchronization.
 
 
