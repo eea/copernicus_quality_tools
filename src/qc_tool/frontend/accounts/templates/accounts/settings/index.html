@@ -10,9 +10,12 @@
 <link rel="stylesheet" href="{% static 'accounts/css/api-tokens.css' %}">
 {% endblock css %}
 
+{% block notifications %}{% endblock notifications %}
+
 {% block content %}
 <div class="account-settings">
     <div class="account-settings__container">
+        {% include "accounts/includes/messages.html" with inline_messages=True %}
         {% if account_access.can_view_deliveries %}
         {% url 'dashboard_home' as account_home_url %}
         {% include "dashboard/shared/breadcrumbs.html" with parent_label="CLMS QC Tool" parent_url=account_home_url current_label="Settings" only %}

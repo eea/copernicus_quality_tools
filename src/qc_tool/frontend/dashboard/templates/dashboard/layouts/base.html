@@ -72,9 +72,9 @@
                 </nav>
                 </header>
 
-                {% include "accounts/includes/messages.html" %}
+                {% block notifications %}{% include "accounts/includes/messages.html" %}{% endblock notifications %}
 
-                <main id="main-content" class="site-main {% block main_class %}{% endblock main_class %}" tabindex="-1">
+                <main id="main-content" class="site-main{% block main_layout_class %}{% endblock main_layout_class %} {% block main_class %}{% endblock main_class %}" tabindex="-1">
                     {% block content %}{% endblock content %}
                 </main>
 

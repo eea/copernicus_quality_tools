@@ -8,8 +8,11 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/table-toolbar.css' %}" type="text/css" media="screen">
 {% endblock workspace_css %}
 
+{% block notifications %}{% endblock notifications %}
+
 {% block workspace_content %}
 <div class="{% block page_container_class %}workspace-page__container{% endblock page_container_class %}">
+    {% include "accounts/includes/messages.html" with inline_messages=True %}
     {% block page_breadcrumbs %}{% endblock page_breadcrumbs %}
 
     {% block page_header %}

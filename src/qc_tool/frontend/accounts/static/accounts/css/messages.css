@@ -1,17 +1,109 @@
-/* Shared placement for Django's one-time browser notifications. */
+/* Shared one-time notifications; keep Bootstrap's inline form alerts separate. */
 .account-messages {
   width: min(calc(100% - 32px), var(--qc-content-width));
   margin: 18px auto 0;
 }
 
+.account-messages:not(:has(.alert)) {
+  display: none;
+}
+
+.account-messages--inline {
+  width: 100%;
+  margin: 0 0 24px;
+}
+
 .account-messages .alert {
-  margin-bottom: 10px;
+  --message-color: var(--qc-color-primary-dark);
+  --message-background: var(--qc-color-primary-soft);
+  --message-border: #cbdcf4;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 32px;
+  align-items: start;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--message-border);
   border-radius: var(--qc-radius-small);
-  box-shadow: 0 8px 22px rgba(35, 57, 91, 0.07);
+  color: var(--message-color);
+  background: var(--message-background);
+  box-shadow: none;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.account-messages .alert + .alert {
+  margin-top: 10px;
+}
+
+.account-messages .alert-success {
+  --message-color: var(--qc-color-success-dark);
+  --message-background: var(--qc-color-success-soft);
+  --message-border: #b9dfc7;
+}
+
+.account-messages .alert-warning {
+  --message-color: var(--qc-color-warning-dark);
+  --message-background: var(--qc-color-warning-soft);
+  --message-border: #f1d2a8;
+}
+
+.account-messages .alert-danger {
+  --message-color: var(--qc-color-danger-dark);
+  --message-background: var(--qc-color-danger-soft);
+  --message-border: #f0c7c3;
+}
+
+.account-message__icon {
+  margin-top: 6px;
+}
+
+.account-message__text {
+  min-width: 0;
+  padding: 5px 0;
+  overflow-wrap: anywhere;
+}
+
+.account-message__text a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.account-message__dismiss {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+}
+
+.account-message__dismiss:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.account-message__dismiss:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 @media (max-width: 560px) {
-  .account-messages {
+  .account-messages:not(.account-messages--inline) {
     width: calc(100% - 24px);
   }
+
+  .account-messages .alert {
+    grid-template-columns: 20px minmax(0, 1fr) 44px;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .account-message__icon { margin-top: 12px; }
+  .account-message__text { padding: 11px 0; }
+  .account-message__dismiss { width: 44px; height: 44px; }
 }

@@ -15,6 +15,11 @@
 
 {% block page_title %}Dashboard{% endblock page_title %}
 {% block page_subtitle %}<p>Overview of your QC Tool workspace.</p>{% endblock page_subtitle %}
+{% block page_header_meta %}
+{% if account_access.show_boundaries_navigation and boundary_version_available %}
+<p>Boundary package date: <strong>{{ boundary_version }}</strong> · <a href="{% url 'boundaries' %}">View boundaries</a></p>
+{% endif %}
+{% endblock page_header_meta %}
 
 {% block page_content %}
 

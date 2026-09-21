@@ -45,16 +45,6 @@
             {% endif %}
         </ul>
     </nav>
-    {% if request.resolver_match.url_name == 'dashboard_home' and account_access.show_boundaries_navigation %}
-    <div class="workspace-sidebar__boundary" aria-label="Boundary package status">
-        <span aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg></span>
-        <div>
-            <strong>Boundary package date</strong>
-            <p>{% if boundary_version_available %}{{ boundary_version }}{% else %}Unavailable{% endif %}</p>
-        </div>
-        <a href="{% url 'boundaries' %}">View boundaries <span aria-hidden="true">→</span></a>
-    </div>
-    {% else %}
     <div class="workspace-sidebar__help">
         <strong>Need help?</strong>
         <p>Read the QC Tool guides and setup documentation.</p>
@@ -62,5 +52,4 @@
             View documentation
         </a>
     </div>
-    {% endif %}
 </aside>
