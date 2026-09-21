@@ -6,12 +6,14 @@ from ._helpers import protected_path
 from qc_tool.frontend.dashboard.views.submissions import (
     submission_file,
     submission_queue,
+    submission_bulk_approve,
     submission_review,
 )
 
 
 urlpatterns = [
     protected_path("products/submissions", submission_queue, name="submission_queue"),
+    protected_path("products/submissions/approve", submission_bulk_approve, name="submission_bulk_approve"),
     protected_path(
         "products/submissions/",
         RedirectView.as_view(

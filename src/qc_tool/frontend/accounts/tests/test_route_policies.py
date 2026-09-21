@@ -64,6 +64,7 @@ EXPECTED_POLICIES = {
     "product_plan_edit": (PRIVATE, SESSION, ("GET", "POST"), MANAGE_CONFIGURATION, LOGIN_REDIRECT),
     "product_finalize": (PRIVATE, SESSION, ("POST",), VIEW, LOGIN_REDIRECT),
     "submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "submission_bulk_approve": (PRIVATE, SESSION, ("POST",), VIEW, LOGIN_REDIRECT),
     "submission_queue_slash": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "legacy_submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "submission_review": (PRIVATE, SESSION, ("GET", "POST"), VIEW, LOGIN_REDIRECT),
@@ -433,7 +434,7 @@ class RoutePolicyRegistryTests(TestCase):
         )
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 64)
+        self.assertEqual(len(EXPECTED_POLICIES), 65)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

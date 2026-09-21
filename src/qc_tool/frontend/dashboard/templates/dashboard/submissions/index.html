@@ -1,27 +1,89 @@
 {% extends "dashboard/layouts/workspace_page.html" %}
 {% load static %}
 {% block title %}Submission review | Products | CLMS QC Tool{% endblock %}
-{% block main_class %}workspace-page submission-review-page{% endblock %}
-{% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}">{% endblock %}
+{% block main_class %}workspace-page submission-queue-page{% endblock %}
+{% block workspace_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/queue.css' %}">
+{% endblock %}
 {% block page_breadcrumbs %}{% url 'products' as products_url %}{% include "dashboard/shared/breadcrumbs.html" with parent_label="Products" parent_url=products_url current_label="Submission review" only %}{% endblock %}
 {% block page_title %}Submission review{% endblock %}
-{% block page_subtitle %}<p>Verify deliveries for your products, approve them or request corrections. Only approved product units count towards fulfilment.</p>{% endblock %}
-{% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">Back to products</a>{% endblock %}
+{% block page_subtitle %}<p>Review submitted deliveries individually, or select several to approve together.</p>{% endblock %}
+{% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg><span>Back to products</span></a>{% endblock %}
 {% block page_content %}
-<section class="workspace-card">
-    <header class="workspace-card__header"><div><h2>{% if selected_product %}Submissions for {{ selected_product }}{% else %}Deliveries submitted for review{% endif %}</h2><p>{{ review_items.paginator.count }} submission{{ review_items.paginator.count|pluralize }} in this view.</p></div></header>
+<section class="workspace-card" aria-labelledby="submission-list-heading">
+    <header class="workspace-card__header">
+        <div>
+            <h2 id="submission-list-heading">{% if selected_product_name %}{{ selected_product_name }}{% else %}Deliveries submitted for review{% endif %}</h2>
+            <p>{{ review_items.paginator.count }} submission{{ review_items.paginator.count|pluralize }} in this view.{% if selected_delivery %} Filtered to delivery #{{ selected_delivery }}.{% endif %}</p>
+        </div>
+    </header>
     <form method="get" class="review-filters">
         {% if selected_product %}<input type="hidden" name="product" value="{{ selected_product }}">{% endif %}
         {% if selected_delivery %}<input type="hidden" name="delivery" value="{{ selected_delivery }}">{% endif %}
         <label for="submission-state">Review status</label>
-        <select name="state" id="submission-state" class="form-control"><option value="pending"{% if selected_state == 'pending' %} selected{% endif %}>Awaiting review</option><option value="accepted"{% if selected_state == 'accepted' %} selected{% endif %}>Approved</option><option value="rejected"{% if selected_state == 'rejected' %} selected{% endif %}>Rejected / corrections requested</option><option value="all"{% if selected_state == 'all' %} selected{% endif %}>All submissions</option></select>
+        <select name="state" id="submission-state" class="form-control">
+            <option value="pending"{% if selected_state == 'pending' %} selected{% endif %}>Awaiting review</option>
+            <option value="accepted"{% if selected_state == 'accepted' %} selected{% endif %}>Approved</option>
+            <option value="rejected"{% if selected_state == 'rejected' %} selected{% endif %}>Rejected / corrections requested</option>
+            <option value="all"{% if selected_state == 'all' %} selected{% endif %}>All submissions</option>
+        </select>
         <button type="submit" class="btn btn-default btn-qc-secondary">Apply filter</button>
     </form>
-    <div class="review-table-region" tabindex="0" role="region" aria-label="Submitted deliveries">
-    <table class="table review-table"><thead><tr><th scope="col">Delivery</th><th scope="col">Product / product unit</th><th scope="col">Submitted by</th><th scope="col">Submitted on</th><th scope="col">Review status</th></tr></thead><tbody>
-    {% for item in review_items %}<tr><td><a href="{% url 'submission_review' item.pk %}">{{ item.delivery.filename }}</a></td><td>{{ item.product_release.product.name }}<br><code>{{ item.product_unit_code }}</code></td><td>{{ item.submitted_by_username }}</td><td>{{ item.requested_at|date:"Y-m-d H:i T" }}</td><td><span class="review-status review-status--{{ item.review_state }}">{% if item.review_state == 'rejected' %}Rejected{% else %}{{ item.get_review_state_display }}{% endif %}</span>{% if item.review_state == 'rejected' %}<br><a class="review-feedback-link" href="{% url 'submission_review' item.pk %}#correction-heading">Read feedback</a>{% endif %}{% if item.publication_state != 'published' %}<br>{{ item.get_publication_state_display }}{% endif %}</td></tr>
-    {% empty %}<tr><td colspan="5">No submissions in this view.</td></tr>{% endfor %}
-    </tbody></table></div>
-    <nav class="review-pagination" aria-label="Submission pages">{% if review_items.has_previous %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ review_items.number }} of {{ review_items.paginator.num_pages }}</span>{% if review_items.has_next %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.next_page_number }}">Next</a>{% endif %}</nav>
+    <form method="post" action="{{ bulk_action_url }}" id="submission-bulk-form">
+        {% csrf_token %}<input type="hidden" name="intent" value="preview">
+        {% if bulk_eligible_count %}
+        <div class="submission-selection-toolbar">
+            <div>
+                <strong id="submission-selection-count" role="status" aria-live="polite" aria-atomic="true">Select deliveries to approve</strong>
+                <p>{{ bulk_eligible_count }} eligible on this page. You can check your selection before approving.</p>
+            </div>
+            <div class="submission-selection-toolbar__actions">
+                <button id="submission-clear-selection" class="btn btn-default btn-qc-secondary" type="button" hidden>Clear selection</button>
+                <button id="submission-approve-selected" class="btn btn-primary btn-qc-primary" type="submit">Approve selected</button>
+            </div>
+        </div>
+        {% elif review_items %}
+        <p class="submission-selection-notice">No deliveries on this page are eligible for bulk approval. Open a delivery to see its review details.</p>
+        {% endif %}
+        <div class="review-table-region" tabindex="0" role="region" aria-label="Submitted deliveries">
+            <table class="table review-table submission-queue-table">
+                <caption class="sr-only">Submitted deliveries. Select eligible deliveries on this page for bulk approval.</caption>
+                <thead><tr>
+                    <th scope="col" class="submission-queue-table__select">
+                        <label data-submission-select-all-control hidden><input id="submission-select-all" type="checkbox" aria-label="Select all eligible deliveries on this page"><span class="sr-only">Select all eligible deliveries on this page</span></label>
+                    </th>
+                    <th scope="col">Delivery</th><th scope="col">Product / product unit</th><th scope="col">Submitted by</th><th scope="col">Submitted on</th><th scope="col">Review status</th>
+                </tr></thead>
+                <tbody>
+                {% for item in review_items %}
+                <tr>
+                    <td class="submission-queue-table__select">
+                        {% if item.bulk_selection %}<input type="checkbox" name="selection" value="{{ item.bulk_selection }}" data-submission-select aria-label="Select {{ item.delivery.filename }} — product unit {{ item.product_unit_code }} — submitted by {{ item.submitted_by_username }}">
+                        {% else %}<span aria-label="Not eligible for bulk approval" title="{{ item.bulk_block_reason }}">—</span>{% endif %}
+                    </td>
+                    <td><a class="submission-queue-table__filename" href="{% url 'submission_review' item.pk %}">{{ item.delivery.filename }}</a></td>
+                    <td>{{ item.product_release.product.name }}<br><span class="submission-unit">{{ item.product_unit_code }}</span></td>
+                    <td>{{ item.submitted_by_username }}</td>
+                    <td><time datetime="{{ item.requested_at|date:'c' }}">{{ item.requested_at|date:"j M Y, H:i T" }}</time></td>
+                    <td>
+                        <span class="review-status review-status--{{ item.review_state }}">{% if item.review_state == 'rejected' %}Rejected{% else %}{{ item.get_review_state_display }}{% endif %}</span>
+                        {% if item.review_state == 'rejected' %}<br><a class="review-feedback-link" href="{% url 'submission_review' item.pk %}#correction-heading">Read feedback</a>{% endif %}
+                        {% if item.publication_state != 'published' %}<p class="submission-queue-table__reason">{{ item.get_publication_state_display }}</p>
+                        {% elif item.bulk_block_reason and item.review_state != 'accepted' and item.review_state != 'rejected' %}<p class="submission-queue-table__reason">{{ item.bulk_block_reason }}</p>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}<tr><td colspan="6" class="submission-queue-table__empty">No submissions in this view.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+    <nav class="review-pagination" aria-label="Submission pages">
+        {% if review_items.has_previous %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.previous_page_number }}">Previous</a>{% endif %}
+        <span>Page {{ review_items.number }} of {{ review_items.paginator.num_pages }}</span>
+        {% if review_items.has_next %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.next_page_number }}">Next</a>{% endif %}
+    </nav>
 </section>
 {% endblock %}
+{% block js %}{{ block.super }}<script src="{% static 'dashboard/js/features/submissions/queue.js' %}"></script>{% endblock %}

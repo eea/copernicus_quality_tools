@@ -102,6 +102,19 @@ to use newly assigned products; revocations also restrict existing tokens.
 If definitions are unavailable, Admin fails closed: existing unavailable
 values remain visible/deletable, while new or changed grants are rejected.
 
+## Bulk submission review
+
+Assigned product managers and administrators can approve several deliveries
+from **Products → Submission review**. Select eligible rows, or select all
+eligible deliveries on the current page (up to 30), then choose **Approve
+selected**. Check the selection, optionally add feedback shared with each
+uploader, and confirm approval. Each submission keeps its own review history.
+
+Competing submissions require an individual decision. If any selected submission
+changes or becomes ineligible, the whole batch stops without approving any of
+the selected deliveries. Return to the list to review the updated selection.
+Bulk approval does not mark the product ready.
+
 ## Product readiness
 
 The administrator approves the required product units in the delivery plan.

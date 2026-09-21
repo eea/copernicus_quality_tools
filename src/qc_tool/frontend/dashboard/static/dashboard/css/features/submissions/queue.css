@@ -1,0 +1,54 @@
+/* Selection and review stay together above the current page of submissions. */
+.submission-selection-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--qc-color-border);
+    background: var(--qc-color-primary-soft);
+}
+
+.submission-selection-toolbar strong { color: var(--qc-color-navy); font-size: 14px; }
+.submission-selection-toolbar p { margin: 5px 0 0; color: var(--qc-color-muted); font-size: 13px; line-height: 1.6; }
+.submission-selection-toolbar__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.submission-selection-toolbar .btn,
+.submission-queue-page .review-actions .btn { min-height: 42px; white-space: normal; }
+.submission-queue-page [hidden] { display: none !important; }
+.submission-selection-notice { margin: 0; padding: 18px 24px; color: var(--qc-color-muted); font-size: 13px; line-height: 1.6; }
+.submission-queue-table { width: 100%; min-width: 950px; table-layout: fixed; margin: 0; }
+.submission-queue-table > thead > tr > th,
+.submission-queue-table > tbody > tr > td { padding: 16px 12px; overflow-wrap: anywhere; }
+.submission-queue-table .submission-queue-table__select { width: 48px; text-align: center; }
+.submission-queue-table th:nth-child(2) { width: 31%; }
+.submission-queue-table th:nth-child(3) { width: 21%; }
+.submission-queue-table th:nth-child(4) { width: 11%; }
+.submission-queue-table th:nth-child(5) { width: 15%; }
+.submission-queue-table input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--qc-color-primary); cursor: pointer; vertical-align: middle; }
+.submission-queue-table__select label { margin: 0; padding: 4px; }
+.submission-queue-table__filename { display: inline-block; font-weight: 600; line-height: 1.6; }
+.submission-queue-table .review-status { white-space: normal; }
+.submission-queue-table time { font-size: 13px; line-height: 1.6; }
+.submission-unit { display: inline-block; margin-top: 6px; color: var(--qc-color-muted); font-size: 13px; }
+.submission-queue-table__reason { margin: 8px 0 0; color: var(--qc-color-muted); font-size: 12px; line-height: 1.6; }
+.submission-queue-table .submission-queue-table__empty { padding: 36px 24px; text-align: center; color: var(--qc-color-muted); }
+.submission-queue-table tbody tr:has(input:checked) { background: var(--qc-color-primary-soft); }
+.submission-queue-page input[type="checkbox"]:focus-visible { outline: 3px solid var(--qc-focus-ring); outline-offset: 3px; }
+.submission-queue-page .review-pagination { border-top: 1px solid var(--qc-color-border); font-size: 13px; }
+.submission-queue-page .review-filters label { margin: 0; font-size: 13px; }
+.submission-bulk-preview { margin-bottom: 24px; }
+.submission-bulk-preview__items { margin: 0; padding: 0; list-style: none; }
+.submission-bulk-preview__items li { padding: 18px 24px; overflow-wrap: anywhere; }
+.submission-bulk-preview__items li + li { border-top: 1px solid var(--qc-color-border-subtle); }
+.submission-bulk-preview__items a { font-size: 14px; font-weight: 600; line-height: 1.6; }
+.submission-bulk-preview__items p { margin: 8px 0 0; color: var(--qc-color-muted); font-size: 13px; line-height: 1.6; }
+.submission-bulk-preview__items .submission-bulk-preview__issue { color: var(--qc-color-danger-dark); }
+
+@media (max-width: 767px) {
+    .submission-selection-toolbar { align-items: stretch; flex-direction: column; padding: 16px; }
+    .submission-selection-toolbar__actions .btn { flex: 1; }
+    .submission-queue-page .review-filters { align-items: stretch; }
+    .submission-queue-page .review-filters .form-control { flex: 1; min-width: 0; }
+    .submission-bulk-preview__items li { padding: 16px; }
+}

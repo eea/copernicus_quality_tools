@@ -1,0 +1,47 @@
+{% extends "dashboard/layouts/workspace_page.html" %}
+{% load static %}
+{% block title %}Approve selected deliveries | Products | CLMS QC Tool{% endblock %}
+{% block main_class %}workspace-page submission-queue-page{% endblock %}
+{% block workspace_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/review.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/submissions/queue.css' %}">
+{% endblock %}
+{% block page_breadcrumbs %}{% url 'products' as products_url %}{% include "dashboard/shared/breadcrumbs.html" with section_label="Products" section_url=products_url parent_label="Submission review" parent_url=submission_workspace_url current_label="Approve selected" only %}{% endblock %}
+{% block page_title %}Approve selected deliveries{% endblock %}
+{% block page_subtitle %}<p>Check the selected deliveries and record one approval for each submission.</p>{% endblock %}
+{% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{{ submission_workspace_url }}"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg><span>Back to submission review</span></a>{% endblock %}
+{% block page_content %}
+{% if form.non_field_errors or form.selection.errors or form.intent.errors %}
+<div class="workspace-notice workspace-notice--danger" role="alert"><div>{{ form.non_field_errors }}{{ form.selection.errors }}{{ form.intent.errors }}</div></div>
+{% endif %}
+{% if selected_items %}
+<section class="workspace-card submission-bulk-preview" aria-labelledby="selected-deliveries-heading">
+    <header class="workspace-card__header"><div><h2 id="selected-deliveries-heading">{{ selected_items|length }} selected deliver{{ selected_items|length|pluralize:"y,ies" }}</h2><p>Open a delivery to check its retained ZIP, QC report and review details.</p></div></header>
+    <ul class="submission-bulk-preview__items">
+        {% for item in selected_items %}
+        <li>
+            <a href="{% url 'submission_review' item.pk %}" target="_blank" rel="noopener">{{ item.delivery.filename }}<span class="sr-only"> (opens in a new tab)</span></a>
+            <p>{{ item.product_release.product.name }} · Product unit <strong>{{ item.product_unit_code }}</strong> · Submitted by {{ item.submitted_by_username }}</p>
+            {% if item.bulk_block_reason %}<p class="submission-bulk-preview__issue">{{ item.bulk_block_reason }}</p>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+{% if selection_ready %}
+<form method="post" class="workspace-card review-form">
+    {% csrf_token %}{{ form.selection }}<input type="hidden" name="intent" value="approve">
+    <header class="workspace-card__header"><div><h2>Confirm approval</h2><p>These deliveries will count as accepted product units in their delivery plans. Completing a product remains a separate manager action.</p></div></header>
+    <div class="workspace-card__body">
+        <div class="review-form__field"><label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label><p id="bulk-notes-help">{{ form.notes.help_text }}</p>{{ form.notes }}{{ form.notes.errors }}</div>
+        <div class="review-actions">
+            <button class="btn btn-primary btn-qc-primary" type="submit">Approve {{ selected_items|length }} deliver{{ selected_items|length|pluralize:"y,ies" }}</button>
+            <a class="btn btn-default btn-qc-secondary" href="{{ submission_workspace_url }}">Cancel</a>
+        </div>
+    </div>
+</form>
+{% elif not selected_items %}
+<p class="submission-selection-notice">Return to the submission list to choose eligible deliveries. No deliveries were approved.</p>
+{% endif %}
+{% endblock %}

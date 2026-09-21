@@ -15,7 +15,7 @@
                 </a>
             </li>
             <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'products' %}"{% if request.resolver_match.url_name == 'products' or request.resolver_match.url_name == 'product_detail' or request.resolver_match.url_name == 'product_upload' or request.resolver_match.url_name == 'product_remove' or request.resolver_match.url_name == 'product_plan_edit' or request.resolver_match.url_name == 'submission_queue' or request.resolver_match.url_name == 'submission_review' and account_access.can_view_submission_queue %} aria-current="page"{% endif %}>
+                <a class="workspace-sidebar__link" href="{% url 'products' %}"{% if request.resolver_match.url_name == 'products' or request.resolver_match.url_name == 'product_detail' or request.resolver_match.url_name == 'product_upload' or request.resolver_match.url_name == 'product_remove' or request.resolver_match.url_name == 'product_plan_edit' or request.resolver_match.url_name == 'submission_queue' or request.resolver_match.url_name == 'submission_bulk_approve' or request.resolver_match.url_name == 'submission_review' and account_access.can_view_submission_queue %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg>
                     Products
                 </a>

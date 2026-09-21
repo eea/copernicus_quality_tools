@@ -1,6 +1,7 @@
 """Delivery submission receipts and the assigned-manager review workspace."""
 
 from pathlib import PurePosixPath
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
@@ -11,6 +12,9 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.forms.submission_reviews import SubmissionReviewForm
+from qc_tool.frontend.dashboard.forms.submission_bulk_review import (
+    BulkSubmissionReviewForm, submission_selection_token,
+)
 from qc_tool.frontend.dashboard.models import SubmissionConflict
 from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
 from qc_tool.frontend.dashboard.services.deliveries.listing.statuses import classify_delivery_status
@@ -23,6 +27,10 @@ from qc_tool.frontend.dashboard.services.submissions.access import (
 )
 from qc_tool.frontend.dashboard.services.submissions.artifacts import submission_inventory, open_submission_file
 from qc_tool.frontend.dashboard.services.submissions.detail_presentation import submission_detail_presentation
+from qc_tool.frontend.dashboard.services.submissions.bulk_review import (
+    MAX_BULK_APPROVALS, annotate_bulk_approval_eligibility,
+    bulk_approval_block_reason, bulk_approve_submissions,
+)
 from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context, current_review_feedback
 from qc_tool.frontend.dashboard.services.submissions.review import review_submission
 
@@ -46,12 +54,83 @@ def submission_queue(request):
     delivery = request.GET.get("delivery", "")
     if delivery:
         queryset = queryset.filter(delivery_id=int(delivery)) if delivery.isdecimal() and len(delivery) < 19 else queryset.none()
-    page = Paginator(queryset.order_by("requested_at", "pk"), 30).get_page(request.GET.get("page"))
+    selected_product_name = ""
+    if product:
+        selected_product_name = reviewable_submissions(access).filter(
+            product_release__product__ident=product,
+        ).values_list("product_release__product__name", flat=True).first() or ""
+    page = Paginator(
+        annotate_bulk_approval_eligibility(queryset).order_by("requested_at", "pk"),
+        MAX_BULK_APPROVALS,
+    ).get_page(request.GET.get("page"))
+    eligible_count = 0
+    for item in page:
+        item.bulk_block_reason = bulk_approval_block_reason(item)
+        item.bulk_selection = ""
+        if not item.bulk_block_reason:
+            item.bulk_selection = submission_selection_token(item, request.user.pk)
+            eligible_count += 1
     return render(request, "dashboard/submissions/index.html", {
         "review_items": page, "selected_state": state, "selected_product": product,
-        "selected_delivery": delivery,
+        "selected_delivery": delivery, "selected_product_name": selected_product_name,
+        "bulk_action_url": _submission_queue_url(request.GET, route="submission_bulk_approve"),
+        "bulk_eligible_count": eligible_count,
         "can_review": True,
     })
+
+
+def _submission_queue_url(query, *, route="submission_queue"):
+    filters = {key: query[key] for key in ("state", "product", "delivery", "page") if query.get(key)}
+    return reverse(route) + ("?" + urlencode(filters) if filters else "")
+
+
+def submission_bulk_approve(request):
+    access = access_for_request(request)
+    if not access.can_view_submission_queue:
+        raise PermissionDenied("Only assigned product managers and administrators can approve submissions.")
+    form = BulkSubmissionReviewForm(request.POST, reviewer_id=request.user.pk)
+    items = []
+    ready = False
+    status = 200
+    valid = form.is_valid()
+    if "selection" in form.cleaned_data and "intent" in form.cleaned_data:
+        ids = [ident for ident, _version in form.selections]
+        items = list(annotate_bulk_approval_eligibility(reviewable_submissions(access)).filter(
+            pk__in=ids,
+        ).order_by("requested_at", "pk"))
+        versions = dict(form.selections)
+        if len(items) != len(ids):
+            items = []
+            form.add_error(None, "One or more selected submissions are no longer available for you to review.")
+            status = 403
+        else:
+            for item in items:
+                item.bulk_block_reason = bulk_approval_block_reason(item)
+                if item.review_version != versions[item.pk]:
+                    item.bulk_block_reason = "The review changed. Return to the list and select the deliveries again."
+            ready = not any(item.bulk_block_reason for item in items)
+            if not ready:
+                form.add_error(None, "No deliveries were approved. Check the issues below, then return to the submission list.")
+                status = 409
+            elif valid and form.cleaned_data["intent"] == "approve":
+                try:
+                    count = bulk_approve_submissions(
+                        selections=form.selections, actor=request.user,
+                        account_access=access, notes=form.cleaned_data["notes"],
+                    )
+                except SubmissionError as exc:
+                    form.add_error(None, "No deliveries were approved. " + exc.message)
+                    ready = False
+                    status = exc.status_code
+                else:
+                    messages.success(request, "{} submission{} approved.".format(count, "" if count == 1 else "s"))
+                    return redirect(_submission_queue_url(request.GET))
+    if not valid:
+        status = 400
+    return render(request, "dashboard/submissions/bulk_approve.html", {
+        "form": form, "selected_items": items, "selection_ready": ready,
+        "submission_workspace_url": _submission_queue_url(request.GET),
+    }, status=status)
 
 
 def _deliveries_workflow_url(workflow):
