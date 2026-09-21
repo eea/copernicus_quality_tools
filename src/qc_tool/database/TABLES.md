@@ -8,9 +8,10 @@ steps and records completed cleanup and deliberately deferred schema changes.
 Verified **2026-09-21** against the release-cleanup working tree and registered models,
 Django **5.2.17**, and a fresh PostgreSQL **14.23** database created with the
 whole-app `database apply` command. The current draft schema has **23 tables,
-189 columns and 90 indexes**: 14 QC Tool tables and 9 Django tables. The existing local database has not been upgraded or reset; its earlier
-204-column draft schema differs intentionally. Use a fresh target for this
-revision. No existing business data was altered.
+189 columns and 90 indexes**: 14 QC Tool tables and 9 Django tables. On
+2026-09-21, the local development database was explicitly reset after a backup
+and initialized through this command. Its schema now matches this dictionary;
+the catalog and delivery history start empty. Production databases are unchanged.
 
 This is a reference, not a migration baseline or a second executable schema.
 Models remain the source of truth during draft; reviewed migrations also govern

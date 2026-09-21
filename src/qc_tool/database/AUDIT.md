@@ -173,8 +173,24 @@ The table dictionary is regenerated from a fresh PostgreSQL 14.23 database:
   current roles were created. Unknown job request origin is NULL; no profile or
   region tables, region permissions, products or verified receipts were created.
   Reimport into the occupied target was refused and the source checksum matched.
-- Original specifications, uploaded specification snapshots, existing databases
-  and migration policy were unchanged. Verification used disposable targets.
+- During schema cleanup, original specifications, uploaded specification snapshots,
+  existing databases and migration policy were unchanged. Regression verification
+  used disposable targets.
+
+### Local review database reset: 2026-09-21
+
+At the user's explicit request, the local development `qc_tool` database was
+backed up in the ignored `backups/` directory, recreated, and initialized through
+the whole-app database command. PostgreSQL now has 23 tables, 189 columns and
+90 indexes, with no retired profile/region tables or country columns. Products,
+deliveries, jobs and product assignments start empty. Startup creates the three
+standard local demo accounts.
+
+Database readiness and Django checks passed. Authenticated dashboard, product,
+delivery and reviewer pages returned HTTP 200 for the applicable demo roles;
+the product list is empty for all three. Shared files and original specifications
+were preserved. Policy remains `draft` pending the user's application review
+and a separate freeze change. This reset is not a production-cutover rehearsal.
 
 ## Earlier index audit: 2026-09-18
 
