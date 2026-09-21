@@ -6,6 +6,7 @@ import shutil
 
 from ..contracts import PublicationLayout
 from ..errors import PublicationError
+from ..storage import artifact_directory
 from .secure_copy import sync_directory
 
 
@@ -50,9 +51,12 @@ def publication_layout(reserved, *, submission_root):
     legacy_component = "aoi-{}-{}".format(reserved.product_unit_id, _safe_component(reserved.product_unit_code))
     legacy_final = root / release_component / legacy_component / final_name
     current_final = root / release_component / unit_component / final_name
-    recorded_path = getattr(reserved, "artifact_path", "")
-    if recorded_path:
-        recorded = Path(recorded_path)
+    recorded_key = getattr(reserved, "artifact_key", "")
+    if recorded_key:
+        try:
+            recorded = artifact_directory(root, recorded_key, require_exists=False)
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise PublicationError("publication_path_conflict", "The stored publication key is unsafe.", 409) from exc
         if recorded not in (legacy_final, current_final):
             raise PublicationError("publication_path_conflict", "The stored publication path does not match this submission.", 409)
         if recorded == legacy_final:

@@ -17,24 +17,6 @@ class Command(BaseCommand):
         )
         parser.add_argument("--email")
         parser.add_argument(
-            "--country",
-            help="Profile country used for legacy region access.",
-        )
-        parser.add_argument(
-            "--region",
-            "--region-code",
-            "--aoi-code",
-            dest="region_codes",
-            action="append",
-            default=[],
-            help=(
-                "Assign one exact, opaque region code; may be supplied more than "
-                "once. No catalog validation or normalization is performed. "
-                "This scopes region access but does not grant region "
-                "permissions."
-            ),
-        )
-        parser.add_argument(
             "--group",
             action="append",
             choices=Role.values(),
@@ -58,8 +40,6 @@ class Command(BaseCommand):
             username=options["username"],
             password=options["password"],
             email=options.get("email"),
-            country=options.get("country"),
-            region_codes=options["region_codes"],
             product_idents=options["product_idents"],
             groups=options["group"],
             is_superuser=options["superuser"],

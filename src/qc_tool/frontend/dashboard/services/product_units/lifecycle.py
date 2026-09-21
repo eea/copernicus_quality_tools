@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 def create_delivery_job(delivery, **kwargs):
-    """Delegate row-locked creation while retaining the historic import."""
+    """Create a QC job with shared logging and row locking."""
 
     return _create_delivery_job(delivery, logger=logger, **kwargs)
 
 
 def refresh_delivery_projection(delivery):
-    """Delegate projection refresh through the historic import boundary."""
+    """Refresh the delivery projection through the row-locked service."""
 
     return _refresh_delivery_projection(delivery)
 

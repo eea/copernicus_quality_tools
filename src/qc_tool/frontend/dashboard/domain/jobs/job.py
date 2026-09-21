@@ -11,6 +11,10 @@ from qc_tool.common import JOB_WAITING
 
 
 class Job(models.Model):
+    class RequestSource(models.TextChoices):
+        BROWSER = "browser", "Browser"
+        API = "api", "API"
+
     job_uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     delivery = models.ForeignKey(
         "dashboard.Delivery",
@@ -31,13 +35,13 @@ class Job(models.Model):
         editable=False,
         help_text="Canonical product unit code reported by the delivery job result.",
     )
-    submitted_product_unit_code = models.CharField(
+    verified_product_unit_code = models.CharField(
         max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         default=None,
         blank=True,
         null=True,
         editable=False,
-        help_text="Canonical product unit code verified from the submitted ZIP.",
+        help_text="Canonical product unit code verified from this job's input ZIP; not a review decision.",
     )
     skip_steps = models.CharField(
         max_length=100,
@@ -59,7 +63,14 @@ class Job(models.Model):
         related_name="requested_qc_jobs",
     )
     requested_by_username = models.CharField(max_length=150, blank=True)
-    request_source = models.CharField(max_length=16, default="legacy")
+    request_source = models.CharField(
+        max_length=16,
+        choices=RequestSource.choices,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Request channel when known; NULL means the channel was not recorded.",
+    )
     requested_api_token_id = models.PositiveBigIntegerField(
         blank=True,
         null=True,
@@ -91,26 +102,23 @@ class Job(models.Model):
         blank=True,
         editable=False,
     )
-    qc_tool_version = models.CharField(
-        max_length=128,
-        blank=True,
-        editable=False,
-    )
-    result_metadata = models.JSONField(blank=True, null=True, editable=False)
-    result_sha256 = models.CharField(max_length=64, blank=True, editable=False)
-    result_received_at = models.DateTimeField(
-        blank=True,
-        null=True,
-        editable=False,
-    )
 
     class Meta:
         app_label = "dashboard"
         db_table = "execution_job"
+        constraints = (
+            models.CheckConstraint(
+                condition=(
+                    models.Q(request_source__isnull=True)
+                    | models.Q(request_source__in=("browser", "api"))
+                ),
+                name="execution_job_source_valid",
+            ),
+        )
         indexes = (
             models.Index(fields=("product_unit_code",), name="execution_job_unit_idx"),
             models.Index(
-                fields=("submitted_product_unit_code",),
+                fields=("verified_product_unit_code",),
                 name="execution_job_zip_unit_idx",
             ),
             models.Index(
@@ -129,11 +137,6 @@ class Job(models.Model):
             self.delivery.filename,
             self.job_status,
         )
-
-    def apply_result_metadata(self, job_result):
-        from qc_tool.frontend.dashboard.services.product_units import apply_result_product_unit
-
-        return apply_result_product_unit(self, job_result)
 
     def update_status(self, job_status):
         from qc_tool.frontend.dashboard.services.product_units import update_job_status

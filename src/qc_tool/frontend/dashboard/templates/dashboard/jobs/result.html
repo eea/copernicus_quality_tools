@@ -125,7 +125,7 @@
         <div><dt>Job identifier</dt><dd><code>{{ job_report.job_uuid }}</code></dd></div>
         <div><dt>Product identifier</dt><dd><code>{{ job_report.product_ident }}</code></dd></div>
         {% if job_report.reference_year %}<div><dt>Reference year</dt><dd>{{ job_report.reference_year }}</dd></div>{% endif %}
-        {% if job_report.submitted_product_unit_code %}<div><dt>Submitted product unit</dt><dd>{{ job_report.submitted_product_unit_code }}</dd></div>{% endif %}
+        {% if job_report.verified_product_unit_code %}<div><dt>Verified product unit</dt><dd>{{ job_report.verified_product_unit_code }}</dd></div>{% endif %}
         {% if account_access.can_view_other_users_deliveries %}<div><dt>Uploaded by</dt><dd>{{ delivery.user.username }}</dd></div>{% endif %}
         <div><dt>Delivery file</dt><dd>{% if delivery.is_deleted %}{{ job_report.filename }} (deleted){% else %}<a href="{% url 'download_delivery_file' delivery.id %}">{{ job_report.filename }}</a>{% endif %}</dd></div>
         {% if job_report.qc_tool_version %}<div><dt>QC Tool version</dt><dd>{{ job_report.qc_tool_version }}</dd></div>{% endif %}

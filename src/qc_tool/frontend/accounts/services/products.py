@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import DatabaseError
 
 
-UNAVAILABLE_PRODUCT_LABEL = "unavailable legacy product"
+UNAVAILABLE_PRODUCT_LABEL = "unavailable product"
 
 
 class ProductCatalogUnavailable(Exception):

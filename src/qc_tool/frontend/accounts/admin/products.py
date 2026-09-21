@@ -8,14 +8,14 @@ from qc_tool.frontend.accounts.models import UserProductGrant
 
 
 CATALOG_UNAVAILABLE_MESSAGE = (
-    "Product definitions are unavailable; product grants cannot be added or "
+    "The product catalog is unavailable; product grants cannot be added or "
     "changed."
 )
 logger = logging.getLogger(__name__)
 
 
 def _catalog_choices():
-    """Read product definitions only while constructing an admin formset."""
+    """Read business-product and QC-definition scopes for an admin formset."""
 
     from qc_tool.frontend.accounts.services.products import (
         ProductCatalogUnavailable,
@@ -26,7 +26,7 @@ def _catalog_choices():
         return product_ident_choices(), False
     except ProductCatalogUnavailable:
         logger.warning(
-            "Product grant choices could not be loaded from configured definitions.",
+            "Product grant choices could not be loaded from the managed catalog.",
             exc_info=True,
         )
         return (), True
@@ -35,9 +35,10 @@ def _catalog_choices():
 class UserProductGrantForm(forms.ModelForm):
     product_ident = forms.ChoiceField(
         choices=(),
-        label="Product",
+        label="Product or QC definition",
         help_text=(
-            "Assign one or more products to default users and product managers. "
+            "Choose a product for its full scope, or a QC definition for only "
+            "that definition's scope. Add one row per assignment. "
             "Default users can upload deliveries, run QC, and submit their own "
             "deliveries for assigned products. Review decisions require the "
             "product-manager or administrator role."
@@ -62,7 +63,7 @@ class UserProductGrantForm(forms.ModelForm):
         current = self.instance.product_ident if self.instance.pk else None
         choices = dict(catalog_choices)
         if current and current not in choices:
-            choices[current] = f"{current} — unavailable legacy product"
+            choices[current] = f"{current} — unavailable product"
 
         field = self.fields["product_ident"]
         field.choices = tuple(sorted(choices.items()))
@@ -113,7 +114,7 @@ class UserProductGrantInline(admin.TabularInline):
     readonly_fields = ("created_at", "created_by")
     extra = 1
     verbose_name = "Product grant"
-    verbose_name_plural = "Product grants — configured definitions"
+    verbose_name_plural = "Product grants — products and QC definitions"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("created_by")

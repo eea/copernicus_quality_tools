@@ -36,7 +36,7 @@ def update_job_status(
             fields=(
                 "job_status",
                 "product_unit_code",
-                "submitted_product_unit_code",
+                "verified_product_unit_code",
                 "date_finished",
             )
         )
@@ -96,9 +96,9 @@ def _apply_terminal_result(
             job.job_status = JOB_ERROR
         _reject_contradictory_product_unit(job, delivery, logger=logger)
 
-    if job.job_status == JOB_OK and not job.submitted_product_unit_code:
+    if job.job_status == JOB_OK and not job.verified_product_unit_code:
         logger.error(
-            "Successful job %s did not report one submitted product unit.",
+            "Successful job %s did not report one verified product unit.",
             job.job_uuid,
         )
         job.job_status = JOB_ERROR
@@ -106,14 +106,14 @@ def _apply_terminal_result(
 
 def _reject_contradictory_product_unit(job, delivery, *, logger):
     if (
-        delivery.submitted_product_unit_code
-        and job.submitted_product_unit_code
-        and delivery.submitted_product_unit_code != job.submitted_product_unit_code
+        delivery.verified_product_unit_code
+        and job.verified_product_unit_code
+        and delivery.verified_product_unit_code != job.verified_product_unit_code
     ):
         logger.error(
-            "Conflicting submitted product unit for delivery %s: %s != %s",
+            "Conflicting verified product unit for delivery %s: %s != %s",
             delivery.pk,
-            delivery.submitted_product_unit_code,
-            job.submitted_product_unit_code,
+            delivery.verified_product_unit_code,
+            job.verified_product_unit_code,
         )
         job.job_status = JOB_ERROR

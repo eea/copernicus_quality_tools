@@ -108,7 +108,7 @@ embedded credentials, paths, query strings, or HTTP endpoints.
 
 - `401` means the session or machine credential is missing or expired.
 - `403` means authentication succeeded but the required permission, ownership,
-  or product/region scope is missing.
+  or product scope is missing.
 
 Browser pages redirect anonymous users to login. Session-backed JSON endpoints
 return JSON errors so the browser can redirect without treating login HTML as

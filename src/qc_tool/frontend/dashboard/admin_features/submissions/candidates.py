@@ -22,7 +22,7 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
     list_display = (
         "submission_uuid",
         "product_unit_code",
-        "submitted_product_unit_code",
+        "verified_product_unit_code",
         "delivery_filename",
         "uploader",
         "qc_requester",
@@ -39,7 +39,7 @@ class DeliverySubmissionAdmin(ScopedCatalogHistoryAdmin):
         "delivery__user__username",
         "job__job_uuid",
         "product_unit_code",
-        "submitted_product_unit_code",
+        "verified_product_unit_code",
         "input_digest",
     )
     readonly_fields = tuple(

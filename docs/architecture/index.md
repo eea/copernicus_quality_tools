@@ -87,7 +87,7 @@ either.
 | Public/private visibility is explicit | A new named dashboard route cannot silently become public |
 | Authentication is separate from visibility | Browser sessions, API credentials, and worker tokens have different contracts |
 | Django permissions represent capabilities | Role and direct user permissions are naturally additive |
-| Product and region grants represent scope | A capability alone does not silently grant access to every record |
+| Product grants represent scope | A capability alone does not silently grant access to every record |
 | Object access lives in `dashboard/access/` | Accounts remains independent of Delivery and Job models |
 | Input boundaries use dedicated services | Views remain small and validation is reusable and testable |
 | Workers poll the frontend | Frontend owns queue state; workers can scale horizontally |

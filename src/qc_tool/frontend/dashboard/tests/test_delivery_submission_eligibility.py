@@ -21,6 +21,10 @@ from qc_tool.frontend.accounts.services.api_tokens import (
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import S3Info
+from qc_tool.frontend.dashboard.services.submissions.errors import SubmissionError
+from qc_tool.frontend.dashboard.services.submissions.reservation.eligibility import (
+    latest_successful_job, validate_delivery,
+)
 
 
 class DeliverySubmissionEligibilityTests(TestCase):
@@ -73,7 +77,7 @@ class DeliverySubmissionEligibilityTests(TestCase):
             created_at=now,
         )
 
-        self.assertEqual(delivery.get_submittable_job(), latest)
+        self.assertEqual(latest_successful_job(delivery), latest)
 
     def test_older_success_does_not_override_a_newer_failed_or_running_job(self):
         for latest_status in (JOB_FAILED, JOB_RUNNING):
@@ -91,7 +95,8 @@ class DeliverySubmissionEligibilityTests(TestCase):
                     created_at=now,
                 )
 
-                self.assertIsNone(delivery.get_submittable_job())
+                with self.assertRaisesMessage(SubmissionError, "latest QC job must finish successfully"):
+                    latest_successful_job(delivery)
 
     def test_already_submitted_delivery_is_not_submittable_again(self):
         delivery = self.create_delivery(submitted=True)
@@ -101,7 +106,9 @@ class DeliverySubmissionEligibilityTests(TestCase):
             created_at=timezone.now(),
         )
 
-        self.assertIsNone(delivery.get_submittable_job())
+        with self.assertRaises(SubmissionError) as caught:
+            validate_delivery(delivery, request_channel="browser")
+        self.assertEqual(caught.exception.code, "submission_receipt_unavailable")
 
     def test_soft_deleted_delivery_is_not_submittable(self):
         delivery = self.create_delivery()
@@ -113,7 +120,9 @@ class DeliverySubmissionEligibilityTests(TestCase):
             created_at=timezone.now(),
         )
 
-        self.assertIsNone(delivery.get_submittable_job())
+        with self.assertRaises(SubmissionError) as caught:
+            validate_delivery(delivery, request_channel="browser")
+        self.assertEqual(caught.exception.code, "delivery_deleted")
 
     def test_equal_timestamps_use_descending_job_uuid_as_tie_breaker(self):
         created_at = timezone.now()
@@ -131,7 +140,7 @@ class DeliverySubmissionEligibilityTests(TestCase):
             created_at=created_at,
             job_uuid=UUID(int=2),
         )
-        self.assertEqual(successful_latest.get_submittable_job(), expected)
+        self.assertEqual(latest_successful_job(successful_latest), expected)
 
         failed_latest = self.create_delivery()
         self.create_job(
@@ -146,12 +155,15 @@ class DeliverySubmissionEligibilityTests(TestCase):
             created_at=created_at,
             job_uuid=UUID(int=4),
         )
-        self.assertIsNone(failed_latest.get_submittable_job())
+        with self.assertRaisesMessage(SubmissionError, "latest QC job must finish successfully"):
+            latest_successful_job(failed_latest)
 
     def test_delivery_without_jobs_is_not_submittable(self):
         delivery = self.create_delivery()
 
-        self.assertIsNone(delivery.get_submittable_job())
+        with self.assertRaises(SubmissionError) as caught:
+            latest_successful_job(delivery)
+        self.assertEqual(caught.exception.code, "qc_job_required")
 
 
 @override_settings(SUBMISSION_ENABLED=False)
@@ -166,8 +178,7 @@ class DisabledSubmissionEndpointTests(TestCase):
         self.client.force_login(self.user)
         s3 = S3Info.objects.create(
             host="https://s3.example.test",
-            access_key="access-key",
-            secret_key="secret-key",
+            credential_ref="a" * 32,
             bucketname="bucket",
             key_prefix="deliveries",
         )

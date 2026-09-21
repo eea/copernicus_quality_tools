@@ -115,6 +115,7 @@ operator-configured plaintext token environment variable.
 | Variable | Frontend default | Worker default | Constraint |
 | --- | ---: | ---: | --- |
 | `S3_ALLOWED_ENDPOINTS` | empty | empty | Comma-separated exact HTTPS origins; empty disables S3 |
+| `S3_CREDENTIALS_DIR` | `WORK_DIR/s3_credentials` | n/a | Persistent private credential directory, owned by the frontend runtime UID; directory `0700`, files `0600` |
 | `S3_CONNECT_TIMEOUT_SECONDS` | `3` | `3` | Positive finite seconds |
 | `S3_READ_TIMEOUT_SECONDS` | `10` | `30` | Positive finite seconds |
 | `S3_MAX_LISTED_OBJECTS` | `1000` | `1000` | 1–1000 |
@@ -123,6 +124,15 @@ operator-configured plaintext token environment variable.
 The allowlist must be identical in frontend and worker. Entries cannot contain
 whitespace padding, credentials, paths, query strings, fragments, unsafe IP
 literals, or HTTP origins.
+
+The database stores an opaque `credential_ref`, not S3 access or secret keys.
+New API registrations save credentials in `S3_CREDENTIALS_DIR`; authenticated
+workers receive only the credentials for their claimed job. Keep the directory
+outside static files, incoming deliveries, job folders and publication folders.
+If overriding the default, mount persistent storage at that container path and
+include it in restricted, encrypted backups. A SQL-only legacy import leaves
+credential references empty; re-register those sources with current credentials
+before starting new QC work. See [credential operations](../deployment/operations.md#s3-credentials).
 
 ## Delivery archive limits
 

@@ -50,7 +50,7 @@ def apply_result_product_unit(job, job_result):
     else:
         value = update.value
     changed = []
-    for field_name in ("product_unit_code", "submitted_product_unit_code"):
+    for field_name in ("product_unit_code", "verified_product_unit_code"):
         if getattr(job, field_name) != value:
             setattr(job, field_name, value)
             changed.append(field_name)

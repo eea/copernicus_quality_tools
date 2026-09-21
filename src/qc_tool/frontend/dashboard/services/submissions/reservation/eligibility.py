@@ -24,9 +24,9 @@ def validate_delivery(delivery, *, request_channel):
         )
     if delivery.date_submitted is not None:
         raise SubmissionError(
-            "legacy_submission_requires_reconciliation",
-            "This delivery was submitted by the legacy workflow and must be "
-            "reconciled before it can use the new publication lifecycle.",
+            "submission_receipt_unavailable",
+            "This delivery is already recorded as submitted, but its publication "
+            "receipt is unavailable. It cannot be submitted again.",
             409,
         )
     if delivery.user_id is None or delivery.user is None:
@@ -67,14 +67,14 @@ def latest_successful_job(delivery):
 
 
 def validated_submitted_product_unit(delivery, latest_job):
-    submitted_unit = normalize_product_unit_code(latest_job.submitted_product_unit_code)
+    submitted_unit = normalize_product_unit_code(latest_job.verified_product_unit_code)
     if submitted_unit is None:
         raise SubmissionError(
             "product_unit_unavailable",
             "The successful QC job did not verify exactly one product unit.",
             409,
         )
-    delivery_unit = normalize_product_unit_code(delivery.submitted_product_unit_code)
+    delivery_unit = normalize_product_unit_code(delivery.verified_product_unit_code)
     if delivery_unit is not None and delivery_unit != submitted_unit:
         raise SubmissionError(
             "delivery_product_unit_mismatch",

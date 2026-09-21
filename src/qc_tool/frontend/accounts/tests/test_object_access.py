@@ -9,19 +9,17 @@ from qc_tool.frontend.accounts.authorization.access import AccountAccess
 from qc_tool.frontend.accounts.authorization.access import access_for
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
-from qc_tool.frontend.accounts.models import UserRegionGrant
-from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.dashboard.access import can_view_delivery
 from qc_tool.frontend.dashboard.access import can_view_job
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
-from qc_tool.frontend.dashboard.views import query_deliveries
+from qc_tool.frontend.dashboard.services.deliveries.listing import query_deliveries
 
 
 class DashboardObjectAccessTests(TestCase):
     def setUp(self):
-        self.owner = self.create_user("owner", country="CZ", product_idents=("clc2024",))
-        self.other = self.create_user("other", country="SK")
+        self.owner = self.create_user("owner", product_idents=("clc2024",))
+        self.other = self.create_user("other")
         self.delivery = self.create_delivery(
             self.owner,
             filename="delivery.zip",
@@ -38,8 +36,6 @@ class DashboardObjectAccessTests(TestCase):
         username,
         *,
         role=None,
-        country=None,
-        region_codes=(),
         product_idents=(),
         is_superuser=False,
     ):
@@ -51,17 +47,6 @@ class DashboardObjectAccessTests(TestCase):
         if role is not None:
             group, _created = Group.objects.get_or_create(name=role.value)
             user.groups.add(group)
-        if country is not None:
-            UserProfile.objects.create(
-                user=user,
-                country=country,
-            )
-        UserRegionGrant.objects.bulk_create(
-            [
-                UserRegionGrant(user=user, region_code=region_code)
-                for region_code in region_codes
-            ]
-        )
         UserProductGrant.objects.bulk_create(
             [
                 UserProductGrant(user=user, product_ident=product_ident)
@@ -143,15 +128,8 @@ class DashboardObjectAccessTests(TestCase):
                 self.assertEqual(response.json()["code"], "permission_denied")
 
     def test_owner_scoped_users_and_superuser_can_read_job(self):
-        region_user = self.create_user(
-            "direct-region-user",
-            role=Role.DEFAULT,
-            region_codes=("CZ",),
-        )
-        self.grant_capability(region_user, "view_region_deliveries")
         allowed_users = (
             self.owner,
-            region_user,
             self.create_user(
                 "product-manager",
                 role=Role.PRODUCT_MANAGER,
@@ -231,13 +209,7 @@ class DashboardObjectAccessTests(TestCase):
                         self.assertTrue(Job.objects.filter(pk=self.job.pk).exists())
                 self.client.logout()
 
-    def test_policy_scopes_direct_region_permission_and_product_role(self):
-        region_user = self.create_user(
-            "direct-scoped-region-user",
-            role=Role.DEFAULT,
-            region_codes=("CZ", "DE"),
-        )
-        self.grant_capability(region_user, "view_region_deliveries")
+    def test_policy_scopes_product_manager_to_assigned_products(self):
         product_manager = self.create_user(
             "scoped-product-manager",
             role=Role.PRODUCT_MANAGER,
@@ -246,12 +218,6 @@ class DashboardObjectAccessTests(TestCase):
         outside_delivery = self.create_delivery(
             self.other,
             filename="outside.zip",
-            product_ident="urban",
-        )
-        german_owner = self.create_user("german-owner", country="DE")
-        second_region_delivery = self.create_delivery(
-            german_owner,
-            filename="second-region.zip",
             product_ident="urban",
         )
         second_product_delivery = self.create_delivery(
@@ -265,18 +231,6 @@ class DashboardObjectAccessTests(TestCase):
         )
         self.assertTrue(can_view_delivery(access_for(self.owner), self.delivery))
         self.assertFalse(can_view_delivery(access_for(self.other), self.delivery))
-        self.assertTrue(
-            can_view_delivery(access_for(region_user), self.delivery)
-        )
-        self.assertTrue(
-            can_view_delivery(
-                access_for(region_user),
-                second_region_delivery,
-            )
-        )
-        self.assertFalse(
-            can_view_delivery(access_for(region_user), outside_delivery)
-        )
         self.assertTrue(can_view_job(access_for(product_manager), self.job))
         self.assertTrue(
             can_view_delivery(
@@ -288,54 +242,11 @@ class DashboardObjectAccessTests(TestCase):
             can_view_delivery(access_for(product_manager), outside_delivery)
         )
 
-        _total, rows = query_deliveries(region_user, limit=100)
-        visible_ids = {row["id"] for row in rows}
-        self.assertIn(self.delivery.pk, visible_ids)
-        self.assertIn(second_region_delivery.pk, visible_ids)
-        self.assertNotIn(outside_delivery.pk, visible_ids)
-
         _total, rows = query_deliveries(product_manager, limit=100)
         visible_ids = {row["id"] for row in rows}
         self.assertIn(self.delivery.pk, visible_ids)
         self.assertIn(second_product_delivery.pk, visible_ids)
         self.assertNotIn(outside_delivery.pk, visible_ids)
-
-    def test_direct_region_permission_and_grant_scope_a_default_user(self):
-        unprivileged = self.create_user(
-            "unprivileged-region-user",
-            role=Role.DEFAULT,
-            region_codes=("CZ",),
-        )
-        directly_privileged = self.create_user(
-            "direct-region-user",
-            role=Role.DEFAULT,
-            region_codes=("CZ",),
-        )
-        permission_without_grant = self.create_user(
-            "region-permission-without-grant",
-            role=Role.DEFAULT,
-        )
-        self.grant_capability(
-            directly_privileged,
-            "view_region_deliveries",
-        )
-        self.grant_capability(
-            permission_without_grant,
-            "view_region_deliveries",
-        )
-
-        self.assertFalse(
-            can_view_delivery(access_for(unprivileged), self.delivery)
-        )
-        self.assertTrue(
-            can_view_delivery(access_for(directly_privileged), self.delivery)
-        )
-        self.assertFalse(
-            can_view_delivery(
-                access_for(permission_without_grant),
-                self.delivery,
-            )
-        )
 
     def test_direct_product_permission_scopes_a_default_user(self):
         unprivileged = self.create_user(
@@ -373,39 +284,3 @@ class DashboardObjectAccessTests(TestCase):
                 self.delivery,
             )
         )
-
-    def test_direct_region_and_product_permissions_are_additive(self):
-        scoped_user = self.create_user(
-            "direct-combined-user",
-            role=Role.DEFAULT,
-            region_codes=("CZ",),
-            product_idents=("clc2024",),
-        )
-        self.grant_capability(scoped_user, "view_region_deliveries")
-        self.grant_capability(scoped_user, "view_product_deliveries")
-        region_delivery = self.create_delivery(
-            self.owner,
-            filename="region-scope.zip",
-            product_ident="urban",
-        )
-        product_delivery = self.create_delivery(
-            self.other,
-            filename="product-scope.zip",
-            product_ident="CLC2024",
-        )
-        outside_delivery = self.create_delivery(
-            self.other,
-            filename="outside-combined-scope.zip",
-            product_ident="urban",
-        )
-
-        access = access_for(scoped_user)
-        self.assertTrue(can_view_delivery(access, region_delivery))
-        self.assertTrue(can_view_delivery(access, product_delivery))
-        self.assertFalse(can_view_delivery(access, outside_delivery))
-
-        _total, rows = query_deliveries(scoped_user, limit=100)
-        visible_ids = {row["id"] for row in rows}
-        self.assertIn(region_delivery.pk, visible_ids)
-        self.assertIn(product_delivery.pk, visible_ids)
-        self.assertNotIn(outside_delivery.pk, visible_ids)

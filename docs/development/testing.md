@@ -100,7 +100,7 @@ High-risk changes should include focused coverage for:
 
 - anonymous, authenticated, and forbidden route behavior;
 - role and direct-permission combinations;
-- ownership and product/region scope;
+- ownership and product scope;
 - CSRF enforcement for session mutations;
 - malformed identifiers and content types;
 - path traversal, symlinks, archive limits, and cleanup;

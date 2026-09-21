@@ -18,11 +18,13 @@ from django.test import TestCase, override_settings
 from qc_tool.common import JOB_LOST
 from qc_tool.database.legacy.dump import LegacyDump
 from qc_tool.database.legacy.importer import apply_import, prepare_import
-from qc_tool.frontend.accounts.models import PersonalAccessToken, UserProductGrant, UserProfile
+from qc_tool.frontend.accounts.models import PersonalAccessToken, UserProductGrant
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductRelease, ProductUnit,
     QcDefinition, S3Info,
 )
+from qc_tool.frontend.dashboard.services.submissions.errors import SubmissionError
+from qc_tool.frontend.dashboard.services.submissions.reservation.eligibility import validate_delivery
 
 
 _COLUMNS = {
@@ -108,7 +110,7 @@ class LegacyImportTests(TestCase):
         self.assertFalse(get_user_model().objects.exists())
         self.assertFalse(Delivery.objects.exists())
 
-    def test_preserves_identity_password_profile_and_required_role(self):
+    def test_preserves_identity_password_and_required_role(self):
         self.apply()
         user = get_user_model().objects.get(pk=47)
         self.assertEqual(user.username, "legacy-synthetic-owner")
@@ -121,11 +123,22 @@ class LegacyImportTests(TestCase):
         self.assertEqual(user.date_joined, datetime(2024, 1, 1, 13))
         self.assertEqual(user.last_login, datetime(2024, 6, 1, 14))
         self.assertEqual(set(user.groups.values_list("name", flat=True)), {"default"})
-        profile = UserProfile.objects.get(user=user)
-        self.assertEqual(profile.pk, 83)
-        self.assertEqual(profile.country, "Synthetic region")
-        self.assertEqual(profile.product_family, "Legacy family")
         self.assertFalse(UserProductGrant.objects.exists())
+
+    def test_reports_omitted_profiles_without_copying_or_exposing_them(self):
+        plan = prepare_import(self.dump)
+        self.assertEqual(plan.report["omitted"]["legacy_profiles"], 1)
+        self.assertEqual(plan.report["omitted"]["legacy_profile_country_values"], 1)
+        self.assertEqual(plan.report["omitted"]["legacy_profile_product_family_values"], 1)
+        self.assertNotIn("profiles", plan.report["planned"])
+        self.assertNotIn("region_grants", plan.report["planned"])
+        self.assertNotIn("Synthetic region", str(plan.report))
+        self.assertNotIn("Legacy family", str(plan.report))
+        for empty_label in (None, ""):
+            with self.subTest(empty_label=empty_label):
+                self.dump.tables["dashboard_userprofile"][0]["product_family"] = empty_label
+                report = prepare_import(self.dump).report
+                self.assertEqual(report["omitted"]["legacy_profile_product_family_values"], 0)
 
     def test_preserves_submitted_delivery_and_job_without_inventing_receipts(self):
         self.apply()
@@ -139,7 +152,9 @@ class LegacyImportTests(TestCase):
         self.assertEqual(delivery.product_description, "Historical product description")
         self.assertEqual(delivery.date_uploaded, datetime(2024, 6, 1, 14))
         self.assertEqual(delivery.date_submitted, datetime(2024, 6, 1, 14, 3))
-        self.assertIsNone(delivery.get_submittable_job())
+        with self.assertRaises(SubmissionError) as denied:
+            validate_delivery(delivery, request_channel="browser")
+        self.assertEqual(denied.exception.code, "submission_receipt_unavailable")
         self.assertEqual(job.delivery_id, delivery.pk)
         self.assertEqual(job.job_status, "ok")
         self.assertEqual(job.date_created, datetime(2024, 6, 1, 14, 0, 30))
@@ -165,17 +180,15 @@ class LegacyImportTests(TestCase):
         job = Job.objects.get(pk=UUID(int=1001))
         self.assertEqual(delivery.product_unit_code, "7")
         self.assertEqual(job.product_unit_code, "7")
-        self.assertIsNone(delivery.submitted_product_unit_code)
-        self.assertIsNone(job.submitted_product_unit_code)
+        self.assertIsNone(delivery.verified_product_unit_code)
+        self.assertIsNone(job.verified_product_unit_code)
         self.assertFalse(delivery.content_sha256)
         self.assertFalse(job.input_sha256)
-        self.assertIsNone(job.result_metadata)
-        self.assertFalse(job.result_sha256)
         self.assertIsNone(job.product_release_id)
         self.assertIsNone(job.qc_definition_id)
         self.assertIsNone(job.requested_by_id)
         self.assertFalse(job.requested_by_username)
-        self.assertEqual(job.request_source, "legacy")
+        self.assertIsNone(job.request_source)
 
     def test_preserves_storage_coordinates_but_does_not_restore_credentials_or_sessions(self):
         self.apply()
@@ -183,8 +196,7 @@ class LegacyImportTests(TestCase):
         self.assertEqual(source.host, "https://storage.example.invalid")
         self.assertEqual(source.bucketname, "synthetic-bucket")
         self.assertEqual(source.key_prefix, "legacy/object.zip")
-        self.assertEqual(source.access_key, "")
-        self.assertEqual(source.secret_key, "")
+        self.assertEqual(source.credential_ref, "")
         self.assertFalse(PersonalAccessToken.objects.exists())
         self.assertFalse(Session.objects.exists())
 
@@ -238,20 +250,18 @@ class LegacyImportTests(TestCase):
         with patch.object(QuerySet, "bulk_create", fail_job_write):
             with self.assertRaisesRegex(RuntimeError, "Synthetic write failure"):
                 self.apply()
-        for model in (get_user_model(), UserProfile, Delivery, Job, S3Info):
+        for model in (get_user_model(), Delivery, Job, S3Info):
             with self.subTest(model=model.__name__):
                 self.assertFalse(model.objects.exists())
 
     def test_generated_primary_keys_follow_retained_legacy_ids(self):
         self.apply()
         user = get_user_model().objects.create_user(username="post-import-user")
-        source = S3Info.objects.create(host="", access_key="", secret_key="", bucketname="", key_prefix="")
+        source = S3Info.objects.create(host="", credential_ref="", bucketname="", key_prefix="")
         delivery = Delivery.objects.create(user=user, filename="new.zip", size_bytes=1)
-        profile = UserProfile.objects.create(user=user)
         self.assertGreater(user.pk, 47)
         self.assertGreater(source.pk, 701)
         self.assertGreater(delivery.pk, 902)
-        self.assertGreater(profile.pk, 83)
 
     def test_reports_do_not_contain_source_personal_data_or_secrets(self):
         plan = prepare_import(self.dump)
@@ -307,12 +317,34 @@ class LegacyImportTests(TestCase):
         self.assertEqual(removed_event.object_id, "99")
         self.assertEqual(removed_event.change_message, "Historical removal")
 
-    def test_unknown_legacy_groups_preserve_membership_without_becoming_management_roles(self):
+    def test_obsolete_groups_and_memberships_are_omitted(self):
         self.dump.tables["auth_group"] = [{"id": "51", "name": "historical-team"}]
         self.dump.tables["auth_user_groups"] = [{"id": "61", "user_id": "47", "group_id": "51"}]
-        self.apply()
+        report = self.apply()
         user = get_user_model().objects.get(pk=47)
-        self.assertEqual(set(user.groups.values_list("name", flat=True)), {"default", "legacy:historical-team"})
-        self.assertFalse(Group.objects.get(name="legacy:historical-team").permissions.exists())
+        self.assertEqual(set(user.groups.values_list("name", flat=True)), {"default"})
+        self.assertEqual(set(Group.objects.values_list("name", flat=True)), {"default", "admin", "product_manager"})
+        self.assertEqual(report["omitted"]["obsolete_groups"], 1)
+        self.assertEqual(report["omitted"]["obsolete_group_memberships"], 1)
+        self.assertNotIn("historical-team", json.dumps(report))
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
+
+    def test_current_direct_permissions_resolve_and_obsolete_permissions_are_omitted(self):
+        self.dump.tables["django_content_type"] = [
+            {"id": "1", "app_label": "auth", "model": "user"},
+            {"id": "2", "app_label": "dashboard", "model": "userprofile"},
+        ]
+        self.dump.tables["auth_permission"] = [
+            {"id": "71", "content_type_id": "1", "codename": "view_user"},
+            {"id": "72", "content_type_id": "2", "codename": "view_userprofile"},
+        ]
+        self.dump.tables["auth_user_user_permissions"] = [
+            {"id": "81", "user_id": "47", "permission_id": "71"},
+            {"id": "82", "user_id": "47", "permission_id": "72"},
+        ]
+        report = self.apply()
+        user = get_user_model().objects.get(pk=47)
+        self.assertEqual(list(user.user_permissions.values_list("codename", flat=True)), ["view_user"])
+        self.assertEqual(report["imported"]["direct_permissions"], 1)
+        self.assertEqual(report["omitted"]["unmapped_direct_permissions"], 1)

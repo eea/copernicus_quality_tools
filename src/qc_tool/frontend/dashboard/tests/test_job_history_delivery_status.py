@@ -14,7 +14,7 @@ from qc_tool.common import JOB_FAILED, JOB_OK, JOB_RUNNING, JOB_WAITING
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductUnit, ProductRelease,
 )
@@ -64,12 +64,12 @@ class JobHistoryDeliveryStatusTests(TestCase):
     def create_submission(self, job, *, review_state="pending", publication_state="published"):
         return DeliverySubmission.objects.create(
             delivery=job.delivery, job=job, product_release=self.release,
-            product_unit=self.aoi, product_unit_code="CZ", submitted_product_unit_code="CZ",
+            product_unit=self.aoi, product_unit_code="CZ", verified_product_unit_code="CZ",
             submitted_by=self.owner, submitted_by_username=self.owner.username,
             request_channel="browser", review_state=review_state,
             publication_state=publication_state,
             published_at=timezone.now() if publication_state == "published" else None,
-            artifact_path="/published/history.zip", artifact_digest="a" * 64,
+            artifact_key="published/history.zip", artifact_digest="a" * 64,
             input_digest="b" * 64,
         )
 
@@ -149,16 +149,15 @@ class JobHistoryDeliveryStatusTests(TestCase):
         self.assertEqual(summary["status"]["value"], "passed")
         self.assertIsNone(summary["action"])
 
-    def test_region_viewer_does_not_see_private_review_status(self):
+    def test_product_viewer_does_not_see_private_review_status(self):
         self.create_submission(self.create_job(JOB_OK), review_state="rejected")
         self.delivery.date_submitted = timezone.now()
         self.delivery.save(update_fields=("date_submitted",))
-        viewer = get_user_model().objects.create_user(username="history-state-region-viewer")
-        UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=viewer, region_code="CZ")
+        viewer = get_user_model().objects.create_user(username="history-state-viewer")
         viewer.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
+        UserProductGrant.objects.create(user=viewer, product_ident=self.product.ident)
         self.client.force_login(viewer)
 
         response = self.client.get(self.json_url, {"include_delivery": "1"})

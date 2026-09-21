@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from qc_tool.common import QCException
 from qc_tool.frontend.accounts.authorization import AccountAccess
-from qc_tool.frontend.dashboard.views import api_product_info
+from qc_tool.frontend.dashboard.views.api_access import api_product_info
 
 
 EXPECTED_OPERATIONS = {

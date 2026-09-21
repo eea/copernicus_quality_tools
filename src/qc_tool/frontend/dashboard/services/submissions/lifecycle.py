@@ -1,7 +1,5 @@
 """Orchestrate reservation, artifact publication, and database finalization."""
 
-from pathlib import Path
-
 from django.conf import settings
 
 from qc_tool.common import CONFIG
@@ -103,13 +101,13 @@ def _verify_retained_publication(reserved, result, submission_root):
     """A retry verifies retained files against both manifest and DB receipt."""
 
     layout = publication_layout(reserved, submission_root=submission_root)
-    if Path(result.artifact_path) != layout.final_directory:
+    if result.artifact_key != layout.final_directory.relative_to(layout.root).as_posix():
         raise PublicationError(
             "publication_manifest_mismatch",
             "The recorded publication path differs from its retained location.",
             409,
         )
-    receipt = receipt_from_existing(layout.final_directory, reserved)
+    receipt = receipt_from_existing(layout.final_directory, reserved, submission_root=layout.root)
     recorded_digest = DeliverySubmission.objects.values_list(
         "artifact_digest", flat=True,
     ).get(pk=reserved.submission_uuid)

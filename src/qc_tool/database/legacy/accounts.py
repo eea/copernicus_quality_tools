@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import identify_hasher, is_password_usable
 
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.product_security import normalize_product_ident
 
 from .values import boolean, bounded_text, integer, timestamp
@@ -20,15 +20,11 @@ from .values import boolean, bounded_text, integer, timestamp
 class PreparedAccounts:
     # A default dataclass repr would reveal password hashes and personal data.
     users: list
-    profiles: list
     role_names: dict
     product_grants: list
-    region_grants: list
     permissions: dict
-    legacy_groups: dict
-    legacy_memberships: list
+    omitted: dict
     warnings: list
-    legacy_group_permission_count: int
 
 
 def _indexed_rows(dump, table):
@@ -77,16 +73,17 @@ def _access_overrides(access_map, user_ids):
         pk = integer(source_id, "access map user ID")
         if str(pk) != source_id or pk not in user_ids:
             raise ValueError("Access map contains an unknown or noncanonical user ID.")
-        if not isinstance(values, dict) or set(values) - {"roles", "products", "regions"}:
-            raise ValueError(f"Access map user {pk}: only roles, products and regions are supported.")
+        if isinstance(values, dict) and "regions" in values:
+            raise ValueError(f"Access map user {pk}: regions are no longer supported; assign products instead.")
+        if not isinstance(values, dict) or set(values) - {"roles", "products"}:
+            raise ValueError(f"Access map user {pk}: only roles and products are supported.")
         roles = _string_list(values.get("roles", []), f"Access map user {pk} roles", maximum_length=150)
         if not set(roles).issubset(Role.values()):
             raise ValueError(f"Access map user {pk}: unknown role.")
         products = _string_list(values.get("products", []), f"Access map user {pk} products", maximum_length=64)
         if any(normalize_product_ident(product) != product for product in products):
             raise ValueError(f"Access map user {pk}: product identifiers must be canonical.")
-        regions = _string_list(values.get("regions", []), f"Access map user {pk} regions", maximum_length=100)
-        result[pk] = {"roles": roles, "products": products, "regions": regions}
+        result[pk] = {"roles": roles, "products": products}
     return result
 
 
@@ -94,20 +91,20 @@ def prepare_accounts(dump, *, access_map=None):
     """Convert identities and explicit grants; never write or consult a database.
 
     Existing password hashes are copied directly, preserving Django's password
-    upgrade-on-login behavior. Old arbitrary groups retain inert memberships;
-    their former permissions do not become canonical application capabilities.
+    upgrade-on-login behavior. Obsolete profiles, arbitrary groups and their
+    memberships are omitted; no retired access rules enter the current schema.
     Explicit product grants can name historical products absent from the empty
     catalog. An administrator must still upload their original specifications.
     """
 
     source_users = _indexed_rows(dump, "auth_user")
-    source_profiles = _indexed_rows(dump, "dashboard_userprofile")
+    source_profiles = dump.tables.get("dashboard_userprofile", ())
     source_groups = _indexed_rows(dump, "auth_group")
     source_permissions = _indexed_rows(dump, "auth_permission")
     source_content_types = _indexed_rows(dump, "django_content_type")
     overrides = _access_overrides(access_map, source_users)
     role_names = {pk: {Role.DEFAULT.value} for pk in source_users}
-    legacy_groups = {}
+    obsolete_group_count = 0
     names = set()
     for pk, row in source_groups.items():
         name = bounded_text(row.get("name"), "auth_group.name", 150)
@@ -115,10 +112,8 @@ def prepare_accounts(dump, *, access_map=None):
             raise ValueError("auth_group: empty or duplicate group name.")
         names.add(name)
         if name not in Role.values():
-            if len(name) + len("legacy:") > 150:
-                raise ValueError("auth_group: a legacy group name exceeds the archival name limit.")
-            legacy_groups[pk] = f"legacy:{name}"
-    legacy_memberships = []
+            obsolete_group_count += 1
+    obsolete_membership_count = 0
     membership_keys = set()
     for row in _indexed_rows(dump, "auth_user_groups").values():
         user_id = _reference(row.get("user_id"), source_users, "auth_user_groups.user_id")
@@ -131,11 +126,10 @@ def prepare_accounts(dump, *, access_map=None):
         if name in Role.values():
             role_names[user_id].add(name)
         else:
-            legacy_memberships.append(membership)
+            obsolete_membership_count += 1
 
     users = []
     product_grants = []
-    region_grants = []
     usernames = set()
     user_model = get_user_model()
     staff_without_role = 0
@@ -177,27 +171,6 @@ def prepare_accounts(dump, *, access_map=None):
             UserProductGrant(user_id=pk, product_ident=ident)
             for ident in override.get("products", ())
         )
-        region_grants.extend(
-            UserRegionGrant(user_id=pk, region_code=code)
-            for code in override.get("regions", ())
-        )
-
-    profiles = []
-    profiled_ids = set()
-    for pk, row in source_profiles.items():
-        user_id = _reference(row.get("user_id"), source_users, "dashboard_userprofile.user_id")
-        if user_id in profiled_ids:
-            raise ValueError("dashboard_userprofile: duplicate user profile.")
-        profiled_ids.add(user_id)
-        profiles.append(UserProfile(
-            id=pk, user_id=user_id,
-            country=bounded_text(row.get("country"), "dashboard_userprofile.country", 100, nullable=True),
-            product_family=bounded_text(row.get("product_family"), "dashboard_userprofile.product_family", 50, nullable=True),
-        ))
-    next_profile_id = max(source_profiles, default=0)
-    for user_id in sorted(source_users.keys() - profiled_ids):
-        next_profile_id += 1
-        profiles.append(UserProfile(id=next_profile_id, user_id=user_id))
 
     natural_permissions = {}
     for pk, row in source_permissions.items():
@@ -226,17 +199,21 @@ def prepare_accounts(dump, *, access_map=None):
     warnings = []
     if staff_without_role:
         warnings.append(f"{staff_without_role} legacy staff accounts retain their staff flag but have no management role; review access explicitly.")
-    if legacy_groups:
-        warnings.append(f"{len(legacy_groups)} legacy groups retain inert memberships; group permissions are not copied.")
-    missing_profiles = len(source_users) - len(profiled_ids)
-    if missing_profiles:
-        warnings.append(f"{missing_profiles} users without legacy profiles receive empty profiles.")
+    if obsolete_group_count:
+        warnings.append(f"{obsolete_group_count} obsolete groups and {obsolete_membership_count} memberships are omitted; source group permissions are not copied.")
+    if source_profiles:
+        warnings.append(f"{len(source_profiles)} obsolete profiles are omitted; countries and product-family labels remain only in the source dump.")
     if unsupported_passwords:
         warnings.append(f"{unsupported_passwords} users retain unsupported password hashes and require password resets before password login.")
     return PreparedAccounts(
-        users=users, profiles=profiles, role_names=role_names,
-        product_grants=product_grants, region_grants=region_grants,
-        permissions=permissions, legacy_groups=legacy_groups,
-        legacy_memberships=legacy_memberships, warnings=warnings,
-        legacy_group_permission_count=len(group_permissions),
+        users=users, role_names=role_names, product_grants=product_grants,
+        permissions=permissions, warnings=warnings,
+        omitted={
+            "legacy_profiles": len(source_profiles),
+            "legacy_profile_country_values": sum(bool(row.get("country")) for row in source_profiles),
+            "legacy_profile_product_family_values": sum(bool(row.get("product_family")) for row in source_profiles),
+            "obsolete_groups": obsolete_group_count,
+            "obsolete_group_memberships": obsolete_membership_count,
+            "source_group_permissions": len(group_permissions),
+        },
     )

@@ -63,30 +63,6 @@ application-wide `database apply` once in the documented deployment job before
 frontend startup. Never use `migrate <app> zero` to create the baseline; that
 command unapplies migrations.
 
-### Historical product unit metadata
-
-After importing and reconciling historical jobs into the baseline schema,
-preview the bounded historical result scan:
-
-```bash
-docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage backfill_product_unit_metadata \
-  --dry-run --limit 100
-```
-
-Then run the idempotent backfill while shared job storage is mounted:
-
-```bash
-docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage backfill_product_unit_metadata \
-  --batch-size 100
-```
-
-The command never infers a product unit from a filename. Missing, malformed, and
-ambiguous result metadata remains unavailable. See
-[Product unit metadata](../architecture/product-unit-metadata.md) for the lifecycle and trust
-boundary.
-
 ## QC Tool user provisioning
 
 For trusted automation, `create_default_user` supports canonical roles and
@@ -101,8 +77,7 @@ docker compose -f docker/compose.local.yaml exec frontend \
     --product <canonical-product-ident>
 ```
 
-Repeat `--group`, `--product`, or `--region` for multiple values. Region grants
-scope access but do not grant the required region permission. Prefer Django
+Repeat `--group` or `--product` for multiple values. Prefer Django
 Admin or an interactive command when exposing a password on the process command
 line or shell history is unacceptable.
 

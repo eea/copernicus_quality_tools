@@ -9,6 +9,7 @@ from qc_tool.frontend.dashboard.services.artifacts import open_regular_artifact
 
 from ..contracts import PublicationReceipt
 from ..errors import PublicationError
+from ..storage import artifact_key_for_directory
 from .integrity import PublicationIntegrityError
 from .integrity import verify_publication_inventory
 from .secure_copy import sync_directory
@@ -32,7 +33,8 @@ def build_manifest(reserved, *, input_digest, file_inventory):
         "product_release_id": reserved.product_release_id,
         "product_unit_id": reserved.product_unit_id,
         "product_unit_code": reserved.product_unit_code,
-        "submitted_product_unit_code": reserved.submitted_product_unit_code,
+        # This v2 wire key is retained for immutable manifest compatibility.
+        "submitted_product_unit_code": reserved.verified_product_unit_code,
         "input_sha256": input_digest,
         "storage": "s3" if reserved.is_s3 else "local",
         "requested_at": reserved.requested_at_iso,
@@ -42,15 +44,17 @@ def build_manifest(reserved, *, input_digest, file_inventory):
     return _canonical_json({**body, "artifact_sha256": digest}), digest
 
 
-def receipt_from_existing(final_directory, reserved):
+def receipt_from_existing(final_directory, reserved, *, submission_root):
     """Validate deterministic existing output before treating retry as success."""
 
-    if final_directory.is_symlink() or not final_directory.is_dir():
+    try:
+        artifact_key = artifact_key_for_directory(final_directory, submission_root)
+    except (OSError, ValueError, RuntimeError) as exc:
         raise PublicationError(
             "publication_path_conflict",
             "The deterministic publication path is occupied by unsafe data.",
             409,
-        )
+        ) from exc
     try:
         with open_regular_artifact(
             final_directory,
@@ -96,7 +100,7 @@ def receipt_from_existing(final_directory, reserved):
         "product_release_id": reserved.product_release_id,
         unit_keys[0]: reserved.product_unit_id,
         unit_keys[1]: reserved.product_unit_code,
-        unit_keys[2]: reserved.submitted_product_unit_code,
+        unit_keys[2]: reserved.verified_product_unit_code,
         "input_sha256": reserved.expected_input_digest,
         "storage": "s3" if reserved.is_s3 else "local",
         "requested_at": reserved.requested_at_iso,
@@ -143,7 +147,7 @@ def receipt_from_existing(final_directory, reserved):
     # sync. Do not commit the database receipt until that entry is durable.
     sync_directory(final_directory.parent)
     return PublicationReceipt(
-        artifact_path=str(final_directory),
+        artifact_key=artifact_key,
         artifact_digest=stated_digest,
         input_digest=input_digest,
         recovered_existing=True,

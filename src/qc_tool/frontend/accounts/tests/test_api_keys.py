@@ -15,7 +15,7 @@ from qc_tool.frontend.accounts.authentication.api_keys import (
     ApiKeyAuthenticationError,
 )
 from qc_tool.frontend.accounts.authentication.api_keys import (
-    authenticate_api_key,
+    authenticate_personal_access_token,
 )
 from qc_tool.frontend.accounts.authentication.api_keys import (
     authenticate_api_request,
@@ -110,14 +110,14 @@ class ApiKeyTests(TestCase):
             ),
             {"Automation", "Desktop client"},
         )
-        self.assertEqual(authenticate_api_key(first.raw_token), user)
-        self.assertEqual(authenticate_api_key(second.raw_token), user)
+        self.assertEqual(authenticate_personal_access_token(first.raw_token).user, user)
+        self.assertEqual(authenticate_personal_access_token(second.raw_token).user, user)
 
         deleted_name = delete_personal_access_token(user, first.token.pk)
 
         self.assertEqual(deleted_name, "Automation")
-        self.assertIsNone(authenticate_api_key(first.raw_token))
-        self.assertEqual(authenticate_api_key(second.raw_token), user)
+        self.assertIsNone(authenticate_personal_access_token(first.raw_token))
+        self.assertEqual(authenticate_personal_access_token(second.raw_token).user, user)
         self.assertTrue(
             PersonalAccessToken.objects.filter(pk=second.token.pk).exists()
         )
@@ -177,7 +177,6 @@ class ApiKeyTests(TestCase):
         PersonalAccessToken.objects.filter(pk=issued.token.pk).update(
             permission_snapshot={"run_qc": True},
             role_snapshot=["not-a-role"],
-            region_codes_snapshot=[""],
             product_idents_snapshot={"general_raster": True},
         )
 
@@ -186,7 +185,6 @@ class ApiKeyTests(TestCase):
         self.assertTrue(result.is_authenticated)
         self.assertEqual(result.access.permissions, frozenset())
         self.assertEqual(result.access.roles, frozenset())
-        self.assertEqual(result.access.region_codes, frozenset())
         self.assertEqual(result.access.product_idents, frozenset())
         self.assertFalse(result.access.is_administrator)
 
@@ -196,7 +194,7 @@ class ApiKeyTests(TestCase):
         user.is_active = False
         user.save(update_fields=("is_active",))
 
-        self.assertIsNone(authenticate_api_key(issued.raw_token))
+        self.assertIsNone(authenticate_personal_access_token(issued.raw_token))
         self.assertEqual(
             self.authenticate_request(issued.raw_token).error,
             ApiKeyAuthenticationError.INVALID,

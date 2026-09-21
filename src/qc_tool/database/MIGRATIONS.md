@@ -110,7 +110,7 @@ they must not introduce independent component release procedures.
 | Owner | Persistent state |
 | --- | --- |
 | Django `auth`, `contenttypes`, `sessions`, `admin` | Users, groups, permissions, sessions, admin audit history |
-| `accounts` | Profiles, personal API tokens, account capability declarations and product/region grants |
+| `accounts` | Personal API tokens, account capability declarations and product grants |
 | `dashboard` domain packages | Catalog releases, product units and QC definitions; deliveries, jobs, storage references, submissions and conflict history |
 | Worker and shared storage | Delivery ZIPs, job artifacts, published submissions and boundary generations; worker scratch PostGIS schemas are disposable job state |
 
@@ -172,7 +172,7 @@ The import reconciliation must cover:
 
 - **Identity and access:** users, password hashes or a deliberate reset policy,
   active/superuser state, default/admin/product-manager membership, direct
-  permissions and product/region grants. Resolve permissions by app label and
+  permissions and product grants. Resolve permissions by app label and
   codename rather than legacy numeric IDs. Verify staff flags and both allowed
   and denied access. Role names alone do not establish scope.
 - **Credentials:** issue new personal API tokens through the account workflow;
@@ -370,9 +370,9 @@ provide a valid reverse operation or explicitly document irreversibility.
 
 Long-running or external-data work belongs in a separately invoked management
 command. Make it bounded, resumable and idempotent, with a dry run and progress
-reporting that excludes secrets. `backfill_product_unit_metadata` is the current example
-for historical job artifacts; `sync_product_catalog` explicitly imports an
-operator-provided catalog. Neither replaces the manual legacy data transfer.
+reporting that excludes secrets. `sync_product_catalog` explicitly imports an
+operator-provided catalog. It does not replace the separate SQL-dump conversion
+into the current schema.
 
 For incompatible changes, use an expand/backfill/contract sequence:
 

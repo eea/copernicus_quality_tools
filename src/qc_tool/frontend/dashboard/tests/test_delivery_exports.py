@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from qc_tool.common import JOB_FAILED, JOB_OK, JOB_RUNNING
-from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductUnit, ProductRelease,
     SubmissionReviewEvent,
@@ -83,7 +83,7 @@ class DeliveryExportTests(TestCase):
         return result
 
     def test_all_formats_default_to_complete_public_schema(self):
-        delivery = self.delivery("owned.zip", product_unit_code="CZ", submitted_product_unit_code="CZ01")
+        delivery = self.delivery("owned.zip", product_unit_code="CZ", verified_product_unit_code="CZ01")
         self.delivery("another-owner.zip", user=self.other)
         fields = [column.field for column in DELIVERY_EXPORT_COLUMNS]
         labels = [column.label for column in DELIVERY_EXPORT_COLUMNS]
@@ -103,7 +103,7 @@ class DeliveryExportTests(TestCase):
                 self.assertEqual(str(record["id"]), str(delivery.pk))
                 self.assertEqual(str(record["size_bytes"]), "1024")
                 self.assertEqual(record["product_unit_code"], "CZ")
-                self.assertEqual(record["submitted_product_unit_code"], "CZ01")
+                self.assertEqual(record["verified_product_unit_code"], "CZ01")
 
     def test_complete_exports_keep_review_feedback_access_scope(self):
         product = Product.objects.create(ident="test", name="Test product")
@@ -119,21 +119,20 @@ class DeliveryExportTests(TestCase):
         )
         submission = DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=release, product_unit=aoi,
-            product_unit_code="CZ", submitted_product_unit_code="CZ", submitted_by=self.user,
+            product_unit_code="CZ", verified_product_unit_code="CZ", submitted_by=self.user,
             submitted_by_username=self.user.username, request_channel="browser",
             publication_state="published", review_state="rejected", review_version=1,
-            published_at=timezone.now(), artifact_path="/published/reviewed.zip",
+            published_at=timezone.now(), artifact_key="published/reviewed.zip",
             artifact_digest="b" * 64, input_digest="c" * 64,
         )
         SubmissionReviewEvent.objects.create(
             submission=submission, version=1, decision="declined",
             actor=self.other, actor_username=self.other.username, notes="Correct the geometry.",
         )
-        # Region access permits the delivery row, but not its review correspondence.
-        UserProfile.objects.create(user=self.user, country="CZ")
-        UserRegionGrant.objects.create(user=self.other, region_code="CZ")
+        # Product browsing permits the row, but not private review correspondence.
+        UserProductGrant.objects.create(user=self.other, product_ident=release.product.ident)
         self.other.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
         fields = [column.field for column in DELIVERY_EXPORT_COLUMNS]
         for viewer in (self.user, self.other):

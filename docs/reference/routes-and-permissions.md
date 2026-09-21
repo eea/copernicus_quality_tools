@@ -68,26 +68,12 @@ catalog, job/API, and worker trust boundaries. A product detail page shows each
 current release stream separately; it never chooses an arbitrary release or
 merges denominators.
 
-## Superseded browser paths
+## Browser route policy
 
-Old bookmarks are supported temporarily by authenticated, one-hop redirects.
-Redirects preserve the query string, and application links must always reverse
-the canonical route name so a redirect chain cannot develop.
-
-| Superseded path | Canonical destination |
-| --- | --- |
-| `/upload/` | `/deliveries/upload/` |
-| `/setup_job` | `/deliveries/jobs/new/` |
-| `/job_history/<delivery_id>/` | `/deliveries/jobs/<delivery_id>/` |
-| `/deliveries/job_history/<delivery_id>/` | `/deliveries/jobs/<delivery_id>/` |
-| `/result/<job_uuid>` | `/deliveries/job-result/<job_uuid>/` |
-| `/deliveries/result/<job_uuid>` | `/deliveries/job-result/<job_uuid>/` |
-| `/boundaries_upload/` | `/boundaries/upload/` |
-| `/submissions/` | `/products/submissions` |
-
-These aliases live only in `frontend/dashboard/urls/compatibility.py`. Remove
-an alias after its deprecation window instead of adding a redirect from one
-legacy path to another.
+Application links reverse the canonical route names shown above. Superseded
+page paths and the old product-list JSON alias are not registered in this
+major release. `/products/submissions/` redirects to `/products/submissions`
+while preserving its query string.
 
 ## Session data and mutations
 
@@ -98,8 +84,7 @@ The browser hierarchy change does not rename internal transport, data,
 artifact, or mutation contracts. Existing `/resumable_upload/`, `/data/*`,
 `/create_job`, `/job/*`, `/delivery/*`, and `/attachment/*` consumers continue
 to use their established paths. `/products/list/` is the canonical
-authenticated product-list JSON endpoint; the existing product data endpoint
-remains a direct JSON compatibility alias while consumers transition.
+authenticated product-list JSON endpoint.
 
 | Action | Permission |
 | --- | --- |

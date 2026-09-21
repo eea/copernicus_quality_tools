@@ -2,16 +2,15 @@
 
 Use this document to review what every stored field means and whether it earns
 its place. [SCHEMA.md](SCHEMA.md) explains the architecture;
-[AUDIT.md](AUDIT.md#column-and-metadata-review-2026-09-21) lists concrete metadata
-and terminology decisions to make before the major release.
+[AUDIT.md](AUDIT.md#remaining-release-checklist) tracks the remaining release
+steps and records completed cleanup and deliberately deferred schema changes.
 
-Verified **2026-09-21** against registered models at source revision `2d1851af`,
+Verified **2026-09-21** against the release-cleanup working tree and registered models,
 Django **5.2.17**, and a fresh PostgreSQL **14.23** database created with the
-whole-app `database apply` command. The current draft schema has **25 tables,
-204 columns and 96 indexes**: 16 QC Tool tables and 9 Django tables. Read-only
-inspection of the existing local PostgreSQL database found the same 25 tables
-and all 204 column names, types and nullability settings. Existing data was not
-read, reset or altered for this documentation.
+whole-app `database apply` command. The current draft schema has **23 tables,
+189 columns and 90 indexes**: 14 QC Tool tables and 9 Django tables. The existing local database has not been upgraded or reset; its earlier
+204-column draft schema differs intentionally. Use a fresh target for this
+revision. No existing business data was altered.
 
 This is a reference, not a migration baseline or a second executable schema.
 Models remain the source of truth during draft; reviewed migrations also govern
@@ -51,18 +50,16 @@ not a script for changing an existing database.
 
 | Area | Table | Columns | Main responsibility |
 | --- | --- | ---: | --- |
-| Accounts | [`account_profile`](#account_profile) | 4 | Legacy account profile |
-| Accounts | [`account_api_token`](#account_api_token) | 12 | Personal API credentials and original access limits |
+| Accounts | [`account_api_token`](#account_api_token) | 11 | Personal API credentials and original access limits |
 | Accounts | [`account_product_grant`](#account_product_grant) | 5 | User-to-product scope |
-| Accounts | [`account_region_grant`](#account_region_grant) | 5 | User-to-region scope |
 | Catalog | [`catalog_product`](#catalog_product) | 12 | Stable product and final manager readiness |
 | Catalog | [`catalog_release_revision`](#catalog_release_revision) | 13 | Versioned delivery plan |
 | Catalog | [`catalog_definition_revision`](#catalog_definition_revision) | 7 | Immutable executable specification revision |
 | Catalog | [`catalog_release_definition`](#catalog_release_definition) | 4 | Exact specifications used by a release |
 | Catalog | [`catalog_product_unit`](#catalog_product_unit) | 6 | Required or draft units in a release |
 | Execution | [`execution_delivery`](#execution_delivery) | 13 | User input/upload and current display projections |
-| Execution | [`execution_job`](#execution_job) | 25 | One QC run and its provenance |
-| Storage | [`storage_delivery_source`](#storage_delivery_source) | 6 | Remote input coordinates and credentials |
+| Execution | [`execution_job`](#execution_job) | 21 | One QC run and its provenance |
+| Storage | [`storage_delivery_source`](#storage_delivery_source) | 5 | Remote input coordinates and credentials |
 | Publication | [`publication_submission`](#publication_submission) | 24 | Retained publication receipt and current review state |
 | Publication | [`publication_conflict`](#publication_conflict) | 11 | Current competition between candidates |
 | Publication | [`publication_conflict_event`](#publication_conflict_event) | 9 | Conflict history |
@@ -79,10 +76,10 @@ not a script for changing an existing database.
 
 The supplementary [`django_migrations`](#django_migrations) table has four
 columns. It is absent from this fresh draft schema; after release freeze it
-records applied migrations, bringing this model set to **26 tables / 208
+records applied migrations, bringing this model set to **24 tables / 193
 columns**. An empty recorder may also exist in a draft database initialized by
 a different Django command. `AccountCapability` is deliberately unmanaged and
-creates permissions, not a 27th table.
+creates permissions, not a 25th table.
 
 ## Main business relationships
 
@@ -110,43 +107,6 @@ more precise than this overview.
 
 ## Accounts
 
-### `account_profile`
-
-Purpose: one optional legacy profile per user. [Model](../frontend/accounts/models/user_profile.py).
-
-| Column | PostgreSQL type | NULL | ORM default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | `bigint` | No | `identity` | Internal profile row identifier, separate from the account ID. |
-| `user_id` | `integer` | No | `required` | Account that owns the profile; unique, so an account has at most one profile. ORM deletion of the user cascades to its profile. |
-| `country` | `varchar(100)` | Yes | `NULL` | Legacy **delivery-owner region** string. Delivery region visibility still compares this exact value with another user's explicit region grants. It is not a verified geographic product-unit identifier. |
-| `product_family` | `varchar(50)` | Yes | `NULL` | Legacy family label imported from old accounts and editable/displayed in administration. It does **not** grant product access; current authorization uses `account_product_grant`. |
-
-Keys and indexes: Primary key `id`; unique `user_id` enforces one profile per account.
-
-Relationships: `user_id` → `auth_user.id` (ORM `CASCADE`). PostgreSQL foreign keys use deferred `NO ACTION`; the named delete behavior is enforced by Django ORM deletion.
-
-Review: `product_family` is a concrete removal/archive candidate once legacy account information has been reviewed. Its current consumers are the import and admin display/edit surface. `country` cannot be removed merely because region grants exist: grants identify the viewer's scope, while this field currently identifies the delivery owner's region. Replace that compatibility rule explicitly before retiring the field. The present region rule also means changing an owner's country changes region visibility of their old deliveries. See [legacy region resolution](../frontend/dashboard/access/legacy_regions.py), [delivery queryset](../frontend/dashboard/access/delivery_querysets.py), and [profile admin](../frontend/accounts/admin/users.py).
-
-<details>
-<summary>Exact PostgreSQL constraints and indexes (3 constraints, 2 indexes)</summary>
-
-| Foreign-key column | Referenced column | Django deletion rule |
-| --- | --- | --- |
-| `user_id` | `auth_user.id` | `CASCADE` |
-
-| Constraint | PostgreSQL definition |
-| --- | --- |
-| `account_profile_pkey` | `PRIMARY KEY (id)` |
-| `account_profile_user_id_bdd52018_fk_auth_user_id` | `FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED` |
-| `account_profile_user_id_key` | `UNIQUE (user_id)` |
-
-| Index | PostgreSQL definition |
-| --- | --- |
-| `account_profile_pkey` | `CREATE UNIQUE INDEX account_profile_pkey ON public.account_profile USING btree (id)` |
-| `account_profile_user_id_key` | `CREATE UNIQUE INDEX account_profile_user_id_key ON public.account_profile USING btree (user_id)` |
-
-</details>
-
 ### `account_api_token`
 
 Purpose: named personal API credentials, storing a digest instead of the raw secret and an issuance-time limit on access. [Model](../frontend/accounts/models/api_tokens.py).
@@ -160,7 +120,6 @@ Purpose: named personal API credentials, storing a digest instead of the raw sec
 | `token_hint` | `varchar(16)` | No | `''` | Short non-secret display hint to help identify the credential after its raw value is shown once. |
 | `permission_snapshot` | `jsonb` | No | `[] (new list)` | JSON list of application permission strings available when the token was issued. Live permissions are intersected with this list. |
 | `role_snapshot` | `jsonb` | No | `[] (new list)` | JSON list of canonical roles at issuance; limits the token's role-dependent behavior. |
-| `region_codes_snapshot` | `jsonb` | No | `[] (new list)` | JSON list of exact region codes granted at issuance; limits region access. |
 | `product_idents_snapshot` | `jsonb` | No | `[] (new list)` | JSON list of assigned product/definition identifiers at issuance; limits product access. |
 | `is_administrator_snapshot` | `boolean` | No | `False` | Whether this token was issued with administrator scope; live administrator status alone cannot broaden an older token. |
 | `created_at` | `timestamp with time zone` | No | `insert time` | Issuance time, for account management and audit. |
@@ -196,6 +155,7 @@ Keep: the snapshot columns deliberately duplicate **past** account state. They s
 
 </details>
 
+
 ### `account_product_grant`
 
 Purpose: assign one explicit product scope to one user, shared by default users and product managers. [Model](../frontend/accounts/models/product_grants.py).
@@ -212,7 +172,7 @@ Keys and indexes: Primary key `id`; `account_product_user_key_uniq` enforces uni
 
 Relationships: `user_id` → `auth_user.id` (ORM `CASCADE`); `created_by_id` → `auth_user.id` (ORM `SET_NULL`). PostgreSQL foreign keys use deferred `NO ACTION`; the named delete behavior is enforced by Django ORM deletion.
 
-Review terminology: the model's older "product-definition identifier" description is narrower than the actual service contract, which accepts both business products and QC definitions. This dual meaning is worth making explicit in future naming/API work. A business-product grant and a recipe-only grant are not interchangeable; current services calculate browsing, QC and review scope separately, particularly for grouped products. String identifiers also preserve assignments when catalog records are temporarily unavailable. Do not replace this field with a business-product foreign key without defining the required recipe scope and historical behavior. See [grantable scope resolution](../frontend/accounts/services/products.py).
+Decision: retain a canonical textual scope identifier, with explicit model/admin help explaining business-product versus exact-definition scope. A business-product grant and a definition-only grant are not interchangeable; services calculate browsing, QC and review scope separately, including grouped products. A single product foreign key would lose those distinctions and historical unresolved assignments. See [grant scope resolution](../frontend/accounts/services/products.py).
 
 <details>
 <summary>Exact PostgreSQL constraints and indexes (5 constraints, 4 indexes)</summary>
@@ -239,48 +199,6 @@ Review terminology: the model's older "product-definition identifier" descriptio
 
 </details>
 
-### `account_region_grant`
-
-Purpose: assign one exact region visibility scope to a user. [Model](../frontend/accounts/models/region_grants.py).
-
-| Column | PostgreSQL type | NULL | ORM default | Meaning |
-| --- | --- | --- | --- | --- |
-| `id` | `bigint` | No | `identity` | Internal assignment identifier. |
-| `user_id` | `integer` | No | `required` | Account receiving the region scope. |
-| `region_code` | `varchar(100)` | No | `''` | Exact, opaque region key, unique per user. The database does not normalize it to a country vocabulary or product unit. |
-| `created_at` | `timestamp with time zone` | No | `insert time` | When the assignment was created. |
-| `created_by_id` | `integer` | Yes | `NULL` | Account that made the assignment, if known; may become NULL after grantor deletion. |
-
-Keys and indexes: Primary key `id`; `account_region_user_code_uniq` enforces unique `(user_id, region_code)`; `account_region_code_not_empty` rejects an empty code. `account_region_code_idx` supports reverse region-scope lookup; the composite unique index covers user lookup.
-
-Relationships: `user_id` → `auth_user.id` (ORM `CASCADE`); `created_by_id` → `auth_user.id` (ORM `SET_NULL`). PostgreSQL foreign keys use deferred `NO ACTION`; the named delete behavior is enforced by Django ORM deletion.
-
-Keep while regional cross-owner visibility is supported: this is an authorization assignment, not the owner's country/profile fact. A grant is effective only with the corresponding region permission. See [account access](../frontend/accounts/authorization/access.py) and [delivery region matching](../frontend/dashboard/access/deliveries.py).
-
-<details>
-<summary>Exact PostgreSQL constraints and indexes (5 constraints, 4 indexes)</summary>
-
-| Foreign-key column | Referenced column | Django deletion rule |
-| --- | --- | --- |
-| `user_id` | `auth_user.id` | `CASCADE` |
-| `created_by_id` | `auth_user.id` | `SET_NULL` |
-
-| Constraint | PostgreSQL definition |
-| --- | --- |
-| `account_region_code_not_empty` | `CHECK ((NOT ((region_code)::text = ''::text)))` |
-| `account_region_grant_created_by_id_e4d2ede3_fk_auth_user_id` | `FOREIGN KEY (created_by_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED` |
-| `account_region_grant_pkey` | `PRIMARY KEY (id)` |
-| `account_region_grant_user_id_d4187b13_fk_auth_user_id` | `FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED` |
-| `account_region_user_code_uniq` | `UNIQUE (user_id, region_code)` |
-
-| Index | PostgreSQL definition |
-| --- | --- |
-| `account_region_code_idx` | `CREATE INDEX account_region_code_idx ON public.account_region_grant USING btree (region_code)` |
-| `account_region_grant_created_by_id_e4d2ede3` | `CREATE INDEX account_region_grant_created_by_id_e4d2ede3 ON public.account_region_grant USING btree (created_by_id)` |
-| `account_region_grant_pkey` | `CREATE UNIQUE INDEX account_region_grant_pkey ON public.account_region_grant USING btree (id)` |
-| `account_region_user_code_uniq` | `CREATE UNIQUE INDEX account_region_user_code_uniq ON public.account_region_grant USING btree (user_id, region_code)` |
-
-</details>
 
 ## Catalog
 
@@ -333,6 +251,7 @@ Keep: readiness is not derivable from accepted-unit counts alone because a final
 | `catalog_product_ready_by_id_e2294a21` | `CREATE INDEX catalog_product_ready_by_id_e2294a21 ON public.catalog_product USING btree (ready_by_id)` |
 
 </details>
+
 
 ### `catalog_release_revision`
 
@@ -396,6 +315,7 @@ Keep: a changed plan creates a revision so old jobs and receipts still identify 
 
 </details>
 
+
 ### `catalog_definition_revision`
 
 Purpose: an immutable parsed copy of one executable product-specification revision, tied to the original file bytes by digest. [Model](../frontend/dashboard/domain/catalog/qc_definition.py).
@@ -433,6 +353,7 @@ Keep `document` and `digest`: the JSON is executable/queryable content, while th
 | `catalog_definition_revision_pkey` | `CREATE UNIQUE INDEX catalog_definition_revision_pkey ON public.catalog_definition_revision USING btree (id)` |
 
 </details>
+
 
 ### `catalog_release_definition`
 
@@ -475,6 +396,7 @@ Keep: one product plan may group several specifications, and one specification c
 
 </details>
 
+
 ### `catalog_product_unit`
 
 Purpose: one required or draft product unit in an exact release revision. It describes expected delivery coverage, not geography by itself and not an uploaded delivery. [Model](../frontend/dashboard/domain/catalog/product_unit.py).
@@ -483,7 +405,7 @@ Purpose: one required or draft product unit in an exact release revision. It des
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | No | `identity` | Internal expected-unit identifier referenced by publication records. |
 | `product_release_id` | `bigint` | No | `required` | Release revision whose plan contains the unit. |
-| `product_unit_code` | `varchar(255)` | No | `''` | Canonical opaque business-unit code, unique within the release. Normalization preserves numeric padding and product-specific suffixes; the legacy AOI adapter is used only at explicit legacy boundaries. |
+| `product_unit_code` | `varchar(255)` | No | `''` | Canonical opaque business-unit code, unique within the release. Normalization preserves numeric padding and product-specific suffixes; geographic specification inputs are adapted at their input boundary. |
 | `source_value` | `varchar(255)` | No | `''` | Original declared spelling/value before canonical normalization. Useful when checking why a specification/plan value became this unit code. |
 | `provenance` | `varchar(100)` | No | `''` | Source of the declaration: current writers use `definition`, `manifest` or `administrator`. |
 | `created_at` | `timestamp with time zone` | No | `insert time` | Time this unit row was created as part of its release revision. |
@@ -516,6 +438,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 
 </details>
 
+
 ## Execution and storage
 
 ### `execution_delivery`
@@ -529,18 +452,18 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `filename` | `varchar(500)` | No | `''` | Original delivery ZIP filename or registered source label. It is not globally unique; retained revisions can share it. |
 | `size_bytes` | `bigint` | No | `required` | Recorded input size in bytes, constrained to be nonnegative. |
 | `date_uploaded` | `timestamp with time zone` | No | `now()` | Time this delivery was registered; defaults to application time. |
-| `date_submitted` | `timestamp with time zone` | Yes | `NULL` | Compatibility projection of publication time, or a historical submission date imported from the legacy dump. A non-NULL value alone does not prove retained files or manager approval. |
+| `date_submitted` | `timestamp with time zone` | Yes | `NULL` | Recorded submission time. Publication sets it after files are retained; a timestamp alone does not prove retained files or manager approval. |
 | `product_ident` | `varchar(64)` | Yes | `NULL` | Identified executable specification identifier; refreshed from the latest job when a job exists. Not a FK and not necessarily the business-product identifier. |
-| `product_description` | `varchar(500)` | Yes | `NULL` | Display description captured at registration and refreshed from the latest job; keeps historical/legacy deliveries readable without a current catalog row. |
+| `product_description` | `varchar(500)` | Yes | `NULL` | Display description captured at registration and refreshed from the latest job; remains readable when its catalog revision is unavailable. |
 | `product_unit_code` | `varchar(255)` | Yes | `NULL` | Reported product-unit projection from the deterministic latest job; may be cleared while a new job is pending. Not the authoritative expected catalog unit. |
-| `submitted_product_unit_code` | `varchar(255)` | Yes | `NULL` | Verified ZIP unit identity retained across later waiting jobs; contradictory later results are rejected. The word submitted here refers to ZIP content, not manager approval. |
+| `verified_product_unit_code` | `varchar(255)` | Yes | `NULL` | Verified ZIP unit identity retained across later waiting jobs; contradictory later results are rejected. Verification identifies ZIP content and does not imply manager approval. |
 | `content_sha256` | `varchar(64)` | Yes | `NULL` | Known input SHA-256 checksum. Publication checks it for contradictions and fills it if missing; a NULL value means unknown, not missing bytes. |
 | `is_deleted` | `boolean` | No | `False` | Visibility/retirement flag. Also marks superseded upload revisions; does not mean that job history may be erased. |
 | `s3_id` | `bigint` | Yes | `NULL` | Optional FK to `storage_delivery_source.id` (ORM CASCADE). Non-NULL selects a remote registered input rather than a local ZIP. |
 
 **Keys and access paths.** Primary key `id`; FKs to user and S3 source have ordinary indexes. `execution_delivery_size_valid` enforces nonnegative size. Named indexes cover reported unit (`execution_delivery_unit_idx`), verified unit (`execution_delivery_zipunit_idx`) and checksum (`execution_delivery_sha_idx`). There is deliberately no unique filename constraint.
 
-**Review note.** Latest-job product fields are maintained by [projections.py](../frontend/dashboard/services/product_units/projections.py). The verified unit is sticky across new waiting jobs. `date_submitted` is retained for legacy records without a verifiable modern receipt; deleting it would lose migrated history. `is_deleted` also retains replaced revisions, as described in [overwrite.py](../frontend/dashboard/services/uploads/overwrite.py).
+**Review note.** Latest-job product fields are maintained by [projections.py](../frontend/dashboard/services/product_units/projections.py). The verified unit is sticky across new waiting jobs. `date_submitted` records the submission event used by current delivery lists and lifecycle checks; retained publication receipts independently prove the files and approval state. `is_deleted` also retains replaced revisions, as described in [overwrite.py](../frontend/dashboard/services/uploads/overwrite.py).
 
 <details>
 <summary>Exact PostgreSQL constraints and indexes (4 constraints, 6 indexes)</summary>
@@ -564,9 +487,10 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `execution_delivery_sha_idx` | `CREATE INDEX execution_delivery_sha_idx ON public.execution_delivery USING btree (content_sha256)` |
 | `execution_delivery_unit_idx` | `CREATE INDEX execution_delivery_unit_idx ON public.execution_delivery USING btree (product_unit_code)` |
 | `execution_delivery_user_id_0df519b0` | `CREATE INDEX execution_delivery_user_id_0df519b0 ON public.execution_delivery USING btree (user_id)` |
-| `execution_delivery_zipunit_idx` | `CREATE INDEX execution_delivery_zipunit_idx ON public.execution_delivery USING btree (submitted_product_unit_code)` |
+| `execution_delivery_zipunit_idx` | `CREATE INDEX execution_delivery_zipunit_idx ON public.execution_delivery USING btree (verified_product_unit_code)` |
 
 </details>
+
 
 ### `execution_job`
 
@@ -582,30 +506,26 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `job_status` | `varchar(64)` | No | `'waiting'` | Execution state: current constants are `waiting`, `running`, `ok`, `partial`, `failed`, `error`, `worker timeout`, `worker lost`. These values have no database CHECK constraint. |
 | `product_ident` | `varchar(64)` | No | `''` | Executable specification identifier selected for this run; historical text remains even if no linked revision exists. |
 | `product_description` | `varchar(500)` | No | `''` | Specification description captured for this run, independent of later catalog wording. |
-| `product_unit_code` | `varchar(255)` | Yes | `NULL` | Normalized unit reported by the worker result; legacy imports may retain a reported unit without verified identity. |
-| `submitted_product_unit_code` | `varchar(255)` | Yes | `NULL` | Unit treated by the QC workflow as verified from this job's ZIP. Current result processing writes the same normalized value to both job unit columns; legacy data may differ. |
+| `product_unit_code` | `varchar(255)` | Yes | `NULL` | Normalized unit reported by the worker result; a reported unit can be retained without verified identity. |
+| `verified_product_unit_code` | `varchar(255)` | Yes | `NULL` | Unit treated by the QC workflow as verified from this job's ZIP. Current result processing writes the same normalized value to both job unit columns; a reported observation alone never proves ZIP verification. |
 | `skip_steps` | `varchar(100)` | Yes | `NULL` | Comma-separated selected QC step numbers omitted from this run; NULL/empty means no omissions. |
 | `worker_url` | `varchar(500)` | Yes | `NULL` | Internal worker origin assigned at claim time; used for status/result polling, excluded from public history serialization. |
 | `requested_by_id` | `integer` | Yes | `NULL` | Optional requesting-account FK to `auth_user.id` (ORM SET_NULL). Not necessarily the delivery owner. |
 | `requested_by_username` | `varchar(150)` | No | `''` | Requester username snapshot retained if the account is renamed or detached. |
-| `request_source` | `varchar(16)` | No | `'legacy'` | Request channel, normally `browser`, `api` or `legacy`; no choices/CHECK constraint on this job field. |
+| `request_source` | `varchar(16)` | Yes | `NULL` | Known request channel: browser or api. NULL means the origin is unknown. A CHECK rejects other values. |
 | `requested_api_token_id` | `bigint` | Yes | `NULL` | Nonnegative token identifier snapshot, deliberately not a FK; credential deletion must not erase job provenance. |
 | `requested_api_token_name` | `varchar(80)` | No | `''` | Token label captured when requested; contains no token secret. |
-| `product_release_id` | `bigint` | Yes | `NULL` | Optional FK to the selected `catalog_release_revision.id` (ORM PROTECT); NULL for legacy/unlinked runs. |
+| `product_release_id` | `bigint` | Yes | `NULL` | Optional FK to the selected `catalog_release_revision.id` (ORM PROTECT); NULL when no authoritative revision was recorded. |
 | `qc_definition_id` | `bigint` | Yes | `NULL` | Optional FK to the exact `catalog_definition_revision.id` used (ORM PROTECT); preserves specification provenance. |
 | `input_sha256` | `varchar(64)` | No | `''` | Input checksum reported by the worker. Publication validates a usable SHA-256 value and compares it with copied input bytes; an empty string means unavailable. |
 | `reference_period` | `varchar(32)` | No | `''` | Bounded projection of worker `reference_year`, used as a report fallback when file metadata lacks it. |
-| `qc_tool_version` | `varchar(128)` | No | `''` | Bounded worker-reported QC software version snapshot; currently persisted without a dedicated application read path. |
-| `result_metadata` | `jsonb` | Yes | `NULL` | Complete parsed worker-result JSON snapshot, not a replacement for ZIPs/logs/reports. Written on terminal processing; no current application read path was found. |
-| `result_sha256` | `varchar(64)` | No | `''` | SHA-256 of canonicalized `result_metadata` JSON, not the hash of original result-file bytes. Currently stored without a verification/read path. |
-| `result_received_at` | `timestamp with time zone` | Yes | `NULL` | Application timestamp when result metadata was persisted; distinct from worker finish time. Currently stored without a dedicated read path. |
 
-**Keys and access paths.** Primary key `job_uuid`; optional account/release/definition FKs are indexed. `execution_job_latest_idx` covers `(delivery_id, date_created DESC, job_uuid DESC)` and replaces a redundant delivery-only FK index. `execution_job_queue_idx` covers `(job_status, date_created)`. Two unit indexes cover reported and ZIP unit lookups. A positive-token-ID CHECK exists; neither job status nor request_source has a database enum/CHECK.
+**Keys and access paths.** Primary key `job_uuid`; optional account/release/definition FKs are indexed. `execution_job_latest_idx` covers `(delivery_id, date_created DESC, job_uuid DESC)` and replaces a redundant delivery-only FK index. `execution_job_queue_idx` covers `(job_status, date_created)`. Two unit indexes cover reported and ZIP unit lookups. A positive-token-ID CHECK exists; `execution_job_source_valid` permits browser/api or NULL; job status is validated by application paths.
 
-**Review note.** Username/token and product-description snapshots are deliberate historical evidence, not ordinary current-account/catalog joins. [`metadata.py`](../frontend/dashboard/services/product_units/jobs/metadata.py) persists the result JSON, digest, received time, version and reference period. Current application code reads `reference_period` as a [serializer fallback](../frontend/dashboard/services/jobs/serializers.py); searches found no equivalent read/verification path for `result_metadata`, `result_sha256`, `result_received_at` or the job's `qc_tool_version`. Review whether to use these retained facts for report recovery/audit or remove unneeded copies before release. Stored SHA-256 alone does not implement verification. Current [result application](../frontend/dashboard/services/product_units/results.py) writes both unit fields identically; review their separate API/legacy contracts before considering consolidation.
+**Decision.** Username/token and product-description snapshots remain historical evidence. The unused `result_metadata`, `result_sha256`, `result_received_at` and job-level `qc_tool_version` columns have been removed. [Result projection](../frontend/dashboard/services/product_units/jobs/metadata.py) persists only the input hash needed for publication and the reference-period report fallback. Complete result JSON and software version remain in job artifacts and in the checksummed publication archive. No PostgreSQL result-recovery feature is claimed. The observed and verified unit fields remain distinct because imported historical observations do not prove ZIP verification.
 
 <details>
-<summary>Exact PostgreSQL constraints and indexes (6 constraints, 8 indexes)</summary>
+<summary>Exact PostgreSQL constraints and indexes (7 constraints, 8 indexes)</summary>
 
 | Foreign-key column | Referenced column | Django deletion rule |
 | --- | --- | --- |
@@ -622,6 +542,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `execution_job_qc_definition_id_b1448905_fk_catalog_d` | `FOREIGN KEY (qc_definition_id) REFERENCES catalog_definition_revision(id) DEFERRABLE INITIALLY DEFERRED` |
 | `execution_job_requested_api_token_id_check` | `CHECK ((requested_api_token_id >= 0))` |
 | `execution_job_requested_by_id_67f2b7b7_fk_auth_user_id` | `FOREIGN KEY (requested_by_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED` |
+| `execution_job_source_valid` | `CHECK (((request_source IS NULL) OR ((request_source)::text = ANY ((ARRAY['browser'::character varying, 'api'::character varying])::text[]))))` |
 
 | Index | PostgreSQL definition |
 | --- | --- |
@@ -632,26 +553,26 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `execution_job_queue_idx` | `CREATE INDEX execution_job_queue_idx ON public.execution_job USING btree (job_status, date_created)` |
 | `execution_job_requested_by_id_67f2b7b7` | `CREATE INDEX execution_job_requested_by_id_67f2b7b7 ON public.execution_job USING btree (requested_by_id)` |
 | `execution_job_unit_idx` | `CREATE INDEX execution_job_unit_idx ON public.execution_job USING btree (product_unit_code)` |
-| `execution_job_zip_unit_idx` | `CREATE INDEX execution_job_zip_unit_idx ON public.execution_job USING btree (submitted_product_unit_code)` |
+| `execution_job_zip_unit_idx` | `CREATE INDEX execution_job_zip_unit_idx ON public.execution_job USING btree (verified_product_unit_code)` |
 
 </details>
 
+
 ### `storage_delivery_source`
 
-**Purpose:** Remote S3 input coordinates and operational credentials. This table does not mean the delivery bytes were preserved locally or published. Model: [S3Info](../frontend/dashboard/domain/storage/s3_info.py).
+**Purpose:** Remote S3 input coordinates and an opaque reference to private credentials outside PostgreSQL. This table does not mean the delivery bytes were preserved locally or published. Model: [S3Info](../frontend/dashboard/domain/storage/s3_info.py).
 
 | Column | PostgreSQL type | NULL | ORM default | Meaning |
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | No | `identity` | Remote source record identifier; primary key. |
 | `host` | `varchar(200)` | No | `''` | S3-compatible endpoint passed to the worker. |
-| `access_key` | `varchar(100)` | No | `''` | Operational S3 access credential, stored as plain text in this model. SQL-only legacy import deliberately leaves it empty. |
-| `secret_key` | `varchar(100)` | No | `''` | Operational S3 secret credential, stored as plain text in this model. SQL-only legacy import deliberately leaves it empty. |
+| `credential_ref` | `varchar(32)` | No | `''` | Opaque 32-hex reference to a private credential file, bound to this source. Blank means credentials are unavailable. |
 | `bucketname` | `varchar(100)` | No | `''` | Source bucket name. |
 | `key_prefix` | `varchar(500)` | No | `''` | Object key/prefix identifying remote input content; this is a source locator, not an archived publication receipt. |
 
 **Keys and access paths.** Only primary key `id`; endpoint/bucket/prefix are not unique. Several delivery records may point to a source row.
 
-**Review note.** The [worker request](../frontend/dashboard/views/workers.py) actively reads every coordinate/credential field. These are not unused metadata, but keeping plaintext credentials per source duplicates secrets and needs a deliberate release decision: prefer credential references or an appropriate secret store in a separate change. Coordinate deduplication cannot ignore differing credentials/access scope. SQL-only legacy import preserves coordinates and clears credentials. Current final-publication workflow rejects S3 inputs until verified source archiving is implemented.
+**Decision.** Database rows contain no S3 access/secret keys. [The credential store](../frontend/dashboard/services/s3/credentials.py) writes private atomic files under `S3_CREDENTIALS_DIR` (default `WORK_DIR/s3_credentials`), bound to the exact endpoint, bucket and prefix. Frontend registration stores them; authenticated worker dispatch resolves them. Missing or unsafe files reject QC creation/dispatch. Back up the private directory separately from SQL, preserving frontend ownership and restrictive permissions. The SQL-dump converter leaves `credential_ref` blank. The current final-publication workflow still requires a retained local ZIP.
 
 <details>
 <summary>Exact PostgreSQL constraints and indexes (1 constraints, 1 indexes)</summary>
@@ -665,6 +586,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `storage_delivery_source_pkey` | `CREATE UNIQUE INDEX storage_delivery_source_pkey ON public.storage_delivery_source USING btree (id)` |
 
 </details>
+
 
 ## Publication
 
@@ -680,10 +602,10 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `product_release_id` | `bigint` | No | `required` | FK to `catalog_release_revision.id` (ORM PROTECT), retained as release provenance and for release filtering. |
 | `product_unit_id` | `bigint` | No | `required` | FK to expected `catalog_product_unit.id` (ORM PROTECT), defining which required unit this candidate can fulfil. |
 | `product_unit_code` | `varchar(255)` | No | `''` | Immutable expected catalog unit-code snapshot taken at reservation. |
-| `submitted_product_unit_code` | `varchar(255)` | No | `''` | Immutable verified ZIP unit-code snapshot. Kept separately from the expected catalog value to preserve the evidence being matched. |
+| `verified_product_unit_code` | `varchar(255)` | No | `''` | Immutable verified ZIP unit-code snapshot. Kept separately from the expected catalog value to preserve the evidence being matched. |
 | `submitted_by_id` | `integer` | Yes | `NULL` | Optional submitting-account FK to `auth_user.id` (ORM SET_NULL). |
 | `submitted_by_username` | `varchar(150)` | No | `''` | Immutable submitter name snapshot, retained when the account changes or is detached. |
-| `request_channel` | `varchar(10)` | No | `''` | Submission channel: `browser`, `api` or `legacy`, enforced by a CHECK. The current SQL-only legacy importer does not create these receipts. |
+| `request_channel` | `varchar(10)` | No | `''` | Submission channel: browser or api, enforced by a CHECK. |
 | `api_token_id` | `bigint` | Yes | `NULL` | Nonnegative submission-token identifier snapshot, deliberately no FK to mutable/deletable credentials. |
 | `api_token_name` | `varchar(80)` | No | `''` | Submission-token label snapshot; no credential secret. |
 | `publication_state` | `varchar(12)` | No | `'pending'` | File-preservation lifecycle: `pending`, `publishing`, `published`, `failed`. |
@@ -693,7 +615,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `publication_claimed_at` | `timestamp with time zone` | Yes | `NULL` | Time the current publication worker/request claimed copying work; used with a 15-minute recovery timeout. |
 | `publication_token` | `uuid` | Yes | `NULL` | Attempt ownership UUID preventing a stale copying request from finalizing or failing a newer attempt; not a user API token. |
 | `published_at` | `timestamp with time zone` | Yes | `NULL` | Time the verified final storage receipt was committed; required for `published`. |
-| `artifact_path` | `varchar(1000)` | No | `''` | Final retained submission directory, currently an absolute filesystem path; required for `published`. |
+| `artifact_key` | `varchar(1000)` | No | `''` | Immutable canonical directory key relative to SUBMISSION_DIR; required for published receipts. Moving the complete storage root does not change this key. |
 | `artifact_digest` | `varchar(64)` | No | `''` | SHA-256 of the canonical unsigned publication-manifest body (which includes the artifact inventory), not a ZIP hash; required for `published`. |
 | `input_digest` | `varchar(64)` | No | `''` | SHA-256 of the reserved and preserved input ZIP. Separate from manifest digest and pinned independently of mutable delivery/job projections. |
 | `failure_code` | `varchar(64)` | No | `''` | Bounded machine-readable code from the latest failed publication attempt; reset when retrying/succeeding. |
@@ -703,7 +625,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 
 **Review note.** Expected/verified codes, actor/token names and checksums are intentional immutable evidence. Claim timestamp/token prevent concurrent/retried publication from racing ([claims.py](../frontend/dashboard/services/submissions/state/claims.py)); they are operational state, not decorative metadata. `review_state` and `review_version` are deliberate current projections backed by review services/events. Receipt/identity immutability and no-delete behavior are application model/queryset guards, not PostgreSQL triggers. Unit/release consistency is validated in model/service code, not a composite database FK.
 
-`artifact_path` currently ties a retained receipt to an absolute mount path ([manifest.py](../frontend/dashboard/services/submissions/publication/manifest.py), [artifacts.py](../frontend/dashboard/services/submissions/artifacts.py)). A storage-relative immutable key is a possible portability improvement, but requires an explicit compatibility design; existing receipts must not be casually rewritten. File inventory remains in the retained manifest, not as per-file database rows.
+`artifact_key` is an immutable canonical POSIX directory key relative to `SUBMISSION_DIR`. [Storage resolution](../frontend/dashboard/services/submissions/storage.py) rejects absolute/traversal/symlink paths. Moving the complete storage root and changing its configuration preserves receipt keys, downloads and retries. Version 1/2 manifest bytes, digests and historical wire field names remain unchanged. File inventory stays in the retained manifest, not as per-file database rows.
 
 <details>
 <summary>Exact PostgreSQL constraints and indexes (16 constraints, 7 indexes)</summary>
@@ -718,12 +640,12 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 
 | Constraint | PostgreSQL definition |
 | --- | --- |
-| `pub_submission_channel_valid` | `CHECK (((request_channel)::text = ANY ((ARRAY['browser'::character varying, 'api'::character varying, 'legacy'::character varying])::text[])))` |
-| `pub_submission_complete` | `CHECK (((NOT ((publication_state)::text = 'published'::text)) OR ((published_at IS NOT NULL) AND (NOT ((artifact_path)::text = ''::text)) AND (NOT ((artifact_digest)::text = ''::text)) AND (NOT ((input_digest)::text = ''::text)))))` |
+| `pub_submission_channel_valid` | `CHECK (((request_channel)::text = ANY ((ARRAY['browser'::character varying, 'api'::character varying])::text[])))` |
+| `pub_submission_complete` | `CHECK (((NOT ((publication_state)::text = 'published'::text)) OR ((published_at IS NOT NULL) AND (NOT ((artifact_key)::text = ''::text)) AND (NOT ((artifact_digest)::text = ''::text)) AND (NOT ((input_digest)::text = ''::text)))))` |
 | `pub_submission_review_valid` | `CHECK (((review_state)::text = ANY ((ARRAY['pending'::character varying, 'accepted'::character varying, 'conflict'::character varying, 'rejected'::character varying])::text[])))` |
 | `pub_submission_state_valid` | `CHECK (((publication_state)::text = ANY ((ARRAY['pending'::character varying, 'publishing'::character varying, 'published'::character varying, 'failed'::character varying])::text[])))` |
 | `pub_submission_unit_not_empty` | `CHECK ((NOT ((product_unit_code)::text = ''::text)))` |
-| `pub_submission_zip_unit_present` | `CHECK ((NOT ((submitted_product_unit_code)::text = ''::text)))` |
+| `pub_submission_zip_unit_present` | `CHECK ((NOT ((verified_product_unit_code)::text = ''::text)))` |
 | `publication_submissi_delivery_id_1a5f603e_fk_execution` | `FOREIGN KEY (delivery_id) REFERENCES execution_delivery(id) DEFERRABLE INITIALLY DEFERRED` |
 | `publication_submissi_job_id_30e86246_fk_execution` | `FOREIGN KEY (job_id) REFERENCES execution_job(job_uuid) DEFERRABLE INITIALLY DEFERRED` |
 | `publication_submissi_product_release_id_6c88e9e4_fk_catalog_r` | `FOREIGN KEY (product_release_id) REFERENCES catalog_release_revision(id) DEFERRABLE INITIALLY DEFERRED` |
@@ -746,6 +668,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `publication_submission_submitted_by_id_efe4df67` | `CREATE INDEX publication_submission_submitted_by_id_efe4df67 ON public.publication_submission USING btree (submitted_by_id)` |
 
 </details>
+
 
 ### `publication_conflict`
 
@@ -798,6 +721,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 
 </details>
 
+
 ### `publication_conflict_event`
 
 **Purpose:** Append-only history of competition opening, reopening, additional candidates and resolution/closure. It answers how selection changed over time. Model: [SubmissionConflictEvent](../frontend/dashboard/domain/submissions/submission_conflict_event.py).
@@ -847,6 +771,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 
 </details>
 
+
 ### `publication_review_event`
 
 **Purpose:** Append-only approval/decline decisions for individual candidates. Conflict resolution can produce several such decisions; this is distinct from the unit-level conflict event. Model: [SubmissionReviewEvent](../frontend/dashboard/domain/submissions/submission_review_event.py).
@@ -893,6 +818,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 
 </details>
 
+
 ## Django framework tables
 
 These nine tables and 40 columns are supplied by the installed Django 5.2.17 runtime. They support authentication, authorization, sessions and administration. They are framework-owned rather than competing business-domain tables. The `CASCADE`/`SET_NULL` behavior below belongs to Django’s deletion collector; the PostgreSQL foreign keys are deferrable integrity constraints and do not declare matching SQL `ON DELETE` actions.
@@ -935,9 +861,10 @@ One login account. Model: `django.contrib.auth.models.User`. Product scope belon
 
 </details>
 
+
 ### `auth_group`
 
-One reusable group/role. Model: `django.contrib.auth.models.Group`. Roles describe permitted actions; product and region grants determine their scope.
+One reusable group/role. Model: `django.contrib.auth.models.Group`. Roles describe permitted actions; product grants determine their scope.
 
 | Column | PostgreSQL type | NULL | ORM default | Meaning |
 | --- | --- | --- | --- | --- |
@@ -946,7 +873,7 @@ One reusable group/role. Model: `django.contrib.auth.models.Group`. Roles descri
 
 **Constraints and indexes:** primary key on `id`; unique B-tree on `name`; additional `name varchar_pattern_ops` index.
 
-**Retention/review:** retain canonical groups and memberships. Imported `legacy:` groups preserve historical membership but do not automatically grant current QC Tool roles or capabilities; any later cleanup must be a deliberate access/history decision.
+**Retention/review:** retain current roles and memberships. The SQL-dump converter imports only supported role memberships; obsolete groups and their memberships stay in the unchanged source dump and are counted as omissions.
 
 <details>
 <summary>Exact PostgreSQL constraints and indexes (2 constraints, 3 indexes)</summary>
@@ -963,6 +890,7 @@ One reusable group/role. Model: `django.contrib.auth.models.Group`. Roles descri
 | `auth_group_pkey` | `CREATE UNIQUE INDEX auth_group_pkey ON public.auth_group USING btree (id)` |
 
 </details>
+
 
 ### `auth_permission`
 
@@ -999,6 +927,7 @@ One named capability attached to a Django model. Model: `django.contrib.auth.mod
 | `auth_permission_pkey` | `CREATE UNIQUE INDEX auth_permission_pkey ON public.auth_permission USING btree (id)` |
 
 </details>
+
 
 ### `auth_user_groups`
 
@@ -1038,6 +967,7 @@ Many-to-many account-to-role membership. Generated by Django for `User.groups`; 
 
 </details>
 
+
 ### `auth_group_permissions`
 
 Many-to-many role-to-capability mapping. Generated by Django for `Group.permissions`. QC Tool bootstrap synchronizes its managed capability subset for the canonical roles.
@@ -1075,6 +1005,7 @@ Many-to-many role-to-capability mapping. Generated by Django for `Group.permissi
 | `auth_group_permissions_pkey` | `CREATE UNIQUE INDEX auth_group_permissions_pkey ON public.auth_group_permissions USING btree (id)` |
 
 </details>
+
 
 ### `auth_user_user_permissions`
 
@@ -1114,6 +1045,7 @@ Many-to-many direct account-to-capability mapping. Generated by Django for `User
 
 </details>
 
+
 ### `django_content_type`
 
 Registry connecting Django model identities to permissions and administrative history. Model: `django.contrib.contenttypes.models.ContentType`. These rows describe model types, not individual products or deliveries.
@@ -1143,6 +1075,7 @@ Registry connecting Django model identities to permissions and administrative hi
 
 </details>
 
+
 ### `django_session`
 
 Temporary server-side browser sessions. Model: `django.contrib.sessions.models.Session`. This table is not needed for permanent account history, but the configured session authentication uses it.
@@ -1171,6 +1104,7 @@ Temporary server-side browser sessions. Model: `django.contrib.sessions.models.S
 | `django_session_session_key_c0390e0f_like` | `CREATE INDEX django_session_session_key_c0390e0f_like ON public.django_session USING btree (session_key varchar_pattern_ops)` |
 
 </details>
+
 
 ### `django_admin_log`
 
@@ -1214,11 +1148,12 @@ Administrative action history. Model: `django.contrib.admin.models.LogEntry`. QC
 
 </details>
 
+
 ## Supplementary lifecycle table
 
 ### `django_migrations`
 
-Django’s schema-history recorder, maintained by `django.db.migrations.recorder.MigrationRecorder`. It is absent from the freshly initialized draft schema audited here and is supplementary to the 25-table inventory. Released databases use it to track applied migrations; it can also exist empty in a previously initialized draft database.
+Django’s schema-history recorder, maintained by `django.db.migrations.recorder.MigrationRecorder`. It is absent from the freshly initialized draft schema audited here and is supplementary to the 23-table inventory. Released databases use it to track applied migrations; it can also exist empty in a previously initialized draft database.
 
 | Column | PostgreSQL type | NULL | ORM default | Meaning |
 | --- | --- | --- | --- | --- |
@@ -1230,6 +1165,7 @@ Django’s schema-history recorder, maintained by `django.db.migrations.recorder
 **Constraints and indexes:** the recorder model declares a primary key on `id`, no FKs and no uniqueness constraint on `(app, name)`. This supplementary definition comes from the installed Django model; no recorder table was created merely to document it.
 
 **Retention/review:** keep it under Django control. Never import the legacy recorder, edit its rows to bypass a failed migration, or delete it as unnecessary metadata. It records which migration identities ran; it does not store SQL, the application data, migration source code or a schema snapshot.
+
 
 ## Keeping this reference current
 
@@ -1243,7 +1179,7 @@ reference complete; then review meaning and retention with actual read/write
 call sites. Neither a populated field nor a duplicated name proves a field is
 necessary or redundant.
 
-This audit compared all 204 physical columns against the documented rows, all
-foreign keys and all 96 fresh-schema indexes against the expandable definitions,
+This audit compared all 189 physical columns against the documented rows, all
+foreign keys and all 90 fresh-schema indexes against the expandable definitions,
 and checked every repository-relative source link. No schema, migration,
 product specification or stored business record was changed.

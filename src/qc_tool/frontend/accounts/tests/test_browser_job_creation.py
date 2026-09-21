@@ -55,7 +55,7 @@ class BrowserJobCreationTests(TestCase):
     def test_creates_a_valid_owner_batch_atomically(self):
         temporary, definition = self._definition_context()
         with temporary, definition, patch(
-            "qc_tool.frontend.dashboard.models.find_product_description",
+            "qc_tool.frontend.dashboard.services.products.find_product_description",
             return_value="Product",
         ):
             response = self._post([delivery.pk for delivery in self.deliveries])
@@ -85,7 +85,7 @@ class BrowserJobCreationTests(TestCase):
 
         temporary, definition = self._definition_context()
         with temporary, definition, patch(
-            "qc_tool.frontend.dashboard.models.find_product_description",
+            "qc_tool.frontend.dashboard.services.products.find_product_description",
             return_value="Product",
         ), patch.object(Delivery, "create_job", new=fail_second):
             response = self._post([delivery.pk for delivery in self.deliveries])

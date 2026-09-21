@@ -639,10 +639,10 @@ class ProductSpecificationUploadTests(TestCase):
         submission = DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=original_release,
             product_unit=original_release.product_units.get(product_unit_code="cz"),
-            product_unit_code="cz", submitted_product_unit_code="cz", submitted_by=self.administrator,
+            product_unit_code="cz", verified_product_unit_code="cz", submitted_by=self.administrator,
             submitted_by_username=self.administrator.username, request_channel="browser",
             publication_state="published", published_at=timezone.now(),
-            artifact_path=str(artifact), artifact_digest="a" * 64, input_digest="b" * 64,
+            artifact_key=artifact.name, artifact_digest="a" * 64, input_digest="b" * 64,
         )
         before = DeliverySubmission.objects.filter(pk=submission.pk).values().get()
 

@@ -15,7 +15,7 @@ from .results import submission_result
 
 @transaction.atomic
 def finalize_publication(reserved, token, receipt, *, idempotent):
-    """Commit publication, legacy projection, and duplicate review state."""
+    """Commit publication, delivery projection, and duplicate review state."""
 
     # All delivery mutators acquire the Delivery row first.
     delivery = Delivery.objects.select_for_update().get(pk=reserved.delivery_id)
@@ -58,7 +58,7 @@ def _require_owned_claim(submission, token):
 def _apply_receipt(submission, receipt, *, published_at):
     submission.publication_state = DeliverySubmission.PublicationState.PUBLISHED
     submission.published_at = published_at
-    submission.artifact_path = receipt.artifact_path
+    submission.artifact_key = receipt.artifact_key
     submission.artifact_digest = receipt.artifact_digest
     submission.input_digest = receipt.input_digest
     submission.failure_code = ""
@@ -67,7 +67,7 @@ def _apply_receipt(submission, receipt, *, published_at):
         update_fields=(
             "publication_state",
             "published_at",
-            "artifact_path",
+            "artifact_key",
             "artifact_digest",
             "input_digest",
             "failure_code",

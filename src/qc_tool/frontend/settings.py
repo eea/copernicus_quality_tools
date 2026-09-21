@@ -330,6 +330,11 @@ RESUMABLE_SIMULTANEOUS_UPLOADS = _environment_integer(
 # allowlists exact HTTPS origins. Timeouts and the single-page object cap keep
 # registration requests bounded even when an allowed service is unhealthy.
 S3_ALLOWED_ENDPOINTS = tuple(_environment_list("S3_ALLOWED_ENDPOINTS"))
+# Persist and back up this private directory with the deployment's work data.
+# Workers receive credentials through their authenticated pull endpoint only.
+S3_CREDENTIALS_DIR = environ.get(
+    "S3_CREDENTIALS_DIR", str(CONFIG["work_dir"] / "s3_credentials")
+)
 S3_CONNECT_TIMEOUT_SECONDS = _environment_float(
     "S3_CONNECT_TIMEOUT_SECONDS",
     3,

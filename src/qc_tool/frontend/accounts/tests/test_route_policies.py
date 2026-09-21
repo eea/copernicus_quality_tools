@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.test import RequestFactory
 from django.test import TestCase
+from django.urls import Resolver404
 from django.urls import resolve
 from django.urls import reverse
 
@@ -66,7 +67,6 @@ EXPECTED_POLICIES = {
     "submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "submission_bulk_approve": (PRIVATE, SESSION, ("POST",), VIEW, LOGIN_REDIRECT),
     "submission_queue_slash": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
-    "legacy_submission_queue": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "submission_review": (PRIVATE, SESSION, ("GET", "POST"), VIEW, LOGIN_REDIRECT),
     "submission_file": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "export_deliveries_excel": (
@@ -86,28 +86,7 @@ EXPECTED_POLICIES = {
     "job_report_pdf": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "job_combined_log": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "file_upload": (PRIVATE, SESSION, ("GET",), UPLOAD, LOGIN_REDIRECT),
-    "legacy_file_upload": (
-        PRIVATE,
-        SESSION,
-        ("GET",),
-        UPLOAD,
-        LOGIN_REDIRECT,
-    ),
     "job_history": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
-    "legacy_job_history": (
-        PRIVATE,
-        SESSION,
-        ("GET",),
-        VIEW,
-        LOGIN_REDIRECT,
-    ),
-    "legacy_delivery_job_history": (
-        PRIVATE,
-        SESSION,
-        ("GET",),
-        VIEW,
-        LOGIN_REDIRECT,
-    ),
     "boundaries": (
         PRIVATE,
         SESSION,
@@ -122,36 +101,8 @@ EXPECTED_POLICIES = {
         MANAGE_CONFIGURATION,
         LOGIN_REDIRECT,
     ),
-    "legacy_boundaries_upload": (
-        PRIVATE,
-        SESSION,
-        ("GET",),
-        MANAGE_CONFIGURATION,
-        LOGIN_REDIRECT,
-    ),
     "setup_job": (PRIVATE, SESSION, ("GET",), RUN_QC, LOGIN_REDIRECT),
-    "legacy_setup_job": (
-        PRIVATE,
-        SESSION,
-        ("GET",),
-        RUN_QC,
-        LOGIN_REDIRECT,
-    ),
     "show_result": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
-    "legacy_show_result": (
-        PRIVATE,
-        SESSION,
-        ("GET",),
-        VIEW,
-        LOGIN_REDIRECT,
-    ),
-    "legacy_delivery_show_result": (
-        PRIVATE,
-        SESSION,
-        ("GET",),
-        VIEW,
-        LOGIN_REDIRECT,
-    ),
     "get_attachment": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "announcement": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "announcement_update": (
@@ -169,7 +120,6 @@ EXPECTED_POLICIES = {
     "job_info_json": (PRIVATE, SESSION, ("GET",), VIEW, JSON),
     "product_definition_json": (PRIVATE, SESSION, ("GET",), VIEW, JSON),
     "product_list_json": (PRIVATE, SESSION, ("GET",), VIEW, JSON),
-    "legacy_product_list_json": (PRIVATE, SESSION, ("GET",), VIEW, JSON),
     "product_descriptions_dropdown": (
         PRIVATE,
         SESSION,
@@ -243,15 +193,9 @@ ROUTE_ARGS = {
     "job_report_pdf": ("00000000-0000-0000-0000-000000000001",),
     "job_combined_log": ("00000000-0000-0000-0000-000000000001",),
     "job_history": (1,),
-    "legacy_job_history": (1,),
-    "legacy_delivery_job_history": (1,),
     "update_job": ("00000000-0000-0000-0000-000000000001",),
     "boundaries_json": ("raster",),
     "show_result": ("00000000-0000-0000-0000-000000000001",),
-    "legacy_show_result": ("00000000-0000-0000-0000-000000000001",),
-    "legacy_delivery_show_result": (
-        "00000000-0000-0000-0000-000000000001",
-    ),
     "get_attachment": (
         "00000000-0000-0000-0000-000000000001",
         "details.txt",
@@ -401,40 +345,20 @@ class RoutePolicyRegistryTests(TestCase):
         )
         self.assertEqual(reverse("api_homepage"), "/api/")
 
-    def test_compatibility_routes_keep_only_the_superseded_paths(self):
+    def test_superseded_routes_are_not_registered(self):
         job_uuid = "00000000-0000-0000-0000-000000000001"
-
-        self.assertEqual(reverse("legacy_file_upload"), "/upload/")
-        self.assertEqual(reverse("legacy_submission_queue"), "/submissions/")
-        self.assertEqual(reverse("submission_queue_slash"), "/products/submissions/")
-        self.assertEqual(reverse("legacy_setup_job"), "/setup_job")
-        self.assertEqual(
-            reverse("legacy_boundaries_upload"),
-            "/boundaries_upload/",
-        )
-        self.assertEqual(
-            reverse("legacy_job_history", args=(7,)),
-            "/job_history/7/",
-        )
-        self.assertEqual(
-            reverse("legacy_delivery_job_history", args=(7,)),
-            "/deliveries/job_history/7/",
-        )
-        self.assertEqual(
-            reverse("legacy_show_result", args=(job_uuid,)),
-            f"/result/{job_uuid}",
-        )
-        self.assertEqual(
-            reverse("legacy_delivery_show_result", args=(job_uuid,)),
-            f"/deliveries/result/{job_uuid}",
-        )
-        self.assertEqual(
-            reverse("legacy_product_list_json"),
+        paths = (
+            "/upload/", "/submissions/", "/setup_job", "/boundaries_upload/",
+            "/job_history/7/", "/deliveries/job_history/7/",
+            f"/result/{job_uuid}", f"/deliveries/result/{job_uuid}",
             "/data/product_list/",
         )
+        for path in paths:
+            with self.subTest(path=path), self.assertRaises(Resolver404):
+                resolve(path)
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 65)
+        self.assertEqual(len(EXPECTED_POLICIES), 56)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():
@@ -499,48 +423,17 @@ class RoutePolicyRegistryTests(TestCase):
                 )
 
 
-class CompatibilityRedirectTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.administrator = get_user_model().objects.create_superuser(
-            username="compatibility-route-administrator",
-            email="compatibility@example.com",
-            password="unused",
+class SubmissionQueueSlashRedirectTests(TestCase):
+    def test_trailing_slash_redirect_preserves_query_string(self):
+        administrator = get_user_model().objects.create_superuser(
+            username="queue-route-administrator", password="unused",
         )
-
-    def setUp(self):
-        self.client.force_login(self.administrator)
-
-    def test_non_record_aliases_redirect_once_and_preserve_query_strings(self):
-        aliases = (
-            ("legacy_file_upload", "file_upload"),
-            ("legacy_setup_job", "setup_job"),
-            ("legacy_boundaries_upload", "boundaries_upload"),
-            ("legacy_submission_queue", "submission_queue"),
-            ("submission_queue_slash", "submission_queue"),
-        )
-
-        for legacy_name, canonical_name in aliases:
-            with self.subTest(legacy_name=legacy_name):
-                response = self.client.get(
-                    reverse(legacy_name) + "?source=old-bookmark"
-                )
-                location = urlsplit(response["Location"])
-
-                self.assertEqual(response.status_code, 301)
-                self.assertEqual(location.path, reverse(canonical_name))
-                self.assertEqual(
-                    parse_qs(location.query),
-                    {"source": ["old-bookmark"]},
-                )
-
-    def test_legacy_product_list_preserves_the_json_response_contract(self):
-        canonical = self.client.get(reverse("product_list_json"))
-        legacy = self.client.get(reverse("legacy_product_list_json"))
-
-        self.assertEqual(canonical.status_code, 200)
-        self.assertEqual(legacy.status_code, 200)
-        self.assertEqual(legacy.json(), canonical.json())
+        self.client.force_login(administrator)
+        response = self.client.get(reverse("submission_queue_slash") + "?product=example")
+        location = urlsplit(response["Location"])
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(location.path, reverse("submission_queue"))
+        self.assertEqual(parse_qs(location.query), {"product": ["example"]})
 
 
 class RoutePolicyAuthorizationOrderTests(TestCase):

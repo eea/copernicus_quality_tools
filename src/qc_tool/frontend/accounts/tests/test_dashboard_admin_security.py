@@ -15,8 +15,7 @@ class DashboardAdminCredentialTests(TestCase):
         self.client.force_login(administrator)
         self.s3 = S3Info.objects.create(
             host="https://objects.example.test",
-            access_key="sensitive-access-key",
-            secret_key="sensitive-secret-key",
+            credential_ref="a" * 32,
             bucketname="deliveries",
             key_prefix="incoming/delivery",
         )
@@ -28,7 +27,7 @@ class DashboardAdminCredentialTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "objects.example.test")
-        self.assertContains(response, "Configured (hidden)")
+        self.assertContains(response, "Stored separately")
         self.assertNotContains(response, "sensitive-access-key")
         self.assertNotContains(response, "sensitive-secret-key")
         self.assertNotContains(response, 'name="access_key"')

@@ -16,7 +16,7 @@ them:
 `ProductUnit.product_unit_code` records the declared scope; it answers the first question
 when its release is authoritative. It is never created from a delivery filename
 or worker observation.
-`Job.submitted_product_unit_code` answers what QC verified inside one ZIP.
+`Job.verified_product_unit_code` answers what QC verified inside one ZIP.
 `DeliverySubmission` links an exact successful Job to an exact ProductUnit and
 stores immutable snapshots of both values.
 Job and submission provenance also snapshots the requesting/submitting user,
@@ -147,7 +147,7 @@ sequenceDiagram
     UI->>DB: Create Job + actor/definition/release snapshot
     Worker->>DB: Claim and complete Job
     Worker-->>UI: result.json with product_unit_code
-    UI->>DB: Store submitted_product_unit_code + result metadata
+    UI->>DB: Store verified_product_unit_code + input hash/reference period
     User->>UI: Submit delivery
     UI->>DB: Lock Delivery/latest Job and reserve DeliverySubmission
     UI->>Store: Copy to private staging directory
@@ -162,7 +162,7 @@ sequenceDiagram
 
 Browser and API endpoints are thin adapters over the same service. Reservation
 requires the deterministically latest Job to be successful, to contain one
-canonical submitted product unit, and to reference an authoritative release and exact
+canonical verified product unit, and to reference an authoritative release and exact
 QC definition revision. It also requires a valid SHA-256 snapshot binding the
 archived input to the exact ZIP inspected by QC. S3 registration and QC remain
 available, but final submission rejects remote inputs with `s3_input_not_archived`
@@ -290,7 +290,7 @@ assigned product managers and administrators; broader delivery browsing grants
 do not expose this correspondence.
 
 Product-manager review scope is the canonical **business product** assigned to
-the manager. A grant for another recipe, a region grant or visibility of an
+the manager. A grant for another recipe or visibility of an
 uploader's other files does not grant review authority. Administrators can review
 all products. Submission itself remains restricted to the delivery owner or an
 administrator; reviewing a user's delivery does not make the manager its owner.
@@ -355,8 +355,6 @@ python3 -m qc_tool.frontend.manage sync_product_definitions path/to/definitions 
 python3 -m qc_tool.frontend.manage sync_product_definitions path/to/definitions
 python3 -m qc_tool.frontend.manage sync_product_catalog path/to/catalog.json --dry-run
 python3 -m qc_tool.frontend.manage sync_product_catalog path/to/catalog.json
-python3 -m qc_tool.frontend.manage backfill_product_unit_metadata --dry-run
-python3 -m qc_tool.frontend.manage backfill_product_unit_metadata --batch-size 100
 ```
 
 Paths above refer to reviewed files visible in the frontend runtime; use the

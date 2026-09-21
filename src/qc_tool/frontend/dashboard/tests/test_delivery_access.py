@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from qc_tool.frontend.dashboard.access import delivery_action_capabilities
 from qc_tool.frontend.dashboard.access import can_view_delivery
-from qc_tool.frontend.dashboard.views import query_deliveries
+from qc_tool.frontend.dashboard.services.deliveries.listing import query_deliveries
 
 
 class DeliveryAccessTests(TestCase):
@@ -91,56 +91,29 @@ class DeliveryAccessTests(TestCase):
             ],
         )
 
-    def test_region_and_product_scopes_are_additive(self):
+    def test_product_read_access_is_limited_to_granted_products(self):
         access = SimpleNamespace(
             allows=lambda permission: True,
             is_authenticated=True,
             is_administrator=False,
             user_id=99,
-            can_view_region_deliveries=True,
-            region_codes=frozenset({"CZ", "DE"}),
             can_view_product_deliveries=True,
             product_idents=frozenset({"clc", "water"}),
             operable_product_idents=frozenset({"clc", "water"}),
         )
-        first_region_delivery = SimpleNamespace(
-            user_id=1,
-            user=SimpleNamespace(
-                userprofile=SimpleNamespace(country="CZ"),
-            ),
-            product_ident="urban",
-        )
-        second_region_delivery = SimpleNamespace(
-            user_id=4,
-            user=SimpleNamespace(
-                userprofile=SimpleNamespace(country="DE"),
-            ),
-            product_ident="urban",
-        )
         product_delivery = SimpleNamespace(
             user_id=2,
-            user=SimpleNamespace(
-                userprofile=SimpleNamespace(country="SK"),
-            ),
             product_ident="clc",
         )
         differently_cased_product_delivery = SimpleNamespace(
             user_id=5,
-            user=SimpleNamespace(
-                userprofile=SimpleNamespace(country="SK"),
-            ),
             product_ident="WATER",
         )
         outside_delivery = SimpleNamespace(
             user_id=3,
-            user=SimpleNamespace(
-                userprofile=SimpleNamespace(country="SK"),
-            ),
             product_ident="urban",
         )
 
-        self.assertTrue(can_view_delivery(access, first_region_delivery))
-        self.assertTrue(can_view_delivery(access, second_region_delivery))
         self.assertTrue(can_view_delivery(access, product_delivery))
         self.assertTrue(
             can_view_delivery(access, differently_cased_product_delivery)
@@ -150,9 +123,6 @@ class DeliveryAccessTests(TestCase):
     def test_product_scope_requires_both_capability_and_grant(self):
         delivery = SimpleNamespace(
             user_id=1,
-            user=SimpleNamespace(
-                userprofile=SimpleNamespace(country="SK"),
-            ),
             product_ident="CLC",
         )
         base_access = {
@@ -160,8 +130,6 @@ class DeliveryAccessTests(TestCase):
             "is_authenticated": True,
             "is_administrator": False,
             "user_id": 99,
-            "can_view_region_deliveries": False,
-            "region_codes": frozenset(),
         }
         grant_without_capability = SimpleNamespace(
             **base_access,
@@ -181,35 +149,11 @@ class DeliveryAccessTests(TestCase):
             can_view_delivery(capability_without_grant, delivery)
         )
 
-    def test_legacy_region_matching_is_exact(self):
-        access = SimpleNamespace(
-            allows=lambda permission: True,
-            is_authenticated=True,
-            is_administrator=False,
-            user_id=99,
-            can_view_region_deliveries=True,
-            region_codes=frozenset({"CZ"}),
-            can_view_product_deliveries=False,
-            product_idents=frozenset(),
-        )
-        differently_cased_delivery = SimpleNamespace(
-            user_id=1,
-            user=SimpleNamespace(
-                userprofile=SimpleNamespace(country="cz"),
-            ),
-            product_ident="urban",
-        )
-
-        self.assertFalse(
-            can_view_delivery(access, differently_cased_delivery)
-        )
 
     def test_delivery_query_uses_additive_bound_scope_parameters(self):
         access = SimpleNamespace(
             is_authenticated=True,
             is_administrator=False,
-            can_view_region_deliveries=True,
-            region_codes=frozenset({"DE", "CZ"}),
             can_view_product_deliveries=True,
             product_idents=frozenset({"water", "clc"}),
             operable_product_idents=frozenset({"water", "clc"}),
@@ -244,7 +188,8 @@ class DeliveryAccessTests(TestCase):
                 "d.user_id = %s AND (LOWER(TRIM(d.product_ident)) IN (%s, %s)",
                 sql,
             )
-            self.assertIn("OR up.country IN (%s, %s)", sql)
+            self.assertNotIn("country", sql)
+            self.assertNotIn("account_profile", sql)
             self.assertEqual(
                 params,
                 [
@@ -260,8 +205,6 @@ class DeliveryAccessTests(TestCase):
                     "water",
                     "clc",
                     "water",
-                    "CZ",
-                    "DE",
                     "clc",
                     "water",
                     "clc",

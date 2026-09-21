@@ -5,8 +5,6 @@ from django.contrib.auth.models import Group
 from django.db import transaction
 
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import UserProfile
-from qc_tool.frontend.accounts.models import UserRegionGrant
 from qc_tool.frontend.accounts.services.product_grants import (
     create_product_grant,
 )
@@ -24,13 +22,11 @@ def provision_user(
     username,
     password,
     email=None,
-    country=None,
-    region_codes=(),
     product_idents=(),
     groups=(),
     is_superuser=False,
 ):
-    """Create one account, profile, and canonical group memberships atomically."""
+    """Create an account with canonical roles and validated product assignments."""
 
     user_model = get_user_model()
     username_field = user_model.USERNAME_FIELD
@@ -53,20 +49,6 @@ def provision_user(
         else user_model._default_manager.create_user
     )
     user = creator(password=password, **attributes)
-
-    if country is not None:
-        UserProfile.objects.update_or_create(
-            user=user,
-            defaults={"country": country},
-        )
-
-    for region_code in dict.fromkeys(region_codes):
-        if not isinstance(region_code, str) or not region_code:
-            raise ValueError("Region grants require a non-empty region code.")
-        UserRegionGrant.objects.get_or_create(
-            user=user,
-            region_code=region_code,
-        )
 
     for role in sorted(roles, key=lambda item: item.value):
         group, _created = Group.objects.get_or_create(name=role.value)

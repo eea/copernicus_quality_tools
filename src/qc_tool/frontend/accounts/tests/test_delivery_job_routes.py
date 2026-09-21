@@ -1,8 +1,7 @@
-"""Compatibility contracts for delivery-owned QC job pages.
+"""Canonical contracts for delivery-owned QC job pages.
 
-Job history and rendered QC results belong to the Deliveries workspace.  The
-named routes are the source of truth for new links, while the former top-level
-paths remain one-hop compatibility redirects for bookmarks and notifications.
+Job history and rendered QC results belong to the Deliveries workspace.
+Named routes are the source of truth for application links.
 """
 
 from pathlib import Path
@@ -67,42 +66,6 @@ class DeliveryJobRouteTests(TestCase):
             reverse("show_result", args=(self.job.job_uuid,)),
             self.canonical_result_url,
         )
-
-    def test_legacy_job_history_path_redirects_to_canonical_delivery_path(self):
-        legacy_url = "/job_history/{}/".format(self.delivery.pk)
-
-        response = self.client.get(legacy_url)
-
-        self.assertIn(response.status_code, (301, 302, 307, 308))
-        self.assertEqual(response["Location"], self.canonical_history_url)
-        self.assertNotEqual(response["Location"], legacy_url)
-
-    def test_interim_delivery_job_history_path_redirects_to_canonical_path(self):
-        interim_url = "/deliveries/job_history/{}/".format(self.delivery.pk)
-
-        response = self.client.get(interim_url)
-
-        self.assertIn(response.status_code, (301, 302, 307, 308))
-        self.assertEqual(response["Location"], self.canonical_history_url)
-        self.assertNotEqual(response["Location"], interim_url)
-
-    def test_legacy_result_path_redirects_to_canonical_delivery_path(self):
-        legacy_url = "/result/{}".format(self.job.job_uuid)
-
-        response = self.client.get(legacy_url)
-
-        self.assertIn(response.status_code, (301, 302, 307, 308))
-        self.assertEqual(response["Location"], self.canonical_result_url)
-        self.assertNotEqual(response["Location"], legacy_url)
-
-    def test_interim_delivery_result_path_redirects_to_canonical_path(self):
-        interim_url = "/deliveries/result/{}".format(self.job.job_uuid)
-
-        response = self.client.get(interim_url)
-
-        self.assertIn(response.status_code, (301, 302, 307, 308))
-        self.assertEqual(response["Location"], self.canonical_result_url)
-        self.assertNotEqual(response["Location"], interim_url)
 
     def test_canonical_delivery_job_paths_render_without_redirecting_back(self):
         history_response = self.client.get(self.canonical_history_url)

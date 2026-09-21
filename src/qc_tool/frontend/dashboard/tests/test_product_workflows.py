@@ -75,10 +75,10 @@ class ProductWorkflowTests(TestCase):
         return DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=release,
             product_unit=unit, product_unit_code=unit.product_unit_code,
-            submitted_product_unit_code=unit.product_unit_code, submitted_by=owner,
+            verified_product_unit_code=unit.product_unit_code, submitted_by=owner,
             submitted_by_username=owner.username, request_channel="browser",
             publication_state=publication_state, review_state=review_state, review_version=1,
-            published_at=timezone.now(), artifact_path="/retained/fixture",
+            published_at=timezone.now(), artifact_key="retained/fixture",
             artifact_digest="b" * 64, input_digest="c" * 64,
         )
 

@@ -39,6 +39,6 @@ def is_product_unit_input_alias(key):
     """Identify unit fields to replace with persisted facts in public reports."""
 
     return bool(
-        key in (PRODUCT_UNIT_CODE_KEY, "submitted_product_unit_code", "aoi_code_submitted")
+        key in (PRODUCT_UNIT_CODE_KEY, "verified_product_unit_code", "submitted_product_unit_code", "aoi_code_submitted")
         or is_aoi_input_alias(key)
     )

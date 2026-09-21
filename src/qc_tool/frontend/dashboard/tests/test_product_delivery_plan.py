@@ -264,10 +264,10 @@ class ProductDeliveryPlanTests(TestCase):
         submission = DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=approved,
             product_unit=approved.product_units.get(product_unit_code="cz"),
-            product_unit_code="cz", submitted_product_unit_code="cz", submitted_by=self.user,
+            product_unit_code="cz", verified_product_unit_code="cz", submitted_by=self.user,
             submitted_by_username=self.user.username, request_channel="browser",
             publication_state="published", review_state="accepted",
-            published_at=timezone.now(), artifact_path="/retained/accepted",
+            published_at=timezone.now(), artifact_key="retained/accepted",
             artifact_digest="a" * 64, input_digest="b" * 64,
         )
         before = list_current_product_coverage(release_ids=(approved.pk,))

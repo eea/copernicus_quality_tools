@@ -42,7 +42,7 @@ def submission_result(submission, *, conflict_id, idempotent):
         publication_state=submission.publication_state,
         review_state=submission.review_state,
         conflict_id=conflict_id,
-        artifact_path=submission.artifact_path,
+        artifact_key=submission.artifact_key,
         published_at=submission.published_at,
         idempotent=idempotent,
     )

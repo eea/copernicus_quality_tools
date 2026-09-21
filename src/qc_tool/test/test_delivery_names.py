@@ -31,7 +31,7 @@ class DeliveryNameTests(TestCase):
         self.assertEqual(result.fields["area_code"], "BE015L1")
         self.assertEqual(result.fields["epsg_code"], "03035")
         self.assertEqual(result.fields["production_date"], "20260730")
-        self.assertNotIn("submitted_product_unit_code", result.fields)
+        self.assertNotIn("verified_product_unit_code", result.fields)
         self.assertNotIn("product_ident", result.fields)
 
     def test_schema_tokens_are_canonical_but_raw_basename_and_area_are_preserved(self):

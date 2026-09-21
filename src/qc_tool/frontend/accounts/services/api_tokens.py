@@ -32,9 +32,7 @@ _PERMISSION_LABELS = {
     "manage_own_account": "Manage profile",
     "manage_api_credential": "Manage API tokens",
     "manage_configuration": "Manage configuration",
-    "view_region_deliveries": "View assigned regions",
     "view_product_deliveries": "View assigned products",
-    "view_region_aggregate_report": "View regional reports",
     "view_product_aggregate_report": "View product reports",
 }
 _ROLE_LABELS = {
@@ -72,7 +70,6 @@ class ApiTokenPresentation:
     last_used_at: Optional[datetime]
     permission_snapshot: tuple[str, ...]
     role_snapshot: tuple[str, ...]
-    region_codes_snapshot: tuple[str, ...]
     product_idents_snapshot: tuple[str, ...]
     is_administrator_snapshot: bool
     permission_labels: tuple[str, ...]
@@ -139,9 +136,6 @@ def api_token_presentations(user):
                 last_used_at=token.last_used_at,
                 permission_snapshot=permission_snapshot,
                 role_snapshot=role_snapshot,
-                region_codes_snapshot=_display_snapshot(
-                    token.region_codes_snapshot
-                ),
                 product_idents_snapshot=_display_snapshot(
                     token.product_idents_snapshot
                 ),
@@ -219,7 +213,6 @@ def issue_personal_access_token(user, name):
                     for permission in account_access.permissions
                 ),
                 role_snapshot=sorted(role.value for role in account_access.roles),
-                region_codes_snapshot=sorted(account_access.region_codes),
                 product_idents_snapshot=sorted(account_access.product_idents),
                 is_administrator_snapshot=account_access.is_administrator,
             )

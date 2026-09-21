@@ -175,7 +175,7 @@ class DeliveryListPresentationTests(TestCase):
             'String(row.last_job_status || "").toLowerCase() === "ok"',
             script,
         )
-        self.assertIn("row.submitted_product_unit_code || row.product_unit_code", script)
+        self.assertIn("row.verified_product_unit_code || row.product_unit_code", script)
         self.assertIn('text: "Product unit: " + productUnitCode', script)
         self.assertNotIn("product unit not available", script)
         self.assertNotIn("delivery-product-unit--empty", script)

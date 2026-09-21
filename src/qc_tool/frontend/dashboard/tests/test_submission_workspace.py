@@ -1,6 +1,5 @@
 """Exercise plan activation, owner tracking, review and retained downloads."""
 
-from pathlib import Path
 from dataclasses import replace
 import re
 import shutil
@@ -294,7 +293,7 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.client.force_login(self.manager)
         response = self.client.get(url)
         self.assertEqual(b"".join(response.streaming_content), b"validated")
-        artifact = Path(submission.artifact_path) / "output.d/report.txt"
+        artifact = (self.submission_root / submission.artifact_key) / "output.d/report.txt"
         artifact.write_text("tampered", encoding="utf-8")
         self.assertEqual(self.client.get(url).status_code, 404)
         artifact.unlink()
@@ -305,7 +304,7 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
     def test_invalid_manifest_is_unavailable_and_does_not_break_review_page(self):
         submission = self.published()
         self.client.force_login(self.manager)
-        manifest = Path(submission.artifact_path) / "submission-manifest.json"
+        manifest = (self.submission_root / submission.artifact_key) / "submission-manifest.json"
         for payload in ("[]", "null", '{"artifact_sha256": "invalid"}'):
             with self.subTest(payload=payload):
                 manifest.write_text(payload, encoding="utf-8")
@@ -358,16 +357,14 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
                     fetch_redirect_response=False,
                 )
 
-    def test_old_submission_queue_redirects_to_products_preserving_filters(self):
+    def test_submission_queue_normalizes_trailing_slash_preserving_filters(self):
         self.client.force_login(self.manager)
         query = "?state=all&product=test-definition&delivery={}&page=2".format(self.delivery.pk)
-        for old_path in ("/submissions/", "/products/submissions/"):
-            with self.subTest(old_path=old_path):
-                response = self.client.get(old_path + query)
-                self.assertRedirects(
-                    response, "/products/submissions" + query,
-                    status_code=301, fetch_redirect_response=False,
-                )
+        response = self.client.get("/products/submissions/" + query)
+        self.assertRedirects(
+            response, "/products/submissions" + query,
+            status_code=301, fetch_redirect_response=False,
+        )
 
     def test_owner_submission_receipt_returns_to_matching_delivery_workflow(self):
         submission = self.published()

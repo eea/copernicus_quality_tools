@@ -1,4 +1,4 @@
-"""Compatibility worker queue claim for persisted QC jobs."""
+"""Worker queue claim for persisted QC jobs."""
 
 from django.utils import timezone
 

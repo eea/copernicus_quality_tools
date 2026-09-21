@@ -9,7 +9,7 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.product_grants import create_product_grant
 from qc_tool.frontend.accounts.services.api_tokens import issue_personal_access_token
 from qc_tool.frontend.accounts.services.products import product_ident_choices
@@ -107,7 +107,7 @@ class GroupedProductAccessTests(TestCase):
         access = self.grant("shared_recipe", "second_recipe")
         restricted = access.restricted_to_snapshot(
             permissions=[permission.value for permission in access.permissions],
-            roles=[role.value for role in access.roles], region_codes=[],
+            roles=[role.value for role in access.roles],
             product_idents=["shared_recipe"], is_administrator=False,
         )
 
@@ -234,19 +234,14 @@ class GroupedProductAccessTests(TestCase):
         UserProductGrant.objects.create(user=self.owner, product_ident="shared_recipe")
         self.assert_owner_visibility([unknown, blank])
 
-    def test_region_visible_unassigned_owner_delivery_has_no_mutation_actions(self):
+    def test_unassigned_owner_delivery_is_hidden_even_with_product_read_permission(self):
         UserProductGrant.objects.create(user=self.owner, product_ident="grouped_product")
-        UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.owner, region_code="CZ")
         self.owner.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
-        outside = self.delivery(self.unassigned, "regional-unassigned.zip")
-        rows = self.assert_owner_visibility([outside])
+        outside = self.delivery(self.unassigned, "unassigned-owner.zip")
+        self.assert_owner_visibility([], [outside])
         self.assertFalse(delivery_product_scope_matches(access_for(self.owner), outside))
-        self.assertFalse(rows[0]["can_run_qc"])
-        self.assertFalse(rows[0]["can_submit"])
-        self.assertFalse(rows[0]["can_delete"])
 
     def test_product_manager_grant_does_not_reveal_other_users_unidentified_uploads(self):
         access = self.grant("grouped_product")
@@ -287,14 +282,14 @@ class GroupedProductAccessTests(TestCase):
         self.assertEqual(api_history.status_code, 200)
         self.assertEqual([row["job_uuid"] for row in api_history.json()["data"]], [latest_job.pk.hex])
 
-    def test_historical_job_product_scope_preserves_explicit_region_read_access(self):
-        delivery = self.delivery(self.unassigned, "region-history.zip")
+    def test_historical_job_requires_explicit_product_assignment(self):
+        delivery = self.delivery(self.unassigned, "unassigned-history.zip")
         job = delivery.job_set.get()
-        UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.manager, region_code="CZ")
         self.manager.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
+        self.assertFalse(can_view_job(access_for(self.manager), job))
+        UserProductGrant.objects.create(user=self.manager, product_ident=self.unassigned.product.ident)
         self.assertTrue(can_view_job(access_for(self.manager), job))
 
     @patch("qc_tool.frontend.accounts.services.products.available_product_descriptions", return_value={"shared_recipe": "Shared recipe"})

@@ -70,7 +70,7 @@ batch/checkpoint settings and completion assertions where applicable.
 ## Acceptance and follow-up
 
 - Login/logout and static assets:
-- Allowed **and denied** user/region/product access:
+- Allowed **and denied** user/product access:
 - Upload, delivery/job state and representative worker execution:
 - Catalog/product unit provenance and submission/filesystem consistency:
 - Empty-installation catalog remains empty until administrator upload or explicit reviewed import:

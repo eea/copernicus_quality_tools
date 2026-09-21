@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -15,6 +17,7 @@ from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.dashboard.models import S3Info
 from qc_tool.frontend.dashboard.services.s3 import S3Delivery
 from qc_tool.frontend.dashboard.services.s3 import S3RegistrationError
+from qc_tool.frontend.dashboard.services.s3.credentials import load_s3_credentials
 
 
 ALLOWED_ENDPOINT = "https://objects.example.com"
@@ -28,6 +31,10 @@ ALLOWED_ENDPOINT = "https://objects.example.com"
 )
 class ApiS3RegistrationSecurityTests(TestCase):
     def setUp(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.secret_path = Path(directory.name) / "credentials"
+        self.enterContext(override_settings(S3_CREDENTIALS_DIR=self.secret_path))
         managed_definition("product")
         self.user = get_user_model().objects.create_user(username="s3-api-owner")
         UserProductGrant.objects.create(user=self.user, product_ident="product")
@@ -131,6 +138,32 @@ class ApiS3RegistrationSecurityTests(TestCase):
         self.assertEqual(delivery.s3.host, ALLOWED_ENDPOINT)
         self.assertEqual(delivery.s3.bucketname, "deliveries")
         self.assertEqual(delivery.s3.key_prefix, "incoming/product")
+        self.assertEqual(len(delivery.s3.credential_ref), 32)
+        self.assertNotIn("secret_key", {field.name for field in S3Info._meta.fields})
+        self.assertNotIn("access_key", {field.name for field in S3Info._meta.fields})
+        self.assertEqual(load_s3_credentials(delivery.s3).secret_key, "secret-key")
+        self.assertNotContains(response, "secret-key")
+
+    @patch("qc_tool.frontend.dashboard.views.api_access.deliveries.inspect_s3_delivery")
+    def test_store_failure_returns_safe_error_without_database_rows(self, inspect):
+        inspect.return_value = S3Delivery(filename="incoming/product", size_bytes=42)
+        self.secret_path.mkdir(mode=0o755)
+        self.secret_path.chmod(0o755)
+        response = self.post(self.payload())
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["code"], "s3_credentials_unavailable")
+        self.assertFalse(Delivery.objects.exists())
+        self.assertFalse(S3Info.objects.exists())
+        self.assertEqual(list(self.secret_path.iterdir()), [])
+
+    @patch("qc_tool.frontend.dashboard.models.Delivery.objects.create", side_effect=RuntimeError("synthetic DB failure"))
+    @patch("qc_tool.frontend.dashboard.views.api_access.deliveries.inspect_s3_delivery")
+    def test_database_failure_removes_new_secret_and_rolls_back_source(self, inspect, create):
+        inspect.return_value = S3Delivery(filename="incoming/product", size_bytes=42)
+        with self.assertRaisesMessage(RuntimeError, "synthetic DB failure"):
+            self.post(self.payload())
+        self.assertFalse(S3Info.objects.exists())
+        self.assertEqual(list(self.secret_path.iterdir()), [])
 
     @patch(
         "qc_tool.frontend.dashboard.views.api_access.deliveries."

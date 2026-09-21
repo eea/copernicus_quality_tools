@@ -40,7 +40,7 @@ machine.
 - [ ] Named dashboard routes remain covered by the public/private registry.
 - [ ] Only login/authentication entrypoints, API docs, and schema are
       intentionally public.
-- [ ] User roles, direct permissions, and product/region grants follow least
+- [ ] User roles, direct permissions, and product grants follow least
       privilege.
 - [ ] Cross-user read access and owner/admin mutation behavior were tested.
 - [ ] Inactive users and revoked API credentials are rejected.

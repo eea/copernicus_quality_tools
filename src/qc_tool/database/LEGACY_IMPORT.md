@@ -14,13 +14,13 @@ operation, not a schema migration or a restore over an existing database.
 | Source information | Result |
 | --- | --- |
 | 97 users | IDs, usernames, password hashes, names, email, flags and account dates retained |
-| 52 user profiles | Retained; 45 users without profiles receive blank profiles |
+| 52 user profiles | Omitted entirely; countries and product-family labels remain only in the unchanged source dump |
 | 57,583 deliveries | IDs, owners, original filenames, sizes, dates, product identifiers, descriptions and deletion flags retained |
 | 15,992 submitted deliveries | Original submission dates retained as historical records |
 | 61,319 QC jobs | UUIDs, delivery relationships, states, dates, descriptions, reported units and execution settings retained |
-| 29,688 S3 locations | Hosts, buckets and object prefixes retained; credentials left blank |
+| 29,688 S3 locations | Hosts, buckets and object prefixes retained; credential references left blank, no secret files created |
 | 196 administration events | Actors, dates, text and original object IDs retained; links retained only where their target IDs are preserved |
-| Old groups and memberships | Unrecognized groups retained under `legacy:` names, without active permissions |
+| Old groups and memberships | Only exact current role names are mapped; obsolete groups and their memberships are omitted |
 | Direct user permissions | Resolved by app label, model and codename; unavailable permissions counted in the applied report |
 
 Duplicate filenames are legitimate historical rows and are **not deduplicated**.
@@ -28,7 +28,8 @@ The 21,144 deleted delivery records remain deleted. Reported `aoi_code` values
 use the existing legacy adapter for `product_unit_code`; verified unit fields
 stay empty. Timestamps respect the target application's timezone configuration.
 Any legacy waiting/running jobs become `worker lost`, preventing accidental
-execution after import.
+execution after import. Job request source stays unknown (`NULL`) because the
+dump does not establish whether each run came from a browser or the API.
 
 The ZIPs, QC reports and submitted-delivery folders are unavailable. The SQL dump
 cannot recreate them, content hashes, verified submission receipts, approvals,
@@ -41,6 +42,15 @@ No products are created and no specifications are modified. Administrators must
 upload the original specification JSONs through **Products → Upload specification**.
 Old API credentials, sessions and migration history are not imported. S3
 credentials require replacement before the stored locations can be used.
+
+The new schema has no user profiles, country-based access rules or region grants.
+The report counts omitted profiles, nonempty country and product-family values,
+obsolete groups and memberships, and all source group-permission links under
+`omitted`. It never exposes those source values or recreates them as inert
+`legacy:` groups. Current roles use the release's own permissions. Direct user
+permissions are retained only when their app label, model and codename exist in
+the release; missing permissions are counted after import. The unchanged source
+dump remains the archive of omitted information.
 
 ## 1. Validate and inspect the report
 
@@ -75,8 +85,7 @@ through administration after importing, or supply a reviewed JSON access map:
   "users": {
     "47": {
       "roles": ["product_manager"],
-      "products": ["clms_ua_lcuc_c2021-2024_v010ha"],
-      "regions": []
+      "products": ["clms_ua_lcuc_c2021-2024_v010ha"]
     },
     "48": {
       "products": ["clms_ua_lcuc_c2021-2024_v010ha"]
@@ -88,15 +97,15 @@ through administration after importing, or supply a reviewed JSON access map:
 Keys are **source user IDs**; these example IDs must be replaced with reviewed
 IDs from your backup. Roles are additive to the preserved roles and baseline
 `default` role. Valid roles are `default`, `product_manager`, and `admin`.
-Products must use their canonical identifiers. Region codes are optional and
-must match your application's geographic scope; omitting them grants no regions.
-Regional visibility also requires the corresponding account capabilities; a
-region scope alone does not reproduce the old `country_manager` role.
+Product scopes must use canonical business-product or exact QC-definition
+identifiers. Definition assignments do not grant access to sibling definitions.
+The removed `regions` access-map option is rejected, including an empty list;
+replace it with explicit product assignments.
 An explicit grant does not create a product. Its specification must still be
 uploaded before the catalog can expose it.
 
 Pass the same `--access-map /private/path/access-map.json` to both the dry run
-and actual import. Without a map, no product or region assignments are inferred.
+and actual import. Without a map, no product assignments are inferred.
 Review access before allowing users onto the new deployment.
 
 ## 3. Rehearse in a fresh disposable database
@@ -174,8 +183,22 @@ PYTHONPATH=src python3 -m qc_tool.frontend.manage test \
   qc_tool.database.tests.integration.test_legacy_command --noinput
 ```
 
-All 63 migration tests pass on SQLite and PostgreSQL. The actual 20260907 dump
-has also been rehearsed on isolated PostgreSQL; every imported user, profile,
-storage source, delivery and job field matched the prepared source conversion,
-and all counts in the recovery table above reconciled. This does not perform or certify
-a production cutover: repeat verification against the eventual frozen release.
+After each schema change, rerun both the synthetic tests and a complete import
+into a new disposable target. Compare the source and imported users, storage
+sources, deliveries and jobs; confirm omitted profiles and groups stay absent.
+Review the aggregate omission counts and direct-permission resolution. Check
+that no products, verified receipts, API tokens or S3 credentials were invented,
+that a second import into the occupied target is refused, and that the source
+checksum is unchanged. Keep this evidence with the release record.
+
+The 2026-09-21 rehearsal after profile/region removal passed on a fresh
+PostgreSQL target. All fields on the 97 imported users, 29,688 storage sources,
+57,583 deliveries and 61,319 jobs matched the prepared conversion. The import
+retained 196 admin events and 15,992 submission dates; it omitted 52 profiles,
+six obsolete groups and 12 memberships. Only current roles were created,
+unknown job channels remained NULL, and a second import was refused. The
+source checksum was unchanged. The full 1,091-test application suites passed
+on SQLite and PostgreSQL; parser/history checks also passed on the host.
+
+This does not perform or certify a production cutover: repeat verification
+against the eventual frozen release.

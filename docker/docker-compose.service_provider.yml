@@ -18,6 +18,7 @@ services:
       - CSRF_TRUSTED_ORIGINS=https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1
       - RESUMABLE_SIMULTANEOUS_UPLOADS=4
       - S3_ALLOWED_ENDPOINTS
+      - S3_CREDENTIALS_DIR
       - S3_CONNECT_TIMEOUT_SECONDS
       - S3_READ_TIMEOUT_SECONDS
       - S3_MAX_LISTED_OBJECTS

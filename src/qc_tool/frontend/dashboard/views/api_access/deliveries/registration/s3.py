@@ -5,6 +5,9 @@ from pathlib import PurePosixPath
 from django.http import JsonResponse
 from qc_tool.frontend.dashboard.services.uploads.access import require_upload_product, require_upload_filename
 from qc_tool.frontend.dashboard.services.uploads.resumable import ResumableUploadError
+from qc_tool.frontend.dashboard.services.s3.credentials import (
+    S3CredentialsUnavailable, discard_s3_credentials, store_s3_credentials,
+)
 
 
 def register_s3_delivery(
@@ -69,24 +72,38 @@ def register_s3_delivery(
     endpoint_logger.debug(product_ident)
     product_description = find_product(product_ident)
 
-    with atomic():
-        s3 = model_module.S3Info.objects.create(
-            host=registration.endpoint,
-            access_key=registration.access_key,
-            secret_key=registration.secret_key,
-            bucketname=registration.bucket_name,
-            key_prefix=registration.key_prefix,
+    try:
+        credential_ref = store_s3_credentials(registration)
+    except S3CredentialsUnavailable:
+        return JsonResponse(
+            {"status": "error", "code": "s3_credentials_unavailable",
+             "message": "S3 credentials could not be stored. Contact an administrator."},
+            status=503,
         )
-        delivery_record = model_module.Delivery.objects.create(
-            filename=delivery_filename,
-            size_bytes=delivery.size_bytes,
-            product_ident=product_ident,
-            product_description=product_description,
-            date_uploaded=now(),
-            user=user,
-            is_deleted=False,
-            s3=s3,
-        )
+    try:
+        with atomic():
+            s3 = model_module.S3Info.objects.create(
+                host=registration.endpoint,
+                credential_ref=credential_ref,
+                bucketname=registration.bucket_name,
+                key_prefix=registration.key_prefix,
+            )
+            delivery_record = model_module.Delivery.objects.create(
+                filename=delivery_filename,
+                size_bytes=delivery.size_bytes,
+                product_ident=product_ident,
+                product_description=product_description,
+                date_uploaded=now(),
+                user=user,
+                is_deleted=False,
+                s3=s3,
+            )
+    except Exception:
+        try:
+            discard_s3_credentials(credential_ref)
+        except S3CredentialsUnavailable:
+            endpoint_logger.error("Could not clean up credentials after failed S3 registration.")
+        raise
     endpoint_logger.debug("Delivery object saved successfully to database.")
     response_data = {
         "status": "ok",

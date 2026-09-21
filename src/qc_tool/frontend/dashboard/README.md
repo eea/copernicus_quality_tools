@@ -61,11 +61,8 @@ artifact, mutation, worker, and operational `/api/*` contracts keep their
 existing paths and authentication behavior. Do not move an internal endpoint
 just to make it resemble a page URL.
 
-Authenticated redirects for superseded page bookmarks belong in
-`urls/compatibility.py`. Each alias redirects directly to its canonical route,
-preserves the query string, and is temporary; templates and application code
-must always reverse the canonical route name. Never use compatibility routes
-for API or mutation traffic.
+Templates and application code reverse canonical route names. Superseded
+browser paths and the old product-list data alias are not registered.
 
 ## Catalog and submission lifecycle map
 
@@ -96,7 +93,7 @@ grow into one service module:
 | Delivery mutation adapters | `views/deliveries/actions/` |
 | Scoped catalog/review administration | `admin_features/catalog.py`, `admin_features/submissions/` |
 
-`models.py` is only Django's model-discovery and compatibility boundary. Model
+`models.py` is Django's model-discovery module. Model
 implementations belong in `domain/`; workflows belong in `services/`.
 
 ## Dependency direction
@@ -117,9 +114,8 @@ urls -> views -> services/access -> models and infrastructure
   capabilities and scoped data.
 - A feature may use a shared service, but services must not import views.
 
-`views/__init__.py` and `helpers.py` are compatibility export surfaces for old
-imports. New code must import the owning module directly. They must stay thin
-and contain no behavior.
+Import views and services from their owning modules. The former monolithic
+view/helper import aliases have been removed.
 
 ## Adding or changing a feature
 

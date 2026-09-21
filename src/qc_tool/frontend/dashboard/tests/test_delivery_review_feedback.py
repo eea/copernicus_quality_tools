@@ -9,7 +9,7 @@ from django.utils import timezone
 from qc_tool.common import JOB_OK
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductUnit, ProductRelease,
     SubmissionReviewEvent,
@@ -54,10 +54,10 @@ class DeliveryReviewFeedbackTests(TestCase):
         submission = DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=self.release,
             product_unit=self.aoi, product_unit_code=self.aoi.product_unit_code,
-            submitted_product_unit_code=self.aoi.product_unit_code, submitted_by=owner,
+            verified_product_unit_code=self.aoi.product_unit_code, submitted_by=owner,
             submitted_by_username=owner.username, request_channel="browser",
             publication_state=publication_state, review_state=state, review_version=version,
-            published_at=now, artifact_path="/published/" + name,
+            published_at=now, artifact_key="published/" + name,
             artifact_digest="b" * 64, input_digest="c" * 64,
         )
         return submission
@@ -136,10 +136,9 @@ class DeliveryReviewFeedbackTests(TestCase):
     def test_delivery_browsing_grants_do_not_expose_review_feedback_or_correction_counts(self):
         submission = self.submission("private-correspondence")
         self.event(submission, notes="Private manager correspondence.")
-        UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.other, region_code="CZ")
+        UserProductGrant.objects.create(user=self.other, product_ident=self.product.ident)
         self.other.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
 
         access = access_for(self.other)
@@ -174,23 +173,15 @@ class DeliveryReviewFeedbackTests(TestCase):
 
         self.assertEqual(self.rows(self.owner)[0]["review_notes"], "Correct the missing geometry.")
 
-    def test_revoked_owner_with_region_read_cannot_see_review_feedback_or_correct(self):
+    def test_revoked_owner_with_product_read_cannot_see_delivery_or_review(self):
         submission = self.submission("revoked-owner")
         self.event(submission, notes="Private product correspondence.")
-        UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.owner, region_code="CZ")
         self.owner.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
         self.owner.product_grants.all().delete()
 
-        rows = self.rows(self.owner, include_capabilities=True)
-        self.assertEqual(len(rows), 1)
-        self.assertIsNone(rows[0]["submission_id"])
-        self.assertIsNone(rows[0]["review_notes"])
-        self.assertFalse(rows[0]["can_upload_correction"])
-        self.assertFalse(rows[0]["can_run_qc"])
-        self.assertFalse(rows[0]["can_submit"])
+        self.assertEqual(self.rows(self.owner, include_capabilities=True), [])
 
     def test_rejection_is_first_in_attention_without_accepted_history(self):
         rejected = self.submission("older-rejected")
@@ -231,10 +222,9 @@ class DeliveryReviewFeedbackTests(TestCase):
     def test_completed_view_and_counts_preserve_review_visibility(self):
         accepted = self.submission("private-acceptance", state="accepted")
         self.event(accepted, decision="approved", notes="Review completed.")
-        UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=self.other, region_code="CZ")
+        UserProductGrant.objects.create(user=self.other, product_ident=self.product.ident)
         self.other.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
         for viewer, visible in ((self.owner, True), (self.manager, True), (self.admin, True), (self.other, False)):
             with self.subTest(viewer=viewer.username):
@@ -248,7 +238,7 @@ class DeliveryReviewFeedbackTests(TestCase):
                 self.assertEqual(payload["workflow_counts"]["in_review"], int(not visible))
                 self.assertEqual(payload["status_counts"]["all"], 1)
                 if not visible:
-                    self.assertFalse(viewer.product_grants.exists())
+                    self.assertTrue(viewer.product_grants.exists())
                     self.assertEqual(payload["status_counts"]["submitted"], 1)
 
     def test_completed_requires_published_acceptance_and_is_exclusive_without_submission_date(self):

@@ -16,7 +16,7 @@ def visible_deliveries(account_access):
     """Return active deliveries visible to an authenticated account."""
 
     # The browser list joins its owner and therefore cannot display orphaned
-    # legacy rows. Keep all consumers on that same explicit contract.
+    # rows. Keep all consumers on that same explicit contract.
     queryset = Delivery.objects.filter(is_deleted=False, user__isnull=False)
     if not (
         account_access.is_authenticated
@@ -59,13 +59,6 @@ def visible_deliveries(account_access):
             unidentified_product & Q(_scope_job_id__isnull=True)
         )
     visibility = Q(user_id=account_access.user_id) & owner_product_scope
-    if account_access.can_view_region_deliveries:
-        # Delivery.product_unit_code is reporting metadata until every product has an
-        # authoritative spatial validator. Do not use uploader-controlled
-        # naming metadata as an authorization fact.
-        visibility |= Q(
-            user__userprofile__country__in=account_access.region_codes
-        )
     if account_access.can_view_product_deliveries:
         visibility |= product_scope
 

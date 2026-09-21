@@ -17,9 +17,7 @@ from qc_tool.frontend.accounts.authorization.permissions import AccountPermissio
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import AccountCapability
 from qc_tool.frontend.accounts.models import PersonalAccessToken
-from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserProductGrant
-from qc_tool.frontend.accounts.models import UserRegionGrant
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import S3Info
@@ -39,8 +37,6 @@ class AccountAdminRegistrationTests(SimpleTestCase):
             tuple(inline.model for inline in user_admin.inlines),
             (
                 PersonalAccessToken,
-                UserProfile,
-                UserRegionGrant,
                 UserProductGrant,
             ),
         )
@@ -51,25 +47,17 @@ class AccountAdminRegistrationTests(SimpleTestCase):
 
 
 class AccountAdminConfigurationTests(SimpleTestCase):
-    def test_user_list_exposes_roles_and_profile_scope(self):
+    def test_user_list_exposes_roles_and_product_scope(self):
         user_admin = admin.site._registry[get_user_model()]
 
         self.assertIn("role_names", user_admin.list_display)
         self.assertIn("direct_qc_permissions", user_admin.list_display)
-        self.assertIn("region_codes", user_admin.list_display)
         self.assertIn("product_idents", user_admin.list_display)
-        self.assertIn("profile_country", user_admin.list_display)
-        self.assertIn("profile_product_family", user_admin.list_display)
+        self.assertNotIn("profile_product_family", user_admin.list_display)
+        self.assertNotIn("profile_country", user_admin.list_display)
+        self.assertNotIn("region_codes", user_admin.list_display)
         self.assertIn("groups", user_admin.filter_horizontal)
         self.assertIn("user_permissions", user_admin.filter_horizontal)
-        self.assertIn(
-            ("region_grants__region_code", admin.AllValuesFieldListFilter),
-            user_admin.list_filter,
-        )
-        self.assertIn(
-            "region_grants__region_code__exact",
-            user_admin.search_fields,
-        )
         self.assertIn(
             ("product_grants__product_ident", admin.AllValuesFieldListFilter),
             user_admin.list_filter,
@@ -77,14 +65,6 @@ class AccountAdminConfigurationTests(SimpleTestCase):
         self.assertIn(
             "product_grants__product_ident__exact",
             user_admin.search_fields,
-        )
-        self.assertEqual(
-            user_admin.profile_country.short_description,
-            "Legacy delivery region",
-        )
-        self.assertEqual(
-            user_admin.profile_product_family.short_description,
-            "Legacy product family",
         )
 
     def test_api_inline_never_exposes_or_edits_the_stored_digest(self):
@@ -120,9 +100,7 @@ class AdminRoleTests(TestCase):
             for model in (
                 self.user_model,
                 Group,
-                UserProfile,
                 PersonalAccessToken,
-                UserRegionGrant,
                 UserProductGrant,
             )
             for action in ("add", "change", "delete", "view")
@@ -165,11 +143,8 @@ class AdminRoleTests(TestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(user.has_perm("auth.change_user"))
         self.assertTrue(user.has_perm("auth.change_group"))
-        self.assertTrue(user.has_perm("accounts.change_userprofile"))
         self.assertTrue(user.has_perm("accounts.change_personalaccesstoken"))
-        self.assertFalse(user.has_perm("dashboard.change_userprofile"))
         self.assertFalse(user.has_perm("dashboard.change_personalaccesstoken"))
-        self.assertTrue(user.has_perm("accounts.change_userregiongrant"))
         self.assertTrue(user.has_perm("accounts.change_userproductgrant"))
 
         user.groups.remove(self.admin_group)
@@ -258,12 +233,6 @@ class AdminRoleTests(TestCase):
         self.assertEqual(
             set(offered.values_list("codename", flat=True)),
             {permission.value for permission in AccountPermission},
-        )
-        self.assertTrue(
-            {
-                AccountPermission.VIEW_REGION_DELIVERIES.value,
-                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.value,
-            }.issubset(set(offered.values_list("codename", flat=True)))
         )
         self.assertNotIn(unrelated, offered)
 
@@ -360,14 +329,6 @@ class AdminRoleTests(TestCase):
                 "personal_access_tokens-INITIAL_FORMS": "0",
                 "personal_access_tokens-MIN_NUM_FORMS": "0",
                 "personal_access_tokens-MAX_NUM_FORMS": "0",
-                "userprofile-TOTAL_FORMS": "1",
-                "userprofile-INITIAL_FORMS": "0",
-                "userprofile-MIN_NUM_FORMS": "0",
-                "userprofile-MAX_NUM_FORMS": "1",
-                "region_grants-TOTAL_FORMS": "1",
-                "region_grants-INITIAL_FORMS": "0",
-                "region_grants-MIN_NUM_FORMS": "0",
-                "region_grants-MAX_NUM_FORMS": "1000",
                 "product_grants-TOTAL_FORMS": "1",
                 "product_grants-INITIAL_FORMS": "0",
                 "product_grants-MIN_NUM_FORMS": "0",
@@ -492,18 +453,13 @@ class AdminRoleTests(TestCase):
             self.user_admin.has_change_permission(request, superuser),
         )
 
-    def test_list_columns_render_roles_and_profile(self):
+    def test_list_columns_render_roles_and_permissions(self):
         user = self.user_model.objects.create_user(
             username="scoped-user",
             password="password",
         )
         product_manager = Group.objects.get(name=Role.PRODUCT_MANAGER.value)
         user.groups.add(product_manager)
-        UserProfile.objects.create(
-            user=user,
-            country="CZ",
-            product_family="HRL",
-        )
         user.user_permissions.add(
             Permission.objects.get(
                 content_type=ContentType.objects.get_for_model(
@@ -519,179 +475,12 @@ class AdminRoleTests(TestCase):
             self.user_admin.role_names(user),
             "Default, Product Manager",
         )
-        self.assertEqual(self.user_admin.profile_country(user), "CZ")
-        self.assertEqual(self.user_admin.profile_product_family(user), "HRL")
         self.assertEqual(
             self.user_admin.direct_qc_permissions(user),
             "Can run quality control",
         )
 
 
-class RegionGrantAdminTests(TestCase):
-    def setUp(self):
-        self.user_model = get_user_model()
-        self.user_admin = admin.site._registry[self.user_model]
-        self.actor = self.user_model.objects.create_user(
-            username="region-grant-admin",
-            password="password",
-        )
-        self.actor.groups.add(synchronize_admin_role())
-        self.client.force_login(self.actor)
-
-    def inline_management_data(self, *, region_total, region_initial):
-        return {
-            "personal_access_tokens-TOTAL_FORMS": "0",
-            "personal_access_tokens-INITIAL_FORMS": "0",
-            "personal_access_tokens-MIN_NUM_FORMS": "0",
-            "personal_access_tokens-MAX_NUM_FORMS": "0",
-            "userprofile-TOTAL_FORMS": "1",
-            "userprofile-INITIAL_FORMS": "0",
-            "userprofile-MIN_NUM_FORMS": "0",
-            "userprofile-MAX_NUM_FORMS": "1",
-            "region_grants-TOTAL_FORMS": str(region_total),
-            "region_grants-INITIAL_FORMS": str(region_initial),
-            "region_grants-MIN_NUM_FORMS": "0",
-            "region_grants-MAX_NUM_FORMS": "1000",
-            "product_grants-TOTAL_FORMS": "1",
-            "product_grants-INITIAL_FORMS": "0",
-            "product_grants-MIN_NUM_FORMS": "0",
-            "product_grants-MAX_NUM_FORMS": "1000",
-        }
-
-    def test_add_view_creates_multiple_exact_grants_with_audit_creator(self):
-        region_permissions = Permission.objects.filter(
-            content_type=ContentType.objects.get_for_model(
-                AccountCapability,
-                for_concrete_model=False,
-            ),
-            codename__in={
-                AccountPermission.VIEW_REGION_DELIVERIES.value,
-                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.value,
-            },
-        )
-        url = reverse("admin:auth_user_add")
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Region grants — exact region codes")
-        self.assertContains(response, "Region codes are stored as opaque")
-        self.assertContains(response, "does not grant it")
-        self.assertContains(response, "Legacy delivery region")
-
-        response = self.client.post(
-            url,
-            {
-                "username": "regional-user",
-                "password1": "sufficient-password",
-                "password2": "sufficient-password",
-                "user_permissions": [
-                    str(permission.pk) for permission in region_permissions
-                ],
-                "region_grants-0-region_code": "REGION-ONE",
-                "region_grants-1-region_code": "region:two/2",
-                **self.inline_management_data(
-                    region_total=2,
-                    region_initial=0,
-                ),
-                "_save": "Save",
-            },
-        )
-
-        self.assertEqual(response.status_code, 302)
-        user = self.user_model.objects.get(username="regional-user")
-        self.assertEqual(
-            set(user.groups.values_list("name", flat=True)),
-            {Role.DEFAULT.value},
-        )
-        self.assertEqual(
-            set(user.user_permissions.values_list("codename", flat=True)),
-            {
-                AccountPermission.VIEW_REGION_DELIVERIES.value,
-                AccountPermission.VIEW_REGION_AGGREGATE_REPORT.value,
-            },
-        )
-        self.assertEqual(
-            list(user.region_grants.values_list("region_code", flat=True)),
-            ["REGION-ONE", "region:two/2"],
-        )
-        self.assertEqual(
-            set(user.region_grants.values_list("created_by_id", flat=True)),
-            {self.actor.pk},
-        )
-        account_access = access_for(user)
-        self.assertTrue(account_access.can_view_region_deliveries)
-        self.assertTrue(account_access.can_view_region_aggregate_report)
-
-    def test_change_view_preserves_creator_and_audits_new_grant(self):
-        user = self.user_model.objects.create_user(
-            username="existing-regional-user",
-            password="password",
-        )
-        existing = UserRegionGrant.objects.create(
-            user=user,
-            region_code="REGION-EXISTING",
-            created_by=user,
-        )
-        url = reverse("admin:auth_user_change", args=(user.pk,))
-
-        response = self.client.post(
-            url,
-            {
-                "username": user.username,
-                "first_name": "",
-                "last_name": "",
-                "email": "",
-                "is_active": "on",
-                "groups": [
-                    str(group.pk)
-                    for group in user.groups.filter(name__in=Role.values())
-                ],
-                "region_grants-0-id": str(existing.pk),
-                "region_grants-0-region_code": existing.region_code,
-                "region_grants-1-region_code": "REGION-NEW",
-                **self.inline_management_data(
-                    region_total=2,
-                    region_initial=1,
-                ),
-                "_save": "Save",
-            },
-        )
-
-        self.assertEqual(response.status_code, 302)
-        existing.refresh_from_db()
-        added = user.region_grants.get(region_code="REGION-NEW")
-        self.assertEqual(existing.created_by_id, user.pk)
-        self.assertEqual(added.created_by_id, self.actor.pk)
-
-    def test_region_summary_and_exact_search_use_all_grants(self):
-        first = self.user_model.objects.create_user(
-            username="first-region-user",
-            password="password",
-        )
-        second = self.user_model.objects.create_user(
-            username="second-region-user",
-            password="password",
-        )
-        UserRegionGrant.objects.bulk_create(
-            [
-                UserRegionGrant(user=first, region_code="REGION-20"),
-                UserRegionGrant(user=first, region_code="REGION-10"),
-                UserRegionGrant(user=second, region_code="REGION-OTHER"),
-            ]
-        )
-        request = RequestFactory().get("/admin/auth/user/")
-        request.user = self.actor
-        queryset = self.user_admin.get_queryset(request)
-        searched, may_duplicate = self.user_admin.get_search_results(
-            request,
-            queryset,
-            "REGION-10",
-        )
-
-        self.assertEqual(list(searched), [first])
-        self.assertTrue(may_duplicate)
-        listed = queryset.get(pk=first.pk)
-        self.assertEqual(self.user_admin.region_codes(listed), "REGION-10, REGION-20")
 
 
 class ProductGrantAdminTests(TestCase):
@@ -711,14 +500,6 @@ class ProductGrantAdminTests(TestCase):
             "personal_access_tokens-INITIAL_FORMS": "0",
             "personal_access_tokens-MIN_NUM_FORMS": "0",
             "personal_access_tokens-MAX_NUM_FORMS": "0",
-            "userprofile-TOTAL_FORMS": "1",
-            "userprofile-INITIAL_FORMS": "0",
-            "userprofile-MIN_NUM_FORMS": "0",
-            "userprofile-MAX_NUM_FORMS": "1",
-            "region_grants-TOTAL_FORMS": "1",
-            "region_grants-INITIAL_FORMS": "0",
-            "region_grants-MIN_NUM_FORMS": "0",
-            "region_grants-MAX_NUM_FORMS": "1000",
             "product_grants-TOTAL_FORMS": str(product_total),
             "product_grants-INITIAL_FORMS": str(product_initial),
             "product_grants-MIN_NUM_FORMS": "0",
@@ -739,10 +520,11 @@ class ProductGrantAdminTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "clc2024 — CORINE Land Cover 2024")
-        self.assertContains(response, "Legacy product family")
+        self.assertNotContains(response, "Legacy product family")
+        self.assertContains(response, "Product or QC definition")
         self.assertContains(
             response,
-            "Assign one or more products to default users and product managers.",
+            "Choose a product for its full scope, or a QC definition for only",
         )
 
         for role in (Role.DEFAULT, Role.PRODUCT_MANAGER):
@@ -922,19 +704,19 @@ class ProductGrantAdminTests(TestCase):
         "qc_tool.frontend.accounts.services.products."
         "available_product_descriptions",
     )
-    def test_unavailable_catalog_keeps_legacy_grant_readonly(self, catalog):
+    def test_unavailable_catalog_keeps_existing_grant_readonly(self, catalog):
         from qc_tool.frontend.accounts.services.products import (
             ProductCatalogUnavailable,
         )
 
         catalog.side_effect = ProductCatalogUnavailable("unavailable")
         user = self.user_model.objects.create_user(
-            username="legacy-product-user",
+            username="archived-product-user",
             password="password",
         )
         UserProductGrant.objects.create(
             user=user,
-            product_ident="legacy_product",
+            product_ident="archived_product",
         )
 
         with self.assertLogs(
@@ -946,8 +728,8 @@ class ProductGrantAdminTests(TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "unavailable legacy product")
-        self.assertContains(response, "Product definitions are unavailable")
+        self.assertContains(response, "unavailable product")
+        self.assertContains(response, "The product catalog is unavailable")
 
         with self.assertLogs(
             "qc_tool.frontend.accounts.admin.products",

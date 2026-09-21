@@ -11,6 +11,7 @@ from django.db import transaction
 from qc_tool.product_units import PRODUCT_UNIT_CODE_MAX_LENGTH
 
 from .retention import SubmissionQuerySet
+from .artifact_keys import validate_artifact_key
 
 
 class DeliverySubmission(models.Model):
@@ -33,7 +34,6 @@ class DeliverySubmission(models.Model):
     class RequestChannel(models.TextChoices):
         BROWSER = "browser", "Browser"
         API = "api", "API"
-        LEGACY = "legacy", "Legacy backfill"
 
     submission_uuid = models.UUIDField(
         primary_key=True,
@@ -63,7 +63,7 @@ class DeliverySubmission(models.Model):
         db_index=False,  # Covered by pub_submission_unit_state_idx.
     )
     product_unit_code = models.CharField(max_length=PRODUCT_UNIT_CODE_MAX_LENGTH, editable=False)
-    submitted_product_unit_code = models.CharField(
+    verified_product_unit_code = models.CharField(
         max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         editable=False,
     )
@@ -105,7 +105,10 @@ class DeliverySubmission(models.Model):
     publication_claimed_at = models.DateTimeField(blank=True, null=True)
     publication_token = models.UUIDField(blank=True, null=True, editable=False)
     published_at = models.DateTimeField(blank=True, null=True)
-    artifact_path = models.CharField(max_length=1000, blank=True)
+    artifact_key = models.CharField(
+        max_length=1000, blank=True,
+        help_text="Immutable directory key relative to the configured submission storage root.",
+    )
     artifact_digest = models.CharField(max_length=64, blank=True)
     input_digest = models.CharField(max_length=64, blank=True)
     failure_code = models.CharField(max_length=64, blank=True)
@@ -131,7 +134,7 @@ class DeliverySubmission(models.Model):
                 name="pub_submission_review_valid",
             ),
             models.CheckConstraint(
-                condition=models.Q(request_channel__in=("browser", "api", "legacy")),
+                condition=models.Q(request_channel__in=("browser", "api")),
                 name="pub_submission_channel_valid",
             ),
             models.CheckConstraint(
@@ -139,7 +142,7 @@ class DeliverySubmission(models.Model):
                 name="pub_submission_unit_not_empty",
             ),
             models.CheckConstraint(
-                condition=~models.Q(submitted_product_unit_code=""),
+                condition=~models.Q(verified_product_unit_code=""),
                 name="pub_submission_zip_unit_present",
             ),
             models.CheckConstraint(
@@ -147,7 +150,7 @@ class DeliverySubmission(models.Model):
                     ~models.Q(publication_state="published")
                     | (
                         models.Q(published_at__isnull=False)
-                        & ~models.Q(artifact_path="")
+                        & ~models.Q(artifact_key="")
                         & ~models.Q(artifact_digest="")
                         & ~models.Q(input_digest="")
                     )
@@ -181,6 +184,11 @@ class DeliverySubmission(models.Model):
             )
 
     def save(self, *args, **kwargs):
+        if self.artifact_key:
+            try:
+                validate_artifact_key(self.artifact_key)
+            except ValueError as exc:
+                raise ValidationError({"artifact_key": str(exc)}) from exc
         database = kwargs.get("using") or router.db_for_write(type(self), instance=self)
         with transaction.atomic(using=database):
             previous = (
@@ -200,7 +208,7 @@ class DeliverySubmission(models.Model):
             product_release_id=self.product_release_id,
             product_unit_id=self.product_unit_id,
             product_unit_code=self.product_unit_code,
-            submitted_product_unit_code=self.submitted_product_unit_code,
+            verified_product_unit_code=self.verified_product_unit_code,
             submitted_by_id=self.submitted_by_id,
             submitted_by_username=self.submitted_by_username,
             request_channel=self.request_channel,

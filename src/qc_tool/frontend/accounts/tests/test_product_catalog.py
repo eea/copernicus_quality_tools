@@ -70,7 +70,7 @@ class ManagedProductCatalogTests(TestCase):
         self.assertEqual(products.available_product_descriptions(), {})
         self.assertEqual(products.grantable_product_descriptions(), {})
         self.assertEqual(dict(products.product_ident_choices(include=("archived",))), {
-            "archived": "archived — unavailable legacy product",
+            "archived": "archived — unavailable product",
         })
 
     def test_historical_definition_revision_does_not_replace_current_description(self):

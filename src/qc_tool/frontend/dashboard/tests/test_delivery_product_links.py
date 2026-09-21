@@ -11,7 +11,7 @@ from django.utils import timezone
 from qc_tool.common import JOB_OK
 from qc_tool.frontend.accounts.authorization import access_for
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductUnit,
     ProductRelease, ProductReleaseDefinition, QcDefinition,
@@ -72,7 +72,7 @@ class DeliveryProductLinkTests(TestCase):
         )
         return DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=job.product_release,
-            product_unit=aoi, product_unit_code="CZ", submitted_product_unit_code="CZ",
+            product_unit=aoi, product_unit_code="CZ", verified_product_unit_code="CZ",
             submitted_by=delivery.user, submitted_by_username=delivery.user.username,
             request_channel="browser",
         )
@@ -176,18 +176,16 @@ class DeliveryProductLinkTests(TestCase):
         self.assertEqual(row["product_url"], reverse("product_detail", args=(self.first.product.ident,)))
         self.assert_history_destination(delivery, row, self.manager)
 
-    def test_history_region_viewer_does_not_use_private_submission_context(self):
+    def test_history_product_viewer_does_not_use_private_submission_context(self):
         delivery = self.create_delivery("private-submission-parent.zip")
         submitted_job = self.create_job(
             delivery, self.first, created_at=timezone.now() - timedelta(minutes=1),
         )
         self.create_submission(delivery, submitted_job)
         self.create_job(delivery, self.second)
-        viewer = get_user_model().objects.create_user(username="product-link-region-viewer")
-        UserProfile.objects.create(user=self.owner, country="CZ")
-        UserRegionGrant.objects.create(user=viewer, region_code="CZ")
+        viewer = get_user_model().objects.create_user(username="product-link-viewer")
         viewer.user_permissions.add(Permission.objects.get(
-            content_type__app_label="accounts", codename="view_region_deliveries",
+            content_type__app_label="accounts", codename="view_product_deliveries",
         ))
         UserProductGrant.objects.create(user=viewer, product_ident=self.second.product.ident)
 

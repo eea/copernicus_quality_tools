@@ -114,7 +114,7 @@ intended.
 
 Upload previews and QC setup show detected product, survey, place and area code
 as filename hints. A parser observation such as `BE015L1` does not populate
-`Delivery.product_unit_code`, `submitted_product_unit_code` or any job unit field.
+`Delivery.product_unit_code`, `verified_product_unit_code` or any job unit field.
 The existing worker naming checks verify the archive contents and the submission
 workflow matches the verified result to the snapshotted release's required units.
 

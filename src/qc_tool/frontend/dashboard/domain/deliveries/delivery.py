@@ -1,11 +1,10 @@
-"""Uploaded ZIP delivery record and its compatibility helpers."""
+"""Uploaded ZIP delivery record and job lifecycle helpers."""
 
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
 from qc_tool.product_units import PRODUCT_UNIT_CODE_MAX_LENGTH
-from qc_tool.common import JOB_OK
 
 
 class Delivery(models.Model):
@@ -38,14 +37,14 @@ class Delivery(models.Model):
         editable=False,
         help_text="Canonical product unit code projected from the latest delivery job.",
     )
-    submitted_product_unit_code = models.CharField(
+    verified_product_unit_code = models.CharField(
         max_length=PRODUCT_UNIT_CODE_MAX_LENGTH,
         default=None,
         blank=True,
         null=True,
         editable=False,
         help_text=(
-            "Canonical product unit code verified from the ZIP by the latest QC job. "
+            "Canonical product unit code verified from this input ZIP and retained across later jobs. "
             "ProductUnit.product_unit_code is the authoritative expected value."
         ),
     )
@@ -77,7 +76,7 @@ class Delivery(models.Model):
         indexes = (
             models.Index(fields=("product_unit_code",), name="execution_delivery_unit_idx"),
             models.Index(
-                fields=("submitted_product_unit_code",),
+                fields=("verified_product_unit_code",),
                 name="execution_delivery_zipunit_idx",
             ),
             models.Index(
@@ -98,21 +97,17 @@ class Delivery(models.Model):
         skip_steps,
         *,
         requested_by=None,
-        request_source="legacy",
+        request_source=None,
         api_token=None,
         account_access=None,
     ):
-        # Import through the compatibility boundary so existing integrations
-        # can still replace product-description lookup in dashboard.models.
-        import qc_tool.frontend.dashboard.models as dashboard_models
+        from qc_tool.frontend.dashboard.services.products import find_product_description
         from qc_tool.frontend.dashboard.services.product_units import create_delivery_job
 
         job = create_delivery_job(
             self,
             product_ident=product_ident,
-            product_description=dashboard_models.find_product_description(
-                product_ident
-            ),
+            product_description=find_product_description(product_ident),
             skip_steps=skip_steps,
             requested_by=requested_by,
             request_source=request_source,
@@ -120,28 +115,3 @@ class Delivery(models.Model):
             account_access=account_access,
         )
         return str(job.job_uuid).lower().replace("-", "")
-
-    def sync_from_latest_job(self):
-        from qc_tool.frontend.dashboard.services.product_units import (
-            refresh_delivery_projection,
-        )
-
-        return refresh_delivery_projection(self)
-
-    def get_submittable_job(self):
-        """Return only the deterministic latest successful job."""
-
-        if self.is_deleted or self.date_submitted is not None:
-            return None
-        Job = self._meta.apps.get_model("dashboard", "Job")
-        latest_job = (
-            Job.objects.filter(delivery_id=self.id)
-            .order_by("-date_created", "-job_uuid")
-            .first()
-        )
-        if latest_job is None or latest_job.job_status != JOB_OK:
-            return None
-        return latest_job
-
-    def is_submitted(self):
-        return self.date_submitted is not None

@@ -8,6 +8,7 @@ from qc_tool.frontend.dashboard.services.uploads import (
 from ..contracts import PublicationReceipt
 from ..contracts import ReservedSubmission
 from ..errors import PublicationError
+from ..storage import artifact_key_for_directory
 from .delivery_input import copy_delivery_input
 from .job_artifacts import copy_job_artifacts
 from .layout import discard_owned_staging
@@ -32,7 +33,7 @@ def publish_reserved_submission(
 
     layout = publication_layout(reserved, submission_root=submission_root)
     if layout.final_directory.exists() or layout.final_directory.is_symlink():
-        return receipt_from_existing(layout.final_directory, reserved)
+        return receipt_from_existing(layout.final_directory, reserved, submission_root=layout.root)
 
     discard_owned_staging(layout)
     try:
@@ -70,7 +71,7 @@ def publish_reserved_submission(
         if recovered is not None:
             return recovered
         return PublicationReceipt(
-            artifact_path=str(layout.final_directory),
+            artifact_key=artifact_key_for_directory(layout.final_directory, layout.root),
             artifact_digest=digest,
             input_digest=input_digest,
         )
@@ -103,7 +104,7 @@ def _expose_staging(layout, reserved):
         # Validate its durable manifest; never overwrite it.
         if layout.final_directory.exists() or layout.final_directory.is_symlink():
             discard_owned_staging(layout)
-            return receipt_from_existing(layout.final_directory, reserved)
+            return receipt_from_existing(layout.final_directory, reserved, submission_root=layout.root)
         raise
     sync_directory(layout.final_directory.parent)
     return None

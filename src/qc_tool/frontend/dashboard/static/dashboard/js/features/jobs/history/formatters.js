@@ -58,8 +58,8 @@
 
     function productUnitFormatter(value, row) {
         var reported = value ? String(value) : "";
-        var submitted = row.submitted_product_unit_code
-            ? String(row.submitted_product_unit_code)
+        var submitted = row.verified_product_unit_code
+            ? String(row.verified_product_unit_code)
             : "";
         var $unit;
 

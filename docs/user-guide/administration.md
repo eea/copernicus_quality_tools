@@ -27,7 +27,7 @@ for validation, revisions, and delivery-plan approval.
 3. Enter username and a strong password.
 4. Save and continue editing.
 5. Assign one or more **Product grants** for the products the user will work on.
-6. Assign additional roles, direct permissions, or region grants as needed.
+6. Assign additional roles or direct permissions as needed.
 
 Every newly created user automatically receives the `default` role. There is no
 public registration.
@@ -59,8 +59,6 @@ permissions, not Django's unrelated model permissions.
 Examples:
 
 - grant `manage_configuration` to a trusted operator without giving full Admin;
-- grant `view_region_deliveries` plus one or more Region grants to a default
-  user;
 - grant `view_product_deliveries` plus Product grants without assigning the
   complete product-manager role.
 
@@ -70,10 +68,11 @@ Cross-user scope permissions and scope rows are independent. Both are required.
 
 Administrators assign products in **Django Admin → Users → Product grants**.
 Both default users and product managers may have one or many grants, selected
-from active catalog products or their registered QC definitions. Add one row per product. The
-product identifier is stored in canonical lowercase form and matched exactly
-to a delivery's product; assigning one product does not grant other products
-in the same family.
+from active catalog products or their registered QC definitions. The **Product
+or QC definition** selector accepts either scope; add one row per assignment.
+An exact QC-definition assignment grants only that definition, not its sibling
+definitions. Identifiers use their canonical lowercase form; assigning one
+product does not grant other products in the same family.
 
 A catalog-product assignment covers its recorded releases. QC choices include
 definitions associated with one unambiguous current release of that product;
@@ -87,9 +86,8 @@ review capabilities within the assigned scope. Only administrators can assign
 or remove users' product grants.
 
 A non-administrator with no product grants cannot start product work. Assign
-products to existing default users before they resume work; their old product
-family setting does not replace explicit grants. Administrators retain access
-to every product.
+products to existing default users before they resume work. Administrators
+retain access to every product.
 
 Removing the last matching product grant takes effect on the user's next request, including
 access to previous jobs, submission feedback, and retained submission files
@@ -123,18 +121,6 @@ unit has an accepted delivery, an assigned manager or administrator opens the
 product and selects **Mark product ready**. Full coverage alone does not perform
 this final action. Changes to the scope or acceptance decisions clear readiness
 so the revised product must be confirmed again.
-
-## Region grants
-
-Region grants currently store exact opaque region codes and do not normalize or
-validate against a catalogue. Each value is unique per user. Assign the related
-Additional QC permission separately.
-
-The delivery-side region value is still resolved from the uploader's legacy
-profile country. Jobs and deliveries now record canonical product unit reporting
-metadata, but it is not an authorization fact until every supported product
-has authoritative spatial validation. See
-[Product unit metadata](../architecture/product-unit-metadata.md) for that trust boundary.
 
 ## Deactivate instead of delete
 

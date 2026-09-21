@@ -82,7 +82,7 @@ class SubmissionAdminScopeTests(TestCase):
             user=owner,
             filename="{}.zip".format(suffix),
             size_bytes=1,
-            submitted_product_unit_code=product_unit.product_unit_code,
+            verified_product_unit_code=product_unit.product_unit_code,
             date_submitted=timezone.now(),
         )
         job = Job.objects.create(
@@ -91,7 +91,7 @@ class SubmissionAdminScopeTests(TestCase):
             product_ident=product_ident,
             product_description=suffix,
             product_unit_code=product_unit.product_unit_code,
-            submitted_product_unit_code=product_unit.product_unit_code,
+            verified_product_unit_code=product_unit.product_unit_code,
             product_release=release,
             qc_definition=definition,
             input_sha256=("1" if suffix == "visible" else "2") * 64,
@@ -102,13 +102,13 @@ class SubmissionAdminScopeTests(TestCase):
             product_release=release,
             product_unit=product_unit,
             product_unit_code=product_unit.product_unit_code,
-            submitted_product_unit_code=product_unit.product_unit_code,
+            verified_product_unit_code=product_unit.product_unit_code,
             submitted_by=owner,
             submitted_by_username=owner.username,
             request_channel=DeliverySubmission.RequestChannel.BROWSER,
             publication_state=DeliverySubmission.PublicationState.PUBLISHED,
             published_at=delivery.date_submitted,
-            artifact_path="/published/{}".format(suffix),
+            artifact_key="published/{}".format(suffix),
             artifact_digest=("e" if suffix == "visible" else "f") * 64,
             input_digest=job.input_sha256,
         )

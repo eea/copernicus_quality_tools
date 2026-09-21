@@ -145,7 +145,7 @@
   font-size: 12px;
 }
 
-.account-token__legacy {
+.account-token__missing-hint {
   color: var(--qc-color-muted);
   font-size: 12px;
 }

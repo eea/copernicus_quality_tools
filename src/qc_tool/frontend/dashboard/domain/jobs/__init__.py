@@ -1,4 +1,4 @@
-"""QC job model and queue compatibility service."""
+"""QC job model and worker queue service."""
 
 from .job import Job
 from .queue import pull_job

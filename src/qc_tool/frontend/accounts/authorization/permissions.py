@@ -15,9 +15,7 @@ class AccountPermission(str, Enum):
     MANAGE_OWN_ACCOUNT = "manage_own_account"
     MANAGE_API_CREDENTIAL = "manage_api_credential"
     MANAGE_CONFIGURATION = "manage_configuration"
-    VIEW_REGION_DELIVERIES = "view_region_deliveries"
     VIEW_PRODUCT_DELIVERIES = "view_product_deliveries"
-    VIEW_REGION_AGGREGATE_REPORT = "view_region_aggregate_report"
     VIEW_PRODUCT_AGGREGATE_REPORT = "view_product_aggregate_report"
 
     @property

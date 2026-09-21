@@ -12,7 +12,6 @@ from qc_tool.frontend.accounts.authorization.permissions import (
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.authorization.roles import roles_for
 from qc_tool.frontend.accounts.models import UserProductGrant
-from qc_tool.frontend.accounts.models import UserRegionGrant
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_content_type,
 )
@@ -60,18 +59,13 @@ class AccountAccessTests(TestCase):
             access.allows(AccountPermission.MANAGE_CONFIGURATION)
         )
 
-    def test_product_role_and_direct_region_permissions_add_scoped_visibility(self):
+    def test_product_role_adds_scoped_visibility(self):
         self.add_roles(Role.PRODUCT_MANAGER)
-        self.grant_permissions(
-            AccountPermission.VIEW_REGION_DELIVERIES,
-            AccountPermission.VIEW_REGION_AGGREGATE_REPORT,
-        )
         self.user.groups.add(Group.objects.create(name="unrecognized-role"))
         UserProductGrant.objects.create(
             user=self.user,
             product_ident="clc2024",
         )
-        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
 
         access = access_for(self.user)
 
@@ -88,13 +82,8 @@ class AccountAccessTests(TestCase):
         self.assertEqual(
             access.permissions,
             DEFAULT_PERMISSIONS
-            | PRODUCT_MANAGER_PERMISSIONS
-            | {
-                AccountPermission.VIEW_REGION_DELIVERIES,
-                AccountPermission.VIEW_REGION_AGGREGATE_REPORT,
-            },
+            | PRODUCT_MANAGER_PERMISSIONS,
         )
-        self.assertTrue(access.can_view_region_deliveries)
         self.assertTrue(access.can_view_product_deliveries)
         self.assertTrue(access.can_view_other_users_deliveries)
         self.assertEqual(access.delivery_list_heading, "Managed Deliveries")
@@ -138,9 +127,9 @@ class AccountAccessTests(TestCase):
         self.assertFalse(access.can_view_deliveries)
         self.assertFalse(access.can_view_other_users_deliveries)
 
-    def test_region_scope_permission_does_not_depend_on_default_bundle(self):
-        self.grant_permissions(AccountPermission.VIEW_REGION_DELIVERIES)
-        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
+    def test_product_scope_permission_does_not_depend_on_default_bundle(self):
+        self.grant_permissions(AccountPermission.VIEW_PRODUCT_DELIVERIES)
+        UserProductGrant.objects.create(user=self.user, product_ident="clc2024")
         membership_model = self.user.groups.through
         default_group = Group.objects.get(name=Role.DEFAULT.value)
         membership_model.objects.filter(
@@ -151,10 +140,10 @@ class AccountAccessTests(TestCase):
         access = access_for(self.user)
 
         self.assertFalse(access.can_view_deliveries)
-        self.assertTrue(access.can_view_region_deliveries)
+        self.assertTrue(access.can_view_product_deliveries)
         self.assertEqual(
             access.permissions,
-            frozenset({AccountPermission.VIEW_REGION_DELIVERIES}),
+            frozenset({AccountPermission.VIEW_PRODUCT_DELIVERIES}),
         )
 
     def test_direct_permissions_add_capabilities_without_manager_groups(self):
@@ -162,13 +151,12 @@ class AccountAccessTests(TestCase):
             user=self.user,
             product_ident="clc2024",
         )
-        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
         content_type = capability_content_type()
         direct_permissions = Permission.objects.filter(
             content_type=content_type,
             codename__in={
                 AccountPermission.MANAGE_CONFIGURATION.value,
-                AccountPermission.VIEW_REGION_DELIVERIES.value,
+                AccountPermission.VIEW_PRODUCT_DELIVERIES.value,
                 AccountPermission.VIEW_PRODUCT_AGGREGATE_REPORT.value,
             },
         )
@@ -178,24 +166,12 @@ class AccountAccessTests(TestCase):
 
         self.assertFalse(access.is_product_manager)
         self.assertEqual(access.product_idents, frozenset({"clc2024"}))
-        self.assertTrue(access.can_view_region_deliveries)
         self.assertTrue(access.can_view_product_aggregate_report)
         self.assertTrue(access.can_manage_configuration)
         self.assertFalse(access.can_access_django_admin)
         self.assertTrue(
             access.allows(AccountPermission.MANAGE_CONFIGURATION)
         )
-
-    def test_scoped_permission_requires_nonempty_region_grant(self):
-        permission = Permission.objects.get(
-            content_type=capability_content_type(),
-            codename=AccountPermission.VIEW_REGION_DELIVERIES.value,
-        )
-        self.user.user_permissions.add(permission)
-
-        access = access_for(self.user)
-
-        self.assertFalse(access.can_view_region_deliveries)
 
     def test_product_scope_permission_requires_a_product_grant(self):
         self.add_roles(Role.PRODUCT_MANAGER)
@@ -229,8 +205,8 @@ class AccountAccessTests(TestCase):
         self.assertFalse(access.can_view_product_report(""))
 
     def test_inactive_user_has_anonymous_access(self):
-        self.grant_permissions(AccountPermission.VIEW_REGION_DELIVERIES)
-        UserRegionGrant.objects.create(user=self.user, region_code="CZ")
+        self.grant_permissions(AccountPermission.VIEW_PRODUCT_DELIVERIES)
+        UserProductGrant.objects.create(user=self.user, product_ident="clc2024")
         self.user.is_active = False
         self.user.save(update_fields=["is_active"])
 
@@ -263,7 +239,7 @@ class AccountAccessTests(TestCase):
         def restricted():
             return access_for(self.user).restricted_to_snapshot(
                 permissions=[permission.value for permission in original.permissions],
-                roles=[role.value for role in original.roles], region_codes=[],
+                roles=[role.value for role in original.roles],
                 product_idents=list(original.product_idents), is_administrator=False,
             )
 

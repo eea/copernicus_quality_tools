@@ -50,7 +50,7 @@ class DeliveryOverwriteTests(UploadRegistrationFixture, TestCase):
         self.assertEqual((self.paths.chunks_dir / ".previous").read_bytes(), b"abcd")
         self.assertEqual(Job.objects.get(pk=self.job.pk).delivery_id, self.original.pk)
         self.assertFalse(Job.objects.filter(delivery=replacement).exists())
-        self.assertIsNone(replacement.submitted_product_unit_code)
+        self.assertIsNone(replacement.verified_product_unit_code)
         self.assertEqual(self.client.get(self.url, self.parameters).status_code, 200)
         self.assertEqual(self.replace().json()["delivery_id"], replacement.pk)
         self.assertEqual(Delivery.objects.count(), 2)
@@ -93,7 +93,7 @@ class DeliveryOverwriteTests(UploadRegistrationFixture, TestCase):
         release = ProductRelease.objects.create(product=product, release_key="2026", revision=1, catalog_digest="a" * 64, description="Retained")
         aoi = ProductUnit.objects.create(product_release=release, product_unit_code="CZ")
         DeliverySubmission.objects.create(delivery=self.original, job=self.job, product_release=release, product_unit=aoi,
-                                          product_unit_code="CZ", submitted_product_unit_code="CZ", submitted_by_username=self.user.username,
+                                          product_unit_code="CZ", verified_product_unit_code="CZ", submitted_by_username=self.user.username,
                                           request_channel="browser")
         self.assertEqual(self.replace().json()["code"], "overwrite_not_allowed")
         self.assert_original_intact()

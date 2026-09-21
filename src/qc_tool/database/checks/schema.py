@@ -50,9 +50,6 @@ def seed_baseline(apps):
         qc_definition_id=definition.pk, is_primary=True,
     )
     create(
-        "accounts", "UserRegionGrant", user_id=user.pk, region_code="CZ-001",
-    )
-    create(
         "accounts", "UserProductGrant", user_id=user.pk,
         product_ident=product.ident,
     )
@@ -60,27 +57,27 @@ def seed_baseline(apps):
         "accounts", "PersonalAccessToken", user_id=user.pk, name="Migration probe",
         secret_digest="sha256:" + "e" * 64,
         permission_snapshot=["view_deliveries"], role_snapshot=["default"],
-        region_codes_snapshot=["CZ-001"], product_idents_snapshot=[product.ident],
+        product_idents_snapshot=[product.ident],
     )
     delivery = create(
         "dashboard", "Delivery", user_id=user.pk, filename="migration-probe.zip",
         size_bytes=2 ** 33, product_ident=product.ident,
-        product_unit_code=product_unit_code, submitted_product_unit_code=product_unit_code, content_sha256="a" * 64,
+        product_unit_code=product_unit_code, verified_product_unit_code=product_unit_code, content_sha256="a" * 64,
     )
     job = create(
         "dashboard", "Job", delivery_id=delivery.pk, product_ident=product.ident,
         product_description="Migration probe", job_status="ok",
-        product_unit_code=product_unit_code, submitted_product_unit_code=product_unit_code,
+        product_unit_code=product_unit_code, verified_product_unit_code=product_unit_code,
         requested_by_id=user.pk, requested_by_username=user.username,
         request_source="api", requested_api_token_id=token.pk,
         requested_api_token_name=token.name,
         product_release_id=release.pk, qc_definition_id=definition.pk,
-        input_sha256="a" * 64, result_metadata={"product_unit_code": product_unit_code},
+        input_sha256="a" * 64, reference_period="2024",
     )
     create(
         "dashboard", "DeliverySubmission", delivery_id=delivery.pk, job_id=job.pk,
         product_release_id=release.pk, product_unit_id=product_unit.pk,
-        product_unit_code=product_unit_code, submitted_product_unit_code=product_unit_code,
+        product_unit_code=product_unit_code, verified_product_unit_code=product_unit_code,
         submitted_by_id=user.pk, submitted_by_username=user.username,
         request_channel="api", api_token_id=token.pk, api_token_name=token.name,
         publication_state="pending",

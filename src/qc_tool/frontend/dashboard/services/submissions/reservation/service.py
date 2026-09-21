@@ -60,7 +60,7 @@ def reserve_submission(
         product_release=release,
         product_unit=product_unit,
         product_unit_code=product_unit.product_unit_code,
-        submitted_product_unit_code=submitted_unit,
+        verified_product_unit_code=submitted_unit,
         submitted_by=actor if getattr(actor, "pk", None) else None,
         submitted_by_username=actor_username(actor),
         request_channel=request_channel,
@@ -111,6 +111,6 @@ def _existing_submission(delivery):
 
 
 def _persist_delivery_identity(delivery, submitted_unit):
-    if delivery.submitted_product_unit_code != submitted_unit:
-        delivery.submitted_product_unit_code = submitted_unit
-        delivery.save(update_fields=("submitted_product_unit_code",))
+    if delivery.verified_product_unit_code != submitted_unit:
+        delivery.verified_product_unit_code = submitted_unit
+        delivery.save(update_fields=("verified_product_unit_code",))

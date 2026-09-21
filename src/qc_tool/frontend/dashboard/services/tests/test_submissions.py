@@ -46,6 +46,7 @@ from qc_tool.frontend.dashboard.services.submissions import (
 )
 from qc_tool.frontend.dashboard.services.submissions import submit_delivery
 from qc_tool.frontend.dashboard.services.submissions import review_submission
+from qc_tool.frontend.dashboard.services.submissions.artifacts import open_submission_file
 
 
 class SubmissionFixtureMixin:
@@ -110,7 +111,7 @@ class SubmissionFixtureMixin:
             user=user,
             filename=zip_path.name,
             size_bytes=len(zip_payload),
-            submitted_product_unit_code=aoi,
+            verified_product_unit_code=aoi,
         )
         job = Job.objects.create(
             delivery=delivery,
@@ -118,7 +119,7 @@ class SubmissionFixtureMixin:
             product_ident=self.definition.product_ident,
             product_description=self.definition.description,
             product_unit_code=aoi,
-            submitted_product_unit_code=aoi,
+            verified_product_unit_code=aoi,
             input_sha256=digest,
             product_release=self.release,
             qc_definition=self.definition,
@@ -169,6 +170,44 @@ class SubmissionFixtureMixin:
 
 
 class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
+    def test_retained_receipt_survives_moving_the_complete_storage_root(self):
+        user, delivery, _job, job_root = self.create_candidate("relocated-owner")
+        self.submit(user, delivery, job_root)
+        submission = DeliverySubmission.objects.get()
+        key = submission.artifact_key
+        self.assertFalse(Path(key).is_absolute())
+        original_manifest = (self.submission_root / key / "submission-manifest.json").read_bytes()
+        original_digest = submission.artifact_digest
+        relocated = self.submission_root.with_name("restored-submissions")
+        self.submission_root.rename(relocated)
+        self.submission_root = relocated
+
+        # Retry reads the same signed receipt from the new configured root.
+        self.assertTrue(self.submit(user, delivery, job_root).idempotent)
+        with patch.dict("qc_tool.common.CONFIG", {"submission_dir": str(relocated)}):
+            with open_submission_file(submission, "output.d/report.txt") as stream:
+                self.assertEqual(stream.read(), b"validated")
+        submission.refresh_from_db()
+        self.assertEqual(submission.artifact_key, key)
+        self.assertEqual(submission.artifact_digest, original_digest)
+        self.assertEqual((relocated / key / "submission-manifest.json").read_bytes(), original_manifest)
+
+    def test_absolute_or_traversing_receipts_cannot_be_persisted(self):
+        user, delivery, job, _job_root = self.create_candidate("unsafe-receipt-owner")
+        for key in ("/outside/receipt", "../outside/receipt", "safe/../receipt", "C:/receipt"):
+            with self.subTest(key=key):
+                submission = DeliverySubmission(
+                    delivery=delivery, job=job, product_release=self.release,
+                    product_unit=self.product_unit, product_unit_code="ee001l",
+                    verified_product_unit_code="ee001l", submitted_by=user,
+                    submitted_by_username=user.username, request_channel="browser",
+                    artifact_key=key,
+                )
+                with self.assertRaises(ValidationError):
+                    submission.save()
+                with self.assertRaises(ValidationError):
+                    DeliverySubmission.objects.bulk_create([submission])
+
     def test_product_revocation_blocks_submission_and_idempotent_retry(self):
         user, delivery, job, job_root = self.create_candidate("revoked-owner")
         user.product_grants.all().delete()
@@ -215,7 +254,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertEqual(submission.review_state, DeliverySubmission.ReviewState.PENDING)
         self.assertEqual(submission.review_version, 0)
         self.assertEqual(get_product_coverage(self.release).accepted, 0)
-        final_directory = Path(submission.artifact_path)
+        final_directory = (self.submission_root / submission.artifact_key)
         self.assertTrue(final_directory.is_dir())
         self.assertTrue((final_directory / "submission-manifest.json").is_file())
         self.assertTrue((final_directory / "output.d" / "report.txt").is_file())
@@ -233,7 +272,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
                 product_release=self.release,
                 product_unit=self.product_unit,
                 product_unit_code=self.product_unit.product_unit_code,
-                submitted_product_unit_code=self.product_unit.product_unit_code,
+                verified_product_unit_code=self.product_unit.product_unit_code,
                 submitted_by=user,
                 submitted_by_username=user.username,
                 request_channel=DeliverySubmission.RequestChannel.BROWSER,
@@ -241,7 +280,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
                     DeliverySubmission.PublicationState.PUBLISHED
                 ),
                 published_at=timezone.now(),
-                artifact_path="/published/incomplete",
+                artifact_key="published/incomplete",
                 artifact_digest="a" * 64,
                 input_digest="",
             )
@@ -253,7 +292,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         original_digest = submission.artifact_digest
         for field, value in (
             ("artifact_digest", "f" * 64),
-            ("artifact_path", "/replacement"),
+            ("artifact_key", "/replacement"),
             ("publication_state", "failed"),
             ("published_at", None),
             ("input_digest", "e" * 64),
@@ -290,14 +329,14 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
             submission.delete()
         with self.assertRaises(ValidationError):
             DeliverySubmission.objects.all().delete()
-        self.assertTrue(Path(submission.artifact_path).is_dir())
+        self.assertTrue((self.submission_root / submission.artifact_key).is_dir())
         self.assertTrue(Job.objects.filter(pk=job.pk).exists())
 
     def test_final_copies_survive_removal_of_upload_and_worker_artifacts(self):
         user, delivery, _job, job_root = self.create_candidate("archived-owner")
         self.submit(user, delivery, job_root)
         submission = DeliverySubmission.objects.get()
-        final_directory = Path(submission.artifact_path)
+        final_directory = (self.submission_root / submission.artifact_key)
         archive = final_directory / "input.d" / "delivery.zip"
         original_bytes = archive.read_bytes()
         (self.media_root / user.username / delivery.filename).unlink()
@@ -315,7 +354,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         user, delivery, _job, job_root = self.create_candidate("corrupted-owner")
         self.submit(user, delivery, job_root)
         submission = DeliverySubmission.objects.get()
-        report = Path(submission.artifact_path) / "output.d" / "report.txt"
+        report = (self.submission_root / submission.artifact_key) / "output.d" / "report.txt"
         report.write_text("changed outside the application")
 
         with self.assertRaises(SubmissionError) as raised:
@@ -347,7 +386,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
     def test_s3_checksum_alone_cannot_be_published_as_retained_input(self):
         user, delivery, _job, job_root = self.create_candidate("s3-owner")
         delivery.s3 = S3Info.objects.create(
-            host="https://s3.example.test", access_key="test", secret_key="test",
+            host="https://s3.example.test", credential_ref="a" * 32,
             bucketname="test", key_prefix="delivery",
         )
         delivery.save(update_fields=("s3",))
@@ -733,7 +772,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         user, delivery, _job, job_root = self.create_candidate("approval-owner")
         self.submit(user, delivery, job_root)
         submission = DeliverySubmission.objects.get(delivery=delivery)
-        receipt = (submission.artifact_path, submission.artifact_digest, submission.input_digest, submission.published_at)
+        receipt = (submission.artifact_key, submission.artifact_digest, submission.input_digest, submission.published_at)
 
         self.review(submission, user, notes="Verified against the delivery plan.")
 
@@ -744,8 +783,8 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertEqual((event.decision, event.version, event.actor_username), ("approved", 1, user.username))
         self.assertEqual(get_product_coverage(self.release).accepted, 1)
         self.assertEqual(get_remaining_product_unit_codes(self.release), ())
-        self.assertEqual((submission.artifact_path, submission.artifact_digest, submission.input_digest, submission.published_at), receipt)
-        self.assertTrue(Path(submission.artifact_path).is_dir())
+        self.assertEqual((submission.artifact_key, submission.artifact_digest, submission.input_digest, submission.published_at), receipt)
+        self.assertTrue((self.submission_root / submission.artifact_key).is_dir())
 
     def test_decline_requires_reason_and_preserves_files(self):
         user, delivery, _job, job_root = self.create_candidate("decline-owner")
@@ -761,7 +800,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         self.assertEqual(submission.review_state, "rejected")
         self.assertEqual(submission.review_events.get().notes, "The submitted metadata is incomplete.")
         self.assertEqual(get_product_coverage(self.release).accepted, 0)
-        self.assertTrue(Path(submission.artifact_path).is_dir())
+        self.assertTrue((self.submission_root / submission.artifact_key).is_dir())
 
     def test_review_denies_unassigned_accounts_and_stale_versions(self):
         user, delivery, _job, job_root = self.create_candidate("review-scope-owner")
@@ -1044,7 +1083,7 @@ class ConcurrentSubmissionTests(TransactionTestCase):
             user=user,
             filename="delivery.zip",
             size_bytes=len(payload),
-            submitted_product_unit_code=self.product_unit.product_unit_code,
+            verified_product_unit_code=self.product_unit.product_unit_code,
         )
         job = Job.objects.create(
             delivery=delivery,
@@ -1052,7 +1091,7 @@ class ConcurrentSubmissionTests(TransactionTestCase):
             product_ident=definition.product_ident,
             product_description=definition.description,
             product_unit_code=self.product_unit.product_unit_code,
-            submitted_product_unit_code=self.product_unit.product_unit_code,
+            verified_product_unit_code=self.product_unit.product_unit_code,
             input_sha256=hashlib.sha256(payload).hexdigest(),
             product_release=release,
             qc_definition=definition,

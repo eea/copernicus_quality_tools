@@ -108,7 +108,7 @@
                         <div>
                             <h3>Tokens act with your access</h3>
                             <p>
-                                A new token copies your current permissions and product and region access.
+                                A new token copies your current permissions and product access.
                                 Reducing your account access limits existing tokens immediately; later access
                                 increases require a new token.
                             </p>
@@ -182,7 +182,7 @@
                                 </span>
                                 <div class="account-token__identity">
                                     <h4>{{ token.name }}</h4>
-                                    {% if token.token_hint %}<code>{{ token.token_hint }}</code>{% else %}<span class="account-token__legacy">Legacy token</span>{% endif %}
+                                    {% if token.token_hint %}<code>{{ token.token_hint }}</code>{% else %}<span class="account-token__missing-hint">Token hint unavailable</span>{% endif %}
                                 </div>
                                 <span class="account-token__active">
                                     <span aria-hidden="true"></span>
@@ -224,12 +224,6 @@
                                                 {% else %}
                                                 {{ token.permission_snapshot|length }} permission{{ token.permission_snapshot|length|pluralize }}
                                                 {% endif %}
-                                            </dd>
-                                        </div>
-                                        <div>
-                                            <dt>Regions</dt>
-                                            <dd>
-                                                {% if token.is_administrator_snapshot %}All regions{% elif token.region_codes_snapshot %}{{ token.region_codes_snapshot|join:", " }}{% else %}No additional region access{% endif %}
                                             </dd>
                                         </div>
                                         <div>

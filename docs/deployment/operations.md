@@ -81,6 +81,7 @@ At minimum, preserve:
 - frontend database;
 - `INCOMING_DIR`;
 - `WORK_DIR`;
+- `S3_CREDENTIALS_DIR` if stored outside `WORK_DIR`, in an encrypted, restricted backup;
 - `BOUNDARY_DIR` and current-generation pointer;
 - `SUBMISSION_DIR` when enabled;
 - deployment configuration and secret references (not plaintext secrets).
@@ -92,6 +93,41 @@ database and its publication files together, then verify the manifest inventory
 and recorded checksums before reopening submissions. A successful database restore
 alone does not prove that the verified deliverables were recovered. See the
 [publication retention contract](../../src/qc_tool/database/SCHEMA.md#retaining-verified-deliverables).
+
+## S3 credentials
+
+S3 source records contain location metadata and an opaque credential reference.
+The credentials themselves are in private files under `S3_CREDENTIALS_DIR`, which
+defaults to `WORK_DIR/s3_credentials`. They are plaintext operational secrets on
+that filesystem; restrict host and volume access and encrypt backups. A database
+dump alone cannot restore S3 access.
+
+The frontend creates the directory with mode `0700` and files with mode `0600`.
+Both must be owned by the frontend runtime UID. Restore these permissions and
+ownership when restoring storage or changing the container's runtime user.
+Symlinked directories/files, files readable by other users, malformed files and
+credentials for a different source location are rejected. Configure a real
+directory or volume mount, not a symlink. Do not put it under static files, an
+individual job, incoming deliveries or final publications, and exclude it from
+job cleanup. If its parent directories do not exist, provision their ownership
+and persistence as part of deployment.
+
+Before reopening S3 work after recovery, restore the credential directory with
+the matching database and test registration plus a worker job. Missing credentials
+prevent new jobs from being queued. A queued job whose credential file disappears
+fails safely when a worker claims it; workers are not sent empty credentials.
+The SQL-only legacy importer intentionally restores no S3 credentials.
+
+To rotate credentials, revoke the old key at its S3 provider and register the
+delivery again with its replacement credentials through the existing S3 API.
+Each registration gets its own credential reference, even for an identical
+location. Existing historical records retain their original reference. If old
+records must remain runnable, an operator can replace the referenced file with
+the same host/bucket/prefix and new credentials using a private, complete temporary
+file followed by an atomic rename; retain mode `0600` and frontend UID ownership.
+Never put keys in shell arguments, logs or tickets. Do not delete files merely
+because they are old: check whether any retained source records reference them.
+There is no automatic credential rotation or garbage collection.
 
 ## Upgrades
 
@@ -227,7 +263,7 @@ Schedule this command through the deployment's trusted job runner.
 - Deactivate a compromised account immediately.
 - Revoke its personal API tokens in Django Admin.
 - Change/reset its password.
-- Review role, direct permission, product grant, and region grant changes.
+- Review role, direct permission, and product grant changes.
 - Rotate any leaked S3 or external credentials at their source.
 - Preserve audit evidence without copying secrets into tickets.
 

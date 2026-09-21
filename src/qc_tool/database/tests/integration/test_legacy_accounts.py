@@ -29,7 +29,7 @@ def account_dump():
 
 @override_settings(USE_TZ=False, TIME_ZONE="Europe/Prague")
 class LegacyAccountsTests(SimpleTestCase):
-    def test_retains_identity_hash_profile_and_natural_permission_keys(self):
+    def test_retains_identity_hash_and_natural_permission_keys(self):
         dump = account_dump()
         prepared = prepare_accounts(dump)
         user = prepared.users[0]
@@ -38,8 +38,7 @@ class LegacyAccountsTests(SimpleTestCase):
         self.assertEqual(user.email, "example@example.test")
         self.assertEqual(user.username, "MigratedUser")
         self.assertEqual(user.date_joined.hour, 9)
-        self.assertEqual(prepared.profiles[0].country, "Czechia")
-        self.assertEqual(prepared.profiles[0].product_family, "CLC2024")
+        self.assertFalse(hasattr(prepared, "profiles"))
         self.assertEqual(prepared.permissions, {7: [("auth", "user", "view_user")]})
         self.assertNotIn(user.password, repr(prepared))
 
@@ -47,10 +46,14 @@ class LegacyAccountsTests(SimpleTestCase):
         prepared = prepare_accounts(account_dump())
         self.assertEqual(prepared.role_names, {7: {"default"}})
         self.assertEqual(prepared.product_grants, [])
-        self.assertEqual(prepared.region_grants, [])
-        self.assertEqual(prepared.legacy_groups, {11: "legacy:product_admin"})
-        self.assertEqual(prepared.legacy_memberships, [(7, 11)])
-        self.assertEqual(prepared.legacy_group_permission_count, 1)
+        self.assertEqual(prepared.omitted, {
+            "legacy_profiles": 1, "legacy_profile_country_values": 1,
+            "legacy_profile_product_family_values": 1, "obsolete_groups": 1,
+            "obsolete_group_memberships": 1, "source_group_permissions": 1,
+        })
+        self.assertFalse(hasattr(prepared, "region_grants"))
+        self.assertNotIn("Czechia", str(prepared.warnings))
+        self.assertNotIn("product_admin", str(prepared.warnings))
 
     def test_superuser_and_inactive_state_are_preserved(self):
         dump = account_dump()
@@ -79,28 +82,29 @@ class LegacyAccountsTests(SimpleTestCase):
 
     def test_explicit_access_map_assigns_exact_scopes_and_manager_staff_flag(self):
         prepared = prepare_accounts(account_dump(), access_map={"users": {"7": {
-            "roles": ["product_manager"], "products": ["clc2024"], "regions": ["CZ"],
+            "roles": ["product_manager"], "products": ["clc2024"],
         }}})
         self.assertEqual(prepared.role_names[7], {"default", "product_manager"})
         self.assertTrue(prepared.users[0].is_staff)
         self.assertEqual(prepared.product_grants[0].product_ident, "clc2024")
         self.assertEqual(prepared.product_grants[0].user_id, 7)
-        self.assertEqual(prepared.region_grants[0].region_code, "CZ")
 
-    def test_empty_profiles_get_noncolliding_primary_keys(self):
+    def test_missing_profiles_do_not_create_replacement_records(self):
         dump = account_dump()
         second_user = dict(dump.tables["auth_user"][0], id="8", username="OtherUser")
         dump.tables["auth_user"].append(second_user)
         prepared = prepare_accounts(dump)
-        self.assertEqual([(profile.pk, profile.user_id) for profile in prepared.profiles], [(2, 7), (3, 8)])
-        self.assertIsNone(prepared.profiles[1].country)
+        self.assertEqual([user.pk for user in prepared.users], [7, 8])
+        self.assertEqual(prepared.omitted["legacy_profiles"], 1)
+        self.assertFalse(hasattr(prepared, "profiles"))
 
     def test_exact_canonical_legacy_roles_remain_roles(self):
         dump = account_dump()
         dump.tables["auth_group"][0]["name"] = "product_manager"
         prepared = prepare_accounts(dump)
         self.assertEqual(prepared.role_names[7], {"default", "product_manager"})
-        self.assertEqual(prepared.legacy_groups, {})
+        self.assertEqual(prepared.omitted["obsolete_groups"], 0)
+        self.assertEqual(prepared.omitted["obsolete_group_memberships"], 0)
 
     def test_rejects_ambiguous_case_variant_usernames(self):
         dump = account_dump()
@@ -108,9 +112,9 @@ class LegacyAccountsTests(SimpleTestCase):
         with self.assertRaisesRegex(ValueError, "case-insensitively"):
             prepare_accounts(dump)
 
-    def test_rejects_bad_foreign_keys_and_duplicate_profiles(self):
+    def test_rejects_bad_foreign_keys_for_retained_account_relationships(self):
         for table, field in (
-            ("dashboard_userprofile", "user_id"), ("auth_user_groups", "group_id"),
+            ("auth_user_groups", "group_id"),
             ("auth_user_user_permissions", "permission_id"), ("auth_permission", "content_type_id"),
             ("auth_group_permissions", "group_id"),
         ):
@@ -119,10 +123,18 @@ class LegacyAccountsTests(SimpleTestCase):
                 dump.tables[table][0][field] = "999"
                 with self.assertRaisesRegex(ValueError, "referenced row"):
                     prepare_accounts(dump)
+
+    def test_obsolete_profile_relationships_do_not_block_core_data_conversion(self):
         dump = account_dump()
-        dump.tables["dashboard_userprofile"].append(dict(dump.tables["dashboard_userprofile"][0], id="3"))
-        with self.assertRaisesRegex(ValueError, "duplicate user profile"):
-            prepare_accounts(dump)
+        dump.tables["dashboard_userprofile"][0]["user_id"] = "999"
+        prepared = prepare_accounts(dump)
+        self.assertEqual(len(prepared.users), 1)
+        self.assertEqual(prepared.omitted["legacy_profiles"], 1)
+
+    def test_removed_region_access_map_option_is_rejected_even_when_empty(self):
+        for regions in ([], ["CZ"], "CZ"):
+            with self.subTest(regions=regions), self.assertRaisesRegex(ValueError, "regions are no longer supported; assign products instead"):
+                prepare_accounts(account_dump(), access_map={"users": {"7": {"regions": regions}}})
 
     def test_access_map_rejects_unknown_keys_users_roles_and_invalid_scopes(self):
         maps = [

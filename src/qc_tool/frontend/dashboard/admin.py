@@ -89,12 +89,9 @@ class S3InfoAdmin(admin.ModelAdmin):
         "key_prefix",
     )
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).defer("access_key", "secret_key")
-
     @admin.display(description="Credentials")
-    def credential_status(self, _instance):
-        return "Configured (hidden)"
+    def credential_status(self, instance):
+        return "Stored separately" if instance.credential_ref else "Unavailable"
 
     def has_add_permission(self, request):
         return False

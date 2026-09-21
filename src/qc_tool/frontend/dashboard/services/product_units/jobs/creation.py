@@ -10,6 +10,9 @@ from qc_tool.delivery_names import DeliveryNameParserUnavailable
 from qc_tool.frontend.accounts.services.products import available_product_idents
 from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
+from qc_tool.frontend.dashboard.services.s3.credentials import (
+    S3CredentialsUnavailable, load_s3_credentials,
+)
 
 from ..projections import sync_locked_delivery_from_latest_job
 
@@ -21,7 +24,7 @@ def create_delivery_job(
     product_description,
     skip_steps,
     requested_by=None,
-    request_source="legacy",
+    request_source=None,
     api_token=None,
     account_access=None,
     logger,
@@ -30,6 +33,8 @@ def create_delivery_job(
 
     Delivery = delivery._meta.model
     Job = delivery._meta.apps.get_model("dashboard", "Job")
+    if request_source is not None and request_source not in Job.RequestSource.values:
+        raise ValueError("The QC job request channel is invalid.")
     with transaction.atomic():
         lock_catalog_sync()
         locked_delivery = Delivery.objects.select_for_update().get(
@@ -148,6 +153,11 @@ def _require_job_creation_allowed(delivery, Job, *, account_access, product_iden
         raise ValueError("A submitted delivery cannot start a QC job.")
     if hasattr(delivery, "submission"):
         raise ValueError("A reserved delivery cannot start a QC job.")
+    if delivery.s3_id is not None:
+        try:
+            load_s3_credentials(delivery.s3)
+        except S3CredentialsUnavailable as exc:
+            raise ValueError(str(exc)) from None
     if Job.objects.filter(
         delivery=delivery,
         job_status__in=(JOB_WAITING, JOB_RUNNING),
@@ -187,6 +197,6 @@ def _copy_projection(source, destination):
         "product_ident",
         "product_description",
         "product_unit_code",
-        "submitted_product_unit_code",
+        "verified_product_unit_code",
     ):
         setattr(destination, field_name, getattr(source, field_name))

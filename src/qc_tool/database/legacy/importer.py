@@ -16,7 +16,7 @@ from django.db import connections, transaction
 from qc_tool.database.deployment import check_draft_tables
 from qc_tool.database.policy import load_policy
 from qc_tool.frontend.accounts.authorization.roles import Role
-from qc_tool.frontend.accounts.models import UserProductGrant, UserProfile, UserRegionGrant
+from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.models import Delivery, Job, S3Info
 
 from .accounts import prepare_accounts
@@ -51,20 +51,19 @@ def prepare_import(dump, access_map=None):
         "mode": "dry_run", "source_sha256": dump.source_sha256,
         "source_size_bytes": dump.source_size_bytes, "source_tables": dump.counts,
         "planned": {
-            "users": len(accounts.users), "profiles": len(accounts.profiles),
+            "users": len(accounts.users),
             "deliveries": len(deliveries), "jobs": len(jobs), "storage_sources": len(storage),
             "admin_log_entries": len(logs),
-            "product_grants": len(accounts.product_grants), "region_grants": len(accounts.region_grants),
+            "product_grants": len(accounts.product_grants),
         },
         "historical_records": stats, "source_job_states": states,
         "access": {
             "roles": {role: sum(role in roles for roles in accounts.role_names.values())
                       for role in Role.values()},
-            "inert_legacy_groups": len(accounts.legacy_groups),
-            "legacy_group_permissions_not_activated": accounts.legacy_group_permission_count,
             "direct_permission_links_to_resolve": sum(map(len, accounts.permissions.values())),
         },
         "omitted": {
+            **accounts.omitted,
             "legacy_api_credentials": len(dump.tables.get("dashboard_apiuser", [])),
             "sessions": len(dump.tables.get("django_session", [])),
             "migration_history": len(dump.tables.get("django_migrations", [])),
@@ -74,9 +73,10 @@ def prepare_import(dump, access_map=None):
             "Delivery ZIPs and QC reports are not in the SQL dump; downloads cannot be restored.",
             "Submission dates are preserved as history. No verified submission receipts, approvals, products or delivery plans are created.",
             "Only reported product units are converted from legacy AOI values; ZIP-verified units and content hashes remain empty.",
-            "Legacy API keys and sessions are not imported. S3 locations are retained with blank credentials.",
-            "Product and region assignments require a reviewed access map or later administrator assignment; none are inferred from upload history.",
+            "Legacy API keys and sessions are not imported. S3 locations are retained without credential references or secret files.",
+            "Product assignments require a reviewed access map or later administrator assignment; none are inferred from upload history.",
             "The source dump remains the audit record for unmapped roles, permissions and unavailable files.",
+            "Obsolete profiles and groups remain only in the source dump; current access uses roles and explicit product grants.",
             *accounts.warnings,
         ],
     }
@@ -105,7 +105,10 @@ def apply_import(plan, *, database="default", target_database):
                 cursor.execute("LOCK TABLE " + ", ".join(connection.ops.quote_name(table) for table in tables) + " IN EXCLUSIVE MODE")
         _require_fresh_target(database, connection)
         result = _write_rows(plan, database, connection)
-    return {**plan.report, "mode": "applied", "imported": result}
+    return {
+        **plan.report, "mode": "applied", "imported": result,
+        "omitted": {**plan.report["omitted"], "unmapped_direct_permissions": result["unmapped_direct_permissions"]},
+    }
 
 
 def _require_fresh_target(database, connection):
@@ -124,16 +127,13 @@ def _write_rows(plan, database, connection):
     user_model = get_user_model()
     account = plan.accounts
     groups = dict(Group.objects.using(database).values_list("name", "pk"))
-    for name in account.legacy_groups.values():
-        groups[name] = Group.objects.using(database).create(name=name).pk
     for model, rows in (
-        (user_model, account.users), (UserProfile, account.profiles),
+        (user_model, account.users),
         (S3Info, plan.storage), (Delivery, plan.deliveries), (Job, plan.jobs),
-        (UserProductGrant, account.product_grants), (UserRegionGrant, account.region_grants),
+        (UserProductGrant, account.product_grants),
     ):
         model.objects.using(database).bulk_create(rows, batch_size=500)
     memberships = {(user_id, groups[role]) for user_id, roles in account.role_names.items() for role in roles}
-    memberships.update((user_id, groups[account.legacy_groups[group_id]]) for user_id, group_id in account.legacy_memberships)
     membership_model = user_model.groups.through
     membership_model.objects.using(database).bulk_create([
         membership_model(user_id=user_id, group_id=group_id) for user_id, group_id in sorted(memberships)
@@ -170,15 +170,14 @@ def _write_rows(plan, database, connection):
             else None
         )
     LogEntry.objects.using(database).bulk_create([entry for entry, _ in plan.admin_logs], batch_size=500)
-    models = [user_model, UserProfile, S3Info, Delivery, Job, Group, membership_model,
-              direct_model, UserProductGrant, UserRegionGrant, LogEntry]
+    models = [user_model, S3Info, Delivery, Job, Group, membership_model,
+              direct_model, UserProductGrant, LogEntry]
     with connection.cursor() as cursor:
         for sql in connection.ops.sequence_reset_sql(no_style(), models):
             cursor.execute(sql)
     counts = dict(plan.report["planned"])
-    counts.update(direct_permissions=len(direct_rows), unmapped_direct_permissions=skipped,
-                  inert_legacy_groups=len(account.legacy_groups), legacy_group_permissions_not_activated=account.legacy_group_permission_count)
-    expected = [(user_model, len(account.users)), (UserProfile, len(account.profiles)),
+    counts.update(direct_permissions=len(direct_rows), unmapped_direct_permissions=skipped)
+    expected = [(user_model, len(account.users)),
                 (Delivery, len(plan.deliveries)), (Job, len(plan.jobs)), (S3Info, len(plan.storage)),
                 (LogEntry, len(plan.admin_logs))]
     if any(model.objects.using(database).count() != count for model, count in expected):

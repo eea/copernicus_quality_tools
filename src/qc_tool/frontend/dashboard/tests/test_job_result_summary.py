@@ -189,10 +189,10 @@ class JobResultSummaryTests(TestCase):
     def test_unpublished_submission_reservation_blocks_rerun(self):
         DeliverySubmission.objects.create(
             delivery=self.delivery, job=self.job, product_release=self.release,
-            product_unit=self.unit, product_unit_code="CZ", submitted_product_unit_code="CZ",
+            product_unit=self.unit, product_unit_code="CZ", verified_product_unit_code="CZ",
             submitted_by=self.owner, submitted_by_username=self.owner.username,
             request_channel="browser", review_state="pending", publication_state="pending",
-            artifact_path="/published/historical.zip", artifact_digest="a" * 64, input_digest="b" * 64,
+            artifact_key="published/historical.zip", artifact_digest="a" * 64, input_digest="b" * 64,
         )
         self.assertIsNone(self.present()["summary"]["action"])
 

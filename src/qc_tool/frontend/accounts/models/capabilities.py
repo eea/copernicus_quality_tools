@@ -18,19 +18,11 @@ class AccountCapability(models.Model):
             ("manage_api_credential", "Can manage own API credential"),
             ("manage_configuration", "Can manage QC Tool configuration"),
             (
-                "view_region_deliveries",
-                "Can view deliveries in assigned regions",
-            ),
-            (
                 "view_product_deliveries",
-                "Can view deliveries in assigned product family",
-            ),
-            (
-                "view_region_aggregate_report",
-                "Can view aggregate reports for assigned regions",
+                "Can view deliveries in assigned products",
             ),
             (
                 "view_product_aggregate_report",
-                "Can view aggregate reports for assigned product family",
+                "Can view aggregate reports for assigned products",
             ),
         )

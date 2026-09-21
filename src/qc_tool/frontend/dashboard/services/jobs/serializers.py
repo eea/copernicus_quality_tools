@@ -28,7 +28,7 @@ def serialize_job_history(jobs, *, compact_uuid=False):
             "product_ident": job.product_ident,
             "product_description": job.product_description,
             "product_unit_code": job.product_unit_code,
-            "submitted_product_unit_code": getattr(job, "submitted_product_unit_code", None),
+            "verified_product_unit_code": getattr(job, "verified_product_unit_code", None),
             "skip_steps": job.skip_steps,
         }
         for job in jobs
@@ -77,9 +77,9 @@ def serialize_job_report(job_report, job):
     ):
         serialized["error_message"] = MISSING_RESULT_ERROR_MESSAGE
     serialized["product_unit_code"] = job.product_unit_code
-    serialized["submitted_product_unit_code"] = getattr(
+    serialized["verified_product_unit_code"] = getattr(
         job,
-        "submitted_product_unit_code",
+        "verified_product_unit_code",
         None,
     )
     return serialized

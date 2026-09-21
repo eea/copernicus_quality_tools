@@ -1,9 +1,6 @@
 from django.core.exceptions import PermissionDenied
 
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
-from qc_tool.frontend.dashboard.access.legacy_regions import (
-    legacy_delivery_region_code,
-)
 
 
 def can_view_delivery(account_access, delivery):
@@ -17,9 +14,6 @@ def can_view_delivery(account_access, delivery):
         account_access.user_id == delivery.user_id
         and delivery_product_scope_matches(account_access, delivery)
     ):
-        return True
-
-    if _region_scope_matches(account_access, delivery):
         return True
 
     return bool(
@@ -100,14 +94,6 @@ def delivery_action_capabilities(account_access, delivery):
         "can_delete": can_manage and account_access.can_delete,
         "can_submit": can_manage and account_access.can_submit,
     }
-
-
-def _region_scope_matches(account_access, delivery):
-    if not account_access.can_view_region_deliveries:
-        return False
-    # Canonical product unit persistence currently records reported naming metadata;
-    # authorization remains on the legacy trusted region seam by design.
-    return legacy_delivery_region_code(delivery) in account_access.region_codes
 
 
 def _normalized_product_ident(value):

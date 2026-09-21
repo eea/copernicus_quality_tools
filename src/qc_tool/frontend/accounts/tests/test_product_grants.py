@@ -67,7 +67,7 @@ class UserProductGrantTests(TestCase):
         "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value=CATALOG,
     )
-    def test_unchanged_unavailable_legacy_value_remains_editable(self, _get):
+    def test_unchanged_unavailable_value_remains_editable(self, _get):
         grant = UserProductGrant.objects.create(
             user=self.user,
             product_ident="retired_product",
@@ -90,12 +90,12 @@ class UserProductGrantTests(TestCase):
         "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value=CATALOG,
     )
-    def test_choices_label_stored_unavailable_legacy_values(self, _get):
+    def test_choices_label_stored_unavailable_values(self, _get):
         choices = dict(product_ident_choices(include={"retired_product"}))
 
         self.assertIn("Corine Land Cover 2024", choices["clc2024"])
         self.assertIn(
-            "unavailable legacy product",
+            "unavailable product",
             choices["retired_product"],
         )
 

@@ -45,7 +45,7 @@ development environment.
 
 ## Authorization
 
-Each token captures the user's roles, permissions, product/region grants, and
+Each token captures the user's roles, permissions, product grants, and
 administrator status when it is created. Effective access is the intersection
 of that snapshot and the user's current live access. Revoking current access
 therefore narrows existing tokens immediately; later grants do not broaden an

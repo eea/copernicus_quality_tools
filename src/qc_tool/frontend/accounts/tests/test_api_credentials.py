@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.authentication.api_keys import (
-    authenticate_api_key,
+    authenticate_personal_access_token,
 )
 from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
@@ -176,8 +176,8 @@ class ApiCredentialViewTests(TestCase):
             ),
             {"Automation", "Desktop"},
         )
-        self.assertEqual(authenticate_api_key(first), self.user)
-        self.assertEqual(authenticate_api_key(second), self.user)
+        self.assertEqual(authenticate_personal_access_token(first).user, self.user)
+        self.assertEqual(authenticate_personal_access_token(second).user, self.user)
 
     def test_duplicate_names_are_rejected_case_insensitively(self):
         self.client.force_login(self.user)
@@ -221,9 +221,9 @@ class ApiCredentialViewTests(TestCase):
             f"{reverse('account_settings')}#api-tokens",
             fetch_redirect_response=False,
         )
-        self.assertIsNone(authenticate_api_key(first.raw_token))
-        self.assertEqual(authenticate_api_key(second.raw_token), self.user)
-        self.assertEqual(authenticate_api_key(foreign.raw_token), other)
+        self.assertIsNone(authenticate_personal_access_token(first.raw_token))
+        self.assertEqual(authenticate_personal_access_token(second.raw_token).user, self.user)
+        self.assertEqual(authenticate_personal_access_token(foreign.raw_token).user, other)
         self.assertEqual(deleted["Cache-Control"], "private, no-store")
         self.assertEqual(deleted["Referrer-Policy"], "no-referrer")
 

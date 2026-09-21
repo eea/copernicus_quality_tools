@@ -43,7 +43,7 @@
 
         if (String(row.last_job_status || "").toLowerCase() === "ok") {
             productUnitCode = String(
-                row.submitted_product_unit_code || row.product_unit_code || ""
+                row.verified_product_unit_code || row.product_unit_code || ""
             );
         }
 

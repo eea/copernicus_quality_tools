@@ -19,7 +19,6 @@ class AccountAccess:
     is_administrator: bool
     roles: FrozenSet[Role]
     permissions: FrozenSet[AccountPermission]
-    region_codes: FrozenSet[str] = frozenset()
     product_idents: FrozenSet[str] = frozenset()
 
     @classmethod
@@ -39,12 +38,6 @@ class AccountAccess:
         is_administrator = bool(
             user.is_superuser or Role.ADMIN in roles
         )
-        region_codes = frozenset(
-            user.region_grants.exclude(region_code="").values_list(
-                "region_code",
-                flat=True,
-            )
-        )
         product_idents = frozenset(
             normalized
             for product_ident in user.product_grants.exclude(
@@ -60,7 +53,6 @@ class AccountAccess:
             is_administrator=is_administrator,
             roles=roles,
             permissions=permissions_for(user),
-            region_codes=region_codes,
             product_idents=product_idents,
         )
 
@@ -147,24 +139,10 @@ class AccountAccess:
         )
 
     @property
-    def can_view_region_deliveries(self):
-        return bool(
-            self.allows(AccountPermission.VIEW_REGION_DELIVERIES)
-            and self.region_codes
-        )
-
-    @property
     def can_view_product_deliveries(self):
         return bool(
             self.allows(AccountPermission.VIEW_PRODUCT_DELIVERIES)
             and self.product_idents
-        )
-
-    @property
-    def can_view_region_aggregate_report(self):
-        return bool(
-            self.allows(AccountPermission.VIEW_REGION_AGGREGATE_REPORT)
-            and self.region_codes
         )
 
     @property
@@ -268,7 +246,6 @@ class AccountAccess:
     def can_view_other_users_deliveries(self):
         return bool(
             self.is_administrator
-            or self.can_view_region_deliveries
             or self.can_view_product_deliveries
         )
 
@@ -296,7 +273,6 @@ class AccountAccess:
         *,
         permissions,
         roles,
-        region_codes,
         product_idents,
         is_administrator,
     ):
@@ -312,7 +288,6 @@ class AccountAccess:
             AccountPermission,
         )
         snapshot_roles = _known_enum_values(roles, Role)
-        snapshot_regions = _bounded_strings(region_codes, maximum_length=100)
         snapshot_products = _bounded_strings(
             product_idents,
             maximum_length=64,
@@ -325,7 +300,6 @@ class AccountAccess:
             ),
             roles=self.roles.intersection(snapshot_roles),
             permissions=self.permissions.intersection(snapshot_permissions),
-            region_codes=self.region_codes.intersection(snapshot_regions),
             product_idents=self.product_idents.intersection(snapshot_products),
         )
 

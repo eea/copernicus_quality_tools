@@ -18,7 +18,6 @@ from qc_tool.frontend.dashboard.domain.submissions import DeliverySubmission
 from qc_tool.frontend.dashboard.domain.submissions import SubmissionConflict
 from qc_tool.frontend.dashboard.domain.submissions import SubmissionConflictEvent
 from qc_tool.frontend.dashboard.domain.submissions import SubmissionReviewEvent
-from qc_tool.frontend.dashboard.services.products import find_product_description
 
 
 __all__ = (
@@ -34,6 +33,5 @@ __all__ = (
     "SubmissionConflict",
     "SubmissionConflictEvent",
     "SubmissionReviewEvent",
-    "find_product_description",
     "pull_job",
 )

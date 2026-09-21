@@ -7,12 +7,9 @@ from django.db.models import Prefetch
 
 from qc_tool.frontend.accounts.admin.filters import RoleListFilter
 from qc_tool.frontend.accounts.admin.products import UserProductGrantInline
-from qc_tool.frontend.accounts.admin.regions import UserRegionGrantInline
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import PersonalAccessToken
-from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserProductGrant
-from qc_tool.frontend.accounts.models import UserRegionGrant
 from qc_tool.frontend.accounts.services.product_grants import save_product_grant
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_permissions,
@@ -29,7 +26,6 @@ class PersonalAccessTokenInline(admin.TabularInline):
         "secret_digest",
         "permission_snapshot",
         "role_snapshot",
-        "region_codes_snapshot",
         "product_idents_snapshot",
         "is_administrator_snapshot",
     )
@@ -42,53 +38,23 @@ class PersonalAccessTokenInline(admin.TabularInline):
         return False
 
 
-class UserProfileInline(admin.StackedInline):
-    model = UserProfile
-    can_delete = False
-    extra = 1
-    max_num = 1
-    verbose_name_plural = "Legacy delivery scope (temporary)"
-
-    def formfield_for_dbfield(self, db_field, request, **kwargs):
-        field = super().formfield_for_dbfield(db_field, request, **kwargs)
-        if db_field.name == "country":
-            field.label = "Legacy delivery region"
-            field.help_text = (
-                "Temporary delivery-region source retained during the region "
-                "grant migration."
-            )
-        elif db_field.name == "product_family":
-            field.label = "Legacy product family"
-            field.help_text = (
-                "Temporary product scope retained during the product-grant "
-                "migration."
-            )
-        return field
-
-
 class AccountUserAdmin(BaseUserAdmin):
     """Keep all user-related Django Admin composition in accounts."""
 
     inlines = (
         PersonalAccessTokenInline,
-        UserProfileInline,
-        UserRegionGrantInline,
         UserProductGrantInline,
     )
     list_display = (
         "username",
         "email",
         "role_names",
-        "region_codes",
         "product_idents",
         "direct_qc_permissions",
-        "profile_country",
-        "profile_product_family",
         "is_active",
     )
     list_filter = (
         RoleListFilter,
-        ("region_grants__region_code", admin.AllValuesFieldListFilter),
         ("product_grants__product_ident", admin.AllValuesFieldListFilter),
         "is_active",
     )
@@ -97,7 +63,6 @@ class AccountUserAdmin(BaseUserAdmin):
         "email",
         "first_name",
         "last_name",
-        "region_grants__region_code__exact",
         "product_grants__product_ident__exact",
     )
     ordering = ("username",)
@@ -142,18 +107,12 @@ class AccountUserAdmin(BaseUserAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related("userprofile")
             .prefetch_related(
                 "groups",
                 Prefetch(
                     "user_permissions",
                     queryset=capability_permissions(),
                     to_attr="direct_qc_capabilities",
-                ),
-                Prefetch(
-                    "region_grants",
-                    queryset=UserRegionGrant.objects.order_by("region_code", "pk"),
-                    to_attr="assigned_region_grants",
                 ),
                 Prefetch(
                     "product_grants",
@@ -167,19 +126,14 @@ class AccountUserAdmin(BaseUserAdmin):
         )
 
     def save_formset(self, request, form, formset, change):
-        if formset.model not in {UserRegionGrant, UserProductGrant}:
+        if formset.model is not UserProductGrant:
             return super().save_formset(request, form, formset, change)
 
         instances = formset.save(commit=False)
         for deleted in formset.deleted_objects:
             deleted.delete()
         for instance in instances:
-            if isinstance(instance, UserProductGrant):
-                save_product_grant(instance, created_by=request.user)
-                continue
-            if instance._state.adding:
-                instance.created_by = request.user
-            instance.save()
+            save_product_grant(instance, created_by=request.user)
         formset.save_m2m()
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
@@ -253,13 +207,6 @@ class AccountUserAdmin(BaseUserAdmin):
         ]
         return ", ".join(sorted(names)) or "—"
 
-    @admin.display(description="Region grants")
-    def region_codes(self, user):
-        grants = getattr(user, "assigned_region_grants", None)
-        if grants is None:
-            grants = user.region_grants.order_by("region_code", "pk")
-        return ", ".join(grant.region_code for grant in grants) or "—"
-
     @admin.display(description="Product grants")
     def product_idents(self, user):
         grants = getattr(user, "assigned_product_grants", None)
@@ -274,22 +221,6 @@ class AccountUserAdmin(BaseUserAdmin):
             permission_ids = capability_permissions().values_list("pk", flat=True)
             permissions = user.user_permissions.filter(pk__in=permission_ids)
         return ", ".join(sorted(item.name for item in permissions)) or "—"
-
-    @admin.display(
-        description="Legacy delivery region",
-        ordering="userprofile__country",
-    )
-    def profile_country(self, user):
-        profile = getattr(user, "userprofile", None)
-        return getattr(profile, "country", None) or "—"
-
-    @admin.display(
-        description="Legacy product family",
-        ordering="userprofile__product_family",
-    )
-    def profile_product_family(self, user):
-        profile = getattr(user, "userprofile", None)
-        return getattr(profile, "product_family", None) or "—"
 
 
 user_model = get_user_model()

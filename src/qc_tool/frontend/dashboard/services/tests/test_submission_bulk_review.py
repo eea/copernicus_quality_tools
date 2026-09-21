@@ -46,7 +46,7 @@ class BulkReviewFixtureMixin(SubmissionFixtureMixin):
         return DeliverySubmission.objects.create(
             delivery=delivery, job=job, product_release=self.release,
             product_unit=unit, product_unit_code=unit_code,
-            submitted_product_unit_code=unit_code, submitted_by=owner,
+            verified_product_unit_code=unit_code, submitted_by=owner,
             submitted_by_username=username, request_channel="browser",
             publication_state=publication_state,
         )

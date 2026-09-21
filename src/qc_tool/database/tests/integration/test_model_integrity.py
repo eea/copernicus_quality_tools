@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from qc_tool.database.checks.schema import verify_declared_constraints_and_indexes
 from qc_tool.frontend.accounts.models import (
-    PersonalAccessToken, UserProductGrant, UserRegionGrant,
+    PersonalAccessToken, UserProductGrant,
 )
 from qc_tool.frontend.dashboard.models import (
     Delivery, DeliverySubmission, Job, Product, ProductRelease,
@@ -44,11 +44,11 @@ class DatabaseModelIntegrityTests(TestCase):
             submission_uuid=UUID(int=ident), delivery=delivery, job=job,
             product_release=unit.product_release, product_unit=unit,
             product_unit_code=unit.product_unit_code,
-            submitted_product_unit_code=unit.product_unit_code,
+            verified_product_unit_code=unit.product_unit_code,
             submitted_by=self.user, submitted_by_username=self.user.username,
             request_channel="browser", publication_state=publication_state,
             review_state=review_state, published_at=timezone.now(),
-            artifact_path=f"/published/{ident}", artifact_digest="b" * 64,
+            artifact_key=f"published/{ident}", artifact_digest="b" * 64,
             input_digest="c" * 64,
         )
 
@@ -102,14 +102,27 @@ class DatabaseModelIntegrityTests(TestCase):
         ):
             with self.subTest(fields=fields), self.assertRaises(IntegrityError), transaction.atomic():
                 self.receipt(ident=1, **fields)
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            receipt = self.receipt(ident=2)
-            # Bulk inserts deliberately bypass the model's retained-history guard.
-            receipt.pk = UUID(int=3)
-            receipt.request_channel = "other"
-            receipt.delivery = Delivery.objects.create(user=self.user, filename="other.zip", size_bytes=1)
-            receipt.job = Job.objects.create(delivery=receipt.delivery, product_ident=self.product.ident)
-            DeliverySubmission.objects.bulk_create([receipt])
+        for channel in ("legacy", "other", ""):
+            with self.subTest(channel=channel), self.assertRaises(IntegrityError), transaction.atomic():
+                receipt = self.receipt(ident=2)
+                # Bulk inserts deliberately bypass the model's retained-history guard.
+                receipt.pk = UUID(int=3)
+                receipt.request_channel = channel
+                receipt.delivery = Delivery.objects.create(user=self.user, filename="other.zip", size_bytes=1)
+                receipt.job = Job.objects.create(delivery=receipt.delivery, product_ident=self.product.ident)
+                DeliverySubmission.objects.bulk_create([receipt])
+
+    def test_job_request_source_is_a_known_channel_or_unknown(self):
+        delivery = Delivery.objects.create(user=self.user, filename="source.zip", size_bytes=1)
+        job = Job.objects.create(delivery=delivery, product_ident=self.product.ident)
+        self.assertIsNone(job.request_source)
+        for channel in ("browser", "api", None):
+            Job.objects.filter(pk=job.pk).update(request_source=channel)
+            job.refresh_from_db()
+            self.assertEqual(job.request_source, channel)
+        for channel in ("legacy", "other", ""):
+            with self.subTest(channel=channel), self.assertRaises(IntegrityError), transaction.atomic():
+                Job.objects.filter(pk=job.pk).update(request_source=channel)
 
     def test_review_events_require_a_supported_decision_and_decline_reason(self):
         receipt = self.receipt(ident=1)
@@ -135,7 +148,7 @@ class DatabaseModelIntegrityTests(TestCase):
 
     def test_foreign_keys_reuse_existing_composite_indexes_without_single_column_duplicates(self):
         covered_foreign_keys = (
-            (PersonalAccessToken, "user"), (UserProductGrant, "user"), (UserRegionGrant, "user"),
+            (PersonalAccessToken, "user"), (UserProductGrant, "user"),
             (ProductRelease, "product"), (ProductUnit, "product_release"),
             (ProductReleaseDefinition, "product_release"), (Job, "delivery"),
             (DeliverySubmission, "product_release"), (DeliverySubmission, "product_unit"),

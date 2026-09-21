@@ -5,10 +5,11 @@ specification; this reference explains their ownership and persistence rules.
 The [database runbook](MIGRATIONS.md) owns initialization and release changes.
 
 For the complete column-level schema, use the [table dictionary](TABLES.md):
-all 25 current tables, their 204 columns, PostgreSQL types, nullability, ORM
+all 23 current tables, their 189 columns, PostgreSQL types, nullability, ORM
 defaults, foreign keys, constraints and indexes. It also explains the additional
-`django_migrations` recorder used after release freeze. The [metadata review](AUDIT.md#column-and-metadata-review-2026-09-21)
-identifies cleanup candidates and distinguishes them from retained evidence.
+`django_migrations` recorder used after release freeze. The [release checklist](AUDIT.md#remaining-release-checklist) tracks remaining
+work; the [metadata review](AUDIT.md#column-and-metadata-review-2026-09-21) records
+completed cleanup and retained evidence.
 
 ## Naming and ownership
 
@@ -29,15 +30,24 @@ They do not import dashboard models.
 
 | Table | Model | Stored facts |
 | --- | --- | --- |
-| `account_profile` | [UserProfile](../frontend/accounts/models/user_profile.py) | Account profile metadata |
 | `account_api_token` | [PersonalAccessToken](../frontend/accounts/models/api_tokens.py) | Named token digests and issuance-time access snapshots |
-| `account_product_grant` | [UserProductGrant](../frontend/accounts/models/product_grants.py) | Explicit user scope for a canonical QC-definition identifier |
-| `account_region_grant` | [UserRegionGrant](../frontend/accounts/models/region_grants.py) | Explicit user scope for an exact region code |
+| `account_product_grant` | [UserProductGrant](../frontend/accounts/models/product_grants.py) | Explicit user scope for a canonical business-product or exact QC-definition identifier |
 
 Django owns users, groups, permissions, content types, sessions, admin history
 and the migration recorder. Their standard `auth_*` and `django_*` tables remain
 framework-managed. `AccountCapability` is an unmanaged permission anchor, so it
 has a content type and permissions but creates no application table.
+
+Account access uses product assignments, ownership and current roles. There is
+no separate profile/country table, region-grant table or region scope in API
+tokens. Personal contact details remain in Django's `auth_user`.
+
+Old-dump conversion is isolated in [`database/legacy`](legacy/). It maps source
+records into current models, counts omitted profiles and obsolete groups, and
+never recreates their tables or authorization rules. Delivery timestamps and
+reported QC observations remain business history; unknown request origin is
+NULL rather than a special legacy channel. Original specifications keep their
+geographic parameter contracts unchanged.
 
 ### Catalog
 
@@ -114,12 +124,14 @@ marker fails after the commit, retry removal; the database product stays inactiv
 | Table | Model | Stored facts |
 | --- | --- | --- |
 | `execution_delivery` | [Delivery](../frontend/dashboard/domain/deliveries/delivery.py) | Upload ownership, input identity and current workflow projections |
-| `execution_job` | [Job](../frontend/dashboard/domain/jobs/job.py) | A QC execution, queue state, definition provenance and verified result snapshot |
-| `storage_delivery_source` | [S3Info](../frontend/dashboard/domain/storage/s3_info.py) | Remote input coordinates and credentials used to obtain a delivery |
+| `execution_job` | [Job](../frontend/dashboard/domain/jobs/job.py) | A QC execution, queue state, definition provenance and queryable result facts |
+| `storage_delivery_source` | [S3Info](../frontend/dashboard/domain/storage/s3_info.py) | Remote input coordinates and a reference to private credentials outside SQL |
 
 These models are discovered by `dashboard.models`. File bytes live in configured
-storage, not in PostgreSQL. Remote-source credentials are operational secrets;
-they do not constitute a retained copy of the input.
+storage, not in PostgreSQL. Remote-source credentials live in the private
+`S3_CREDENTIALS_DIR`; the database stores only `credential_ref`. Back up that
+private directory with frontend ownership and restrictive permissions. Neither
+the reference nor those secrets constitute a retained copy of the input.
 
 Jobs are retained execution records. No user role can delete one independently;
 only an explicit, permitted deletion of its unsubmitted delivery removes the
@@ -179,7 +191,9 @@ uses this sequence:
 3. Write a manifest containing file paths, sizes and SHA-256 checksums. Flush
    files and synchronize directory entries before exposing the complete tree
    through a same-filesystem rename. Synchronize the containing directory too.
-4. Record the final path, checksums and publication time in the database. A
+4. Record the storage-relative `artifact_key`, checksums and publication time
+   in the database. Resolve it beneath `SUBMISSION_DIR`; moving the complete
+   storage root must not require rewriting a receipt or its manifest. A
    storage failure cannot mark the delivery submitted. A retry after rename
    verifies the existing manifest and inventory before completing the receipt.
 5. On a retry of an already finalized submission, verify the files against the

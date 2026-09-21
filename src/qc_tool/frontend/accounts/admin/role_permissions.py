@@ -6,9 +6,7 @@ from django.db import transaction
 
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import PersonalAccessToken
-from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.accounts.models import UserProductGrant
-from qc_tool.frontend.accounts.models import UserRegionGrant
 from qc_tool.frontend.accounts.services.role_permissions import (
     synchronize_role_permissions,
 )
@@ -17,9 +15,7 @@ from qc_tool.frontend.accounts.services.role_permissions import (
 MANAGED_MODELS = (
     get_user_model(),
     Group,
-    UserProfile,
     PersonalAccessToken,
-    UserRegionGrant,
     UserProductGrant,
 )
 PERMISSION_ACTIONS = ("add", "change", "delete", "view")

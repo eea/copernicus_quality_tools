@@ -91,7 +91,7 @@ class PublicationVersionTests(SimpleTestCase):
         self.reserved = ReservedSubmission(
             submission_uuid=uuid4(), delivery_id=1, job_uuid=uuid4(),
             product_release_id=2, product_unit_id=3, release_key="2026",
-            product_unit_code="007", submitted_product_unit_code="007",
+            product_unit_code="007", verified_product_unit_code="007",
             username="owner", filename="unit.zip", is_s3=False,
             expected_input_digest=hashlib.sha256(self.input_bytes).hexdigest(),
             requested_at_iso="2026-01-01T00:00:00Z", already_existed=False,
@@ -124,7 +124,9 @@ class PublicationVersionTests(SimpleTestCase):
         final, payload, digest = self.write_publication(2)
         self.assertTrue(final.parent.name.startswith("product-unit-"))
         self.assertEqual(json.loads(payload)["schema_version"], 2)
-        self.assertEqual(receipt_from_existing(final, self.reserved).artifact_digest, digest)
+        self.assertEqual(json.loads(payload)["submitted_product_unit_code"], "007")
+        self.assertNotIn("verified_product_unit_code", json.loads(payload))
+        self.assertEqual(receipt_from_existing(final, self.reserved, submission_root=self.root).artifact_digest, digest)
 
     def test_old_publication_recovery_keeps_original_bytes_checksum_and_path(self):
         current, payload, digest = self.write_publication(1)
@@ -132,11 +134,24 @@ class PublicationVersionTests(SimpleTestCase):
         old_parent.mkdir()
         legacy = old_parent / current.name
         current.rename(legacy)
-        for reserved in (self.reserved, replace(self.reserved, artifact_path=str(legacy))):
+        for reserved in (self.reserved, replace(self.reserved, artifact_key=legacy.relative_to(self.root).as_posix())):
             layout = publication_layout(reserved, submission_root=self.root)
             self.assertEqual(layout.final_directory, legacy)
-            self.assertEqual(receipt_from_existing(legacy, reserved).artifact_digest, digest)
+            self.assertEqual(receipt_from_existing(legacy, reserved, submission_root=self.root).artifact_digest, digest)
         self.assertEqual((legacy / "submission-manifest.json").read_bytes(), payload)
+
+        key = legacy.relative_to(self.root).as_posix()
+        original_root = self.root
+        relocated_root = original_root / "relocated"
+        relocated_root.mkdir()
+        # Move the release directory beneath a newly configured root.
+        (original_root / key.split("/")[0]).rename(relocated_root / key.split("/")[0])
+        reserved = replace(self.reserved, artifact_key=key)
+        layout = publication_layout(reserved, submission_root=relocated_root)
+        receipt = receipt_from_existing(layout.final_directory, reserved, submission_root=relocated_root)
+        self.assertEqual(receipt.artifact_key, key)
+        self.assertEqual(receipt.artifact_digest, digest)
+        self.assertEqual((layout.final_directory / "submission-manifest.json").read_bytes(), payload)
 
     def test_legacy_manifest_rejects_new_aliases_even_with_valid_checksum(self):
         final, payload, _digest = self.write_publication(1)
@@ -147,4 +162,4 @@ class PublicationVersionTests(SimpleTestCase):
         body["artifact_sha256"] = hashlib.sha256(canonical).hexdigest()
         (final / "submission-manifest.json").write_text(json.dumps(body))
         with self.assertRaises(PublicationError):
-            receipt_from_existing(final, self.reserved)
+            receipt_from_existing(final, self.reserved, submission_root=self.root)

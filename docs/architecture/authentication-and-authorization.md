@@ -13,8 +13,8 @@ QC Tool separates four questions:
 3. Which capability does the caller need?
 4. May the caller access this specific delivery or job?
 
-`accounts.models` owns profiles, personal API tokens, capability declarations
-and scope grants. It uses Django's native users, groups and permissions without
+`accounts.models` owns personal API tokens, capability declarations
+and product grants. It uses Django's native users, groups and permissions without
 depending on dashboard models. See the central
 [table ownership reference](../../src/qc_tool/database/SCHEMA.md) for persistence
 names and boundaries.
@@ -60,7 +60,7 @@ roles with capabilities and object scope; views and services reuse that policy.
 | `product_manager` | View assigned products, track fulfilment, and review their submissions | product visibility plus approval/decline within the assigned business-product scope |
 | `admin` | Manage products, delivery plans, users and reviews | all QC Tool capabilities; synchronized to Django staff access |
 
-The authorization vocabulary also reserves region/product aggregate-report
+The authorization vocabulary also reserves product aggregate-report
 permissions. No production aggregate-report view currently consumes them. A
 future report must reuse the same capability-plus-scope policy rather than
 treating the permission name as implementation.
@@ -82,16 +82,15 @@ Cross-user visibility requires both a capability and a matching scope grant:
 visible delivery =
     administrator
     OR (own delivery AND assigned product)
-    OR (region-view permission AND matching region grant)
     OR (product-view permission AND matching product grant)
 ```
 
-- Product grants use exact canonical product-definition identifiers. Both
-  default users and product managers may have one or many assignments.
-- Region grants currently store exact, opaque region codes.
-- The current delivery-region resolver still reads the uploader's legacy
-  profile country. `Delivery.product_unit_code` now exists, but remains reported
-  metadata until every supported product has authoritative geographic validation; see [Product unit metadata](product-unit-metadata.md).
+- Product grants use canonical business-product or exact QC-definition
+  identifiers. A business-product grant covers its recorded releases; an exact
+  definition grant does not grant access to sibling definitions. Both default
+  users and product managers may have one or many assignments.
+- Product-unit reporting and geographic QC do not grant account access; see
+  [Product unit metadata](product-unit-metadata.md).
 - Cross-user visibility requires both the relevant permission and its grant.
 - Default users already receive delivery-work capabilities through their role;
   product grants define where those capabilities apply.
@@ -107,7 +106,7 @@ does not confer a management role or allow the user to edit their own grants.
 Reviewing a submitted delivery is a separate permission: an administrator may
 review any product; a product manager may review only within their assigned
 catalog scope. A partial recipe assignment does not authorize review of other
-streams, and region-based visibility alone does not authorize review.
+streams, and read-only product access does not authorize review.
 
 Only administrators may create products by uploading JSON specifications, upload
 specification revisions, remove products, or configure and activate delivery
@@ -130,6 +129,13 @@ Admin edits use `save_product_grant` in the same module. These services validate
 the catalog identifier and uniqueness and preserve the creator audit. Callers
 must first authorize the administrator performing the assignment.
 
+`product_ident` is deliberately a textual scope identifier, not a business-product
+foreign key. It accepts either an active business product or a registered QC
+definition. This preserves definition-only access and unchanged historical
+grants whose catalog entry is unavailable. New or reassigned unavailable scopes
+fail validation. Never infer permission from a shared product family or a
+parent product displayed only as context for one assigned definition.
+
 `AccountAccess.can_access_product` checks new work against the current catalog,
 including an assigned business product's unambiguous QC recipes.
 `AccountAccess.can_access_product_snapshot` checks a recorded recipe and its
@@ -148,7 +154,7 @@ token-restricted `AccountAccess` through these helpers.
 
 Django stores identity—not QC permissions—in the session. On every request,
 `AccountAccess` resolves current roles, direct/group permissions, product
-grants, and region grants, then caches that immutable snapshot only on the
+grants, then caches that immutable snapshot only on the
 request object. Admin changes therefore take effect on the user's next request
 without requiring logout.
 

@@ -14,19 +14,19 @@ class ReservedSubmission:
     product_unit_id: int
     release_key: str
     product_unit_code: str
-    submitted_product_unit_code: str
+    verified_product_unit_code: str
     username: str
     filename: str
     is_s3: bool
     expected_input_digest: str
     requested_at_iso: str
     already_existed: bool
-    artifact_path: str = ""
+    artifact_key: str = ""
 
 
 @dataclass(frozen=True)
 class PublicationReceipt:
-    artifact_path: str
+    artifact_key: str
     artifact_digest: str
     input_digest: str
     recovered_existing: bool = False
@@ -39,7 +39,7 @@ class SubmissionResult:
     publication_state: str
     review_state: str
     conflict_id: int | None
-    artifact_path: str
+    artifact_key: str
     published_at: object
     idempotent: bool
 

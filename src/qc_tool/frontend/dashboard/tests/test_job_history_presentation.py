@@ -259,10 +259,10 @@ class JobHistoryPresentationTests(TestCase):
     def test_delivery_summary_preserves_zero_size_and_labels_expected_aoi(self):
         self.delivery.size_bytes = 0
         self.delivery.product_unit_code = "CZ"
-        self.delivery.submitted_product_unit_code = "SK"
+        self.delivery.verified_product_unit_code = "SK"
         self.delivery.product_description = None
         self.delivery.save(update_fields=(
-            "size_bytes", "product_unit_code", "submitted_product_unit_code", "product_description",
+            "size_bytes", "product_unit_code", "verified_product_unit_code", "product_description",
         ))
 
         response, _document = self.response_document()

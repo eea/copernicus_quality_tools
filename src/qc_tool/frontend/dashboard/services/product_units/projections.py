@@ -17,7 +17,7 @@ def sync_locked_delivery_from_latest_job(delivery):
         .order_by("-date_created", "-job_uuid")
         .only(
             "product_unit_code",
-            "submitted_product_unit_code",
+            "verified_product_unit_code",
             "product_ident",
             "product_description",
         )
@@ -34,19 +34,19 @@ def sync_locked_delivery_from_latest_job(delivery):
         delivery.product_unit_code = product_unit_code
         updated_fields.append("product_unit_code")
 
-    # The explicit submitted product unit is the identity verified from this one-ZIP,
+    # The verified product unit is the identity established from this one-ZIP,
     # one-product unit upload.  Preserve it while a newer job is waiting and reject
     # conflicting terminal observations in the lifecycle service.
-    submitted_unit = delivery.submitted_product_unit_code
+    submitted_unit = delivery.verified_product_unit_code
     if (
         submitted_unit is None
         and latest_job is not None
-        and latest_job.submitted_product_unit_code
+        and latest_job.verified_product_unit_code
     ):
-        submitted_unit = normalize_product_unit_code(latest_job.submitted_product_unit_code)
-    if delivery.submitted_product_unit_code != submitted_unit:
-        delivery.submitted_product_unit_code = submitted_unit
-        updated_fields.append("submitted_product_unit_code")
+        submitted_unit = normalize_product_unit_code(latest_job.verified_product_unit_code)
+    if delivery.verified_product_unit_code != submitted_unit:
+        delivery.verified_product_unit_code = submitted_unit
+        updated_fields.append("verified_product_unit_code")
 
     if latest_job is not None:
         for field_name in ("product_ident", "product_description"):

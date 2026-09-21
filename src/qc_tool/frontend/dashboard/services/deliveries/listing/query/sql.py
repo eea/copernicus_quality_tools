@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
 
-from qc_tool.frontend.accounts.models import UserProfile
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission, SubmissionReviewEvent
 from qc_tool.frontend.dashboard.models import Job
@@ -29,7 +28,6 @@ def _delivery_join_sql(database_connection, submission_join):
     delivery_table = quote_name(Delivery._meta.db_table)
     job_table = quote_name(Job._meta.db_table)
     user_table = quote_name(get_user_model()._meta.db_table)
-    profile_table = quote_name(UserProfile._meta.db_table)
     release_table = quote_name(ProductRelease._meta.db_table)
     product_table = quote_name(Product._meta.db_table)
     return f"""
@@ -45,8 +43,6 @@ def _delivery_join_sql(database_connection, submission_join):
         ON scoped_product.id = scoped_release.product_id
         INNER JOIN {user_table} u
         ON d.user_id = u.id
-        LEFT JOIN {profile_table} up
-        ON d.user_id = up.user_id
         {submission_join}
         WHERE d.is_deleted = FALSE
         """
@@ -55,8 +51,8 @@ def _delivery_join_sql(database_connection, submission_join):
 def _submission_join_sql(database_connection, account_access, user_id):
     """Join only review receipts visible to the owner or assigned reviewers.
 
-    A region grant can reveal a delivery without granting access to its manager
-    correspondence. Keep that boundary in SQL so filters cannot disclose it.
+    Delivery visibility alone does not grant access to manager correspondence.
+    Keep that boundary in SQL so filters cannot disclose it.
     """
 
     quote_name = database_connection.ops.quote_name
@@ -112,7 +108,7 @@ DELIVERY_SELECT_SQL = """
         SELECT d.id, d.user_id AS action_owner_id, d.filename, u.username,
         d.date_uploaded, d.size_bytes,
         d.product_ident, d.product_description, d.product_unit_code,
-        d.submitted_product_unit_code, d.content_sha256,
+        d.verified_product_unit_code, d.content_sha256,
         d.date_submitted, d.is_deleted,
         d.s3_id,
         j.job_uuid AS last_job_uuid,
@@ -120,7 +116,6 @@ DELIVERY_SELECT_SQL = """
         scoped_product.ident AS action_catalog_product_ident,
         j.date_created, j.date_started, j.date_finished,
         j.job_status as last_job_status,
-        up.country AS user_country,
         s.submission_uuid AS submission_id,
         s.review_state AS submission_review_state,
         s.publication_state AS submission_publication_state,
@@ -237,11 +232,6 @@ def _visibility_clause(user_id, account_access, database_connection):
         )
     clauses = [f"(d.user_id = %s AND ({owner_scope_sql}))"]
     parameters = [user_id] + product_parameters
-    if account_access.can_view_region_deliveries:
-        region_codes = sorted(account_access.region_codes)
-        placeholders = ", ".join(["%s"] * len(region_codes))
-        clauses.append(f"up.country IN ({placeholders})")
-        parameters.extend(region_codes)
     if account_access.can_view_product_deliveries:
         clauses.append(f"({product_sql})")
         parameters.extend(product_parameters)

@@ -42,7 +42,7 @@ def prepare_records(dump, user_ids):
             host=bounded_text(row["host"], location, 200),
             bucketname=bounded_text(row["bucketname"], location, 100),
             key_prefix=bounded_text(row["key_prefix"], location, 500),
-            access_key="", secret_key="",
+            credential_ref="",
         ))
     for row in dump.tables["dashboard_delivery"]:
         location = "dashboard_delivery"
@@ -59,7 +59,7 @@ def prepare_records(dump, user_ids):
             date_submitted=submitted_at,
             product_ident=bounded_text(row["product_ident"], location, 64, nullable=True),
             product_description=bounded_text(row["product_description"], location, 500, nullable=True),
-            product_unit_code=unit, submitted_product_unit_code=None,
+            product_unit_code=unit, verified_product_unit_code=None,
             is_deleted=boolean(row["is_deleted"], location),
         ))
         stats["submitted_deliveries"] += submitted_at is not None
@@ -91,10 +91,10 @@ def prepare_records(dump, user_ids):
             product_ident=bounded_text(row["product_ident"], location, 64),
             product_description=bounded_text(row["product_description"], location, 500),
             product_unit_code=_reported_unit(row["aoi_code"], stats),
-            submitted_product_unit_code=None,
+            verified_product_unit_code=None,
             skip_steps=bounded_text(row["skip_steps"], location, 100, nullable=True),
             worker_url=bounded_text(row["worker_url"], location, 500, nullable=True),
-            request_source="legacy", requested_by=None, requested_by_username="",
+            request_source=None, requested_by=None, requested_by_username="",
             product_release=None, qc_definition=None,
         ))
     stats["deliveries_without_jobs"] = len(delivery_ids - {job.delivery_id for job in jobs})

@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-from pathlib import Path
 from uuid import uuid4
 from io import StringIO
 from unittest.mock import patch
@@ -37,7 +36,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.submission = self.published()
         self.original_bytes = (self.media_root / self.owner.username / self.delivery.filename).read_bytes()
         self.receipt = (
-            self.submission.artifact_path, self.submission.artifact_digest,
+            self.submission.artifact_key, self.submission.artifact_digest,
             self.submission.input_digest, self.submission.published_at,
         )
         self.client.force_login(self.owner)
@@ -80,10 +79,10 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertEqual(self.submission.review_state, DeliverySubmission.ReviewState.REJECTED)
         self.assertEqual(self.submission.review_events.get().notes, "Correct the boundary extent.")
         self.assertEqual((
-            self.submission.artifact_path, self.submission.artifact_digest,
+            self.submission.artifact_key, self.submission.artifact_digest,
             self.submission.input_digest, self.submission.published_at,
         ), self.receipt)
-        self.assertEqual((Path(self.submission.artifact_path) / "input.d" / self.delivery.filename).read_bytes(), self.original_bytes)
+        self.assertEqual(((self.submission_root / self.submission.artifact_key) / "input.d" / self.delivery.filename).read_bytes(), self.original_bytes)
         response = self.client.get(reverse("submission_file", args=(self.submission.pk, "input.d/" + self.delivery.filename)))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), self.original_bytes)
@@ -187,7 +186,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
 
     def test_retained_original_must_be_verified_before_working_input_is_replaced(self):
         self.reject()
-        archive = Path(self.submission.artifact_path) / "input.d" / self.delivery.filename
+        archive = (self.submission_root / self.submission.artifact_key) / "input.d" / self.delivery.filename
         archive.write_bytes(b"tampered archive")
         response = self.upload()
         self.assertEqual(response.status_code, 503, response.content)
@@ -207,7 +206,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertEqual(corrected.filename, self.delivery.filename)
         self.assertEqual(corrected.user_id, self.owner.pk)
         self.assertIsNone(corrected.date_submitted)
-        self.assertIsNone(corrected.submitted_product_unit_code)
+        self.assertIsNone(corrected.verified_product_unit_code)
         self.assertFalse(Job.objects.filter(delivery=corrected).exists())
         self.delivery.refresh_from_db()
         self.assertTrue(self.delivery.is_deleted)
@@ -276,7 +275,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
             delivery=corrected, job_status=JOB_OK,
             product_ident=self.definition.product_ident,
             product_description=self.definition.description,
-            product_unit_code=self.product_unit.product_unit_code, submitted_product_unit_code=self.product_unit.product_unit_code,
+            product_unit_code=self.product_unit.product_unit_code, verified_product_unit_code=self.product_unit.product_unit_code,
             input_sha256=hashlib.sha256(self.corrected_bytes).hexdigest(),
             product_release=self.release, qc_definition=self.definition,
             requested_by=self.owner, requested_by_username=self.owner.username,
@@ -292,7 +291,7 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertEqual(resubmission.job_id, job.pk)
         self.assertEqual(resubmission.review_state, DeliverySubmission.ReviewState.PENDING)
         self.assertEqual(resubmission.input_digest, job.input_sha256)
-        self.assertEqual((Path(resubmission.artifact_path) / "input.d" / corrected.filename).read_bytes(), self.corrected_bytes)
+        self.assertEqual(((self.submission_root / resubmission.artifact_key) / "input.d" / corrected.filename).read_bytes(), self.corrected_bytes)
         self.assertEqual(get_product_coverage(self.release).accepted, 0)
         self.assert_retained_receipt()
 

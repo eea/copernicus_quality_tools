@@ -75,6 +75,17 @@ class ManagedProductEntrypointTests(TestCase):
         delivery = Delivery.objects.create(user=self.user, filename="bundled.zip", size_bytes=1)
         delivery.create_job("bundled", "", account_access=self.access)
         self.assertEqual(Job.objects.count(), 1)
+        self.assertIsNone(Job.objects.get().request_source)
+
+    def test_job_creation_rejects_unknown_channel_labels_without_writing(self):
+        managed_definition("bundled", document=self.document)
+        delivery = Delivery.objects.create(user=self.user, filename="bundled.zip", size_bytes=1)
+        for channel in ("legacy", "other", ""):
+            with self.subTest(channel=channel), self.assertRaisesMessage(ValueError, "request channel is invalid"):
+                delivery.create_job("bundled", "", request_source=channel, account_access=self.access)
+        self.assertFalse(Job.objects.exists())
+        delivery.refresh_from_db()
+        self.assertIsNone(delivery.product_ident)
 
     def test_archiving_a_managed_product_removes_it_from_new_deliveries_and_jobs(self):
         _definition, release = managed_definition("bundled", document=self.document)

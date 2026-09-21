@@ -1,11 +1,10 @@
 from django.core.exceptions import PermissionDenied
 
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
-from qc_tool.frontend.dashboard.access.deliveries import _region_scope_matches
 
 
 def can_view_job(account_access, job):
-    """Read a job only within its recorded product or trusted regional scope.
+    """Read a job only within its recorded product and ownership scope.
 
     Rerunning a delivery under another product cannot transfer access to older
     QC artifacts after the original product assignment is revoked.
@@ -14,8 +13,6 @@ def can_view_job(account_access, job):
     if not account_access.allows(AccountPermission.VIEW_DELIVERIES):
         return False
     if account_access.is_administrator:
-        return True
-    if _region_scope_matches(account_access, job.delivery):
         return True
     if not (
         account_access.user_id == job.delivery.user_id

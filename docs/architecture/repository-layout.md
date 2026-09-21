@@ -68,7 +68,7 @@ Rules:
 ```text
 frontend/dashboard/
 ├── access/
-│   ├── deliveries.py  # Delivery ownership/product/region read policy
+│   ├── deliveries.py  # Delivery ownership/product read policy
 │   ├── jobs.py        # Job access inherited from its delivery
 │   └── routes/        # Complete public/private endpoint registry
 ├── domain/            # Catalog, delivery, job, storage and publication models
@@ -115,7 +115,7 @@ database/
 
 The [application schema](../../src/qc_tool/database/SCHEMA.md) maps business
 responsibilities to explicit table names and model modules. Accounts owns its
-profiles and tokens as well as grants; dashboard discovers the other business
+tokens and product grants; dashboard discovers the other business
 models. Table prefixes identify domains within one application database and do
 not introduce independent component releases.
 

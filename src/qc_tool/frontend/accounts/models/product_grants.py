@@ -3,7 +3,12 @@ from django.db import models
 
 
 class UserProductGrant(models.Model):
-    """Assign one canonical product-definition identifier to a user."""
+    """Assign a canonical business-product or QC-definition scope to a user.
+
+    Text is intentional: either catalog identity is valid, and existing
+    assignments may outlive catalog entries. The scope services resolve the
+    identifier without granting sibling definitions from a partial assignment.
+    """
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -11,7 +16,14 @@ class UserProductGrant(models.Model):
         related_name="product_grants",
         db_index=False,  # Covered by account_product_user_key_uniq.
     )
-    product_ident = models.CharField(max_length=64)
+    product_ident = models.CharField(
+        "Product or QC definition",
+        max_length=64,
+        help_text=(
+            "Canonical business-product identifier or exact QC-definition "
+            "identifier. A definition assignment does not grant sibling definitions."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -72,7 +84,7 @@ class UserProductGrant(models.Model):
             raise ValidationError(
                 {
                     "product_ident": (
-                        "Product definitions are unavailable; a new product "
+                        "The product catalog is unavailable; a new product "
                         "grant cannot be validated."
                     )
                 }

@@ -18,7 +18,6 @@ class PersonalAccessToken(models.Model):
     token_hint = models.CharField(max_length=16, blank=True, editable=False)
     permission_snapshot = models.JSONField(default=list, editable=False)
     role_snapshot = models.JSONField(default=list, editable=False)
-    region_codes_snapshot = models.JSONField(default=list, editable=False)
     product_idents_snapshot = models.JSONField(default=list, editable=False)
     is_administrator_snapshot = models.BooleanField(default=False, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)

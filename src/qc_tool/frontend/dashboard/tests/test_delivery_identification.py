@@ -316,7 +316,7 @@ class DeliveryIdentificationUploadTests(TestCase):
         self.assertEqual(delivery.filename, VERVIERS_FILENAME)
         self.assertEqual(delivery.product_ident, "urban_atlas")
         self.assertIsNone(delivery.product_unit_code)
-        self.assertIsNone(delivery.submitted_product_unit_code)
+        self.assertIsNone(delivery.verified_product_unit_code)
         self.assertFalse(Job.objects.exists())
 
     def test_ambiguous_registration_waits_for_manual_qc_product_selection(self):
@@ -330,7 +330,7 @@ class DeliveryIdentificationUploadTests(TestCase):
         delivery = Delivery.objects.get()
         self.assertIsNone(delivery.product_ident)
         self.assertIsNone(delivery.product_unit_code)
-        self.assertIsNone(delivery.submitted_product_unit_code)
+        self.assertIsNone(delivery.verified_product_unit_code)
 
 
 class DeliveryIdentificationJobTests(TestCase):
@@ -368,7 +368,7 @@ class DeliveryIdentificationJobTests(TestCase):
         self.delivery.refresh_from_db()
         self.assertIsNone(self.delivery.product_ident)
         self.assertIsNone(self.delivery.product_unit_code)
-        self.assertIsNone(self.delivery.submitted_product_unit_code)
+        self.assertIsNone(self.delivery.verified_product_unit_code)
 
     def test_matching_job_keeps_parsed_unit_separate_from_verified_metadata(self):
         job = self.create_job("urban_atlas")
@@ -376,11 +376,11 @@ class DeliveryIdentificationJobTests(TestCase):
         self.assertEqual(job.qc_definition_id, self.definition.pk)
         self.assertEqual(job.product_ident, "urban_atlas")
         self.assertIsNone(job.product_unit_code)
-        self.assertIsNone(job.submitted_product_unit_code)
+        self.assertIsNone(job.verified_product_unit_code)
         self.delivery.refresh_from_db()
         self.assertEqual(self.delivery.product_ident, "urban_atlas")
         self.assertIsNone(self.delivery.product_unit_code)
-        self.assertIsNone(self.delivery.submitted_product_unit_code)
+        self.assertIsNone(self.delivery.verified_product_unit_code)
 
     def test_invalid_and_unconfigured_names_cannot_create_jobs_or_change_rows(self):
         for filename in (
@@ -418,7 +418,7 @@ class DeliveryIdentificationJobTests(TestCase):
         self.assertEqual(job.product_ident, "urban_atlas_alternative")
         self.delivery.refresh_from_db()
         self.assertEqual(self.delivery.product_ident, "urban_atlas_alternative")
-        self.assertIsNone(self.delivery.submitted_product_unit_code)
+        self.assertIsNone(self.delivery.verified_product_unit_code)
 
 
 @override_settings(
@@ -463,7 +463,7 @@ class DeliveryIdentificationApiTests(TestCase):
                 self.assertEqual(delivery.filename, VERVIERS_FILENAME)
                 self.assertEqual(delivery.product_ident, "urban_atlas")
                 self.assertIsNone(delivery.product_unit_code)
-                self.assertIsNone(delivery.submitted_product_unit_code)
+                self.assertIsNone(delivery.verified_product_unit_code)
 
     def test_recognized_invalid_and_unconfigured_names_are_rejected_before_persistence(self):
         for source in ("local", "s3"):
@@ -499,7 +499,7 @@ class DeliveryIdentificationApiTests(TestCase):
                 delivery = Delivery.objects.get(pk=response.json()["delivery_id"])
                 self.assertIsNone(delivery.product_ident)
                 self.assertIsNone(delivery.product_unit_code)
-                self.assertIsNone(delivery.submitted_product_unit_code)
+                self.assertIsNone(delivery.verified_product_unit_code)
 
 
 class BundledUrbanAtlasVariantIdentificationTests(TestCase):

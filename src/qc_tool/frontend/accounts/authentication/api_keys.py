@@ -97,19 +97,6 @@ def is_api_key_digest(value):
 
 
 @sensitive_variables("raw_key")
-def authenticate_api_key(raw_key):
-    """Resolve the active user for one valid personal access token.
-
-    This compatibility helper deliberately returns only the user. Request
-    authentication uses :func:`authenticate_api_request`, which also returns
-    the token's restricted access snapshot.
-    """
-
-    token = authenticate_personal_access_token(raw_key)
-    return token.user if token is not None else None
-
-
-@sensitive_variables("raw_key")
 def authenticate_personal_access_token(raw_key):
     """Resolve one active token by exact digest without exposing its secret."""
 
@@ -185,7 +172,6 @@ def authenticate_api_request(request):
     restricted_access = live_access.restricted_to_snapshot(
         permissions=token.permission_snapshot,
         roles=token.role_snapshot,
-        region_codes=token.region_codes_snapshot,
         product_idents=token.product_idents_snapshot,
         is_administrator=token.is_administrator_snapshot,
     )

@@ -28,8 +28,8 @@ def visible_submissions(access):
         return queryset
     if not access.product_idents:
         # Keep an empty SQL subquery rather than an EmptyResultSet. Receipt
-        # scopes are used in negated aggregate filters for region-visible
-        # deliveries; compiler-empty IN clauses can short-circuit all counts.
+        # scopes are used in negated aggregate delivery filters;
+        # compiler-empty IN clauses can short-circuit all counts.
         return queryset.filter(pk__isnull=True)
     queryset = queryset.annotate(
         _scope_recipe_ident=Lower(Trim("job__product_ident")),

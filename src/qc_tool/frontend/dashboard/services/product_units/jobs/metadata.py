@@ -1,32 +1,18 @@
-"""Bounded, queryable metadata snapshots from one worker result."""
+"""Queryable result facts used by publication and report fallback.
 
-import hashlib
-import json
-
-from django.utils import timezone
+The complete result and its software version remain in the original job
+artifacts, which publication retains and checksums. Do not duplicate that
+document in the execution table.
+"""
 
 
 def apply_result_metadata(job, job_result):
-    """Persist queryable result facts and a JSON audit snapshot."""
-
-    canonical = json.dumps(
-        job_result,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
+    """Project only fields that have a database consumer."""
     values = {
-        "result_metadata": job_result,
-        "result_sha256": hashlib.sha256(canonical).hexdigest(),
-        "result_received_at": timezone.now(),
         "input_sha256": _bounded_text(job_result.get("hash"), 64),
         "reference_period": _bounded_text(
             job_result.get("reference_year"),
             32,
-        ),
-        "qc_tool_version": _bounded_text(
-            job_result.get("qc_tool_version"),
-            128,
         ),
     }
     changed = []

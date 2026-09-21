@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import ipaddress
 import re
 
@@ -12,8 +12,8 @@ _BUCKET_NAME = re.compile(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\Z")
 @dataclass(frozen=True)
 class S3Registration:
     endpoint: str
-    access_key: str
-    secret_key: str
+    access_key: str = field(repr=False)
+    secret_key: str = field(repr=False)
     bucket_name: str
     key_prefix: str
 

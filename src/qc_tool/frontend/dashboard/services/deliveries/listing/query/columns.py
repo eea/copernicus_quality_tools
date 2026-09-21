@@ -11,7 +11,7 @@ COLUMN_LOOKUP = {
     "product_ident": "d.product_ident",
     "product_description": "d.product_description",
     "product_unit_code": "d.product_unit_code",
-    "submitted_product_unit_code": "d.submitted_product_unit_code",
+    "verified_product_unit_code": "d.verified_product_unit_code",
     "content_sha256": "d.content_sha256",
     "date_submitted": "d.date_submitted",
     "is_deleted": "d.is_deleted",

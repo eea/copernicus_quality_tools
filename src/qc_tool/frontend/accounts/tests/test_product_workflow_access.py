@@ -25,7 +25,7 @@ class ProductWorkflowAccessTests(TestCase):
             user=self.user, filename="unclassified.zip", size_bytes=10,
         )
         description = patch(
-            "qc_tool.frontend.dashboard.models.find_product_description",
+            "qc_tool.frontend.dashboard.services.products.find_product_description",
             return_value="Product",
         )
         self.definitions = {ident: managed_definition(ident) for ident in ("first_product", "second_product")}
@@ -93,7 +93,7 @@ class ProductWorkflowAccessTests(TestCase):
         access = access_for(self.user)
         token_access = access.restricted_to_snapshot(
             permissions=[permission.value for permission in access.permissions],
-            roles=[role.value for role in access.roles], region_codes=[],
+            roles=[role.value for role in access.roles],
             product_idents=["first_product"], is_administrator=False,
         )
         with self.assertRaises(PermissionError):

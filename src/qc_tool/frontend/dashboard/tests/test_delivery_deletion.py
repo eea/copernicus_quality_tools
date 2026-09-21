@@ -136,7 +136,7 @@ class DeliveryDeletionTests(TestCase):
         aoi = ProductUnit.objects.create(product_release=release, product_unit_code="CZ")
         submission = DeliverySubmission.objects.create(
             delivery=self.delivery, job=self.jobs[-1], product_release=release,
-            product_unit=aoi, product_unit_code="CZ", submitted_product_unit_code="CZ",
+            product_unit=aoi, product_unit_code="CZ", verified_product_unit_code="CZ",
             submitted_by_username=self.owner.username, request_channel="browser",
         )
 

@@ -62,7 +62,7 @@ flowchart LR
 
 The browser, API, and worker use separate authentication mechanisms. Django
 permissions determine application capabilities, while delivery ownership and
-product or region grants determine which records a user can see. Read the
+product grants determine which records a user can see. Read the
 [authentication and authorization guide](architecture/authentication-and-authorization.md)
 before adding an endpoint.
 

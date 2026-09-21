@@ -3,6 +3,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from .artifact_keys import validate_artifact_key
+
 
 class RetainedPublicationQuerySet(models.QuerySet):
     """Keep history while allowing explicitly mutable review projections."""
@@ -37,6 +39,16 @@ class SubmissionQuerySet(RetainedPublicationQuerySet):
     # Django's SET_NULL collector may detach a removed account; its immutable
     # username and credential snapshots remain the historical evidence.
     clearable_actor_fields = frozenset({"submitted_by", "submitted_by_id"})
+
+    def bulk_create(self, objs, *args, **kwargs):
+        objs = list(objs)
+        for submission in objs:
+            if submission.artifact_key:
+                try:
+                    validate_artifact_key(submission.artifact_key)
+                except ValueError as exc:
+                    raise ValidationError({"artifact_key": str(exc)}) from exc
+        return super().bulk_create(objs, *args, **kwargs)
 
 
 class ConflictEventQuerySet(RetainedPublicationQuerySet):
