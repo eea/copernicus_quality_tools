@@ -1,4 +1,90 @@
-# Database audit: products, units and acceptance
+# Database audit: schema, metadata and retention
+
+The latest column-level review is **2026-09-21**. Start with the
+[complete table dictionary](TABLES.md) for all **25 current tables and 204
+columns**, including their purposes, PostgreSQL types, defaults, foreign keys,
+constraints and indexes. The findings below identify actual simplification
+candidates; this documentation does not claim that every existing field is
+essential or authorize deletion of stored history.
+
+## Column and metadata review: 2026-09-21
+
+A fresh PostgreSQL 14.23 database created from the current models contains 16
+application tables and 9 Django tables, with 96 indexes. Read-only inspection
+of the existing local database found identical table/column names, types and
+nullability. Every physical column is covered in the dictionary. The additional
+four-column `django_migrations` table is documented separately: it is absent
+from this fresh draft schema and expected after release freeze.
+
+### Decisions to make before freezing the release
+
+| Field or group | What current code does | Review decision |
+| --- | --- | --- |
+| `account_profile.product_family` | Imported from legacy accounts and edited/displayed in [account admin](../frontend/accounts/admin/users.py); it does not participate in current product authorization. | Strongest candidate for retiring from the live schema. Decide whether the historical label needs an archive before removing the field, admin surface and importer mapping together. Product assignments already belong in `account_product_grant`. |
+| `execution_job.result_metadata`, `result_sha256`, `result_received_at`, `qc_tool_version` | [Result processing](../frontend/dashboard/services/product_units/jobs/metadata.py) writes these snapshots. Searches of current application read paths found no consumer/verification of these stored job fields; report rendering still reads artifact files. | Decide whether PostgreSQL should supply report recovery and retained result evidence. Either implement that use and verification, or remove the unused copies in a reviewed schema change. A stored digest alone is not an integrity check. Keep `reference_period`: the [report serializer](../frontend/dashboard/services/jobs/serializers.py) already uses it as a fallback. |
+| `storage_delivery_source.access_key`, `secret_key` | Plaintext operational credentials, actively used by [worker requests](../frontend/dashboard/views/workers.py), potentially repeated across many source records. | These are not unused fields, but credential storage deserves a release decision. Consider a credential reference/secret-store design separately; do not erase active credentials without replacing their retrieval path. The SQL-only legacy importer intentionally leaves them blank. |
+| `account_product_grant.product_ident` | The [scope service](../frontend/accounts/services/products.py) accepts both business-product and executable-definition identifiers. The old model description implies only the latter. | Clarify the scope vocabulary/API contract before choosing a rename or catalog FK. Converting it directly to a product FK would discard definition-only scope and historical unresolved grants. |
+| `submitted_product_unit_code` on delivery, job and receipt | Means ZIP-verified input identity, while `product_unit_code` is a job/display observation or expected catalog snapshot depending on the table. [Current job result application](../frontend/dashboard/services/product_units/results.py) writes the same value to both job unit fields; legacy imports may supply reported-only values. | Clarify the name and contract: "submitted" does not mean manager accepted. Assess duplication at the job level separately from the sticky delivery identity and immutable expected-versus-observed receipt evidence. Do not merge all similarly named columns. |
+| `publication_submission.artifact_path` | Stores an absolute retained directory; [artifact validation](../frontend/dashboard/services/submissions/artifacts.py) checks it against the configured storage root. | A stable storage-relative key could simplify moving/restoring deployments. This is a compatibility improvement, not disposable metadata; existing immutable receipts must continue to resolve and verify. |
+
+These are review candidates, not confirmed permission to delete data. In
+particular, a field with no current UI reader can still be an intended audit
+record. Decide that retention requirement explicitly before removing its writer.
+
+### Lower-priority simplification and consistency
+
+| Item | Assessment |
+| --- | --- |
+| `catalog_definition_revision.source_path` | Source provenance rather than the location used to retrieve original bytes. It is retained in [plan reconstruction](../frontend/dashboard/services/catalog/delivery_plans.py) and admin. Keep or remove based on an explicit provenance requirement; never replace original specification bytes by serializing JSONB. |
+| `catalog_product_unit.created_at` | Usually duplicates the release's import timing. Low-impact removal candidate if there is no need for per-unit import timestamps. |
+| `catalog_product_unit.source_value` and `provenance` | [Release validation](../frontend/dashboard/services/catalog/sync/release_validation.py) compares these values; original and normalized codes can differ. Keep their meaning. `provenance` is free text although current writers use a small vocabulary; consider a choices/CHECK contract. |
+| `execution_job.job_status` and `request_source` | Current states/channels are validated by application paths, without SQL membership checks. Consider explicit enumerations/checks after accounting for supported legacy values. This is an integrity improvement, not metadata removal. |
+| Version/revision nonnegative checks alongside stricter positive checks | Django positive-integer fields produce `>= 0` checks while some named business constraints require `> 0`. The weaker checks are redundant but cheap; removing business constraints would weaken validation. Avoid changing field ownership just to reduce this count. |
+| `django_session` expired rows | Routine cleanup is supported by `clearsessions`; the table and active sessions remain required. This is a retention task, not a reason to remove session columns. |
+
+### Deliberate duplication to retain
+
+- Actor usernames and token IDs/names preserve who acted when accounts or
+  credentials change. Token-ID snapshots are intentionally not foreign keys.
+- API token permission/role/product/region snapshots prevent later account
+  grants from silently expanding previously issued credentials.
+- Product, release and specification descriptions can differ for grouped
+  products. Delivery/job descriptions also keep legacy history readable when
+  no authoritative catalog revision exists.
+- Current review/conflict state supports lists and concurrency checks; event
+  tables retain earlier decisions. These are separate current and historical
+  facts, not two independent sources that can be updated arbitrarily.
+- Readiness actor/time, scope digest and revision are required for explicit
+  manager confirmation and invalidation when accepted coverage changes.
+- `Delivery.date_submitted` retains legacy submission dates even when a verified
+  modern publication receipt cannot be recovered. Dropping it would lose
+  information from the available SQL-only backup.
+- `account_profile.country` still identifies the delivery owner's region in
+  [legacy region visibility](../frontend/dashboard/access/legacy_regions.py).
+  Region grants describe the viewer's scope and cannot replace that fact.
+  Changing the owner's country currently changes visibility of past deliveries;
+  review that compatibility behavior before retiring the profile field.
+
+### Enforcement and retention boundaries
+
+The dictionary distinguishes SQL constraints from model/service rules. Many
+cross-row checks, publication immutability and append-only event protections
+live in Django code rather than PostgreSQL triggers. Publication checks cannot
+prove that files still exist or that their hashes match. Nullable actor FKs
+with stored usernames intentionally preserve attribution after detachment.
+
+Django admin history is different: its actor relationship uses ORM `CASCADE`,
+so hard-deleting an account can remove administration events. Prefer deactivation
+when preserving historical users and deliveries; do not describe all audit
+tables as deletion-proof. Framework metadata and its indexes remain owned by
+Django's migrations.
+
+No fields, tables or indexes were removed in this review. No migration baseline,
+product specification or existing database was changed. Resolve agreed design
+changes through the [draft/released lifecycle](MIGRATIONS.md), and update the
+dictionary with them.
+
+## Earlier table and index audit: 2026-09-18
 
 Audited the local PostgreSQL schema read-only on 2026-09-18 and compared it with
 Django model ownership, indexes and the publication workflow. The database
@@ -8,7 +94,8 @@ alone is not an optimization target. No existing database was reset or altered.
 ## Inventory and decisions
 
 The [application schema](SCHEMA.md) lists every application table and its owning
-model. All 16 store separate facts and remain necessary:
+model. These 16 tables have distinct responsibilities; column-level retention
+decisions are reviewed above rather than inferred from table count:
 
 | Area | Tables | Decision |
 | --- | --- | --- |

@@ -4,6 +4,12 @@ QC Tool uses one application database. Django models are the executable schema
 specification; this reference explains their ownership and persistence rules.
 The [database runbook](MIGRATIONS.md) owns initialization and release changes.
 
+For the complete column-level schema, use the [table dictionary](TABLES.md):
+all 25 current tables, their 204 columns, PostgreSQL types, nullability, ORM
+defaults, foreign keys, constraints and indexes. It also explains the additional
+`django_migrations` recorder used after release freeze. The [metadata review](AUDIT.md#column-and-metadata-review-2026-09-21)
+identifies cleanup candidates and distinguishes them from retained evidence.
+
 ## Naming and ownership
 
 Each managed QC Tool model declares an explicit `Meta.db_table`. Table names use
@@ -205,7 +211,9 @@ see [operations](../../../docs/deployment/operations.md).
 ## Maintaining this structure
 
 Define each table once in its owning model, and update this inventory when its
-responsibility changes. Raw SQL must obtain and quote table identifiers from
+responsibility changes. Update the column dictionary with every field, default,
+constraint or index change; it is documentation, not an executable schema or a
+migration baseline. Raw SQL must obtain and quote table identifiers from
 model metadata, as the [delivery query](../frontend/dashboard/services/deliveries/listing/query/sql.py)
 does. Do not duplicate a table-name registry in another configuration file.
 
