@@ -1,4 +1,7 @@
 {
-  "phase": "draft",
-  "baselines": {}
+  "phase": "released",
+  "baselines": {
+    "accounts": "0001_major_release",
+    "dashboard": "0001_major_release"
+  }
 }

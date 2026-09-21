@@ -3,6 +3,13 @@
 This package owns QC Tool's schema lifecycle, deployment commands, checks and
 migration documentation. Read `policy.json` to select the applicable workflow.
 
+**QC Tool 3.0.0 freezes the schema.** The current policy is `released`, with
+`accounts/0001_major_release` and `dashboard/0001_major_release` as immutable
+baseline identities. The verified PostgreSQL inventory is **24 tables and 193
+columns**. Future model changes require reviewed forward migrations. Release
+images, registry publication and production cutover are separate steps tracked
+in the [release checklist](AUDIT.md#remaining-release-checklist).
+
 | Lifecycle stage | Workflow |
 | --- | --- |
 | `draft` | Develop models without migration files; initialize disposable databases from those models. |
@@ -28,9 +35,9 @@ stores the resulting schema, application data and record of applied migrations.
 | Review every table and column | [Complete table and column dictionary](TABLES.md) |
 | Review model ownership, retained data and cleanup candidates | [Application schema](SCHEMA.md) and [database audit](AUDIT.md) |
 | Understand what belongs in Git versus PostgreSQL | [Migration philosophy](MIGRATIONS.md#migration-philosophy) |
-| Develop a draft schema | [Models-only development](MIGRATIONS.md#draft-schema-development) |
+| Change the frozen schema | [Forward-migration development](MIGRATIONS.md#development-after-the-major-release-is-frozen) |
 | Check a change on a disposable database | [Local verification](MIGRATIONS.md#local-verification) |
-| Prepare the first release | [Create and freeze the first snapshots](MIGRATIONS.md#freeze-the-first-release) |
+| Understand the 3.0.0 freeze procedure | [First snapshots](MIGRATIONS.md#freeze-the-first-release) |
 | Transfer legacy production data | [SQL dump importer](LEGACY_IMPORT.md) and [the zero step](MIGRATIONS.md#one-time-manual-production-cutover) |
 | Maintain migrations after the release | [Developer workflow](MIGRATIONS.md#development-after-the-major-release-is-frozen) |
 | Build and deploy a release | [Release preparation](MIGRATIONS.md#prepare-a-release) and [release record](RELEASE_TEMPLATE.md) |
@@ -56,21 +63,20 @@ src/qc_tool/database/
 ├── apps.py                         # Django command discovery
 ├── management/commands/database.py # database plan|check|apply
 ├── management/commands/import_legacy_dump.py # Explicit dry run / fresh-target import
-├── migrations/                    # No migration definitions during draft
+├── migrations/                    # Frozen baselines and forward migrations
 │   ├── accounts/                  # Accounts migration module
 │   └── dashboard/                 # Dashboard migration module
 ├── checks/                        # History gate and disposable schema checks
 └── tests/                         # Policy, initialization and deployment tests
 ```
 
-The Django app labels `accounts` and `dashboard` have migration modules under
-this package. Model ownership may evolve during draft schema development.
-At freeze, generate snapshots for the registered model-owning apps. The app
-subdirectories support Django's dependency graph; releases use one
-application-wide plan and apply job.
+The Django app labels `accounts` and `dashboard` have frozen initial migrations
+under this package. Preserve these identities and files; add reviewed forward
+migrations for later changes. The app subdirectories support Django's dependency
+graph; releases use one application-wide plan and apply job.
 
 There is no second SQL/JSON schema specification to maintain. Django models
-describe the desired schema; after freeze, native Django migration files describe
-its evolution. Django's framework migrations remain installed upstream and are
-enabled for released targets. During draft only, their history is disabled too
-so all related tables can be built together from current models.
+describe the desired schema; native Django migration files describe its evolution.
+Django's framework migrations remain installed upstream and are enabled together
+with the QC Tool baselines. A fresh released target starts empty and applies the
+complete graph; an existing draft database is not an upgrade target.

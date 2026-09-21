@@ -1,13 +1,16 @@
 # Database audit and remaining release work
 
-Updated **2026-09-21**. Schema cleanup and removal of obsolete profile/region access are implemented
-in the working tree. The current draft contains **23 tables, 189 columns and 90
-indexes**; see the [complete dictionary](TABLES.md).
+Updated **2026-09-21** for **QC Tool 3.0.0**. The schema is frozen in the separate
+release candidate: [policy.json](policy.json) declares `released` and identifies
+the two `0001_major_release` baselines. The verified released PostgreSQL schema
+contains **24 tables, 193 columns, 120 constraints and 91 indexes**; see the
+[complete dictionary](TABLES.md).
 
-**Next step: review and commit the cleanup, then freeze the schema in a separate
-release-preparation change.** [policy.json](policy.json) still declares `draft`
-with no baselines. The earlier test and import results below verify the draft
-models; they do not establish a frozen release or a completed production cutover.
+**Next step: record the release commit and CI results, then build and verify the
+release images.** Publication is on hold until registry access is available.
+The [3.0.0 release record](releases/3.0.0.md) separates verified source checks
+from pending packaged-artifact checks, publication and production cutover.
+No existing local or production database was upgraded by this freeze.
 
 ## Remaining release checklist
 
@@ -15,47 +18,37 @@ Keep items unchecked until their evidence is recorded for the selected release.
 The [migration runbook](MIGRATIONS.md) owns the commands; this checklist tracks
 what remains to be done.
 
-### Before freezing
+### Before publication
 
-- [ ] **Review and commit the final draft schema.** Review [TABLES.md](TABLES.md)
-  against the intended release, including the retained/deferred decisions below.
-  Include the application code and tests that use the renamed fields. The completed
-  changes below include removal of obsolete profile/region access.
-- [ ] **Start the release record.** Copy [RELEASE_TEMPLATE.md](RELEASE_TEMPLATE.md)
-  into the release PR or deployment records. Choose the release version, owner,
-  target environment and manual legacy-cutover path. Confirm that the
-  `20260907` SQL dump is the intended source snapshot and account for any later
-  legacy writes; the available backup contains no ZIPs or QC result files.
-
-### Freeze the schema
-
-- [ ] **Create the separate freeze change.** Follow
-  [Freeze the first release](MIGRATIONS.md#freeze-the-first-release): generate
-  `accounts/0001_major_release.py` and `dashboard/0001_major_release.py` under
-  the central migration package together with policy `released` and the
-  matching baseline identities. Review the operations and
-  dependencies. Do not fake these migrations onto an existing draft database.
-- [ ] **Verify the released migration graph.** Run history, model-drift, schema
-  and application checks on fresh SQLite and PostgreSQL targets. Verify role
-  bootstrap, repeat application, and an empty product catalog. Refresh the
-  dictionary from that released schema, including `django_migrations` (currently
-  documented separately). After these checks pass, commit policy and snapshots
-  together in the freeze change. Record CI results for that exact candidate.
-
-### After freezing, before production cutover
+- [ ] **Record the committed candidate and CI results.** Commit policy and both
+  reviewed snapshots together in the separate freeze change. Record its immutable
+  source SHA and passing CI for that exact revision in the
+  [release record](releases/3.0.0.md). Local checks below passed against mounted
+  candidate source; they do not prove the content of a published image.
+- [ ] **Confirm registry access and publication configuration.** Publication
+  remains on hold at the user's request until access is available. Record the
+  intended registries and immutable frontend/worker image references before
+  publishing or deploying anything.
 
 - [ ] **Build and verify the release images.** Use a clean, committed source SHA
   for frontend and worker, or record and test compatibility of a retained worker.
   Run packaged-artifact checks **without checkout bind mounts**. Record immutable
   image digests and pin them in the target configuration; promote the same images.
   See [Prepare a release](MIGRATIONS.md#prepare-a-release).
+
+### Before production cutover
+
+- [ ] **Confirm the source snapshot and target.** Complete the release owner,
+  target environment and manual cutover details in the release record. Confirm
+  that the `20260907` SQL dump is the intended source and account for any later
+  legacy writes. The available backup contains no ZIPs or QC result files.
 - [ ] **Repeat the legacy import rehearsal with those images.** Follow
   [LEGACY_IMPORT.md](LEGACY_IMPORT.md) on a fresh isolated PostgreSQL target built
   from the frozen migrations. Compare the source checksum, dry-run/applied counts
   and converted fields. Record the omitted data and permission mappings. Historical
   submission dates remain history: missing files cannot create verified receipts
-  or approval eligibility. The successful draft rehearsal below is the comparison
-  point, not a substitute for this run.
+  or approval eligibility. The successful frozen-source rehearsal in the release
+  record is the comparison point, not a substitute for the packaged-image run.
 - [ ] **Prepare product access and replacement credentials.** Review the
   [access map or administrator assignments](LEGACY_IMPORT.md#2-review-user-access),
   including legacy staff accounts and unmapped permissions. After importing into
@@ -88,14 +81,48 @@ what remains to be done.
   after acceptance checks; record monitoring results and the recovery window.
   Follow the [manual cutover procedure](MIGRATIONS.md#one-time-manual-production-cutover).
 
+## Frozen schema verification: 3.0.0
+
+The separate release candidate contains initial snapshots for `accounts` and
+`dashboard`, both named `0001_major_release`, with matching `released` policy.
+The snapshots were reviewed for dependencies, model creation, indexes and
+constraints; they contain no data import or product seeding. Original product
+specifications and uploaded snapshots were not modified.
+
+Verified on disposable targets using the mounted release-candidate source:
+
+- SQLite and PostgreSQL baseline creation, synthetic-record preservation,
+  repeat application, role bootstrap, declared constraints/indexes and model
+  drift checks passed.
+- All **1,091 application tests** passed on SQLite (eight skips) and PostgreSQL
+  (two skips). Each backend now skips the draft-only history test; the other
+  skips remain backend-specific or established test exclusions.
+- All **109 JavaScript tests** and **33 host history/parser tests** passed.
+- A fresh PostgreSQL legacy-import rehearsal preserved 97 users, 57,583 deliveries,
+  61,319 jobs, 29,688 sources, 196 administration events and 15,992 historical
+  submission dates. Converted user/source/delivery/job fields matched individually;
+  no products or verified receipts were created, repeat import was refused and
+  the source checksum was unchanged. See the [release record](releases/3.0.0.md).
+- Read-only inspection of PostgreSQL **14.23** confirmed **24 tables, 193 columns,
+  120 constraints and 91 indexes**. The dictionary matches all physical columns,
+  null flags, constraints and indexes. The migration recorder is now part of the
+  inventory; the three Django membership-table row IDs are `bigint` in the
+  released schema.
+
+These are source and disposable-database checks. Exact-commit CI, packaged-image
+verification, registry publication, release-image import rehearsal and production
+cutover remain separate checklist items above. Freeze does not adopt or fake the
+new migration history onto an existing draft or legacy database.
+
 ## Column and metadata review: 2026-09-21
 
 ### Completed schema cleanup
 
 These are implemented decisions, with no remaining implementation task in this
 section. Existing databases, original specifications and uploaded snapshots were
-not rewritten. The draft now has 23 tables and 189 columns; the earlier cleanup had 25 tables
-and 198 columns.
+not rewritten during cleanup. That draft had 23 tables and 189 columns; an earlier
+iteration had 25 tables and 198 columns. The released inventory above adds Django's
+migration recorder without restoring removed application metadata.
 
 | Completed change | Retained behavior / reference |
 | --- | --- |
@@ -111,7 +138,7 @@ and 198 columns.
 ### Retained for this release; optional future changes
 
 These observations are explicitly deferred and do not block this release.
-After freeze, any schema change needs a reviewed forward migration.
+Any subsequent schema change needs a reviewed forward migration.
 
 | Item | Decision for this release |
 | --- | --- |
@@ -155,16 +182,16 @@ when preserving historical users and deliveries; do not describe all audit
 tables as deletion-proof. Framework metadata and its indexes remain owned by
 Django's migrations.
 
-### Current draft verification
+### Earlier draft verification: 2026-09-21
 
-Fresh SQLite and PostgreSQL schema probes pass for the current 23-table schema,
+Before freeze, fresh SQLite and PostgreSQL schema probes passed for the 23-table draft,
 including repeat initialization, account roles, constraints and index checks.
-The table dictionary is regenerated from a fresh PostgreSQL 14.23 database:
+The dictionary at that stage was verified from a fresh PostgreSQL 14.23 database:
 189 columns, 119 constraints and 90 indexes.
 
 - The 1,091-test application suite passed on SQLite (seven skips) and PostgreSQL
   (one skip). The 109 JavaScript tests and 33 host history/parser tests passed
-  separately. The current WSGI imports, Django checks and draft history gate pass.
+  separately. WSGI imports, Django checks and the draft history gate passed.
 - The unchanged 20260907 SQL dump was imported into a separate fresh PostgreSQL
   target. All 97 users, 29,688 storage sources, 57,583 deliveries and 61,319 jobs
   matched the prepared conversion field by field. It retained 196 administration
@@ -181,16 +208,19 @@ The table dictionary is regenerated from a fresh PostgreSQL 14.23 database:
 
 At the user's explicit request, the local development `qc_tool` database was
 backed up in the ignored `backups/` directory, recreated, and initialized through
-the whole-app database command. PostgreSQL now has 23 tables, 189 columns and
+the whole-app database command. That reset produced 23 tables, 189 columns and
 90 indexes, with no retired profile/region tables or country columns. Products,
 deliveries, jobs and product assignments start empty. Startup creates the three
-standard local demo accounts.
+standard local demo accounts. This describes the earlier local review state,
+not the isolated 24-table release verification database.
 
 Database readiness and Django checks passed. Authenticated dashboard, product,
 delivery and reviewer pages returned HTTP 200 for the applicable demo roles;
 the product list is empty for all three. Shared files and original specifications
-were preserved. Policy remains `draft` pending the user's application review
-and a separate freeze change. This reset is not a production-cutover rehearsal.
+were preserved. The policy was still `draft` at the time of that reset. The
+separate 3.0.0 freeze changes the release policy; it does not upgrade or reset
+that existing local database. The earlier reset was not a production-cutover
+rehearsal.
 
 ## Earlier index audit: 2026-09-18
 
@@ -205,5 +235,6 @@ receipts. Further index tuning should follow production query plans and observed
 load. No latency improvement is claimed from the small local dataset.
 
 The [application schema](SCHEMA.md) owns the table inventory and persistence
-contracts. The earlier test totals are superseded by the current draft verification
-above; record the eventual frozen-release results in the release record.
+contracts. The historical results remain background evidence; the current frozen
+schema checks and pending release operations are recorded above and in the
+[3.0.0 release record](releases/3.0.0.md).
