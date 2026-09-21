@@ -58,6 +58,13 @@
     font-size: 12px;
 }
 
+.workspace-summary__guidance {
+    margin: 10px 0 0;
+    color: var(--qc-color-muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
 .workspace-summary__description a {
     color: var(--qc-color-primary);
     text-decoration: none;

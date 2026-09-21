@@ -27,6 +27,7 @@
                 {% endif %}
             </div>
         </div>
+        {% if summary.status_description %}<p class="workspace-summary__guidance">{{ summary.status_description }}</p>{% endif %}
     </div>
     {% if summary.facts %}
     <dl class="workspace-summary__facts workspace-card__footer">

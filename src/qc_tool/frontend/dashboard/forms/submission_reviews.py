@@ -13,9 +13,9 @@ class SubmissionReviewForm(forms.Form):
         label="Feedback for the uploader", max_length=5000, required=False,
         widget=forms.Textarea(attrs={
             "rows": 4, "class": "form-control", "aria-describedby": "review-notes-help",
-            "placeholder": "Describe what needs to change and how the corrected delivery will be checked.",
+            "placeholder": "Add feedback about this delivery. If rejecting, explain what needs to change.",
         }),
-        help_text="Shared with the uploader. Required when requesting corrections or replacing an approved submission; optional for approval.",
+        help_text="Shared with the uploader. Required when rejecting or choosing between competing submissions; optional for approval.",
     )
 
     def clean(self):

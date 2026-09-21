@@ -1,0 +1,246 @@
+/* Submission receipts follow the same summary and card layout as QC history. */
+.submission-review-page .workspace-card {
+    min-width: 0;
+    margin-bottom: 24px;
+}
+
+.submission-review-page .workspace-card:last-child {
+    margin-bottom: 0;
+}
+
+.submission-review-page .review-actions .btn,
+.submission-review-page .submission-feedback__next .btn {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: normal;
+}
+
+.submission-downloads {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.submission-download {
+    display: flex;
+    height: 100%;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--qc-color-border);
+    border-radius: var(--qc-radius-small);
+    color: var(--qc-color-primary);
+    background: var(--qc-color-surface-subtle);
+    text-decoration: none;
+}
+
+.submission-download:hover,
+.submission-download:focus-visible {
+    border-color: var(--qc-color-primary);
+    color: var(--qc-color-primary-dark);
+    background: var(--qc-color-primary-soft);
+    text-decoration: none;
+}
+
+.submission-download__icon {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+}
+
+.submission-download__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.submission-download__content strong {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.submission-download__filename,
+.submission-download__size {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.submission-download__filename {
+    color: var(--qc-color-text);
+}
+
+.submission-download__size {
+    color: var(--qc-color-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.submission-supporting-files {
+    margin-top: 20px;
+    border-top: 1px solid var(--qc-color-border-subtle);
+    padding-top: 4px;
+}
+
+.submission-supporting-files:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border: 0;
+}
+
+.submission-supporting-files > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    color: var(--qc-color-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.submission-supporting-files > summary::-webkit-details-marker {
+    display: none;
+}
+
+.submission-supporting-files__chevron {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+}
+
+.submission-supporting-files[open] .submission-supporting-files__chevron {
+    transform: rotate(90deg);
+}
+
+.submission-count {
+    display: inline-block;
+    min-width: 24px;
+    padding: 1px 7px;
+    border-radius: var(--qc-radius-pill);
+    background: var(--qc-color-surface-hover);
+    color: var(--qc-color-muted);
+    font-size: 12px;
+    text-align: center;
+}
+
+.submission-supporting-files > p {
+    color: var(--qc-color-muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.submission-file-list,
+.submission-candidates,
+.submission-history {
+    margin: 0;
+    list-style: none;
+}
+
+.submission-file-list,
+.submission-candidates {
+    padding: 0;
+}
+
+.submission-file-list li,
+.submission-candidates li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px 24px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--qc-color-border-subtle);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.submission-file-list li:last-child,
+.submission-candidates li:last-child {
+    border-bottom: 0;
+}
+
+.submission-file-list a,
+.submission-candidates li > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.submission-file-list li > span {
+    flex-shrink: 0;
+    color: var(--qc-color-muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.submission-candidates li {
+    padding: 18px 24px;
+}
+
+.submission-candidates p {
+    margin: 6px 0 0;
+    color: var(--qc-color-muted);
+    font-size: 12px;
+}
+
+.submission-storage-notice {
+    margin: 0;
+}
+
+.submission-review-page .review-form__field {
+    margin-bottom: 20px;
+}
+
+.submission-review-page .review-form__field p {
+    font-size: 13px;
+}
+
+.submission-history__event + .submission-history__event {
+    border-top: 1px solid var(--qc-color-border-subtle);
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.submission-history__byline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-size: 13px;
+}
+
+.submission-history__byline time {
+    margin-left: auto;
+    color: var(--qc-color-muted);
+    font-size: 12px;
+}
+
+.submission-history__event > p {
+    margin: 14px 0 0;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.submission-download:focus-visible,
+.submission-supporting-files > summary:focus-visible {
+    outline: 3px solid var(--qc-focus-ring);
+    outline-offset: 3px;
+}
+
+@media (max-width: 767px) {
+    .submission-downloads { grid-template-columns: minmax(0, 1fr); }
+    .submission-candidates li { align-items: flex-start; flex-direction: column; }
+    .submission-history__byline time { margin-left: 0; }
+}
+
+@media (max-width: 480px) {
+    .submission-download { padding: 12px; }
+    .submission-candidates li { padding: 16px; }
+    .submission-file-list li { align-items: flex-start; flex-direction: column; gap: 4px; }
+}

@@ -22,6 +22,7 @@ from qc_tool.frontend.dashboard.services.submissions.access import (
     visible_submissions,
 )
 from qc_tool.frontend.dashboard.services.submissions.artifacts import submission_inventory, open_submission_file
+from qc_tool.frontend.dashboard.services.submissions.detail_presentation import submission_detail_presentation
 from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context, current_review_feedback
 from qc_tool.frontend.dashboard.services.submissions.review import review_submission
 
@@ -132,15 +133,36 @@ def submission_review(request, submission_id):
     except (ArtifactUnavailable, OSError):
         pass
     events = list(submission.review_events.select_related("actor").order_by("created_at", "pk"))
+    detail = submission_detail_presentation(
+        submission, can_review=can_review, storage_available=storage_available,
+        files=files, conflict=conflict,
+    )
+    summary = {
+        "kind": "Submitted delivery", "icon": "file",
+        "reference": "#{}".format(submission.delivery_id),
+        "title": submission.delivery.filename,
+        "description_label": "Product",
+        "description": submission.product_release.product.name,
+        "description_url": reverse("product_detail", args=(submission.product_release.product.ident,)),
+        "status_label": "Review status", "status": detail["status"],
+        "status_description": detail["status"]["message"],
+        "facts": [
+            {"label": "Product unit", "value": submission.product_unit_code},
+            {"label": "Submitted by", "value": submission.submitted_by_username},
+            {"label": "Submitted on", "datetime": submission.requested_at},
+            {"label": "QC result", "value": "Passed" if submission.job.job_status == "ok" else "Not passed"},
+            {"label": "Delivery plan", "value": "Revision {}".format(submission.product_release.revision)},
+        ],
+    }
     return render(request, "dashboard/submissions/detail.html", {
         **_submission_workspace_navigation(access, submission),
         "submission": submission, "form": form, "can_review": can_review,
-        "can_decide": can_review and submission.publication_state == "published"
-            and submission.review_state in {"pending", "conflict"},
+        "can_decide": detail["decision"]["can_decide"],
+        "detail": detail, "submission_summary": summary,
         "conflict": conflict,
         "candidates": visible_submissions(access).filter(
             product_unit=submission.product_unit, publication_state="published",
-        ).exclude(pk=submission.pk).order_by("requested_at"),
+        ).exclude(pk=submission.pk).order_by("requested_at") if can_review else [],
         "events": events,
         "review_feedback": current_review_feedback(submission, events=events),
         "correction": correction_context(submission, access, events=events),

@@ -70,6 +70,54 @@ class SubmissionWorkspaceFixtureMixin(SubmissionFixtureMixin):
 
 @override_settings(SUBMISSION_ENABLED=True)
 class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
+    def test_review_summary_prioritizes_retained_downloads_and_pending_action(self):
+        (self.job_root / "report.pdf").write_bytes(b"retained QC report")
+        submission = self.published()
+        shutil.rmtree(self.job_root)
+        self.client.force_login(self.manager)
+        response = self.client.get(self.review_url(submission))
+        self.assertContains(response, "<h1>Submission review</h1>", html=True)
+        summary = response.context["submission_summary"]
+        self.assertEqual(summary["title"], self.delivery.filename)
+        self.assertEqual(summary["status"]["label"], "Awaiting review")
+        self.assertContains(response, "Download submitted ZIP")
+        self.assertContains(response, "Download QC report")
+        self.assertContains(response, 'name="expected_review_version"')
+        self.assertContains(response, 'name="expected_conflict_version"')
+        self.assertContains(response, 'name="decision" value="approved"')
+        self.assertNotContains(response, 'id="submission-history-heading"')
+        self.assertNotContains(response, '<details open')
+        primary_files = response.context["detail"]["evidence"]["primary_files"]
+        self.assertEqual({file["name"] for file in primary_files}, {"input.d/delivery.zip", "report.pdf"})
+        for file in primary_files:
+            self.assertEqual(self.client.get(file["url"]).status_code, 200)
+        self.assertContains(response, 'href="{}"'.format(reverse(
+            "submission_file", args=(submission.pk, "output.d/report.txt"),
+        )))
+
+    def test_owner_receipt_explains_pending_review_without_review_controls(self):
+        submission = self.published()
+        other, delivery, _job, job_root = self.create_candidate("competing-owner")
+        self.submit(other, delivery, job_root)
+        self.client.force_login(self.owner)
+        response = self.client.get(self.review_url(submission))
+        self.assertContains(response, "<h1>Submission details</h1>", html=True)
+        self.assertNotContains(response, 'id="submission-decision"')
+        self.assertNotContains(response, "competing-owner")
+        self.assertNotContains(response, 'id="submission-candidates-heading"')
+        self.assertEqual(response.context["candidates"], [])
+
+    def test_stopped_product_allows_rejection_but_not_approval(self):
+        submission = self.published()
+        self.client.force_login(self.manager)
+        self.product.is_active = False
+        self.product.save(update_fields=("is_active",))
+        response = self.client.get(self.review_url(submission))
+        self.assertNotContains(response, 'name="decision" value="approved"')
+        self.assertNotContains(response, 'name="decision" value="replace"')
+        self.assertContains(response, 'name="decision" value="declined"')
+        self.assertTrue(response.context["detail"]["decision"]["approval_block_reason"])
+
     def test_owner_cannot_approve_and_unassigned_manager_cannot_read_receipt(self):
         submission = self.published()
         self.client.force_login(self.owner)
@@ -119,7 +167,7 @@ class SubmissionWorkspaceTests(SubmissionWorkspaceFixtureMixin, TestCase):
         self.assertNotContains(response, '<script>alert("extent")</script>')
         self.assertContains(response, '?correction_for={}'.format(submission.pk))
         self.assertContains(response, 'datetime="{}"'.format(event.created_at.isoformat()))
-        self.assertLess(response.content.index(b"correction-heading"), response.content.index(b"Submitted delivery and QC evidence"))
+        self.assertLess(response.content.index(b"correction-heading"), response.content.index(b"submission-evidence-heading"))
         self.assertNotContains(response, "Reject and request corrections")
         self.assertContains(response, 'href="{}"'.format(self.deliveries_url("action_required")))
 
