@@ -25,7 +25,12 @@ def convert_rule_to_sql_violation(rule_text):
         then_clause = if_then_match.group(2).strip()
 
         # Violation: target value exists, but IF condition was NOT met
-        return f"({then_clause}) AND NOT ({condition})"
+        condition_error = f"({then_clause}) AND NOT ({condition})"
+
+        # Violation two: condition was met, but target value does not exist
+        then_error = f"({condition}) AND NOT ({then_clause})"
+
+        return f"({condition_error}) OR ({then_error})"
 
     # Standalone rule: directly invert with NOT (...)
     return f"NOT ({rule_text})"
