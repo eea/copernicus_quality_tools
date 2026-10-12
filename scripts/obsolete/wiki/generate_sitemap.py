@@ -1,3 +1,8 @@
+"""Retained legacy single-page GitHub wiki sitemap generator.
+
+Manual historical utility with fixed wiki scope; not part of the documentation
+build. Its historical output path is derived from the parent of this directory.
+"""
 import os
 import requests
 from bs4 import BeautifulSoup

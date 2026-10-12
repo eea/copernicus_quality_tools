@@ -1,3 +1,8 @@
+"""Retained legacy GitHub wiki crawler that writes a sitemap in the current directory.
+
+Manual historical documentation utility; it makes network requests and is not
+part of the current application or its documentation build.
+"""
 import requests
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET

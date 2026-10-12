@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
-"""
-Download _gap_ attachments from QC job results and extract polygons
-with area > 1 km² (1 000 000 m²) into per-delivery GeoPackage files.
+"""Manual, repeatable gap analysis for a captured CLC delivery list.
 
-Usage:
-    python clc_gap_undetected.py \
-        --username <qc_user> \
-        --password <qc_pass> \
-        [--base-url https://qc-copernicus.eea.europa.eu] \
-        [--delivery-list clc_delivery_list.json] \
-        [--output-dir ./gap_results] \
-        [--area-threshold 1000000] \
-        [--land-polygons osm-land-polygons-europe.gpkg]
+Downloads historical report attachments after interactive authentication, filters
+large gap features, and optionally separates land from ocean intersections. It
+does not submit deliveries, change QC verdicts, or run automated QC tests. The
+companion delivery_list.json is a historical snapshot, not a synthetic fixture.
+The default area threshold is 100000 square metres (10 hectares). Missing land
+polygons disable ocean filtering; computed areas require an appropriate CRS.
+Omit --password to keep credentials out of command-line arguments.
 """
-
 import argparse
 import getpass
 import json
@@ -31,7 +26,7 @@ LOGIN_URL = "/accounts/login/"
 REPORT_URL = "/data/report/{job_uuid}/report.json"
 ATTACHMENT_URL = "/attachment/{job_uuid}/{filename}/"
 
-AREA_THRESHOLD_DEFAULT = 100_000  # 1 ha
+AREA_THRESHOLD_DEFAULT = 100_000  # 10 ha
 
 
 def login(session: requests.Session, base_url: str, username: str, password: str) -> None:
@@ -239,9 +234,9 @@ def main():
     parser.add_argument("--base-url", default=BASE_URL, help=f"Base URL of the QC Tool (default: {BASE_URL})")
     parser.add_argument(
         "--delivery-list",
-        default=Path(__file__).parent / "clc_delivery_list.json",
+        default=Path(__file__).parent / "delivery_list.json",
         type=Path,
-        help="Path to clc_delivery_list.json",
+        help="Path to delivery_list.json",
     )
     parser.add_argument(
         "--output-dir",
@@ -253,7 +248,7 @@ def main():
         "--area-threshold",
         type=float,
         default=AREA_THRESHOLD_DEFAULT,
-        help=f"Minimum gap area in m² to include (default: {AREA_THRESHOLD_DEFAULT} = 1 ha)",
+        help=f"Minimum gap area in m² to include (default: {AREA_THRESHOLD_DEFAULT} = 10 ha)",
     )
     parser.add_argument(
         "--land-polygons",

@@ -1,3 +1,10 @@
+"""Manual CLC2024 metadata generation with retained historical XML templates.
+
+Runs immediately when executed or imported. It selects the first GPKG/GDB and
+first clc24_* layer beside this file, prompts for a contact email, and replaces
+four XML outputs in that directory. It does not validate generated metadata.
+Do not import this script as a library or run it during QC verification.
+"""
 import os
 import re
 import uuid

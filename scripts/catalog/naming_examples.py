@@ -1,11 +1,15 @@
+"""Read-only, heuristic naming examples from selected CLMS specifications.
 
-
+This manual diagnostic uses the legacy parsEO parse_auto API and fixed sample
+substitutions. Its output does not establish application identification or QC
+acceptance. Specification files are never rewritten.
+"""
+import argparse
 import json
 import os
 from pathlib import Path
 from typing import Any, Dict
 
-import parseo
 
 
 TARGET_KEYS = [
@@ -40,6 +44,7 @@ def find_keys(obj, target_keys, found=None):
 
 
 def main(products_dir) -> None:
+    import parseo
     folder = Path(products_dir)
 
     c = 0
@@ -222,11 +227,10 @@ def main(products_dir) -> None:
         print(prod, sample_name)
 
 if __name__ == "__main__":
-    #products_dir = "/mnt/c/users/jkadlec/gisat/src3/copernicus_quality_tools/product_definitions/"
-    products_dir = r"C:\Users\jkadlec\gisat\src3\copernicus_quality_tools\product_definitions"
-    products_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent.joinpath("product_definitions")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--products-dir", type=Path,
+                        default=Path(__file__).resolve().parents[2] / "product_definitions",
+                        help="Product definition directory (default: repository product_definitions)")
+    products_dir = parser.parse_args().products_dir
     print("products_dir", products_dir)
-
     main(products_dir)
-
-

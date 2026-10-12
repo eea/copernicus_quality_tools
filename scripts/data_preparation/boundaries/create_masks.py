@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Create per-feature European country masks from a projected boundary layer.
 
+Manual utility requiring the historical FID_eurobo attribute and explicit source
+and output paths. Existing outputs are replaced. Pixel size defaults to 5 metres;
+the historical mask_swf_005 filename prefix is retained for every pixel size.
+This script is not an automated QC check or a boundary publication command.
 """
-Script creating raster masks of european countries.
-"""
-
-
+import argparse
 from datetime import datetime
 from math import ceil
 from math import floor
 from pathlib import Path
 
-import osgeo.ogr as ogr
-import osgeo.gdal as gdal
 
 
 def enlarge_to_grid(xmin, ymin, xmax, ymax, pixel_size):
@@ -25,15 +25,16 @@ def enlarge_to_grid(xmin, ymin, xmax, ymax, pixel_size):
 def get_size(xmin, ymin, xmax, ymax, pixel_size):
     return (int((xmax - xmin) / pixel_size), int((ymax - ymin) / pixel_size))
 
-def main(pixel_size=5):
+def main(source_file, output_dir, pixel_size=5):
+    import osgeo.ogr as ogr
+    import osgeo.gdal as gdal
     gdal.UseExceptions()
     ogr.UseExceptions()
 
-    dest_path = Path("/mnt/pracovni-archiv-01/projects/cop15m/swf_masks/deflate")
-    src_path = Path("/home/ikratochvil/userdoc/gisat/cop15m/swf_masks")
+    dest_path = Path(output_dir)
 
     # Open datasource of boundary polygons.
-    src_filepath = src_path.joinpath("VHR_Image_2015_CCMs_CC/euroboundarymap_diss_grid_3035_14012014_CCMs_CC.shp")
+    src_filepath = Path(source_file)
     src_dsrc = ogr.Open(str(src_filepath))
     src_layer = src_dsrc.GetLayerByIndex(0)
 
@@ -84,4 +85,12 @@ def main(pixel_size=5):
         print(datetime.now())
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source", type=Path, required=True,
+                        help="Projected source boundary file with FID_eurobo attributes")
+    parser.add_argument("--output-dir", type=Path, required=True,
+                        help="Existing output directory; matching outputs are replaced")
+    parser.add_argument("--pixel-size", type=float, default=5,
+                        help="Grid pixel size (default: %(default)s; filenames retain the historical 005 prefix)")
+    args = parser.parse_args()
+    main(source_file=args.source, output_dir=args.output_dir, pixel_size=args.pixel_size)

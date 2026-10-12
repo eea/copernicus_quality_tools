@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Create raster boundary layers from reference masks and a boundary mosaic.
 
+Manual preparation utility with explicit input and output paths. The historical
+algorithm generates only the EU reference tile and replaces existing outputs.
+It is not an automated QC check and does not publish boundary generations.
 """
-Script creating raster boundary layers based on set of the reference boundary layers and source pan-european boundary mosaic
-"""
-
+import argparse
 import os
 import re
 import subprocess
 
-import osgeo.ogr as ogr
-import osgeo.gdal as gdal
 
-REFERENCE_FILES_DIR = "/home/jtomicek/copernicus_quality_tools/qc_tool_boundary/boundaries/raster/"
-BOUNDARY_MOSAIC = "/home/jtomicek/Documents/qctool_eea39_boundary_update/eea_r_3035_20_m_copernicus-buffer_p_2012-2018_v03_r00/Boundary_EEA39_03035_020m.tif"
-RESULTS_DIR = "/home/jtomicek/Documents/qctool_eea39_boundary_update/results"
 REFERENCE_FILES_REGEX = "^mask_eea38uk_010m_"
 
 
@@ -36,6 +33,7 @@ def dir_recursive_search(in_dir, regexp=".*", target="file", deep=9999, full_pat
 
 
 def get_raster_extent(raster_path):
+    import osgeo.gdal as gdal
     dataset = gdal.Open(raster_path)
     if not dataset:
         raise ValueError("Could not open the raster file.")
@@ -56,6 +54,7 @@ def get_raster_extent(raster_path):
     return {"xmin": str(xmin), "ymin": str(ymin), "xmax": str(xmax), "ymax": str(ymax)}
 
 def get_pixel_size(raster_path):
+    import osgeo.gdal as gdal
     dataset = gdal.Open(raster_path)
     if not dataset:
         raise ValueError("Could not open the raster file.")
@@ -65,6 +64,8 @@ def get_pixel_size(raster_path):
 
 
 def main(reference_files_dir, boundary_mosaic, results_dir, reference_files_regex):
+    import osgeo.ogr as ogr
+    import osgeo.gdal as gdal
     gdal.UseExceptions()
     ogr.UseExceptions()
 
@@ -112,11 +113,14 @@ def main(reference_files_dir, boundary_mosaic, results_dir, reference_files_rege
 
 
 if __name__ == "__main__":
-    reference_files_dir = REFERENCE_FILES_DIR
-    boundary_mosaic = BOUNDARY_MOSAIC
-    results_dir = RESULTS_DIR
-    reference_files_regex=REFERENCE_FILES_REGEX
-    main(reference_files_dir=reference_files_dir,
-         boundary_mosaic=boundary_mosaic,
-         results_dir=results_dir,
-         reference_files_regex=REFERENCE_FILES_REGEX)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--reference-dir", required=True, help="Directory containing reference masks")
+    parser.add_argument("--mosaic", required=True, help="Source pan-European boundary raster")
+    parser.add_argument("--output-dir", required=True, help="Existing output directory; matching outputs are replaced")
+    parser.add_argument("--reference-regex", default=REFERENCE_FILES_REGEX,
+                        help="Reference filename pattern (default: %(default)s)")
+    args = parser.parse_args()
+    main(reference_files_dir=args.reference_dir,
+         boundary_mosaic=args.mosaic,
+         results_dir=args.output_dir,
+         reference_files_regex=args.reference_regex)
