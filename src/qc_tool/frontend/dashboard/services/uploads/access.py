@@ -5,6 +5,9 @@ from qc_tool.frontend.dashboard.access.deliveries import delivery_product_scope_
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.delivery_names import DeliveryNameParserUnavailable
 from qc_tool.frontend.dashboard.services.products import identify_delivery
+from qc_tool.frontend.dashboard.services.deliveries.history import (
+    LegacyDeliveryAlreadySubmitted, require_available_legacy_filename,
+)
 
 from ._resumable.errors import ResumableUploadError
 
@@ -36,6 +39,7 @@ def require_upload_filename(access, filename, *, overwrite_delivery_id=None):
             raise _product_denied()
     else:
         require_upload_product(access, None)
+    original = None
     if overwrite_delivery_id is not None:
         # Include a retired original so interrupted overwrite recovery cannot
         # bypass a product assignment revoked since its initial request.
@@ -44,6 +48,12 @@ def require_upload_filename(access, filename, *, overwrite_delivery_id=None):
         ).first()
         if original is not None:
             require_upload_delivery(access, original)
+    try:
+        require_available_legacy_filename(
+            filename, exclude_delivery_id=original.pk if original is not None else None,
+        )
+    except LegacyDeliveryAlreadySubmitted as exc:
+        raise ResumableUploadError(exc.code, exc.message, 409) from exc
     return identification
 
 

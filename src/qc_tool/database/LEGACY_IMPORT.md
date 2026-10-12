@@ -38,6 +38,15 @@ do **not** create entries eligible for the current approval workflow or make any
 product completed. Historical QC states are retained, but detailed results and
 downloads cannot be restored from this backup.
 
+After import, browser uploads, local/S3 API registration and new submissions
+reject a filename already recorded as submitted without a current publication
+receipt. This check ignores ASCII letter case, includes deleted historical rows
+and works across owners; its response does not expose the old uploader or record.
+Current receipts and their correction/review workflows are unaffected. This is
+filename protection only: a renamed ZIP, changed production date or a different
+package version cannot be matched reliably without additional reviewed evidence.
+Historical dates still do not create approvals or completed product coverage.
+
 No products are created and no specifications are modified. Administrators must
 upload the original specification JSONs through **Products → Upload specification**.
 Old API credentials, sessions and migration history are not imported. S3

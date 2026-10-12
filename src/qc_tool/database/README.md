@@ -32,6 +32,7 @@ stores the resulting schema, application data and record of applied migrations.
 | Check a change on a disposable database | [Local verification](MIGRATIONS.md#local-verification) |
 | Prepare the first release | [Create and freeze the first snapshots](MIGRATIONS.md#freeze-the-first-release) |
 | Transfer legacy production data | [SQL dump importer](LEGACY_IMPORT.md) and [the zero step](MIGRATIONS.md#one-time-manual-production-cutover) |
+| Make and verify a separate local legacy copy | [Automated local rehearsal and available web-history sources](LOCAL_LEGACY_REHEARSAL.md) |
 | Maintain migrations after the release | [Developer workflow](MIGRATIONS.md#development-after-the-major-release-is-frozen) |
 | Build and deploy a release | [Release preparation](MIGRATIONS.md#prepare-a-release) and [release record](RELEASE_TEMPLATE.md) |
 | Upgrade PostgreSQL with minimal interruption | [Online rollout](MIGRATIONS.md#online-rollout-sequence) |
@@ -39,6 +40,15 @@ stores the resulting schema, application data and record of applied migrations.
 
 Use the documentation from the same source revision as the release. Other docs
 pages link here; this package owns the application-wide procedure.
+
+Offline cutover wrappers live under
+[`scripts/migration/legacy/`](../../../scripts/migration/legacy/README.md), with
+their repeatable host tests under
+[`scripts/tests/migration/`](../../../scripts/tests/migration/). These wrappers
+invoke the central database workflow and importer; they do not define a second
+schema or migration history. The
+[script catalog](../../../scripts/README.md) explains their lifecycle and
+separates them from one-off investigations.
 
 ## Package layout
 

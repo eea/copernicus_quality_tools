@@ -9,6 +9,26 @@ nav_order: 1
 Run focused tests first, then the relevant full suite. The GitHub Actions
 frontend workflow is the authoritative frontend test contract.
 
+## Maintainer-tool tests on the host
+
+Run from the repository root with Python 3.11 or newer:
+
+```bash
+python3 -m unittest discover -s scripts/tests -t . -v
+```
+
+These repeatable tests cover the maintained migration helpers and the QC
+evidence runner. They use temporary files and synthetic records; they do not
+connect to production, initialize an application database, start Docker, or run
+the migration and QC commands themselves. The frontend workflow runs this suite
+in a separate **Maintainer tools (offline)** job.
+
+Keep tests for tools under `scripts/tests/`, grouped by the tool's purpose.
+Core QC and archive-security regression tests remain under `src/qc_tool/test/`;
+frontend and database tests stay with their owning application packages. See
+[Script organization and lifecycle](scripts.md) for retained tools, one-time
+operations, historical experiments and proposed removals.
+
 ## Frontend checks in the local stack
 
 ```bash
@@ -140,6 +160,10 @@ docker compose -f docker/compose.local.yaml exec \
 
 Expect this suite to be substantially slower. Run the relevant product/check
 tests whenever changing `product_definitions/`, `raster/`, or `vector/`.
+
+For genuine archived production inputs, follow [Legacy QC parity](legacy-qc-parity.md).
+It documents isolated execution, identical-input evidence, accepted and rejected
+controls, specification scope and coverage gaps.
 
 ## Static and configuration checks
 

@@ -6,6 +6,9 @@ from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
+from qc_tool.frontend.dashboard.services.deliveries.history import (
+    LegacyDeliveryAlreadySubmitted, require_available_legacy_filename,
+)
 
 from ..errors import SubmissionError
 from .eligibility import catalog_target
@@ -48,6 +51,10 @@ def reserve_submission(
     validate_delivery(delivery, request_channel=request_channel)
     latest_job = latest_successful_job(delivery)
     _require_submission_product(account_access, latest_job, latest_job.product_release)
+    try:
+        require_available_legacy_filename(delivery.filename, exclude_delivery_id=delivery.pk)
+    except LegacyDeliveryAlreadySubmitted as exc:
+        raise SubmissionError(exc.code, exc.message, 409) from exc
     submitted_unit = validated_submitted_product_unit(delivery, latest_job)
     input_digest = validated_input_digest(latest_job)
     release, product_unit = catalog_target(latest_job, submitted_unit)

@@ -63,6 +63,11 @@ For configuration advice, see the [deployment guide](docs/deployment/index.md).
 There are already some automated tests at `src/qc_tool/test`.
 See the instructions in [NOTES.txt](src/qc_tool/test/NOTES.txt).
 
+Maintainer commands are grouped by purpose under [`scripts/`](scripts/README.md).
+The catalog distinguishes repeatable tests, legacy cutover tools and historical
+experiments, and lists proposed removals. See the [testing guide](docs/development/testing.md)
+for the host, worker and frontend suites.
+
 The application-wide database package lives in
 [`src/qc_tool/database/`](src/qc_tool/database/README.md). It owns the committed
 schema history, release policy, deployment command, checks and migration runbook.

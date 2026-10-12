@@ -66,6 +66,7 @@ a selected filter even when its result count becomes zero.
 ## Main contributor guides
 
 - [Testing](testing.md)
+- [Script organization and lifecycle](scripts.md)
 - [Upload page components](upload-pages.md)
 - [Table page components](table-pages.md)
 - [Database lifecycle and migrations](database-migrations.md)

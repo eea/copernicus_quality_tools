@@ -74,9 +74,11 @@ class DeliveryUploadCheckTests(TestCase):
         from django.utils import timezone
         self.own.date_submitted = timezone.now()
         self.own.save(update_fields=("date_submitted",))
-        row = self.check(["same.zip"]).json()["files"][0]
-        self.assertFalse(row["can_overwrite"])
-        self.assertIn("submitted", row["overwrite_reason"])
+        response = self.check(["same.zip"])
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "legacy_delivery_already_submitted")
+        self.own.date_submitted = None
+        self.own.save(update_fields=("date_submitted",))
         Delivery.objects.create(user=self.owner, filename="same.zip", size_bytes=11)
         row = self.check(["same.zip"]).json()["files"][0]
         self.assertFalse(row["can_overwrite"])

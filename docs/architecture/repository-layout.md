@@ -15,7 +15,7 @@ copernicus_quality_tools/
 ├── docs/                      # This documentation site
 ├── documentation/             # Historical diagrams and reference artefacts
 ├── product_definitions/       # Product-specific JSON QC recipes
-├── scripts/                   # Maintainer and data-preparation utilities
+├── scripts/                   # Purpose-specific operator tools and host tests
 ├── src/qc_tool/
 │   ├── database/             # Whole-app migration history, policy, CLI and tests
 │   ├── frontend/
@@ -37,6 +37,11 @@ copernicus_quality_tools/
 │   └── test/                 # Worker and QC tests
 └── testing_data/              # Test fixtures
 ```
+
+The [script catalog](../../scripts/README.md) separates maintained commands,
+legacy cutover operations, repeatable verification tests, and historical
+experiments. Application commands and core regression tests remain with their
+owning packages under `src/qc_tool/`.
 
 ## Frontend accounts app
 

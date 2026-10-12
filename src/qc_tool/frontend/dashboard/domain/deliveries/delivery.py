@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from qc_tool.product_units import PRODUCT_UNIT_CODE_MAX_LENGTH
@@ -74,6 +75,11 @@ class Delivery(models.Model):
             ),
         )
         indexes = (
+            models.Index(
+                Lower("filename"),
+                condition=models.Q(date_submitted__isnull=False),
+                name="execution_delivery_subname_idx",
+            ),
             models.Index(fields=("product_unit_code",), name="execution_delivery_unit_idx"),
             models.Index(
                 fields=("verified_product_unit_code",),

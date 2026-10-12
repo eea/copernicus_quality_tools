@@ -16,6 +16,9 @@ export WGETRC="$wgetRcFile"
 
 cp /etc/hosts /etc/squid_hosts
 echo "127.0.0.1 inspire.ec.europa.eu" >> /etc/squid_hosts
+# Squid drops privileges to proxy and must read this non-secret resolver file.
+# The private wget credential file above must retain the restrictive umask.
+chmod 0644 /etc/squid_hosts
 
 rm -f /var/run/squid.pid
 rm -rf /var/run/apache2/apache2.pid
