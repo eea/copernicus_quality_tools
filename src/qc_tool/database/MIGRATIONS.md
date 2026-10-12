@@ -604,9 +604,10 @@ Also verify `/etc/qc_tool_version.txt` in both images matches the recorded SHA
 and run the relevant worker regression/smoke tests. Archive the results before
 publishing. Image registry credentials, publication automation, release tags
 and production target configuration are operator-owned; the repository's
-current GitHub workflow tests changes to `dev` and does not publish or deploy
-releases. The existing Docker build hook accepts a branch name, so it must be
-configured to use the same immutable source or be bypassed by the build above.
+current GitHub workflow tests pushes to `dev` and `release/**`, plus pull requests
+targeting `dev`; it does not publish or deploy releases. The existing Docker build
+hook accepts a branch name, so it must be configured to use the same immutable
+source or be bypassed by the build above.
 
 ### Release record
 

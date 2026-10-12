@@ -1,13 +1,16 @@
 # Application schema
 
-QC Tool uses one application database. Django models are the executable schema
-specification; this reference explains their ownership and persistence rules.
+QC Tool uses one application database. The **3.0.0 schema is frozen** under
+policy `released`, with `accounts/0001_major_release` and
+`dashboard/0001_major_release` as its initial migration identities. Django models
+describe the desired state; committed migrations govern schema changes. This
+reference explains model ownership and persistence rules.
 The [database runbook](MIGRATIONS.md) owns initialization and release changes.
 
 For the complete column-level schema, use the [table dictionary](TABLES.md):
-all 23 current tables, their 189 columns, PostgreSQL types, nullability, ORM
-defaults, foreign keys, constraints and indexes. It also explains the additional
-`django_migrations` recorder used after release freeze. The [release checklist](AUDIT.md#remaining-release-checklist) tracks remaining
+all **24 tables and 193 columns**, PostgreSQL types, nullability, ORM defaults,
+foreign keys, constraints and indexes, including the `django_migrations` recorder.
+The [release checklist](AUDIT.md#remaining-release-checklist) tracks remaining
 work; the [metadata review](AUDIT.md#column-and-metadata-review-2026-09-21) records
 completed cleanup and retained evidence.
 
@@ -231,7 +234,7 @@ migration baseline. Raw SQL must obtain and quote table identifiers from
 model metadata, as the [delivery query](../frontend/dashboard/services/deliveries/listing/query/sql.py)
 does. Do not duplicate a table-name registry in another configuration file.
 
-Follow the phase-specific [database workflow](MIGRATIONS.md#choose-the-workflow).
-Use fresh disposable databases for draft schema changes. Once migration history
-is frozen, preserve table and model identities through reviewed migrations and
-explicit application compatibility checks.
+Follow the released [database workflow](MIGRATIONS.md#development-after-the-major-release-is-frozen).
+Preserve the frozen baselines, table identities and model identities. Include a
+reviewed forward migration and explicit application compatibility checks with
+each schema change; never reset or fake an existing database into this baseline.

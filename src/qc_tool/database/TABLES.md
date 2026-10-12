@@ -5,17 +5,24 @@ its place. [SCHEMA.md](SCHEMA.md) explains the architecture;
 [AUDIT.md](AUDIT.md#remaining-release-checklist) tracks the remaining release
 steps and records completed cleanup and deliberately deferred schema changes.
 
-Verified **2026-09-21** against the release-cleanup working tree and registered models,
-Django **5.2.17**, and a fresh PostgreSQL **14.23** database created with the
-whole-app `database apply` command. The current draft schema has **23 tables,
-189 columns and 90 indexes**: 14 QC Tool tables and 9 Django tables. On
-2026-09-21, the local development database was explicitly reset after a backup
-and initialized through this command. Its schema now matches this dictionary;
-the catalog and delivery history start empty. Production databases are unchanged.
+Verified **2026-09-21** against the **3.0.0 frozen schema**, Django **5.2.17**,
+and a fresh PostgreSQL **14.23** database built from the released migration graph.
+The schema has **24 tables, 193 columns, 120 constraints and 91 indexes**:
+14 QC Tool tables and 10 Django tables, including `django_migrations`.
+The disposable verification database contains synthetic test records; neither
+the existing local development database nor production was upgraded for this
+audit. Image publication and production cutover remain pending.
+
+The 2026-10-12 branch integration preserves that frozen inventory and adds
+`dashboard/0002_legacy_submission_filename_index`. This forward migration adds
+one nonunique partial expression index on submitted delivery filenames; it changes
+no columns or constraints. The resulting schema has 92 indexes. The delivery
+index definitions below include this addition; the original audit counts remain
+historical evidence for the two baseline files.
 
 This is a reference, not a migration baseline or a second executable schema.
-Models remain the source of truth during draft; reviewed migrations also govern
-released installations. SQL definitions in the expandable sections describe the
+Models describe the desired schema; the frozen baselines and reviewed forward
+migrations govern released installations. SQL definitions in the expandable sections describe the
 fresh database, including automatically named indexes and constraints. They are
 not a script for changing an existing database.
 
@@ -23,7 +30,8 @@ not a script for changing an existing database.
 
 - **PostgreSQL type** is the actual physical type; `varchar(n)` is PostgreSQL's
   alias for `character varying(n)`. Most QC Tool IDs are `bigint`, while Django
-  user/group/permission IDs and references to them are `integer`.
+  user/group/permission IDs and references to them are `integer`. Django's three
+  account/role/permission join tables use `bigint` row IDs in this released schema.
 - **NULL** says whether the database accepts SQL NULL. An empty string is a
   separate value. Non-NULL text can still be empty unless a listed CHECK or
   application validation forbids it. A nullable FK permits a missing link; it
@@ -74,13 +82,10 @@ not a script for changing an existing database.
 | Django | [`django_content_type`](#django_content_type) | 3 | Model identity registry |
 | Django | [`django_session`](#django_session) | 3 | Temporary browser sessions |
 | Django | [`django_admin_log`](#django_admin_log) | 8 | Administration history |
+| Django | [`django_migrations`](#django_migrations) | 4 | Applied migration history |
 
-The supplementary [`django_migrations`](#django_migrations) table has four
-columns. It is absent from this fresh draft schema; after release freeze it
-records applied migrations, bringing this model set to **24 tables / 193
-columns**. An empty recorder may also exist in a draft database initialized by
-a different Django command. `AccountCapability` is deliberately unmanaged and
-creates permissions, not a 25th table.
+All 24 tables are part of the released inventory. `AccountCapability` is
+deliberately unmanaged and creates permissions, not a 25th table.
 
 ## Main business relationships
 
@@ -462,12 +467,12 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `is_deleted` | `boolean` | No | `False` | Visibility/retirement flag. Also marks superseded upload revisions; does not mean that job history may be erased. |
 | `s3_id` | `bigint` | Yes | `NULL` | Optional FK to `storage_delivery_source.id` (ORM CASCADE). Non-NULL selects a remote registered input rather than a local ZIP. |
 
-**Keys and access paths.** Primary key `id`; FKs to user and S3 source have ordinary indexes. `execution_delivery_size_valid` enforces nonnegative size. Named indexes cover reported unit (`execution_delivery_unit_idx`), verified unit (`execution_delivery_zipunit_idx`) and checksum (`execution_delivery_sha_idx`). There is deliberately no unique filename constraint.
+**Keys and access paths.** Primary key `id`; FKs to user and S3 source have ordinary indexes. `execution_delivery_size_valid` enforces nonnegative size. Named indexes cover reported unit (`execution_delivery_unit_idx`), verified unit (`execution_delivery_zipunit_idx`) and checksum (`execution_delivery_sha_idx`). Forward migration `0002_legacy_submission_filename_index` adds `execution_delivery_subname_idx` on `LOWER(filename)` where `date_submitted IS NOT NULL`, supporting case-insensitive legacy submission lookups. There is deliberately no unique filename constraint.
 
 **Review note.** Latest-job product fields are maintained by [projections.py](../frontend/dashboard/services/product_units/projections.py). The verified unit is sticky across new waiting jobs. `date_submitted` records the submission event used by current delivery lists and lifecycle checks; retained publication receipts independently prove the files and approval state. `is_deleted` also retains replaced revisions, as described in [overwrite.py](../frontend/dashboard/services/uploads/overwrite.py).
 
 <details>
-<summary>Exact PostgreSQL constraints and indexes (4 constraints, 6 indexes)</summary>
+<summary>Exact PostgreSQL constraints and indexes (4 constraints, 7 indexes)</summary>
 
 | Foreign-key column | Referenced column | Django deletion rule |
 | --- | --- | --- |
@@ -486,6 +491,7 @@ Keep: `source_value` and canonical code can differ and preserve meaningful norma
 | `execution_delivery_pkey` | `CREATE UNIQUE INDEX execution_delivery_pkey ON public.execution_delivery USING btree (id)` |
 | `execution_delivery_s3_id_80df5506` | `CREATE INDEX execution_delivery_s3_id_80df5506 ON public.execution_delivery USING btree (s3_id)` |
 | `execution_delivery_sha_idx` | `CREATE INDEX execution_delivery_sha_idx ON public.execution_delivery USING btree (content_sha256)` |
+| `execution_delivery_subname_idx` | `CREATE INDEX execution_delivery_subname_idx ON public.execution_delivery USING btree (lower((filename)::text)) WHERE (date_submitted IS NOT NULL)` |
 | `execution_delivery_unit_idx` | `CREATE INDEX execution_delivery_unit_idx ON public.execution_delivery USING btree (product_unit_code)` |
 | `execution_delivery_user_id_0df519b0` | `CREATE INDEX execution_delivery_user_id_0df519b0 ON public.execution_delivery USING btree (user_id)` |
 | `execution_delivery_zipunit_idx` | `CREATE INDEX execution_delivery_zipunit_idx ON public.execution_delivery USING btree (verified_product_unit_code)` |
@@ -936,7 +942,7 @@ Many-to-many account-to-role membership. Generated by Django for `User.groups`; 
 
 | Column | PostgreSQL type | NULL | ORM default | Meaning |
 | --- | --- | --- | --- | --- |
-| `id` | `integer` | No | `identity` | Primary key for one membership. |
+| `id` | `bigint` | No | `identity` | Primary key for one membership. |
 | `user_id` | `integer` | No | `required` | FK → `auth_user.id`; account receiving the role. ORM deletion: CASCADE. |
 | `group_id` | `integer` | No | `required` | FK → `auth_group.id`; assigned role/group. ORM deletion: CASCADE. |
 
@@ -975,7 +981,7 @@ Many-to-many role-to-capability mapping. Generated by Django for `Group.permissi
 
 | Column | PostgreSQL type | NULL | ORM default | Meaning |
 | --- | --- | --- | --- | --- |
-| `id` | `integer` | No | `identity` | Primary key for one group capability assignment. |
+| `id` | `bigint` | No | `identity` | Primary key for one group capability assignment. |
 | `group_id` | `integer` | No | `required` | FK → `auth_group.id`; group receiving the capability. ORM deletion: CASCADE. |
 | `permission_id` | `integer` | No | `required` | FK → `auth_permission.id`; granted capability. ORM deletion: CASCADE. |
 
@@ -1014,7 +1020,7 @@ Many-to-many direct account-to-capability mapping. Generated by Django for `User
 
 | Column | PostgreSQL type | NULL | ORM default | Meaning |
 | --- | --- | --- | --- | --- |
-| `id` | `integer` | No | `identity` | Primary key for one direct capability assignment. |
+| `id` | `bigint` | No | `identity` | Primary key for one direct capability assignment. |
 | `user_id` | `integer` | No | `required` | FK → `auth_user.id`; account receiving the capability. ORM deletion: CASCADE. |
 | `permission_id` | `integer` | No | `required` | FK → `auth_permission.id`; directly granted capability. ORM deletion: CASCADE. |
 
@@ -1150,11 +1156,11 @@ Administrative action history. Model: `django.contrib.admin.models.LogEntry`. QC
 </details>
 
 
-## Supplementary lifecycle table
+## Migration history
 
 ### `django_migrations`
 
-Django’s schema-history recorder, maintained by `django.db.migrations.recorder.MigrationRecorder`. It is absent from the freshly initialized draft schema audited here and is supplementary to the 23-table inventory. Released databases use it to track applied migrations; it can also exist empty in a previously initialized draft database.
+Django’s schema-history recorder, maintained by `django.db.migrations.recorder.MigrationRecorder`. It is part of the 24-table released inventory and tracks the committed migration identities applied to this database.
 
 | Column | PostgreSQL type | NULL | ORM default | Meaning |
 | --- | --- | --- | --- | --- |
@@ -1163,9 +1169,22 @@ Django’s schema-history recorder, maintained by `django.db.migrations.recorder
 | `name` | `varchar(255)` | No | `''` | Applied migration name, such as `0001_major_release`; not the application release number. |
 | `applied` | `timestamp with time zone` | No | `now()` | When Django recorded the migration as applied. |
 
-**Constraints and indexes:** the recorder model declares a primary key on `id`, no FKs and no uniqueness constraint on `(app, name)`. This supplementary definition comes from the installed Django model; no recorder table was created merely to document it.
+**Constraints and indexes:** primary key on `id`, no FKs and no uniqueness constraint on `(app, name)`. The definitions below were inspected in the fresh released PostgreSQL database.
 
 **Retention/review:** keep it under Django control. Never import the legacy recorder, edit its rows to bypass a failed migration, or delete it as unnecessary metadata. It records which migration identities ran; it does not store SQL, the application data, migration source code or a schema snapshot.
+
+<details>
+<summary>Exact PostgreSQL constraints and indexes (1 constraint, 1 index)</summary>
+
+| Constraint | PostgreSQL definition |
+| --- | --- |
+| `django_migrations_pkey` | `PRIMARY KEY (id)` |
+
+| Index | PostgreSQL definition |
+| --- | --- |
+| `django_migrations_pkey` | `CREATE UNIQUE INDEX django_migrations_pkey ON public.django_migrations USING btree (id)` |
+
+</details>
 
 
 ## Keeping this reference current
@@ -1180,7 +1199,8 @@ reference complete; then review meaning and retention with actual read/write
 call sites. Neither a populated field nor a duplicated name proves a field is
 necessary or redundant.
 
-This audit compared all 189 physical columns against the documented rows, all
-foreign keys and all 90 fresh-schema indexes against the expandable definitions,
-and checked every repository-relative source link. No schema, migration,
-product specification or stored business record was changed.
+The 3.0.0 audit compared all 193 physical columns, their types and null flags,
+all 120 constraints and all 91 indexes against this dictionary. The three Django
+join-table row IDs are `bigint` in the migration-built schema, unlike the earlier
+draft dictionary. This documentation audit used read-only inspection; product
+specifications and stored business records were not changed.
