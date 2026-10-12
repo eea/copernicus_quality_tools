@@ -14,56 +14,21 @@ log = logging.getLogger(__name__)
 
 
 def convert_rule_to_sql_violation(rule_text):
-    # Clean up the rule text and split by semicolons for multi-rule rows
-    clauses = [c.strip() for c in rule_text.split(';') if c.strip()]
-    
-    operator_inversions = {
-        '=': '<>',
-        '>': '<=',
-        '<': '>=',
-        '>=': '<',
-        '<=': '>',
-        '<>': '='
-    }
-    
-    sql_parts = []
-    
-    for clause in clauses:
-        # Check if it's an IF/THEN rule
-        if re.match(r'(?i)^if\s+', clause):
-            match = re.match(r'(?i)if\s+(.*?)\s+then\s+(\w+)\s*([<=<>!]+|is)\s*(.*)', clause)
-            if match:
-                condition = match.group(1).strip()
-                target_var = match.group(2).strip()
-                operator = match.group(3).strip().lower()
-                value = match.group(4).strip()
-                
-                if operator == 'is' and value.lower() == 'null':
-                    violation_then = f"{target_var} IS NOT NULL"
-                elif operator == 'is' and value.lower() == 'not null':
-                    violation_then = f"{target_var} IS NULL"
-                else:
-                    inverted_op = operator_inversions.get(operator, operator)
-                    violation_then = f"{target_var}{inverted_op}{value}"
-                
-                sql_parts.append(f"({condition} AND {violation_then})")
-        
-        # Otherwise, treat it as a direct mathematical constraint (e.g., A + B <= 100)
-        else:
-            # Match the left side, the operator, and the right side
-            match = re.match(r'(.*?)\s*([<=<>!]+)\s*(.*)', clause)
-            if match:
-                left_side = match.group(1).strip()
-                operator = match.group(2).strip()
-                right_side = match.group(3).strip()
-                
-                inverted_op = operator_inversions.get(operator, operator)
-                sql_parts.append(f"({left_side}{inverted_op}{right_side})")
-            else:
-                # Fallback if no operator is matched (e.g., raw text or unhandled format)
-                sql_parts.append(f"NOT ({clause})")
-                
-    return " OR ".join(sql_parts)
+    # Strip whitespace and trailing semicolons
+    rule_text = rule_text.strip().rstrip(';').strip()
+
+    # Match "IF <condition> THEN <then_clause>"
+    if_then_match = re.match(r'^\s*if\s+(.+?)\s+then\s+(.+)$', rule_text, re.IGNORECASE)
+
+    if if_then_match:
+        condition = if_then_match.group(1).strip()
+        then_clause = if_then_match.group(2).strip()
+
+        # Violation: target value exists, but IF condition was NOT met
+        return f"({then_clause}) AND NOT ({condition})"
+
+    # Standalone rule: directly invert with NOT (...)
+    return f"NOT ({rule_text})"
 
 
 def run_check(params, status):
