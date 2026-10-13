@@ -230,5 +230,5 @@ Exit `2` means no ZIP remained in the staged selection; argument errors can also
 return `2`.
 
 This evidence applies to those recorded source bytes and runtime settings.
-It does not certify complete historical coverage or a frozen v3.0.0 release
+It does not certify complete historical coverage or a packaged v3.0.0 release
 artifact. Packaged-image release verification remains a separate requirement.

@@ -4,6 +4,36 @@ QC Tool's database lifecycle covers schema development, release freeze, data
 conversion and released-schema upgrades. The phase in [`policy.json`](policy.json)
 determines the applicable development and deployment workflow.
 
+## Version policy
+
+**v3.0.0 introduces a completely new models-only schema.** Its policy is
+`draft` with `baselines: {}`. It contains no first-party migration definitions
+or initial schema snapshots. Fresh development/test targets are created from
+the current models with `database plan|apply|check`; existing databases are not
+altered or reset to simulate this initial installation.
+
+The first migration-managed release is **v3.0.1 or later**, in a separate
+reviewed change. Define its supported starting databases and initialization or
+adoption procedure before introducing migration history. A model-created
+v3.0.0 database has no applied history; new initial migrations cannot simply be
+applied over its existing tables. Do not infer a safe adoption from matching
+table names, run `--fake`, or generate snapshots during CI/startup.
+
+The unpublished v3.0.0 freeze integrated at
+`41a1427f47ce8e8068ac6605d6bc17377309a69c` is withdrawn by the release owner's
+explicit correction. The exact one-time source-history decision is recorded in
+[`history_corrections/3.0.0-models-only.json`](history_corrections/3.0.0-models-only.json).
+The history guard validates that exact comparison commit, version and removed
+files; it is not a general reset option or a database operation. Subsequent
+released migration history remains immutable.
+
+The current production/secure-environment guard remains in place while this
+branch uses `draft`: production `database` commands and frontend startup are
+blocked. Development/test validation does not establish production deployment
+readiness. A models-only production initialization workflow requires its own
+explicitly reviewed implementation; relabeling production as development is not
+a supported procedure.
+
 ## Migration philosophy
 
 | Source | Responsibility |
@@ -65,7 +95,8 @@ Repository-relative links refer to documentation and code in that checkout.
 | Situation | Follow | Done when |
 | --- | --- | --- |
 | Draft model/schema change | [Models-only development](#draft-schema-development), then [local verification](#local-verification) | Current models initialize and tests pass on both backends; no migration files |
-| First production release | [Freeze](#freeze-the-first-release), [prepare release](#prepare-a-release), then [deployment initialization](../../../docs/deployment/index.md#5-pull-and-initialize-the-database); include [manual cutover](#one-time-manual-production-cutover) when replacing a legacy installation | Target schema and application checks pass; any required data import is reconciled before serving traffic |
+| v3.0.0 fresh-schema preparation | [Models-only development](#draft-schema-development), [local verification](#local-verification) and separate [legacy conversion rehearsal](#one-time-manual-production-cutover) | No first-party migrations; fresh model-created targets and source/data assertions pass |
+| First migration-managed release (v3.0.1 or later) | Review supported source/adoption procedure, then [introduce history](#freeze-the-first-release), [prepare release](#prepare-a-release) and [deployment initialization](../../../docs/deployment/index.md#5-pull-and-initialize-the-database) | Target schema/history and application checks pass; the existing v3.0.0 schema is not automatically adopted |
 | Empty installation after freeze | [Prepare release](#prepare-a-release), then [deployment initialization](../../../docs/deployment/index.md#5-pull-and-initialize-the-database) | Complete schema and roles exist; application smoke tests pass |
 | Post-release model/schema change | [Author and review](#development-after-the-major-release-is-frozen), then [prepare release](#prepare-a-release) | Committed forward migrations and compatibility evidence accompany the release |
 | Compatible PostgreSQL expansion | [Online rollout](#online-rollout-sequence) | New code works with expanded schema; deferred backfill/contract has an owner |
@@ -129,12 +160,14 @@ and artifact backfills remain explicit management operations.
 
 ## One-time manual production cutover
 
-The "zero" step transfers legacy data into a fresh released schema. Finalize
-and freeze that schema before the production cutover rehearsal against
-legacy records and storage. The [legacy dump converter](LEGACY_IMPORT.md) can be
-developed and tested on disposable draft schemas; repeat the rehearsal against
-the frozen release before cutover. Schema initialization must not populate products;
-product data enters through the reviewed import or catalog synchronization.
+The "zero" step transfers legacy data into a fresh target schema separately
+from schema creation. For v3.0.0, the [legacy dump converter](LEGACY_IMPORT.md)
+can be developed and rehearsed against fresh model-created development/test
+targets without any migration definitions. Repeat conversion against the exact
+candidate's supported target workflow before a production cutover. Migration
+history begins only in a reviewed v3.0.1-or-later release. Schema initialization
+must not populate products; product data enters through the reviewed import or
+catalog synchronization. The production guard described above remains active.
 
 
 Rehearse the following against a restored source snapshot before scheduling
@@ -146,11 +179,12 @@ results as release evidence.
    data. Provision a **separate, empty** target database and target storage with
    explicit credentials and volume mappings. Do not attach the old database
    volume to the new release.
-2. Pin the new frontend and worker images in the target deployment. Start its
-   database service, then apply the committed migrations using a one-shot
-   frontend container as shown in [Deployment](../../../docs/deployment/index.md). This
-   builds the complete target schema, including Django's own tables, permission
-   records and canonical role setup. Keep frontend and workers stopped.
+2. Pin the new frontend and worker images in the separate target configuration.
+   Initialize its empty schema through the reviewed application-wide workflow:
+   current models for a v3.0.0 development/test rehearsal, or committed history
+   for a migration-managed release from v3.0.1 onward. Production initialization
+   must follow the target release's explicitly supported deployment procedure.
+   Keep frontend and workers stopped during import.
 3. Map and import the selected legacy records into that schema. Use an explicit
    field and primary-key mapping; a legacy SQL dump is a source for conversion,
    not a schema to restore over the target. Import referenced rows before their
@@ -245,8 +279,11 @@ lifecycle rather than a hard-coded branch name.
 
 ### Freeze the first release
 
-Release freeze establishes immutable migration history. Perform it as a reviewed
-release-preparation change after the schema and application behavior are ready.
+This procedure is for the first migration-managed release, **v3.0.1 or later**.
+It does not apply to v3.0.0. Review the existing-database adoption/initialization
+contract first; the steps below build a fresh migration-managed target and do
+not adopt existing model-created tables. The transition establishes immutable
+history after the schema and application behavior are ready.
 
 1. Finish the models and review the intended first production schema. Confirm
    fresh SQLite/PostgreSQL creation and application tests pass.
@@ -528,8 +565,9 @@ starting release, especially when upgrading Django or PostgreSQL.
 ## Prepare a release
 
 Do this for every production release, including changes with no new migrations.
-An initial release requires schema freeze; replacing a legacy installation also
-requires the manual cutover. The release version is a product decision; use a
+v3.0.0 remains models-only; preparing it does not authorize a migration freeze.
+The first migration-managed release is v3.0.1 or later. Replacing a legacy
+installation requires the separate manual cutover. The release version is a product decision; use a
 major version for breaking changes according to the project's release history.
 It is independent of migration numbers. Do not reset history for later major
 versions or rewrite published image tags to fix a failed release.
@@ -581,8 +619,11 @@ candidate images; they do not publish or deploy them:
 )
 ```
 
-Verify the frontend artifact with isolated container-local storage. This requires
-the frozen `released` policy and rejects images whose policy is `draft`:
+Verify the frontend artifact with isolated container-local storage and the
+expected policy for that release. For v3.0.0, require `draft` and no baselines;
+for a future migration-managed release, require its reviewed `released` policy.
+The example below verifies v3.0.0 model-created test storage and does not prove
+production startup support:
 
 ```bash
 QC_RELEASE_SOURCE=$(git rev-parse HEAD)
@@ -593,7 +634,7 @@ docker run --rm \
   -e DJANGO_SECRET_KEY=artifact-check-only \
   -e DJANGO_ALLOWED_HOSTS=testserver,localhost \
   "qc-tool-frontend:$QC_RELEASE_SOURCE" sh -eu -c '
-    python3 -c "from qc_tool.database.policy import load_policy; assert load_policy()[\"phase\"] == \"released\""
+    python3 -c "from qc_tool.database.policy import load_policy; assert load_policy() == {\"phase\": \"draft\", \"baselines\": {}}"
     python3 -m qc_tool.database.checks.schema
     python3 -m qc_tool.frontend.manage check
     python3 -m qc_tool.frontend.manage collectstatic --noinput
@@ -613,8 +654,8 @@ source or be bypassed by the build above.
 
 Use [RELEASE_TEMPLATE.md](RELEASE_TEMPLATE.md) for the release PR and deployment
 evidence. It is the application-wide specification of **how this release is
-operated**, while committed native Django migrations remain the executable
-schema history. Fill in the actual deployment commands, database identity,
+operated**. v3.0.0 has no executable migration history; reviewed native Django
+migrations own that history only from v3.0.1 onward. Fill in the actual deployment commands, database identity,
 secret references, image digests, compatibility window and recovery decisions.
 Generic documentation cannot supply site-specific credentials or legacy field
 mappings; complete those fields during the rehearsal, before deployment.
@@ -646,8 +687,9 @@ changes use the maintenance procedure instead. CI validates changes; it does
 not access production, and the repository does not supply a deployment
 orchestrator or configure a traffic router.
 
-Production frontend startup runs `database check` and refuses pending
-migrations. It never runs `makemigrations`. Local Compose explicitly opts into
+Production frontend startup runs `database check` and currently refuses the
+v3.0.0 draft policy. For migration-managed releases it refuses pending migrations.
+It never runs `makemigrations`. Local Compose explicitly opts into
 draft initialization (or released migrations) at startup with `QC_TOOL_MIGRATE_ON_STARTUP=yes`, which the
 entry script accepts only in `development` or `test` environments.
 
@@ -829,7 +871,7 @@ is correct.
 
 | Symptom | Required response |
 | --- | --- |
-| Draft production guard | Follow the explicit release freeze after review. Never relabel production as test/development. |
+| Draft production guard | v3.0.0 has no migration history. Review its production initialization gate separately; migration management starts only in v3.0.1 or later. Never relabel production as test/development or create a v3.0.0 baseline to bypass the guard. |
 | Draft history gate rejects a migration | Remove the uncommitted draft migration proposal and keep the model change. Generate the first snapshots at release freeze. Never remove released history. |
 | Released history gate rejects a changed file | Restore that file's committed bytes; add a reviewed forward change. Use the correct comparison SHA and fetch missing history. |
 | Model drift | In draft, verify current models on a fresh database. After freeze, author the missing forward migration. A raw database edit cannot fix this check. |

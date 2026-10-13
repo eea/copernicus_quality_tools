@@ -1,129 +1,91 @@
 # Database audit and remaining release work
 
-Updated **2026-09-21** for **QC Tool 3.0.0**. The schema is frozen in the separate
-release candidate: [policy.json](policy.json) declares `released` and identifies
-the two `0001_major_release` baselines. The verified released PostgreSQL schema
-contains **24 tables, 193 columns, 120 constraints and 91 indexes**; see the
-[complete dictionary](TABLES.md).
+Updated **2026-10-13** for the corrected **QC Tool 3.0.0 models-only policy**.
+[policy.json](policy.json) is `draft` with no baseline identities. Version 3.0.0
+contains no first-party migration definitions or schema snapshots. The first
+migration-managed freeze is reserved for **3.0.1 or a later reviewed release**.
 
-The 2026-10-12 branch integration retains both baselines unchanged and adds the
-forward migration `dashboard/0002_legacy_submission_filename_index`. Its partial
-`LOWER(filename)` index supports the new legacy-submission guard. Columns and
-constraints remain unchanged; the current graph has 92 indexes. The freeze
-verification counts below continue to describe the original baseline graph.
+The case-insensitive legacy submission lookup retains its nonunique partial
+`LOWER(filename)` index in the Delivery model. A fresh models-only target creates
+it directly; it is not a forward migration or a global filename constraint.
+No existing database is reset, adopted, or upgraded by this source correction.
+See the [table dictionary](TABLES.md) and [release record](releases/3.0.0.md).
 
-**Next step: obtain registry access and complete the production image pair.**
-The freeze commit and CI are recorded; an ARM64 frontend artifact is verified.
-Publication is on hold until registry access is available.
-The [3.0.0 release record](releases/3.0.0.md) separates verified source checks
-from pending packaged-artifact checks, publication and production cutover.
-No existing local or production database was upgraded by this freeze.
+Fresh models-only PostgreSQL verification on 2026-10-13 measured **23 tables,
+189 columns, 119 constraints and 91 indexes**. The migration recorder is absent
+and no migrations are applied. Schema/roles/repeated initialization checks and
+**103 focused regression tests** passed on that isolated target. This is source
+verification; packaged artifact and production acceptance checks remain pending.
+The fresh SQLite target also passed schema checks and the same focused suite:
+103 tests collected, 100 passed and 3 PostgreSQL-only skips. It has 23 tables and
+189 columns without a migration recorder or applied history. These results are
+not a full frontend, worker parity or packaged-artifact certificate.
+
+Earlier frozen-candidate checks and packaged artifacts describe a superseded
+schema experiment. They do not certify the corrected source, its models-only
+initialization, or a deployable frontend/worker pair. Rebuild and verify artifacts
+from the selected source before publication. Current secure-environment database
+commands remain blocked; production initialization is a separate unresolved gate.
 
 ## Remaining release checklist
 
-Keep items unchecked until their evidence is recorded for the selected release.
-The [migration runbook](MIGRATIONS.md) owns the commands; this checklist tracks
-what remains to be done.
+The [runbook](MIGRATIONS.md) owns commands. Record evidence for the exact selected
+source and keep incomplete items unchecked.
 
 ### Before publication
 
-- [x] **Record the committed candidate and CI results.** Policy and both reviewed
-  snapshots were committed together as `e7a699d9e182ceda7f2906549461c83807bf1b74`
-  and pushed only to `release/v3.0.0`. Both backend jobs passed in
-  [CI run 35612383745](https://github.com/eea/copernicus_quality_tools/actions/runs/35612383745).
-  See the [release record](releases/3.0.0.md) for source and artifact evidence.
-- [ ] **Confirm registry access and publication configuration.** Publication
-  remains on hold at the user's request until access is available. Record the
-  intended registries and immutable frontend/worker image references before
-  publishing or deploying anything.
-
-- [ ] **Build and verify the release images.** Use a clean, committed source SHA
-  for frontend and worker, or record and test compatibility of a retained worker.
-  Run packaged-artifact checks **without checkout bind mounts**. Record immutable
-  image digests and pin them in the target configuration; promote the same images.
-  See [Prepare a release](MIGRATIONS.md#prepare-a-release).
+- [x] **Verify the corrected source policy and schema.** Confirm no first-party
+  migration definitions or snapshots; test model initialization, repeated
+  initialization, retained synthetic data, roles and declared indexes/constraints
+  on fresh SQLite and PostgreSQL targets. Record the actual physical inventory.
+- [ ] **Run application and tooling checks for that source.** Include legacy
+  import reconciliation and duplicate filename admission/submission behavior.
+  Prior tests against the removed migration graph are historical evidence only.
+- [ ] **Build and verify both release artifacts.** Pin the committed source SHA,
+  validate the packaged models-only policy without checkout mounts, and record
+  immutable frontend/worker image digests. Do not reuse the earlier frozen image.
+- [ ] **Confirm publication access and source mapping.** Registry publication,
+  release tags and production deployment remain separate operator actions.
 
 ### Before production cutover
 
-- [ ] **Confirm the source snapshot and target.** Complete the release owner,
-  target environment and manual cutover details in the release record. Confirm
-  that the `20260907` SQL dump is the intended source and account for any later
-  legacy writes. The available backup contains no ZIPs or QC result files.
-- [ ] **Repeat the legacy import rehearsal with those images.** Follow
-  [LEGACY_IMPORT.md](LEGACY_IMPORT.md) on a fresh isolated PostgreSQL target built
-  from the frozen migrations. Compare the source checksum, dry-run/applied counts
-  and converted fields. Record the omitted data and permission mappings. Historical
-  submission dates remain history: missing files cannot create verified receipts
-  or approval eligibility. The successful frozen-source rehearsal in the release
-  record is the comparison point, not a substitute for the packaged-image run.
-- [ ] **Prepare product access and replacement credentials.** Review the
-  [access map or administrator assignments](LEGACY_IMPORT.md#2-review-user-access),
-  including legacy staff accounts and unmapped permissions. After importing into
-  each fresh target, manually upload the original specification JSONs and make
-  any remaining administrator assignments to canonical product/definition scopes.
-  Former country-based viewers need explicit product grants. Remove clients'
-  dependence on the retired user-country API/export field and country/region CLI
-  options; use the current documented routes.
-  Replace old API credentials; replace S3 credentials for locations that will be
-  used again. Update API clients to `verified_product_unit_code`. Existing
-  versioned publication manifests retain their original keys and checksums.
-- [ ] **Provision storage and verify recovery.** Record the new database and
-  incoming/work/boundary/submission volumes. Configure persistent
-  [S3 credential storage](../../../docs/deployment/operations.md#s3-credentials)
-  with frontend ownership, directory mode `0700`, file mode `0600` and a restricted
-  backup. Rehearse database/storage restore for the target configuration. Preserve
-  the source dump and record the recovery procedure and rollback boundary.
-- [ ] **Verify the complete user workflow.** With the candidate images, test
-  login, allowed and denied product access, upload of a new representative delivery,
-  worker QC, publication, individual/bulk review and explicit manager readiness.
-  Test S3 registration/dispatch if enabled. Confirm that startup creates no products
-  before an administrator uploads an original specification. Record results in
-  the release record.
-- [ ] **Complete and execute the cutover record.** Write the exact commands,
-  stop conditions and recovery actions for the pinned target configuration.
-  If the legacy deployment still runs, stop writes and drain/stop workers before
-  the agreed source snapshot. Initialize the fresh release target with
-  `database plan|apply|check`, then import and reconcile before starting target
-  application writers. Switch traffic only
-  after acceptance checks; record monitoring results and the recovery window.
-  Follow the [manual cutover procedure](MIGRATIONS.md#one-time-manual-production-cutover).
+- [ ] **Resolve the production initialization gate.** The current command refuses
+  `draft` policy in a secure environment. Do not bypass it with fake records,
+  a database reset, or a 3.0.0 migration baseline. Record the explicitly reviewed
+  production procedure before attempting a cutover.
+- [ ] **Confirm source completeness and fresh targets.** Obtain a coherent
+  database/storage snapshot or label the available mixed history accurately.
+  Preserve originals; use new database and storage locations. No empty-catalog
+  assumption permits resetting an occupied database.
+- [ ] **Rehearse the supported record conversion.** Use
+  [LEGACY_IMPORT.md](LEGACY_IMPORT.md) and the
+  [local wrapper](LOCAL_LEGACY_REHEARSAL.md) on isolated fresh targets. Reconcile
+  ownership, permission mappings, timestamps and omitted evidence. Historical
+  submission dates do not create verified publication receipts or approvals.
+- [ ] **Review access and replacement credentials.** Assign canonical product
+  scopes explicitly, issue new API/S3 credentials where needed, and upload the
+  unchanged original specifications through the supported administration flow.
+- [ ] **Restore files and prove recovery.** Reconcile incoming/work/submission
+  storage and boundary references with the database; test target backup/restore.
+  SQL alone cannot reconstruct ZIPs, detailed QC reports or published folders.
+- [ ] **Verify the full workflow and strict QC acceptance parity.** Test allowed
+  and denied access, new delivery upload, duplicate history rejection, worker QC,
+  publication, review and manager readiness with the actual image pair. The
+  historical sample comparisons are not a current-production parity certificate.
+- [ ] **Record the cutover and recovery window.** Coordinate source writes and
+  workers, use the final agreed snapshot, validate before changing traffic, and
+  keep a recovery copy without accepting writes in both systems.
 
-## Frozen schema verification: 3.0.0
+## First migration-managed release: 3.0.1 or later
 
-The separate release candidate contains initial snapshots for `accounts` and
-`dashboard`, both named `0001_major_release`, with matching `released` policy.
-The snapshots were reviewed for dependencies, model creation, indexes and
-constraints; they contain no data import or product seeding. Original product
-specifications and uploaded snapshots were not modified.
-
-Verified on disposable targets using the mounted release-candidate source:
-
-- SQLite and PostgreSQL baseline creation, synthetic-record preservation,
-  repeat application, role bootstrap, declared constraints/indexes and model
-  drift checks passed.
-- All **1,091 application tests** passed on SQLite (eight skips) and PostgreSQL
-  (two skips). Each backend now skips the draft-only history test; the other
-  skips remain backend-specific or established test exclusions.
-- All **109 JavaScript tests** and **33 host history/parser tests** passed.
-- A fresh PostgreSQL legacy-import rehearsal preserved 97 users, 57,583 deliveries,
-  61,319 jobs, 29,688 sources, 196 administration events and 15,992 historical
-  submission dates. Converted user/source/delivery/job fields matched individually;
-  no products or verified receipts were created, repeat import was refused and
-  the source checksum was unchanged. See the [release record](releases/3.0.0.md).
-- Read-only inspection of PostgreSQL **14.23** confirmed **24 tables, 193 columns,
-  120 constraints and 91 indexes**. The dictionary matches all physical columns,
-  null flags, constraints and indexes. The migration recorder is now part of the
-  inventory; the three Django membership-table row IDs are `bigint` in the
-  released schema.
-
-After these source checks, exact-commit GitHub CI passed on both backends. An
-ARM64 frontend image built from that commit passed packaged-source, policy,
-migration, static-file, empty-installation and role checks without a checkout
-bind mount. The real legacy import and field reconciliation also passed against
-that packaged frontend. The production-architecture frontend/worker pair,
-registry publication and deployment acceptance remain pending; see the release
-record. Freeze does not adopt or fake migration history onto a draft or legacy
-database.
+Review its initial schema definitions and policy transition together. Existing
+3.0.0 schemas have model-created tables but no first-party migration history.
+Initial migrations cannot simply be run over those tables. Prepare a separate
+fresh-target data conversion or an explicitly approved adoption design with
+schema, data and storage reconciliation. This project does not promise an
+automatic adoption path, `--fake-initial`, recorder rewriting or database reset.
+After that reviewed freeze, preserve established identities and add forward
+migrations normally.
 
 ## Column and metadata review: 2026-09-21
 
@@ -131,9 +93,8 @@ database.
 
 These are implemented decisions, with no remaining implementation task in this
 section. Existing databases, original specifications and uploaded snapshots were
-not rewritten during cleanup. That draft had 23 tables and 189 columns; an earlier
-iteration had 25 tables and 198 columns. The released inventory above adds Django's
-migration recorder without restoring removed application metadata.
+not rewritten during cleanup. These model decisions are retained in the current
+models-only schema; the physical inventory must be checked on a fresh target.
 
 | Completed change | Retained behavior / reference |
 | --- | --- |
@@ -149,7 +110,9 @@ migration recorder without restoring removed application metadata.
 ### Retained for this release; optional future changes
 
 These observations are explicitly deferred and do not block this release.
-Any subsequent schema change needs a reviewed forward migration.
+In 3.0.0, schema changes remain models-only and require fresh disposable
+verification. After the first reviewed freeze in 3.0.1 or later, schema changes
+require forward migrations.
 
 | Item | Decision for this release |
 | --- | --- |
@@ -191,61 +154,22 @@ Django admin history is different: its actor relationship uses ORM `CASCADE`,
 so hard-deleting an account can remove administration events. Prefer deactivation
 when preserving historical users and deliveries; do not describe all audit
 tables as deletion-proof. Framework metadata and its indexes remain owned by
-Django's migrations.
+Django under the selected schema policy. Migration history is enabled only after
+the future reviewed freeze.
 
-### Earlier draft verification: 2026-09-21
+## Historical verification background
 
-Before freeze, fresh SQLite and PostgreSQL schema probes passed for the 23-table draft,
-including repeat initialization, account roles, constraints and index checks.
-The dictionary at that stage was verified from a fresh PostgreSQL 14.23 database:
-189 columns, 119 constraints and 90 indexes.
+Earlier draft-model review verified 23 tables and 189 columns on a separate
+PostgreSQL target before the submitted-filename index was added. The historical
+application suite and legacy conversion checks remain evidence for that earlier
+source, not for the corrected current candidate.
 
-- The 1,091-test application suite passed on SQLite (seven skips) and PostgreSQL
-  (one skip). The 109 JavaScript tests and 33 host history/parser tests passed
-  separately. WSGI imports, Django checks and the draft history gate passed.
-- The unchanged 20260907 SQL dump was imported into a separate fresh PostgreSQL
-  target. All 97 users, 29,688 storage sources, 57,583 deliveries and 61,319 jobs
-  matched the prepared conversion field by field. It retained 196 administration
-  events and 15,992 historical submission dates.
-- The import omitted 52 profiles, six obsolete groups and 12 memberships. Only
-  current roles were created. Unknown job request origin is NULL; no profile or
-  region tables, region permissions, products or verified receipts were created.
-  Reimport into the occupied target was refused and the source checksum matched.
-- During schema cleanup, original specifications, uploaded specification snapshots,
-  existing databases and migration policy were unchanged. Regression verification
-  used disposable targets.
+The subsequent unpublished frozen-candidate attempt is preserved in Git history
+([freeze source](https://github.com/eea/copernicus_quality_tools/commit/e7a699d9e182ceda7f2906549461c83807bf1b74),
+[evidence source](https://github.com/eea/copernicus_quality_tools/commit/c5837c6eda58df6fab5727a6e6d730ffc416a89b)).
+Its migration definitions and policy are superseded for 3.0.0. Existing rehearsal
+or development databases from any earlier attempt are not automatically changed
+by the corrected source policy and must not be repurposed as release targets.
 
-### Local review database reset: 2026-09-21
-
-At the user's explicit request, the local development `qc_tool` database was
-backed up in the ignored `backups/` directory, recreated, and initialized through
-the whole-app database command. That reset produced 23 tables, 189 columns and
-90 indexes, with no retired profile/region tables or country columns. Products,
-deliveries, jobs and product assignments start empty. Startup creates the three
-standard local demo accounts. This describes the earlier local review state,
-not the isolated 24-table release verification database.
-
-Database readiness and Django checks passed. Authenticated dashboard, product,
-delivery and reviewer pages returned HTTP 200 for the applicable demo roles;
-the product list is empty for all three. Shared files and original specifications
-were preserved. The policy was still `draft` at the time of that reset. The
-separate 3.0.0 freeze changes the release policy; it does not upgrade or reset
-that existing local database. The earlier reset was not a production-cutover
-rehearsal.
-
-## Earlier index audit: 2026-09-18
-
-The earlier audit consolidated terminology around `product_unit` and removed
-11 redundant foreign-key indexes covered by composite indexes. The accepted
-candidate uniqueness constraint and readiness actor reference added two indexes,
-bringing the total from 105 to 96 across the same 25 tables. These changes are
-already implemented; the original local database was not altered.
-
-Retain composite uniqueness, reverse unit lookup, queue indexes and publication
-receipts. Further index tuning should follow production query plans and observed
-load. No latency improvement is claimed from the small local dataset.
-
-The [application schema](SCHEMA.md) owns the table inventory and persistence
-contracts. The historical results remain background evidence; the current frozen
-schema checks and pending release operations are recorded above and in the
-[3.0.0 release record](releases/3.0.0.md).
+The [application schema](SCHEMA.md) owns model responsibilities; the
+[release record](releases/3.0.0.md) records current decisions and pending evidence.

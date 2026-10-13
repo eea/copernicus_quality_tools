@@ -83,8 +83,10 @@ docker compose -f docker/compose.local.yaml restart worker
 Local Compose enables `QC_TOOL_MIGRATE_ON_STARTUP=yes` in the development
 environment. In draft it creates missing tables from models and standard roles,
 with no migration files or product import. It does not alter existing tables;
-use a fresh development database after schema changes. After release freeze
-it applies committed migrations; production uses an explicit deployment job. See [Database migrations](../development/database-migrations.md).
+use a fresh development database after schema changes. v3.0.0 contains no
+first-party migration definitions or snapshots. After a reviewed transition in
+v3.0.1 or later, local startup can apply committed history. See
+[Database migrations](../development/database-migrations.md).
 
 The initial product catalog is empty. Add reviewed JSON specifications through
 **Products → Upload specification** as an administrator, then assign their
@@ -93,10 +95,11 @@ does not add them to the catalog, QC selector, or product-grant choices. Local
 demo accounts start without product assignments; restarts retain existing
 accounts and catalog data.
 
-Moving from a draft or incompatible legacy schema to a released schema requires
-a new database initialized from the frozen migrations. Preserve needed local
-data and use a new database/volume; import retained records through an explicit
-conversion procedure. Startup does not perform that transfer.
+Moving from a model-created v3.0.0 or incompatible legacy schema to future
+migration management requires a reviewed adoption/initialization procedure.
+A fresh target plus explicit data conversion is one supported planning option;
+do not fake history or assume initial migrations can adopt existing tables.
+Preserve needed data before selecting new volumes. Startup does not transfer it.
 
 ## Create a local administrator
 

@@ -1,9 +1,13 @@
+import copy
+import hashlib
 import json
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
+from qc_tool.database.checks import history
 from qc_tool.database.checks.history import baseline_paths
 from qc_tool.database.checks.history import check_migration_history
 from qc_tool.database.checks.history import MigrationHistoryError
@@ -37,6 +41,8 @@ class MigrationHistoryTests(unittest.TestCase):
         target.write_text(content)
 
     def policy(self, phase="draft", baselines=None):
+        if not (self.repository / "pyproject.toml").exists():
+            self.write("pyproject.toml", '[project]\nversion = "3.0.1"\n')
         self.write(POLICY_PATH, json.dumps({
             "phase": phase,
             "baselines": (BASELINE_NAMES if phase == "released" else {}) if baselines is None else baselines,
@@ -215,6 +221,156 @@ class MigrationHistoryTests(unittest.TestCase):
             with self.subTest(base=base):
                 with self.assertRaises(MigrationHistoryError):
                     check_migration_history(self.repository, base)
+
+    def unpublished_fixture(self, *, extra=False, altered=False):
+        audit = self.repository / history.CORRECTION_PATH
+        if audit.exists():
+            audit.unlink()
+        self.policy("released")
+        self.write("pyproject.toml", '[project]\nversion = "3.0.0"\n')
+        expected = copy.deepcopy(history.UNPUBLISHED_FREEZE_CORRECTION)
+        for path in expected["removed_migrations"]:
+            self.write(path, "reviewed unpublished snapshot\n")
+        expected["removed_migrations"] = {
+            path: hashlib.sha256((self.repository / path).read_bytes()).hexdigest()
+            for path in expected["removed_migrations"]
+        }
+        if extra:
+            self.write("src/qc_tool/database/migrations/dashboard/0003_unreviewed.py")
+        if altered:
+            self.write(BASELINES[0], "unreviewed snapshot bytes\n")
+        base = self.commit()
+        expected["comparison_commit"] = base
+        return base, expected
+
+    def propose_correction(self, contract):
+        self.policy("draft")
+        for path in contract["removed_migrations"]:
+            (self.repository / path).unlink()
+        self.write(history.CORRECTION_PATH, json.dumps(contract))
+
+    def test_exact_unpublished_correction_removes_all_reviewed_history(self):
+        base, contract = self.unpublished_fixture()
+        self.propose_correction(contract)
+        with patch.object(history, "UNPUBLISHED_FREEZE_CORRECTION", contract):
+            self.assertIn("Unpublished 3.0.0 correction", check_migration_history(self.repository, base))
+
+    def test_unpublished_correction_rejects_wrong_base_or_version(self):
+        base, contract = self.unpublished_fixture()
+        wrong_base = self.commit()
+        self.propose_correction(contract)
+        with patch.object(history, "UNPUBLISHED_FREEZE_CORRECTION", contract):
+            with self.assertRaisesRegex(MigrationHistoryError, "exact unpublished correction base"):
+                check_migration_history(self.repository, wrong_base)
+            self.write("pyproject.toml", '[project]\nversion = "3.0.1"\n')
+            with self.assertRaisesRegex(MigrationHistoryError, "only to version 3.0.0"):
+                check_migration_history(self.repository, base)
+
+    def test_unpublished_correction_requires_reviewed_audit_document(self):
+        base, contract = self.unpublished_fixture()
+        self.propose_correction(contract)
+        with patch.object(history, "UNPUBLISHED_FREEZE_CORRECTION", contract):
+            for content in (
+                json.dumps({**contract, "publication_state": "published"}),
+                json.dumps({**contract, "allow_reset": True}),
+                json.dumps({**contract, "schema_version": True}),
+                '{"schema_version":1,"schema_version":1}',
+                '{',
+            ):
+                with self.subTest(content=content):
+                    self.write(history.CORRECTION_PATH, content)
+                    with self.assertRaises(MigrationHistoryError):
+                        check_migration_history(self.repository, base)
+            (self.repository / history.CORRECTION_PATH).unlink()
+            with self.assertRaisesRegex(MigrationHistoryError, "regular"):
+                check_migration_history(self.repository, base)
+
+    def test_unpublished_correction_rejects_partial_or_new_definitions(self):
+        base, contract = self.unpublished_fixture()
+        self.propose_correction(contract)
+        with patch.object(history, "UNPUBLISHED_FREEZE_CORRECTION", contract):
+            for path in (*contract["removed_migrations"], "src/qc_tool/database/migrations/future_app/0001_initial.py"):
+                with self.subTest(path=path):
+                    self.write(path)
+                    with self.assertRaisesRegex(MigrationHistoryError, "no migration files"):
+                        check_migration_history(self.repository, base)
+                    (self.repository / path).unlink()
+
+    def test_unpublished_correction_rejects_unreviewed_base_definition_or_hash(self):
+        for options, message in (({"extra": True}, "unreviewed migration"), ({"altered": True}, "reviewed hashes")):
+            with self.subTest(options=options):
+                base, contract = self.unpublished_fixture(**options)
+                self.propose_correction(contract)
+                with patch.object(history, "UNPUBLISHED_FREEZE_CORRECTION", contract):
+                    with self.assertRaisesRegex(MigrationHistoryError, message):
+                        check_migration_history(self.repository, base)
+                extra = self.repository / "src/qc_tool/database/migrations/dashboard/0003_unreviewed.py"
+                if extra.exists():
+                    extra.unlink()
+
+    def test_correction_audit_is_immutable_after_consumption(self):
+        base, contract = self.unpublished_fixture()
+        self.propose_correction(contract)
+        with patch.object(history, "UNPUBLISHED_FREEZE_CORRECTION", contract):
+            check_migration_history(self.repository, base)
+            corrected = self.commit()
+            self.write("src/qc_tool/frontend/models.py", "new draft models\n")
+            self.assertIn("models may evolve", check_migration_history(self.repository, corrected))
+            audit = self.repository / history.CORRECTION_PATH
+            original = audit.read_bytes()
+            self.write(history.CORRECTION_PATH, original.decode() + "\n")
+            with self.assertRaisesRegex(MigrationHistoryError, "audit is immutable"):
+                check_migration_history(self.repository, corrected)
+            audit.unlink()
+            with self.assertRaisesRegex(MigrationHistoryError, "regular"):
+                check_migration_history(self.repository, corrected)
+            self.write("audit-copy.json", original.decode())
+            audit.symlink_to(self.repository / "audit-copy.json")
+            with self.assertRaisesRegex(MigrationHistoryError, "regular"):
+                check_migration_history(self.repository, corrected)
+
+    def test_first_freeze_requires_3_0_1_or_later(self):
+        base = self.established_baseline()
+        self.policy("released")
+        for path in BASELINES:
+            self.write(path)
+        for version in ("2.4.9", "3.0.0", "3.0.0rc1"):
+            with self.subTest(version=version):
+                self.write("pyproject.toml", f'[project]\nversion = "{version}"\n')
+                with self.assertRaisesRegex(MigrationHistoryError, "3.0.1 or later"):
+                    check_migration_history(self.repository, base)
+        self.write("pyproject.toml", '[project]\nversion = "3.0.1"\n')
+        self.assertIn("Release freeze", check_migration_history(self.repository, base))
+
+    def test_released_policy_requires_project_version_metadata(self):
+        base = self.established_baseline("released")
+        (self.repository / "pyproject.toml").unlink()
+        with self.assertRaisesRegex(MigrationHistoryError, "3.0.1 or later"):
+            check_migration_history(self.repository, base)
+
+    def test_correction_audit_cannot_be_introduced_in_ordinary_draft_work(self):
+        base = self.established_baseline()
+        self.write(history.CORRECTION_PATH, json.dumps(history.UNPUBLISHED_FREEZE_CORRECTION))
+        with self.assertRaisesRegex(MigrationHistoryError, "only with the exact"):
+            check_migration_history(self.repository, base)
+
+    def test_later_release_cannot_reuse_the_unpublished_correction(self):
+        base, contract = self.unpublished_fixture()
+        self.propose_correction(contract)
+        with patch.object(history, "UNPUBLISHED_FREEZE_CORRECTION", contract):
+            check_migration_history(self.repository, base)
+            corrected = self.commit()
+            self.policy("released")
+            self.write("pyproject.toml", '[project]\nversion = "3.0.1"\n')
+            for path in BASELINES:
+                self.write(path)
+            self.assertIn("Release freeze", check_migration_history(self.repository, corrected))
+            released = self.commit()
+            self.policy("draft")
+            for path in BASELINES:
+                (self.repository / path).unlink()
+            with self.assertRaisesRegex(MigrationHistoryError, "cannot return"):
+                check_migration_history(self.repository, released)
 
 
 class PolicyValidationTests(unittest.TestCase):

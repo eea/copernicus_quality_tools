@@ -154,7 +154,9 @@ SQLite upgrades and the manual cutover require a maintenance window.
 
 ### Maintenance procedure
 
-This procedure applies after the major-release baseline. The first architecture
+This procedure applies after the migration-managed transition in v3.0.1 or
+later. v3.0.0 has a models-only schema and no migration definitions or snapshots;
+its production initialization remains an unresolved release gate. The first architecture
 cutover uses a **new database and a manual data import**, described in
 [Database migrations](../../src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover).
 Do not run the new baseline against a pre-release production database.

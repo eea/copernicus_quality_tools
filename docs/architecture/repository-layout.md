@@ -101,19 +101,23 @@ than creating another general helper module.
 
 `src/qc_tool/database/` owns all first-party database lifecycle assets:
 
+Version 3.0.0 contains no first-party migration definitions or schema snapshots.
+The first migration-managed freeze is a separate reviewed change in 3.0.1 or
+later; existing model-created databases need an explicit transition plan.
+
 ```text
 database/
 ├── README.md          # Ownership, layout and entry points
 ├── SCHEMA.md          # Canonical table ownership and persistence boundaries
 ├── MIGRATIONS.md      # Canonical whole-app migration and deployment runbook
-├── policy.json        # Draft/released lifecycle and baseline identities
+├── policy.json        # 3.0.0 models-only; future released baseline identities
 ├── policy.py          # Policy loading and validation
 ├── deployment.py      # Planning, migration checks, apply and PostgreSQL locks
 ├── apps.py            # Django management-command discovery
 ├── management/        # database plan|check|apply command
 ├── migrations/
-│   ├── accounts/      # Migration namespace for the accounts app label
-│   └── dashboard/     # Migration namespace for the dashboard app label
+│   ├── accounts/      # Empty namespace in 3.0.0; future accounts migrations
+│   └── dashboard/     # Empty namespace in 3.0.0; future dashboard migrations
 ├── checks/            # Git history guard and disposable schema verification
 └── tests/             # Host history tests and runtime integration tests
 ```

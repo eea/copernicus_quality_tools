@@ -185,6 +185,13 @@ Never weaken the check or commit its secret.
 
 ## Central database release policy
 
+v3.0.0 has no first-party migration definitions or baseline snapshots. Its fresh
+schemas are built from current models. The first migration-managed transition
+can occur in v3.0.1 or later; it requires a reviewed adoption/initialization
+contract before changing policy. The CI history guard also verifies the exact
+one-time withdrawal of the unpublished v3.0.0 freeze, while retaining ordinary
+released-history protection.
+
 The [whole-application migration runbook](../../src/qc_tool/database/MIGRATIONS.md) and
 [`src/qc_tool/database/policy.json`](../../src/qc_tool/database/policy.json) govern every component.
 When the policy phase is `draft`, CI rejects every first-party migration

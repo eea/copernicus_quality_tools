@@ -70,10 +70,11 @@ for the host, worker and frontend suites.
 
 The application-wide database package lives in
 [`src/qc_tool/database/`](src/qc_tool/database/README.md). It owns the committed
-schema history, release policy, deployment command, checks and migration runbook.
-The release policy determines the workflow: `draft` schemas are developed from
-models without migration files; release freeze creates the first versioned
-snapshots. Released schemas evolve through committed migrations applied in one
+release policy, deployment command, checks and migration runbook.
+**v3.0.0 is models-only:** no first-party migration files or initial snapshots;
+fresh development/test databases are built from current models. Migration
+management begins only in a reviewed **v3.0.1-or-later** change with an explicit
+existing-database adoption/initialization procedure. Those releases evolve through committed migrations applied in one
 deployment job, and production startup checks that they are current. Legacy
 data transfers use a separate import procedure into a fresh target database.
 See the [migration runbook](src/qc_tool/database/MIGRATIONS.md) before changing

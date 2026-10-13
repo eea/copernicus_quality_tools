@@ -9,9 +9,12 @@ database from the current models through the application-wide
 It never resets or merges into an existing database, starts services, connects
 to production, generates migrations, or edits specifications.
 
-This is a **local conversion rehearsal**, including when the repository policy
-is `draft`. Production cutover remains the separate frozen-release operation
-described in [MIGRATIONS.md](MIGRATIONS.md#one-time-manual-production-cutover).
+This is a **local conversion rehearsal**. QC Tool 3.0.0 uses the models-only
+`draft` policy and generates no migration definitions. Production cutover is a
+separate reviewed operation; its current initialization guard remains in place.
+The first migration-managed release is reserved for 3.0.1 or later and needs an
+explicit transition for existing 3.0.0 databases. See
+[MIGRATIONS.md](MIGRATIONS.md#one-time-manual-production-cutover).
 
 ## Obtain one coherent source snapshot
 

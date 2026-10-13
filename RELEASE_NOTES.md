@@ -2,11 +2,16 @@
 
 ## Major release: fresh database required
 
-QC Tool 3.0.0 freezes the application schema and introduces committed initial
-migrations. Create a **new database** with the whole-application
-`database plan|apply|check` workflow. This release does not upgrade a legacy or
-model-created development database in place. Never use `--fake` to bypass this
-requirement.
+QC Tool 3.0.0 uses a **models-only schema** under the `draft` policy, with no
+first-party migration definitions or baseline snapshots. Initialize a **new
+database** through the whole-application `database plan|apply|check` workflow
+from the current models. Initialization does not upgrade or reset an existing
+legacy or development database.
+
+The first migration-managed schema is reserved for an explicitly reviewed
+release from **3.0.1 onward**. Existing 3.0.0 tables cannot automatically adopt
+new initial migrations; a separate conversion/adoption plan is required. Never
+use fake migration records to bypass that transition.
 
 To preserve records from the supported 20260907 SQL backup, use the separate
 [legacy importer](src/qc_tool/database/LEGACY_IMPORT.md) after initializing the
@@ -37,6 +42,10 @@ Review user/product assignments after import, issue replacement API and S3
 credentials, and upload the original product specification files. Removed routes
 and country/region fields are not compatibility aliases; update integrations to
 the documented API, including `verified_product_unit_code`.
+
+Models-only database commands currently remain blocked in a secure production
+environment. Production initialization and cutover are unresolved gates; do not
+create a 3.0.0 migration baseline or reset a database to circumvent them.
 
 Use a verified frontend/worker image pair from the same release. Image publication
 and deployment remain pending; do not substitute an earlier worker without

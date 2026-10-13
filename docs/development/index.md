@@ -17,8 +17,9 @@ contains compiled geospatial, database, Java, and validator dependencies.
 2. Start the [local environment](../getting-started/index.md).
 3. Keep the change in the owning package; database changes follow the
    [application-wide release policy](database-migrations.md). Follow the workflow
-   for its phase: model changes without migration files in `draft`, reviewed
-   forward migrations in `released`.
+   for its phase: 3.0.0 stays models-only (`draft`) without migration definitions
+   or baseline snapshots; initial history is introduced only by a reviewed
+   freeze in 3.0.1 or later. After that freeze, use reviewed forward migrations.
 4. Add focused tests for the behavior and trust boundary.
 5. Run the focused suite while iterating.
 6. Run the documented regression suite and checks before review.

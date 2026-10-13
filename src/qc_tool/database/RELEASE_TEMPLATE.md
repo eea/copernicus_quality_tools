@@ -6,6 +6,11 @@ reason where appropriate. Store secret references, never secret values. The
 [migration runbook](MIGRATIONS.md) defines the procedure; this record captures the
 decisions and evidence for one release. It is not another executable manifest.
 
+v3.0.0 uses current models without migration definitions or baselines. The first
+migration-managed release can be v3.0.1 or later, after a reviewed source-schema
+adoption/initialization procedure. The current draft-policy production guard is
+not a completed models-only deployment workflow.
+
 ## Release identity
 
 | Item | Value |
@@ -13,7 +18,7 @@ decisions and evidence for one release. It is not another executable manifest.
 | Owner and operator | |
 | Release version and source commit SHA | |
 | Previous release and supported upgrade starting points | |
-| Policy phase (`released` for production) | |
+| Policy phase and supported initialization/adoption path | |
 | Frontend image digest | |
 | Worker image digest and compatibility evidence | |
 | Target environment, Compose project/config revision | |
@@ -24,7 +29,7 @@ decisions and evidence for one release. It is not another executable manifest.
 ## Change and compatibility
 
 - Release behavior and affected workflows:
-- Migration identities from `database plan`, across all apps (or no changes):
+- v3.0.0 models-only target, or v3.0.1+ migration identities across all apps:
 - Path: empty installation / manual legacy cutover / PostgreSQL expansion /
   backfill or reader switch / later contraction / maintenance upgrade:
 - What the old frontend and workers can read/write after the schema change:
@@ -37,7 +42,7 @@ decisions and evidence for one release. It is not another executable manifest.
 ## Rehearsal and recovery
 
 - Starting release, isolated database/storage snapshot and representative volume:
-- Baseline verification and migration-specific predecessor tests:
+- Fresh-model verification for v3.0.0, or baseline/adoption and predecessor tests for v3.0.1+:
 - Old/new application and worker smoke tests:
 - Measured lock wait, migration/backfill duration, load and replication impact:
 - Backup identifiers, restore rehearsal result, recovery time/data-loss limits:

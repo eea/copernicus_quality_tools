@@ -120,7 +120,10 @@ Review access before allowing users onto the new deployment.
 ## 3. Rehearse in a fresh disposable database
 
 While `policy.json` is `draft`, only development/test rehearsal is supported.
-The command rejects production imports until the release is explicitly frozen.
+v3.0.0 contains no migration definitions or baseline snapshots. Its current
+guard rejects production imports; a reviewed production initialization/import
+workflow is still required. Migration management can start only in v3.0.1 or
+later, and must not be introduced into v3.0.0 to bypass the guard.
 The following SQLite example leaves all existing databases alone. The temporary
 directory must be new, and the schema is built through the whole-app command:
 
@@ -163,6 +166,10 @@ records. A successful import cannot be rerun or merged into an occupied target;
 use another fresh disposable target for another rehearsal.
 
 ## 4. Production cutover after release freeze
+
+This section describes a future migration-managed target from v3.0.1 onward.
+It is not a v3.0.0 deployment procedure. The current models-only production
+initialization gate remains unresolved.
 
 Follow the [one-time cutover](MIGRATIONS.md#one-time-manual-production-cutover)
 using the frozen release and a new, initialized PostgreSQL database. Do not label
@@ -209,5 +216,6 @@ unknown job channels remained NULL, and a second import was refused. The
 source checksum was unchanged. The full 1,091-test application suites passed
 on SQLite and PostgreSQL; parser/history checks also passed on the host.
 
-This does not perform or certify a production cutover: repeat verification
-against the eventual frozen release.
+This historical rehearsal does not certify the current models-only candidate
+or a production cutover. Repeat verification against the exact selected source,
+policy and supported initialization workflow before deployment.

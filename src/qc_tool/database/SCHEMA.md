@@ -1,18 +1,18 @@
 # Application schema
 
-QC Tool uses one application database. The **3.0.0 schema is frozen** under
-policy `released`, with `accounts/0001_major_release` and
-`dashboard/0001_major_release` as its initial migration identities. Django models
-describe the desired state; committed migrations govern schema changes. This
-reference explains model ownership and persistence rules.
-The [database runbook](MIGRATIONS.md) owns initialization and release changes.
+QC Tool uses one application database. **3.0.0 is models-only**: policy is
+`draft`, with no first-party migration definitions or baseline snapshots.
+Django models describe the schema used to initialize a fresh target. Initial
+migration history is reserved for a separately reviewed release from **3.0.1
+onward**; it does not automatically adopt an existing 3.0.0 database.
+This reference explains model ownership and persistence rules. The
+[database runbook](MIGRATIONS.md) owns initialization and later release changes.
 
-For the complete column-level schema, use the [table dictionary](TABLES.md):
-all **24 tables and 193 columns**, PostgreSQL types, nullability, ORM defaults,
-foreign keys, constraints and indexes, including the `django_migrations` recorder.
+The [table dictionary](TABLES.md) describes stored fields and access paths.
 The [release checklist](AUDIT.md#remaining-release-checklist) tracks remaining
 work; the [metadata review](AUDIT.md#column-and-metadata-review-2026-09-21) records
-completed cleanup and retained evidence.
+completed model cleanup and retained evidence. Physical schema evidence must
+identify its source revision, policy, backend and initialization method.
 
 ## Naming and ownership
 
@@ -24,7 +24,8 @@ the stored fact independently of the Python package or UI that displays it.
 These prefixes group tables within one database. They do not create separate
 PostgreSQL schemas, services or release procedures. Django app labels remain
 framework identities for model discovery, content types and permissions;
-`accounts` and `dashboard` participate in one centrally managed migration graph.
+`accounts` and `dashboard` share one schema workflow and, after the future
+freeze, one centrally managed migration graph.
 
 ### Accounts
 
@@ -36,9 +37,10 @@ They do not import dashboard models.
 | `account_api_token` | [PersonalAccessToken](../frontend/accounts/models/api_tokens.py) | Named token digests and issuance-time access snapshots |
 | `account_product_grant` | [UserProductGrant](../frontend/accounts/models/product_grants.py) | Explicit user scope for a canonical business-product or exact QC-definition identifier |
 
-Django owns users, groups, permissions, content types, sessions, admin history
-and the migration recorder. Their standard `auth_*` and `django_*` tables remain
-framework-managed. `AccountCapability` is an unmanaged permission anchor, so it
+Django owns users, groups, permissions, content types, sessions and admin history.
+The migration recorder is infrastructure state when migration history is used;
+it is not a QC Tool model or required models-only application table. Standard
+`auth_*` and `django_*` business tables remain framework-managed. `AccountCapability` is an unmanaged permission anchor, so it
 has a content type and permissions but creates no application table.
 
 Account access uses product assignments, ownership and current roles. There is
@@ -234,7 +236,10 @@ migration baseline. Raw SQL must obtain and quote table identifiers from
 model metadata, as the [delivery query](../frontend/dashboard/services/deliveries/listing/query/sql.py)
 does. Do not duplicate a table-name registry in another configuration file.
 
-Follow the released [database workflow](MIGRATIONS.md#development-after-the-major-release-is-frozen).
-Preserve the frozen baselines, table identities and model identities. Include a
-reviewed forward migration and explicit application compatibility checks with
-each schema change; never reset or fake an existing database into this baseline.
+For 3.0.0, follow [models-only development](MIGRATIONS.md#draft-schema-development)
+and verify each schema change on fresh disposable databases without generating
+migration definitions. Existing tables are not upgraded by initialization.
+From the first reviewed freeze in 3.0.1 or later, preserve established baseline,
+table and model identities and include reviewed forward migrations with later
+schema changes. Transitioning an existing 3.0.0 database requires a separately
+reviewed conversion/adoption plan; never reset or fake it into a new history.

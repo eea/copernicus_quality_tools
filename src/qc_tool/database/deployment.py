@@ -60,8 +60,10 @@ def manage_database(action, *, database, stdout, lock_timeout_ms, statement_time
     policy = release_policy()
     if policy["phase"] == "draft" and settings.IS_SECURE_ENVIRONMENT:
         raise CommandError(
-            "This branch has a draft schema without migration history. Freeze the release policy "
-            "before production deployment; do not apply it to a legacy database."
+            "This branch has a draft schema without migration history. "
+            "The models-only production initialization workflow is not yet supported; "
+            "use a fresh development/test target. Migration management starts only "
+            "in a reviewed 3.0.1-or-later release; do not apply this schema to a legacy database."
         )
     connection = connections[database]
     if policy["phase"] == "draft":

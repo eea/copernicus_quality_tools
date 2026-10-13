@@ -90,7 +90,11 @@ def apply_import(plan, *, database="default", target_database):
         raise ValueError("Target database name does not match the configured database; no data was written.")
     phase = load_policy()["phase"]
     if phase == "draft" and settings.IS_SECURE_ENVIRONMENT:
-        raise ValueError("Freeze the release schema before a production import. Draft imports are for development/test rehearsals only.")
+        raise ValueError(
+            "Models-only production import is not yet supported. Draft imports are "
+            "for fresh development/test rehearsals only; do not introduce a 3.0.0 "
+            "migration baseline to bypass this guard."
+        )
     if phase == "released":
         call_command("database", "check", database=database, stdout=StringIO())
     check_draft_tables(connection)

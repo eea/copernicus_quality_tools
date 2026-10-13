@@ -135,7 +135,14 @@ or development-server flags and no accidental host bind mounts.
 
 ## 5. Pull and initialize the database
 
-Production images must use the frozen `released` database policy. A `draft`
+**v3.0.0 has a models-only schema without migration definitions or baselines.**
+The production commands below describe the future migration-managed workflow,
+starting in v3.0.1 or later; they are not a v3.0.0 initialization procedure.
+The current draft-policy production guard is retained. Use the
+[version policy](../../src/qc_tool/database/MIGRATIONS.md#version-policy) and
+development/test rehearsal procedure while production preparation is deferred.
+
+For migration-managed releases, production images use the `released` policy. A `draft`
 policy refuses production database commands; complete the
 [release freeze](../../src/qc_tool/database/MIGRATIONS.md#freeze-the-first-release)
 before production deployment.
