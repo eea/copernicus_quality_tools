@@ -12,14 +12,14 @@ Run from the repository root:
 python3 -m unittest discover -s scripts/tests -t . -v
 
 # Focused groups
-python3 -m unittest discover -s scripts/tests/migration -t . -v
 python3 -m unittest discover -s scripts/tests/testing -t . -v
 ```
 
 The **Maintainer tools (offline)** CI job collects this directory explicitly.
-`migration/` covers source preparation, fresh-target rehearsal/isolation and
-export reconciliation. `testing/` covers the worker evidence runner's input,
+`testing/` covers the worker evidence runner's input,
 classification and source-provenance contracts.
+Private legacy-conversion archives are outside this suite and the maintained
+codebase.
 
 Application unit/integration tests remain with their owning packages under
 `src/qc_tool/`. Historical investigations and generated outputs are not test

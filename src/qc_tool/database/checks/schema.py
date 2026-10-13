@@ -1,7 +1,7 @@
-"""Build draft models or exercise released upgrades on an EMPTY test database.
+"""Verify current models on an entirely empty disposable test database.
 
-Run inside the supported frontend runtime with QC_TOOL_ENVIRONMENT=test and
-explicit disposable DB settings. This command never resets an existing database.
+Run in the pinned frontend runtime with QC_TOOL_ENVIRONMENT=test and explicit
+isolated DB settings. This command never resets or upgrades an existing target.
 """
 
 import os
@@ -10,8 +10,8 @@ import sys
 from django.utils import timezone
 
 
-def seed_baseline(apps):
-    """Keep historical input fixed; evolve successor assertions for schema changes."""
+def seed_records(apps):
+    """Create synthetic current-model rows and retain their exact selected values."""
     snapshots = []
 
     def create(app, model, **values):
@@ -24,26 +24,26 @@ def seed_baseline(apps):
         return instance
 
     # Deliberately synthetic, unusable credentials; no shared files or services.
-    user = create("auth", "User", username="migration-probe", password="!")
+    user = create("auth", "User", username="schema-probe", password="!")
     product = create(
-        "dashboard", "Product", ident="migration_probe", name="Migration probe",
+        "dashboard", "Product", ident="schema_probe", name="Schema probe",
     )
     release = create(
         "dashboard", "ProductRelease", product_id=product.pk,
-        release_key="migration_probe_2026", revision=1,
-        description="Migration probe", catalog_digest="c" * 64,
+        release_key="schema_probe_2026", revision=1,
+        description="Schema probe", catalog_digest="c" * 64,
         coverage_state="authoritative", is_current=True,
         approved_at=timezone.now(),
     )
     product_unit_code = "unit-" + "x" * 250
     product_unit = create(
         "dashboard", "ProductUnit", product_release_id=release.pk,
-        product_unit_code=product_unit_code, provenance="migration-test",
+        product_unit_code=product_unit_code, provenance="schema-test",
     )
     definition = create(
         "dashboard", "QcDefinition", product_ident=product.ident,
-        digest="d" * 64, description="Migration probe",
-        document={"probe": True}, source_path="migration-probe.json",
+        digest="d" * 64, description="Schema probe",
+        document={"probe": True}, source_path="schema-probe.json",
     )
     create(
         "dashboard", "ProductReleaseDefinition", product_release_id=release.pk,
@@ -54,19 +54,19 @@ def seed_baseline(apps):
         product_ident=product.ident,
     )
     token = create(
-        "accounts", "PersonalAccessToken", user_id=user.pk, name="Migration probe",
+        "accounts", "PersonalAccessToken", user_id=user.pk, name="Schema probe",
         secret_digest="sha256:" + "e" * 64,
         permission_snapshot=["view_deliveries"], role_snapshot=["default"],
         product_idents_snapshot=[product.ident],
     )
     delivery = create(
-        "dashboard", "Delivery", user_id=user.pk, filename="migration-probe.zip",
+        "dashboard", "Delivery", user_id=user.pk, filename="schema-probe.zip",
         size_bytes=2 ** 33, product_ident=product.ident,
         product_unit_code=product_unit_code, verified_product_unit_code=product_unit_code, content_sha256="a" * 64,
     )
     job = create(
         "dashboard", "Job", delivery_id=delivery.pk, product_ident=product.ident,
-        product_description="Migration probe", job_status="ok",
+        product_description="Schema probe", job_status="ok",
         product_unit_code=product_unit_code, verified_product_unit_code=product_unit_code,
         requested_by_id=user.pk, requested_by_username=user.username,
         request_source="api", requested_api_token_id=token.pk,
@@ -91,7 +91,7 @@ def verify_rows(snapshots):
     for label, pk, expected in snapshots:
         actual = apps.get_model(label).objects.filter(pk=pk).values(*expected).get()
         if actual != expected:
-            raise RuntimeError(f"Migration changed the probe's {label} record.")
+            raise RuntimeError(f"Repeated initialization changed the probe's {label} record.")
 
 
 def verify_account_bootstrap():
@@ -118,28 +118,11 @@ def verify_account_bootstrap():
 
 
 def verify_declared_constraints_and_indexes():
-    """Inspect the fresh schema for every named first-party integrity rule."""
-
-    from django.apps import apps
+    """Validate the required managed schema contract and named integrity rules."""
     from django.db import connection
+    from qc_tool.database.deployment import SchemaInitializer
 
-    with connection.cursor() as cursor:
-        for model in apps.get_models():
-            if model._meta.app_label not in {"accounts", "dashboard"} or not model._meta.managed:
-                continue
-            table = model._meta.db_table
-            actual = connection.introspection.get_constraints(cursor, table)
-            declared = {rule.name for rule in (*model._meta.constraints, *model._meta.indexes)}
-            missing = declared - actual.keys()
-            if missing:
-                raise RuntimeError(f"Missing constraints or indexes in {table}: {sorted(missing)}")
-
-
-def baseline_targets(graph, baselines, first_party_apps):
-    """Seed before all later first-party work, including newly introduced apps."""
-    return list(baselines) + [
-        node for node in graph.leaf_nodes() if node[0] not in first_party_apps
-    ]
+    SchemaInitializer(connection).check()
 
 
 def main():
@@ -150,61 +133,45 @@ def main():
     import django
     django.setup()
 
+    from django.apps import apps
+    from django.contrib.auth.models import Group
     from django.core.management import call_command
     from django.db import connection
-    from django.db.migrations.executor import MigrationExecutor
-    from qc_tool.database.deployment import release_policy
-    from qc_tool.database.policy import MIGRATION_MODULES
+    from unittest.mock import patch
+    from qc_tool.database.checks.source import check_source
+    from qc_tool.database.deployment import SchemaInitializer
 
-    if connection.introspection.table_names(include_views=True):
+    check_source()
+    initializer = SchemaInitializer(connection)
+    if initializer.inspect()["state"] != "empty":
         raise RuntimeError("Refusing to modify a nonempty database. Use a new test database.")
 
-    policy = release_policy()
-    if policy["phase"] == "draft":
-        from django.apps import apps
+    call_command("database", "apply", verbosity=0)
+    verify_declared_constraints_and_indexes()
+    verify_account_bootstrap()
+    if (apps.get_model("auth", "User").objects.exists()
+            or apps.get_model("dashboard", "Product").objects.exists()):
+        raise RuntimeError("Schema initialization must not create users or seed products.")
 
-        call_command("database", "apply", verbosity=0)
-        if apps.get_model("dashboard", "Product").objects.exists():
-            raise RuntimeError("Draft schema initialization must not seed products.")
-        snapshots = seed_baseline(apps)
+    snapshots = seed_records(apps)
+    roles = list(Group.objects.order_by("pk").values_list("pk", "name"))
+    grants = list(Group.permissions.through.objects.order_by("pk").values_list(
+        "pk", "group_id", "permission_id",
+    ))
+    # A matching target must never run native initialization or bootstrap again.
+    with patch("qc_tool.database.deployment.call_command",
+               side_effect=RuntimeError("Repeated apply attempted initialization/bootstrap.")):
         call_command("database", "apply", verbosity=0)
         call_command("database", "check", verbosity=0)
-        verify_rows(snapshots)
-        verify_account_bootstrap()
-        verify_declared_constraints_and_indexes()
-        print(f"{connection.vendor}: draft model schema, synthetic data, repeat initialization and roles passed.")
-        return
-
-    executor = MigrationExecutor(connection)
-    baselines = tuple(policy["baselines"].items())
-    for baseline in baselines:
-        if baseline not in executor.loader.graph.nodes:
-            raise RuntimeError(f"Missing committed release baseline: {baseline}.")
-    conflicts = executor.loader.detect_conflicts()
-    if conflicts:
-        raise RuntimeError(f"Resolve migration conflicts before release: {conflicts}.")
-
-    # Keep Django's own apps at their supported heads; pin only QC Tool's apps
-    # to the first release. Never reverse an installed or production database.
-    targets = baseline_targets(executor.loader.graph, baselines, MIGRATION_MODULES)
-    executor.migrate(targets)
-    baseline_apps = executor.loader.project_state(targets).apps
-    snapshots = seed_baseline(baseline_apps)
-
-    # The management command also runs post_migrate permission/role bootstrap.
-    call_command("database", "apply", verbosity=0)
     verify_rows(snapshots)
     verify_account_bootstrap()
+    if (roles != list(Group.objects.order_by("pk").values_list("pk", "name"))
+            or grants != list(Group.permissions.through.objects.order_by("pk").values_list(
+                "pk", "group_id", "permission_id",
+            ))):
+        raise RuntimeError("Repeated initialization changed role or permission records.")
     verify_declared_constraints_and_indexes()
-    call_command("database", "apply", verbosity=0)
-    call_command("database", "check", verbosity=0)
-    call_command(
-        "makemigrations", *MIGRATION_MODULES,
-        check_changes=True, dry_run=True, interactive=False, verbosity=0,
-    )
-    verify_rows(snapshots)
-    verify_account_bootstrap()
-    print(f"{connection.vendor}: baseline, seeded upgrade, repeat migrate, and model drift checks passed.")
+    print(f"{connection.vendor}: current-model schema, synthetic records, read-only repeat apply and roles passed.")
 
 
 if __name__ == "__main__":

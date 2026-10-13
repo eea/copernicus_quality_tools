@@ -17,14 +17,9 @@ scripts/
 ├── data_preparation/boundaries/    # Explicit generation of boundary resources
 │   ├── create_layers.py
 │   └── create_masks.py
-├── migration/legacy/               # Offline legacy cutover/rehearsal tools
-│   ├── prepare_sources.py
-│   ├── reconcile_exports.py
-│   └── rehearse.py
 ├── testing/                       # Repeatable QC evidence collection
 │   └── legacy_qc.py
 ├── tests/                         # Offline unit tests for maintained tools
-│   ├── migration/
 │   └── testing/
 ├── one_off/clc2024/                # Historical product-specific preparation
 │   ├── generate_metadata.py
@@ -47,9 +42,6 @@ not rewrite the command paths recorded in those captures.
 
 | Purpose | Command or guide | Lifecycle and effect |
 | --- | --- | --- |
-| Audit/import a legacy snapshot | [`migration/legacy/rehearse.py`](migration/legacy/rehearse.py) | Maintained cutover tool. Rehearsals are repeatable; each uses a new private output directory and a fresh target. |
-| Prepare available mixed history | [`migration/legacy/prepare_sources.py`](migration/legacy/prepare_sources.py) | Maintained cutover helper. Writes a separate interchange and provenance manifest, preserving source bytes. |
-| Compare CSV history with XLSX exports | [`migration/legacy/reconcile_exports.py`](migration/legacy/reconcile_exports.py) | Repeatable, read-only verification; prints aggregate differences and fingerprints. |
 | Run captured deliveries through an isolated worker | [`testing/legacy_qc.py`](testing/legacy_qc.py) | Repeatable manual integration verification; requires prepared inputs and a disposable worker. |
 | Check tooling regressions locally/in CI | [`tests/`](tests/README.md) | Automated offline unit tests; synthetic inputs and temporary directories. |
 | Review recipe tile identifiers or naming examples | [`catalog/`](catalog/README.md) | Manual legacy diagnostics; findings require review against current product contracts. |
@@ -57,27 +49,23 @@ not rewrite the command paths recorded in those captures.
 | Reproduce a historical CLC2024 preparation/investigation | [`one_off/clc2024/`](one_off/clc2024/README.md) | Historical tools retained for review; not automated QC tests. |
 | Review outdated documentation tools | [`obsolete/wiki/`](obsolete/wiki/README.md) | Removal candidates; current docs use Jekyll's sitemap plugin. |
 
-**One-time operation does not mean disposable implementation.** Legacy production
-cutover happens once, but source validation, rehearsal and reconciliation need
-maintained tools and regression tests until the legacy workflow is retired.
+Legacy database conversion is a private manual operation outside this catalog
+and the application codebase. The original operator tools are archived privately;
+they are not shipped or collected by CI. See the
+[manual restore guide](../src/qc_tool/database/MANUAL_RESTORE.md) for a prepared
+current-schema database artifact.
 
 ## Maintained commands
 
 Inspect the CLI without starting a database or worker:
 
 ```bash
-python3 -m scripts.migration.legacy.rehearse --help
-python3 -m scripts.migration.legacy.prepare_sources --help
-python3 -m scripts.migration.legacy.reconcile_exports --help
 python3 -m scripts.testing.legacy_qc --help
 ```
 
-Use the [legacy migration guide](migration/legacy/README.md) for source/output
-contracts and the [QC verification guide](testing/README.md) for prepared worker
-execution. Imports, `--help`, source preparation and export reconciliation use
-the standard library. Both rehearsal modes (audit and `--apply`) execute the
-application's importer and require the frontend Python environment. Actual QC
-runs need Docker and the worker's geospatial dependencies.
+Use the [QC verification guide](testing/README.md) for prepared worker execution.
+The runner's imports and `--help` use the standard library. Actual QC runs need
+Docker and the worker's geospatial dependencies.
 
 Inside an existing frontend/worker image, set the repository as the working
 directory before invoking a script module:
@@ -85,7 +73,7 @@ directory before invoking a script module:
 ```bash
 docker compose -f docker/compose.local.yaml exec \
   -w /usr/local/src/copernicus_quality_tools \
-  frontend python3 -m scripts.migration.legacy.rehearse --help
+  frontend python3 -m scripts.testing.legacy_qc --help
 ```
 
 Only committed scripts are available in source-archive release images. The
@@ -97,7 +85,7 @@ checkout-mounted development stack sees the local scripts immediately.
 | --- | --- | --- |
 | Tool input/provenance/isolation contracts | `scripts/tests/` | Host `unittest`, collected by the offline CI job |
 | Raster/vector and archive-security behavior | `src/qc_tool/test/` | Existing worker regression suite with its GDAL/PostGIS environment |
-| Database policy/import/model invariants | `src/qc_tool/database/tests/` | Existing host/integration groups |
+| Models-only source/schema invariants | `src/qc_tool/database/tests/` | Existing host/integration groups |
 | Frontend access, upload, submission and UI behavior | Frontend account/dashboard test packages | Existing Django/JavaScript groups |
 | Production/v3 compatibility on actual deliveries | `scripts/testing/` and private evidence | Explicit paired integration runs; never triggered by the offline host suite |
 
@@ -125,22 +113,22 @@ These files are retained in the folders below. The proposals do not delete them.
 | `catalog/check_tile_codes.py` | Fixed product-family/step/length assumptions can drift from current product-unit validation. | Move any still-needed assertions into focused tests of the real product-unit contract before retiring this diagnostic. |
 | `catalog/naming_examples.py` | Heuristic regex substitutions and direct parsEO parsing are different from the application's naming integration. | Preserve useful explicit cases in tests of the actual naming adapter before retiring the example generator. |
 
-Keep the migration helpers, their unit tests, the worker evidence runner and
-boundary-generation tools. The CLC gap analysis remains a manual diagnostic
+Keep the worker evidence runner, its unit tests and boundary-generation tools.
+The CLC gap analysis remains a manual diagnostic
 while that investigation is useful; archive/remove it when its owner closes the
 investigation and preserves the relevant findings.
 
 ## Adding or maintaining a tool
 
 1. Put it in the owning purpose directory. Use a verb/object name such as
-   `reconcile_exports.py`; keep dates, delivery IDs and machine paths in private
+   `inspect_inputs.py`; keep dates, delivery IDs and machine paths in private
    run configuration or evidence.
 2. State its purpose, lifecycle, dependencies, inputs, outputs and overwrite
    behavior in its module docstring and directory README.
 3. Use explicit CLI inputs and repository-relative defaults. Keep normal
    imports free of operator actions, and guard execution with `main()`.
 4. Put durable business logic in the application package; a script should adapt
-   an operator command to that logic rather than create another importer/check.
+   an operator command to that logic rather than create another QC implementation.
 5. Add meaningful contract tests under `scripts/tests/<purpose>/` for maintained
    tools. Production access, large delivery downloads and expensive real QC
    remain explicit integration verification.

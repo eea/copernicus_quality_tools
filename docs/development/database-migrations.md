@@ -1,40 +1,47 @@
 ---
-title: Database migrations
+title: Database initialization
 parent: Development
 nav_order: 5
 ---
 
-# Database migrations
+# Database initialization
 
-Start with the [QC Tool database guide](../../src/qc_tool/database/README.md)
-and [choose the workflow](../../src/qc_tool/database/MIGRATIONS.md#choose-the-workflow)
-for the release you are maintaining. The database package owns the policy,
-schema initialization, future migration graph, deployment command, checks,
-tests and runbook for the whole application. **3.0.0 is models-only (`draft`) and
-contains no first-party migration definitions or baseline snapshots.** The first
-migration-managed release may be 3.0.1 or later, after an explicit review.
+The [QC Tool database guide](../../src/qc_tool/database/README.md) owns the
+models-only policy, initialization command, schema checks and release evidence
+for the whole application. **3.0.0 contains no migration framework, definitions,
+initial snapshots or legacy converter.** Current Django models define the schema.
 
 | Task | Instructions |
 | --- | --- |
-| Change a model while the policy phase is `draft` | [Draft schema development](../../src/qc_tool/database/MIGRATIONS.md#draft-schema-development); change models without migration files |
-| Validate a schema change before review | [Local verification](../../src/qc_tool/database/MIGRATIONS.md#local-verification) on disposable databases |
-| Prepare 3.0.0 | Verify models on fresh targets and record the unresolved production initialization gate; do not generate migrations |
-| Introduce migration history in 3.0.1 or later | [Reviewed freeze](../../src/qc_tool/database/MIGRATIONS.md#freeze-the-first-release) plus an explicit transition for existing databases |
-| Change a schema after release freeze | [Author and review forward migrations](../../src/qc_tool/database/MIGRATIONS.md#development-after-the-major-release-is-frozen) |
-| Prepare an application release | Complete the [release record](../../src/qc_tool/database/MIGRATIONS.md#release-record) using the [release template](../../src/qc_tool/database/RELEASE_TEMPLATE.md) |
-| Deploy compatible PostgreSQL changes | [Online rollout sequence](../../src/qc_tool/database/MIGRATIONS.md#online-rollout-sequence) and the deployment's [operations guide](../deployment/operations.md#upgrades) |
-| Investigate a failed migration or recover a release | [Failure and recovery](../../src/qc_tool/database/MIGRATIONS.md#failure-and-recovery) |
+| Change a model | Change the owning model and verify a new disposable target; initialization does not upgrade existing databases |
+| Inspect an existing database | Run `database plan` and `database check`; both inspect schema without changing data or repairing it |
+| Initialize a new installation | Run `database plan`, then `database apply` against an entirely empty target, followed by `database check` |
+| Use a prepared database copy | Follow the [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md); validate schema, records and corresponding storage before cutover |
+| Prepare an application release | Record matching source/image identifiers and complete the [release template](../../src/qc_tool/database/RELEASE_TEMPLATE.md) |
+| Deploy or recover an installation | Follow the [deployment guide](../deployment/index.md) and [operations guide](../deployment/operations.md#upgrades) |
 
-Existing 3.0.0 tables and data are not automatically adopted by new initial
-migrations. Review a fresh-target conversion or separately approved adoption
-design; do not use fake migration records or reset an occupied database.
+`database apply` supports an entirely empty production database. For a complete
+schema matching the current models it performs a read-only no-op. It refuses
+partial or foreign schemas and detected model drift; it never resets a database,
+repairs existing tables or converts legacy records. An empty product catalog does not mean that
+the database is empty.
 
-For SQLite or incompatible schema changes after the future freeze, use the documented maintenance
-workflow. A nearly zero downtime PostgreSQL migration also needs compatible
-frontend and worker versions, staged data changes and suitable rollout
-infrastructure; successful CI alone does not establish those conditions.
+Readiness inspection compares required managed tables, columns, backend types,
+nullability, primary-key generation, foreign keys, uniqueness, named `Meta`
+CHECK predicates and declared index definitions. It also checks SQLite JSON
+validity. It does not exhaustively compare field-generated positive-integer
+CHECKs, arbitrary additional constraints, triggers or privileges. Schema readiness
+does not prove restored record completeness, account authorization or storage
+availability; verify those against the handoff manifest and application workflows.
 
-Read the canonical files from the **same source revision as the pinned release
-image**. Check out that release tag or commit before following the procedures.
-The relative links above stay within that source revision. This page is navigation;
-maintain the procedure in `src/qc_tool/database/` so it has one owner.
+Legacy conversion and its source archives are private operator work outside the
+maintained application. Restore a validated current-schema artifact into a
+separate target; never restore legacy DDL over an application database.
+
+The first migration definitions may be introduced only in a separately reviewed
+3.0.1-or-later release. That future work must define an explicit transition for
+existing databases; this branch supplies no migration or automatic adoption path.
+
+Read the guide and commands from the same source revision as the pinned release
+image. This page provides navigation; keep the implementation and procedure in
+`src/qc_tool/database/` so they have one owner.

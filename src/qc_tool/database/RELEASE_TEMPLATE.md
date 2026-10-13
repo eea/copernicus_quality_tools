@@ -1,86 +1,47 @@
-# QC Tool release record: <version>
+# QC Tool installation record: <version>
 
-Copy this template into the release PR or your deployment records. Complete it
-before deployment, then attach the actual results. Use `not applicable` with a
-reason where appropriate. Store secret references, never secret values. The
-[migration runbook](MIGRATIONS.md) defines the procedure; this record captures the
-decisions and evidence for one release. It is not another executable manifest.
+Record evidence for the exact database copy and application images before manual
+production installation. Store credential references, never secret values.
+See [initialization](MIGRATIONS.md) and [manual restore](MANUAL_RESTORE.md).
+v3.0.0 has no migration history or upgrade machinery.
 
-v3.0.0 uses current models without migration definitions or baselines. The first
-migration-managed release can be v3.0.1 or later, after a reviewed source-schema
-adoption/initialization procedure. The current draft-policy production guard is
-not a completed models-only deployment workflow.
-
-## Release identity
+## Identity and source
 
 | Item | Value |
 | --- | --- |
-| Owner and operator | |
-| Release version and source commit SHA | |
-| Previous release and supported upgrade starting points | |
-| Policy phase and supported initialization/adoption path | |
-| Frontend image digest | |
-| Worker image digest and compatibility evidence | |
-| Target environment, Compose project/config revision | |
-| Database engine/version, host and database name (no credentials) | |
-| Shared storage identities | |
-| CI runs and artifact smoke-test results | |
+| Owner/operator and planned cutover time | |
+| Version and source commit | |
+| Frontend/worker immutable image digests | |
+| Target PostgreSQL version and new database identity | |
+| Archive filename, SHA-256 and restore evidence | |
+| Source capture dates, provenance and known omissions | |
+| Shared storage backup identities | |
+| Recovery copy and traffic-switch rollback procedure | |
 
-## Change and compatibility
+## Verification
 
-- Release behavior and affected workflows:
-- v3.0.0 models-only target, or v3.0.1+ migration identities across all apps:
-- Path: empty installation / manual legacy cutover / PostgreSQL expansion /
-  backfill or reader switch / later contraction / maintenance upgrade:
-- What the old frontend and workers can read/write after the schema change:
-- What the new frontend and workers require before starting:
-- Queued/running jobs, clients and background tasks affected:
-- Transaction behavior, expected duration, lock/statement timeout bounds:
-- Data-preservation and authorization assertions:
-- Schema operations deliberately deferred to a later release:
+- [ ] Restore archive into an entirely empty isolated target; checksum matches.
+- [ ] `database check` passes with the selected source/image in production mode.
+- [ ] IDs, ownership, timestamps, record counts, foreign keys and sequences match.
+- [ ] Historical submitted filenames reject duplicate admission, including case changes.
+- [ ] Account passwords and permitted product access are explicitly provisioned.
+- [ ] Original specifications/catalog and shared input/report/submission files are available.
+- [ ] Credentials, boundary storage and active worker configuration are verified.
+- [ ] Login, denied/allowed access, new upload, QC, publication and review are verified.
+- [ ] Same-input QC pass/fail agrees with production, except damaged ZIPs.
+- [ ] Source writes/workers and target traffic have a coordinated cutover plan.
 
-## Rehearsal and recovery
+## Ordered manual installation
 
-- Starting release, isolated database/storage snapshot and representative volume:
-- Fresh-model verification for v3.0.0, or baseline/adoption and predecessor tests for v3.0.1+:
-- Old/new application and worker smoke tests:
-- Measured lock wait, migration/backfill duration, load and replication impact:
-- Backup identifiers, restore rehearsal result, recovery time/data-loss limits:
-- Latest point at which application images alone can be rolled back:
-- Action if DDL partly commits or concurrent index creation fails:
-- Action if a backfill stops, including checkpoint and safe resume command:
-- Restore or forward-repair procedure, including writes since the backup:
+| Order | Exact command/action | Expected result | Actual evidence |
+| --- | --- | --- | --- |
+| 1 | Verify target identity, recovery assets and source-write handling | | |
+| 2 | Restore into a new empty target, or initialize a completely new installation | | |
+| 3 | Check schema and reconcile data/files/access | | |
+| 4 | Start the compatible frontend and workers | | |
+| 5 | Run workflow checks and switch traffic | | |
+| 6 | Monitor and retain recovery copy | | |
 
-## Ordered deployment steps
-
-Write the **exact commands and expected result** for this environment. Include
-the pinned Compose configuration and environment-lock owner. Every step needs
-an explicit stop condition; a failed migration must block service rollout.
-
-| Order | Action/command | Expected result | Stop/recovery condition | Actual result/time |
-| --- | --- | --- | --- | --- |
-| 1 | Verify target and images; acquire environment lock | | | |
-| 2 | Establish traffic/job handling and backup evidence | | | |
-| 3 | Plan, then apply schema once with restricted diagnostic logs | | | |
-| 4 | Check migration state and validate data | | | |
-| 5 | Deploy compatible frontend/workers and verify health | | | |
-| 6 | Run/schedule backfill or manual import at its required stage | | | |
-| 7 | Resume/switch traffic and monitor | | | |
-
-Reorder the template steps for the selected path: manual import happens before
-new services start; an online backfill happens after compatible writers are
-deployed. Supply import mappings or backfill commands, dry-run results,
-batch/checkpoint settings and completion assertions where applicable.
-
-## Acceptance and follow-up
-
-- Login/logout and static assets:
-- Allowed **and denied** user/product access:
-- Upload, delivery/job state and representative worker execution:
-- Catalog/product unit provenance and submission/filesystem consistency:
-- Empty-installation catalog remains empty until administrator upload or explicit reviewed import:
-- Migration state current; data assertions and backfill completeness:
-- Error rate, latency, queue age and database load within recorded limits:
-- Migration/deployment log location and operator decision:
-- Rollback window end and retained recovery assets:
-- Owner and earliest eligible release for contract/cleanup work:
+Stop on any failed prerequisite. Existing databases are never reset, faked or
+repaired by the initializer. No production action is implied by preparing this
+record or a private local database copy.

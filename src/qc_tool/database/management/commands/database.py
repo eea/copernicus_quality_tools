@@ -8,7 +8,7 @@ from qc_tool.database.deployment import manage_database
 
 
 class Command(BaseCommand):
-    help = "Initialize draft models or plan/check/apply the released QC Tool migration graph."
+    help = "Inspect current-model readiness or explicitly initialize an empty database."
 
     def add_arguments(self, parser):
         parser.add_argument("action", choices=("plan", "check", "apply"))
@@ -28,6 +28,6 @@ class Command(BaseCommand):
             )
         except DatabaseError as error:
             raise CommandError(
-                "Database migration failed. Inspect the database and migration log "
-                "before retrying; non-atomic migrations may need forward repair."
+                "Database initialization or inspection failed. No existing schema "
+                "is upgraded or reset; inspect the target before retrying."
             ) from error

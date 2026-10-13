@@ -35,8 +35,6 @@ docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage database plan
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage database check
-docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage makemigrations --check --dry-run
 
 # Users
 docker compose -f docker/compose.local.yaml exec frontend \
@@ -49,19 +47,24 @@ docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage clearsessions
 ```
 
-During draft, `database plan` explains initialization and `database check`
-verifies table/column presence. `database apply` creates missing tables from
-models, without generating migration files, importing products, or altering
-existing columns. Use a fresh development schema after model changes. After
-freeze, these commands manage the full migration graph, and
-`makemigrations --check --dry-run` detects model drift without writing files.
+`database plan` and `database check` inspect the schema read-only. The explicit
+`database apply` command initializes an entirely empty database from models,
+including in production; it is a read-only no-op for a complete matching schema.
+It refuses partial or foreign schemas and detected model drift. It never imports
+products, converts records, resets a database or upgrades existing tables.
 
-Use the [local verification procedure](../../src/qc_tool/database/MIGRATIONS.md#local-verification)
-to apply and test changes on a disposable database. For a release, follow the
-[canonical workflow](../development/database-migrations.md) and run the
-application-wide `database apply` once in the documented deployment job before
-frontend startup. Never use `migrate <app> zero` to create the baseline; that
-command unapplies migrations.
+For a new empty target, run:
+
+```bash
+docker compose -f docker/compose.local.yaml run --rm --no-deps frontend \
+  python3 -m qc_tool.frontend.manage database apply
+```
+
+Use a fresh disposable target after model changes. Follow the
+[database guide](../development/database-migrations.md) before selecting persistent
+storage and the [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md)
+for a prepared current-schema copy. The application ships no migration or legacy
+conversion command.
 
 ## QC Tool user provisioning
 

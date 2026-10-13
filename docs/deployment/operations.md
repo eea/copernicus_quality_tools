@@ -116,7 +116,7 @@ Before reopening S3 work after recovery, restore the credential directory with
 the matching database and test registration plus a worker job. Missing credentials
 prevent new jobs from being queued. A queued job whose credential file disappears
 fails safely when a worker claims it; workers are not sent empty credentials.
-The SQL-only legacy importer intentionally restores no S3 credentials.
+A prepared database restore alone does not restore these credential files.
 
 To rotate credentials, revoke the old key at its S3 provider and register the
 delivery again with its replacement credentials through the existing S3 API.
@@ -131,56 +131,44 @@ There is no automatic credential rotation or garbage collection.
 
 ## Upgrades
 
-The [database runbook](../../src/qc_tool/database/MIGRATIONS.md)
-owns schema authoring, compatibility, migration-job gates and recovery rules.
-This page describes Compose operations for the selected deployment. Read the
-runbook from the source revision matching the pinned release image and complete
-its [release record](../../src/qc_tool/database/MIGRATIONS.md#release-record)
-using the [template](../../src/qc_tool/database/RELEASE_TEMPLATE.md).
+The [database guide](../../src/qc_tool/database/README.md) owns models-only
+initialization and schema validation. Use the procedure from the same source
+revision as the pinned image and record its evidence with the
+[release template](../../src/qc_tool/database/RELEASE_TEMPLATE.md).
 
-Choose the rollout path before applying schema changes:
+v3.0.0 has no migration framework, definitions, snapshots or legacy converter.
+Its database command cannot upgrade existing tables. A complete schema matching
+the candidate models can be retained; a changed schema requires a separately
+prepared target and reviewed data transfer. Initial migration definitions are
+reserved for a separate 3.0.1-or-later review; this branch supplies no such path.
 
-- **Compatible PostgreSQL expansion:** use the [online rollout
-  sequence](../../src/qc_tool/database/MIGRATIONS.md#online-rollout-sequence).
-  Keep the old release serving during the bounded migration job; deploy
-  compatible code, backfill, and contract only in a later release.
-- **SQLite or incompatible operations after the first release:** use the
-  maintenance procedure below.
-- **First manual cutover:** use a separate target database and the
-  [cutover runbook](../../src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover),
-  with the [initial deployment commands](index.md#5-pull-and-initialize-the-database).
-
-SQLite upgrades and the manual cutover require a maintenance window.
+For a prepared current-schema copy, use the
+[manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md). Keep conversion
+scripts, original legacy sources and intermediate artifacts in private operator
+storage outside the maintained application.
 
 ### Maintenance procedure
 
-This procedure applies after the migration-managed transition in v3.0.1 or
-later. v3.0.0 has a models-only schema and no migration definitions or snapshots;
-its production initialization remains an unresolved release gate. The first architecture
-cutover uses a **new database and a manual data import**, described in
-[Database migrations](../../src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover).
-Do not run the new baseline against a pre-release production database.
-
-1. Read the release's migration and compatibility notes. Rehearse with
-   production-like data volume and boundaries; verify restore procedures.
-2. Pin the new frontend and worker image tags/digests. Render the deployment
-   configuration and inspect its database identity and persistent volumes.
+1. Rehearse the candidate with representative data and boundaries. Verify a
+   coherent database/storage backup and restore procedure.
+2. Pin matching frontend and worker image identifiers. Render the deployment
+   configuration and inspect its target database and persistent volumes.
 3. Enter maintenance mode, prevent new writes/uploads, and drain or deliberately
-   stop active jobs. Stop frontend and workers so API clients, admin sessions,
-   background refresh and job polling cannot write during migration.
-4. Take a coherent database and shared-data backup. Keep the database service
-   and persistent volumes available. Pull the pinned images.
-5. Inspect the migration plan and run exactly one serialized migration job
-   using the new frontend image. Run required release-specific backfills at
-   their documented point, then check the migration state.
-6. Only after successful migration and validation, recreate application
-   services. Run deployment checks, exercise login and permitted/denied access,
-   inspect deliveries and submissions, and verify a representative worker job.
-7. Leave maintenance mode and monitor. Record the image digests, migration log,
-   backup reference and validation results with the deployment.
+   stop active jobs. Stop frontend and workers so clients and background tasks
+   cannot continue writing.
+4. Take the coordinated backup. If the schema changes, prepare and validate a
+   separate target through the manual restore procedure; preserve the old target.
+5. Run the candidate image's read-only `database plan` and `database check`
+   against the selected target. Validate retained records and corresponding
+   storage. Stop if its schema is partial, foreign or has detected model drift.
+6. Only after validation, select the reviewed target and recreate application
+   services. Exercise login, permitted/denied access, deliveries, submissions
+   and a representative worker job.
+7. Leave maintenance mode and monitor. Record image identifiers, backup/restore
+   references, target identity and validation results.
 
 ```bash
-qc_compose config --quiet &&
+qc_compose config --quiet
 qc_compose pull
 ```
 
@@ -191,50 +179,41 @@ Stop all application writers:
 qc_compose stop worker frontend
 ```
 
-Take the coordinated backup described above and record its recovery reference
-before proceeding. Inspect the new image's plan against the release record:
+Take the coordinated backup described above. Configure only the reviewed target
+and inspect it with the pinned frontend image:
 
 ```bash
 qc_compose run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage database plan
-```
-
-Only after the plan is reviewed, apply it and check the migration state. The
-second command runs only if the first succeeds:
-
-```bash
-qc_compose run --rm --no-deps frontend \
-  python3 -m qc_tool.frontend.manage database apply --traceback &&
 qc_compose run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage database check
 ```
 
-Complete release-specific backfills and data validation at their documented
-stage. Continue only when both commands and the validation succeed:
+Both commands inspect schema without writing application data. `database apply`
+is for empty-target initialization; it is not an upgrade or repair command.
+A complete current schema makes `apply` a read-only no-op. If validation fails,
+keep the services stopped, preserve the target, and review the discrepancy rather
+than resetting data or changing the schema to make startup pass.
+
+Continue only after schema, data, storage and application compatibility checks
+succeed:
 
 ```bash
-qc_compose up --detach --remove-orphans --scale worker=4 &&
+qc_compose up --detach --remove-orphans --scale worker=4
 qc_compose exec frontend python3 -m qc_tool.frontend.manage check --deploy
 ```
 
-Use the same service configuration and pinned frontend image for the job and
-the application; the `run` command replaces the normal startup command and
-`--no-deps` avoids launching application services as a side effect. Prevent
-concurrent deployments with the deployment runner's environment lock. The
-PostgreSQL command also holds a session advisory lock and bounds DDL lock waits.
-The repository validates migrations in CI but does not supply a production
-deployment orchestrator.
+Use the same service configuration and pinned image for validation and the
+application. The `run` command replaces ordinary startup and `--no-deps` avoids
+launching application services as a side effect. Prevent concurrent deployments
+with the deployment runner's environment lock. The repository does not supply a
+production deployment orchestrator.
 
-Production startup runs the whole-application `database check`; it does not apply pending schema
-changes. `database check` checks the migration recorder, not the validity of
-imported data or manual schema edits. `makemigrations`, `--fake`, and deleting
-migration history are not production repair procedures.
-
-If the job fails, keep application services stopped and follow the canonical
-[failure and recovery procedure](../../src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
-The `--traceback` option captures the cause on the first attempt; keep its output
-in restricted release logs and do not retry merely to obtain better diagnostics.
-Resume only after the release's recovery and compatibility criteria are met.
+Production startup validates schema read-only. It does not verify restored
+business records, filesystem contents or S3 credentials. Keep those checks in
+the manual restore/recovery procedure. The first initialization attempt can use
+`--traceback`; retain its output in restricted logs and avoid a retry merely to
+obtain diagnostics.
 
 ## Scale workers
 

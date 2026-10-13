@@ -69,7 +69,7 @@ machine.
 ## Runtime and operations
 
 - [ ] Images are pinned to reviewed releases/digests and scanned.
-- [ ] Database migrations were reviewed and a rollback/restore plan exists.
+- [ ] The target schema matches current models; any prepared database copy has a verified restore and recovery plan.
 - [ ] One frontend process/container is used until the background refresh loop
       is extracted.
 - [ ] Worker replica count matches storage, memory, database, and validator

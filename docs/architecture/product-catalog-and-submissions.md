@@ -360,13 +360,15 @@ python3 -m qc_tool.frontend.manage sync_product_catalog path/to/catalog.json
 Paths above refer to reviewed files visible in the frontend runtime; use the
 full [operator workflow](../development/product-definitions.md#deploy-and-maintain)
 for the target deployment and matching worker recipes. Catalog synchronization
-is an explicit operation. Migrations never read product definitions or shared
-result files. Historical legacy submissions
+is an explicit operation. Schema initialization never reads product definitions
+or shared result files. Historical legacy submissions
 remain fail-closed until they are reconciled; the new service does not guess an
 authorizing Job or expected release.
 
 Run the schema command as the serialized deployment job described in
 [Operations](../deployment/operations.md#upgrades). The major architecture
-release requires a new database and an operator-managed import; these commands
-do not perform that transfer. See
-[Database migrations](../development/database-migrations.md).
+release requires a new database or a validated copy prepared manually outside
+the codebase; these commands do not convert or transfer legacy records. `apply`
+initializes only an entirely empty target or leaves a complete matching schema
+unchanged; it refuses partial or foreign schemas and detected model drift. See
+[Database initialization](../development/database-migrations.md).

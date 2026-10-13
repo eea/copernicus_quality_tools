@@ -1,96 +1,42 @@
-"""Shared database release policy, independent of Django and database access."""
+"""The v3.0.0 database is initialized from current models, without history."""
 
 import json
 from pathlib import Path
-import re
 
-
-SOURCE_DIRECTORY = "src/qc_tool"
-DATABASE_DIRECTORY = f"{SOURCE_DIRECTORY}/database"
-MIGRATIONS_DIRECTORY = f"{DATABASE_DIRECTORY}/migrations"
-POLICY_PATH = f"{DATABASE_DIRECTORY}/policy.json"
-
-# Django app labels stay stable; only their migration source modules move.
-# Add future app mappings here so their schema remains in this same package.
-MIGRATION_MODULES = {
-    "accounts": "qc_tool.database.migrations.accounts",
-    "dashboard": "qc_tool.database.migrations.dashboard",
-}
-
-# Draft schema creation must include auth/contenttypes before resolving model
-# relations. Disable their history too; a released target always starts fresh
-# with the framework's normal migration graph enabled.
-FRAMEWORK_APPS = ("admin", "auth", "contenttypes", "sessions")
-
-
-def migration_modules(policy=None):
-    policy = load_policy() if policy is None else policy
-    if policy["phase"] == "draft":
-        return dict.fromkeys((*FRAMEWORK_APPS, *MIGRATION_MODULES))
-    return dict(MIGRATION_MODULES)
-
+MODELS_ONLY_APPS = ("admin", "auth", "contenttypes", "sessions", "accounts", "dashboard")
+MODELS_ONLY_POLICY = {"phase": "draft", "baselines": {}}
 
 class DatabasePolicyError(Exception):
-    """The database release policy or proposed history violates its contract."""
-
+    """The packaged models-only configuration is missing or invalid."""
 
 def _unique_keys(pairs):
     result = {}
     for key, value in pairs:
         if key in result:
-            raise DatabasePolicyError(f"Duplicate database policy key: {key}.")
+            raise DatabasePolicyError(f"Duplicate database configuration key: {key}.")
         result[key] = value
     return result
 
-
 def parse_policy(document):
-    """Validate a JSON policy without opening a database."""
     try:
         policy = json.loads(document, object_pairs_hook=_unique_keys)
     except (TypeError, ValueError, UnicodeDecodeError) as error:
-        raise DatabasePolicyError("Database policy must contain valid JSON.") from error
-    if not isinstance(policy, dict) or set(policy) != {"phase", "baselines"}:
-        raise DatabasePolicyError("Database policy requires only phase and baselines.")
-    if policy["phase"] not in ("draft", "released"):
-        raise DatabasePolicyError("Database policy phase must be draft or released.")
-    baselines = policy["baselines"]
-    if not isinstance(baselines, dict):
-        raise DatabasePolicyError("Database baselines must be a mapping.")
-    if policy["phase"] == "draft" and baselines:
-        raise DatabasePolicyError("Draft schema development has no migration baselines.")
-    if policy["phase"] == "released" and not baselines:
-        raise DatabasePolicyError(
-            "Released policy requires the first release's baseline identities."
-        )
-    for app, name in baselines.items():
-        if not re.fullmatch(r"[a-z][a-z0-9_]*", app):
-            raise DatabasePolicyError(f"Invalid baseline app label: {app}.")
-        if not isinstance(name, str) or not re.fullmatch(r"0001_[a-z0-9_]+", name):
-            raise DatabasePolicyError(f"Invalid baseline migration name for {app}.")
+        raise DatabasePolicyError("Database configuration must contain valid JSON.") from error
+    if policy != MODELS_ONLY_POLICY:
+        raise DatabasePolicyError("v3.0.0 requires the models-only configuration with no baselines.")
     return policy
 
-
-def baseline_paths(policy):
-    """Return repository-relative migration paths from an already valid policy."""
-    return tuple(
-        f"{MIGRATIONS_DIRECTORY}/{app}/{name}.py"
-        for app, name in sorted(policy["baselines"].items())
-    )
-
-
 def load_policy(repository=None):
-    """Read the packaged policy, or a comparison checkout for the Git gate."""
-    policy_file = (
-        Path(__file__).with_name("policy.json")
-        if repository is None
-        else Path(repository) / POLICY_PATH
-    )
-    if not policy_file.is_file() or policy_file.is_symlink():
-        raise DatabasePolicyError(
-            f"The shared database policy must be a regular file at {POLICY_PATH}."
-        )
+    path = (Path(__file__).with_name("policy.json") if repository is None
+            else Path(repository) / "src/qc_tool/database/policy.json")
+    if path.is_symlink() or not path.is_file():
+        raise DatabasePolicyError("The models-only database configuration must be a regular file.")
     try:
-        document = policy_file.read_bytes()
+        return parse_policy(path.read_bytes())
     except OSError as error:
-        raise DatabasePolicyError(f"Cannot read the shared policy at {POLICY_PATH}.") from error
-    return parse_policy(document)
+        raise DatabasePolicyError("Cannot read the models-only database configuration.") from error
+
+def migration_modules():
+    """Disable Django's migration modules; no application history is maintained."""
+    load_policy()
+    return dict.fromkeys(MODELS_ONLY_APPS)

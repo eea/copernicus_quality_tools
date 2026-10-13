@@ -243,7 +243,8 @@ also retain inactive products without reactivating them.
 
 Schema initialization and application startup do not import recipes. This is a
 catalog data operation and does not generate migration files. Use
-[`database plan|check|apply`](database-migrations.md) for schema changes.
+[`database plan|check|apply`](database-migrations.md) for empty-target
+initialization and schema validation.
 
 ## Interpret `/products`
 
@@ -527,12 +528,12 @@ adding either through the central schema workflow.
    JSON revision is not their execution source. A job's database snapshot alone
    does not prevent a changed file from being used later.
 3. Deploy matching recipes to frontend and worker runtimes. Run the
-   [schema procedure](../../src/qc_tool/database/MIGRATIONS.md#prepare-a-release)
+   [schema procedure](../../src/qc_tool/database/README.md)
    where required, then the explicit definition import and any reviewed catalog
-   manifest with one deployment operator. Never seed catalog data in migrations.
+   manifest with one deployment operator. Schema initialization never seeds catalog data.
 4. In production use the deployment's pinned frontend image and Compose settings,
    following the `qc_compose` setup in the
-   [database runbook](../../src/qc_tool/database/MIGRATIONS.md#deployment-command-setup).
+   [deployment command setup](../deployment/operations.md#deployment-command-setup).
    Replace `docker compose -f docker/compose.local.yaml` in the examples with
    `qc_compose` and use the release's actual recipe/manifest paths.
 5. Check import idempotency, inspect current definition digests and release

@@ -17,10 +17,9 @@ Run from the repository root with Python 3.11 or newer:
 python3 -m unittest discover -s scripts/tests -t . -v
 ```
 
-These repeatable tests cover the maintained migration helpers and the QC
-evidence runner. They use temporary files and synthetic records; they do not
-connect to production, initialize an application database, start Docker, or run
-the migration and QC commands themselves. The frontend workflow runs this suite
+These repeatable tests cover the QC evidence runner. They use temporary files
+and synthetic records; they do not connect to production, initialize an
+application database, start Docker, or execute real QC jobs. The frontend workflow runs this suite
 in a separate **Maintainer tools (offline)** job.
 
 Keep tests for tools under `scripts/tests/`, grouped by the tool's purpose.
@@ -36,48 +35,50 @@ docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage check
 
 docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage makemigrations --check --dry-run
+  python3 -m qc_tool.frontend.manage database check
 
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage collectstatic --noinput
 ```
 
-The checkout is mounted read-only. In draft, tests create tables directly from
-models; no migration files are maintained and the drift command has no history
-to compare. After release freeze, drift checks compare models with committed
-migrations. Use the writable environment in
-[Database migrations](../../src/qc_tool/database/MIGRATIONS.md#development-after-the-major-release-is-frozen)
-to author reviewed new migrations.
+The checkout is mounted read-only. Current Django models define the schema;
+no migration files, converter or automatic schema-upgrade path are maintained.
+Use a new disposable database after model changes. `database check` validates
+an existing schema without modifying it.
 
-## Migration checks
+## Models-only schema checks
 
-CI enforces the phase declared in `src/qc_tool/database/policy.json` and runs
-the frontend suite on SQLite and PostgreSQL. In draft, it rejects migration
-files and creates the schema directly from current models. After freeze, it
-checks immutable history, baseline-to-head upgrades and model drift. Both modes
-exercise synthetic records, permissions and repeat initialization/application.
-Neither imports or upgrades old production data.
+CI verifies the models-only source contract and runs the frontend suite on
+SQLite and PostgreSQL. It rejects first-party migration packages and application
+conversion machinery and builds the schema directly from current models. Integration tests
+exercise schema validation, initialization, permissions, synthetic records,
+repeat initialization and refusal of unsafe existing schemas. They do not
+convert or upgrade old production data.
 
-The complete [local verification procedure](../../src/qc_tool/database/MIGRATIONS.md#local-verification)
-is maintained in the database runbook. For a quick schema check, use a disposable
-SQLite database in a one-shot container:
+The inspector validates the required model contract, including named `Meta`
+CHECK predicates, SQLite JSON validity and declared index definitions. It does
+not exhaustively compare field-generated positive-integer checks, arbitrary
+extra SQL constraints, triggers or privileges. Fresh Django initialization
+still creates its generated rules; physical inventory and data/access/storage
+validation remain separate evidence for a prepared restore.
+
+Follow the [database runbook](../../src/qc_tool/database/MIGRATIONS.md) for complete
+local verification. For a disposable SQLite schema check in a one-shot container:
 
 ```bash
 docker compose -f docker/compose.local.yaml run --rm --no-deps \
   -e QC_TOOL_ENVIRONMENT=test \
   -e DB_ENGINE=sqlite \
-  -e FRONTEND_DB_PATH=/tmp/qc-tool-migration-check.sqlite3 \
-  -e WORK_DIR=/tmp/qc-tool-migration-check-work \
+  -e FRONTEND_DB_PATH=/tmp/qc-tool-schema-check.sqlite3 \
+  -e WORK_DIR=/tmp/qc-tool-schema-check-work \
   frontend python3 -m qc_tool.database.checks.schema
 ```
 
-The command overrides ordinary frontend startup and uses container-local
-temporary storage removed with the container. It does not require the local
-database service to be running. The check requires a test environment and
-refuses a populated database. Follow the runbook for its PostgreSQL equivalent
-with a dedicated empty test database. Add
-focused predecessor-to-successor migration tests for data transformations or
-constraints that need additional historical fixtures.
+This overrides ordinary frontend startup and uses container-local temporary
+storage removed with the container. It requires a test environment and an empty
+disposable database. Use a dedicated empty PostgreSQL test target for the other
+backend. Add focused tests when changing model constraints, indexes or schema
+validation; preserve application records during repeated checks.
 
 ## Frontend regression suite
 
@@ -92,16 +93,16 @@ docker compose -f docker/compose.local.yaml exec frontend \
 
 These explicit package labels include the central database integration tests
 and both dashboard test packages while avoiding the historical
-`dashboard/tests.py` discovery-name collision. The migration-history unit tests
-run separately on the host because they use Git, which is not part of the
-frontend runtime image:
+`dashboard/tests.py` discovery-name collision. Run the models-only source
+contract tests and source gate separately on the host:
 
 ```bash
-PYTHONPATH=src python3 -m unittest qc_tool.database.tests.test_history
-PYTHONPATH=src python3 -m qc_tool.database.checks.history --base <commit>
+PYTHONPATH=src python3 -m unittest qc_tool.database.tests.test_source
+PYTHONPATH=src python3 -m qc_tool.database.checks.source
 ```
 
-Use the PR base or push predecessor as `<commit>` for the history comparison.
+The source gate reads the current source layout and policy. It has no comparison
+commit or migration-history reset mechanism.
 
 Upload feedback also has JavaScript event tests. Run them with Node.js 22:
 
@@ -158,8 +159,9 @@ docker compose -f docker/compose.local.yaml exec \
   worker python3 -m unittest discover qc_tool.test
 ```
 
-Expect this suite to be substantially slower. Run the relevant product/check
-tests whenever changing `product_definitions/`, `raster/`, or `vector/`.
+Expect this suite to be substantially slower. Run relevant product/check tests
+when validating recipes or QC behavior. Keep product specifications and uploaded
+snapshots unchanged; raster/vector checks remain unchanged on this branch.
 
 For genuine archived production inputs, follow [Legacy QC parity](legacy-qc-parity.md).
 It documents isolated execution, identical-input evidence, accepted and rejected
@@ -183,29 +185,26 @@ For production settings, run Django's deploy check with a long throwaway secret,
 an explicit test hostname, and HTTPS/HSTS settings matching the deployment.
 Never weaken the check or commit its secret.
 
-## Central database release policy
+## Central database source contract
 
-v3.0.0 has no first-party migration definitions or baseline snapshots. Its fresh
-schemas are built from current models. The first migration-managed transition
-can occur in v3.0.1 or later; it requires a reviewed adoption/initialization
-contract before changing policy. The CI history guard also verifies the exact
-one-time withdrawal of the unpublished v3.0.0 freeze, while retaining ordinary
-released-history protection.
+v3.0.0 has no migration framework, first-party definitions, initial snapshots or
+legacy converter. Fresh schemas are built from current models. Initial migration
+definitions may be introduced only in a separately reviewed 3.0.1-or-later release
+with an explicit transition contract; this branch provides no future migration
+machinery.
 
-The [whole-application migration runbook](../../src/qc_tool/database/MIGRATIONS.md) and
-[`src/qc_tool/database/policy.json`](../../src/qc_tool/database/policy.json) govern every component.
-When the policy phase is `draft`, CI rejects every first-party migration
-definition and tests schemas built directly from models. Release freeze
-introduces the first snapshots; the `released` phase enforces immutable history
-and reviewed forward migrations.
+The [whole-application database runbook](../../src/qc_tool/database/MIGRATIONS.md)
+and [`policy.json`](../../src/qc_tool/database/policy.json) govern every component.
+Production may initialize an entirely empty database using the same explicit
+command. `plan` and `check` inspect schema read-only; `apply` refuses partial or foreign schemas and
+detected model drift and leaves a complete current schema unchanged.
 
 The workflow uses SQLite and PostgreSQL 14. PostgreSQL tests additionally
-exercise serialization between concurrent migration jobs and timeout
-restoration. Do not use `--keepdb` across draft schema changes.
+exercise serialization between concurrent initialization jobs and restoration
+of timeout settings. Do not use `--keepdb` across model schema changes.
 
-The generic baseline fixture is not a release-to-release or load test. A future
-data migration also needs a predecessor fixture and expected transformation;
-an online release needs old/new application compatibility and representative
-PostgreSQL staging data. Record the evidence and accepted limitations in the
-[release record](../../src/qc_tool/database/MIGRATIONS.md#release-record).
+A disposable schema fixture is not a production restore, release-to-release or
+load test. Prepared data copies require private reconciliation, corresponding
+storage and a restore rehearsal. Record matching source/image identifiers and
+evidence limits in the [release record](../../src/qc_tool/database/releases/3.0.0.md).
 CI success alone cannot promise zero downtime.

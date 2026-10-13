@@ -18,8 +18,8 @@ This is a reference, not an executable schema snapshot or a second schema owner.
 Models describe the current schema. Initial migration history is reserved for a
 separately reviewed release from **3.0.1 onward**. The SQL definitions below
 record PostgreSQL access paths and integrity rules; they are not a script for
-upgrading an existing database. Publication and production initialization remain
-separate unresolved release gates.
+upgrading an existing database. A fresh production installation uses explicit initialization or a manual archive
+restore; full application and artifact verification remain separate release gates.
 
 ## How to read the columns
 
@@ -1150,21 +1150,12 @@ Administrative action history. Model: `django.contrib.admin.models.LogEntry`. QC
 </details>
 
 
-## Future migration history
+## Migration history
 
-### `django_migrations`
-
-This recorder is **not present in the verified 3.0.0 models-only target** and is
-not a registered QC Tool model. Django may create it when a future reviewed
-migration-managed release enables history, or during separate diagnostic work.
-Its presence alone never proves that initial migrations were correctly adopted.
-
-When history is enabled, Django records an app label, migration name and applied
-time for each operation; those entries do not store migration source, SQL or
-application data. Initial definitions are reserved for 3.0.1 or later. Existing
-model-created 3.0.0 tables require a separately reviewed transition before that
-history can be used. Never import an old recorder, fake baseline records, delete
-an existing recorder, or rewrite applied history to bypass a failure.
+`django_migrations` is absent from the v3.0.0 models-only schema and is not a
+registered application model. No migration-management or adoption machinery is
+included. Any first migration history in 3.0.1 or later needs a separate reviewed
+transition; do not import or fake legacy migration records.
 
 ## Keeping this reference current
 

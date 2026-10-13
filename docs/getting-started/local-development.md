@@ -67,9 +67,9 @@ docker compose -f docker/compose.local.yaml exec frontend \
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage shell
 
-# Database readiness (draft initializes models; released applies migrations)
+# Read-only schema inspection
 docker compose -f docker/compose.local.yaml exec frontend \
-  python3 -m qc_tool.frontend.manage makemigrations --check --dry-run
+  python3 -m qc_tool.frontend.manage database plan
 docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage database apply
 docker compose -f docker/compose.local.yaml exec frontend \
@@ -80,13 +80,15 @@ docker compose -f docker/compose.local.yaml restart frontend
 docker compose -f docker/compose.local.yaml restart worker
 ```
 
-Local Compose enables `QC_TOOL_MIGRATE_ON_STARTUP=yes` in the development
-environment. In draft it creates missing tables from models and standard roles,
-with no migration files or product import. It does not alter existing tables;
-use a fresh development database after schema changes. v3.0.0 contains no
-first-party migration definitions or snapshots. After a reviewed transition in
-v3.0.1 or later, local startup can apply committed history. See
-[Database migrations](../development/database-migrations.md).
+Local Compose enables `QC_TOOL_INITIALIZE_ON_STARTUP=yes` in the development
+environment. It initializes an entirely empty database from current models and
+standard roles, without importing products. A complete matching database is
+left unchanged; partial or foreign schemas and detected model drift are refused.
+Use a new separate development target after model schema changes, preserving any data you
+still need. Startup never upgrades or resets an existing database.
+
+v3.0.0 contains no migration framework, definitions, snapshots or legacy
+converter. See [Database initialization](../development/database-migrations.md).
 
 The initial product catalog is empty. Add reviewed JSON specifications through
 **Products → Upload specification** as an administrator, then assign their
@@ -95,11 +97,11 @@ does not add them to the catalog, QC selector, or product-grant choices. Local
 demo accounts start without product assignments; restarts retain existing
 accounts and catalog data.
 
-Moving from a model-created v3.0.0 or incompatible legacy schema to future
-migration management requires a reviewed adoption/initialization procedure.
-A fresh target plus explicit data conversion is one supported planning option;
-do not fake history or assume initial migrations can adopt existing tables.
-Preserve needed data before selecting new volumes. Startup does not transfer it.
+Existing legacy data is converted manually outside the codebase into a prepared
+current-schema artifact. Follow the
+[manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md) before using
+that copy. Preserve needed data before selecting new volumes; startup does not
+transfer it.
 
 ## Create a local administrator
 
@@ -161,9 +163,10 @@ Keep changes in the layer that owns the behavior:
 - product recipes belong in `product_definitions/`;
 - specific QC algorithms belong in `raster/` or `vector/`.
 
-Product recipes and raster/vector check behavior are domain changes. Keep them
-separate from infrastructure, authentication, or documentation refactors and
-run the appropriate specialist regression suite.
+Keep original product recipes and uploaded specification snapshots unchanged.
+Raster/vector check behavior remains unchanged on this branch. Infrastructure,
+authentication and documentation work must preserve it; use the appropriate
+specialist regression suite to verify that contract.
 
 ## Rebuild versus restart
 

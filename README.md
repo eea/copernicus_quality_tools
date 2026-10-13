@@ -64,21 +64,27 @@ There are already some automated tests at `src/qc_tool/test`.
 See the instructions in [NOTES.txt](src/qc_tool/test/NOTES.txt).
 
 Maintainer commands are grouped by purpose under [`scripts/`](scripts/README.md).
-The catalog distinguishes repeatable tests, legacy cutover tools and historical
+The catalog distinguishes repeatable tests, manual diagnostics and historical
 experiments, and lists proposed removals. See the [testing guide](docs/development/testing.md)
 for the host, worker and frontend suites.
 
 The application-wide database package lives in
 [`src/qc_tool/database/`](src/qc_tool/database/README.md). It owns the committed
-release policy, deployment command, checks and migration runbook.
-**v3.0.0 is models-only:** no first-party migration files or initial snapshots;
-fresh development/test databases are built from current models. Migration
-management begins only in a reviewed **v3.0.1-or-later** change with an explicit
-existing-database adoption/initialization procedure. Those releases evolve through committed migrations applied in one
-deployment job, and production startup checks that they are current. Legacy
-data transfers use a separate import procedure into a fresh target database.
-See the [migration runbook](src/qc_tool/database/MIGRATIONS.md) before changing
-models, selecting persistent volumes or deploying an upgrade.
+models-only policy, initialization command and schema checks.
+**v3.0.0 contains no migration framework, definitions, initial snapshots or legacy
+converter.** `database plan|check` inspects the current schema without changing it.
+`database apply` initializes an entirely empty database from current models,
+including in production, and leaves a complete matching database unchanged.
+It refuses partial or foreign schemas and detected model drift. Schema changes
+require a new target and a separately reviewed data transfer; startup does not upgrade or
+reset existing databases.
+
+Legacy conversion is a private manual cutover operation outside the application.
+Use the [manual restore guide](src/qc_tool/database/MANUAL_RESTORE.md) for a prepared
+database artifact, and the [database guide](src/qc_tool/database/README.md) before
+changing models, selecting persistent volumes or deploying. Initial migration
+definitions may be introduced only in a separately reviewed **v3.0.1-or-later**
+release with an explicit transition plan.
 
 
 # Demo installation

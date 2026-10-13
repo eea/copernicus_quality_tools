@@ -18,9 +18,11 @@ deployment behavior. They govern QC Tool as one application, across components.
 
 When `policy.json` declares `draft`, keep no first-party migration definitions
 or baseline snapshots. Change models and architecture directly.
-Fresh development/test databases are built from current models using
-the whole-app database command. Schema creation does not populate products or
-alter existing tables; use a fresh disposable database after schema changes.
+Fresh databases, including new production installations, are built from current
+models using the whole-app database command. Initialization requires an entirely
+empty database. A matching existing schema is a read-only no-op; a partial,
+foreign or outdated schema is refused. Schema creation does not populate products
+or alter existing tables; use a fresh disposable database after schema changes.
 Do not reset an existing database automatically, even if its product catalog
 is empty: users and other data can still exist.
 
@@ -37,12 +39,8 @@ resumable backfills, and later cleanup for online PostgreSQL deployments.
 
 Use the application-wide `python3 -m qc_tool.frontend.manage database
 plan|check|apply` workflow. CI and startup must never generate migration files.
-Legacy data conversion is a separate release operation into a fresh target
-schema. Do not reset, fake, or migrate an existing production or developer
+Legacy data conversion is a manual operation outside the maintained codebase.
+Deliver a verified native PostgreSQL copy for manual restore into a fresh target.
+Do not retain legacy converters or prebuild future migration machinery in v3.0.0.
+Do not reset, fake, or migrate an existing production or developer
 database to simulate a cutover. Test against disposable databases only.
-
-The unpublished v3.0.0 freeze mistakenly integrated at commit
-`41a1427f47ce8e8068ac6605d6bc17377309a69c` is withdrawn by the release owner's
-explicit correction. Its exact one-time source-history decision is recorded in
-`src/qc_tool/database/history_corrections/3.0.0-models-only.json`. This exception
-does not authorize resetting databases or rewriting future released history.

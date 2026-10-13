@@ -6,7 +6,7 @@ Django models describe the schema used to initialize a fresh target. Initial
 migration history is reserved for a separately reviewed release from **3.0.1
 onward**; it does not automatically adopt an existing 3.0.0 database.
 This reference explains model ownership and persistence rules. The
-[database runbook](MIGRATIONS.md) owns initialization and later release changes.
+[database runbook](MIGRATIONS.md) owns fresh initialization and read-only checks.
 
 The [table dictionary](TABLES.md) describes stored fields and access paths.
 The [release checklist](AUDIT.md#remaining-release-checklist) tracks remaining
@@ -24,8 +24,7 @@ the stored fact independently of the Python package or UI that displays it.
 These prefixes group tables within one database. They do not create separate
 PostgreSQL schemas, services or release procedures. Django app labels remain
 framework identities for model discovery, content types and permissions;
-`accounts` and `dashboard` share one schema workflow and, after the future
-freeze, one centrally managed migration graph.
+`accounts` and `dashboard` share one models-only initialization workflow.
 
 ### Accounts
 
@@ -47,9 +46,9 @@ Account access uses product assignments, ownership and current roles. There is
 no separate profile/country table, region-grant table or region scope in API
 tokens. Personal contact details remain in Django's `auth_user`.
 
-Old-dump conversion is isolated in [`database/legacy`](legacy/). It maps source
-records into current models, counts omitted profiles and obsolete groups, and
-never recreates their tables or authorization rules. Delivery timestamps and
+Old-data conversion is manual and outside this codebase. The prepared copy maps
+supported records into current models, omits obsolete profiles/groups and never
+recreates their tables or authorization rules. See [manual restore](MANUAL_RESTORE.md). Delivery timestamps and
 reported QC observations remain business history; unknown request origin is
 NULL rather than a special legacy channel. Original specifications keep their
 geographic parameter contracts unchanged.
@@ -236,7 +235,7 @@ migration baseline. Raw SQL must obtain and quote table identifiers from
 model metadata, as the [delivery query](../frontend/dashboard/services/deliveries/listing/query/sql.py)
 does. Do not duplicate a table-name registry in another configuration file.
 
-For 3.0.0, follow [models-only development](MIGRATIONS.md#draft-schema-development)
+For 3.0.0, follow [models-only verification](MIGRATIONS.md#local-verification)
 and verify each schema change on fresh disposable databases without generating
 migration definitions. Existing tables are not upgraded by initialization.
 From the first reviewed freeze in 3.0.1 or later, preserve established baseline,

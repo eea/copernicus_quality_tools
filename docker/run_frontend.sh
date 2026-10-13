@@ -3,14 +3,18 @@ set -eu
 
 cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend
 
-# Production schema changes belong to one explicit deployment job, using the
-# same release image as the web process. Startup only verifies readiness.
-case "${QC_TOOL_MIGRATE_ON_STARTUP:-no}" in
+# Production initialization is an explicit operator command. Startup checks a
+# restored/current schema without changing its records or permissions.
+if [ -n "${QC_TOOL_MIGRATE_ON_STARTUP+x}" ]; then
+    echo "QC_TOOL_MIGRATE_ON_STARTUP is unsupported. Use QC_TOOL_INITIALIZE_ON_STARTUP for local initialization." >&2
+    exit 1
+fi
+case "${QC_TOOL_INITIALIZE_ON_STARTUP:-no}" in
     yes)
         case "${QC_TOOL_ENVIRONMENT:-production}" in
             development|test) ;;
             *)
-                echo "Automatic migrations are limited to development/test. Run database apply as a deployment job." >&2
+                echo "Automatic initialization is limited to development/test. Initialize an empty production database explicitly or restore a prepared copy." >&2
                 exit 1
                 ;;
         esac
@@ -18,12 +22,12 @@ case "${QC_TOOL_MIGRATE_ON_STARTUP:-no}" in
         ;;
     no) ;;
     *)
-        echo "QC_TOOL_MIGRATE_ON_STARTUP must be yes or no." >&2
+        echo "QC_TOOL_INITIALIZE_ON_STARTUP must be yes or no." >&2
         exit 1
         ;;
 esac
 if ! python3 -m qc_tool.frontend.manage database check; then
-    echo "Database is not ready. Draft: initialize a fresh development schema. Released: apply committed migrations. See src/qc_tool/database/MIGRATIONS.md." >&2
+    echo "Database is not ready. Restore a matching copy or explicitly initialize an empty target. Existing databases are never upgraded or reset." >&2
     exit 1
 fi
 python3 -m qc_tool.frontend.manage collectstatic --noinput

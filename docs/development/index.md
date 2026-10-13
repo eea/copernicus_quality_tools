@@ -16,10 +16,10 @@ contains compiled geospatial, database, Java, and validator dependencies.
 1. Read the relevant [architecture](../architecture/index.md) section.
 2. Start the [local environment](../getting-started/index.md).
 3. Keep the change in the owning package; database changes follow the
-   [application-wide release policy](database-migrations.md). Follow the workflow
-   for its phase: 3.0.0 stays models-only (`draft`) without migration definitions
-   or baseline snapshots; initial history is introduced only by a reviewed
-   freeze in 3.0.1 or later. After that freeze, use reviewed forward migrations.
+   [models-only database workflow](database-migrations.md). v3.0.0 ships no
+   migration framework, definitions, snapshots or converter. Verify schema
+   changes on new disposable targets; initialization never upgrades existing
+   databases. Initial migration definitions require a separate 3.0.1-or-later review.
 4. Add focused tests for the behavior and trust boundary.
 5. Run the focused suite while iterating.
 6. Run the documented regression suite and checks before review.
@@ -70,7 +70,7 @@ a selected filter even when its result count becomes zero.
 - [Script organization and lifecycle](scripts.md)
 - [Upload page components](upload-pages.md)
 - [Table page components](table-pages.md)
-- [Database lifecycle and migrations](database-migrations.md)
+- [Database initialization](database-migrations.md)
 - [Writing documentation](documentation.md)
 - [Product onboarding](product-onboarding.md)
 - [Product definitions and reporting](product-definitions.md)

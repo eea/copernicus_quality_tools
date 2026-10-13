@@ -17,7 +17,7 @@ copernicus_quality_tools/
 ├── product_definitions/       # Product-specific JSON QC recipes
 ├── scripts/                   # Purpose-specific operator tools and host tests
 ├── src/qc_tool/
-│   ├── database/             # Whole-app migration history, policy, CLI and tests
+│   ├── database/             # Models-only initialization, validation and tests
 │   ├── frontend/
 │   │   ├── accounts/         # Identity, roles, permissions, grants, admin
 │   │   ├── dashboard/        # Deliveries, jobs, UI, route and object access
@@ -39,8 +39,7 @@ copernicus_quality_tools/
 ```
 
 The [script catalog](../../scripts/README.md) separates maintained commands,
-legacy cutover operations, repeatable verification tests, and historical
-experiments. Application commands and core regression tests remain with their
+repeatable verification tests, manual diagnostics and historical experiments. Application commands and core regression tests remain with their
 owning packages under `src/qc_tool/`.
 
 ## Frontend accounts app
@@ -101,42 +100,41 @@ than creating another general helper module.
 
 `src/qc_tool/database/` owns all first-party database lifecycle assets:
 
-Version 3.0.0 contains no first-party migration definitions or schema snapshots.
-The first migration-managed freeze is a separate reviewed change in 3.0.1 or
-later; existing model-created databases need an explicit transition plan.
+Version 3.0.0 contains no migration framework, definitions, initial snapshots or
+legacy converter. Current Django models define the whole application schema.
 
 ```text
 database/
-├── README.md          # Ownership, layout and entry points
+├── README.md          # Ownership, models-only policy and entry points
 ├── SCHEMA.md          # Canonical table ownership and persistence boundaries
-├── MIGRATIONS.md      # Canonical whole-app migration and deployment runbook
-├── policy.json        # 3.0.0 models-only; future released baseline identities
-├── policy.py          # Policy loading and validation
-├── deployment.py      # Planning, migration checks, apply and PostgreSQL locks
+├── TABLES.md          # Table, column, constraint and index reference
+├── MIGRATIONS.md      # Current initialization/validation runbook
+├── MANUAL_RESTORE.md  # Restore a privately prepared current-schema artifact
+├── policy.json        # Models-only source contract
+├── policy.py          # Policy validation and disabled Django migration modules
+├── deployment.py      # Empty-target initialization and read-only validation
 ├── apps.py            # Django management-command discovery
 ├── management/        # database plan|check|apply command
-├── migrations/
-│   ├── accounts/      # Empty namespace in 3.0.0; future accounts migrations
-│   └── dashboard/     # Empty namespace in 3.0.0; future dashboard migrations
-├── checks/            # Git history guard and disposable schema verification
-└── tests/             # Host history tests and runtime integration tests
+├── checks/            # Source-contract gate and disposable schema verification
+└── tests/             # Source-contract and runtime integration tests
 ```
 
 The [application schema](../../src/qc_tool/database/SCHEMA.md) maps business
 responsibilities to explicit table names and model modules. Accounts owns its
-tokens and product grants; dashboard discovers the other business
-models. Table prefixes identify domains within one application database and do
-not introduce independent component releases.
+tokens and product grants; dashboard discovers the other business models.
+Table prefixes identify domains within one application database and do not
+introduce independent component releases.
 
-During draft, Django builds all tables from current models; migration history
-is disabled and no first-party migration definitions exist. Model/app ownership
-may evolve with the architecture. The first snapshots are generated at explicit
-release freeze into this package's subdirectories for the then-current app
-labels. Released deployments apply one complete graph, including Django's own
-migrations. Legacy data transfers use a separate import procedure into a fresh
-released database. See the
-[migration policy](../development/database-migrations.md) for the developer,
-freeze, data-transfer and deployment procedures.
+`database plan|check` inspects the schema read-only. `apply` initializes an
+entirely empty database and leaves a complete matching one unchanged; partial or foreign schemas and
+detected model drift are refused. Model changes require a separate target,
+not automatic alteration of an existing database. Legacy database conversion is
+private manual work outside the codebase. See
+[Database initialization](../development/database-migrations.md) and the
+[manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md).
+
+Initial migration definitions may be introduced only in a separately reviewed
+3.0.1-or-later release with an explicit existing-database transition plan.
 
 ## Worker and shared security packages
 
@@ -156,7 +154,7 @@ outside raster/vector QC modules:
 ## Product and QC ownership
 
 `product_definitions/` and the `raster/` and `vector/` packages define domain
-behavior. Treat changes there as separate product/QC work: document the
-specification, use representative fixtures, and run the relevant domain tests.
-Do not mix those changes into account, deployment, or generic security
-refactors.
+behavior. Consume original specification bytes without rewriting specifications
+or uploaded snapshots. Raster/vector checks remain unchanged on this branch;
+account, deployment and generic security work must preserve their behavior.
+Use representative fixtures and the relevant domain tests to verify that contract.

@@ -1,92 +1,82 @@
-# QC Tool database lifecycle
+# QC Tool database
 
-This package owns QC Tool's schema policy, whole-application database command,
-checks, legacy conversion and documentation.
+QC Tool **v3.0.0 has a new models-only schema**. Django models are its only
+schema definition. [policy.json](policy.json) is `draft` with `baselines: {}`;
+there are no first-party migration packages, baseline snapshots, legacy import
+commands or released-migration execution paths in this version.
 
-**QC Tool 3.0.0 uses a models-only schema.** [policy.json](policy.json) declares
-`draft` with an empty `baselines` mapping. Keep no first-party migration
-definitions or schema snapshots in this version. The `draft` label selects the
-schema workflow; it is independent of the application's release number.
-Initial migration history may be introduced only in **3.0.1 or a later release**,
-through a separately reviewed freeze and transition plan.
+The central database package owns fresh initialization and read-only readiness
+checks for the entire application, including Django's account tables. It does
+not upgrade, repair, reset or adopt an existing database.
 
-| Schema lifecycle | Workflow |
+```sh
+PYTHONPATH=src python3 -m qc_tool.frontend.manage database plan
+PYTHONPATH=src python3 -m qc_tool.frontend.manage database apply
+PYTHONPATH=src python3 -m qc_tool.frontend.manage database check
+```
+
+| Command | Behavior |
 | --- | --- |
-| 3.0.0, models-only (`draft`) | Change models directly; initialize fresh disposable targets from those models. No first-party migration definitions or baseline snapshots. |
-| First migration-managed release, 3.0.1 or later | Review the transition, generate initial definitions, and change policy in the same release preparation. |
-| After that explicit freeze (`released`) | Preserve established migration identities and add reviewed forward migrations with schema changes. |
-| Legacy conversion | Import and reconcile supported source records into a separate fresh target; never restore legacy DDL over the application schema. |
+| `plan` | Read-only: reports whether the database is empty, matches current models, or has an incompatible schema. |
+| `apply` | Initializes an entirely empty database. A matching existing schema is a read-only no-op. A partial, foreign or outdated schema is refused. |
+| `check` | Read-only: validates the managed model schema and required integrity/access paths. An empty or incompatible database fails. |
 
-Use `python3 -m qc_tool.frontend.manage database plan|apply|check`. Models-only
-initialization creates missing tables and standard permissions/roles without
-populating products. It does not upgrade existing tables, constraints or indexes,
-and it never resets a database. Use a fresh disposable database after a model
-schema change, even when an existing product catalog is empty.
+An explicit `apply` works for fresh development, test **and production** targets.
+Startup checks readiness; it never initializes production automatically. Local
+Compose opts into development initialization with
+`QC_TOOL_INITIALIZE_ON_STARTUP=yes`. CI and startup never generate migration files.
+Use fresh disposable targets after changing models. An empty product catalog
+does not mean an empty database: account and history tables may still contain data.
 
-New catalogs remain empty until an administrator uploads original product
-specifications through **Products → Upload specification**, or an operator runs
-a reviewed import. Specifications and uploaded snapshots are never rewritten.
+Readiness validates required model structure and declared integrity/access paths.
+It does not exhaustively compare field-generated positive-integer checks,
+additional constraints, triggers, privileges or storage. A handoff archive has
+separate full schema/data reconciliation evidence; the checker alone does not
+certify a manually altered database or a complete production installation.
 
-The current production guard rejects models-only database commands in a secure
-environment. Production initialization and cutover remain deferred; do not
-circumvent that guard or generate a 3.0.0 baseline to bypass it. See the current
-[release record](releases/3.0.0.md) and [runbook](MIGRATIONS.md).
+Fresh initialization creates the current tables, standard permissions and roles.
+It creates no users, products or deliveries. Administrators upload original
+specifications through **Products → Upload specification**; specifications and
+uploaded snapshots must never be rewritten.
 
-## Start here
+Legacy conversion is **manual and outside the maintained codebase**. A prepared
+native PostgreSQL archive contains the new schema and converted records together.
+Restore it into a separate empty database using [MANUAL_RESTORE.md](MANUAL_RESTORE.md).
+Do not run initialization before restoring its schema, restore legacy DDL over
+this schema, or reset/fake/alter existing databases to simulate a cutover.
+Private conversion source/evidence and database copies are excluded from Git.
 
-| Your task | Procedure |
+Initial migration history belongs to a separately reviewed release in **3.0.1
+or later**. Its transition from model-created tables must be designed then;
+v3.0.0 ships no future migration or automatic adoption mechanism.
+
+## References
+
+| Task | Reference |
 | --- | --- |
-| Review model ownership and retained data | [Application schema](SCHEMA.md), [table dictionary](TABLES.md) and [database audit](AUDIT.md) |
-| Change the 3.0.0 models-only schema | [Models-only development](MIGRATIONS.md#draft-schema-development) |
-| Verify a schema on a disposable database | [Local verification](MIGRATIONS.md#local-verification) |
-| Transfer supported legacy records | [SQL dump importer](LEGACY_IMPORT.md) |
-| Make a separate local history copy | [Local rehearsal and available web sources](LOCAL_LEGACY_REHEARSAL.md) |
-| Plan the first migration-managed release, 3.0.1 or later | [Reviewed freeze](MIGRATIONS.md#freeze-the-first-release) and an explicit existing-database transition plan |
-| Maintain history after that freeze | [Forward-migration development](MIGRATIONS.md#development-after-the-major-release-is-frozen) |
-| Prepare artifacts and deployment evidence | [Release preparation](MIGRATIONS.md#prepare-a-release) and [release template](RELEASE_TEMPLATE.md) |
-| Recover from a failed operation | [Failure and recovery](MIGRATIONS.md#failure-and-recovery) |
-
-An existing model-created 3.0.0 database has no first-party applied migration
-history. New initial migrations cannot automatically adopt its tables. Before
-3.0.1 or later, review a fresh-target data conversion or another explicitly
-approved adoption design with schema and data evidence. Framework identity types
-and integrity definitions may differ between model initialization and a generated
-migration graph even when application field names match. Verify the complete
-schema, not just the QC Tool tables. A version bump, startup, `database check`,
-or `--fake-initial` is not that transition. Do not reset, fake, or rewrite an
-existing database or its recorder.
+| Initialize or verify a fresh database | [Initialization runbook](MIGRATIONS.md) |
+| Restore the prepared database copy | [Manual PostgreSQL restore](MANUAL_RESTORE.md) |
+| Review model ownership | [Application schema](SCHEMA.md) |
+| Review stored fields and SQL integrity | [Table dictionary](TABLES.md) |
+| Review verified evidence and remaining work | [Audit](AUDIT.md), [v3.0.0 record](releases/3.0.0.md) |
+| Record a production installation | [Release template](RELEASE_TEMPLATE.md) |
 
 ## Package layout
 
 ```text
 src/qc_tool/database/
-├── README.md                       # Policy and entry points
-├── SCHEMA.md                       # Table ownership and persistence boundaries
-├── TABLES.md                       # Fields, constraints and indexes
-├── MIGRATIONS.md                   # Current initialization and future migration workflow
-├── RELEASE_TEMPLATE.md             # Release decisions and evidence
-├── policy.json                     # 3.0.0: draft, no baseline identities
-├── policy.py                       # Policy and Django module selection
-├── deployment.py                   # Whole-application command and locks
-├── legacy/                         # Offline legacy record conversion
-├── apps.py                         # Django command discovery
-├── management/commands/            # database and import_legacy_dump
-├── migrations/                     # Namespace packages only in 3.0.0
-│   ├── accounts/
-│   └── dashboard/
-├── checks/                         # Source policy and disposable schema checks
-└── tests/                          # Policy and database tests
+├── policy.json, policy.py          # Models-only source contract
+├── deployment.py                  # Empty-schema initializer and readiness inspector
+├── apps.py                        # Django management-command discovery
+├── management/commands/database.py
+├── checks/source.py               # Offline source-layout check
+├── checks/schema.py               # Disposable model-created schema verification
+├── tests/                         # Offline and database regression checks
+└── releases/                      # Release evidence
 ```
 
-The app labels `accounts` and `dashboard` are model and future migration
-namespaces inside one application workflow. While policy is `draft`, QC Tool and
-Django framework migration history are disabled together; the installed Django
-package still supplies its upstream migration code. After a reviewed freeze in
-3.0.1 or later, the complete migration graph becomes the released-schema owner.
-CI and startup must never generate migration definitions.
-
-Offline cutover wrappers live under
-[`scripts/migration/legacy/`](../../../scripts/migration/legacy/README.md), with
-host tests under [`scripts/tests/migration/`](../../../scripts/tests/migration/).
-They invoke the central workflow and importer; they do not own another schema.
-The [script catalog](../../../scripts/README.md) records their lifecycle.
+`accounts` and `dashboard` are model namespaces within one database workflow.
+Django's migration modules are disabled for all managed application/framework
+apps. Native Django `migrate --run-syncdb` is used internally only when the whole
+schema is empty; the public operation is `database apply`. It writes no migration
+history. Existing schemas never run initialization or its bootstrap signals.

@@ -11,13 +11,13 @@ manifests. Select a persistence profile, pin reviewed image tags, provide
 secrets, adapt hostnames/origins, and put the frontend behind a correctly
 configured HTTPS reverse proxy.
 
-New installations start with an empty database and apply the release's committed
-migrations. Transferring data from an incompatible legacy schema requires a
-separate target database and a reviewed import. Read the
-[cutover procedure](../../src/qc_tool/database/MIGRATIONS.md#one-time-manual-production-cutover)
-before attaching persistent storage. For upgrades, choose the appropriate
-[release workflow](../../src/qc_tool/database/MIGRATIONS.md#choose-the-workflow)
-and follow [Operations](operations.md#upgrades).
+New installations initialize an entirely empty database from current models.
+v3.0.0 ships no migration framework, schema snapshots or legacy converter.
+Legacy conversion is private manual operator work; restore only a prepared
+current-schema artifact into a separate target. Read the
+[database guide](../../src/qc_tool/database/README.md) and
+[manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md) before attaching
+persistent storage. For application updates, follow [Operations](operations.md#upgrades).
 
 ## Choose a profile
 
@@ -135,74 +135,68 @@ or development-server flags and no accidental host bind mounts.
 
 ## 5. Pull and initialize the database
 
-**v3.0.0 has a models-only schema without migration definitions or baselines.**
-The production commands below describe the future migration-managed workflow,
-starting in v3.0.1 or later; they are not a v3.0.0 initialization procedure.
-The current draft-policy production guard is retained. Use the
-[version policy](../../src/qc_tool/database/MIGRATIONS.md#version-policy) and
-development/test rehearsal procedure while production preparation is deferred.
-
-For migration-managed releases, production images use the `released` policy. A `draft`
-policy refuses production database commands; complete the
-[release freeze](../../src/qc_tool/database/MIGRATIONS.md#freeze-the-first-release)
-before production deployment.
-Prepare the [release record](../../src/qc_tool/database/MIGRATIONS.md#release-record)
-from the [template](../../src/qc_tool/database/RELEASE_TEMPLATE.md)
-before running this sequence. These commands initialize an empty installation
-or a separate manual-cutover target; later upgrades follow the
-[online or maintenance workflow](operations.md#upgrades).
+Prepare the [release record](../../src/qc_tool/database/releases/3.0.0.md) using
+the [template](../../src/qc_tool/database/RELEASE_TEMPLATE.md). Keep frontend and
+workers stopped while preparing the target. The explicit initializer supports
+an entirely empty production database; it does not upgrade, reset or convert an
+existing database. A product catalog with no products is not proof of emptiness.
 
 ```bash
 qc_compose pull
-
 qc_compose up --detach userdb
-
 qc_compose exec -T userdb pg_isready --username qc_user --dbname qc_tool
 ```
 
 Wait for `pg_isready` to succeed. The SQLite profile has no `userdb` service;
 skip those two commands for that profile and retain its persistent frontend
-volume. Apply migrations once with the same pinned frontend image that will
-serve traffic:
+volume. Inspect the target using the same pinned frontend image that will serve
+traffic:
 
 ```bash
 qc_compose run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage database plan
 ```
 
-Review the plan against the release record and confirm the target is the new
-database. Only then apply it:
+`plan` inspects the schema without changing it. For an entirely empty target,
+review the reported database identity and initialize it once:
 
 ```bash
 qc_compose run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage database apply --traceback
 ```
 
-The command overrides normal frontend startup. Stop on any error and follow
-[failure and recovery](../../src/qc_tool/database/MIGRATIONS.md#failure-and-recovery).
-Keep detailed migration output in restricted release logs. For a legacy data
-cutover, complete and validate the manual data import at this point,
-while frontend and workers remain stopped. For an empty installation no import
-is needed. Its product catalog stays empty until an administrator uploads the
-selected JSON specifications through **Products → Upload specification**.
-Bundled recipe directories do not populate products at startup.
+`apply` creates the current-model schema and standard permissions/roles on an
+empty database. It is a read-only no-op for a complete matching schema and
+refuses partial or foreign schemas and detected model drift. Stop on an error;
+preserve the target and restricted logs for investigation. It never repairs existing tables.
+
+For a manual data cutover, use the
+[manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md) instead of
+initializing the restore target. That guide restores a prepared current-schema
+artifact into a separate empty database. Do not restore legacy DDL over the
+model-created schema. Validate restored records and corresponding storage while
+frontend and workers remain stopped.
+
+A new empty installation needs no restore. Its product catalog stays empty until
+an administrator uploads reviewed JSON files through **Products → Upload
+specification**; bundled recipe directories do not populate products at startup.
 
 ```bash
 qc_compose run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage database check
 ```
 
-Continue only after this check and the release's import/data validation succeed.
-Start application services:
+`check` validates the current schema read-only. Continue only after it and the
+release's data/storage validation succeed:
 
 ```bash
 qc_compose up --detach --scale worker=4
 ```
 
-Production frontend startup checks for pending migrations and collects static
-files before Gunicorn. It refuses to start when migrations are pending; the
-deployment job owns their application. Never generate migrations in a release
-container. `QC_TOOL_MIGRATE_ON_STARTUP=yes` is reserved for development/test.
+Production frontend startup runs the read-only schema check and collects static
+files before Gunicorn. It refuses an empty or incompatible schema. Use the
+explicit initialization job above; `QC_TOOL_INITIALIZE_ON_STARTUP=yes` is reserved
+for development/test. Startup does not convert data or apply schema upgrades.
 
 ## 6. Verify
 
@@ -217,7 +211,7 @@ or HSTS, document that control rather than enabling conflicting Django settings
 merely to silence a check. No other warning should be accepted without an
 explicit risk decision.
 
-Record the migration result and the following checks in the release record.
+Record the initialization/restore result and the following checks in the release record.
 Verify through the public HTTPS hostname:
 
 - login renders and POST login works;
