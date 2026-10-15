@@ -5,7 +5,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{% block title %}CLMS QC-Tool{% endblock title %}</title>
+        <title>{% block title %}{{ORGANIZATION}} QC-Tool{% endblock title %}</title>
         <meta name="description" content=""/>
         <meta name="robots" content="{% block robots %}index, follow{% endblock robots %}"/>
         <meta name="keywords" content="eea, copernicus, qc, tool, gis, quality"/>
@@ -36,7 +36,7 @@
                             <a class="navbar-brand" href="/">
                                 <img src="{{ STATIC_URL }}dashboard/img/logo_copernicus_big.png" style="height:45px;margin-top:-13px;float:left" />
                                 <img src="{{ STATIC_URL }}dashboard/img/logo_land_monitoring_medium.png" style="padding-left:25px;height:45px;margin-top:-13px;float:left" />
-                                <span style="overflow: hidden;">&nbsp;&nbsp;CLMS QC Tool</span>
+                                <span style="overflow: hidden;">&nbsp;&nbsp;{{ORGANIZATION}} QC Tool</span>
                             </a>
                         </div>
                         <div class="navbar-collapse collapse" style="line-height:150px; height:150px;">

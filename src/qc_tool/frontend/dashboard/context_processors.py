@@ -5,6 +5,12 @@ def show_logo(request):
     # return the value you want as a dictionnary. you may add multiple values in there.
     return {'SHOW_LOGO': settings.SHOW_LOGO != "no"}
 
+def organization(request):
+    return {'ORGANIZATION': settings.ORGANIZATION}
+
+def copyright(request):
+    return {'COPYRIGHT': settings.COPYRIGHT}
+
 def version_processor(request):
     return {'qc_tool_version': get_qc_tool_version()}
 
