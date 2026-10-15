@@ -481,6 +481,9 @@ def setup_config():
     config["organization"] = environ.get("ORGANIZATION", "CLMS")
     config["copyright"] = environ.get("COPYRIGHT", "Copyright © 2019-2025 Copernicus Programme")
 
+    config["report_image_dir"] = environ.get("REPORT_IMAGE_DIR")
+    config["report_image_names"] = environ.get("REPORT_IMAGE_NAMES")
+    
     # api url
     config["api_url"] = environ.get("API_URL", API_URL)
 
