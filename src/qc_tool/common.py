@@ -409,6 +409,8 @@ def setup_config():
     * SUBMISSION_DIR;
     * FRONTEND_DB_PATH;
     * SHOW_LOGO;
+    * ORGANIZATION;
+    * REPORT_LOGO_PATH;
     * API_URL;
     * UPDATE_JOB_STATUSES;
     * UPDATE_JOB_STATUSES_INTERVAL;
@@ -429,6 +431,7 @@ def setup_config():
     * LEAVE_SCHEMA;
     * LEAVE_JOBDIR;
     * SHOW_LOGO;
+    * REPORT_LOGO_PATH;
     """
     config = {}
 
@@ -474,6 +477,14 @@ def setup_config():
     # Logo customization.
     config["show_logo"] = environ.get("SHOW_LOGO", "yes") == "yes"
 
+    # Organization name for display in the frontend.
+    config["organization"] = environ.get("ORGANIZATION", "CLMS")
+    config["copyright"] = environ.get("COPYRIGHT", "Copyright © 2019-2026 Copernicus Programme")
+
+    config["report_image_names"] = environ.get("REPORT_IMAGE_NAMES")
+    config["header_image_names"] = environ.get("HEADER_IMAGE_NAMES")
+    config["footer_image_names"] = environ.get("FOOTER_IMAGE_NAMES")
+    
     # api url
     config["api_url"] = environ.get("API_URL", API_URL)
 

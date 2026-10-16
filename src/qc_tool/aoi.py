@@ -14,6 +14,7 @@ _AOI_INPUT_ALIASES = (
     AOI_CODE_KEY,
     "delivery_unit_id",
     "fua_code",
+    "fua_or_cit",
     "fua",
     "du_id",
     "du",
@@ -133,6 +134,17 @@ _AOI_VALIDATION_UNSUPPORTED = {
     "cz_2012",
     "cz_2018",
     "cz_change_2012_2018",
+}
+
+_AOI_VALIDATION_EXEMPT_PRODUCTS = {
+    "clms_euhydro_acc_ie_nir",
+    "clms_euhydro_art_ie_nir",
+    "clms_euhydro_bas_ie_nir",
+    "clms_euhydro_coast_ie_nir",
+    "clms_euhydro_dem_ie_nir",
+    "clms_euhydro_dir_ie_nir",
+    "clms_euhydro_net_ie_nir",
+    "clms_euhydro_wbo_ie_nir",
 }
 
 
@@ -625,7 +637,9 @@ def validate_after_step(check_ident, params, status):
         return
 
     contract = plan.get("contracts", {}).get(medium)
-    if contract is None:
+    if plan.get("product_ident") in _AOI_VALIDATION_EXEMPT_PRODUCTS:
+        return
+    elif contract is None:
         invalidate_aoi_code(
             status,
             "Product {:s} claims an AOI but has no authoritative {:s} "

@@ -477,6 +477,7 @@ def deliveries(request):
 
     return render(request, 'dashboard/deliveries.html', {"submission_enabled": settings.SUBMISSION_ENABLED,
                                                          "show_logo": settings.SHOW_LOGO,
+                                                         "organization": settings.ORGANIZATION,
                                                          "announcement": get_announcement_message(),
                                                          "boundary_version": get_boundary_version(),
                                                          "api_key": api_key,
@@ -534,6 +535,7 @@ def setup_job(request):
                "product_ident": product_ident,
                "product_list": product_list,
                "show_logo": settings.SHOW_LOGO,
+               "organization": settings.ORGANIZATION,
                "announcement": get_announcement_message()}
     return render(request, "dashboard/setup_job.html", context)
 
@@ -1344,7 +1346,8 @@ def job_history_page(request, delivery_id):
         if delivery.user != request.user:
             raise PermissionDenied("Delivery id={:d} belongs to another user.".format(int(delivery_id)))
     return render(request, 'dashboard/job_history.html', {"delivery": delivery,
-                                                          "show_logo": settings.SHOW_LOGO})
+                                                          "show_logo": settings.SHOW_LOGO,
+                                                          "organization": settings.ORGANIZATION})
 @login_required
 def get_result(request, job_uuid):
     """
@@ -1368,6 +1371,7 @@ def get_result(request, job_uuid):
     return render(request, "dashboard/result.html", {"job_report":job_report,
                                                      "delivery": delivery,
                                                      "show_logo": settings.SHOW_LOGO,
+                                                     "organization": settings.ORGANIZATION,
                                                      "announcement": get_announcement_message()
                                                      })
 

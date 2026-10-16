@@ -1,24 +1,27 @@
+{% load static %}
 <div class="container-fluid" id="section-footer" xmlns="http://www.w3.org/1999/html">
     <div class="container">
         <div class="row text-center">
-            <div class="col-md-4"></div>
-            <div class="col-md-4">
-                <div class="row text-center">
-                    <a href="https://copernicus.eu">
-                        <img src="{{ STATIC_URL }}dashboard/img/copernicus_eu_logo.svg" style="float:left; padding-left: 20px; margin-top: -20px; margin-bottom:10px; height:50px" />
-                    </a>
-
-                    <a href="http://eea.europa.eu">
-                        <img src="{{ STATIC_URL }}dashboard/img/logo_eea_square.png" style="float:right; padding-left:20px; margin-top: -20px; margin-bottom:10px; height:50px" />
-                    </a>
+            <div class="col-md-12">
+                <div class="row text-center" style="display: inline-block;">
+                    {% if FOOTER_LOGOS %}
+                        {% for logo_url in FOOTER_LOGOS %}
+                            <img src="{{ logo_url }}" style="padding: 0 10px; margin-top: -20px; margin-bottom: 10px; height: 50px; vertical-align: middle;" />
+                        {% endfor %}
+                    {% else %}
+                        <!-- Fallback Default Logos -->
+                        <a href="https://copernicus.eu">
+                            <img src="{% static 'dashboard/img/copernicus_eu_logo.svg' %}" style="float: left; padding-left: 20px; margin-top: -20px; margin-bottom: 10px; height: 50px;" />
+                        </a>
+                        <a href="http://eea.europa.eu">
+                            <img src="{% static 'dashboard/img/logo_eea_square.png' %}" style="float: right; padding-left: 20px; margin-top: -20px; margin-bottom: 10px; height: 50px;" />
+                        </a>
+                    {% endif %}
                 </div>
-
             </div>
-            <div class="col-md-4"></div>
         </div>
         <div class="row text-center">
-                    <p>Copyright © 2019-2025 Copernicus Programme</p>
-                </div>
-
+            <p>{{ COPYRIGHT }}</p>
+        </div>
     </div>
 </div>
