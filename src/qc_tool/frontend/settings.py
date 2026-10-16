@@ -86,7 +86,9 @@ TEMPLATES = [
                 'qc_tool.frontend.dashboard.context_processors.organization',
                 'qc_tool.frontend.dashboard.context_processors.copyright',
                 'qc_tool.frontend.dashboard.context_processors.version_processor',
-                'qc_tool.frontend.dashboard.context_processors.can_change_password'
+                'qc_tool.frontend.dashboard.context_processors.can_change_password',
+                'qc_tool.frontend.dashboard.context_processors.header_logos',
+                'qc_tool.frontend.dashboard.context_processors.footer_logos',
             ],
         },
     },
@@ -178,6 +180,9 @@ SHOW_LOGO = CONFIG["show_logo"]
 ORGANIZATION = CONFIG["organization"]
 
 COPYRIGHT = CONFIG["copyright"]
+
+HEADER_IMAGE_NAMES = CONFIG["header_image_names"]
+FOOTER_IMAGE_NAMES = CONFIG["footer_image_names"]
 
 # Maintenance mode setting.
 MAINTENANCE_MODE = CONFIG["maintenance_mode"]

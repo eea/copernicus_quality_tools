@@ -479,10 +479,11 @@ def setup_config():
 
     # Organization name for display in the frontend.
     config["organization"] = environ.get("ORGANIZATION", "CLMS")
-    config["copyright"] = environ.get("COPYRIGHT", "Copyright © 2019-2025 Copernicus Programme")
+    config["copyright"] = environ.get("COPYRIGHT", "Copyright © 2019-2026 Copernicus Programme")
 
-    config["report_image_dir"] = environ.get("REPORT_IMAGE_DIR")
     config["report_image_names"] = environ.get("REPORT_IMAGE_NAMES")
+    config["header_image_names"] = environ.get("HEADER_IMAGE_NAMES")
+    config["footer_image_names"] = environ.get("FOOTER_IMAGE_NAMES")
     
     # api url
     config["api_url"] = environ.get("API_URL", API_URL)

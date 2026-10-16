@@ -1,4 +1,7 @@
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from qc_tool.frontend.dashboard import views
 
 urlpatterns = [
@@ -59,8 +62,9 @@ urlpatterns = [
     path("change_password/", views.change_password, name="change_password")
 ]
 
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
 urlpatterns += staticfiles_urlpatterns()
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # On initial startup: create token for worker authentication.
 from qc_tool.common import create_worker_token

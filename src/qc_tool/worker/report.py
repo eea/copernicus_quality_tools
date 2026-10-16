@@ -82,8 +82,8 @@ def generate_pdf_report(job_report_filepath, job_uuid):
     report_images = []
 
     # Check if custom report_image_dir is defined and valid
-    if CONFIG.get("report_image_dir") and str(CONFIG["report_image_dir"]).strip() not in ("", "None"):
-        report_logo_dirpath = Path(normpath(str(CONFIG["report_image_dir"])))
+    if CONFIG.get("report_image_names") and str(CONFIG["report_image_names"]).strip() not in ("", "None"):
+        report_logo_dirpath = Path(normpath(str(CONFIG["incoming_dir"])))
         raw_names = str(CONFIG.get("report_image_names", ""))
         report_image_names = [name.strip() for name in raw_names.split(",") if name.strip()]
 
