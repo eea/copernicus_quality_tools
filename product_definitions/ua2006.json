@@ -410,7 +410,7 @@
         "layers": [
           "reference"
         ],
-        "du_column_name": "fua_code"
+        "du_column_name": "fua_or_cit"
       }
     },
     {
