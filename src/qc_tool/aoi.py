@@ -14,6 +14,7 @@ _AOI_INPUT_ALIASES = (
     AOI_CODE_KEY,
     "delivery_unit_id",
     "fua_code",
+    "fua_or_cit",
     "fua",
     "du_id",
     "du",
