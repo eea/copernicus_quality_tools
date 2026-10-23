@@ -1,0 +1,49 @@
+.database-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 24px; align-items: start; }
+.database-tools { display: grid; gap: 24px; min-width: 0; }
+.database-table-tools > summary { cursor: pointer; font-weight: 600; padding: 14px 0; }
+.database-page .qc-admin-panel h2 { margin: 0 0 14px; font-size: 20px; }
+.database-section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.database-muted, .database-page code { color: var(--body-quiet-color); }
+.database-page code { font-size: 12px; overflow-wrap: anywhere; }
+.database-search { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 22px 0; }
+.database-search > div { flex: 1 1 180px; }
+.database-search label { display: block; margin-bottom: 6px; font-weight: 600; }
+.database-search input, .database-search select { width: 100%; box-sizing: border-box; min-height: 40px; background: var(--body-bg); color: var(--body-fg); border: 1px solid var(--hairline-color); border-radius: 6px; padding: 8px 10px; }
+.database-search--records > div { flex: 0 1 420px; }
+.database-table-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.database-table-group h3 { margin: 0 0 8px; color: var(--body-quiet-color); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.database-table-group ul, .database-connected ul { list-style: none; padding: 0; margin: 0; }
+.database-table-group li, .database-connected li { list-style: none; border-top: 1px solid var(--hairline-color); }
+.database-table-group a, .database-connected li a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; text-decoration: none; }
+.database-table-group a:hover strong { text-decoration: underline; }
+.database-table-group strong, .database-table-group code, .database-connected strong, .database-connected .database-muted { display: block; }
+.database-table-group code { margin-top: 3px; font-size: 10px; }
+.database-table-mode { font-size: 11px; white-space: nowrap; color: var(--body-quiet-color); }
+.database-maintenance { position: sticky; top: 20px; }
+.database-state { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 20px; }
+.database-state-dot { width: 9px; height: 9px; border-radius: 50%; background: #278354; }
+.database-state-dot--paused { background: #af7619; }
+.database-maintenance p { line-height: 1.65; }
+.database-maintenance form { margin: 20px 0 12px; }
+.database-back { display: inline-block; margin-bottom: 12px; }
+.database-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.database-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.database-policy { max-width: 850px; line-height: 1.65; }
+.database-scroll { overflow-x: auto; margin-top: 16px; }
+.database-records { width: 100%; }
+.database-records caption { text-align: left; padding: 0 0 12px; color: var(--body-quiet-color); }
+.database-records th { padding: 12px; background: var(--darkened-bg); white-space: nowrap; }
+.database-records td { padding: 14px 12px; overflow-wrap: anywhere; max-width: 320px; vertical-align: top; }
+.database-open-record { white-space: nowrap; }
+.database-empty { padding: 22px 0; color: var(--body-quiet-color); }
+.database-pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 18px; margin-top: 22px; }
+.database-filter { padding: 10px 14px; background: var(--darkened-bg); border-radius: 6px; }
+.database-filter a { margin-left: 10px; }
+.database-record-detail { margin: 20px 0 0; }
+.database-record-detail > div { display: grid; grid-template-columns: 210px minmax(0, 1fr); border-top: 1px solid var(--hairline-color); padding: 12px 0; gap: 20px; }
+.database-record-detail dt { color: var(--body-quiet-color); }
+.database-record-detail dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 26rem; overflow-y: auto; }
+.database-connected { margin-top: 24px; }
+.database-connected li a > span:last-child { white-space: nowrap; }
+@media (max-width: 1250px) { .database-layout { grid-template-columns: minmax(0, 1fr); } .database-maintenance { position: static; grid-row: 1; } .database-maintenance form { display: inline-block; margin: 6px 16px 0 0; } }
+@media (max-width: 700px) { .database-table-groups { grid-template-columns: minmax(0, 1fr); } .database-record-detail > div { grid-template-columns: minmax(0, 1fr); gap: 6px; } .database-page .qc-admin-intro { align-items: start; } }

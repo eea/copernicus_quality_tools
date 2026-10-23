@@ -44,8 +44,29 @@ docker compose -f docker/compose.local.yaml exec frontend \
 
 # Maintenance
 docker compose -f docker/compose.local.yaml exec frontend \
+  python3 -m qc_tool.frontend.manage maintenance status
+docker compose -f docker/compose.local.yaml exec frontend \
+  python3 -m qc_tool.frontend.manage maintenance on
+docker compose -f docker/compose.local.yaml exec frontend \
+  python3 -m qc_tool.frontend.manage maintenance check --generation <current-generation>
+docker compose -f docker/compose.local.yaml exec frontend \
+  python3 -m qc_tool.frontend.manage maintenance off --generation <current-generation>
+
+# Session cleanup (an operator DB writer; do not run during a backup)
+docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage clearsessions
 ```
+
+Normal maintenance is controlled through **Admin → Maintenance mode**.
+The commands provide operator recovery when the signed-in session expires.
+Both control the same persistent state without a Docker environment setting or
+container restart.
+`on` and `check` return nonzero while stopping is incomplete; check their exit
+status before starting a backup. `status` reports state, and `off` requires
+confirmed readiness. First use can initialize private maintenance storage;
+`status` never performs a readiness transition or writes the application DB.
+Follow the [maintenance runbook](../deployment/maintenance.md)
+for generation checks, worker retirement and backup/schema boundaries.
 
 `database plan` and `database check` inspect the schema read-only. The explicit
 `database apply` command initializes an entirely empty database from models,
@@ -66,6 +87,29 @@ storage and the [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE
 for a prepared current-schema copy. The application ships no migration or legacy
 conversion command.
 
+## Record transfer operations
+
+The administrator UI creates reviewed operations and launches the dedicated
+runner. These commands inspect or recover an existing operation; they do not
+accept SQL, create a schema or bypass package/maintenance validation.
+
+```bash
+python3 -m qc_tool.frontend.manage data_transfer status <operation-uuid>
+python3 -m qc_tool.frontend.manage data_transfer run <operation-uuid>
+python3 -m qc_tool.frontend.manage data_transfer retry <operation-uuid>
+python3 -m qc_tool.frontend.manage data_transfer cancel <operation-uuid>
+```
+
+Run inside the frontend container with its normal database, storage and control
+configuration. `run` is also the dedicated subprocess invoked by the UI.
+`retry` retains the original operation identity and verifies the durable outcome;
+an active process-owned lock prevents a second runner. `cancel` refuses committed
+or unsafe interrupted imports. A transfer pins maintenance until it completes or
+safe cancellation is recorded. No command automatically disables maintenance.
+
+Follow the [record transfer guide](../user-guide/record-transfers.md) for scope,
+account mapping, compatibility and interrupted-operation recovery.
+
 ## QC Tool user provisioning
 
 For trusted automation, `create_default_user` supports canonical roles and
@@ -84,12 +128,15 @@ Repeat `--group` or `--product` for multiple values. Prefer Django
 Admin or an interactive command when exposing a password on the process command
 line or shell history is unacceptable.
 
+Optional `--email` must be a valid address; omitting it leaves the field blank.
+Invalid addresses are rejected before creating an account.
+
 Upload the product specification as an administrator before assigning it with
 `--product`. Files in the bundled recipe directory are not available assignments
 until explicitly added to the database catalog.
 
 The command is idempotent: it does not update an existing user's password,
-roles, or scopes. Use Admin or the appropriate password command for changes.
+email, roles, or scopes. Use Admin or the appropriate password command for changes.
 
 ## Database shell
 

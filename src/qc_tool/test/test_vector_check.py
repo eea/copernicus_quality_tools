@@ -449,6 +449,16 @@ class Test_import2pg(VectorCheckTestCase):
         run_check(self.params, status)
         self.assertEqual("aborted", status.status)
 
+    def test_missing_source_layer_aborts(self):
+        from qc_tool.vector.import2pg import run_check
+        self.params.update({"layer_defs": {"layer_0": {
+            "src_filepath": TEST_DATA_DIR.joinpath("vector", "checks", "import2pg", "field_overflow_example.shp"),
+            "src_layer_name": "missing_layer", "layer_alias": "layer_0"}}, "layers": ["layer_0"]})
+        status = self.status_class()
+        run_check(self.params, status)
+        self.assertEqual("aborted", status.status)
+        self.assertIn("Source layer missing_layer", status.messages[0])
+
     def test_precision(self):
         """ogr2ogr parameter PRECISION=NO should supress numeric field overflow error."""
         from qc_tool.vector.import2pg import run_check
@@ -889,16 +899,19 @@ class Test_gap(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO boundary VALUES (ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES (ST_Difference(ST_MakeEnvelope(2, 2, 5, 5, 4326),"
                                                                       " ST_MakeEnvelope(3, 3, 4, 4, 4326)));")
+        self.cursor.execute("ALTER TABLE boundary ALTER COLUMN geom TYPE geometry(MultiPolygon,4326) USING ST_Multi(geom);")
         self.cursor.execute("CREATE TABLE reference (xfid integer, geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
                                                          "pg_fid_name": "xfid"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
+                            "boundary_tolerance": 0,
                             "du_column_name": None,
                             "step_nr": 1})
 
     def test_tolerance(self):
         from qc_tool.vector.gap import run_check
+        self.params["boundary_tolerance"] = 0.01
         self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (2, ST_MakeEnvelope(2.009, 2.009, 5, 5, 4326));")
         status = self.status_class()
@@ -909,11 +922,12 @@ class Test_gap(VectorCheckTestCase):
 
     def test_tolerance_finds_gaps(self):
         from qc_tool.vector.gap import run_check
+        self.params["boundary_tolerance"] = 0.01
         self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (2, ST_MakeEnvelope(2.05, 2.05, 5, 5, 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
         self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
         self.assertEqual(1, len(self.cursor.fetchall()))
         self.assertIn("has 1 gaps", status.messages[0])
@@ -935,10 +949,11 @@ class Test_gap(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO reference VALUES (1, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
         self.assertIn("gap", status.messages[0])
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
-        self.assertEqual([('POLYGON((2 2,2 5,5 5,5 2,2 2),(3 3,4 3,4 4,3 4,3 3))',)], self.cursor.fetchall())
+        self.cursor.execute("SELECT ST_Equals(geom,ST_GeomFromText(%s,4326)) FROM s01_reference_gap_error;",
+                            ["POLYGON((2 2,2 5,5 5,5 2,2 2),(3 3,4 3,4 4,3 4,3 3))"])
+        self.assertEqual([(True,)], self.cursor.fetchall())
 
 
 class Test_gap_du(VectorCheckTestCase):
@@ -952,11 +967,13 @@ class Test_gap_du(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('B', ST_MakeEnvelope(8, 8, 9, 9, 4326));")
         self.cursor.execute("INSERT INTO boundary VALUES ('C', ST_MakeEnvelope(10, 10, 11, 11, 4326));")
+        self.cursor.execute("ALTER TABLE boundary ALTER COLUMN geom TYPE geometry(MultiPolygon,4326) USING ST_Multi(geom);")
         self.cursor.execute("CREATE TABLE reference (xfid integer, unit CHAR(1), geom geometry(Polygon, 4326));")
         self.params.update({"layer_defs": {"reference": {"pg_layer_name": "reference",
                                                          "pg_fid_name": "xfid"},
                                            "boundary": {"pg_layer_name": "boundary"}},
                             "layers": ["reference"],
+                            "boundary_tolerance": 0,
                             "du_column_name": "unit",
                             "step_nr": 1})
 
@@ -979,19 +996,20 @@ class Test_gap_du(VectorCheckTestCase):
         self.cursor.execute("INSERT INTO reference VALUES (3, 'B', ST_MakeEnvelope(6, 6, 7, 7, 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
         self.assertIn("gap", status.messages[0])
-        self.cursor.execute("SELECT ST_AsText(geom) FROM s01_reference_gap_error;")
-        self.assertListEqual([('POLYGON((8 8,8 9,9 9,9 8,8 8))',)], self.cursor.fetchall())
+        self.cursor.execute("SELECT ST_Equals(geom,ST_GeomFromText(%s,4326)) FROM s01_reference_gap_error;",
+                            ["POLYGON((8 8,8 9,9 9,9 8,8 8))"])
+        self.assertEqual([(True,)], self.cursor.fetchall())
 
-    def test_du_warning(self):
+    def test_unknown_boundary_unit_fails(self):
         from qc_tool.vector.gap import run_check
         self.cursor.execute("INSERT INTO reference VALUES (1, 'A', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (2, 'D', ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         self.cursor.execute("INSERT INTO reference VALUES (3, NULL, ST_MakeEnvelope(0, 0, 1, 1, 4326));")
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
         self.cursor.execute("SELECT * FROM s01_reference_du_warning;")
         self.assertListEqual([(2,), (3,)], self.cursor.fetchall())
 
@@ -1486,7 +1504,7 @@ class Test_condition(VectorCheckTestCase):
                             "step_nr": 1})
 
     def test_dostupnosts2_ok(self):
-        from qc_tool.vector.change import run_check
+        from qc_tool.vector.condition import run_check
         self.params["conditions"] = ["if S1PIX=0 then DOSTUPNOSTS2 is NULL"]
         cursor = self.params["connection_manager"].get_connection().cursor()
         cursor.execute("CREATE TABLE mytable (fid integer, S1PIX integer, DOSTUPNOSTS2 integer);")
@@ -1498,7 +1516,7 @@ class Test_condition(VectorCheckTestCase):
         self.assertEqual("ok", status.status)
         
     def test_dostupnosts2_failed(self):
-        from qc_tool.vector.change import run_check
+        from qc_tool.vector.condition import run_check
 
         # Isolate this test to only run the first rule
         self.params["conditions"] = ["if S1PIX=0 then DOSTUPNOSTS2 is NULL"]
@@ -1677,7 +1695,7 @@ class Test_inspire_xml_lookup(VectorCheckTestCase):
         }
 
         status = self.status_class()
-        with patch("qc_tool.vector.helper.do_inspire_check") as mock_inspire_check:
+        with patch("qc_tool.worker.inspire.do_inspire_check") as mock_inspire_check:
             run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
@@ -1697,7 +1715,7 @@ class Test_inspire_xml_lookup(VectorCheckTestCase):
         }
 
         status = self.status_class()
-        with patch("qc_tool.vector.helper.do_inspire_check") as mock_inspire_check:
+        with patch("qc_tool.worker.inspire.do_inspire_check") as mock_inspire_check:
             run_check(self.params, status)
 
         self.assertEqual("ok", status.status)
@@ -1717,7 +1735,7 @@ class Test_inspire_xml_lookup(VectorCheckTestCase):
         }
 
         status = self.status_class()
-        with patch("qc_tool.vector.helper.do_inspire_check") as mock_inspire_check:
+        with patch("qc_tool.worker.inspire.do_inspire_check") as mock_inspire_check:
             run_check(self.params, status)
 
         self.assertEqual("ok", status.status)

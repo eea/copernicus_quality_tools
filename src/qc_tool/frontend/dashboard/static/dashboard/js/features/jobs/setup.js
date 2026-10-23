@@ -91,7 +91,7 @@ function display_product_info(product_ident) {
         updateProductDefinitionLink(product_ident, 'Product Definition');
 
         // enable Run QC button
-        $("#btn_run").prop("disabled", false);
+        $("#btn_run").prop("disabled", Boolean(window.qcMaintenance && window.qcMaintenance.isActive()));
 
         //listen to checkbox events
         toggle_select_buttons();
@@ -165,6 +165,7 @@ function select_all() {
 
 
 function create_job() {
+    if (window.qcMaintenance && window.qcMaintenance.isActive()) return;
 
     // Validate if the user has selected a product.
     if ($("#select_product").val() === "Select product ...") {

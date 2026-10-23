@@ -22,7 +22,8 @@
 {% block upload_title %}Product specification JSON{% endblock upload_title %}
 {% block upload_description %}Choose files first. A draft product is created only when you select Add or Add all.{% endblock upload_description %}
 {% block upload_body %}
-<form id="product-definition-upload" class="workspace-card__body qc-upload-body" method="post" enctype="multipart/form-data" data-max-file-bytes="{{ max_file_bytes|default:1048576 }}">
+<form id="product-definition-upload" class="workspace-card__body qc-upload-body" method="post" enctype="multipart/form-data" data-max-file-bytes="{{ max_file_bytes|default:1048576 }}" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
     {% csrf_token %}
     {% if form.non_field_errors %}
     <div class="workspace-notice workspace-notice--danger" role="alert">
@@ -43,6 +44,7 @@
         <p>Name each file after its product, for example <code>my_product.json</code>. Use the same filename to add a new specification version.</p>
         <p>Uploading the same specification again does not create a duplicate. Existing versions and quality-check results are retained. After adding a product, review and approve its delivery plan from the product page.</p>
     </details>
+</fieldset>
 </form>
 {% endblock upload_body %}
 

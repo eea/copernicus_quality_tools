@@ -2,6 +2,7 @@
 
 from django.contrib import admin
 
+from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import Job
 from qc_tool.frontend.dashboard.models import S3Info
@@ -50,6 +51,18 @@ class JobAdmin(admin.ModelAdmin):
         "product_unit_code",
     )
     readonly_fields = tuple(field.name for field in Job._meta.fields)
+
+    def has_module_permission(self, request):
+        return (
+            access_for_request(request).is_administrator
+            or super().has_module_permission(request)
+        )
+
+    def has_view_permission(self, request, obj=None):
+        return (
+            access_for_request(request).is_administrator
+            or super().has_view_permission(request, obj)
+        )
 
     def has_add_permission(self, request):
         return False

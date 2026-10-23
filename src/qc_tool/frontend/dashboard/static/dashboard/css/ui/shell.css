@@ -1,4 +1,4 @@
-/* Shared application shell: header, navigation, page frame, icons, and footer. */
+/* Workspace layout: header dimensions, navigation collapse, page frame and footer. */
 html {
   min-height: 100%;
 }
@@ -49,19 +49,6 @@ body.qc-shell {
   color: #fff;
 }
 
-.ui-icon {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vertical-align: -4px;
-}
-
 .qc-shell #menucontainer {
   position: relative;
   min-height: 80px;
@@ -94,112 +81,17 @@ body.qc-shell {
   color: #14243f;
 }
 
-.qc-shell .navbar-brand-logo {
-  float: none;
-  width: auto;
-  height: 43px;
-  margin: 0;
-  object-fit: contain;
-}
-
-.qc-shell .navbar-brand-logo-land-monitoring {
-  height: 43px;
-  margin-left: 24px;
-  padding: 0;
-}
-
-.qc-shell .navbar-brand-title {
-  margin-left: 28px;
-  overflow: visible;
-  white-space: nowrap;
-}
-
 .qc-shell .navbar-menu {
   height: auto;
   line-height: normal;
 }
 
+/* Workspace header dimensions; shared menu appearance lives in navigation.css. */
 .qc-shell .main-menu > li > a,
 .qc-shell .main-menu > li > .site-nav-button,
 .qc-shell .main-menu > li.navbar-logout button {
-  display: flex;
   min-height: 80px;
-  align-items: center;
   padding: 29px 14px;
-  border: 0;
-  color: var(--qc-color-text);
-  background: transparent;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 22px;
-  text-decoration: none;
-}
-
-.qc-shell .main-menu > li.navbar-logout > form {
-  margin: 0;
-}
-
-.qc-shell .main-menu > li > a:hover,
-.qc-shell .main-menu > li > a:focus,
-.qc-shell .main-menu > li > a[aria-current="page"],
-.qc-shell .main-menu > li > .site-nav-button:hover,
-.qc-shell .main-menu > li > .site-nav-button:focus,
-.qc-shell .main-menu > li.open > .site-nav-button,
-.qc-shell .main-menu > li.site-nav-user--active > .site-nav-button,
-.qc-shell .main-menu > li.navbar-logout button:hover,
-.qc-shell .main-menu > li.navbar-logout button:focus {
-  color: var(--qc-color-primary);
-  background: #f5f8fd;
-}
-
-.qc-shell .main-menu .ui-icon {
-  margin-right: 8px;
-  color: #53627a;
-}
-
-.qc-shell .site-nav-button .caret {
-  margin-left: 7px;
-}
-
-.qc-shell .site-nav-dropdown-menu {
-  min-width: 205px;
-  padding: 7px 0;
-  border-color: var(--qc-color-border);
-  border-radius: 8px;
-  box-shadow: 0 13px 28px rgba(20, 36, 63, 0.14);
-}
-
-.qc-shell .site-nav-dropdown-menu > li > a,
-.qc-shell .site-nav-dropdown-menu > li.navbar-logout button {
-  display: flex;
-  width: 100%;
-  min-height: 42px;
-  align-items: center;
-  padding: 10px 16px;
-  border: 0;
-  color: var(--qc-color-text);
-  background: #fff;
-  line-height: 22px;
-  text-align: left;
-}
-
-.qc-shell .site-nav-dropdown-menu > li.navbar-logout > form {
-  margin: 0;
-}
-
-.qc-shell .site-nav-dropdown-menu > li > a:hover,
-.qc-shell .site-nav-dropdown-menu > li > a:focus,
-.qc-shell .site-nav-dropdown-menu > li > a[aria-current="page"],
-.qc-shell .site-nav-dropdown-menu > li.navbar-logout button:hover,
-.qc-shell .site-nav-dropdown-menu > li.navbar-logout button:focus {
-  color: var(--qc-color-primary);
-  background: #f3f7fd;
-  text-decoration: none;
-}
-
-.qc-shell .navbar-logout-label {
-  min-width: 0;
-  white-space: nowrap;
 }
 
 .qc-shell .footer {
@@ -255,19 +147,6 @@ body.qc-shell {
     padding-left: 18px;
   }
 
-  .qc-shell .navbar-brand-logo {
-    height: 38px;
-  }
-
-  .qc-shell .navbar-brand-logo-land-monitoring {
-    margin-left: 16px;
-  }
-
-  .qc-shell .navbar-brand-title {
-    margin-left: 18px;
-    font-size: 18px;
-  }
-
   .qc-shell .main-menu > li > a,
   .qc-shell .main-menu > li > .site-nav-button,
   .qc-shell .main-menu > li.navbar-logout button {
@@ -295,20 +174,6 @@ body.qc-shell {
   .qc-shell .navbar-brand {
     height: 70px;
     padding: 14px 0;
-  }
-
-  .qc-shell .navbar-brand-logo,
-  .qc-shell .navbar-brand-logo-land-monitoring {
-    height: 38px;
-  }
-
-  .qc-shell .navbar-brand-logo-land-monitoring {
-    margin-left: 16px;
-  }
-
-  .qc-shell .navbar-brand-title {
-    margin-left: 18px;
-    font-size: 17px;
   }
 
   .qc-shell .navbar-toggle {
@@ -365,15 +230,6 @@ body.qc-shell {
 }
 
 @media (max-width: 560px) {
-  .qc-shell .navbar-brand-logo-land-monitoring {
-    display: none;
-  }
-
-  .qc-shell .navbar-brand-title {
-    margin-left: 12px;
-    font-size: 16px;
-  }
-
   .site-footer__logos {
     gap: 18px;
   }

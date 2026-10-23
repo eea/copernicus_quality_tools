@@ -35,6 +35,7 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
     "export_deliveries_excel": private_session_page(VIEW, "GET"),
     "download_delivery_file": private_session_page(VIEW, "GET"),
     "job_report_pdf": private_session_page(VIEW, "GET"),
+    "job_input_zip": private_session_page(VIEW, "GET"),
     "job_combined_log": private_session_page(VIEW, "GET"),
     "file_upload": private_session_page(AccountPermission.UPLOAD_DELIVERY, "GET"),
     "job_history": private_session_page(VIEW, "GET"),
@@ -110,6 +111,7 @@ MACHINE_PRIVATE_ROUTE_POLICIES = {
         "POST",
     ),
     "pull_job": private_worker("POST"),
+    "worker_maintenance": private_worker("POST"),
 }
 
 

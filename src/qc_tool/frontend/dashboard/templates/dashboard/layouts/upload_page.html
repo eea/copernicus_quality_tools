@@ -14,7 +14,9 @@
             <p>{% block upload_description %}{% endblock upload_description %}</p>
         </div>
     </header>
+    <fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
     {% block upload_body %}{% endblock upload_body %}
+    </fieldset>
     <div class="sr-only" data-upload-announcement role="status" aria-atomic="true"></div>
 </section>
 {% endblock page_content %}

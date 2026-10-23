@@ -7,7 +7,7 @@ steps and records completed cleanup and deliberately deferred schema changes.
 
 Verified **2026-10-13** against a fresh **QC Tool 3.0.0 models-only**
 PostgreSQL target. Policy is `draft`; no first-party migration definitions or
-baseline snapshots are present. The measured schema has **23 tables, 189 columns,
+baseline snapshots are present. That historical measurement had **23 tables, 189 columns,
 119 constraints and 91 indexes**: 14 QC Tool tables and 9 Django tables.
 `django_migrations` is absent and no migrations are recorded as applied.
 Initialization, roles, repeated initialization, synthetic record preservation,
@@ -20,6 +20,11 @@ separately reviewed release from **3.0.1 onward**. The SQL definitions below
 record PostgreSQL access paths and integrity rules; they are not a script for
 upgrading an existing database. A fresh production installation uses explicit initialization or a manual archive
 restore; full application and artifact verification remain separate release gates.
+
+The current draft also includes the administrative transfer receipt documented
+below (added 2026-10-20). The 2026-10-13 totals are historical evidence and do not
+include that addition; fresh schema verification is required for the current
+model set. This feature does not upgrade an earlier draft database in place.
 
 ## How to read the columns
 
@@ -54,6 +59,7 @@ restore; full application and artifact verification remain separate release gate
 
 | Area | Table | Columns | Main responsibility |
 | --- | --- | ---: | --- |
+| Administration | [`qc_database_transfer_receipt`](#qc_database_transfer_receipt) | 10 | Atomic import identity and recovery evidence |
 | Accounts | [`account_api_token`](#account_api_token) | 11 | Personal API credentials and original access limits |
 | Accounts | [`account_product_grant`](#account_product_grant) | 5 | User-to-product scope |
 | Catalog | [`catalog_product`](#catalog_product) | 12 | Stable product and final manager readiness |
@@ -78,7 +84,7 @@ restore; full application and artifact verification remain separate release gate
 | Django | [`django_session`](#django_session) | 3 | Temporary browser sessions |
 | Django | [`django_admin_log`](#django_admin_log) | 8 | Administration history |
 
-All 23 tables are model-created application/framework tables. `AccountCapability` is
+All listed tables are model-created application/framework tables. `AccountCapability` is
 deliberately unmanaged and creates permissions without adding another table.
 
 ## Main business relationships
@@ -1149,6 +1155,41 @@ Administrative action history. Model: `django.contrib.admin.models.LogEntry`. QC
 
 </details>
 
+
+## Administrative transfer evidence
+
+### `qc_database_transfer_receipt`
+
+A target-side record that an explicitly reviewed import committed. Model:
+[`qc_tool.database.models.TransferReceipt`](models.py), owned by the central
+`qc_database` app. It is inserted in the **same transaction** as the imported
+records. It is not an exported source permission, migration recorder or schema
+baseline.
+
+| Column | Model storage | NULL | ORM default | Meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `BigAutoField` | No | identity | Local receipt identity; never copied from a package. |
+| `package_id` | UUID, unique | No | required | Stable package identity; prevents replaying an import. |
+| `package_sha256` | `varchar(64)` | No | `''` | Digest of the exact reviewed archive bytes. |
+| `operation_id` | UUID, unique | No | required | Private operation-journal identity used for crash recovery. |
+| `plan_sha256` | `varchar(64)` | No | `''` | Digest binding the applied package, mappings and reviewed destination plan. |
+| `profile` | `varchar(24)` | No | `''` | Supported account or application transfer scope. |
+| `actor_id` | FK → `auth_user.id` | Yes | NULL | Target administrator who confirmed the import; Django deletion rule SET_NULL. |
+| `actor_name` | `varchar(150)` | No | `''` | Retained target actor-name snapshot. |
+| `created_at` | `DateTimeField` | No | `now()` | Commit-operation timestamp under the installation timezone policy. |
+| `summary` | JSON | No | `{}` | Exact created counts and source-to-target identity evidence used for verification/recovery. |
+
+**Integrity/access paths:** local primary key; independent uniqueness on package
+and operation UUIDs; indexed nullable actor FK. The model adds no first-party
+migration files or baseline snapshots. Field declarations above describe the
+current model, rather than claiming a new measured native-schema inventory.
+
+**Retention:** preserve receipts with the target database and private operation
+journals. A committed receipt prevents duplicate application after a lost HTTP
+response or process crash. Recovery verifies committed records and immutable
+files; it never treats an absent browser response as a rollback. Ordinary Admin
+record editing/export does not expose this model. An existing draft schema that
+lacks the table is refused; verification uses a fresh disposable target.
 
 ## Migration history
 

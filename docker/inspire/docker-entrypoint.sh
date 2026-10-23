@@ -2,6 +2,10 @@
 
 set -e
 
+# A source bind mount must not make an old runtime appear to be a current
+# worker. Refuse unsupported Python/driver combinations before starting work.
+python3 /usr/local/src/copernicus_quality_tools/docker/check_worker_runtime.py
+
 # Requires:
 # -unzip
 # -curl
@@ -30,52 +34,52 @@ rm -rf /var/run/apache2/apache2.pid
 # service squid start
 # service squid restart
 
-javaHttpProxyOpts=""
+javaHttpProxyOpts=()
 if [[ -n "$HTTP_PROXY_HOST" && "$HTTP_PROXY_HOST" != "none" ]]; then
   if [[ -n "$HTTP_PROXY_USERNAME" && "$HTTP_PROXY_USERNAME" != "none" ]]; then
-    echo "Using HTTP proxy server $HTTP_PROXY_HOST on port $HTTP_PROXY_PORT as user $HTTP_PROXY_USERNAME"
-    javaHttpProxyOpts="-Dhttp.proxyHost=$HTTP_PROXY_HOST -Dhttp.proxyPort=$HTTP_PROXY_PORT -Dhttp.proxyUser=$HTTP_PROXY_USERNAME -Dhttp.proxyPassword=$HTTP_PROXY_PASSWORD"
-    echo "http_proxy=http://$HTTP_PROXY_USERNAME:$HTTP_PROXY_PASSWORD@$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> $wgetRcFile
+    echo "Using configured authenticated HTTP proxy."
+    javaHttpProxyOpts=("-Dhttp.proxyHost=$HTTP_PROXY_HOST" "-Dhttp.proxyPort=$HTTP_PROXY_PORT" "-Dhttp.proxyUser=$HTTP_PROXY_USERNAME" "-Dhttp.proxyPassword=$HTTP_PROXY_PASSWORD")
+    echo "http_proxy=http://$HTTP_PROXY_USERNAME:$HTTP_PROXY_PASSWORD@$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> "$wgetRcFile"
   else
-    echo "Using HTTP proxy server $HTTP_PROXY_HOST on port $HTTP_PROXY_PORT"
-    javaHttpProxyOpts="-Dhttp.proxyHost=$HTTP_PROXY_HOST -Dhttp.proxyPort=$HTTP_PROXY_PORT"
-    echo "http_proxy=http://$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> $wgetRcFile
+    echo "Using configured HTTP proxy."
+    javaHttpProxyOpts=("-Dhttp.proxyHost=$HTTP_PROXY_HOST" "-Dhttp.proxyPort=$HTTP_PROXY_PORT")
+    echo "http_proxy=http://$HTTP_PROXY_HOST:$HTTP_PROXY_PORT" >> "$wgetRcFile"
   fi
 fi
 
-javaHttpsProxyOpts=""
+javaHttpsProxyOpts=()
 if [[ -n "$HTTPS_PROXY_HOST" && "$HTTPS_PROXY_HOST" != "none" ]]; then
   if [[ -n "$HTTPS_PROXY_USERNAME" && "$HTTPS_PROXY_USERNAME" != "none" ]]; then
-    echo "Using HTTP Secure proxy server $HTTPS_PROXY_HOST on port $HTTPS_PROXY_PORT as user $HTTPS_PROXY_USERNAME"
-    javaHttpsProxyOpts="-Dhttps.proxyHost=$HTTPS_PROXY_HOST -Dhttps.proxyPort=$HTTPS_PROXY_PORT -Dhttps.proxyUser=$HTTPS_PROXY_USERNAME -Dhttps.proxyPassword=$HTTPS_PROXY_PASSWORD"
-    echo "https_proxy=https://$HTTPS_PROXY_USERNAME:$HTTPS_PROXY_PASSWORD@$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> $wgetRcFile
+    echo "Using configured authenticated HTTPS proxy."
+    javaHttpsProxyOpts=("-Dhttps.proxyHost=$HTTPS_PROXY_HOST" "-Dhttps.proxyPort=$HTTPS_PROXY_PORT" "-Dhttps.proxyUser=$HTTPS_PROXY_USERNAME" "-Dhttps.proxyPassword=$HTTPS_PROXY_PASSWORD")
+    echo "https_proxy=https://$HTTPS_PROXY_USERNAME:$HTTPS_PROXY_PASSWORD@$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> "$wgetRcFile"
   else
-    echo "Using HTTP Secure proxy server $HTTPS_PROXY_HOST on port $HTTPS_PROXY_PORT"
-    javaHttpsProxyOpts="-Dhttps.proxyHost=$HTTPS_PROXY_HOST -Dhttps.proxyPort=$HTTPS_PROXY_PORT"
-    echo "https_proxy=https://$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> $wgetRcFile
+    echo "Using configured HTTPS proxy."
+    javaHttpsProxyOpts=("-Dhttps.proxyHost=$HTTPS_PROXY_HOST" "-Dhttps.proxyPort=$HTTPS_PROXY_PORT")
+    echo "https_proxy=https://$HTTPS_PROXY_HOST:$HTTPS_PROXY_PORT" >> "$wgetRcFile"
   fi
 fi
 
 max_mem_kb=0
-xms_xmx=""
+xms_xmx=()
 if [[ -n "$JAVA_MAX_MEM" && "$JAVA_MAX_MEM" != "max" && "$JAVA_MAX_MEM" != "0" ]]; then
   re='^[0-9]+$'
   if ! [[ $JAVA_MAX_MEM =~ $re ]] ; then
      echo "JAVA_MAX_MEM: Not a number" >&2; exit 1
   fi
   max_mem_kb=$(($JAVA_MAX_MEM*1024))
-  xms_xmx="-Xms1g -Xmx${max_mem_kb}k"
+  xms_xmx=(-Xms1g "-Xmx${max_mem_kb}k")
 else
   # in KB
   max_mem_kb=$(cat /proc/meminfo | grep MemTotal | awk '{ print $2 }')
 
   # 4 GB in kb
   if [[ $max_mem_kb -lt 4194304 ]]; then
-    xms_xmx="-Xms1g"
+    xms_xmx=(-Xms1g)
   else
     # 2 GB for system
     xmx_kb=$(($max_mem_kb-2097152))
-    xms_xmx="-Xms2g -Xmx${xmx_kb}k"
+    xms_xmx=(-Xms2g "-Xmx${xmx_kb}k")
   fi
 fi
 
@@ -84,7 +88,10 @@ if [[ $max_mem_kb -lt 1048576 ]]; then
   exit 1;
 fi
 
-JAVA_OPTIONS="-server $xms_xmx $javaHttpProxyOpts $javaHttpsProxyOpts"
+# Supervisor parses this environment substitution with shlex, without a shell.
+# Serialize individual arguments once so credentials retain quotes/whitespace.
+JAVA_OPTIONS=$(python3 -c 'import shlex, sys; print(shlex.join(sys.argv[1:]))' \
+  -server "${xms_xmx[@]}" "${javaHttpProxyOpts[@]}" "${javaHttpsProxyOpts[@]}")
 export JAVA_OPTIONS
 echo "Configured Java memory and proxy options."
 

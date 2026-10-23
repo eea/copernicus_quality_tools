@@ -13,6 +13,9 @@ from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard import models
 from qc_tool.frontend.dashboard.access import require_job_view
+from qc_tool.frontend.dashboard.services.maintenance import (
+    MaintenanceError, application_activity,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +28,8 @@ def update_job(request, job_uuid):
 
     job = get_object_or_404(models.Job, job_uuid=job_uuid)
     require_job_view(access_for_request(request), job)
-    _refresh_if_stale(job)
+    if not getattr(request, "maintenance_active", False):
+        _refresh_if_stale(job)
     return JsonResponse(
         {
             "id": job.delivery.id,
@@ -40,19 +44,26 @@ def refresh_job_statuses():
 
     time.sleep(10)
     while True:
+        try:
+            refresh_job_statuses_once()
+        except MaintenanceError:
+            logger.warning("Job refresh paused: maintenance state unavailable.")
+        time.sleep(int(CONFIG["refresh_job_statuses_background_interval"]))
+
+
+def refresh_job_statuses_once():
+    """Use the same admission barrier as HTTP, including ongoing iterations."""
+    with application_activity() as admitted:
+        if not admitted:
+            return
         running_jobs = models.Job.objects.filter(job_status=JOB_RUNNING)
-        logger.info("Found %d running jobs.", len(running_jobs))
         updated_count = 0
         for job in running_jobs:
             previous_status = job.job_status
             _refresh_if_stale(job)
             if previous_status == JOB_RUNNING and job.job_status != JOB_RUNNING:
                 updated_count += 1
-        logger.info(
-            "refresh_job_statuses: Status of %d running jobs has been updated.",
-            updated_count,
-        )
-        time.sleep(int(CONFIG["refresh_job_statuses_background_interval"]))
+        logger.info("Refreshed %d terminal jobs.", updated_count)
 
 
 def _refresh_if_stale(job):

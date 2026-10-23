@@ -18,7 +18,7 @@ def locate_xml_file(metadata_folder_path, layer_filepath):
 
 
 def run_check(params, status):
-    from qc_tool.vector.helper import do_inspire_check
+    from qc_tool.worker.inspire import do_inspire_check
     from qc_tool.raster.helper import do_raster_layers
     from qc_tool.common import CONFIG
 

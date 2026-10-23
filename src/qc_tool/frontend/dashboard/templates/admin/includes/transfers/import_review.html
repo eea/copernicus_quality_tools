@@ -1,0 +1,115 @@
+{% load static %}
+  {% if plan and can_review_import and not needs_native_destination %}
+  <section class="module transfer-panel" id="import-plan">
+    <h2>{% if native_transfer %}Review database restore{% elif plan.profile == 'accounts' %}Review users{% else %}Review records to add{% endif %}</h2>
+    <div class="transfer-panel__body">
+      {% if transfer_compatibility %}
+      <section class="transfer-compatibility{% if not transfer_compatibility.supported %} transfer-compatibility--blocked{% endif %}" aria-labelledby="compatibility-heading" role="{% if transfer_compatibility.supported %}status{% else %}alert{% endif %}">
+        <h3 id="compatibility-heading">{% if transfer_compatibility.supported %}Package compatibility checked{% else %}Package is not compatible with this installation{% endif %}</h3>
+        <p>{{ transfer_compatibility.message }}</p>
+        {% if transfer_compatibility.source_release or transfer_compatibility.target_release %}<p class="help">Package version: <strong>{{ transfer_compatibility.source_release|default:"Unknown" }}</strong> · This installation: <strong>{{ transfer_compatibility.target_release|default:"Unknown" }}</strong></p>{% endif %}
+        {% if transfer_compatibility.changes %}<details><summary>View {{ transfer_compatibility.change_count }} compatibility difference{{ transfer_compatibility.change_count|pluralize }}</summary><div class="transfer-table-wrap"><table class="transfer-differences"><thead><tr><th scope="col">Model or field</th><th scope="col">In package</th><th scope="col">This installation</th></tr></thead><tbody>{% for change in transfer_compatibility.changes %}<tr><th scope="row">{{ change.path }}<span class="transfer-secondary">{{ change.label }}</span></th><td data-label="In package">{{ change.source|default_if_none:"—" }}</td><td data-label="This installation">{{ change.target|default_if_none:"—" }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+        {% if not transfer_compatibility.supported and operation.package_sha256 %}<div class="transfer-actions"><a class="button btn-qc-secondary" href="{% url 'admin_data_transfer_download' operation.id %}">Download original package</a></div>{% endif %}
+      </section>
+      {% endif %}
+      {% if native_transfer %}<p>Restore every database table and field, including credentials, permissions and sessions, into this separate empty database. The live database stays unchanged.</p>{% elif plan.profile == 'accounts' %}<p>Review incoming profiles and choose what to do with each user. New accounts are inactive. An existing account is updated only when you explicitly choose <strong>Update profile</strong>.</p>{% else %}<p><strong>Add records to {{ plan.target_label }}.</strong> Existing QC records are kept unchanged. New accounts are inactive; access is set up separately.</p><p class="help">Passwords and access credentials are excluded. Review new accounts before enabling their access.</p>{% endif %}
+      {% if plan.profile != 'accounts' and plan.include_files != None %}<p><strong>{% if plan.include_files %}Records and available files{% else %}Records only{% endif %}.</strong> {% if plan.include_files %}Verified package files can be added; existing files are never overwritten.{% else %}Package file contents will not be copied. Matching verified files already on this server can still be linked.{% endif %}</p>{% endif %}
+      {% include "admin/includes/transfers/file_summary.html" with file_references=plan.file_references %}
+      {% if plan.account_summary %}
+      <dl class="transfer-account-summary" aria-label="User import summary"><div><dt>New users</dt><dd>{{ plan.account_summary.create }}</dd></div><div><dt>Use existing</dt><dd>{{ plan.account_summary.reuse }}</dd></div><div><dt>Update profile</dt><dd>{{ plan.account_summary.replace }}</dd></div><div><dt>Skipped</dt><dd>{{ plan.account_summary.skip }}</dd></div><div><dt>Needs a decision</dt><dd>{{ plan.account_summary.blocked }}</dd></div></dl>
+      <p class="help">{{ plan.account_summary.selected }} of {{ plan.account_summary.total }} users selected. Skipped users will not be imported.</p>
+      {% elif plan.resource_summary %}
+      <div class="transfer-table-wrap"><table class="transfer-summary">
+        <caption>What will change</caption>
+        <thead><tr><th scope="col">Information</th><th scope="col">New</th><th scope="col">Already present</th><th scope="col">Skipped</th><th scope="col">Needs a decision</th></tr></thead>
+        <tbody>{% for row in plan.resource_summary %}<tr><th scope="row">{{ row.label }}</th><td data-label="New">{{ row.create }}</td><td data-label="Already present">{{ row.reuse }}</td><td data-label="Skipped">{{ row.skip }}</td><td data-label="Needs a decision">{{ row.blocked }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      {% elif plan_counts %}<table class="transfer-counts"><caption>Records to import</caption><thead><tr><th scope="col">Information</th><th scope="col">Records</th></tr></thead><tbody>{% for label, count in plan_counts %}<tr><th scope="row">{{ label }}</th><td>{{ count }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+      {% if plan.warnings %}<ul class="transfer-warnings">{% for warning in plan.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+      {% if account_blocker_count %}<p class="errornote" role="alert">Resolve {{ account_blocker_count }} {% if plan.profile == 'accounts' %}user decision{{ account_blocker_count|pluralize }}{% else %}account mapping{{ account_blocker_count|pluralize }}{% endif %} below before importing.</p>{% endif %}
+      {% if plan_global_blockers %}<div class="errornote" role="alert"><strong>Resolve these issues before importing:</strong><ul>{% for blocker in plan_global_blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
+
+      {% if delivery_file_page.object_list %}
+      <section class="transfer-file-review" aria-labelledby="delivery-files-heading">
+        <h3 id="delivery-files-heading">Original delivery ZIPs</h3>
+        <p>Files already on this server are reused only when their verified bytes match. Existing files are never overwritten.</p>
+        <div class="transfer-table-wrap"><table class="transfer-files">
+          <thead><tr><th scope="col">Delivery file</th><th scope="col">Availability</th><th scope="col">QC jobs</th></tr></thead>
+          <tbody>{% for row in delivery_file_page %}<tr><th scope="row">{{ row.filename }}{% if row.owner %}<span class="transfer-secondary">{{ row.owner }}</span>{% endif %}</th><td><strong>{{ row.status_label }}</strong>{% if row.file_status_label and row.file_status_label != row.status_label %}<span class="transfer-secondary">Original ZIP: {{ row.file_status_label }}</span>{% endif %}{% if row.message %}<span class="transfer-secondary">{{ row.message }}</span>{% endif %}{% if row.sha256 %}<details><summary>Verified file details</summary><p>{% if row.size != None %}{{ row.size|filesizeformat }} · {% endif %}SHA-256 <code>{{ row.sha256 }}</code></p></details>{% endif %}</td><td data-label="QC jobs">{{ row.job_count }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+        {% if delivery_file_page.has_other_pages %}<nav class="paginator transfer-pagination" aria-label="Delivery files">{% if delivery_file_page.has_previous %}<a href="?operation={{ operation.id|urlencode }}&amp;file_page={{ delivery_file_page.previous_page_number }}#delivery-files-heading">Previous files</a>{% endif %}<span>Files {{ delivery_file_page.start_index }}–{{ delivery_file_page.end_index }} of {{ delivery_file_page.paginator.count }}</span>{% if delivery_file_page.has_next %}<a href="?operation={{ operation.id|urlencode }}&amp;file_page={{ delivery_file_page.next_page_number }}#delivery-files-heading">Next files</a>{% endif %}</nav>{% endif %}
+      </section>
+      {% endif %}
+
+      <form method="post" data-maintenance-exempt data-transfer-import-form>
+        {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}"><input type="hidden" name="action" value="plan">
+        {% include "admin/includes/transfers/user_choices.html" %}
+        {% if resolution_form.rows %}
+        <section class="transfer-conflict-review" aria-labelledby="import-conflicts-heading">
+          <h3 id="import-conflicts-heading">Choose how to handle matching records</h3>
+          <p>Compare the incoming records with this installation. Reusing a record leaves it unchanged; skipping excludes its connected incoming history.</p>
+          {{ resolution_form.non_field_errors }}{{ resolution_form.resolution_plan_hash.errors }}{{ resolution_form.resolution_plan_hash }}
+          <input type="hidden" name="conflict_page" value="{{ conflict_page.number }}">
+          {% for row in resolution_form.rows %}
+          <div class="transfer-conflict">
+            <div class="transfer-conflict__heading"><h4>{{ row.source.label }}</h4><span class="transfer-secondary">{{ row.source.resource_label }}</span></div>
+            <p>{{ row.source.reason }}</p>
+            {% if row.source.differences %}<div class="transfer-table-wrap"><table class="transfer-differences"><caption>Differences to review</caption><thead><tr><th scope="col">Field</th><th scope="col">Existing value</th><th scope="col">Incoming value</th></tr></thead><tbody>{% for difference in row.source.differences %}<tr><th scope="row">{{ difference.field }}</th><td data-label="Existing value">{{ difference.current|default_if_none:"—" }}</td><td data-label="Incoming value">{{ difference.incoming|default_if_none:"—" }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+            {% if row.source.impact_rows %}<p class="help"><strong>Skipping affects incoming records:</strong> {% for label, count in row.source.impact_rows %}{{ count }} {{ label }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+            <div class="form-row">{{ row.field.errors }}{{ row.field.label_tag }}{{ row.field }}</div>
+          </div>
+          {% endfor %}
+          {% if conflict_page.has_other_pages %}<div class="paginator transfer-pagination">
+            {% if conflict_page.has_previous %}<button class="button btn-qc-secondary" type="submit" name="conflict_page_next" value="{{ conflict_page.previous_page_number }}" formnovalidate{% if not transfers_ready %} disabled{% endif %}>Save and previous conflicts</button>{% endif %}
+            <span>Conflicts {{ conflict_page.start_index }}–{{ conflict_page.end_index }} of {{ conflict_page.paginator.count }}</span>
+            {% if conflict_page.has_next %}<button class="button btn-qc-secondary" type="submit" name="conflict_page_next" value="{{ conflict_page.next_page_number }}" formnovalidate{% if not transfers_ready %} disabled{% endif %}>Save and next conflicts</button>{% endif %}
+          </div>{% endif %}
+        </section>
+        {% endif %}
+        {% if mapping_form.rows %}
+        <input type="hidden" name="mapping_page" value="{{ mapping_page.number }}">
+        <h3>Match imported users</h3>
+        <p>Create an inactive account, or choose the existing user who should own these imported records.{% if plan.profile == 'application' %} QC files require matching usernames.{% endif %}</p>
+        {{ mapping_form.non_field_errors }}
+        <div class="transfer-table-wrap"><table class="transfer-mappings">
+          <thead><tr><th scope="col">Account in package</th><th scope="col">Account on this installation</th></tr></thead>
+          <tbody>{% for row in mapping_form.rows %}<tr>
+            <th scope="row"><label for="{{ row.field.id_for_label }}">{{ row.source.username }}</label>{% if row.source.email %}<span class="transfer-secondary">{{ row.source.email }}</span>{% endif %}</th>
+            <td>{{ row.field.errors }}{{ row.field }}{% if row.source.blocker %}<p class="errornote">{{ row.source.blocker }}</p>{% elif row.source.requires_mapping %}<p class="help">Choose an existing account to resolve this identity.</p>{% endif %}</td>
+          </tr>{% endfor %}</tbody>
+        </table></div>
+        {% if mapping_page.has_other_pages %}<div class="paginator transfer-pagination">
+          {% if mapping_page.has_previous %}<button class="button btn-qc-secondary" type="submit" name="mapping_page_next" value="{{ mapping_page.previous_page_number }}" formnovalidate{% if not transfers_ready %} disabled{% endif %}>Save and previous</button>{% endif %}
+          <span>Accounts {{ mapping_page.start_index }}–{{ mapping_page.end_index }} of {{ mapping_page.paginator.count }}</span>
+          {% if mapping_page.has_next %}<button class="button btn-qc-secondary" type="submit" name="mapping_page_next" value="{{ mapping_page.next_page_number }}" formnovalidate{% if not transfers_ready %} disabled{% endif %}>Save and next</button>{% endif %}
+        </div>{% endif %}
+        {% endif %}
+
+      {% if account_choice_form.rows or mapping_form.rows or resolution_form.rows %}
+      <div class="transfer-actions">
+        <button type="submit" class="button default btn-qc-primary" name="action" value="plan" formnovalidate data-transfer-update-review{% if not plan.blockers and plan.can_apply %} hidden{% endif %}{% if not transfers_ready %} disabled{% endif %}>Save choices and review</button>
+        {% if not plan.blockers and plan.can_apply %}<noscript><button type="submit" class="button btn-qc-secondary" name="action" value="plan" formnovalidate{% if not transfers_ready %} disabled{% endif %}>Save choices and review</button></noscript>{% endif %}
+      </div>
+      {% endif %}
+
+      <p class="help" role="status" data-mapping-dirty hidden>Import choices changed. Save and validate them before importing.</p>
+
+      {% if plan.blockers or not plan.can_apply %}<p class="help">Resolve the issues above before confirming this import.</p>{% endif %}
+      <div class="transfer-confirmation" data-transfer-confirmation{% if plan.blockers or not plan.can_apply %} hidden{% endif %}>
+        {{ confirmation_form.plan_hash }}{{ confirmation_form.generation }}
+        <fieldset{% if not transfers_ready or plan.blockers or not plan.can_apply %} disabled{% endif %}>
+          <legend>{% if native_transfer %}Confirm database restore{% elif plan.profile == 'accounts' %}Confirm user changes{% else %}Confirm additions{% endif %}</legend>
+          {{ confirmation_form.non_field_errors }}
+          <div class="form-row">{{ confirmation_form.destination_confirmation.errors }}{{ confirmation_form.destination_confirmation.label_tag }}{{ confirmation_form.destination_confirmation }}<p class="help">{{ confirmation_form.destination_confirmation.help_text }}</p></div>
+          <div class="form-row transfer-checkbox">{{ confirmation_form.confirmed_scope.errors }}{{ confirmation_form.confirmed_scope }}{{ confirmation_form.confirmed_scope.label_tag }}</div>
+          <div class="transfer-actions"><button type="submit" class="button default btn-qc-primary" name="action" value="apply" data-transfer-apply{% if not transfers_ready or plan.blockers or not plan.can_apply %} disabled{% endif %}>{% if native_transfer %}Restore database{% elif plan.profile == 'accounts' %}Import selected users{% else %}Add records{% endif %}</button></div>
+        </fieldset>
+        {% if not transfers_ready %}<p class="help">The destination and maintenance must be ready before continuing.</p>{% elif plan.blockers or not plan.can_apply %}<p class="help">Resolve the issues above, then save your choices to continue.</p>{% endif %}
+      </div>
+      </form>
+      {% if operation.cancellable %}<form method="post" class="transfer-revalidate transfer-actions" data-maintenance-exempt>{% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}"><button class="button transfer-button-quiet btn-qc-quiet" type="submit" name="action" value="cancel">Discard package</button></form>{% endif %}
+      <details class="transfer-details"><summary>Package details</summary><form method="post" class="transfer-actions" data-maintenance-exempt>{% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}"><button class="button btn-qc-secondary" type="submit" name="action" value="revalidate"{% if not transfers_ready %} disabled{% endif %}>Refresh review</button></form><dl><dt>Operation</dt><dd><code>{{ operation.id }}</code></dd><dt>Target</dt><dd>{{ plan.target_label }}</dd>{% for label, value in source_details %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}<dt>Package SHA-256</dt><dd><code>{{ plan.package_sha256 }}</code></dd><dt>Reviewed plan</dt><dd><code>{{ plan.plan_hash }}</code></dd></dl>{% if plan.exclusions %}<ul>{% for item in plan.exclusions %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}</details>
+    </div>
+  </section>
+  {% endif %}
+

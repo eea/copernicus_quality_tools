@@ -38,7 +38,8 @@ qc_compose logs --follow frontend worker
 
 Monitor:
 
-- frontend login/health response and error rate;
+- frontend `/health` liveness and error rate (login is intentionally read-only
+  during maintenance);
 - database connectivity and storage;
 - worker and validator health;
 - waiting/running job age;
@@ -46,15 +47,69 @@ Monitor:
 - repeated authentication/authorization failures;
 - S3 upstream failures by stable error code.
 
+Docker health status is an observation, not an automatic recovery mechanism.
+Alert on unhealthy services and replace the complete worker container after a
+scheduler failure. Never restart only its scheduler inside a surviving worker:
+older validator process groups may still own database/file writes.
+
+Use the supplied `init: true` container setting, or an equivalent child-reaping
+init in another orchestrator. Administrative transfer runners are separate
+processes in the frontend container; they inherit its runtime UID, limits and
+persistent `WORK_DIR`, and keep maintenance pinned after a crash. Check the
+owning transfer before restarting/replacing a frontend and use its recovery
+workflow afterwards. Restarting never grants permission to clear its pin.
+
+### Transfer capacity and ingress
+
+The frontend uses one Gunicorn process with four request threads, so a long
+upload can run while other users browse. Keep one process while WSGI owns the
+background job refresher. `QC_TOOL_WEB_TIMEOUT_SECONDS` monitors the threaded
+worker's heartbeat; it is not an upload deadline. Configure proxy body/read
+timeouts and storage capacity separately. A boundary upload's browser waits up
+to 30 minutes for transfer and validation together; a lost response does not
+prove activation failed, so check Boundaries before retrying.
+
+Set ingress request size, upload/read timeout and temporary-file capacity for the
+chosen transfer limits. A proxy's default 1 MiB body limit cannot carry the
+default 16 GiB package limit. Do not disable limits globally: apply an explicit
+operator-approved limit to the Admin transfer upload route and retain request
+timeouts/rate controls. Review ingress buffering as well as Django's temporary
+upload directory; large multipart bodies can occupy both before transfer staging
+begins. Mount and monitor sufficient private temporary storage for the frontend.
+
+Budget space for an uploaded package, validated/extracted artifacts, the final
+published files, SQL growth and rollback/recovery journals together. The default
+expanded artifact limit is 64 GiB and the 512 MiB reserve is an emergency floor,
+not a capacity plan. Check source/target volume drivers for POSIX locking, atomic
+rename and durable file/directory synchronization. Set resource limits only after
+measuring representative exports/imports; image health and synthetic CI tests do
+not establish production throughput or maximum package capacity.
+
 Never log Authorization headers, S3 secrets, raw delivery contents, session
 records, or one-time API credentials.
 
 ## Maintenance mode
 
-`MAINTENANCE_MODE=yes` returns maintenance responses for non-admin application
-paths. Use it to reduce concurrent application activity during a coordinated
-database/filesystem operation. It is not a database lock and does not stop
-workers by itself.
+Administrators use **Admin → Maintenance mode** to block application writes,
+interrupt QC jobs and check application quiescence. Wait for **ready** before
+backing up database and storage together. Unreachable workers and ongoing
+pre-existing writer requests keep the state **stopping**. Signed-in users and API
+clients can continue authorized read-only browsing, downloads and audited read
+POSTs. The application shows a maintenance notice and disables write controls;
+the server rejects mutations, including ordinary Admin edits and login/logout.
+Read-only sessions, suppressed result refresh and token-use updates, and a
+database-write guard protect the ready state. New reads do not block readiness.
+The page displays the last confirmed readiness time. Recheck immediately before
+backup if services restarted or time has elapsed. Operator `on`/`check` commands
+return nonzero until readiness is confirmed, so scripts must honor that status.
+
+Follow the [maintenance runbook](maintenance.md) for the full procedure, recovery
+commands and deployment requirements. The UI and `maintenance` command use the
+same persistent state; no Docker environment switch or container restart is
+needed to turn normal maintenance on or off. Maintenance does not grant SQL
+exclusivity or execute schema changes.
+Stop services and close all readers before DDL or database replacement, even if
+the application already reports ready.
 
 ## Backups
 

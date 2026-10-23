@@ -31,11 +31,13 @@
             <p>{{ overview.message }}</p>
         </div>
         {% if overview.can_finalize %}
-        <form method="post" action="{% url 'product_finalize' product.ident %}" class="product-detail__primary-action">
+        <form method="post" action="{% url 'product_finalize' product.ident %}" class="product-detail__primary-action" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
             {% csrf_token %}
             <input type="hidden" name="expected_scope_digest" value="{{ readiness.scope_digest }}">
             <button type="submit" class="btn btn-primary btn-qc-primary">Mark product ready</button>
-        </form>
+        </fieldset>
+</form>
         {% elif overview.action_url %}
         <a class="btn btn-primary btn-qc-primary product-detail__primary-action" href="{{ overview.action_url }}">{{ overview.action_label }} <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg></a>
         {% endif %}

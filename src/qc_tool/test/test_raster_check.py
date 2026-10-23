@@ -2,6 +2,7 @@
 
 
 from unittest import skipIf
+from shutil import copyfile
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
@@ -284,6 +285,13 @@ class Test_gap(RasterCheckTestCase):
                       "layer_3": {"src_filepath": self.layer_filepath, "src_layer_name": self.layer_filepath.name}}
         self.params.update({"raster_layer_defs": layer_defs})
 
+        # Historical fixture bytes live beside raster masks; stage them under
+        # the canonical vector boundary layout used by the current application.
+        self.vector_boundary_dir = self.jobdir_manager.tmp_dir / "vector-boundaries"
+        boundary = self.vector_boundary_dir / "vector" / "aoi_ua_building_heights.gpkg"
+        boundary.parent.mkdir(parents=True)
+        copyfile(TEST_DATA_DIR / "boundaries" / "raster" / boundary.name, boundary)
+
     def test(self):
         from qc_tool.raster.gap import run_check
 
@@ -401,7 +409,9 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("does not intersect the AOI mask", status.messages[0])
+        self.assertFalse(status.attachment_filenames)
 
     def test_intersects_mask_upper_left(self):
         # Prepare mask.
@@ -430,7 +440,29 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("has 11 gap pixels in the mapped area.", status.messages[0])
+
+    def test_disjoint_east_and_south_rasters_use_the_mask_extent(self):
+        RasterCheckTestCase.create_raster(
+            self.mask_filepath, np.ones((6, 8), dtype=int), 10, ulx=5000, uly=3000,
+        )
+        self.params.update({"layers": ["layer_3"],
+                            "boundary_dir": self.jobdir_manager.tmp_dir / "boundaries",
+                            "tmp_dir": self.jobdir_manager.tmp_dir,
+                            "output_dir": self.jobdir_manager.output_dir,
+                            "aoi_code": "aoi01", "outside_area_code": 9, "step_nr": 1})
+        from qc_tool.raster.gap import run_check
+        for ulx, uly in ((6000, 3000), (5000, 2000)):
+            with self.subTest(ulx=ulx, uly=uly):
+                RasterCheckTestCase.create_raster(
+                    self.layer_filepath, np.ones((3, 3), dtype=int), 10, ulx=ulx, uly=uly,
+                )
+                status = self.status_class()
+                run_check(self.params, status)
+                self.assertEqual("failed", status.status)
+                self.assertIn("does not intersect the AOI mask", status.messages[0])
+                self.assertFalse(status.attachment_filenames)
 
     def test_intersects_mask_lower_right(self):
         # Prepare mask.
@@ -459,7 +491,8 @@ class Test_gap(RasterCheckTestCase):
         from qc_tool.raster.gap import run_check
         status = self.status_class()
         run_check(self.params, status)
-        self.assertEqual("ok", status.status)
+        self.assertEqual("failed", status.status)
+        self.assertIn("has 13 gap pixels in the mapped area.", status.messages[0])
 
     def test_gaps_found(self):
         from qc_tool.raster.gap import run_check
@@ -489,7 +522,7 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.vector_boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
@@ -509,7 +542,7 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.vector_boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
@@ -530,7 +563,7 @@ class Test_gap(RasterCheckTestCase):
                             "outside_area_code": "NODATA",
                             "mask": "aoi_ua_building_heights.gpkg",
                             "du_column_name": "CodeCITY",
-                            "boundary_dir": TEST_DATA_DIR.joinpath("boundaries"),
+                            "boundary_dir": self.vector_boundary_dir,
                             "tmp_dir": self.jobdir_manager.tmp_dir,
                             "output_dir": self.jobdir_manager.output_dir,
                             "step_nr": 1})
@@ -644,6 +677,7 @@ class Test_mmu(RasterCheckTestCase):
         RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10)
 
         self.params.update({"layers": ["layer1"],
+                            "report_exceptions": True,
                             "area_pixels": 10,
                             "nodata_value": 9,
                             "neighbour_exception_codes": [9],
@@ -672,6 +706,7 @@ class Test_mmu(RasterCheckTestCase):
         RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10)
         self.params.update(
             {"layers": ["layer1"],
+             "report_exceptions": True,
              "area_pixels": 8,
              "nodata_value": 9,
              "neighbour_exception_codes": [9],
@@ -701,6 +736,7 @@ class Test_mmu(RasterCheckTestCase):
         RasterCheckTestCase.create_raster(self.tmp_raster, np.array(data), 10)
         self.params.update(
             {"layers": ["layer1"],
+             "report_exceptions": True,
              "area_pixels": 8,
              "nodata_value": 9,
              "groupcodes": [],

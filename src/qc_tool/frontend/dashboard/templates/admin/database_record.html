@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}">{% endblock %}
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; <a href="{{ records_home_url }}">{{ records_home_label }}</a> &rsaquo; <a href="{{ records_url }}">{{ resource.label }}</a> &rsaquo; {{ record_pk }}</div>{% endblock %}
+{% block content %}
+<div class="qc-admin-home database-page">
+  <header class="qc-admin-intro"><div><a class="database-back" href="{{ records_url }}">&larr; {{ resource.label }}</a><h1>Record {{ record_pk }}</h1><code>{{ resource.table }}</code></div>{% include "admin/includes/database_actions.html" %}</header>
+  <section class="qc-admin-panel"><h2>Record details</h2><p class="database-policy">{{ resource.description }}</p>{% if maintenance.enabled %}<p class="database-muted">Record changes are paused during maintenance.</p>{% endif %}
+    <dl class="database-record-detail">{% for field in record_fields %}<div><dt>{{ field.label }}</dt><dd>{% if field.url %}<a href="{{ field.url }}">{{ field.value }}</a>{% else %}{{ field.value }}{% endif %}</dd></div>{% endfor %}</dl>
+  </section>
+  {% if record_storage_links %}<section class="qc-admin-panel database-connected"><h2>Server files</h2><p>Open the recorded storage location. Historical ZIP downloads require the run's recorded checksum; a matching filename alone is insufficient.</p><ul>{% for link in record_storage_links %}<li><a href="{{ link.url }}">{{ link.label }} &rarr;</a></li>{% endfor %}</ul></section>{% endif %}
+  <section class="qc-admin-panel database-connected"><h2>Connected records</h2><p>Follow relationships before making changes. Protected history and dependent records stay linked.</p>
+    <ul>{% for row in record_dependencies %}<li><a href="{{ row.url }}"><span><strong>{{ row.label }}</strong><span class="database-muted">{{ row.field }}</span></span><span>{{ row.count }} record{{ row.count|pluralize }} &rarr;</span></a></li>{% empty %}<li class="database-muted">No records refer to this record.</li>{% endfor %}</ul>
+  </section>
+</div>
+{% endblock %}

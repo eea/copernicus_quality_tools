@@ -1,0 +1,29 @@
+{% if account_choice_form.rows %}
+<section class="transfer-user-review" aria-labelledby="user-choices-heading">
+  <h3 id="user-choices-heading">Choose what happens to each user</h3>
+  <p>Import a new inactive user, use an existing account unchanged, update its profile, or skip it. Only the actions available for that user are offered.</p>
+  <p class="transfer-account-protection"><strong>Update profile changes first name, last name and email only.</strong> It preserves the username, password, activation, roles, permissions, product access, tokens and history.</p>
+  {{ account_choice_form.non_field_errors }}{{ account_choice_form.account_plan_hash.errors }}{{ account_choice_form.account_plan_hash }}
+  <input type="hidden" name="account_choice_page" value="{{ account_choice_page.number }}">
+  {% for row in account_choice_form.rows %}
+  <article class="transfer-account-choice">
+    <div class="transfer-account-choice__heading"><h4>{{ row.source.username }}</h4>{% if row.source.email %}<span class="transfer-secondary">{{ row.source.email }}</span>{% endif %}</div>
+    {% if row.source.blocker %}<p class="errornote">{{ row.source.blocker }}</p>{% endif %}
+    {% if row.source.differences %}
+    <div class="transfer-table-wrap"><table class="transfer-differences"><caption>Profile comparison</caption><thead><tr><th scope="col">Field</th><th scope="col">Existing profile</th><th scope="col">Incoming profile</th></tr></thead><tbody>{% for difference in row.source.differences %}<tr><th scope="row">{{ difference.field }}</th><td data-label="Existing profile">{{ difference.current|default_if_none:"—" }}</td><td data-label="Incoming profile">{{ difference.incoming|default_if_none:"—" }}</td></tr>{% endfor %}</tbody></table></div>
+    {% endif %}
+    <div class="transfer-account-choice__fields">
+      <div class="form-row">{{ row.action.errors }}{{ row.action.label_tag }}{{ row.action }}</div>
+      {% if row.source.candidate_targets %}<div class="form-row">{{ row.target.errors }}{% if row.single_target %}{{ row.target }}<p class="help">Existing user: <strong>{{ row.single_target.username }}</strong></p>{% else %}{{ row.target.label_tag }}{{ row.target }}<p class="help">Used for the existing-account or profile-update action.</p>{% endif %}</div>{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  {% if account_choice_page.has_other_pages %}
+  <nav class="paginator transfer-pagination" aria-label="Imported users">
+    {% if account_choice_page.has_previous %}<button type="submit" class="btn-qc-secondary" name="account_choice_page_next" value="{{ account_choice_page.previous_page_number }}" formnovalidate{% if not transfers_ready %} disabled{% endif %}>Save and previous users</button>{% endif %}
+    <span>Users {{ account_choice_page.start_index }}–{{ account_choice_page.end_index }} of {{ account_choice_page.paginator.count }}</span>
+    {% if account_choice_page.has_next %}<button type="submit" class="btn-qc-secondary" name="account_choice_page_next" value="{{ account_choice_page.next_page_number }}" formnovalidate{% if not transfers_ready %} disabled{% endif %}>Save and next users</button>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endif %}

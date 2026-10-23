@@ -7,9 +7,15 @@ has_children: true
 # Deployment
 
 The files under `docker/` are deployment baselines, not universal production
-manifests. Select a persistence profile, pin reviewed image tags, provide
+manifests. Select a persistence profile, pin reviewed image digests, provide
 secrets, adapt hostnames/origins, and put the frontend behind a correctly
 configured HTTPS reverse proxy.
+
+EEA's existing release flow uses GitHub tags to trigger Docker Hub automated
+builds for the frontend and worker. Tag an already-reviewed, green commit, verify
+both published images, then hand their digests to the EEA deployment. GitHub tag
+CI and Docker Hub builds run independently. See [Docker Hub images](dockerhub-images.md)
+for the existing build rules, source provenance and artifact checks.
 
 New installations initialize an entirely empty database from current models.
 v3.0.0 ships no migration framework, schema snapshots or legacy converter.
@@ -44,15 +50,17 @@ flowchart LR
     WorkerN -->|WorkerToken| Frontend
 ```
 
-The published Compose files expose port 8000 but do not provide TLS. Do not
-expose that port directly to an untrusted network.
+The production Compose files bind port 8000 to host loopback and do not provide
+TLS. Route a trusted HTTPS ingress to that loopback listener. An ingress in
+another container should use a private shared network instead of publishing the
+frontend to an untrusted network.
 
 ## 1. Pin and customize the manifests
 
 Copy the selected Compose file into deployment configuration management, then:
 
-- replace release-candidate or floating image references with approved tags or
-  digests;
+- set `QC_TOOL_FRONTEND_IMAGE` and `QC_TOOL_WORKER_IMAGE` to matching reviewed
+  image digests; production profiles refuse to select legacy defaults;
 - set the real `DJANGO_ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`;
 - set the public `API_URL` when applicable;
 - configure exact HTTPS `S3_ALLOWED_ENDPOINTS`, or leave S3 disabled;
@@ -60,10 +68,36 @@ Copy the selected Compose file into deployment configuration management, then:
 - verify `INSPIRE_SERVICE_URL` from inside the worker;
 - add the TLS/proxy-specific Django variables described below.
 
-The checked-in EEA profile currently uses an HTTPS localhost validator URL,
-while the bundled/local validator normally listens on HTTP port 8080. Treat the
-deployment value as environment-specific and verify it rather than copying it
-blindly.
+The bundled validator listens on HTTP port 8080 inside its worker. Override and
+verify `INSPIRE_SERVICE_URL` when using an external validator.
+
+The normal release process uses the existing tag-triggered Docker Hub builds.
+For an isolated manual verification build, package both artifacts from the same
+reviewed checkout using the repository root as context. CI tests the packaged
+source without bind mounts; builds never download a different application
+branch. Supply the release tag as `VERSION` and its reviewed commit SHA as
+`SOURCE_REVISION`:
+
+```bash
+docker build --build-arg VERSION="$QC_RELEASE_TAG" \
+  --build-arg SOURCE_REVISION="$QC_RELEASE_COMMIT" \
+  -f docker/Dockerfile.frontend -t "$QC_RELEASE_FRONTEND_TAG" .
+docker build --build-arg VERSION="$QC_RELEASE_TAG" \
+  --build-arg SOURCE_REVISION="$QC_RELEASE_COMMIT" --build-arg BUILD_JOBS=2 \
+  -f docker/Dockerfile.worker -t "$QC_RELEASE_WORKER_TAG" .
+```
+
+`VERSION` identifies the release in the UI and QC reports; `SOURCE_REVISION`
+records immutable source provenance in the image label. Manual builds that omit
+the revision are labelled `unknown` and need a verified source identity before
+release. For deployment, record and use the actual Docker Hub digest pair.
+
+The worker uses Ubuntu 24.04/Python 3.12, a private virtual environment and the
+reviewed GDAL 3.8.4/Arrow 17/PostgreSQL 17/Java 11 stack. Its build and entrypoint
+reject unsupported Python, missing QC drivers or broken application adapters.
+The first build compiles GDAL and Squid; budget time and memory rather than
+reusing a legacy Python 3.8 worker. `.dockerignore` excludes private database
+backups and operator work from the source context.
 
 ## 2. Create a secret environment file
 
@@ -73,8 +107,12 @@ At minimum:
 ```dotenv
 DJANGO_SECRET_KEY=<long-random-secret>
 QC_TOOL_POSTGRES_PASSWORD=<long-random-database-password>
+QC_TOOL_FRONTEND_IMAGE=<registry/frontend@sha256:reviewed-digest>
+QC_TOOL_WORKER_IMAGE=<registry/worker@sha256:reviewed-digest>
 ```
 
+Both production profiles require `QC_TOOL_FRONTEND_IMAGE`,
+`QC_TOOL_WORKER_IMAGE` and `DJANGO_SECRET_KEY`.
 `QC_TOOL_POSTGRES_PASSWORD` is required by the PostgreSQL profile. Do not add it
 to a SQLite profile unnecessarily. An env file only supplies substitutions;
 the Compose service must explicitly pass each application setting into its
@@ -111,7 +149,10 @@ and CSRF cookies default on.
 Use one stable project name for initial deployment and every upgrade; Compose
 uses it in persistent volume names. For a legacy data cutover, use
 a distinct target project and new database volumes so the old deployment stays
-available for recovery. Define the deployment command once and use it for all
+available for recovery. The PostgreSQL service uses project-scoped names, so a
+separate target can coexist with the retained source. Set a different
+`QC_TOOL_PORT` in the target env file when verifying both frontends on one host;
+the default loopback listener is port 8000. Define the deployment command once and use it for all
 remaining steps. Set these values to the reviewed target environment:
 
 ```bash
@@ -198,12 +239,19 @@ files before Gunicorn. It refuses an empty or incompatible schema. Use the
 explicit initialization job above; `QC_TOOL_INITIALIZE_ON_STARTUP=yes` is reserved
 for development/test. Startup does not convert data or apply schema upgrades.
 
+The manifests wait for PostgreSQL and frontend liveness before starting dependent
+services and use a child-reaping init process for detached transfer runners.
+Health checks continue during maintenance. `/health` certifies liveness only;
+`database check`, maintenance readiness and restore validation remain separate
+checks. Docker marks unhealthy containers but does not automatically restart
+them; monitoring must alert or replace the complete affected container.
+
 ## 6. Verify
 
 ```bash
 qc_compose ps
 
-qc_compose exec frontend python3 -m qc_tool.frontend.manage check --deploy
+qc_compose exec frontend python3 -m qc_tool.frontend.manage check --deploy --fail-level WARNING
 ```
 
 Review every reported item. If the trusted ingress—not Django—owns SSL redirect
@@ -238,3 +286,5 @@ boundary package before the first QC job. Never enable
 Continue with the [security checklist](security-checklist.md),
 [operations guide](operations.md), and
 [environment-variable reference](../reference/environment-variables.md).
+The [production readiness evidence](production-readiness.md) records this
+candidate's verification and the installation checks that remain.

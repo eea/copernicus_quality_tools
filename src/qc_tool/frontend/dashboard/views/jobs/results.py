@@ -16,6 +16,7 @@ from qc_tool.frontend.dashboard.services.jobs import serialize_job_report
 from qc_tool.frontend.dashboard.services.jobs.result_presentation import (
     build_result_presentation,
 )
+from qc_tool.frontend.dashboard.services.artifacts.inputs import job_input_availability
 
 
 def get_result(request, job_uuid):
@@ -33,6 +34,7 @@ def get_result(request, job_uuid):
             "job_report": job_report,
             "job": job,
             "result_view": result_view,
+            "job_input": job_input_availability(job),
             "delivery": job.delivery,
             "show_logo": settings.SHOW_LOGO,
             "announcement": get_announcement_message(),

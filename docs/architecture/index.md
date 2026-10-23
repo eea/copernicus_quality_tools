@@ -6,6 +6,9 @@ has_children: true
 
 # Architecture
 
+See the [architecture, deployment and CI/CD maintenance review](maintenance-research.md)
+for the application writer inventory and the maintenance coordination design.
+
 QC Tool is a two-application system connected through a database, shared
 storage, and an authenticated job-polling protocol:
 
@@ -104,4 +107,7 @@ Continue with:
 - [Authentication and authorization](authentication-and-authorization.md)
 - [Application schema and table ownership](../../src/qc_tool/database/SCHEMA.md)
 - [Whole-application database lifecycle](../development/database-migrations.md)
+- [Admin record transfer](record-transfer-design.md)
+- [Additive imports, conflict review and retained ZIPs](additive-record-import.md)
+- [Database records, files and recovery proposal](database-storage-lifecycle.md)
 - [Development guide](../development/index.md)

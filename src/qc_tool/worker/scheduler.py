@@ -3,25 +3,32 @@
 
 import json
 import logging
+import os
+import signal
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from socket import gethostname
 from subprocess import PIPE
 from subprocess import Popen
-from time import sleep
+from time import monotonic, sleep
 from threading import Event
+from threading import RLock
 from threading import Thread
+from urllib.parse import urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler
 from urllib.request import ProxyHandler
 from urllib.request import Request
 from urllib.request import build_opener
-from uuid import uuid4
 
 import bottle
 
 from qc_tool.common import CONFIG
 from qc_tool.common import auth_worker
 from qc_tool.common import get_worker_token
+from qc_tool.maintenance.protocol import decode_message
+from qc_tool.maintenance.protocol import MAX_MESSAGE_BYTES as MAX_MAINTENANCE_BYTES
+from qc_tool.maintenance.protocol import parse_command
+from qc_tool.maintenance.protocol import parse_state as _maintenance_payload
 from qc_tool.worker_auth import build_worker_authorization
 from qc_tool.worker_auth import parse_worker_authorization
 from qc_tool.worker_auth import WORKER_AUTHENTICATE_HEADER
@@ -31,9 +38,99 @@ from qc_tool.worker.jobs import read_pulled_job
 QUERY_INTERVAL = 10
 WORKER_REQUEST_TIMEOUT_SECONDS = 30
 MAX_WORKER_SLOTS = 128
+TERMINATION_GRACE_SECONDS = 5
 
 
 log = logging.getLogger(__name__)
+
+
+class WorkerMaintenance:
+    """Fence claims and process launches until the frontend grants admission.
+
+    Generation numbers prevent delayed HTTP responses from reopening a worker
+    after a newer administrator command. A failed poll adds a local pause but
+    does not invent a frontend generation.
+    """
+
+    def __init__(self):
+        self.lock = RLock()
+        self._enabled = True
+        self._generation = -1
+        self._available = False
+        self._pulls = 0
+        self._controllers = set()
+
+    @property
+    def paused(self):
+        with self.lock:
+            return self._enabled or not self._available
+
+    def snapshot(self):
+        with self.lock:
+            return {
+                "enabled": self.paused,
+                "generation": max(self._generation, 0),
+                "quiescent": not self._pulls and not self._controllers,
+            }
+
+    def update(self, enabled, generation):
+        _maintenance_payload({"enabled": enabled, "generation": generation})
+        with self.lock:
+            if generation < self._generation:
+                return self.snapshot()
+            # One generation identifies one authoritative state. Conflicting
+            # same-generation commands cannot reopen a paused worker.
+            if generation == self._generation and enabled != self._enabled:
+                return self.snapshot()
+            self._generation = generation
+            self._enabled = enabled
+            self._available = True
+            if enabled:
+                for controller in tuple(self._controllers):
+                    controller.request_stop()
+            return self.snapshot()
+
+    def unavailable(self):
+        with self.lock:
+            self._available = False
+            for controller in tuple(self._controllers):
+                controller.request_stop()
+
+    def begin_pull(self):
+        with self.lock:
+            if self.paused:
+                return False
+            self._pulls += 1
+            return True
+
+    def finish_pull(self):
+        with self.lock:
+            self._pulls -= 1
+
+    def register(self, controller):
+        with self.lock:
+            if self.paused:
+                return False
+            self._controllers.add(controller)
+            return True
+
+    def unregister(self, controller):
+        with self.lock:
+            self._controllers.discard(controller)
+
+
+maintenance = WorkerMaintenance()
+
+
+def _process_group_exists(process_group):
+    try:
+        os.killpg(process_group, 0)
+    except ProcessLookupError:
+        return False
+    # Permission failures must never be interpreted as a stopped group.
+    except PermissionError:
+        return True
+    return True
 
 
 class _RejectRedirects(HTTPRedirectHandler):
@@ -81,6 +178,10 @@ def get_health():
     """Return no job data and require no shared secret for health checks."""
 
     bottle.response.content_type = "application/json"
+    active_scheduler = getattr(bottle.default_app(), "scheduler", None)
+    if active_scheduler is not None and not active_scheduler.healthy:
+        bottle.response.status = 503
+        return json.dumps({"status": "unavailable"})
     return json.dumps({"status": "ok"})
 
 
@@ -111,6 +212,22 @@ def get_max_slots():
     bottle.response.content_type = "application/json"
     return json.dumps(job_table.max_slots)
 
+
+@bottle.put("/maintenance")
+def set_maintenance():
+    """Accept only bounded, authenticated controller commands."""
+
+    if not 0 <= bottle.request.content_length <= MAX_MAINTENANCE_BYTES:
+        bottle.abort(400, "Invalid maintenance state.")
+    body = bottle.request.body.read(MAX_MAINTENANCE_BYTES + 1)
+    try:
+        enabled, generation = parse_command(decode_message(body))
+    except (UnicodeDecodeError, ValueError):
+        bottle.abort(400, "Invalid maintenance state.")
+    bottle.response.content_type = "application/json"
+    bottle.response.set_header("Cache-Control", "no-store, private")
+    return json.dumps(maintenance.update(enabled, generation))
+
 @bottle.put("/max_slots")
 def set_max_slots():
     max_slots = bottle.request.json
@@ -132,20 +249,24 @@ def set_max_slots():
 class JobTable():
     def __init__(self, max_slots=1):
         self._job_table = {}
+        self._lock = RLock()
         self.max_slots = max_slots
 
     @property
     def free_slots(self):
-        return self.max_slots - len(self._job_table)
+        with self._lock:
+            return self.max_slots - len(self._job_table)
 
     def get_table_json(self):
-        info = []
-        for job_uuid, created in self._job_table.items():
-            info.append({"uuid": job_uuid, "created": created.isoformat()})
-        return info
+        with self._lock:
+            return [
+                {"uuid": job_uuid, "created": created.isoformat()}
+                for job_uuid, created in self._job_table.items()
+            ]
 
     def get_job_json(self, job_uuid):
-        created = self._job_table.get(job_uuid, None)
+        with self._lock:
+            created = self._job_table.get(job_uuid, None)
         if created is None:
             info = None
         else:
@@ -153,10 +274,12 @@ class JobTable():
         return info
 
     def put(self, job_uuid):
-        self._job_table[job_uuid] = datetime.utcnow()
+        with self._lock:
+            self._job_table[job_uuid] = datetime.utcnow()
 
     def rm(self, job_uuid):
-        self._job_table.pop(job_uuid, None)
+        with self._lock:
+            self._job_table.pop(job_uuid, None)
 
 job_table = JobTable()
 
@@ -164,7 +287,43 @@ job_table = JobTable()
 class Scheduler():
     def __init__(self, query_url):
         self.query_url = query_url
+        parsed = urlsplit(query_url)
+        parent_path = parsed.path.rsplit("/", 1)[0]
+        self.maintenance_url = urlunsplit(
+            (parsed.scheme, parsed.netloc, parent_path + "/worker_maintenance", "", "")
+        )
         self.query_interval = QUERY_INTERVAL
+        self._thread = None
+        self._failed = False
+
+    @property
+    def healthy(self):
+        return (
+            not self._failed
+            and self._thread is not None
+            and self._thread.is_alive()
+        )
+
+    def refresh_maintenance(self):
+        try:
+            request = Request(
+                self.maintenance_url,
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": build_worker_authorization(get_worker_token()),
+                },
+                method="POST",
+            )
+            with _worker_url_opener.open(
+                request, timeout=WORKER_REQUEST_TIMEOUT_SECONDS,
+            ) as response:
+                body = response.read(MAX_MAINTENANCE_BYTES + 1)
+                enabled, generation = _maintenance_payload(decode_message(body))
+            maintenance.update(enabled, generation)
+        except Exception as exc:
+            maintenance.unavailable()
+            log.warning("Maintenance query failed safely (%s).", type(exc).__name__)
+        return maintenance.snapshot()
 
     def pull_job(self):
         job_args = None
@@ -195,48 +354,132 @@ class Scheduler():
         return job_args
 
     def start(self):
-        t = Thread(target=self.run, name="scheduler", daemon=True)
-        t.start()
+        self._thread = Thread(target=self._run_guarded, name="scheduler", daemon=True)
+        try:
+            self._thread.start()
+        except Exception:
+            self._failed = True
+            maintenance.unavailable()
+            raise
         log.info("Scheduler has started.")
 
-    def run(self):
-        while True:
-            while job_table.free_slots > 0:
-                # Query a new job.
+    def _run_guarded(self):
+        """A dead scheduling loop must close admission and fail its probe."""
+        try:
+            self.run()
+            raise RuntimeError("The scheduler loop exited unexpectedly.")
+        except BaseException:
+            self._failed = True
+            maintenance.unavailable()
+            log.exception("Scheduler stopped unexpectedly; worker admission is closed.")
+
+    def _claim_batch(self, poll_deadline):
+        """Bound claim attempts by time and capacity, without idle throttling.
+
+        Short jobs can finish while the batch is claiming more work. Limiting
+        this batch makes another authority poll unavoidable under continuous
+        load. A productive batch can poll again immediately instead of waiting
+        an extra interval before filling a free slot.
+        """
+        batch_limit = max(1, job_table.max_slots)
+        for _ in range(batch_limit):
+            if (
+                job_table.free_slots <= 0
+                or monotonic() >= poll_deadline
+                or not maintenance.begin_pull()
+            ):
+                return False
+            try:
                 log.debug("Querying a new job...")
-                query_time = datetime.utcnow()
                 job_args = self.pull_job()
                 if job_args is None:
                     log.debug("Got no new job.")
-                    break
-                log.info(
-                    "Got job %s.",
-                    job_args.get("job_uuid", "<unknown>"),
-                )
+                    return False
+                log.info("Got job %s.", job_args.get("job_uuid", "<unknown>"))
+                # Recheck admission after the network call. A pause during
+                # an in-flight claim can never launch its response.
+                if not JobController(job_args).start():
+                    return False
+            finally:
+                maintenance.finish_pull()
+        return job_table.free_slots > 0 and not maintenance.paused
 
-                # Run the new job.
-                job_controller = JobController(job_args)
-                job_controller.start()
-            sleep(self.query_interval)
+    def run(self):
+        while True:
+            # Poll even when every slot is occupied: active jobs must react to
+            # maintenance and loss of their admission authority.
+            self.refresh_maintenance()
+            poll_deadline = monotonic() + self.query_interval
+            if self._claim_batch(poll_deadline):
+                continue
+            remaining = poll_deadline - monotonic()
+            if remaining > 0:
+                sleep(remaining)
 
 
 class JobController():
     def __init__(self, job_args):
         self.job_args = job_args
+        self.process = None
+        self._registered = False
+        self._stop_event = Event()
+        self._stop_thread = None
 
     def start(self):
+        if not maintenance.register(self):
+            return False
+        self._registered = True
         put_event = Event()
         name = self.job_args["job_uuid"].lower().replace("-", "")
         t = Thread(target=self.run, name=name, args=(put_event,))
-        t.start()
+        try:
+            t.start()
+        except Exception:
+            maintenance.unregister(self)
+            raise
 
         # We need to wait until the controller thread acknowledges the job has been put into job table.
         # Otherwise the scheduler may pull a new job even if all slots have already been spent.
         put_event.wait()
+        return True
+
+    def request_stop(self):
+        """Fence a pending launch and terminate the complete validator group."""
+
+        self._stop_event.set()
+        # Called while holding maintenance.lock, also used around Popen.
+        if self.process is not None and self._stop_thread is None:
+            self._stop_thread = Thread(target=self._terminate_group, daemon=True)
+            self._stop_thread.start()
+
+    def _terminate_group(self):
+        process_group = self.process.pid
+        try:
+            os.killpg(process_group, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        except PermissionError:
+            log.error("Cannot terminate validator process group; worker remains non-quiescent.")
+            return
+        deadline = monotonic() + TERMINATION_GRACE_SECONDS
+        while _process_group_exists(process_group) and monotonic() < deadline:
+            self.process.poll()  # Reap an exited group leader while checking descendants.
+            sleep(0.05)
+        if _process_group_exists(process_group):
+            try:
+                os.killpg(process_group, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            except PermissionError:
+                log.error("Cannot kill validator process group; worker remains non-quiescent.")
 
     def run(self, put_event):
         job_uuid = self.job_args.get("job_uuid", "<invalid>")
         try:
+            if not self._registered:
+                if not maintenance.register(self):
+                    return
+                self._registered = True
             log.info("Controller for job %s has started.", job_uuid)
             job_table.put(job_uuid)
             put_event.set()
@@ -271,12 +514,17 @@ class JobController():
                 stdout_f.write("\n")
                 stdout_f.flush()
                 s3_secret = self.job_args.get("s3_secret_key")
-                process = Popen(
-                    args=args,
-                    stdin=PIPE if s3_secret is not None else None,
-                    stdout=stdout_f,
-                    stderr=stdout_f,
-                )
+                with maintenance.lock:
+                    if maintenance.paused or self._stop_event.is_set():
+                        return
+                    process = Popen(
+                        args=args,
+                        stdin=PIPE if s3_secret is not None else None,
+                        stdout=stdout_f,
+                        stderr=stdout_f,
+                        start_new_session=True,
+                    )
+                    self.process = process
                 log.info("Started job with pid={:d}.".format(process.pid))
                 if s3_secret is None:
                     process.wait()
@@ -291,8 +539,22 @@ class JobController():
             # Never leave Scheduler.start() waiting if malformed input fails
             # before the controller can be registered.
             put_event.set()
+            if self.process is not None:
+                # Reap the direct child and account for descendants, including
+                # subprocesses left alive after their validator parent exits.
+                if _process_group_exists(self.process.pid):
+                    with maintenance.lock:
+                        self.request_stop()
+                self.process.wait()
+                if self._stop_thread is not None:
+                    self._stop_thread.join()
+                while _process_group_exists(self.process.pid):
+                    # An unreaped descendant or failed kill keeps readiness
+                    # false. Never certify quiescence from parent exit alone.
+                    sleep(0.1)
             # TODO Here the updated job status could be sent to the frontend DB.
             job_table.rm(job_uuid)
+            maintenance.unregister(self)
             log.info("Closing controller.")
 
 def init_logging():

@@ -1,0 +1,4 @@
+{% extends "admin/submit_line.html" %}
+{% block submit-row %}
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>{{ block.super }}</fieldset>
+{% endblock %}

@@ -58,5 +58,6 @@ user's delivery remains administrator-only.
 
 - [Deliveries and jobs](deliveries-and-jobs.md)
 - [User and permission administration](administration.md)
+- [Administrator record transfers](record-transfers.md)
 - [API automation](api.md)
 - [Check reference](../checks/index.md)

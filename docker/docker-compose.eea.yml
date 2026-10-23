@@ -1,20 +1,31 @@
 services:
   userdb:
     image: postgres:14
-    container_name: qc_tool_userdb
     restart: always
     environment:
       POSTGRES_DB: qc_tool
       POSTGRES_USER: qc_user
       POSTGRES_PASSWORD: ${QC_TOOL_POSTGRES_PASSWORD:?Set QC_TOOL_POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - qc_tool_network
   frontend:
-    image: eeacms/copernicus-qctool-frontend:2.4.7rc4
+    depends_on:
+      userdb:
+        condition: service_healthy
+    image: "${QC_TOOL_FRONTEND_IMAGE:?Set QC_TOOL_FRONTEND_IMAGE to the reviewed frontend digest}"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
     ports:
-      - 8000:8000
+      - "127.0.0.1:${QC_TOOL_PORT:-8000}:8000"
     environment:
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
@@ -22,7 +33,7 @@ services:
       - WORK_DIR=/mnt/qc_tool_work/work
       - SUBMISSION_DIR=/mnt/qc_tool_submission/submission
       - DB_ENGINE=postgres
-      - POSTGRES_HOST=qc_tool_userdb
+      - POSTGRES_HOST=userdb
       - POSTGRES_PORT=5432
       - POSTGRES_DB=qc_tool
       - POSTGRES_USER=qc_user
@@ -34,9 +45,9 @@ services:
       - WORKER_ALIVE_TIMEOUT=5
       - REFRESH_JOB_STATUSES_BACKGROUND=yes
       - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
-      - MAINTENANCE_MODE=no
       - CASE_INSENSITIVE_USERNAMES=yes
       - CSRF_TRUSTED_ORIGINS=https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1
+      - QC_TOOL_UPLOAD_TEMP_DIR
       - RESUMABLE_SIMULTANEOUS_UPLOADS=4
       - S3_ALLOWED_ENDPOINTS
       - S3_CREDENTIALS_DIR
@@ -44,10 +55,26 @@ services:
       - S3_READ_TIMEOUT_SECONDS
       - S3_MAX_LISTED_OBJECTS
       - QC_TOOL_ENVIRONMENT=production
-      - DJANGO_SECRET_KEY
+      - QC_TOOL_RESTORE_DATABASE
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
       - DJANGO_ALLOWED_HOSTS=qc-copernicus.eea.europa.eu
+      - DJANGO_TRUST_PROXY_SSL_HEADER=${DJANGO_TRUST_PROXY_SSL_HEADER:-no}
+      - DJANGO_SECURE_SSL_REDIRECT=${DJANGO_SECURE_SSL_REDIRECT:-no}
       - DJANGO_SECURE_HSTS_SECONDS=31536000
       - DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=yes
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - >-
+          import os, urllib.request;
+          request = urllib.request.Request('http://127.0.0.1:8000/health', headers={'Host': os.environ['DJANGO_ALLOWED_HOSTS'].split(',')[0], 'X-Forwarded-Proto': 'https'});
+          urllib.request.urlopen(request, timeout=3).close()
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     networks:
       - qc_tool_network
     volumes:
@@ -58,13 +85,20 @@ services:
       - qc_tool_frontend:/var/lib/qc_tool
 
   worker:
-    image: eeacms/copernicus-qctool-worker:2.4.7rc4
+    image: "${QC_TOOL_WORKER_IMAGE:?Set QC_TOOL_WORKER_IMAGE to the matching reviewed worker digest}"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    depends_on:
+      frontend:
+        condition: service_healthy
     shm_size: 1gb
     environment:
+      - QC_TOOL_ENVIRONMENT=production
       - PRODUCT_DIRS
       - BOUNDARY_DIR=/mnt/qc_tool_boundary/boundaries
       - INCOMING_DIR=/mnt/qc_tool_incoming/incoming
-      - INSPIRE_SERVICE_URL=https://localhost:8080/validator/v2/
+      - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
       - PULL_JOB_URL=http://frontend:8000/pull_job
       - WORK_DIR=/mnt/qc_tool_work/work
       - JAVA_MAX_MEM=1536
@@ -76,6 +110,12 @@ services:
       - S3_READ_TIMEOUT_SECONDS
       - S3_MAX_LISTED_OBJECTS
       - S3_MAX_DOWNLOAD_BYTES
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "3", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
     networks:
       - qc_tool_network
     volumes:

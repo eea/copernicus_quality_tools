@@ -16,7 +16,13 @@ ZIP_VALIDATORS = (
 
 
 def run_check(params, status):
-    from qc_tool.vector.helper import do_unzip
+    from qc_tool.worker.archives import do_unzip
+
+    # Preserve the upload format contract before invoking a ZIP parser, so a
+    # plainly wrong format receives its specific actionable validation message.
+    if not params["filepath"].name.lower().endswith(".zip"):
+        status.aborted("Delivery must be a .zip file.")
+        return
 
     # Keep validation owned by this check module. New vector ZIP validators can
     # be added to ZIP_VALIDATORS without changing the shared unzip helper.

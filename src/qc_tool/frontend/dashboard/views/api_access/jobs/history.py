@@ -44,15 +44,16 @@ def job_history(
         "-job_uuid",
     )
 
-    for job in jobs:
-        if job.job_status == running_status:
-            job_status = refresh_running_job(
-                str(job.job_uuid),
-                job.worker_url,
-                configuration["worker_alive_timeout"],
-            )
-            if job_status is not None:
-                job.update_status(job_status)
+    if not getattr(request, "maintenance_active", False):
+        for job in jobs:
+            if job.job_status == running_status:
+                job_status = refresh_running_job(
+                    str(job.job_uuid),
+                    job.worker_url,
+                    configuration["worker_alive_timeout"],
+                )
+                if job_status is not None:
+                    job.update_status(job_status)
 
     job_list = serialize_history(jobs, compact_uuid=True)
     result = {

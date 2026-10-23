@@ -6,10 +6,39 @@ import hashlib
 import io
 import os
 from pathlib import Path
+import stat
 from typing import BinaryIO, Optional, Union
 
 from ..errors import BoundaryPackageInvalid, BoundaryPackageLimitExceeded
 from .constants import COPY_CHUNK_SIZE
+
+
+def declared_archive_size(source) -> Optional[int]:
+    """Inspect a known upload/local file size without reading or staging it.
+
+    This is an early rejection hint, never authority to bypass the streaming
+    bound: a caller can understate an upload or change a local source later.
+    """
+    try:
+        if isinstance(source, (str, os.PathLike)):
+            status = os.stat(source)
+            if not stat.S_ISREG(status.st_mode):
+                raise BoundaryPackageInvalid("uploaded archive is not a regular file")
+            size = status.st_size
+        else:
+            size = getattr(source, "size", None)
+    except OSError as error:
+        raise BoundaryPackageInvalid("uploaded archive size cannot be inspected") from error
+    if size is not None and (type(size) is not int or size < 0):
+        raise BoundaryPackageInvalid("uploaded archive has an invalid declared size")
+    return size
+
+
+def check_archive_size(source, maximum: int) -> None:
+    size = declared_archive_size(source)
+    if size is not None and size > maximum:
+        raise BoundaryPackageLimitExceeded("compressed archive is too large", limit="archive_bytes",
+                                           actual=size, maximum=maximum)
 
 
 def copy_archive_bounded(
@@ -17,6 +46,7 @@ def copy_archive_bounded(
 ) -> tuple[int, str]:
     """Copy an upload into private staging while hashing and bounding it."""
 
+    check_archive_size(source, max_bytes)
     digest = hashlib.sha256()
     byte_count = 0
     source_stream: BinaryIO
@@ -54,7 +84,8 @@ def copy_archive_bounded(
                     raise BoundaryPackageInvalid("uploaded archive is not a binary stream")
                 byte_count += len(chunk)
                 if byte_count > max_bytes:
-                    raise BoundaryPackageLimitExceeded("compressed archive is too large")
+                    raise BoundaryPackageLimitExceeded("compressed archive is too large", limit="archive_bytes",
+                                                       actual=byte_count, maximum=max_bytes)
                 digest.update(chunk)
                 output.write(chunk)
             output.flush()

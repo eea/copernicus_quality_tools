@@ -1,4 +1,5 @@
-from django.core.management.base import BaseCommand
+from django.core.exceptions import ValidationError
+from django.core.management.base import BaseCommand, CommandError
 
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.services.users import provision_user
@@ -36,14 +37,17 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        result = provision_user(
-            username=options["username"],
-            password=options["password"],
-            email=options.get("email"),
-            product_idents=options["product_idents"],
-            groups=options["group"],
-            is_superuser=options["superuser"],
-        )
+        try:
+            result = provision_user(
+                username=options["username"],
+                password=options["password"],
+                email=options.get("email"),
+                product_idents=options["product_idents"],
+                groups=options["group"],
+                is_superuser=options["superuser"],
+            )
+        except ValidationError as error:
+            raise CommandError("; ".join(error.messages)) from error
 
         if not result.created:
             self.stdout.write(

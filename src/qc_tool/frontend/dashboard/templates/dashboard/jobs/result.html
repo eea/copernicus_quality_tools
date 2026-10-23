@@ -127,7 +127,7 @@
         {% if job_report.reference_year %}<div><dt>Reference year</dt><dd>{{ job_report.reference_year }}</dd></div>{% endif %}
         {% if job_report.verified_product_unit_code %}<div><dt>Verified product unit</dt><dd>{{ job_report.verified_product_unit_code }}</dd></div>{% endif %}
         {% if account_access.can_view_other_users_deliveries %}<div><dt>Uploaded by</dt><dd>{{ delivery.user.username }}</dd></div>{% endif %}
-        <div><dt>Delivery file</dt><dd>{% if delivery.is_deleted %}{{ job_report.filename }} (deleted){% else %}<a href="{% url 'download_delivery_file' delivery.id %}">{{ job_report.filename }}</a>{% endif %}</dd></div>
+        <div><dt>Checked ZIP</dt><dd>{% if job_input.available %}<a href="{% url 'job_input_zip' job.job_uuid %}">Download {{ job_report.filename }}</a>{% else %}{{ job_report.filename }} — unavailable{% endif %}<br><small>{{ job_input.message }}</small></dd></div>
         {% if job_report.qc_tool_version %}<div><dt>QC Tool version</dt><dd>{{ job_report.qc_tool_version }}</dd></div>{% endif %}
         {% if job.qc_definition_id %}<div><dt>Specification SHA-256</dt><dd><code>{{ job.qc_definition.digest }}</code></dd></div>{% endif %}
         {% if job.input_sha256 %}<div><dt>Delivery SHA-256</dt><dd><code>{{ job.input_sha256 }}</code></dd></div>{% endif %}

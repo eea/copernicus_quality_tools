@@ -20,10 +20,10 @@ class BoundaryPackageLimits:
     and reviewable instead of scattering magic limits through an HTTP view.
     """
 
-    max_archive_bytes: int = 512 * 1024 * 1024
+    max_archive_bytes: int = 4 * 1024 * 1024 * 1024
     max_members: int = 10_000
-    max_member_bytes: int = 512 * 1024 * 1024
-    max_uncompressed_bytes: int = 2 * 1024 * 1024 * 1024
+    max_member_bytes: int = 4 * 1024 * 1024 * 1024
+    max_uncompressed_bytes: int = 32 * 1024 * 1024 * 1024
     max_compression_ratio: float = 100.0
     max_path_length: int = 1_024
     max_path_component_bytes: int = 255

@@ -8,6 +8,7 @@ from .headers import WORKER_AUTH_SCHEME
 from .urls import InvalidWorkerUrl
 from .urls import worker_origin_from_remote_address
 from .urls import worker_job_status_url
+from .urls import worker_maintenance_url
 
 
 __all__ = (
@@ -19,4 +20,5 @@ __all__ = (
     "InvalidWorkerUrl",
     "worker_origin_from_remote_address",
     "worker_job_status_url",
+    "worker_maintenance_url",
 )

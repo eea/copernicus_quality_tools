@@ -20,6 +20,9 @@ from django.core.exceptions import ImproperlyConfigured
 from qc_tool.common import CONFIG
 from qc_tool.database.policy import migration_modules
 from qc_tool.frontend.delivery_filename_rules import DEFAULT_DELIVERY_FILENAME_RULES
+from qc_tool.frontend.dashboard.services.boundaries.configuration import (
+    boundary_package_limits_from_environment,
+)
 
 MIGRATION_MODULES = migration_modules()
 
@@ -150,7 +153,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    'qc_tool.frontend.admin_config.QCAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -164,10 +167,11 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'qc_tool.database.middleware.DatabaseScopeMiddleware',
     'qc_tool.frontend.dashboard.middleware.MaintenanceModeMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'qc_tool.frontend.dashboard.middleware.MaintenanceSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'qc_tool.frontend.dashboard.access.routes.csrf.UploadAwareCsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # Default-deny authentication for future views that have not been
     # explicitly classified by the dashboard route-policy registry.
@@ -181,7 +185,7 @@ ROOT_URLCONF = 'qc_tool.frontend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'frontend', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -196,6 +200,7 @@ TEMPLATES = [
                 'django.template.context_processors.static',
                 'qc_tool.frontend.dashboard.context_processors.show_logo',
                 'qc_tool.frontend.dashboard.context_processors.version_processor',
+                'qc_tool.frontend.dashboard.context_processors.maintenance_context',
                 'qc_tool.frontend.accounts.context_processors.account_access',
             ],
         },
@@ -209,6 +214,10 @@ WSGI_APPLICATION = 'qc_tool.frontend.wsgi.application'
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
 
 DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite")
+if DB_ENGINE not in {"sqlite", "postgres"}:
+    raise ImproperlyConfigured(
+        "DB_ENGINE must be sqlite or postgres; refusing to select a different database."
+    )
 
 if DB_ENGINE == "postgres":
     database_password = environ.get("POSTGRES_PASSWORD")
@@ -220,7 +229,7 @@ if DB_ENGINE == "postgres":
         database_password = "qc_tool_password"
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
+            'ENGINE': 'qc_tool.database.backends.postgresql',
             'NAME': environ.get("POSTGRES_DB", "qc_tool_frontend"),
             'USER': environ.get("POSTGRES_USER", "qc_tool_user"),
             'PASSWORD': database_password,
@@ -235,6 +244,9 @@ else:
             'NAME': str(CONFIG["frontend_db_path"])
         }
 }
+
+# Keep the deployment identity independent of the test runner's temporary NAME.
+QC_TOOL_CONFIGURED_DATABASE = dict(DATABASES["default"])
 
 
 # Password validation
@@ -308,6 +320,15 @@ MEDIA_ROOT = str(CONFIG["incoming_dir"])
 MEDIA_URL = '/media/'
 FILE_UPLOAD_PERMISSIONS = 0o640
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
+# Large multipart bodies are spooled before the transfer service validates its
+# own archive limits. Operators can put this temporary storage on a sized,
+# private volume instead of the container writable layer.
+FILE_UPLOAD_TEMP_DIR = environ.get("QC_TOOL_UPLOAD_TEMP_DIR") or None
+
+# One deployment policy covers boundary ZIP copying, metadata checks and
+# extraction. Invalid environment values refuse startup; callers pass the
+# validated typed limits explicitly to the boundary service.
+QC_TOOL_BOUNDARY_PACKAGE_LIMITS = boundary_package_limits_from_environment(environ)
 
 # Submission feature setting.
 SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
@@ -317,6 +338,26 @@ SHOW_LOGO = CONFIG["show_logo"]
 
 # Maintenance mode setting.
 MAINTENANCE_MODE = CONFIG["maintenance_mode"]
+
+# Bounded administrator data packages. Journals and private staging share the
+# persistent WORK_DIR with the maintenance locks across every frontend.
+QC_TOOL_TRANSFER_DIR = environ.get("QC_TOOL_TRANSFER_DIR", str(CONFIG["work_dir"] / "data-transfer"))
+QC_TOOL_TRANSFER_MAX_RECORDS = _environment_integer(
+    "QC_TOOL_TRANSFER_MAX_RECORDS", 250_000, minimum=1, maximum=1_000_000,
+)
+QC_TOOL_TRANSFER_ARCHIVE_LIMITS = {
+    "max_archive_bytes": _environment_integer("QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES", 16 * 1024**3, minimum=1024, maximum=1024**4),
+    "max_total_bytes": _environment_integer("QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES", 64 * 1024**3, minimum=1024, maximum=4 * 1024**4),
+}
+QC_TOOL_TRANSFER_MIN_FREE_BYTES = _environment_integer(
+    "QC_TOOL_TRANSFER_MIN_FREE_BYTES", 512 * 1024**2, minimum=1024**2, maximum=1024**4,
+)
+# Native restores use this separately provisioned, entirely empty database on
+# the configured PostgreSQL server. HTTP requests cannot choose hosts or secrets.
+QC_TOOL_RESTORE_DATABASE = environ.get("QC_TOOL_RESTORE_DATABASE", "").strip()
+QC_TOOL_POSTGRES_TOOL_TIMEOUT = _environment_integer(
+    "QC_TOOL_POSTGRES_TOOL_TIMEOUT", 3600, minimum=1, maximum=86400,
+)
 
 # Resumable uploads simultaneous uploads setting.
 RESUMABLE_SIMULTANEOUS_UPLOADS = _environment_integer(
@@ -360,11 +401,15 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard_home"
 LOGOUT_REDIRECT_URL = "login"
 
-# case-insensitive username authentication backend
-if CONFIG["case_insensitive_usernames"]:
-    AUTHENTICATION_BACKENDS = [
-        'qc_tool.frontend.accounts.authentication.backends.CaseInsensitiveBackend',
-    ]
+# Keep normal backend identities so existing sessions remain usable. The first
+# backend handles maintenance sign-in without password-hash writes or fallback.
+AUTHENTICATION_BACKENDS = [
+    'qc_tool.frontend.accounts.authentication.backends.MaintenanceBackend',
+    (
+        'qc_tool.frontend.accounts.authentication.backends.CaseInsensitiveBackend'
+        if CONFIG["case_insensitive_usernames"] else 'django.contrib.auth.backends.ModelBackend'
+    ),
+]
 
 CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
 LOGGING = {

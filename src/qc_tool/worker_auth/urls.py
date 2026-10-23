@@ -26,14 +26,11 @@ def worker_origin_from_remote_address(remote_address, port):
     return "http://{}:{}/".format(host, port)
 
 
-def worker_job_status_url(worker_url, job_uuid, *, expected_port):
-    """Build a status URL only from a canonical IP origin and UUID."""
-
+def _validated_worker_origin(worker_url, *, expected_port):
     try:
         parsed = urlsplit(worker_url)
         port = parsed.port
         address = ipaddress.ip_address(parsed.hostname)
-        normalized_uuid = UUID(str(job_uuid))
     except (AttributeError, TypeError, ValueError) as exc:
         raise InvalidWorkerUrl from exc
     if (
@@ -54,9 +51,23 @@ def worker_job_status_url(worker_url, job_uuid, *, expected_port):
         if address.version == 6
         else address.compressed
     )
-    return "{}://{}:{}/jobs/{}.json".format(
+    return "{}://{}:{}".format(
         parsed.scheme,
         host,
         port,
-        normalized_uuid,
     )
+
+
+def worker_job_status_url(worker_url, job_uuid, *, expected_port):
+    """Build a status URL only from a canonical IP origin and UUID."""
+    origin = _validated_worker_origin(worker_url, expected_port=expected_port)
+    try:
+        normalized_uuid = UUID(str(job_uuid))
+    except (TypeError, ValueError) as exc:
+        raise InvalidWorkerUrl from exc
+    return "{}/jobs/{}.json".format(origin, normalized_uuid)
+
+
+def worker_maintenance_url(worker_url, *, expected_port):
+    """Apply the same origin/port trust boundary to maintenance commands."""
+    return _validated_worker_origin(worker_url, expected_port=expected_port) + "/maintenance"

@@ -1,11 +1,23 @@
 import logging
 
+from django.contrib import admin
 from django.shortcuts import render
 
 from qc_tool.frontend.accounts.http import prevent_private_response_caching
+from qc_tool.frontend.admin_site import is_admin_request
 
 
 logger = logging.getLogger(__name__)
+
+
+def _error_page(request, status):
+    if is_admin_request(request):
+        return render(request, "admin/qc_tool_error.html", {
+            **admin.site.each_context(request),
+            "status_code": status,
+            "title": "Access denied" if status == 403 else "Page not found",
+        }, status=status)
+    return render(request, f"accounts/errors/{status}.html", status=status)
 
 
 def permission_denied(request, exception):
@@ -17,13 +29,13 @@ def permission_denied(request, exception):
         request.path,
     )
     return prevent_private_response_caching(
-        render(request, "accounts/errors/403.html", status=403)
+        _error_page(request, 403)
     )
 
 
 def page_not_found(request, exception):
     """Render a generic recovery page without exposing lookup details."""
 
-    response = render(request, "accounts/errors/404.html", status=404)
+    response = _error_page(request, 404)
     response["X-Robots-Tag"] = "noindex, nofollow, noarchive"
     return prevent_private_response_caching(response)

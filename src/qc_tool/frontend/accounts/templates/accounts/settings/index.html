@@ -44,7 +44,8 @@
                         </div>
                     </div>
 
-                    <form method="post" action="{% url 'account_settings' %}">
+                    <form method="post" action="{% url 'account_settings' %}" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
                         {% csrf_token %}
 
                         {% if profile_form.non_field_errors %}
@@ -85,7 +86,8 @@
                                 Save profile
                             </button>
                         </div>
-                    </form>
+                    </fieldset>
+</form>
                 </section>
                 {% endif %}
 
@@ -124,7 +126,8 @@
                             <h3 id="api-token-create-title">Create a token</h3>
                             <p>The secret is displayed only once, so be ready to store it securely.</p>
                         </div>
-                        <form method="post" action="{% url 'api_token_create' %}" data-disable-on-submit>
+                        <form method="post" action="{% url 'api_token_create' %}" data-disable-on-submit data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
                             {% csrf_token %}
 
                             {% if api_token_form.non_field_errors %}
@@ -165,7 +168,8 @@
                                     Create token
                                 </button>
                             </div>
-                        </form>
+                        </fieldset>
+</form>
                     </div>
 
                     <div class="account-token-list-heading">
@@ -247,13 +251,15 @@
                                     data-confirm-title="Delete API token?"
                                     data-confirm-action="Delete token"
                                     data-disable-on-submit
-                                >
+                                 data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
                                     {% csrf_token %}
                                     <button class="btn btn-default btn-qc-danger-outline" type="submit">
                                         <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>
                                         Delete token
                                     </button>
-                                </form>
+                                </fieldset>
+</form>
                             </div>
                         </li>
                         {% endfor %}
@@ -320,7 +326,7 @@
                 <p id="account-confirm-message"></p>
                 <div class="account-confirm-dialog__actions">
                     <button class="btn btn-default btn-qc-secondary" type="submit" value="cancel" autofocus>Cancel</button>
-                    <button class="btn btn-danger btn-qc-danger" type="submit" value="confirm" data-confirm-dialog-action>Continue</button>
+                    <button class="btn btn-danger btn-qc-danger" type="submit" value="confirm" data-confirm-dialog-action data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>Continue</button>
                 </div>
             </form>
         </dialog>

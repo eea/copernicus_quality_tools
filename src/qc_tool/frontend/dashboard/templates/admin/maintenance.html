@@ -1,0 +1,115 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/admin/maintenance.css' %}">
+{% endblock %}
+{% block extrahead %}{{ block.super }}
+<script src="{% static 'dashboard/js/admin/maintenance.js' %}" defer></script>
+{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">{% translate 'Home' %}</a> &rsaquo; Maintenance</div>
+{% endblock %}
+
+{% block content %}
+<div class="qc-admin-home qc-maintenance" data-maintenance-control data-phase="{{ maintenance.phase }}" data-generation="{{ maintenance.generation }}">
+  <header class="qc-admin-intro">
+    <div>
+      <h1>Maintenance mode</h1>
+      <p class="qc-admin-intro__description">Pause changes while you back up or maintain QC Tool.</p>
+    </div>
+  </header>
+
+  {% if action_error %}<p class="errornote" role="alert">{{ action_error }}</p>{% endif %}
+  {% if action_result %}<ul class="messagelist"><li class="success" role="status">{{ action_result }}</li></ul>{% endif %}
+
+  <section class="qc-admin-service{% if maintenance.enabled or maintenance_unavailable %} qc-admin-service--paused{% endif %}" aria-labelledby="maintenance-heading">
+    <span class="qc-admin-icon"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg></span>
+    <div class="qc-admin-service__content">
+      <p class="qc-admin-eyebrow">CURRENT STATUS</p>
+      <h2 id="maintenance-heading">{% if maintenance_unavailable %}Maintenance status unavailable{% elif transfer_operation %}Database transfer in progress{% elif maintenance.phase == 'ready' %}Maintenance is on{% elif maintenance.enabled %}Turning on maintenance{% else %}Maintenance is off{% endif %}</h2>
+      {% if maintenance_unavailable %}
+        <p>QC Tool has paused changes because its maintenance status cannot be read. Reload this page to try again.</p>
+      {% elif transfer_operation %}
+        <p>Changes stay paused until this database {{ transfer_operation.kind }} finishes or is recovered. Open the transfer to see the next step.</p>
+      {% elif maintenance.phase == 'ready' %}
+        <p>QC work has stopped. You can carry out your maintenance task, then turn maintenance off to allow changes again.</p>
+      {% elif maintenance.enabled %}
+        <p>Changes are already paused. QC Tool is stopping submitted jobs and checking progress automatically.</p>
+      {% else %}
+        <p>Users can upload data, run QC jobs and make changes.</p>
+      {% endif %}
+      {% if progress_pending %}
+        <p class="qc-maintenance-progress" role="status" aria-live="polite"><span class="qc-maintenance-progress__dot" aria-hidden="true"></span><span data-progress-message>Stopping work automatically. This page will update when it is finished.</span></p>
+      {% endif %}
+    </div>
+    <div class="qc-admin-service__actions">
+      {% if transfer_operation %}
+        <a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_data_transfer' %}?operation={{ transfer_operation.operation_id }}">View transfer</a>
+      {% elif maintenance_unavailable %}
+        <a class="qc-admin-button btn-qc-secondary" href="{{ request.path }}">Reload page</a>
+      {% else %}
+        <form method="post" data-maintenance-exempt>
+          {% csrf_token %}
+          <input type="hidden" name="generation" value="{{ maintenance.generation }}">
+          {% if transfer_return_url %}<input type="hidden" name="next" value="{{ transfer_return_url }}">{% endif %}
+          {% if maintenance.enabled %}
+            {% if deployment_maintenance %}
+              <p class="qc-maintenance-managed">Managed by deployment settings</p>
+            {% else %}
+              <button type="submit" class="qc-admin-button qc-admin-button--primary btn-qc-primary" name="action" value="disable"{% if maintenance.phase != 'ready' %} disabled aria-describedby="maintenance-stopping-note"{% endif %}>Turn off maintenance</button>
+            {% endif %}
+          {% else %}
+            <button type="submit" class="qc-admin-button qc-admin-button--primary btn-qc-primary" name="action" value="enable">Turn on maintenance</button>
+          {% endif %}
+        </form>
+        {% if maintenance.enabled and maintenance.phase != 'ready' %}<p id="maintenance-stopping-note" class="qc-maintenance-action-note">Available when QC work has stopped.</p>{% endif %}
+      {% endif %}
+    </div>
+  </section>
+
+  {% if not maintenance_unavailable %}
+  <section class="qc-maintenance-effects" aria-label="What this means for users">
+    <div><h3>Uploads &amp; changes</h3><p>{% if maintenance.enabled %}Paused for everyone, including administrators.{% else %}Paused when you turn maintenance on.{% endif %}</p></div>
+    <div><h3>Submitted QC jobs</h3><p>{% if maintenance.enabled %}Interrupted jobs do not resume automatically. Users must submit them again.{% else %}Queued and running jobs will be interrupted. Users must submit them again.{% endif %}</p></div>
+    <div><h3>Browsing &amp; downloads</h3><p>Existing data stays available to signed-in users with access.</p></div>
+  </section>
+  {% endif %}
+
+  <p class="qc-maintenance-persistence">{% if maintenance.enabled %}Maintenance stays on until an administrator turns it off, even if this page is closed.{% else %}Once turned on, maintenance stays on until an administrator turns it off.{% endif %}</p>
+  {% if deployment_maintenance %}<p class="errornote">An operator must remove the deployment maintenance setting before QC Tool can resume.</p>{% endif %}
+
+  {% if progress_pending %}
+  <form method="post" data-maintenance-exempt data-maintenance-progress>
+    {% csrf_token %}
+    <input type="hidden" name="generation" value="{{ maintenance.generation }}">
+    <input type="hidden" name="action" value="progress">
+    {% if transfer_return_url %}<input type="hidden" name="next" value="{{ transfer_return_url }}">{% endif %}
+    <noscript><p>Enable JavaScript for automatic progress, or update it here.</p><button type="submit" class="qc-admin-button btn-qc-secondary">Update progress</button></noscript>
+  </form>
+  <div class="qc-maintenance-problem" data-progress-problem hidden>
+    <p role="alert" data-progress-error></p>
+    <button type="button" class="qc-admin-button btn-qc-secondary" data-progress-retry hidden>Try again</button>
+    <a href="{{ request.get_full_path }}">Reload page</a>
+  </div>
+  {% endif %}
+
+  {% if not transfer_operation %}
+  <p class="qc-maintenance-next">{% if transfer_return_url %}<a href="{{ transfer_return_url }}">{% if storage_return %}Back to Storage{% elif database_return %}Back to database{% elif maintenance.phase == 'ready' %}Continue import or export{% else %}Back to import or export{% endif %}</a>{% else %}<a href="{% url 'admin_data_transfer' %}">Back to database</a>{% endif %}</p>
+  {% endif %}
+
+  <details class="qc-admin-directory qc-maintenance-details">
+    <summary>Technical details</summary>
+    <div class="qc-maintenance-details__body">
+      {% if maintenance.actor %}<p>Last changed by {{ maintenance.actor }}{% if maintenance.changed_at %} at {{ maintenance.changed_at }}{% endif %}.</p>{% endif %}
+      {% if maintenance.readiness_checked_at %}<p>Workers last checked at {{ maintenance.readiness_checked_at }}.</p>{% endif %}
+      <ul data-progress-blockers{% if not maintenance.blockers %} hidden{% endif %}>{% for blocker in maintenance.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>
+      <p>QC Tool checks that its application requests and workers have stopped before maintenance is ready. Checks run automatically on this page while work is stopping.</p>
+      <p>Readiness covers this QC Tool deployment. Stop other application instances and external database writers before a backup or schema change.</p>
+      <p><a href="https://eea.github.io/copernicus_quality_tools/deployment/maintenance.html" target="_blank" rel="noopener">Operator maintenance guide</a></p>
+    </div>
+  </details>
+</div>
+{% endblock %}

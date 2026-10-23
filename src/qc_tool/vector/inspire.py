@@ -55,7 +55,7 @@ def get_expected_xml_names(layer_filepath, layer_name=None):
 
 
 def run_check(params, status):
-    from qc_tool.vector.helper import do_inspire_check
+    from qc_tool.worker.inspire import do_inspire_check
     from qc_tool.vector.helper import do_layers
     from qc_tool.common import CONFIG
 

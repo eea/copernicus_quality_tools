@@ -1,3 +1,20 @@
 #!/bin/bash
+set -euo pipefail
 
-docker build --build-arg VERSION=$SOURCE_BRANCH -f $DOCKERFILE_PATH -t $IMAGE_NAME .
+# Both supported Dockerfiles package this checkout, using the repository root
+# as context. Automated builders may invoke this hook from docker/ or the root.
+repository_dir="$(git rev-parse --show-toplevel)"
+dockerfile_path="${DOCKERFILE_PATH:?Set DOCKERFILE_PATH}"
+if [ ! -f "$dockerfile_path" ]; then
+    if [ -f "$repository_dir/$dockerfile_path" ]; then
+        dockerfile_path="$repository_dir/$dockerfile_path"
+    else
+        dockerfile_path="$repository_dir/docker/$dockerfile_path"
+    fi
+fi
+source_revision="${SOURCE_COMMIT:-$(git rev-parse HEAD)}"
+# Docker Hub supplies the branch or release tag in SOURCE_BRANCH.
+source_version="${SOURCE_BRANCH:-$source_revision}"
+docker build --build-arg "VERSION=$source_version" \
+    --build-arg "SOURCE_REVISION=$source_revision" \
+    --file "$dockerfile_path" --tag "${IMAGE_NAME:?Set IMAGE_NAME}" "$repository_dir"

@@ -5,6 +5,18 @@
 from qc_tool.test.helper import VectorCheckTestCase
 
 
+class GeometryRowsMixin:
+    def assert_geometry_rows_equal(self, expected, actual):
+        # Ring start/orientation may change between GEOS/PostGIS releases.
+        # Preserve row identities/counts and compare exact topology instead.
+        self.assertEqual([row[:-1] for row in expected], [row[:-1] for row in actual])
+        with self.params["connection_manager"].get_connection().cursor() as cursor:
+            for expected_row, actual_row in zip(expected, actual):
+                cursor.execute("SELECT ST_Equals(ST_GeomFromText(%s,4326), ST_GeomFromText(%s,4326));",
+                               [expected_row[-1], actual_row[-1]])
+                self.assertTrue(cursor.fetchone()[0], (expected_row, actual_row))
+
+
 class Test_table_exists(VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.helper import table_exists
@@ -34,7 +46,7 @@ class Test_extract_srid(VectorCheckTestCase):
         self.assertEqual(4326, srid)
 
 
-class Test_PartitionedLayer(VectorCheckTestCase):
+class Test_PartitionedLayer(GeometryRowsMixin, VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.connection = self.params["connection_manager"].get_connection()
@@ -140,7 +152,7 @@ class Test_PartitionedLayer(VectorCheckTestCase):
         partitioned_layer._create_polygon_dump()
         partitioned_layer._fill_subpartitions()
         cursor.execute("SELECT fid, partition_id, ST_AsText(geom) FROM feature_mylayer ORDER BY fid, partition_id;")
-        self.assertListEqual([(1, 2, "POLYGON((-5 1,-5 2,-3 2,-3 1,-5 1))"),
+        self.assert_geometry_rows_equal([(1, 2, "POLYGON((-5 1,-5 2,-3 2,-3 1,-5 1))"),
                               (2, 3, "POLYGON((4 1,4 2,7 2,7 1,4 1))"),
                               (2, 4, "POLYGON((4 1,4 2,5 2,5 1,4 1))"),
                               (2, 5, "POLYGON((5 2,7 2,7 1,5 1,5 2))"),
@@ -206,6 +218,23 @@ class Test_NeighbourTable(VectorCheckTestCase):
                               (5, 4, 1)],
                              cursor.fetchall())
 
+    def test_intersection_dimension_and_shared_edge_tolerance(self):
+        from qc_tool.vector.helper import PartitionedLayer, NeighbourTable
+        cursor = self.connection.cursor()
+        cursor.execute("TRUNCATE feature_mylayer;")
+        cursor.execute("INSERT INTO feature_mylayer VALUES "
+                       "(1, ST_MakeEnvelope(0, 0, 1, 1, 4326)),"
+                       "(2, ST_MakeEnvelope(2, 0, 3, 1, 4326)),"  # disjoint
+                       "(3, ST_MakeEnvelope(1, 1, 2, 2, 4326)),"  # point contact
+                       "(4, ST_MakeEnvelope(1, 0, 2, 0.5, 4326)),"  # shared edge
+                       "(5, ST_MakeEnvelope(0.9, 0, 1.1, 0.1, 4326)),"  # positive area
+                       "(6, ST_MakeEnvelope(1, 0.8, 2, 0.8005, 4326));")  # edge below tolerance
+        table = NeighbourTable(PartitionedLayer(self.connection, "mylayer", "xfid", srid=4326))
+        table._create_neighbour_table()
+        table._fill()
+        cursor.execute("SELECT fidb, dim FROM neighbour_mylayer WHERE fida=1 ORDER BY fidb;")
+        self.assertEqual([(4, 1), (5, 2)], cursor.fetchall())
+
 
 class Test_MetaTable(VectorCheckTestCase):
     def setUp(self):
@@ -225,7 +254,7 @@ class Test_MetaTable(VectorCheckTestCase):
         self.assertListEqual([(1,), (2,)], cursor.fetchall())
 
 
-class Test_InteriorTable(VectorCheckTestCase):
+class Test_InteriorTable(GeometryRowsMixin, VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.helper import _InteriorTable
         from qc_tool.vector.helper import PartitionedLayer
@@ -242,7 +271,7 @@ class Test_InteriorTable(VectorCheckTestCase):
         interior_table._create_interior_table()
         interior_table._fill()
         cursor.execute("SELECT partition_id, ST_AsText(geom) FROM interior_mylayer ORDER BY partition_id;")
-        self.assertListEqual([(2, 'MULTIPOLYGON(((-10 -10,-10 9,1 9,1 -10,-10 -10)))'),
+        self.assert_geometry_rows_equal([(2, 'MULTIPOLYGON(((-10 -10,-10 9,1 9,1 -10,-10 -10)))'),
                               (5, 'MULTIPOLYGON(((10 1,10 2,11 2,11 1,10 1)),((19 1,19 2,20 2,20 1,19 1)))')],
                              cursor.fetchall())
 
@@ -261,7 +290,7 @@ class Test_InteriorTable(VectorCheckTestCase):
         self.assertListEqual([], cursor.fetchall())
 
 
-class Test_ExteriorTable(VectorCheckTestCase):
+class Test_ExteriorTable(GeometryRowsMixin, VectorCheckTestCase):
     def test(self):
         from qc_tool.vector.helper import _ExteriorTable
         from qc_tool.vector.helper import _InteriorTable
@@ -280,7 +309,7 @@ class Test_ExteriorTable(VectorCheckTestCase):
         exterior_table._create_exterior_table()
         exterior_table._fill()
         cursor.execute("SELECT partition_id, ST_AsText(geom) FROM exterior_mylayer ORDER BY partition_id;")
-        self.assertListEqual([(2, 'MULTIPOLYGON(((-10 9,-10 10,1 10,1 9,-10 9)))'),
+        self.assert_geometry_rows_equal([(2, 'MULTIPOLYGON(((-10 9,-10 10,1 10,1 9,-10 9)))'),
                               (5, 'MULTIPOLYGON(((11 2,19 2,19 1,11 1,11 2)))')],
                              cursor.fetchall())
 
@@ -319,6 +348,22 @@ class Test_ExteriorTable(VectorCheckTestCase):
 
 
 class Test_MarginalProperty(VectorCheckTestCase):
+    def test_empty_intersection_with_overlapping_bounds_is_not_marginal(self):
+        from qc_tool.vector.helper import MarginalProperty, PartitionedLayer
+        cursor = self.params["connection_manager"].get_connection().cursor()
+        cursor.execute("CREATE TABLE meta_mylayer (fid integer);")
+        cursor.execute("CREATE TABLE feature_mylayer (fid integer, geom geometry(Polygon,4326));")
+        cursor.execute("INSERT INTO feature_mylayer VALUES (1, ST_MakeEnvelope(1,1,2,2,4326));")
+        cursor.execute("CREATE TABLE exterior_mylayer (geom geometry(Polygon,4326));")
+        cursor.execute("INSERT INTO exterior_mylayer VALUES "
+                       "(ST_Difference(ST_MakeEnvelope(0,0,3,3,4326), ST_MakeEnvelope(0.5,0.5,2.5,2.5,4326)));")
+        prop = MarginalProperty(PartitionedLayer(cursor.connection, "mylayer", "fid", srid=4326))
+        prop._prepare_meta_table()
+        cursor.execute("INSERT INTO meta_mylayer(fid) VALUES (1);")
+        prop._fill()
+        cursor.execute("SELECT is_marginal FROM meta_mylayer WHERE fid=1;")
+        self.assertEqual((False,), cursor.fetchone())
+
     def test(self):
         from qc_tool.vector.helper import MarginalProperty
         from qc_tool.vector.helper import PartitionedLayer
@@ -376,16 +421,18 @@ class Test_ComplexChangeProperty(VectorCheckTestCase):
         meta_table._create_meta_table()
         complex_change_property = ComplexChangeProperty(neighbour_table, "code1", "code2", "area")
         complex_change_property._prepare_meta_table()
-        complex_change_property._fill_cluster("cc_id_initial", "code1")
-        complex_change_property._fill_cluster("cc_id_final", "code2")
+        # Production uses the connected-component implementation introduced in
+        # 4a8f59e55, which includes unchanged members sharing a year's code.
+        complex_change_property._fill_cluster_new("cc_id_initial", "code1")
+        complex_change_property._fill_cluster_new("cc_id_final", "code2")
         cursor.execute("SELECT fid, cc_id_initial, cc_id_final FROM meta_mylayer ORDER BY fid;")
-        self.assertListEqual([(1, None, None),
-                              (2, 2, None),
-                              (3, 2, None),
-                              (4, 2, 4),
+        self.assertListEqual([(1, 1, None),
+                              (2, 1, None),
+                              (3, 1, None),
+                              (4, 1, 4),
                               (5, None, 4),
                               (6, None, 4),
-                              (7, None, None),
+                              (7, None, 4),
                               (8, None, None)],
                              cursor.fetchall())
 
@@ -420,7 +467,7 @@ class Test_ComplexChangeProperty(VectorCheckTestCase):
                               (8, None)],
                              cursor.fetchall())
 
-class Test_GapTable(VectorCheckTestCase):
+class Test_GapTable(GeometryRowsMixin, VectorCheckTestCase):
     def setUp(self):
         super().setUp()
         self.connection = self.params["connection_manager"].get_connection()
@@ -434,7 +481,7 @@ class Test_GapTable(VectorCheckTestCase):
         gap_table = GapTable(partitioned_layer, "myboundary", None)
         gap_table._create_split_geom()
         cursor.execute("SELECT ST_AsText(split_geom(ST_MakeEnvelope(0.6, -1.1, 9.2, 6, 4326), 1.0));")
-        self.assertListEqual([('POLYGON((0.6 6,5 6,5 -1.1,0.6 -1.1,0.6 6))',),
+        self.assert_geometry_rows_equal([('POLYGON((0.6 6,5 6,5 -1.1,0.6 -1.1,0.6 6))',),
                               ('POLYGON((5 -1.1,5 6,9.2 6,9.2 -1.1,5 -1.1))',)],
                              cursor.fetchall())
         cursor.execute("SELECT ST_AsText(split_geom(ST_MakeEnvelope(0.2, 0.1, 0.6, 0.9, 4326), 1.0));")
@@ -491,7 +538,7 @@ class Test_GapTable(VectorCheckTestCase):
         count = gap_table._split_features()
         self.assertEqual(1, count)
         cursor.execute("SELECT fid, ST_AsText(geom) FROM gap_mylayer ORDER BY fid;")
-        self.assertListEqual([(1, 'POLYGON((-6.8 -1.6,-6.8 -1.1,-1.2 -1.1,-1.2 -1.6,-6.8 -1.6))'),
+        self.assert_geometry_rows_equal([(1, 'POLYGON((-6.8 -1.6,-6.8 -1.1,-1.2 -1.1,-1.2 -1.6,-6.8 -1.6))'),
                               (3, 'POLYGON((5 4.2,5 3.2,5 1.8,5 0.2,0.2 0.2,0.1 0.2,0.1 4.2,0.2 4.2,5 4.2))'),
                               (4, 'POLYGON((5 0.2,5 1.8,8 1.8,8 0.2,5 0.2))'),
                               (5, 'POLYGON((5 3.2,5 4.2,9.2 4.2,9.2 3.2,5 3.2))')],
@@ -514,8 +561,8 @@ class Test_GapTable(VectorCheckTestCase):
         gap_table = GapTable(partitioned_layer, "myboundary", None)
         gap_table._subtract_partition(3)
         cursor.execute("SELECT fid, ST_AsText(geom) FROM gap_mylayer ORDER BY fid;")
-        self.assertListEqual([(1, 'POLYGON((0 0,0 1,1 1,1 0,0 0))'),
-                              (4, 'POLYGON((1 3,2 3,2 2,1 2,1 3))')],
+        self.assert_geometry_rows_equal([(1, 'POLYGON((0 0,0 1,1 1,1 0,0 0))'),
+                                        (4, 'POLYGON((1 3,2 3,2 2,1 2,1 3))')],
                              cursor.fetchall())
 
 

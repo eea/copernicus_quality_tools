@@ -24,13 +24,16 @@
 {% block upload_body %}
 <div class="workspace-card__body qc-upload-body">
     <form id="boundary-upload-form" method="post" enctype="multipart/form-data"
-          action="{% url 'boundaries_upload_data' %}" data-success-url="{% url 'boundaries' %}">
+          action="{% url 'boundaries_upload_data' %}" data-success-url="{% url 'boundaries' %}"{% if boundary_upload_limits %} data-max-archive-bytes="{{ boundary_upload_limits.max_archive_bytes }}" data-available-upload-bytes="{{ boundary_available_upload_bytes }}"{% endif %} data-maintenance-write>
+{% if boundary_configuration_error %}<p class="qc-upload-error" role="alert">{{ boundary_configuration_error }}</p>{% endif %}
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled or boundary_configuration_error %} disabled{% endif %}>
         {% csrf_token %}
         <noscript><p class="qc-upload-error">Enable JavaScript to upload and activate boundary packages.</p></noscript>
         <p class="qc-upload-error" data-boundary-unsupported hidden>Please use a current browser to upload boundary packages.</p>
         <div class="qc-upload-layout">
             <div>
                 {% include "dashboard/shared/uploads/picker.html" with id="boundary-upload" input_id="fileupload" input_name="file" accept=".zip,application/zip" label="Boundary package ZIP" title="Choose one ZIP file" drop_title="Drop one ZIP file here" hint="One ZIP containing raster/ and vector/ directories." choose_label="Choose ZIP file" only %}
+                {% if boundary_upload_limits %}<p class="qc-upload-hint">ZIP limit: {{ boundary_upload_limits.max_archive_bytes|filesizeformat }}. Each file: {{ boundary_upload_limits.max_member_bytes|filesizeformat }}. Expanded package: {{ boundary_upload_limits.max_uncompressed_bytes|filesizeformat }}.</p>{% endif %}
                 <ul class="qc-upload-list" data-upload-list aria-label="Selected boundary package"></ul>
                 <div class="qc-upload-actions">
                     <button type="submit" class="btn btn-primary btn-qc-primary" data-boundary-submit disabled>Upload and activate</button>
@@ -46,10 +49,12 @@
                     <li>The new package becomes active only after it passes validation.</li>
                     <li>Running quality checks continue using their original boundaries.</li>
                 </ul>
+                {% if boundary_upload_limits %}<p>{{ boundary_storage_free|filesizeformat }} free in boundary storage. The server needs room for the uploaded ZIP, extracted files and any retained previous package.</p>{% endif %}
             </aside>
         </div>
         <div id="upload-result" class="qc-upload-feedback"></div>
-    </form>
+    </fieldset>
+</form>
 </div>
 {% endblock upload_body %}
 

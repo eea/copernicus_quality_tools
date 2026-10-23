@@ -208,6 +208,7 @@
         if (!response.ok) {
             throw await responseError(response);
         }
+        if (window.qcMaintenance) window.qcMaintenance.observeResponse(response);
         if (response.redirected || /text\/html/i.test(response.headers.get("Content-Type") || "")) {
             throw new Error("Your session could not be verified. Refresh this page and sign in again if needed.");
         }

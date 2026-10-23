@@ -3,6 +3,7 @@
     "use strict";
 
     var nextFileId = 0;
+    function maintenanceActive() { return Boolean(window.qcMaintenance && window.qcMaintenance.isActive()); }
 
     function formatSize(bytes) {
         if (bytes < 1024) return bytes + " B";
@@ -24,8 +25,10 @@
         var error = root.querySelector("[data-upload-error]");
         var hint = drop.querySelector("[data-upload-hint]");
         var extensions = options.extensions || [];
-        var busy = false;
+        var busy = maintenanceActive();
         var dragDepth = 0;
+        input.disabled = busy;
+        browse.disabled = busy;
 
         input.setAttribute("aria-describedby", hint.id + " " + error.id);
         if (error.textContent.trim()) {
@@ -72,7 +75,7 @@
         }
 
         function select(selected) {
-            if (busy) return;
+            if (busy || maintenanceActive()) return;
             var message = options.deferValidation ? "" : validate(selected);
             if (message) {
                 reject(message);
@@ -83,7 +86,7 @@
         }
 
         browse.addEventListener("click", function() {
-            if (!busy) input.click();
+            if (!busy && !maintenanceActive()) input.click();
         });
         input.addEventListener("change", function() { select(files()); });
         // Keep the native input usable when JS is absent. With enhancement the
@@ -97,13 +100,13 @@
             if (drop.dataset.dropTitle) title.textContent = drop.dataset.dropTitle;
             drop.addEventListener("dragenter", function(event) {
                 event.preventDefault();
-                if (busy) return;
+                if (busy || maintenanceActive()) return;
                 dragDepth += 1;
                 drop.classList.add("is-dragover");
             });
             drop.addEventListener("dragover", function(event) {
                 event.preventDefault();
-                if (event.dataTransfer) event.dataTransfer.dropEffect = busy ? "none" : "copy";
+                if (event.dataTransfer) event.dataTransfer.dropEffect = busy || maintenanceActive() ? "none" : "copy";
             });
             drop.addEventListener("dragleave", function(event) {
                 event.preventDefault();
@@ -114,7 +117,7 @@
                 event.preventDefault();
                 dragDepth = 0;
                 drop.classList.remove("is-dragover");
-                if (busy || !event.dataTransfer) return;
+                if (busy || maintenanceActive() || !event.dataTransfer) return;
                 var selected = event.dataTransfer.files;
                 // Text or links dragged within the page are not a replacement
                 // file selection. Preserve both the input and its preview.
@@ -147,9 +150,10 @@
                 else drop.removeAttribute("data-has-files");
             },
             setBusy: function(value) {
-                busy = value;
-                browse.disabled = value;
-                drop.setAttribute("aria-disabled", String(value));
+                busy = value || maintenanceActive();
+                browse.disabled = busy;
+                if (maintenanceActive()) input.disabled = true;
+                drop.setAttribute("aria-disabled", String(busy));
                 root.querySelectorAll("[data-upload-idle]").forEach(function(node) { node.hidden = value; });
                 root.querySelectorAll("[data-upload-pending]").forEach(function(node) { node.hidden = !value; });
                 // Do not disable the file input: native multipart submission

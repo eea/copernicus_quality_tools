@@ -191,7 +191,7 @@ class BrowserSessionFlowTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(
                     response,
-                    f'<form method="post" action="{logout_url}">',
+                    f'<form method="post" action="{logout_url}" data-maintenance-write>',
                     count=1,
                 )
                 self.assertNotContains(response, f'href="{logout_url}')

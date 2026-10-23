@@ -41,7 +41,11 @@ def provision_user(
     attributes = dict(lookup)
     email_field = user_model.get_email_field_name()
     if email_field != username_field:
-        attributes[email_field] = email or f"{username}@{username}.com"
+        # Email is optional. Inventing an address from a username can produce
+        # invalid domains and falsely imply a real contact address.
+        attributes[email_field] = user_model._meta.get_field(email_field).clean(
+            email if email is not None else "", None,
+        )
 
     creator = (
         user_model._default_manager.create_superuser

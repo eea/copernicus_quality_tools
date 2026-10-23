@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
 
 
-from qc_tool.common import TEST_DATA_DIR
+import hashlib
+from pathlib import Path
+from shutil import copyfile
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+from uuid import uuid4
+from zipfile import ZipFile
+
+import numpy as np
+from osgeo import gdal
+
+from qc_tool.common import CONFIG, TEST_DATA_DIR, create_job_dir
 from qc_tool.test.helper import ProductTestCase
 from qc_tool.worker.dispatch import dispatch
 
@@ -34,12 +45,41 @@ class Test_Raster(ProductTestCase):
 
         # inspire check is skipped
         expected_step_results[2] = "skipped"
-        # fty_010m has extra checks raster.tile and raster.mmu
-        expected_step_results[11] = "failed"
-
         job_result = dispatch(self.job_uuid, self.username, filepath, product_ident, (3,))
         step_statuses = [step_result["status"] for step_result in job_result["steps"]]
         self.assertListEqual(expected_step_results, step_statuses, self.show_messages(job_result))
+
+        # Preserve the original passing delivery and exercise the MMU rejection
+        # separately with a deterministic isolated valid-code patch. The forest
+        # ring prevents NoData/neighbour exceptions from exempting its centre.
+        original_hash = hashlib.sha256(filepath.read_bytes()).digest()
+        temporary = TemporaryDirectory(prefix="qc-fty-mmu-")
+        self.addCleanup(temporary.cleanup)
+        working = Path(temporary.name)
+        negative_archive = working / filepath.name
+        with ZipFile(filepath) as original:
+            raster_member = next(name for name in original.namelist() if name.lower().endswith(".tif"))
+            raster = working / "mmu-control.tif"
+            raster.write_bytes(original.read(raster_member))
+            dataset = gdal.Open(str(raster), gdal.GA_Update)
+            band = dataset.GetRasterBand(1)
+            band.WriteArray(np.ones((15, 15), dtype=np.uint8), 100, 100)
+            band.WriteArray(np.zeros((1, 1), dtype=np.uint8), 107, 107)
+            band = None
+            dataset.FlushCache()
+            dataset = None
+            with ZipFile(negative_archive, "w") as destination:
+                for member in original.infolist():
+                    destination.writestr(member, raster.read_bytes() if member.filename == raster_member
+                                         else original.read(member.filename))
+        negative_job = str(uuid4())
+        create_job_dir(negative_job)
+        negative_result = dispatch(negative_job, self.username, negative_archive, product_ident, (3,))
+        expected_step_results[11] = "failed"
+        self.assertListEqual(expected_step_results, [step["status"] for step in negative_result["steps"]],
+                             self.show_messages(negative_result))
+        self.assertIn("1 error objects under MMU limit", " ".join(negative_result["steps"][11]["messages"]))
+        self.assertEqual(hashlib.sha256(filepath.read_bytes()).digest(), original_hash)
 
     def test_fty_2018_100m(self):
         """High resolution forest type (FTY) - 100m"""
@@ -179,23 +219,32 @@ class Test_Raster(ProductTestCase):
         # inspire check is skipped
         expected_step_results[2] = "skipped"
 
-        job_result = dispatch(self.job_uuid, "user_name", filepath, product_ident, (3,))
+        # The retained mask bytes predate the recipe's year-qualified mask name.
+        temporary = TemporaryDirectory(prefix="qc-swf-boundary-")
+        self.addCleanup(temporary.cleanup)
+        boundary_dir = Path(temporary.name)
+        raster_dir = boundary_dir / "raster"
+        raster_dir.mkdir()
+        (boundary_dir / "vector").mkdir()
+        copyfile(TEST_DATA_DIR / "boundaries/raster/mask_swf_100m_eu.tif",
+                 raster_dir / "mask_swf_2015_100m_eu.tif")
+        with patch.dict(CONFIG, {"boundary_dir": boundary_dir}):
+            job_result = dispatch(self.job_uuid, "user_name", filepath, product_ident, (3,))
         step_results = [step_result["status"] for step_result in job_result["steps"]]
-        self.assertListEqual(expected_step_results, step_results)
+        self.assertListEqual(expected_step_results, step_results, self.show_messages(job_result))
 
     def test_ua2012_dhm(self):
         """Urban Atlas 2012 Building Heights - 10m raster"""
         product_ident = "ua2012_dhm"
         filepath = TEST_DATA_DIR.joinpath("raster", "ua2012_dhm", "EE003Ly_NARVA_ua2012_dhm.zip")
 
-        expected_step_results = ["ok"] * 12
+        expected_step_results = ["ok"] * 11
         # inspire check is skipped
         expected_step_results[2] = "skipped"
 
         job_result = dispatch(self.job_uuid, "user_name", filepath, product_ident, (3,))
-        print(job_result)
         step_results = [step_result["status"] for step_result in job_result["steps"]]
-        self.assertListEqual(expected_step_results, step_results)
+        self.assertListEqual(expected_step_results, step_results, self.show_messages(job_result))
 
     def test_general_raster(self):
         """General raster product"""

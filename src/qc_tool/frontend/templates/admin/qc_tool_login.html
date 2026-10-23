@@ -1,0 +1,22 @@
+{% extends "admin/login.html" %}
+
+{% block content %}
+<div id="content-main">
+  <h1>Sign in to administration</h1>
+  <p>Manage users, permissions and database transfers.</p>
+  {% if maintenance.enabled %}<p class="help" role="status">During maintenance, only administrators and product managers can sign in.</p>{% endif %}
+  {% if user.is_authenticated %}<p class="errornote">Your account does not have access to this page. Sign in with an account that has access.</p>{% endif %}
+  {% if form.non_field_errors %}<div class="errornote" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+  <form method="post" id="login-form" data-maintenance-exempt>
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="form-row">
+      {{ field.errors }}
+      {{ field.label_tag }} {{ field }}
+    </div>
+    {% endfor %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="submit-row"><input type="submit" class="btn-qc-primary" value="Sign in"></div>
+  </form>
+</div>
+{% endblock %}

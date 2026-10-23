@@ -4,6 +4,23 @@ Never modify product specification files or uploaded specification snapshots.
 Keep filename identification rules and other QC Tool integration configuration
 outside the specifications; consume their original bytes without rewriting them.
 
+# QC check ownership
+
+Keep `src/qc_tool/vector/` and `src/qc_tool/raster/` focused on QC checks.
+Avoid edits there unless required by a check or a necessary integration change.
+Place reusable application and worker functionality in its owning package outside
+the check folders; extract existing shared functionality when it is needed.
+Preserve check identities, parameters and result semantics when changing imports.
+
+# Administration boundaries
+
+The Admin interface owns users, role groups, permissions, and database import,
+export, backups and maintenance. Keep task navigation and automatic
+authentication/error recovery destinations inside Admin. Permit one explicit
+**Back to workspace** control with a back arrow to leave administration; the
+Admin brand still links to its overview. Do not add other normal-workspace links,
+product/boundary setup, QC execution or submission-review shortcuts to Admin.
+
 # Database changes
 
 QC Tool **v3.0.0 uses a completely new, models-only schema**. Keep its policy

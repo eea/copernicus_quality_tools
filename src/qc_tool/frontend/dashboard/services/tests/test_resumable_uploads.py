@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import errno
 import multiprocessing
+import os
 from pathlib import Path
 import stat
 import tempfile
 from unittest import TestCase
+from unittest.mock import patch
 
 from qc_tool.frontend.dashboard.services.uploads import (
     ResumableUploadDescriptor,
@@ -18,6 +21,7 @@ from qc_tool.frontend.dashboard.services.uploads import (
     store_chunk,
 )
 from qc_tool.frontend.dashboard.services.uploads._resumable.locks import upload_lock
+from qc_tool.frontend.dashboard.services.uploads._resumable import paths as resumable_paths
 
 
 class _UploadedChunk:
@@ -202,6 +206,108 @@ class ResumablePathTests(TestCase):
         self.assertFalse(paths.user_root.exists())
         self.assertFalse(paths.chunks_dir.exists())
         self.assertFalse(is_chunk_stored(paths.chunk_path))
+
+    def test_fresh_configured_leaf_is_created_only_by_a_write_request(self):
+        self.media_root.rmdir()
+        paths = prepare_resumable_paths(self.descriptor, media_root=self.media_root,
+                                        username="alice", create=False)
+        self.assertFalse(self.media_root.exists())
+        self.assertFalse(is_chunk_stored(paths.chunk_path))
+        sync = os.fsync
+        synchronized = []
+        def synchronize(descriptor):
+            status = os.fstat(descriptor)
+            synchronized.append((status.st_dev, status.st_ino))
+            sync(descriptor)
+        with patch.object(resumable_paths.os, "fsync", side_effect=synchronize):
+            paths = prepare_resumable_paths(self.descriptor, media_root=self.media_root,
+                                            username="alice", create=True)
+        self.assertEqual(stat.S_IMODE(self.media_root.stat().st_mode), 0o750)
+        self.assertTrue(paths.chunks_dir.is_dir())
+        root, parent = self.media_root.stat(), self.media_root.parent.stat()
+        self.assertEqual(synchronized, [(root.st_dev, root.st_ino), (parent.st_dev, parent.st_ino)])
+
+    def test_existing_configured_root_permissions_and_trusted_symlink_are_preserved(self):
+        self.media_root.chmod(0o700)
+        link = self.media_root.parent / "configured-media-link"
+        link.symlink_to(self.media_root, target_is_directory=True)
+        with patch.object(resumable_paths.os, "fsync") as synchronize:
+            paths = prepare_resumable_paths(self.descriptor, media_root=link, username="alice")
+        synchronize.assert_not_called()
+        self.assertEqual(paths.user_root.parent, self.media_root.resolve())
+        self.assertEqual(stat.S_IMODE(self.media_root.stat().st_mode), 0o700)
+        self.assertTrue(link.is_symlink())
+
+    def test_missing_mount_parent_is_not_created_by_probes_or_writes(self):
+        root = self.media_root.parent / "missing-mount" / "incoming"
+        for create in (False, True):
+            with self.subTest(create=create), self.assertLogs(
+                "qc_tool.frontend.dashboard.services.uploads._resumable.errors", level="WARNING"
+            ):
+                with self.assertRaises(ResumableUploadError) as raised:
+                    prepare_resumable_paths(self.descriptor, media_root=root, username="alice", create=create)
+            self.assertEqual(raised.exception.status_code, 503)
+            self.assertEqual(raised.exception.code, "upload_storage_unavailable")
+            self.assertIn("mount", raised.exception.message)
+            self.assertNotIn(str(root.parent), raised.exception.message)
+            self.assertFalse(root.parent.exists())
+
+    def test_concurrent_creator_cannot_make_us_rewrite_existing_root_permissions(self):
+        root = self.media_root.parent / "new-incoming"
+        mkdir = os.mkdir
+        def competing_creator(name, *args, **kwargs):
+            if name == root.name:
+                mkdir(name, mode=0o700, dir_fd=kwargs["dir_fd"])
+                raise FileExistsError(errno.EEXIST, "created by another request")
+            return mkdir(name, *args, **kwargs)
+        with patch.object(resumable_paths.os, "mkdir", side_effect=competing_creator):
+            paths = prepare_resumable_paths(self.descriptor, media_root=root, username="alice")
+        self.assertTrue(paths.chunks_dir.is_dir())
+        self.assertEqual(stat.S_IMODE(root.stat().st_mode), 0o700)
+
+    def test_symlink_inserted_during_leaf_creation_is_rejected_without_touching_target(self):
+        root = self.media_root.parent / "new-incoming"
+        outside = self.media_root.parent / "outside"
+        outside.mkdir()
+        mkdir = os.mkdir
+        def competing_link(name, *args, **kwargs):
+            if name == root.name:
+                os.symlink(outside, name, dir_fd=kwargs["dir_fd"], target_is_directory=True)
+                raise FileExistsError(errno.EEXIST, "concurrent symlink")
+            return mkdir(name, *args, **kwargs)
+        with patch.object(resumable_paths.os, "mkdir", side_effect=competing_link):
+            with self.assertRaises(ResumableUploadError) as raised:
+                prepare_resumable_paths(self.descriptor, media_root=root, username="alice")
+        self.assertEqual(raised.exception.code, "unsafe_upload_storage")
+        self.assertEqual(list(outside.iterdir()), [])
+
+    def test_root_storage_errors_have_actionable_safe_status_and_operator_evidence(self):
+        root = self.media_root.parent / "new-incoming"
+        for error_number, status, code in (
+            (errno.ENOSPC, 507, "upload_storage_full"),
+            (errno.EDQUOT, 507, "upload_storage_full"),
+            (errno.EACCES, 503, "upload_storage_unavailable"),
+            (errno.EPERM, 503, "upload_storage_unavailable"),
+            (errno.EROFS, 503, "upload_storage_unavailable"),
+        ):
+            with self.subTest(errno=error_number), self.assertLogs(
+                "qc_tool.frontend.dashboard.services.uploads._resumable.errors", level="WARNING"
+            ) as logs:
+                with patch.object(resumable_paths.os, "mkdir", side_effect=OSError(error_number, "/private/server/storage")):
+                    with self.assertRaises(ResumableUploadError) as raised:
+                        prepare_resumable_paths(self.descriptor, media_root=root, username="alice")
+            self.assertEqual((raised.exception.status_code, raised.exception.code), (status, code))
+            self.assertNotIn("/private", raised.exception.message)
+            self.assertTrue(any(f"errno={error_number}" in value for value in logs.output))
+            self.assertFalse(root.exists())
+
+    def test_full_filesystem_while_creating_user_staging_is_also_507(self):
+        with self.assertLogs("qc_tool.frontend.dashboard.services.uploads._resumable.errors", level="WARNING"):
+            with patch.object(resumable_paths.os, "mkdir", side_effect=OSError(errno.ENOSPC, "/private/server/storage")):
+                with self.assertRaises(ResumableUploadError) as raised:
+                    prepare_resumable_paths(self.descriptor, media_root=self.media_root, username="alice")
+        self.assertEqual((raised.exception.status_code, raised.exception.code), (507, "upload_storage_full"))
+        self.assertFalse((self.media_root / "alice").exists())
 
     def test_rejects_owner_traversal_before_creating_any_path(self):
         outside = self.media_root.parent / "escape"

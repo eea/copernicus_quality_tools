@@ -15,6 +15,14 @@ def run_check(params, status):
 
     from qc_tool.vector.helper import do_layers
 
+    def open_dataset(source):
+        # OGR can report unreadable input as None or RuntimeError, depending on
+        # whether its process-wide exception mode was enabled by another check.
+        try:
+            return ogr.Open(source, OF_READONLY)
+        except RuntimeError:
+            return None
+
     # Check if the current delivery is excluded from vector checks
     if "skip_vector_checks" in params:
         if params["skip_vector_checks"]:
@@ -29,8 +37,14 @@ def run_check(params, status):
         pg_layer_name = layer_def["layer_alias"]
 
         # Only promote to MULTIPOLYGON when the source layer is polygon-based.
-        _src_ds = ogr.Open(str(layer_def["src_filepath"]), OF_READONLY)
+        _src_ds = open_dataset(str(layer_def["src_filepath"]))
+        if _src_ds is None:
+            status.aborted("Failed to open vector source for layer {:s}.".format(src_layer_name))
+            return
         _src_layer = _src_ds.GetLayerByName(src_layer_name)
+        if _src_layer is None:
+            status.aborted("Source layer {:s} could not be found in the vector dataset.".format(src_layer_name))
+            return
         _flat_geom_type = ogr.GT_Flatten(_src_layer.GetGeomType())
         _is_polygon = _flat_geom_type in (ogr.wkbPolygon, ogr.wkbMultiPolygon)
         _nlt_args = ["-nlt", "MULTIPOLYGON"] if _is_polygon else []
@@ -78,12 +92,21 @@ def run_check(params, status):
             # Therefore we try some checking whether the layer has been imported correctly.
 
             ## Open datasource from filesystem.
-            src_datasource = ogr.Open(str(layer_def["src_filepath"]), OF_READONLY)
+            src_datasource = open_dataset(str(layer_def["src_filepath"]))
+            if src_datasource is None:
+                status.aborted("The vector source for layer {:s} became unavailable during import.".format(src_layer_name))
+                return
             src_layer = src_datasource.GetLayerByName(src_layer_name)
+            if src_layer is None:
+                status.aborted("Source layer {:s} became unavailable during import.".format(src_layer_name))
+                return
 
             ## Open datasource from postgis.
             conn_string = "PG:{:s} active_schema={:s}".format(dsn, schema)
-            dst_datasource = ogr.Open(conn_string, OF_READONLY)
+            dst_datasource = open_dataset(conn_string)
+            if dst_datasource is None:
+                status.aborted("The PostGIS destination could not be opened after importing layer {:s}.".format(src_layer_name))
+                return
             # NOTE: GetLayerByName() works case insensitive in this case.
             dst_layer = dst_datasource.GetLayerByName(pg_layer_name)
             if dst_layer is None:

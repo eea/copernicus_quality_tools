@@ -3,8 +3,8 @@ version: '3.7'
 services:
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend.debug
+      context: ../..
+      dockerfile: docker/Dockerfile.frontend.debug
       args:
         - VERSION
     image: eeacms/copernicus-qctool-frontend:latest
@@ -36,8 +36,8 @@ services:
 
   worker:
     build:
-      context: .
-      dockerfile: Dockerfile.worker
+      context: ../..
+      dockerfile: docker/Dockerfile.worker
       args:
         - VERSION
     image: eeacms/copernicus-qctool-worker:latest

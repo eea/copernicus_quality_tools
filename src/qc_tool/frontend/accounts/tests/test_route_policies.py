@@ -84,6 +84,7 @@ EXPECTED_POLICIES = {
         LOGIN_REDIRECT,
     ),
     "job_report_pdf": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "job_input_zip": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "job_combined_log": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "file_upload": (PRIVATE, SESSION, ("GET",), UPLOAD, LOGIN_REDIRECT),
     "job_history": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
@@ -171,6 +172,7 @@ EXPECTED_POLICIES = {
         JSON,
     ),
     "pull_job": (PRIVATE, WORKER_TOKEN, ("POST",), None, STATUS_ONLY),
+    "worker_maintenance": (PRIVATE, WORKER_TOKEN, ("POST",), None, STATUS_ONLY),
 }
 
 
@@ -191,6 +193,7 @@ ROUTE_ARGS = {
     "product_definition_json": ("fixtureless",),
     "job_report_json": ("00000000-0000-0000-0000-000000000001",),
     "job_report_pdf": ("00000000-0000-0000-0000-000000000001",),
+    "job_input_zip": ("00000000-0000-0000-0000-000000000001",),
     "job_combined_log": ("00000000-0000-0000-0000-000000000001",),
     "job_history": (1,),
     "update_job": ("00000000-0000-0000-0000-000000000001",),
@@ -358,7 +361,7 @@ class RoutePolicyRegistryTests(TestCase):
                 resolve(path)
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 56)
+        self.assertEqual(len(EXPECTED_POLICIES), 58)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():

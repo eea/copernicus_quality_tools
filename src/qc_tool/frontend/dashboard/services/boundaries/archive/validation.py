@@ -21,7 +21,8 @@ def validate_archive(zip_file: ZipFile, limits: BoundaryPackageLimits) -> Valida
     if not infos:
         raise BoundaryPackageInvalid("ZIP archive contains no entries")
     if len(infos) > limits.max_members:
-        raise BoundaryPackageLimitExceeded("ZIP archive contains too many entries")
+        raise BoundaryPackageLimitExceeded("ZIP archive contains too many entries", limit="members",
+                                           actual=len(infos), maximum=limits.max_members)
 
     validated: list[ValidatedMember] = []
     normalized_entries: dict[tuple[str, ...], bool] = {}
@@ -35,7 +36,8 @@ def validate_archive(zip_file: ZipFile, limits: BoundaryPackageLimits) -> Valida
         total_size += info.file_size
         total_compressed_size += info.compress_size
         if total_size > limits.max_uncompressed_bytes:
-            raise BoundaryPackageLimitExceeded("ZIP expands beyond the total size limit")
+            raise BoundaryPackageLimitExceeded("ZIP expands beyond the total size limit", limit="uncompressed_bytes",
+                                               actual=total_size, maximum=limits.max_uncompressed_bytes)
 
         if not member.is_directory:
             file_count += 1
@@ -82,4 +84,6 @@ def enforce_compression_ratio(
     if uncompressed_size == 0:
         return
     if compressed_size == 0 or uncompressed_size / compressed_size > maximum_ratio:
-        raise BoundaryPackageLimitExceeded("ZIP compression ratio exceeds the limit")
+        raise BoundaryPackageLimitExceeded("ZIP compression ratio exceeds the limit", limit="compression_ratio",
+                                           actual=uncompressed_size / compressed_size if compressed_size else None,
+                                           maximum=maximum_ratio)

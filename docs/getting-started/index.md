@@ -28,9 +28,10 @@ docker version
 docker compose version
 ```
 
-The published worker image currently targets `linux/amd64`. On an ARM computer,
-Docker Desktop uses emulation because the local Compose file defaults
-`QC_TOOL_PLATFORM` to `linux/amd64`. Worker startup and QC jobs will be slower.
+The local stack builds both images for the Docker host architecture by default.
+For an explicit target, set `DOCKER_DEFAULT_PLATFORM`, or include
+`docker/compose.platform.yaml` with `QC_TOOL_PLATFORM`. Emulating another CPU
+architecture can make worker startup, compilation and QC jobs substantially slower.
 
 The worker contains PostgreSQL/PostGIS, Java, and the INSPIRE validator. Ensure
 Docker has enough memory and disk space for those services and for uploaded
@@ -171,11 +172,11 @@ After changing worker or shared code:
 docker compose -f docker/compose.local.yaml restart worker
 ```
 
-The frontend image build downloads `QC_TOOL_SOURCE_VERSION` from the upstream
-GitHub repository before the checkout is mounted over it. The default is
-`master`. If you override it, use a branch/tag/commit that already exists in
-`eea/copernicus_quality_tools`; an unpushed local or fork-only ref cannot be
-downloaded and the image build will fail.
+Both images build from the current checkout. `QC_TOOL_SOURCE_VERSION` is an
+optional provenance label; unpushed local changes are included without fetching
+an upstream branch. The worker build uses the supported Python 3.12 and geospatial
+runtime rather than overlaying current source onto a legacy Python 3.8 image.
+The first full worker build compiles GDAL and Squid and can take substantial time.
 
 Rebuild when changing Dockerfiles or pinned dependencies:
 

@@ -5,7 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-function jobFailure(responseJSON) {
+function jobFailure(responseJSON, maintenanceActive = false) {
     const dialogs = [];
     const document = {};
     const $ = value => ({
@@ -16,7 +16,7 @@ function jobFailure(responseJSON) {
         text(text) { return {textContent: text}; }
     });
     $.ajax = options => options.error({responseJSON});
-    const context = {$, document, BootstrapDialog: {show: dialog => dialogs.push(dialog)}};
+    const context = {$, document, window: {qcMaintenance: {isActive: () => maintenanceActive}}, BootstrapDialog: {show: dialog => dialogs.push(dialog)}};
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../static/dashboard/js/features/jobs/setup.js"), "utf8"), context);
     context.create_job();
     return dialogs[0];
@@ -26,6 +26,10 @@ test("job creation explains backend filename errors as plain text", () => {
     const message = 'The filename <img src=x onerror="alert(1)"> does not match the selected specification.';
     const dialog = jobFailure({code: "delivery_name_invalid", message});
     assert.equal(dialog.message.textContent, message);
+});
+
+test("maintenance prevents a programmatic QC creation attempt", () => {
+    assert.equal(jobFailure({message: "must not be requested"}, true), undefined);
 });
 
 test("job creation retains a safe fallback for missing or malformed error messages", () => {

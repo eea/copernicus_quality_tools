@@ -10,7 +10,10 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import close_old_connections
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.db import connection
+from django.middleware.csrf import get_token
+from django.test import Client, RequestFactory, TestCase, TransactionTestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.models import UserProductGrant
@@ -44,6 +47,50 @@ class UploadRegistrationFixture:
 
 
 class ResumableRegistrationTests(UploadRegistrationFixture, TestCase):
+    def test_first_upload_initializes_only_the_configured_root_and_registers_once(self):
+        fresh_root = self.media_root / "fresh-incoming"
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        token_request = RequestFactory().get(self.url)
+        token = get_token(token_request)
+        client.cookies["csrftoken"] = token_request.META["CSRF_COOKIE"]
+        with override_settings(MEDIA_ROOT=fresh_root):
+            with CaptureQueriesContext(connection) as queries:
+                probe = client.get(self.url, self.parameters)
+            self.assertEqual(probe.status_code, 404)
+            self.assertFalse(fresh_root.exists())
+            self.assertFalse(Delivery.objects.exists())
+            self.assertEqual([query["sql"] for query in queries if query["sql"].lstrip().upper().startswith(
+                ("INSERT ", "UPDATE ", "DELETE ", "CREATE ", "ALTER ", "DROP "))], [])
+
+            def post():
+                return client.post(self.url, {
+                    **self.parameters, "file": SimpleUploadedFile("chunk", b"abcd"),
+                }, HTTP_X_CSRFTOKEN=token)
+
+            first = post()
+            self.assertEqual(first.status_code, 200, first.content)
+            self.assertEqual(Delivery.objects.count(), 1)
+            target = fresh_root / self.user.username / self.descriptor.filename
+            self.assertEqual(target.read_bytes(), b"abcd")
+            inode = target.stat().st_ino
+            self.assertEqual(client.get(self.url, self.parameters).status_code, 200)
+            repeated = post()
+            self.assertEqual(repeated.status_code, 200, repeated.content)
+            self.assertEqual(repeated.json()["delivery_id"], first.json()["delivery_id"])
+            self.assertEqual(Delivery.objects.count(), 1)
+            self.assertEqual(target.stat().st_ino, inode)
+
+    def test_missing_storage_mount_is_not_silently_recreated_by_uploads(self):
+        missing_mount = self.media_root / "missing-volume"
+        with override_settings(MEDIA_ROOT=missing_mount / "incoming"):
+            response = self.post_chunk()
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["code"], "upload_storage_unavailable")
+        self.assertNotIn(str(missing_mount), response.json()["message"])
+        self.assertFalse(missing_mount.exists())
+        self.assertFalse(Delivery.objects.exists())
+
     def test_complete_staging_requires_post_to_register_a_delivery(self):
         store_chunk(SimpleUploadedFile("chunk", b"abcd"), self.paths.chunk_path, expected_bytes=4)
         response = self.client.get(self.url, self.parameters)

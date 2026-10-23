@@ -451,9 +451,9 @@ class DeliveryWorkspacePresentationTests(TestCase):
             "dashboard/js/features/deliveries/rows/actions.js"
         )
 
-        self.assertIn(".qc-shell .btn-qc-primary", stylesheet)
-        self.assertIn(".qc-shell .btn-qc-quiet", stylesheet)
-        self.assertIn(".qc-shell .btn-qc--compact", stylesheet)
+        self.assertIn(":is(.qc-shell, .qc-admin) .btn-qc-primary", stylesheet)
+        self.assertIn(":is(.qc-shell, .qc-admin) .btn-qc-quiet", stylesheet)
+        self.assertIn(":is(.qc-shell, .qc-admin) .btn-qc--compact", stylesheet)
 
         for predicate, action_class in (
             ("canRunQc(row)", "delivery-row-qc"),

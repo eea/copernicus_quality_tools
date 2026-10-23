@@ -6,8 +6,46 @@ nav_order: 1
 
 # Testing
 
+Administrative record-transfer tests are discovered by the existing
+`qc_tool.database.tests.integration` and dashboard test suites. The transfer
+service tests use real transaction boundaries on disposable databases and inject
+precommit failure, lost COMMIT acknowledgement, interrupted status persistence
+and terminal-journal cleanup failures. Application tests include real publication
+manifests, original specification bytes, account mapping and file rollback.
+Run both SQLite and PostgreSQL; configure PostgreSQL with `DB_ENGINE=postgres`.
+Tests never restore into or reset a retained deployment database.
+
 Run focused tests first, then the relevant full suite. The GitHub Actions
 frontend workflow is the authoritative frontend test contract.
+
+## Native PostgreSQL backup and restore
+
+Both frontend images package the reviewed PostgreSQL 14 client tools. CI checks
+`pg_dump --version` and `pg_restore --version` inside the packaged frontend;
+installing `psycopg2-binary` does not satisfy this requirement. The signed PGDG
+repository/key and exact client package are pinned in each frontend Dockerfile.
+The selected package is available for both AMD64 and ARM64. A native operation
+requires its client major to match the source/target PostgreSQL server major.
+
+Run native integration checks only against disposable PostgreSQL databases.
+Fixtures must exercise a full archive and separately provisioned empty target,
+including stored password hashes, API credential digests, sessions, receipt rows,
+unmanaged tables/columns, sequences and schema objects. Compare the complete
+source and restored data rather than only model-managed fields. The portable
+account/application privacy and graph tests continue to enforce their filtered
+contract independently.
+
+Native refusal/recovery coverage includes fresh-target creation permissions,
+the serving database, occupied or foreign schemas, tool/server major mismatch, malformed or
+changed archives, failed restoration and uncertain COMMIT acknowledgement.
+Assertions establish that restoration preserves the serving database and active
+selection. Explicit activation tests cover preflight, administrator credential
+proof, retained source access, revision checks, request/stream pinning and
+same-maintenance-generation rollback. Test-runner `NAME` overrides must never
+follow the deployment pointer. Never use an existing developer/production database as a test
+restore destination, create/drop it from application tests, or initialize a full
+archive destination with `database apply` first. Keep real credential-bearing
+backups out of test logs and CI artifacts.
 
 ## Maintainer-tool tests on the host
 
@@ -130,12 +168,26 @@ High-risk changes should include focused coverage for:
 
 ## Worker infrastructure/security tests
 
-The running worker provides its current Python and system dependencies:
+Build the current worker runtime before relying on its Python and system
+dependencies. Current source over an older Python 3.8 image is unsupported:
+
+```bash
+docker compose -f docker/compose.local.yaml build worker
+```
+
+The worker image build and entrypoint verify Python 3.11 or newer, GDAL 3.8.4,
+the required raster/vector/Parquet drivers and application adapter imports.
+CI builds this image from the proposed checkout, runs `pip check`, starts only a
+disposable embedded scratch PostgreSQL and executes the full synthetic worker
+suite with external INSPIRE calls disabled. It does not validate live INSPIRE,
+S3 service availability or customer-file QC parity.
 
 ```bash
 docker compose -f docker/compose.local.yaml exec worker \
   python3 -m unittest \
     qc_tool.test.test_archive_security \
+    qc_tool.test.test_worker_archives \
+    qc_tool.test.test_worker_module_boundaries \
     qc_tool.test.test_product_security \
     qc_tool.test.test_worker_auth \
     qc_tool.test.test_worker_job_contracts \
@@ -147,6 +199,57 @@ docker compose -f docker/compose.local.yaml exec worker \
 
 These tests exercise worker contracts and security adapters without changing
 specific raster/vector QC behavior.
+
+Maintenance admission/process-group tests also run as a small host job in CI:
+
+```bash
+PYTHONPATH=src python3 -m unittest \
+  qc_tool.test.test_maintenance_protocol \
+  qc_tool.test.test_worker_auth \
+  qc_tool.test.test_worker_maintenance \
+  qc_tool.test.test_worker_scheduler \
+  qc_tool.test.test_worker_service_auth
+```
+
+They need Bottle and a POSIX process environment. They use synthetic subprocesses,
+including a child process, and do not connect to application/worker databases.
+Frontend maintenance regressions are discovered by the existing frontend suite:
+`dashboard.tests.test_admin_maintenance`, `dashboard.tests.test_maintenance` and
+`dashboard.services.tests.test_maintenance` under the full package prefix above.
+They exercise read-only sessions, cross-process admission/stream draining,
+worker acknowledgments, role/CSRF controls and terminal job history. Maintenance
+coverage also checks bounded parallel probes, strict shared wire contracts,
+service-owned worker retirement, prefixed routes, readiness observation times
+and nonzero operator-command results while stopping remains incomplete. Worker
+coverage must include repeated authority polling under continuous short-job
+load and a dead scheduler causing closed admission plus unhealthy liveness.
+
+### Read-only maintenance matrix
+
+Run these checks in both stopping and ready phases, with ordinary users, scoped
+product managers, administrators/superusers, existing API credentials and
+anonymous/expired/invalid sessions. Use synthetic fixtures and disposable
+SQLite/PostgreSQL targets. Capture SQL to reject DML as well as comparing retained
+rows, because an unchanged final snapshot alone can miss attempted writes.
+
+| Boundary | Expected evidence |
+| --- | --- |
+| Browser/API reads | Authorized pages, lists, history/results, Admin records and retained downloads remain available; forbidden/out-of-scope/missing objects preserve their usual denials; no session, last-login, token-use, Job or Delivery writes |
+| Safe POST reads | `table_export`, `delivery_upload_check` and persisted-status `update_job` work with their normal CSRF, account and payload limits; no worker refresh or DB/filesystem mutation |
+| Mutating requests | Upload registration/chunks/finalization and GET probes, QC claims/creation, publication/reviews, ordinary Admin POSTs, profile/password/token changes and login/logout return maintenance denial before DB or shared-file changes |
+| Hidden writes | Invalid-session cleanup, async session methods, `SESSION_SAVE_EVERY_REQUEST`, API token throttling, status/history refresh and lazy Admin content-type creation cannot persist writes; unexpected ORM writes are blocked |
+| Admission and streaming | Pre-enable admitted requests drain before ready; newly admitted maintenance reads/streams do not hold the writer barrier or invalidate readiness; worker acknowledgments remain required |
+| Presentation | Persistent maintenance notice, disabled mutating controls and visible read controls agree across normal pages, Admin and login; direct calls remain blocked after bypassing disabled UI controls |
+| Route/storage failure | Named routes work under URL prefixes; unclassified effects and missing/corrupt/unsafe maintenance state fail closed; authorization remains enforced |
+
+The original maintenance tests are in `dashboard.tests.test_maintenance`,
+`test_admin_maintenance`, `test_maintenance_streaming` and
+`test_maintenance_control_routes`; read-only browsing coverage is in
+`test_maintenance_browsing`, `test_maintenance_reads` and `test_maintenance_ui`.
+Session, route-policy, table-export and
+history/status regression packages provide the corresponding normal-mode
+contracts. Update their previous blanket-503 assumptions when extending browsing;
+retain writer-fence, generation, worker and storage safety assertions.
 
 ## Full QC test suite
 
@@ -181,7 +284,10 @@ rg --files src/qc_tool/frontend/dashboard/static -g '*.js' \
 git diff --check
 ```
 
-For production settings, run Django's deploy check with a long throwaway secret,
+Frontend CI builds from the repository root and tests the source packaged in the
+image without a checkout bind mount. Local database archives and operator work
+are excluded by `.dockerignore`. For production settings, run Django's deploy
+check with `--deploy --fail-level WARNING`, a long throwaway secret,
 an explicit test hostname, and HTTPS/HSTS settings matching the deployment.
 Never weaken the check or commit its secret.
 

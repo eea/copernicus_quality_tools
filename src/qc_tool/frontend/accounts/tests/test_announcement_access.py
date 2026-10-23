@@ -71,7 +71,7 @@ class AnnouncementAccessTests(TestCase):
         self.assertContains(response, "Update announcement")
         self.assertContains(
             response,
-            '<form method="post" action="{}">'.format(
+            '<form method="post" action="{}" data-maintenance-write>'.format(
                 reverse("announcement_update")
             ),
         )

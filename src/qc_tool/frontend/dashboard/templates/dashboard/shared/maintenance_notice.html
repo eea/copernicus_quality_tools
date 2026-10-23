@@ -1,0 +1,14 @@
+{% load static %}
+{% if admin_notice %}
+<ul class="messagelist" data-maintenance-banner role="status" aria-live="polite" aria-atomic="true"{% if not maintenance.enabled %} hidden{% endif %}>
+  <li class="warning"><span data-maintenance-message>{{ maintenance.notice }}</span> <a href="" data-maintenance-reload>Reload page</a></li>
+</ul>
+{% else %}
+<div class="qc-maintenance-notice" data-maintenance-banner{% if not maintenance.enabled %} hidden{% endif %} role="status" aria-live="polite" aria-atomic="true">
+  <div class="qc-maintenance-notice__content">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+    <span data-maintenance-message>{{ maintenance.notice }}</span>
+    <a class="qc-maintenance-notice__reload" href="" data-maintenance-reload>Reload page</a>
+  </div>
+</div>
+{% endif %}

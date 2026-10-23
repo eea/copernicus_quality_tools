@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import errno
 import os
 from pathlib import Path
 import stat
 
 from .descriptor import ResumableUploadDescriptor
-from .errors import ResumableUploadError
+from .errors import ResumableUploadError, storage_failure
 from .filesystem import directory_flags, open_directory
 
 
@@ -30,14 +31,7 @@ def prepare_resumable_paths(
     """Resolve confined staging paths, optionally creating private directories."""
 
     _validate_owner(username)
-    try:
-        root = Path(media_root).resolve(strict=True)
-    except (OSError, RuntimeError) as exc:
-        raise ResumableUploadError(
-            "upload_storage_unavailable",
-            "Upload storage is unavailable.",
-            503,
-        ) from exc
+    root, root_exists = _prepare_upload_root(media_root, create=create)
 
     user_root = root / username
     uploads_root = user_root / "uploads"
@@ -47,7 +41,7 @@ def prepare_resumable_paths(
         _ensure_confined_directory(user_root, parent=root, mode=0o750)
         _ensure_confined_directory(uploads_root, parent=user_root, mode=0o700)
         _ensure_confined_directory(chunks_dir, parent=uploads_root, mode=0o700)
-    else:
+    elif root_exists:
         user_exists = _validate_optional_directory(user_root, parent=root)
         uploads_exist = user_exists and _validate_optional_directory(
             uploads_root,
@@ -62,6 +56,64 @@ def prepare_resumable_paths(
         chunk_path=chunks_dir / f"chunk-{descriptor.chunk_number:08d}.part",
         target_path=user_root / descriptor.filename,
     )
+
+
+def _prepare_upload_root(media_root, *, create: bool) -> tuple[Path, bool]:
+    """Provision only a configured leaf below an already mounted parent.
+
+    Existing configured roots retain their trusted resolution semantics and
+    permissions. A GET can recognize an absent leaf without creating it; an
+    absent ancestor remains a deployment failure, never a reason to mkdir -p.
+    """
+    configured = Path(media_root)
+    try:
+        root = configured.resolve(strict=True)
+    except FileNotFoundError:
+        try:
+            parent = configured.parent.resolve(strict=True)
+        except OSError as error:
+            raise storage_failure(error, operation="locating the configured upload mount") from error
+        except RuntimeError as error:
+            raise _unsafe_storage() from error
+        root = parent / configured.name
+        directory = open_directory(parent)
+        created = False
+        try:
+            if create:
+                try:
+                    os.mkdir(configured.name, mode=0o750, dir_fd=directory)
+                    created = True
+                except FileExistsError:
+                    pass
+            try:
+                leaf = os.open(configured.name, directory_flags(), dir_fd=directory)
+            except FileNotFoundError:
+                if not create:
+                    return root, False
+                raise
+            try:
+                if not stat.S_ISDIR(os.fstat(leaf).st_mode):
+                    raise _unsafe_storage()
+                if created:
+                    os.fchmod(leaf, 0o750)
+                    os.fsync(leaf)
+                    os.fsync(directory)
+            finally:
+                os.close(leaf)
+        except OSError as error:
+            if error.errno in {errno.ELOOP, errno.ENOTDIR}:
+                raise _unsafe_storage() from error
+            raise storage_failure(error, operation="preparing the configured upload root") from error
+        finally:
+            os.close(directory)
+        return root, True
+    except OSError as error:
+        raise storage_failure(error, operation="resolving the configured upload root") from error
+    except RuntimeError as error:
+        raise _unsafe_storage() from error
+    if not root.is_dir():
+        raise _unsafe_storage()
+    return root, True
 
 
 def expected_chunk_paths(
@@ -115,6 +167,8 @@ def _ensure_confined_directory(path: Path, *, parent: Path, mode: int) -> None:
                 dir_fd=parent_descriptor,
             )
         except OSError as exc:
+            if exc.errno not in {errno.ELOOP, errno.ENOTDIR}:
+                raise storage_failure(exc, operation="opening confined upload storage") from exc
             raise _unsafe_storage() from exc
         try:
             if not stat.S_ISDIR(os.fstat(directory_descriptor).st_mode):
@@ -125,11 +179,7 @@ def _ensure_confined_directory(path: Path, *, parent: Path, mode: int) -> None:
     except ResumableUploadError:
         raise
     except OSError as exc:
-        raise ResumableUploadError(
-            "upload_storage_unavailable",
-            "Upload storage is unavailable.",
-            503,
-        ) from exc
+        raise storage_failure(exc, operation="creating confined upload storage") from exc
     finally:
         os.close(parent_descriptor)
 
@@ -147,6 +197,8 @@ def _validate_optional_directory(path: Path, *, parent: Path) -> bool:
         except FileNotFoundError:
             return False
         except OSError as exc:
+            if exc.errno not in {errno.ELOOP, errno.ENOTDIR}:
+                raise storage_failure(exc, operation="probing confined upload storage") from exc
             raise _unsafe_storage() from exc
         try:
             if not stat.S_ISDIR(os.fstat(directory_descriptor).st_mode):

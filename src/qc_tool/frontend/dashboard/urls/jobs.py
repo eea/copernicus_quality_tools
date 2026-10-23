@@ -6,6 +6,7 @@ from qc_tool.frontend.dashboard.views.jobs.artifacts import (
     get_combined_job_log,
 )
 from qc_tool.frontend.dashboard.views.jobs.artifacts import get_pdf_report
+from qc_tool.frontend.dashboard.views.jobs.artifacts import get_job_input
 from qc_tool.frontend.dashboard.views.jobs.creation import create_job
 from qc_tool.frontend.dashboard.views.jobs.history import get_job_history_json
 from qc_tool.frontend.dashboard.views.jobs.results import get_job_report
@@ -29,6 +30,11 @@ urlpatterns = [
         "data/job_info/<product_ident>/",
         get_job_info,
         name="job_info_json",
+    ),
+    protected_path(
+        "data/job/<uuid:job_uuid>/input.zip",
+        get_job_input,
+        name="job_input_zip",
     ),
     protected_path(
         "data/report/<uuid:job_uuid>/report.pdf",

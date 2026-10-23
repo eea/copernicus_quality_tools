@@ -14,6 +14,9 @@ from qc_tool.frontend.dashboard.services.s3.credentials import (
 )
 from qc_tool.worker_auth import InvalidWorkerUrl
 from qc_tool.worker_auth import worker_origin_from_remote_address
+from qc_tool.frontend.dashboard.services.maintenance import (
+    MaintenanceError, register_worker,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -28,6 +31,8 @@ def pull_job(request):
         )
     except InvalidWorkerUrl:
         return HttpResponseBadRequest("The worker peer address is invalid.")
+    if register_worker(worker_url)["enabled"]:
+        return JsonResponse(None, safe=False)
     job = models.pull_job(worker_url)
     if job is None:
         response = None
@@ -56,3 +61,19 @@ def pull_job(request):
                  "s3_key_prefix": job.delivery.s3.key_prefix
             })
     return JsonResponse(response, safe=False)
+
+
+def worker_maintenance(request):
+    """Worker admission authority; no DB or state writes during maintenance."""
+    try:
+        worker_url = worker_origin_from_remote_address(
+            request.META.get("REMOTE_ADDR"), CONFIG.get("worker_port", WORKER_PORT),
+        )
+        state = register_worker(worker_url)
+    except InvalidWorkerUrl:
+        return HttpResponseBadRequest("The worker peer address is invalid.")
+    except MaintenanceError:
+        return JsonResponse({"error": "maintenance_state_unavailable"}, status=503)
+    response = JsonResponse({"enabled": state["enabled"], "generation": state["generation"]})
+    response["Cache-Control"] = "no-store, private"
+    return response

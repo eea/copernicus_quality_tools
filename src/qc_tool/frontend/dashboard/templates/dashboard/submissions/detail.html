@@ -117,7 +117,8 @@
 {% endif %}
 
 {% if can_decide %}
-<form id="submission-decision" method="post" class="workspace-card review-form" aria-labelledby="submission-decision-heading">
+<form id="submission-decision" method="post" class="workspace-card review-form" aria-labelledby="submission-decision-heading" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
     {% csrf_token %}{{ form.expected_review_version }}{{ form.expected_conflict_version }}
     <header class="workspace-card__header">
         <div>
@@ -152,6 +153,7 @@
             {% endif %}
         </div>
     </div>
+</fieldset>
 </form>
 {% endif %}
 

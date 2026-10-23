@@ -1,0 +1,32 @@
+# Build only application sources and committed test fixtures. In particular,
+# never send local SQL archives, credentials or operator work to a builder.
+**
+!src/
+!src/**
+!product_definitions/
+!product_definitions/**
+!testing_data/
+!testing_data/**
+!docker/
+!docker/**
+!scripts/
+!scripts/**
+!pyproject.toml
+!README.md
+!LICENSE
+**/__pycache__/
+**/*.py[cod]
+**/.env
+**/.env.*
+**/local_settings.py
+**/.DS_Store
+src/qc_tool/database/backups/
+src/**/*.sqlite
+src/**/*.sqlite-*
+src/**/*.sqlite3
+src/**/*.sqlite3-*
+src/**/*.db
+src/**/*.dump
+src/**/*.backup
+docker/*.env
+docker/**/.env*

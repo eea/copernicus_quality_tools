@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-MODELS_ONLY_APPS = ("admin", "auth", "contenttypes", "sessions", "accounts", "dashboard")
+MODELS_ONLY_APPS = ("admin", "auth", "contenttypes", "sessions", "accounts", "dashboard", "qc_database")
 MODELS_ONLY_POLICY = {"phase": "draft", "baselines": {}}
 
 class DatabasePolicyError(Exception):

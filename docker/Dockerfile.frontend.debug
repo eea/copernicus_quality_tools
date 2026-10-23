@@ -1,10 +1,18 @@
-# Keep debug and release environments on the same reviewed runtime manifest.
+# Pin the supported Python patch and multi-architecture image manifest. Update
+# both together after the image scan and runtime regression suite pass.
 FROM python:3.12.14-slim-trixie@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a
 
 LABEL author="gisat.cz"
 LABEL description="QC Tool frontend debug service"
 
 ARG VERSION
+ARG SOURCE_REVISION=unknown
+# Match the supported application database major; update both pins together.
+ARG POSTGRES_CLIENT_MAJOR=14
+ARG POSTGRES_CLIENT_VERSION=14.24-1.pgdg13+2
+LABEL org.opencontainers.image.source="https://github.com/eea/copernicus_quality_tools" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}"
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -20,28 +28,40 @@ RUN test -n "$VERSION" \
     && apt-get install --yes --no-install-recommends \
         ca-certificates \
         tzdata \
-        unzip \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && python3 -c 'import hashlib, pathlib, urllib.request; key = urllib.request.urlopen("https://www.postgresql.org/media/keys/ACCC4CF8.asc", timeout=30).read(); assert hashlib.sha256(key).hexdigest() == "0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76", "Unexpected PGDG signing key"; pathlib.Path("/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc").write_bytes(key)' \
+    && printf '%s\n' \
+        'Types: deb' \
+        'URIs: https://apt.postgresql.org/pub/repos/apt' \
+        'Suites: trixie-pgdg' \
+        'Components: main' \
+        'Signed-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc' \
+        > /etc/apt/sources.list.d/pgdg.sources \
+    && apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        "postgresql-client-${POSTGRES_CLIENT_MAJOR}=${POSTGRES_CLIENT_VERSION}" \
+    && pg_dump --version && pg_restore --version \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.frontend.txt /tmp/requirements.frontend.txt
+COPY docker/requirements.frontend.txt /tmp/requirements.frontend.txt
 RUN python -m pip install --no-cache-dir \
         -r /tmp/requirements.frontend.txt \
-    && python -m pip install --no-cache-dir \
-        --target /tmp \
-        debugpy==1.8.17
+    && python -m pip install --no-cache-dir --target /tmp debugpy==1.8.17
 
-RUN mkdir -p /tmp/qc-tool-source /usr/local/src \
-    && python -c "import os, urllib.request; version = os.environ['VERSION']; urllib.request.urlretrieve('https://github.com/eea/copernicus_quality_tools/archive/' + version + '.zip', '/tmp/qc-tool-source.zip')" \
-    && unzip -q /tmp/qc-tool-source.zip -d /tmp/qc-tool-source \
-    && extracted_dir="$(find /tmp/qc-tool-source -mindepth 1 -maxdepth 1 -type d -print -quit)" \
-    && test -n "$extracted_dir" \
-    && mv "$extracted_dir" /usr/local/src/copernicus_quality_tools \
-    && rm -rf /tmp/qc-tool-source /tmp/qc-tool-source.zip \
-    && mkdir -p /var/lib/qc_tool
+# The checkout is the build input. CI tests this packaged source without a bind
+# mount; VERSION is provenance, never an instruction to fetch a mutable branch.
+COPY src /usr/local/src/copernicus_quality_tools/src
+COPY product_definitions /usr/local/src/copernicus_quality_tools/product_definitions
+COPY testing_data /usr/local/src/copernicus_quality_tools/testing_data
+COPY docker /usr/local/src/copernicus_quality_tools/docker
+COPY scripts /usr/local/src/copernicus_quality_tools/scripts
+COPY pyproject.toml README.md LICENSE /usr/local/src/copernicus_quality_tools/
+RUN mkdir -p /var/lib/qc_tool \
+    && python3 -c "import sys; assert sys.version_info >= (3, 11)"
 
 EXPOSE 8000 5678
 
-COPY run_frontend.sh /run_frontend.sh
+COPY docker/run_frontend.sh /run_frontend.sh
 RUN chmod 0755 /run_frontend.sh
 
 CMD ["/run_frontend.sh"]

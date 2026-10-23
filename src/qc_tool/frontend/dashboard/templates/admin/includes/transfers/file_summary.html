@@ -1,0 +1,14 @@
+{% if file_references %}
+<section class="transfer-file-summary" aria-labelledby="file-summary-heading">
+  <h3 id="file-summary-heading">Files in this package</h3>
+  <dl class="transfer-account-summary" aria-label="File reference summary">
+    <div><dt>File references</dt><dd>{{ file_references.total }}</dd></div>
+    <div><dt>Files included</dt><dd>{{ file_references.included }}</dd></div>
+    <div><dt>Not included</dt><dd>{{ file_references.not_included }}</dd></div>
+    <div><dt>Missing at source</dt><dd>{{ file_references.missing }}</dd></div>
+    <div><dt>Not verified</dt><dd>{{ file_references.unverified }}</dd></div>
+    <div><dt>Remote files</dt><dd>{{ file_references.remote }}</dd></div>
+  </dl>
+  <p class="help">Records keep their file identities even when bytes are unavailable. Importing files does not approve a delivery or change its QC result.</p>
+</section>
+{% endif %}

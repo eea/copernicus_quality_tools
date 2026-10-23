@@ -77,6 +77,7 @@
                 label: count === 1 ? "Delete delivery" : "Delete " + count + " deliveries",
                 cssClass: "btn-qc-danger",
                 action: function (dialog) {
+                    if (window.qcMaintenance && window.qcMaintenance.isActive()) { dialog.close(); return; }
                     var button = this;
                     button.disable();
                     button.spin();
@@ -133,6 +134,7 @@
                 label: count === 1 ? "Submit delivery" : "Submit " + count + " deliveries",
                 cssClass: "btn-qc-primary",
                 action: function (dialog) {
+                    if (window.qcMaintenance && window.qcMaintenance.isActive()) { dialog.close(); return; }
                     var button = this;
                     var requestData = useBatch ? {
                         ids: rows.map(function (row) { return row.id; }).join(","),

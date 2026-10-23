@@ -22,7 +22,7 @@
         var eligible = eligibleSelections();
         var selected = eligible.filter(function (input) { return input.checked; }).length;
         count.textContent = selected + " selected";
-        approve.disabled = openingReview || selected === 0;
+        approve.disabled = openingReview || selected === 0 || Boolean(window.qcMaintenance && window.qcMaintenance.isActive());
         approve.textContent = openingReview ? "Opening review…" :
             "Approve selected" + (selected ? " (" + selected + ")" : "");
         selectAll.checked = eligible.length > 0 && selected === eligible.length;

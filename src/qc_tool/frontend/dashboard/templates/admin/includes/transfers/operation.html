@@ -1,0 +1,112 @@
+{% load static %}
+  {% if needs_native_destination %}
+  <section class="module transfer-panel" id="prepare-destination">
+    <h2>Create a restore database</h2>
+    <div class="transfer-panel__body">
+      <p>Your backup is uploaded. Create a separate empty database for this import, then review its name before restoring. Your running database stays in use.</p>
+      {% if transfer_database.current_database %}<p class="help">Current database: <strong>{{ transfer_database.current_database }}</strong>.</p>{% endif %}
+      {% if plan_counts %}<table class="transfer-counts"><caption>Backup contents</caption><thead><tr><th scope="col">Information</th><th scope="col">Records</th></tr></thead><tbody>{% for label, count in plan_counts %}<tr><th scope="row">{{ label }}</th><td>{{ count }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+      {% if transfer_database.ready and not transfer_database.can_create_restore_database %}<p class="errornote" role="alert">{% if transfer_database.restore_reason %}{{ transfer_database.restore_reason }}{% else %}PostgreSQL permissions do not allow creating a restore database. An operator must enable database creation for this installation.{% endif %}</p>{% endif %}
+      <form method="post" class="transfer-actions" data-maintenance-exempt>
+        {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
+        <button type="submit" class="button default btn-qc-primary" name="action" value="prepare_destination"{% if not can_prepare_native_destination %} disabled{% endif %}>Create restore database</button>
+        {% if operation.cancellable %}<button type="submit" class="button btn-qc-secondary" name="action" value="cancel">Discard package</button>{% endif %}
+      </form>
+      {% if not maintenance_ready %}<p class="help">Turn on maintenance before preparing the destination.</p>{% endif %}
+      {% if source_details %}<details class="transfer-details"><summary>Backup details</summary><dl>{% for label, value in source_details %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></details>{% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if operation and not needs_native_destination %}
+  {% if not plan or not can_review_import %}
+  <section class="module transfer-panel" id="transfer-operation"
+    {% if operation.status == 'queued' or operation.status == 'running' %}data-transfer-status-url="{% url 'admin_data_transfer_status' operation.id %}" data-operation-id="{{ operation.id }}" data-transfer-status="{{ operation.status }}" data-runner-active="{{ operation.runner_active|yesno:'true,false' }}" data-recoverable="{{ operation.recoverable|yesno:'true,false' }}" data-cancellable="{{ operation.cancellable|yesno:'true,false' }}"{% endif %}>
+    <h2>{% if operation.status == 'completed' %}{% if operation.kind == 'export' %}{% if native_transfer %}Your database backup is ready{% else %}Your export is ready{% endif %}{% elif native_transfer %}Database restore complete{% else %}Import complete{% endif %}{% elif operation.status == 'cancelled' %}Transfer cancelled{% elif operation.recoverable or operation.status == 'failed' or operation.status == 'recovery_required' %}Transfer needs attention{% elif operation.status == 'staged' %}Package uploaded{% elif operation.status == 'planned' %}Review your import{% elif operation.kind == 'export' %}Creating your export{% elif native_transfer %}Restoring the database{% else %}Importing records{% endif %}</h2>
+    <div class="transfer-panel__body">
+      {% if operation.error %}<p class="errornote" role="alert">{{ operation.error }}</p>{% endif %}
+      {% if operation.recoverable %}
+        <p>The transfer stopped. Recover it to verify its saved result before continuing.</p>
+      {% elif operation.status == 'queued' or operation.status == 'running' %}
+        <p class="transfer-progress" role="status">{% if operation.kind == 'export' %}Preparing and checking your package.{% elif native_transfer %}Restoring and verifying the separate database.{% else %}Importing and verifying the reviewed records.{% endif %} You can leave this page and return from Transfer history.</p>
+        <p class="help"><span data-transfer-poll-message>Progress updates automatically.</span> <a href="{% url 'admin_data_transfer' %}?operation={{ operation.id|urlencode }}#transfer-operation" data-transfer-refresh>Refresh status</a></p>
+      {% elif operation.status == 'staged' and not plan %}
+        <p>The package is saved. Review it to see which records and files will be added.</p>
+        <form method="post" data-maintenance-exempt>
+          {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
+          <button type="submit" class="button default btn-qc-primary" name="action" value="plan"{% if not transfers_ready %} disabled{% endif %}>Review import</button>
+          {% if not transfers_ready %}<p class="help">Turn on maintenance, then return here to review your import.</p>{% endif %}
+        </form>
+      {% endif %}
+      {% if operation.downloadable %}
+        <div class="transfer-actions"><a class="button default btn-qc-primary" href="{% url 'admin_data_transfer_download' operation.id %}">{% if operation.kind == 'import' %}Download original package{% elif native_transfer %}Download database backup{% else %}Download ZIP package{% endif %}</a></div>
+        {% if native_transfer %}<p class="help">Contains credentials and permissions. Store this backup securely.</p>{% endif %}
+        {% if operation.expires_at %}<p class="help">Available until {{ operation.expires_at }}.</p>{% endif %}
+      {% endif %}
+      {% if operation.result %}
+        {% if operation.kind == 'import' and native_transfer %}
+          {% if operation_database_active %}<p><strong>This restored database is now active.</strong>{% if transfer_maintenance.enabled %} Maintenance remains on.{% endif %} The previous database is retained.</p>{% else %}<p><strong>Restored into a separate database{% if operation.result.target_label %}: {{ operation.result.target_label }}{% endif %}.</strong> The live database has not been replaced.</p><p>Verify its matching files and credentials before switching. {% if plan.include_files %}Available package files were checked without overwriting existing files.{% else %}File contents were not copied.{% endif %} Deployment secrets require separate recovery.</p>{% if not maintenance_ready %}<p>Enable maintenance to review and switch to this database.</p>{% endif %}{% endif %}
+        {% elif operation.kind == 'import' %}
+          <p><strong>{{ created_accounts }} account{{ created_accounts|pluralize }} created.</strong>{% if mapped_accounts and transfer_area != 'users' %} {{ mapped_accounts }} existing account{{ mapped_accounts|pluralize }} mapped.{% endif %}</p>
+          {% if transfer_area == 'users' %}
+          <dl class="transfer-account-summary" aria-label="User import result"><div><dt>Profiles updated</dt><dd>{{ operation.result.updated_counts.accounts|default:0 }}</dd></div><div><dt>Existing accounts reused</dt><dd>{{ operation.result.reused_counts.accounts|default:0 }}</dd></div><div><dt>Skipped</dt><dd>{{ operation.result.skipped_account_keys|length }}</dd></div></dl>
+          <p>Profile updates changed only the reviewed names and email addresses. Existing credentials, access permissions and connected history were preserved.</p>
+          {% endif %}
+          {% if operation.profile == 'application' or operation.plan.profile == 'application' %}<p>New records were added to this installation. Existing records remain unchanged.</p>{% endif %}
+          {% if operation.result.created_account_keys %}<p>New accounts are inactive. Review their access and set credentials before activation.</p>{% endif %}
+        {% endif %}
+        {% if result_count_rows %}<table class="transfer-counts"><caption>Verified records</caption><thead><tr><th scope="col">Information</th><th scope="col">Records</th></tr></thead><tbody>{% for label, count in result_count_rows %}<tr><th scope="row">{{ label }}</th><td>{{ count }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+        {% if operation.result.warnings %}<ul class="transfer-warnings">{% for warning in operation.result.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+      {% endif %}
+      {% if can_review_database_switch and not activation_form %}
+      <form method="post" class="transfer-actions" data-maintenance-exempt>
+        {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
+        <button type="submit" class="button default btn-qc-primary" name="action" value="review_database_switch">Review database switch</button>
+      </form>
+      {% endif %}
+      {% if activation_form and not operation_database_active %}
+      <div class="transfer-confirmation">
+        <h3>Switch to the restored database</h3>
+        <p><strong>{{ activation_review.source_database }}</strong> &rarr; <strong>{{ activation_review.target_database }}</strong>. The current database will be retained.</p>
+        {% if activation_review.blockers %}<ul class="errornote" role="alert">{% for blocker in activation_review.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
+        <form method="post" action="{% url 'admin_data_transfer' %}" class="transfer-control-form" data-maintenance-exempt>
+          {% csrf_token %}<input type="hidden" name="action" value="activate_database"><input type="hidden" name="operation_id" value="{{ operation.id }}">
+          {% for field in activation_form.hidden_fields %}{{ field }}{% endfor %}
+          <fieldset{% if not maintenance_ready or not activation_review.can_apply or activation_review.blockers %} disabled{% endif %}>
+            <legend>Confirm database switch</legend>
+            {{ activation_form.non_field_errors }}
+            <div class="form-row">{{ activation_form.destination_confirmation.errors }}{{ activation_form.destination_confirmation.label_tag }}{{ activation_form.destination_confirmation }}<p class="help">{{ activation_form.destination_confirmation.help_text }}</p></div>
+            {% if activation_form.requires_credentials %}<p>Verify administrator access on the restored database.</p><div class="form-row">{{ activation_form.username.errors }}{{ activation_form.username.label_tag }}{{ activation_form.username }}</div><div class="form-row">{{ activation_form.password.errors }}{{ activation_form.password.label_tag }}{{ activation_form.password }}</div>{% endif %}
+            <div class="form-row transfer-checkbox">{{ activation_form.confirmed_storage.errors }}{{ activation_form.confirmed_storage }}{{ activation_form.confirmed_storage.label_tag }}</div>
+            <div class="transfer-actions"><button type="submit" class="button default btn-qc-primary">Switch active database</button></div>
+          </fieldset>
+          <p class="help">Maintenance stays on after switching. Switch-back controls are under Backups &amp; recovery → Database settings &amp; rollback below.</p>
+        </form>
+      </div>
+      {% endif %}
+      {% if transfer_maintenance.enabled %}{% if operation.status == 'completed' or operation.status == 'cancelled' %}<p>Maintenance remains on. <a href="{{ maintenance_url }}">Turn off maintenance</a> when your work is finished.</p>{% endif %}{% endif %}
+
+      {% if operation.recoverable or operation.cancellable %}
+      <form method="post" class="transfer-actions" data-maintenance-exempt>
+        {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
+        {% if operation.recoverable %}<button type="submit" class="button btn-qc-secondary" name="action" value="retry">{% if operation.status == 'completed' or operation.status == 'cancelled' %}Finish recovery{% else %}Recover transfer{% endif %}</button>{% endif %}
+        {% if operation.cancellable and not operation.runner_active %}<button type="submit" class="button btn-qc-secondary" name="action" value="cancel">{% if operation.status == 'staged' or operation.status == 'planned' %}Discard package{% else %}Cancel transfer{% endif %}</button>{% endif %}
+      </form>
+      {% endif %}
+      <details class="transfer-details">
+        <summary>Transfer details</summary>
+        <dl>
+          <dt>Operation</dt><dd><code>{{ operation.id }}</code></dd>
+          <dt>Status</dt><dd>{{ operation.status }}</dd>
+          {% if operation.created_at %}<dt>Started</dt><dd>{{ operation.created_at }}</dd>{% endif %}
+          {% if operation.updated_at %}<dt>Last updated</dt><dd>{{ operation.updated_at }}</dd>{% endif %}
+          {% if operation.message %}<dt>Details</dt><dd>{{ operation.message }}</dd>{% endif %}
+          {% if operation.package_sha256 %}<dt>Package SHA-256</dt><dd><code>{{ operation.package_sha256 }}</code></dd>{% endif %}
+        </dl>
+        <p><a href="{% url 'admin_data_transfer' %}?operation={{ operation.id|urlencode }}#transfer-operation" data-transfer-refresh>Refresh this transfer</a></p>
+      </details>
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+

@@ -47,7 +47,8 @@
                 <p>Changes are shown to every signed-in user. Saving an empty message removes the current announcement.</p>
             </div>
         </header>
-        <form method="post" action="{% url 'announcement_update' %}">
+        <form method="post" action="{% url 'announcement_update' %}" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
             {% csrf_token %}
             <div class="workspace-card__body announcement-card__body">
             <div class="form-group{% if announcement_form.announcement_text.errors %} has-error{% endif %}">
@@ -69,7 +70,8 @@
                 Save announcement
             </button>
             </div>
-        </form>
+        </fieldset>
+</form>
     </section>
     {% endif %}
 {% endblock page_content %}

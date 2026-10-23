@@ -1,0 +1,3 @@
+{% if record_actions %}<div class="database-actions">
+{% for action in record_actions %}{% if maintenance.enabled %}<button type="button" class="btn-qc-secondary" disabled title="Record changes are paused during maintenance.">{{ action.label }}</button>{% else %}<a class="{% if action.kind == 'primary' %}btn-qc-primary{% else %}btn-qc-secondary{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% endif %}{% endfor %}
+</div>{% endif %}

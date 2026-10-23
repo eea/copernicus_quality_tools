@@ -1,0 +1,189 @@
+/* Scoped layout for reviewed Admin transfers and forms. */
+.transfer-page { max-width: 1100px; }
+.transfer-page [hidden] { display: none !important; }
+.transfer-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0 0 20px; padding: 0; list-style-position: inside; }
+.transfer-steps li { padding: 12px; border-bottom: 3px solid var(--hairline-color); color: var(--body-quiet-color); }
+.transfer-steps li[aria-current="step"] { color: var(--body-fg); border-bottom-color: var(--primary); font-weight: 600; }
+.transfer-tabs { display: flex; gap: 24px; margin: 0 0 20px; border-bottom: 1px solid var(--hairline-color); }
+.transfer-tabs a, .transfer-tabs > span { padding: 4px 0 12px; border-bottom: 3px solid transparent; font-weight: 600; }
+.transfer-tabs [aria-current="page"] { color: var(--body-fg); border-bottom-color: var(--primary); }
+.transfer-maintenance { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; padding: 12px 16px; margin-bottom: 20px; background: var(--darkened-bg); border: 1px solid var(--hairline-color); border-radius: 4px; line-height: 1.6; }
+.transfer-maintenance > a { white-space: nowrap; }
+.transfer-panel { border: 1px solid var(--hairline-color); border-radius: 4px; overflow: hidden; }
+.transfer-panel > h2 { margin: 0; padding: 12px 18px; }
+.transfer-panel__body { padding: 4px 20px 20px; }
+.transfer-panel__body > p { line-height: 1.6; }
+.transfer-page .transfer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin: 20px 0 0; }
+.transfer-scopes { padding: 8px 0 0; border: 0; }
+.transfer-scope { display: flex; align-items: flex-start; gap: 10px; padding: 14px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; }
+.transfer-scope:has(input:checked) { border-color: var(--primary); background: var(--selected-bg); }
+.transfer-scope > input { margin: 3px 0 0; flex-shrink: 0; }
+.transfer-file-options { margin-top: 20px; }
+.transfer-file-options > legend { padding: 0; font-size: 16px; font-weight: 600; }
+.transfer-file-options > .help { margin-bottom: 0; }
+.transfer-file-summary { margin-top: 20px; }
+.transfer-compatibility { padding: 14px 16px; margin-bottom: 20px; border: 1px solid var(--hairline-color); border-left: 3px solid var(--primary); border-radius: 4px; background: var(--darkened-bg); }
+.transfer-compatibility--blocked { border-left-color: var(--error-fg); }
+.transfer-compatibility h3 { margin-top: 0; }
+.transfer-compatibility p:last-child { margin-bottom: 0; }
+.transfer-secondary { display: block; margin-top: 5px; color: var(--body-quiet-color); font-weight: 400; line-height: 1.5; }
+.transfer-user-selection { margin: 20px 0; }
+.transfer-user-selection > label { display: block; margin-bottom: 10px; font-weight: 600; }
+.transfer-user-selection::after { display: block; clear: both; content: ""; }
+.transfer-page .form-row { padding: 12px 0; }
+.transfer-page .form-row > label { display: block; margin-bottom: 8px; font-weight: 600; }
+.transfer-page input[type="file"] { max-width: 100%; }
+.transfer-table-wrap { width: 100%; overflow-x: auto; }
+.transfer-counts { width: min(100%, 560px); margin: 16px 0; }
+.transfer-counts caption { padding: 10px 12px; text-align: left; font-weight: 600; }
+.transfer-counts td { width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
+.transfer-counts th, .transfer-counts td, .transfer-mappings th, .transfer-mappings td, .transfer-history th, .transfer-history td { padding: 10px 12px; }
+.transfer-mappings, .transfer-history { width: 100%; }
+.transfer-mappings th { width: 38%; font-weight: 600; }
+.transfer-mappings select { width: 100%; max-width: 440px; }
+.transfer-mappings .errornote { margin: 8px 0 0; font-weight: 400; }
+.transfer-warnings { padding: 12px 12px 12px 30px; border-left: 3px solid var(--message-warning-bg); background: var(--darkened-bg); }
+.transfer-warnings li { line-height: 1.6; }
+.transfer-confirmation { padding-top: 20px; margin-top: 24px; border-top: 1px solid var(--hairline-color); }
+.transfer-confirmation fieldset { padding: 0; border: 0; }
+.transfer-confirmation legend { padding: 0; font-size: 16px; font-weight: 600; }
+.transfer-confirmation input[type="text"] { box-sizing: border-box; width: min(100%, 500px); }
+.transfer-control-form fieldset { padding: 0; border: 0; }
+.transfer-control-form legend { padding-top: 16px; font-weight: 600; }
+.transfer-control-form input[type="text"], .transfer-control-form input[type="password"] { box-sizing: border-box; width: min(100%, 500px); }
+.transfer-page .transfer-checkbox { display: flex; align-items: flex-start; gap: 10px; }
+.transfer-page .transfer-checkbox > label { margin: 0; font-weight: 400; line-height: 1.5; }
+.transfer-checkbox > input { margin-top: 3px; }
+.transfer-details { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--hairline-color); }
+.transfer-details summary { width: fit-content; color: var(--link-fg); cursor: pointer; }
+.transfer-details dl { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px 16px; margin: 16px 0; }
+.transfer-details dt { color: var(--body-quiet-color); }
+.transfer-details dd { margin: 0; overflow-wrap: anywhere; }
+.transfer-progress { padding-left: 14px; border-left: 3px solid var(--primary); }
+.transfer-page .paginator { margin-top: 16px; }
+.transfer-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.transfer-revalidate { margin-top: 16px; }
+.transfer-summary, .transfer-files, .transfer-differences { width: 100%; margin: 16px 0; }
+.transfer-summary caption, .transfer-differences caption { text-align: left; padding: 10px 12px; font-weight: 600; }
+.transfer-summary th, .transfer-summary td, .transfer-files th, .transfer-files td, .transfer-differences th, .transfer-differences td { padding: 10px 12px; vertical-align: top; }
+.transfer-summary td { text-align: right; font-variant-numeric: tabular-nums; }
+.transfer-summary th:not(:first-child) { text-align: right; }
+.transfer-file-review, .transfer-conflict-review, .transfer-completion-links { margin-top: 24px; padding-top: 8px; }
+.transfer-files th { min-width: 170px; }
+.transfer-files td { min-width: 190px; }
+.transfer-files td:last-child { min-width: 60px; font-variant-numeric: tabular-nums; }
+.transfer-files details { margin-top: 10px; }
+.transfer-files code, .transfer-differences td { overflow-wrap: anywhere; }
+.transfer-conflict { margin-top: 16px; padding: 16px; border: 1px solid var(--hairline-color); border-radius: 4px; }
+.transfer-conflict__heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.transfer-conflict__heading h4 { margin: 0; overflow-wrap: anywhere; }
+.transfer-conflict__heading .transfer-secondary { margin: 0; }
+.transfer-conflict select { width: min(100%, 620px); }
+.transfer-differences { table-layout: fixed; }
+.transfer-differences th:first-child { width: 24%; }
+.transfer-completion-links li { margin-bottom: 8px; }
+.transfer-recovery-help { margin: 18px 0; }
+.transfer-recovery-help summary { color: var(--link-fg); cursor: pointer; }
+.transfer-history td { white-space: nowrap; }
+@media (max-width: 767px) {
+  .transfer-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .transfer-tabs { gap: 20px; }
+  .transfer-panel__body { padding-right: 14px; padding-left: 14px; }
+  .transfer-panel > h2 { padding-right: 14px; padding-left: 14px; }
+  .transfer-scope { padding: 12px; }
+  .transfer-details dl { grid-template-columns: 1fr; gap: 4px; }
+  .transfer-details dd { margin-bottom: 8px; }
+  .transfer-mappings th { width: auto; min-width: 120px; }
+  .transfer-mappings td { min-width: 180px; }
+  .transfer-user-selection .selector { width: 100%; }
+  .transfer-conflict { padding: 12px; }
+  .transfer-summary, .transfer-summary caption, .transfer-summary tbody,
+  .transfer-files, .transfer-files tbody { display: block; box-sizing: border-box; width: 100%; }
+  .transfer-summary thead, .transfer-files thead { display: none; }
+  .transfer-summary tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 0; border-bottom: 1px solid var(--hairline-color); }
+  .transfer-summary th { grid-column: 1 / -1; text-align: left; }
+  .transfer-summary td { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 8px 12px; }
+  .transfer-summary td::before { content: attr(data-label); color: var(--body-quiet-color); font-size: 11px; text-align: left; }
+  .transfer-files tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--hairline-color); }
+  .transfer-files th, .transfer-files td { display: block; min-width: 0; width: auto; overflow-wrap: anywhere; }
+  .transfer-files td:last-child { min-width: 0; }
+  .transfer-files td:last-child::before { content: attr(data-label) ": "; color: var(--body-quiet-color); }
+  .transfer-differences, .transfer-differences caption, .transfer-differences tbody { display: block; box-sizing: border-box; width: 100%; min-width: 0; }
+  .transfer-differences thead { display: none; }
+  .transfer-differences tr { display: block; border-bottom: 1px solid var(--hairline-color); }
+  .transfer-differences th:first-child, .transfer-differences td { display: block; box-sizing: border-box; width: 100%; }
+  .transfer-differences td::before { display: block; margin-bottom: 6px; content: attr(data-label); color: var(--body-quiet-color); font-size: 11px; }
+}
+
+/* Task choices and focused workflows share the Admin shell's visual language. */
+.qc-admin-home.transfer-page { max-width: 1100px; }
+.transfer-page .qc-admin-intro { margin-bottom: 24px; }
+.transfer-tabs { flex-wrap: wrap; gap: 0 28px; margin-bottom: 26px; }
+.transfer-tabs a { min-height: 36px; padding: 8px 0 9px; text-decoration: none; }
+.transfer-panel { margin: 0 0 24px; border-color: var(--border-color); border-radius: 10px; background: var(--qc-admin-surface); box-shadow: var(--qc-shadow-low); }
+.transfer-panel > h2 { padding: 18px 22px; font-size: 16px; text-transform: none; }
+.transfer-panel__body { padding: 4px 22px 24px; }
+.transfer-maintenance { border-radius: 8px; background: var(--qc-admin-warning-soft); color: var(--qc-admin-warning); }
+.transfer-maintenance a { color: inherit; font-weight: 600; text-underline-offset: 3px; }
+.transfer-ready { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; color: var(--body-quiet-color); font-size: 12px; }
+.transfer-ready a { margin-inline-start: 6px; }
+.transfer-scopes { padding-top: 12px; }
+.transfer-scope { padding: 16px; border-radius: 8px; }
+.transfer-scope > span { flex: 1; min-width: 0; }
+.transfer-scope .transfer-secondary { font-size: 13px; }
+.transfer-scope input { accent-color: var(--button-bg); }
+.transfer-scope-summary { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px 24px; padding: 12px 0; }
+.transfer-scope-summary dt { font-weight: 600; }
+.transfer-scope-summary dd { margin: 0; color: var(--body-quiet-color); line-height: 1.6; }
+.transfer-import-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 28px; padding-top: 8px; border-top: 1px solid var(--hairline-color); }
+.transfer-import-types p { margin: 12px 0 0; font-size: 13px; }
+.transfer-import-types span { display: block; margin-top: 5px; color: var(--body-quiet-color); line-height: 1.6; }
+.transfer-database-settings { margin-top: 30px; padding: 16px 20px; border: 1px solid var(--border-color); border-radius: 9px; background: var(--qc-admin-surface); }
+.transfer-database-settings > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.transfer-database-settings > h3 { padding: 12px 0 0; font-size: 14px; }
+.transfer-database-settings > .transfer-panel__body { padding: 0; }
+.transfer-database-settings .transfer-details { margin-top: 16px; }
+.transfer-issue { margin-bottom: 20px; padding: 16px 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--qc-admin-warning-soft); }
+.transfer-issue h2 { margin: 0 0 8px; font-size: 14px; }
+.transfer-issue p { margin: 6px 0; }
+.transfer-issue details { margin-top: 12px; }
+.transfer-issue summary { cursor: pointer; }
+.transfer-history th, .transfer-history td { padding: 14px 18px; }
+.transfer-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.transfer-category { min-width: 0; }
+.transfer-category__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: auto; }
+.transfer-category > .transfer-category__note { margin: 18px 0 0; font-size: 12px; line-height: 1.6; }
+.transfer-includes { display: grid; gap: 10px; margin: 18px 0; padding-inline-start: 22px; color: var(--body-quiet-color); }
+.transfer-recovery { margin-top: 30px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--qc-admin-surface); }
+.transfer-recovery > summary { padding: 18px 22px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.transfer-recovery > summary .transfer-secondary { margin-inline-start: 18px; font-size: 12px; }
+.transfer-recovery__body { padding: 0 22px 22px; }
+.transfer-recovery__body > p { line-height: 1.65; }
+.transfer-recovery .transfer-database-settings { margin-top: 22px; padding: 16px 0 0; border: 0; border-top: 1px solid var(--hairline-color); border-radius: 0; }
+.transfer-account-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin: 20px 0; }
+.transfer-account-summary > div { padding: 12px; border: 1px solid var(--hairline-color); border-radius: 8px; }
+.transfer-account-summary dt { color: var(--body-quiet-color); font-size: 12px; }
+.transfer-account-summary dd { margin: 5px 0 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.transfer-account-choice { margin-top: 20px; padding: 18px; border: 1px solid var(--border-color); border-radius: 8px; }
+.transfer-account-choice__heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; }
+.transfer-account-choice__heading h4 { margin: 0; overflow-wrap: anywhere; }
+.transfer-account-choice__heading .transfer-secondary { margin: 0; }
+.transfer-account-choice__fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.transfer-account-choice__fields select { box-sizing: border-box; width: 100%; min-width: 0; }
+.transfer-account-choice .errornote { margin: 10px 0; }
+.transfer-account-choice .transfer-differences { margin-bottom: 8px; }
+.transfer-account-protection { margin: 18px 0; padding: 12px 16px; border-left: 3px solid var(--primary); background: var(--darkened-bg); font-size: 13px; line-height: 1.6; }
+@media (max-width: 767px) {
+  .transfer-tabs { gap: 0 20px; }
+  .transfer-tabs a { font-size: 12px; }
+  .transfer-panel > h2 { padding: 16px; }
+  .transfer-panel__body { padding: 4px 16px 20px; }
+  .transfer-scope-summary, .transfer-import-types { grid-template-columns: 1fr; gap: 8px; }
+  .transfer-scope-summary dd { margin-bottom: 10px; }
+  .transfer-categories, .transfer-account-choice__fields { grid-template-columns: 1fr; }
+  .transfer-category__actions > a { flex: 1 1 auto; }
+  .transfer-recovery > summary { padding: 16px; }
+  .transfer-recovery__body { padding: 0 16px 18px; }
+  .transfer-account-choice { padding: 14px; }
+  .transfer-account-choice__fields { gap: 0; }
+}

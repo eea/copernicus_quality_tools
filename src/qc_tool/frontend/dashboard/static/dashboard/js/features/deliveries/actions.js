@@ -20,7 +20,8 @@
 
     function updateButton(selector, label, eligible, total, reason) {
         var $button = $(selector);
-        var allEligible = total > 0 && eligible === total;
+        var maintenance = Boolean(window.qcMaintenance && window.qcMaintenance.isActive());
+        var allEligible = !maintenance && total > 0 && eligible === total;
         var displayLabel = total ? label + " (" + total + ")" : label;
         if (!$button.length) {
             return;
@@ -160,6 +161,7 @@
         bindBulkActions();
         bindSelectionEvents();
         updateSelection();
+        document.addEventListener("qc:maintenance", updateSelection);
     }
 
     window.QcDeliveryActions = {

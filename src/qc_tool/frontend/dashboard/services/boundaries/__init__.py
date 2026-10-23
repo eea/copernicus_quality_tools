@@ -18,13 +18,14 @@ from .errors import (
     BoundaryPackageConfigurationError,
     BoundaryPackageError,
     BoundaryPackageInternalError,
+    BoundaryPackageInsufficientSpace,
     BoundaryPackageInvalid,
     BoundaryPackageLimitExceeded,
     BoundaryPackagePromotionError,
     BoundaryPackageUnsafe,
 )
 from .resolver import resolve_boundary_generation
-from .service import replace_boundary_package
+from .service import inspect_boundary_capacity, replace_boundary_package
 
 
 __all__ = (
@@ -37,12 +38,14 @@ __all__ = (
     "BoundaryPackageError",
     "BoundaryPackageInvalid",
     "BoundaryPackageInternalError",
+    "BoundaryPackageInsufficientSpace",
     "BoundaryPackageLimitExceeded",
     "BoundaryPackageLimits",
     "BoundaryPackagePromotionError",
     "BoundaryPackageResult",
     "BoundaryPackageUnsafe",
     "replace_boundary_package",
+    "inspect_boundary_capacity",
     "resolve_boundary_generation",
     "list_boundary_files",
 )

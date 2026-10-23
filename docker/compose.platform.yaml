@@ -1,0 +1,8 @@
+# Optional explicit architecture override for local builds. Retains the former
+# QC_TOOL_PLATFORM setting without forcing every ARM developer through QEMU.
+# docker compose -f docker/compose.local.yaml -f docker/compose.platform.yaml ...
+services:
+  frontend:
+    platform: "${QC_TOOL_PLATFORM:?Set QC_TOOL_PLATFORM to the target architecture}"
+  worker:
+    platform: "${QC_TOOL_PLATFORM:?Set QC_TOOL_PLATFORM to the target architecture}"

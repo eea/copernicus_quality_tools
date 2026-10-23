@@ -41,6 +41,17 @@ const rejected = {
     job_result_url: "/jobs/result/", can_delete: true, can_run_qc: true, can_submit: true,
 };
 
+test("maintenance disables delivery mutations while keeping review and QC setup links", () => {
+    const {window} = page();
+    window.qcMaintenance = {isActive: () => true};
+    const actions = window.actionsFormatter(null, {...rejected, delivery_status: "passed", date_submitted: null, can_delete: true});
+    const buttons = actions.querySelectorAll("button");
+    assert.ok(buttons.length);
+    assert.ok(buttons.every(button => button.disabled));
+    assert.ok(actions.querySelector(".delivery-review-link").getAttribute("href"));
+    assert.ok(actions.querySelector(".delivery-row-qc").getAttribute("href"));
+});
+
 test("review outcomes stay distinct from the QC result", () => {
     const {window} = page();
     const status = window.QcDeliveryRowStatus.presentation;

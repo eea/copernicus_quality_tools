@@ -1,0 +1,23 @@
+/* Reuse shared actions and the Admin status card and theme variables. */
+.qc-maintenance { max-width: 1060px; }
+.qc-maintenance .qc-admin-service { align-items: center; }
+.qc-maintenance .qc-admin-service__actions { flex-shrink: 0; max-width: 240px; }
+.qc-maintenance .qc-admin-service__actions form { margin: 0; }
+.qc-maintenance .qc-maintenance-progress { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; color: var(--qc-admin-warning); }
+.qc-maintenance-progress__dot { flex-shrink: 0; width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: currentColor; }
+.qc-maintenance-effects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 24px 0 20px; }
+.qc-maintenance-effects h3 { margin: 0 0 6px; color: var(--body-loud-color); font-size: 13px; }
+.qc-maintenance-effects p { margin: 0; color: var(--body-quiet-color); font-size: 13px; line-height: 1.65; }
+.qc-maintenance-persistence, .qc-maintenance-next { font-size: 13px; color: var(--body-quiet-color); }
+.qc-maintenance-next { margin-top: 22px; }
+.qc-maintenance .qc-maintenance-action-note, .qc-maintenance-managed { margin: 0; color: var(--body-quiet-color); font-size: 12px; }
+.qc-maintenance-details__body { padding: 0 20px 12px; color: var(--body-quiet-color); font-size: 12px; }
+.qc-maintenance-details__body li { overflow-wrap: anywhere; }
+.qc-maintenance-problem { padding: 12px 18px; border-radius: 8px; color: var(--qc-admin-warning); background: var(--qc-admin-warning-soft); }
+.qc-maintenance-problem p { margin: 0 0 8px; }
+.qc-maintenance-problem a { margin-inline-start: 10px; }
+@media (max-width: 767px) {
+  .qc-maintenance .qc-admin-service { flex-wrap: wrap; }
+  .qc-maintenance .qc-admin-service__actions { width: 100%; max-width: none; }
+  .qc-maintenance-effects { grid-template-columns: 1fr; gap: 16px; }
+}

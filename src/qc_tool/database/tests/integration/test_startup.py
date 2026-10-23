@@ -10,7 +10,9 @@ from django.test import SimpleTestCase
 
 class FrontendSchemaStartupTests(SimpleTestCase):
     def run_startup(self, *, environment="production", auto_initialize=None,
-                    unready=False, demo_users="no", retired_option=None):
+                    unready=False, demo_users="no", retired_option=None,
+                    dev_server="no", web_workers="1", recovery=False,
+                    selected_failure=False):
         source = Path(__file__).resolve().parents[5] / "docker" / "run_frontend.sh"
         with TemporaryDirectory(prefix="qc-startup-test-") as temporary:
             root = Path(temporary)
@@ -18,8 +20,16 @@ class FrontendSchemaStartupTests(SimpleTestCase):
             stub = (
                 '#!/bin/sh\n'
                 'printf "%s\\n" "$*" >> "$QC_STARTUP_TEST_LOG"\n'
-                'if [ "$*" = "-m qc_tool.frontend.manage database check" ]; then\n'
-                '    exit "$QC_STARTUP_TEST_UNREADY"\n'
+                'if [ "$*" = "-m qc_tool.frontend.manage database check --allow-maintenance-recovery" ]; then\n'
+                '    if [ "$QC_STARTUP_TEST_UNREADY" = "1" ] && [ ! -f "$QC_STARTUP_TEST_DIRECTORY/initialized" ]; then\n'
+                '        if [ "$QC_STARTUP_TEST_RECOVERY" = "yes" ]; then printf "%s\\n" maintenance-recovery; exit 0; fi\n'
+                '        if [ "$QC_STARTUP_TEST_SELECTED_FAILURE" = "yes" ]; then exit 2; fi\n'
+                '        exit 1\n'
+                '    fi\n'
+                '    printf "%s\\n" ready\n'
+                'fi\n'
+                'if [ "$*" = "-m qc_tool.frontend.manage database apply" ]; then\n'
+                '    touch "$QC_STARTUP_TEST_DIRECTORY/initialized"\n'
                 'fi\n'
             )
             for executable in ("python3", "gunicorn"):
@@ -38,9 +48,12 @@ class FrontendSchemaStartupTests(SimpleTestCase):
                 "QC_STARTUP_TEST_LOG": str(log),
                 "QC_STARTUP_TEST_DIRECTORY": str(root),
                 "QC_STARTUP_TEST_UNREADY": "1" if unready else "0",
+                "QC_STARTUP_TEST_RECOVERY": "yes" if recovery else "no",
+                "QC_STARTUP_TEST_SELECTED_FAILURE": "yes" if selected_failure else "no",
                 "QC_TOOL_ENVIRONMENT": environment,
                 "QC_TOOL_BOOTSTRAP_DEMO_USERS": demo_users,
-                "QC_TOOL_DEV_SERVER": "no",
+                "QC_TOOL_DEV_SERVER": dev_server,
+                "QC_TOOL_WEB_WORKERS": web_workers,
             }
             # Inherited operator options must not select a fixture's mode.
             child_environment.pop("QC_TOOL_MIGRATE_ON_STARTUP", None)
@@ -59,14 +72,14 @@ class FrontendSchemaStartupTests(SimpleTestCase):
     def test_production_defaults_to_read_only_schema_check(self):
         result, commands = self.run_startup()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(commands[0], "-m qc_tool.frontend.manage database check")
+        self.assertEqual(commands[0], "-m qc_tool.frontend.manage database check --allow-maintenance-recovery")
         self.assertNotIn("-m qc_tool.frontend.manage database apply", commands)
         self.assertIn("qc_tool.frontend.wsgi:application", commands[-1])
 
     def test_unready_schema_stops_before_static_collection_or_web_startup(self):
         result, commands = self.run_startup(unready=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(commands, ["-m qc_tool.frontend.manage database check"])
+        self.assertEqual(commands, ["-m qc_tool.frontend.manage database check --allow-maintenance-recovery"])
         self.assertIn("Database is not ready", result.stderr)
 
     def test_production_rejects_automatic_initialization(self):
@@ -77,12 +90,27 @@ class FrontendSchemaStartupTests(SimpleTestCase):
     def test_local_opt_in_initializes_then_checks_schema(self):
         for environment in ("development", "test"):
             with self.subTest(environment=environment):
-                result, commands = self.run_startup(environment=environment, auto_initialize="yes")
+                result, commands = self.run_startup(environment=environment, auto_initialize="yes", unready=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(commands[:2], [
+                self.assertEqual(commands[:3], [
+                    "-m qc_tool.frontend.manage database check --allow-maintenance-recovery",
                     "-m qc_tool.frontend.manage database apply",
-                    "-m qc_tool.frontend.manage database check",
+                    "-m qc_tool.frontend.manage database check --allow-maintenance-recovery",
                 ])
+
+    def test_selected_database_failure_never_runs_development_initialization(self):
+        result, commands = self.run_startup(environment="development", auto_initialize="yes",
+                                            unready=True, selected_failure=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(commands, ["-m qc_tool.frontend.manage database check --allow-maintenance-recovery"])
+
+    def test_recovery_skips_initialization_demo_users_and_development_server_checks(self):
+        result, commands = self.run_startup(environment="development", auto_initialize="yes",
+                                            unready=True, recovery=True, demo_users="yes", dev_server="yes")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("-m qc_tool.frontend.manage database apply", commands)
+        self.assertFalse(any("create_default_user" in command or "runserver" in command for command in commands))
+        self.assertIn("qc_tool.frontend.wsgi:application", commands[-1])
 
     def test_unknown_startup_mode_is_rejected(self):
         result, commands = self.run_startup(auto_initialize="perhaps")
@@ -107,7 +135,35 @@ class FrontendSchemaStartupTests(SimpleTestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any("create_default_user" in command for command in commands))
         self.assertFalse(any("wsgi:application" in command for command in commands))
-        self.assertIn("Refusing to create predictable demo users", result.stderr)
+        self.assertEqual(commands, [])
+        self.assertIn("QC_TOOL_BOOTSTRAP_DEMO_USERS", result.stderr)
+
+    def test_production_rejects_development_server_before_any_startup_work(self):
+        result, commands = self.run_startup(dev_server="yes")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(commands, [])
+        self.assertIn("QC_TOOL_DEV_SERVER", result.stderr)
+
+    def test_development_server_requires_explicit_development_environment(self):
+        result, commands = self.run_startup(environment="development", dev_server="yes")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(commands[-1], "-m qc_tool.frontend.manage runserver 0.0.0.0:8000")
+
+    def test_unsupported_web_topology_is_rejected_before_any_startup_work(self):
+        for workers in ("0", "2", "-1", "many"):
+            with self.subTest(workers=workers):
+                result, commands = self.run_startup(web_workers=workers)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(commands, [])
+                self.assertIn("QC_TOOL_WEB_WORKERS must be 1", result.stderr)
+
+    def test_invalid_development_startup_flags_fail_before_database_access(self):
+        for argument in ("demo_users", "dev_server"):
+            with self.subTest(argument=argument):
+                result, commands = self.run_startup(**{argument: "perhaps"})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(commands, [])
+                self.assertIn("must be yes or no", result.stderr)
 
     def test_retired_option_is_rejected_even_when_disabled_or_empty(self):
         for value in ("yes", "no", ""):

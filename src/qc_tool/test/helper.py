@@ -28,13 +28,21 @@ def init_logging():
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     root_log = logging.getLogger()
+    original_level = root_log.level
     root_log.addHandler(handler)
     root_log.setLevel(logging.DEBUG)
+
+    def cleanup():
+        root_log.removeHandler(handler)
+        handler.close()
+        root_log.setLevel(original_level)
+
+    return cleanup
 
 
 class ProductTestCase(TestCase):
     def setUp(self):
-        init_logging()
+        self.addCleanup(init_logging())
         super().setUp()
         self.job_uuid = str(uuid4())
         create_job_dir(self.job_uuid)
@@ -81,7 +89,7 @@ class RasterCheckTestCase(TestCase):
         return raster_filepath
 
     def setUp(self):
-        init_logging()
+        self.addCleanup(init_logging())
         super().setUp()
         self.status_class = CheckStatus
         job_uuid = str(uuid4())
@@ -94,7 +102,7 @@ class RasterCheckTestCase(TestCase):
 
 class VectorCheckTestCase(TestCase):
     def setUp(self):
-        init_logging()
+        self.addCleanup(init_logging())
         super().setUp()
         self.status_class = CheckStatus
         job_uuid = str(uuid4())

@@ -42,7 +42,7 @@ class ResumableUploadTemplateTests(TestCase):
         )
         self.assertContains(
             response,
-            f'<form method="post" action="{reverse("logout")}">',
+            f'<form method="post" action="{reverse("logout")}" data-maintenance-write>',
             count=1,
         )
 

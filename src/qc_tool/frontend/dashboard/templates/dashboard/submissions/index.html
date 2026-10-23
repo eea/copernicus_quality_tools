@@ -31,7 +31,8 @@
         </select>
         <button type="submit" class="btn btn-default btn-qc-secondary">Apply filter</button>
     </form>
-    <form method="post" action="{{ bulk_action_url }}" id="submission-bulk-form">
+    <form method="post" action="{{ bulk_action_url }}" id="submission-bulk-form" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
         {% csrf_token %}<input type="hidden" name="intent" value="preview">
         {% if bulk_eligible_count %}
         <div class="submission-selection-toolbar">
@@ -78,7 +79,8 @@
                 </tbody>
             </table>
         </div>
-    </form>
+    </fieldset>
+</form>
     <nav class="review-pagination" aria-label="Submission pages">
         {% if review_items.has_previous %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.previous_page_number }}">Previous</a>{% endif %}
         <span>Page {{ review_items.number }} of {{ review_items.paginator.num_pages }}</span>

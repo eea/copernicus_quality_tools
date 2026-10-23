@@ -49,7 +49,7 @@ class SharedApplicationShellTests(TestCase):
         logout_url = reverse("logout")
         self.assertEqual(
             document.count(
-                '<form method="post" action="{}">'.format(logout_url)
+                '<form method="post" action="{}" data-maintenance-write>'.format(logout_url)
             ),
             1,
         )
@@ -116,7 +116,7 @@ class SharedApplicationShellTests(TestCase):
         self.assertIn("Settings", menu)
         self.assertEqual(
             menu.count(
-                '<form method="post" action="{}">'.format(reverse("logout"))
+                '<form method="post" action="{}" data-maintenance-write>'.format(reverse("logout"))
             ),
             1,
         )

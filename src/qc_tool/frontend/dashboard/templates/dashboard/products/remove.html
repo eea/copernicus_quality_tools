@@ -50,11 +50,13 @@
         {% endif %}
         <p>Stopping moves this product to Stopped and prevents it from being selected for new quality-control jobs.</p>
         <p>Specification versions, existing jobs, stored files, and submitted deliveries are retained. You can restore the product later by uploading a specification named <code>{{ product.ident }}.json</code>.</p>
-        <form method="post" class="product-remove__actions">
+        <form method="post" class="product-remove__actions" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
             {% csrf_token %}
             <button type="submit" class="btn btn-qc-danger">{% if removal_pending %}Retry stopping{% else %}Stop product{% endif %}</button>
             <a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">Cancel</a>
-        </form>
+        </fieldset>
+</form>
         {% else %}
         <p>This product has already been stopped. Its specifications and delivery history remain available.</p>
         <p>To restore it, upload a specification named <code>{{ product.ident }}.json</code>.</p>

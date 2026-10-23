@@ -1,0 +1,19 @@
+# Worker runtime on Ubuntu 24.04 / Python 3.12. Keep GDAL's NumPy build ABI
+# consistent with the runtime, and review these pins with the full QC suite.
+setuptools==83.0.0
+wheel==0.46.2
+numpy==1.26.4
+pypdf==6.21.1
+urllib3==2.8.0
+boto3==1.37.38
+botocore==1.37.38
+bottle==0.13.4
+checksumdir==1.2.0
+lxml==6.1.3
+requests==2.34.2
+reportlab==3.6.13
+saxonche==12.5.0
+scikit-image==0.24.0
+supervisor==4.3.0
+parseo @ https://codeload.github.com/copernicus-land/parsEO/tar.gz/17725f320c35a270fafcf9dbe03f992a045fd1bc#sha256=6e721d1038f896595357a7b9bd606c2b18a4596668eff7033dff0571f893294b
+geonetwork @ https://codeload.github.com/Gisat/envi-geonetwork-validator/tar.gz/ee24511ec7515c00993864c23baeebde8653c117#sha256=d647cc8bd6b3d52f46bc803d56dc0380065396b7a0fb4e46f4550b3d26088865

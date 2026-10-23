@@ -3,14 +3,18 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.db import router
 from django.db.models import Prefetch
 
 from qc_tool.frontend.accounts.admin.filters import RoleListFilter
 from qc_tool.frontend.accounts.admin.products import UserProductGrantInline
 from qc_tool.frontend.accounts.authorization.roles import Role
+from qc_tool.frontend.accounts.forms.admin_users import AdminUserChangeForm
+from qc_tool.frontend.accounts.forms.admin_users import AdminUserPasswordChangeForm
 from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.product_grants import save_product_grant
+from qc_tool.frontend.accounts.services.admin_users import serialized_admin_user_change
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_permissions,
 )
@@ -40,6 +44,9 @@ class PersonalAccessTokenInline(admin.TabularInline):
 
 class AccountUserAdmin(BaseUserAdmin):
     """Keep all user-related Django Admin composition in accounts."""
+
+    form = AdminUserChangeForm
+    change_password_form = AdminUserPasswordChangeForm
 
     inlines = (
         PersonalAccessTokenInline,
@@ -102,6 +109,22 @@ class AccountUserAdmin(BaseUserAdmin):
             {"fields": ("groups", "user_permissions")},
         ),
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = super().get_readonly_fields(request, obj)
+        return (*fields, "username") if obj is not None else fields
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        if request.method != "POST":
+            return super().changeform_view(request, object_id, form_url, extra_context)
+        with serialized_admin_user_change(using=router.db_for_write(self.model)):
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
+    def user_change_password(self, request, id, form_url=""):
+        if request.method != "POST":
+            return super().user_change_password(request, id, form_url)
+        with serialized_admin_user_change(using=router.db_for_write(self.model)):
+            return super().user_change_password(request, id, form_url)
 
     def get_queryset(self, request):
         return (

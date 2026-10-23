@@ -16,8 +16,64 @@ Including another URLconf
 from django.urls import include
 from django.urls import path
 from django.contrib import admin
+from django.contrib.auth.views import LogoutView
+
+from qc_tool.frontend.accounts.forms.authentication import AccountAdminAuthenticationForm
+from qc_tool.frontend.accounts.views.sessions import AdminLoginView
+
+from qc_tool.frontend.dashboard.views.admin_maintenance import maintenance_control
+from qc_tool.frontend.dashboard.views.admin_database import database_record, database_records
+from qc_tool.frontend.dashboard.views.admin_users import user_management
+from qc_tool.frontend.dashboard.views.admin_storage import (
+    storage_home, storage_file, storage_download, storage_trash, storage_action,
+)
+from qc_tool.frontend.dashboard.views.admin_data_transfer import (
+    data_transfer, data_transfer_download, data_transfer_status,
+)
 
 urlpatterns = [
+    path(
+        'admin/login/',
+        AdminLoginView.as_view(
+            template_name='admin/qc_tool_login.html',
+            authentication_form=AccountAdminAuthenticationForm,
+            next_page='admin:index',
+            extra_context={
+                'title': 'Sign in',
+                'site_header': admin.site.site_header,
+                'site_title': admin.site.site_title,
+                'has_permission': False,
+            },
+        ),
+        name='admin_login',
+    ),
+    path(
+        'admin/logout/',
+        admin.site.admin_view(LogoutView.as_view(next_page='admin_login', redirect_field_name=None)),
+        name='admin_logout',
+    ),
+    path(
+        'admin/maintenance/',
+        admin.site.admin_view(maintenance_control),
+        name='admin_maintenance',
+    ),
+    path('admin/database/', admin.site.admin_view(data_transfer), name='admin_data_transfer'),
+    path('admin/users/', admin.site.admin_view(user_management), name='admin_user_management'),
+    path('admin/storage/', admin.site.admin_view(storage_home), name='admin_storage'),
+    path('admin/storage/file/', admin.site.admin_view(storage_file), name='admin_storage_file'),
+    path('admin/storage/download/', admin.site.admin_view(storage_download), name='admin_storage_download'),
+    path('admin/storage/trash/', admin.site.admin_view(storage_trash), name='admin_storage_trash'),
+    path('admin/storage/action/', admin.site.admin_view(storage_action), name='admin_storage_action'),
+    path('admin/database/records/<str:table>/', admin.site.admin_view(database_records), name='admin_database_records'),
+    path('admin/database/records/<str:table>/<str:pk>/', admin.site.admin_view(database_record), name='admin_database_record'),
+    path('admin/database/<str:operation_id>/status/', admin.site.admin_view(data_transfer_status), name='admin_data_transfer_status'),
+    path('admin/database/<str:operation_id>/download/', admin.site.admin_view(data_transfer_download), name='admin_data_transfer_download'),
+    # Direct aliases preserve reviewed POST bodies, query strings and Admin
+    # authorization. New navigation always uses the canonical reverse names.
+    path('admin/database', admin.site.admin_view(data_transfer), name='admin_data_transfer_no_slash'),
+    path('admin/data-transfer/', admin.site.admin_view(data_transfer), name='admin_data_transfer_legacy'),
+    path('admin/data-transfer/<str:operation_id>/status/', admin.site.admin_view(data_transfer_status), name='admin_data_transfer_status_legacy'),
+    path('admin/data-transfer/<str:operation_id>/download/', admin.site.admin_view(data_transfer_download), name='admin_data_transfer_download_legacy'),
     path('admin/', admin.site.urls),
     path('', include('qc_tool.frontend.accounts.urls')),
     path('', include('qc_tool.frontend.dashboard.urls')),

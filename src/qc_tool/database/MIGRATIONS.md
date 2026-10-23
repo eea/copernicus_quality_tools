@@ -50,6 +50,15 @@ Production startup runs `database check` and refuses an unready database. Run an
 explicit initialization job only for a confirmed empty installation, or manually
 restore a prepared archive. Do not point either operation at legacy production.
 
+The startup adapter adds `--allow-maintenance-recovery` to `database check`.
+This option is restricted to `check --database default`; ordinary checks stay
+strict. It can admit the maintenance UI after an unavailable explicit selection
+only when the same maintenance generation is still ready, the retained source
+has recorded verification evidence and its identity/schema/administrator access
+pass read-only inspection. It never initializes, repairs, switches or resumes a
+database. Recovery startup skips demo bootstrap and local initialization. An
+unselected incompatible database remains refused.
+
 Development/test startup can opt into `QC_TOOL_INITIALIZE_ON_STARTUP=yes`.
 It uses the same guarded initializer. Automatic initialization is refused in
 production. The former migration-startup option is no longer supported.

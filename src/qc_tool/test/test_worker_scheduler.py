@@ -8,6 +8,7 @@ from unittest.mock import patch
 from qc_tool.worker.cmd import read_s3_secret
 from qc_tool.worker.scheduler import JobController
 from qc_tool.worker.scheduler import Scheduler
+from qc_tool.worker.scheduler import WorkerMaintenance
 
 
 class SchedulerPullJobTests(TestCase):
@@ -75,12 +76,17 @@ class JobControllerCredentialTests(TestCase):
     @patch("qc_tool.worker.scheduler.job_table.put")
     @patch("qc_tool.worker.scheduler.open", mock_open())
     @patch("qc_tool.worker.scheduler.Popen")
+    @patch("qc_tool.worker.scheduler._process_group_exists", return_value=False)
+    @patch("qc_tool.worker.scheduler.maintenance", new_callable=WorkerMaintenance)
     def test_s3_secret_is_piped_and_never_placed_in_argv(
         self,
+        maintenance,
+        _group_exists,
         popen,
         _put,
         _remove,
     ):
+        maintenance.update(False, 0)
         process = MagicMock(pid=123, returncode=0)
         popen.return_value = process
 
@@ -91,6 +97,7 @@ class JobControllerCredentialTests(TestCase):
         self.assertNotIn("--s3-secret-key", args)
         self.assertNotIn("do-not-expose", args)
         self.assertEqual(popen.call_args.kwargs["stdin"], PIPE)
+        self.assertTrue(popen.call_args.kwargs["start_new_session"])
         process.communicate.assert_called_once_with(input=b"do-not-expose")
 
 

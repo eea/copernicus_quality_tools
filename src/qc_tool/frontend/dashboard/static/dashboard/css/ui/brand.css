@@ -1,0 +1,48 @@
+/* One identity for the workspace and Admin; each shell owns its destination. */
+.qc-brand {
+  --qc-brand-logo-height: 43px;
+  --qc-brand-logo-gap: 24px;
+  --qc-brand-gap: 28px;
+  --qc-brand-font-size: 21px;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--qc-brand-gap);
+  text-decoration: none;
+}
+.qc-brand__logos {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--qc-brand-logo-gap);
+}
+.qc-brand .qc-brand__logo {
+  display: block;
+  float: none;
+  width: auto;
+  height: var(--qc-brand-logo-height);
+  margin: 0;
+  object-fit: contain;
+}
+.qc-brand__title {
+  font-size: var(--qc-brand-font-size);
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+@media (max-width: 1199px) {
+  .qc-brand {
+    --qc-brand-logo-height: 38px;
+    --qc-brand-logo-gap: 16px;
+    --qc-brand-gap: 18px;
+    --qc-brand-font-size: 18px;
+  }
+}
+@media (max-width: 560px) {
+  .qc-brand {
+    --qc-brand-logo-height: 26px;
+    --qc-brand-logo-gap: 10px;
+    --qc-brand-gap: 12px;
+    --qc-brand-font-size: 16px;
+  }
+}

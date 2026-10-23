@@ -65,6 +65,34 @@ class UserProvisioningTests(TestCase):
             },
         )
 
+    def test_omitted_or_blank_email_does_not_invent_a_contact_address(self):
+        for username, email in (("product_manager", None), ("blank-email", "")):
+            with self.subTest(username=username):
+                result = provision_user(
+                    username=username, password="service-password", email=email,
+                )
+                result.user.refresh_from_db()
+                self.assertEqual(result.user.email, "")
+                get_user_model()._meta.get_field("email").clean(result.user.email, result.user)
+
+    def test_invalid_email_is_rejected_without_creating_an_account(self):
+        with self.assertRaises(ValidationError):
+            provision_user(
+                username="invalid-email", password="service-password",
+                email="product_manager@product_manager.com",
+                groups=(Role.PRODUCT_MANAGER.value,),
+            )
+        self.assertFalse(get_user_model().objects.filter(username="invalid-email").exists())
+
+    def test_command_reports_invalid_email_without_creating_an_account(self):
+        with self.assertRaisesMessage(CommandError, "valid email"):
+            call_command(
+                "create_default_user", username="invalid-command-email",
+                password="command-password", email="not-an-email",
+                stdout=StringIO(),
+            )
+        self.assertFalse(get_user_model().objects.filter(username="invalid-command-email").exists())
+
     @patch(
         "qc_tool.frontend.accounts.services.products.available_product_descriptions",
         return_value={"clc2024": "CLC", "general_raster": "General raster"},
@@ -119,11 +147,13 @@ class UserProvisioningTests(TestCase):
         first = provision_user(
             username="idempotent-user",
             password="original-password",
+            email="original@example.test",
         )
 
         second = provision_user(
             username="idempotent-user",
             password="replacement-password",
+            email="replacement@example.test",
             groups=(Role.PRODUCT_MANAGER.value,),
         )
 
@@ -135,6 +165,7 @@ class UserProvisioningTests(TestCase):
         )
         first.user.refresh_from_db()
         self.assertTrue(first.user.check_password("original-password"))
+        self.assertEqual(first.user.email, "original@example.test")
         self.assertEqual(
             set(first.user.groups.values_list("name", flat=True)),
             {Role.DEFAULT.value},

@@ -5,6 +5,8 @@
     if (!ui) return;
 
     ui.createQueue = function(root, options) {
+        if (window.qcMaintenance && window.qcMaintenance.isActive()) return null;
+        function paused() { return Boolean(window.qcMaintenance && window.qcMaintenance.isActive()); }
         var labels = Object.assign({add: "Add", overwrite: "Overwrite", addAll: "Add all", overwriteAll: "Add all & overwrite",
             ready: "Ready to add", pending: "Adding…", failed: "Could not add", completed: "added", running: "Adding…"}, options.labels);
         var list = root.querySelector("[data-upload-list]");
@@ -52,7 +54,7 @@
                 (done ? " · " + done + " " + labels.completed : "") + (needsAttention ? " · " + needsAttention + " to review" : "");
             var runningBatch = batchActive && Boolean(active || waiting);
             all.hidden = !runningBatch && (ready + replacements < 2 || checking > 0 || redirected);
-            all.disabled = Boolean(active) || redirected;
+            all.disabled = Boolean(active) || redirected || paused();
             all.textContent = runningBatch ? labels.running + " (" + (waiting + (active ? 1 : 0)) + " remaining)" :
                 (replacements ? labels.overwriteAll : labels.addAll) + " (" + (ready + replacements) + ")";
             if (batchDescription) {
@@ -64,6 +66,18 @@
             picker.setSelected(entries.length > 0);
         }
         function fail(entry, error) {
+            if (error.stopBatch) {
+                batchActive = false;
+                entries.filter(function(item) { return item.state === "queued"; }).forEach(function(item) {
+                    var replacing = item.overwriteKey !== null;
+                    present(item, {
+                        state: replacing ? "replaceable" : "selected",
+                        label: replacing ? "Replacement not started" : labels.ready,
+                        message: "Not uploaded. Resolve the upload error, then start this file again.",
+                        percent: null
+                    });
+                });
+            }
             if (error.redirecting) {
                 redirected = true;
                 picker.setBusy(true);
@@ -144,23 +158,23 @@
             picker.input.value = "";
         }
         function add(entry) {
-            if (redirected || entries.indexOf(entry) === -1 || ["selected", "failed", "canceled"].indexOf(entry.state) === -1) return;
+            if (paused() || redirected || entries.indexOf(entry) === -1 || ["selected", "failed", "canceled"].indexOf(entry.state) === -1) return;
             present(entry, {state: "queued", label: "Waiting…", message: "", url: "", percent: null});
             pump();
         }
         function overwrite(entry) {
-            if (redirected || entries.indexOf(entry) === -1 || entry.state !== "replaceable") return;
+            if (paused() || redirected || entries.indexOf(entry) === -1 || entry.state !== "replaceable") return;
             entry.overwriteKey = entry.availableOverwriteKey;
             present(entry, {state: "queued", label: "Waiting to replace…", message: "", url: "", percent: null});
             pump();
         }
         async function pump() {
-            if (active || redirected) return;
+            if (paused() || active || redirected) return;
             var entry = entries.find(function(item) { return item.state === "queued"; });
             if (!entry) { batchActive = false; refresh(); return; }
             active = entry;
             refresh();
-            if (await check(entry) && !redirected) {
+            if (await check(entry) && !redirected && !paused()) {
                 try {
                     entry.attempted = true;
                     present(entry, {state: "uploading", label: labels.pending, message: "", percent: null});
@@ -175,7 +189,7 @@
             pump();
         }
         function addAll() {
-            if (redirected || active) return;
+            if (paused() || redirected || active) return;
             batchActive = true;
             entries.filter(function(entry) { return entry.state === "selected" || entry.state === "replaceable"; }).forEach(function(entry) {
                 entry.overwriteKey = entry.state === "replaceable" ? entry.availableOverwriteKey : null;
@@ -184,6 +198,11 @@
             pump();
         }
         all.addEventListener("click", addAll);
+        window.document.addEventListener("qc:maintenance", function() {
+            if (active && active.controls && active.controls.cancel) active.controls.cancel();
+            picker.setBusy(true);
+            refresh();
+        });
         refresh();
         return {picker: picker, entries: entries, add: add, overwrite: overwrite, addAll: addAll, remove: remove};
     };

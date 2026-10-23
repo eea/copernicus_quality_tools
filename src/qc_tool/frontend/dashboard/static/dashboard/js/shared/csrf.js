@@ -42,12 +42,25 @@
         return true;
     }
 
+    function responsePayload(xhr) {
+        if (!xhr) return null;
+        if (xhr.responseJSON) return xhr.responseJSON;
+        if (xhr.responseType === "json") return xhr.response;
+        if (xhr.responseType && xhr.responseType !== "text") return null;
+        try {
+            return JSON.parse(xhr.responseText || "null");
+        } catch (_error) {
+            return null;
+        }
+    }
+
     function handleUnauthorizedXhr(xhr) {
+        if (window.qcMaintenance) window.qcMaintenance.observeXhr(xhr);
         if (!xhr || xhr.status !== 401) {
             return false;
         }
         var loginUrl = xhr.getResponseHeader("X-Login-URL") ||
-            loginUrlFromPayload(xhr.responseJSON || xhr.responseText);
+            loginUrlFromPayload(responsePayload(xhr));
         return redirectToLogin(loginUrl);
     }
 
@@ -55,6 +68,7 @@
         getToken: getToken
     };
     window.qcAuth = {
+        responsePayload: responsePayload,
         redirectFromPayload: function(payload) {
             return redirectToLogin(loginUrlFromPayload(payload));
         },
@@ -72,6 +86,9 @@
         });
         $(document).ajaxError(function(_event, xhr) {
             handleUnauthorizedXhr(xhr);
+        });
+        $(document).ajaxComplete(function(_event, xhr) {
+            if (window.qcMaintenance) window.qcMaintenance.observeXhr(xhr);
         });
     }
 })(window, document, window.jQuery);

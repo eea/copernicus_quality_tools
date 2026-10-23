@@ -175,7 +175,8 @@ def authenticate_api_request(request):
         product_idents=token.product_idents_snapshot,
         is_administrator=token.is_administrator_snapshot,
     )
-    _record_token_use(token)
+    if not getattr(request, "maintenance_active", False):
+        _record_token_use(token)
     return ApiKeyAuthenticationResult(
         user=token.user,
         token=token,

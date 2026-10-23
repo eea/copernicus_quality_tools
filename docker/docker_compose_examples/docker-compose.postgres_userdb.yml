@@ -17,8 +17,8 @@ services:
   
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ../..
+      dockerfile: docker/Dockerfile.frontend
       args:
         - VERSION
 
@@ -37,6 +37,7 @@ services:
       - POSTGRES_DB=qc_tool
       - POSTGRES_USER=qc_user
       - POSTGRES_PASSWORD=qc_password
+      - QC_TOOL_RESTORE_DATABASE
       - FRONTEND_DB_PATH=/mnt/qc_tool_work/frontend.sqlite3
       - CSRF_TRUSTED_ORIGINS=https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1
       - RESUMABLE_SIMULTANEOUS_UPLOADS=4
@@ -52,8 +53,8 @@ services:
 
   worker:
     build:
-      context: .
-      dockerfile: Dockerfile.worker
+      context: ../..
+      dockerfile: docker/Dockerfile.worker
       args:
         - VERSION
 

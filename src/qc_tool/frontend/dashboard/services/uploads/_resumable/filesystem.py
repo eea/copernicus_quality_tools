@@ -9,7 +9,7 @@ from pathlib import Path
 import stat
 from typing import BinaryIO
 
-from .errors import ResumableUploadError
+from .errors import ResumableUploadError, storage_failure
 
 
 COPY_CHUNK_SIZE = 1024 * 1024
@@ -34,6 +34,8 @@ def open_directory(path: Path) -> int:
             raise OSError(errno.ENOTDIR, "path is not a directory")
         return descriptor
     except OSError as exc:
+        if exc.errno not in {errno.ELOOP, errno.ENOTDIR}:
+            raise storage_failure(exc, operation="opening an upload directory") from exc
         raise ResumableUploadError(
             "unsafe_upload_storage",
             "Upload storage is not safe.",

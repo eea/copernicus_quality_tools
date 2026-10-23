@@ -1,4 +1,4 @@
-"""Django discovery for the application-wide database command; owns no models."""
+"""Application database lifecycle and durable transfer commit receipts."""
 
 from django.apps import AppConfig
 

@@ -1,0 +1,30 @@
+{% load static %}
+  {% if database_control.active_database %}
+  <details class="transfer-database-settings"{% if rollback_form.errors %} open{% endif %}>
+    <summary>Database settings{% if database_control.previous_database %} &amp; rollback{% endif %}</summary>
+    <h3 id="active-database-heading">Active database</h3>
+    <div class="transfer-panel__body">
+      <p><strong>{{ database_control.active_database }}</strong>{% if database_control.previous_database %} · Previous database retained: {{ database_control.previous_database }}{% endif %}</p>
+      {% if rollback_form %}
+      <details class="transfer-details"{% if rollback_form.errors %} open{% endif %}>
+        <summary>Switch back to {{ database_control.previous_database }}</summary>
+        {% if database_control.rollback_blockers %}<ul class="errornote" role="alert">{% for blocker in database_control.rollback_blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
+        <form method="post" action="{% url 'admin_data_transfer' %}" class="transfer-control-form" data-maintenance-exempt>
+          {% csrf_token %}<input type="hidden" name="action" value="rollback_database">
+          {% for field in rollback_form.hidden_fields %}{{ field }}{% endfor %}
+          <fieldset{% if not maintenance_ready or database_control.rollback_blockers %} disabled{% endif %}>
+            <legend>Confirm switch back</legend>
+            {{ rollback_form.non_field_errors }}
+            <div class="form-row">{{ rollback_form.destination_confirmation.errors }}{{ rollback_form.destination_confirmation.label_tag }}{{ rollback_form.destination_confirmation }}<p class="help">{{ rollback_form.destination_confirmation.help_text }}</p></div>
+            {% if rollback_form.requires_credentials %}<p>Verify administrator access on the previous database.</p><div class="form-row">{{ rollback_form.username.errors }}{{ rollback_form.username.label_tag }}{{ rollback_form.username }}</div><div class="form-row">{{ rollback_form.password.errors }}{{ rollback_form.password.label_tag }}{{ rollback_form.password }}</div>{% endif %}
+            <div class="form-row transfer-checkbox">{{ rollback_form.confirmed_storage.errors }}{{ rollback_form.confirmed_storage }}{{ rollback_form.confirmed_storage.label_tag }}</div>
+            <div class="transfer-actions"><button type="submit" class="button btn-qc-secondary">Switch back</button></div>
+          </fieldset>
+          {% if not maintenance_ready %}<p class="help">Enable maintenance before switching databases.</p>{% endif %}
+        </form>
+      </details>
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+

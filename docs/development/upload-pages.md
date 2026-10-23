@@ -71,6 +71,9 @@ callbacks when its transport supports them.
 
 Reject with an `Error` carrying a useful message. Set `redirecting` after shared
 authentication handling redirects the browser; remaining batch requests stop.
+Set `stopBatch` for a service-wide failure, such as unavailable upload storage.
+The current file stays failed; unstarted files return to their ready/replacement
+state with their choices retained. Restarting them requires an explicit action.
 `blocked` denotes a conflict requiring a different file, and `canceled` denotes
 an interrupted upload. Set `recheck` on a stale-target conflict to clear the
 overwrite choice and run preflight again on Retry. Retry otherwise uses the
@@ -108,6 +111,21 @@ enhancement hides it and uses per-file actions. The server always rejects
 multiple files in a single request, regardless of browser input attributes.
 
 ## Delivery duplicate checks and retries
+
+The delivery upload service creates a missing configured `MEDIA_ROOT` leaf on
+the first authorized chunk POST, beneath its already existing storage parent.
+New roots use mode `0750`; existing root permissions are retained. A GET chunk
+probe returns missing (`404`) without creating directories or database records.
+The service never creates a missing mount/ancestor tree to conceal a deployment
+error. Permission/mount failures return actionable `503` responses; full storage
+or quota exhaustion returns `507`. Operator logs retain the failure context;
+responses do not expose server paths.
+
+The browser sets `maxChunkRetries: 0` and retains resumable chunk probes. Failed
+requests require **Retry upload**, which retains the same upload identity and
+server receipts. This prevents the library's default 100 immediate retries from
+amplifying a storage outage. A storage failure also stops the batch, leaving
+unstarted files and replacement choices available for explicit continuation.
 
 `POST /deliveries/upload/check/` accepts JSON `{filenames: [...]}` with between
 1 and 100 plain ZIP filenames and a maximum request size of 64 KiB. Each result

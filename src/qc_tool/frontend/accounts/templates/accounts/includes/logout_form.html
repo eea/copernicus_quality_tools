@@ -1,6 +1,7 @@
 {% load static %}
 <li class="navbar-logout">
-    <form method="post" action="{% url 'logout' %}">
+    <form method="post" action="{% url 'logout' %}" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
         {% csrf_token %}
         <button type="submit">
             <svg class="ui-icon" aria-hidden="true" focusable="false">
@@ -8,5 +9,6 @@
             </svg>
             <span class="navbar-logout-label">Log out</span>
         </button>
-    </form>
+    </fieldset>
+</form>
 </li>

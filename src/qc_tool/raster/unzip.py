@@ -17,7 +17,7 @@ ZIP_VALIDATORS = (
 
 def run_check(params, status):
     # Raster layers are unzipped to the temporary directory r_unzip.d.
-    from qc_tool.vector.helper import do_unzip
+    from qc_tool.worker.archives import do_unzip
 
     # Keep validation owned by this check module. New raster ZIP validators can
     # be added to ZIP_VALIDATORS without changing the shared unzip helper.

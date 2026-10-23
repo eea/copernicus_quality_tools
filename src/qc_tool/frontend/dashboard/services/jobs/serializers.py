@@ -1,11 +1,15 @@
 """Explicit public projections for job records and reports."""
 
 from qc_tool.product_units import is_product_unit_input_alias
-from qc_tool.common import JOB_ERROR
+from qc_tool.common import JOB_ERROR, JOB_RUNNING, JOB_WAITING
 
 
 MISSING_RESULT_ERROR_MESSAGE = (
     "The QC worker stopped before producing a result document. Review the "
+    "job log or contact an administrator and provide this job identifier."
+)
+INTERRUPTED_RESULT_ERROR_MESSAGE = (
+    "This job ended with an error before completion was accepted. Review the "
     "job log or contact an administrator and provide this job identifier."
 )
 
@@ -59,7 +63,15 @@ def serialize_job_report(job_report, job):
         serialized.get("description") or job.product_description
     )
     serialized["filename"] = job.delivery.filename
-    serialized["status"] = serialized.get("status") or job.job_status
+    # The DB owns terminal lifecycle state. A maintenance interruption can
+    # leave a partial result document, including one which already says OK
+    # while its worker was still producing artifacts. It must not resurrect a
+    # cancelled/error job in browser or API results.
+    artifact_status = serialized.get("status")
+    serialized["status"] = (
+        job.job_status if job.job_status not in {JOB_WAITING, JOB_RUNNING}
+        else serialized.get("status") or job.job_status
+    )
     serialized["job_start_date"] = (
         serialized.get("job_start_date") or job.date_started
     )
@@ -75,7 +87,10 @@ def serialize_job_report(job_report, job):
         serialized["status"] == JOB_ERROR
         and not _has_message(serialized.get("error_message"))
     ):
-        serialized["error_message"] = MISSING_RESULT_ERROR_MESSAGE
+        serialized["error_message"] = (
+            INTERRUPTED_RESULT_ERROR_MESSAGE if artifact_status and artifact_status != JOB_ERROR
+            else MISSING_RESULT_ERROR_MESSAGE
+        )
     serialized["product_unit_code"] = job.product_unit_code
     serialized["verified_product_unit_code"] = getattr(
         job,

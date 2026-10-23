@@ -140,7 +140,7 @@
 
                 <div id="product_link_placeholder" class="job-setup-definition-link"></div>
                 <div class="job-setup-actions">
-                    <button id="btn_run" type="submit" class="btn btn-success btn-qc-success">
+                    <button id="btn_run" type="submit" class="btn btn-success btn-qc-success" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
                         <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#play"></use></svg>
                         Run QC
                     </button>

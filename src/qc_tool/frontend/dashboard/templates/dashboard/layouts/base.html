@@ -10,13 +10,18 @@
         <meta name="robots" content="{% block robots %}noindex, nofollow, noarchive{% endblock robots %}"/>
         <meta name="keywords" content="eea, copernicus, qc, tool, gis, quality"/>
         <meta name="csrf-token" content="{{ csrf_token }}">
+        <meta name="qc-maintenance" content="{{ maintenance.enabled|yesno:'on,off' }}" data-notice="{{ maintenance.notice }}">
         <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}" crossorigin="anonymous">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/tokens.css' %}">
         <link rel="stylesheet" type="text/css" href="{% static 'dashboard/css/main.css' %}">
+        <link rel="stylesheet" href="{% static 'dashboard/css/ui/navigation.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/shell.css' %}">
+        <link rel="stylesheet" href="{% static 'dashboard/css/ui/brand.css' %}">
+        <link rel="stylesheet" href="{% static 'dashboard/css/ui/icons.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/actions.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/breadcrumbs.css' %}">
         <link rel="stylesheet" href="{% static 'accounts/css/messages.css' %}">
+        <link rel="stylesheet" href="{% static 'dashboard/css/ui/maintenance.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap-dialog.min.css' %}" type="text/css" />
         <link rel="shortcut icon" type="image/png" href="{% static 'dashboard/img/favicon.ico' %}"/>
 
@@ -30,22 +35,13 @@
         <div id="wrap">
             <div id="main" class="clear-top">
                 <header class="site-header">
+                {% include "dashboard/shared/maintenance_notice.html" %}
                 <nav id="menucontainer" class="navbar navbar-default" aria-label="Primary navigation">
                     <div class="container-fluid">
                         <div class="navbar-header">
                             {% url 'dashboard_home' as homepage_url %}
-                            <a class="navbar-brand" href="{% block brand_url %}{{ homepage_url|default:'/' }}{% endblock brand_url %}">
-                                <img
-                                    class="navbar-brand-logo navbar-brand-logo-copernicus"
-                                    src="{% static 'dashboard/img/logo_copernicus_big.png' %}"
-                                    alt=""
-                                />
-                                <img
-                                    class="navbar-brand-logo navbar-brand-logo-land-monitoring"
-                                    src="{% static 'dashboard/img/logo_land_monitoring_medium.png' %}"
-                                    alt=""
-                                />
-                                <span class="navbar-brand-title">CLMS QC Tool</span>
+                            <a class="navbar-brand qc-brand" href="{% block brand_url %}{{ homepage_url|default:'/' }}{% endblock brand_url %}">
+                                {% include "dashboard/shared/brand.html" %}
                             </a>
                             <button
                                 type="button"
@@ -80,6 +76,7 @@
 
                 {% block js %}
                     <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+                    <script src="{% static 'dashboard/js/shared/maintenance.js' %}"></script>
                     <script src="{% static 'dashboard/js/shared/csrf.js' %}"></script>
                     <script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
                     <script src="{% static 'dashboard/js/moment.min.js' %}"></script>

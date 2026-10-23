@@ -14,6 +14,21 @@ from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable
 from qc_tool.frontend.dashboard.services.artifacts import open_job_attachment
 from qc_tool.frontend.dashboard.services.artifacts import open_job_report
 from qc_tool.frontend.dashboard.services.artifacts import read_text_artifact
+from qc_tool.frontend.dashboard.services.artifacts.inputs import open_job_input
+
+
+def get_job_input(request, job_uuid):
+    """Download only the exact input ZIP recorded by an authorized QC run."""
+
+    job = _require_authorized_job(request, job_uuid)
+    try:
+        stream = open_job_input(job)
+    except ArtifactUnavailable as exc:
+        raise Http404(str(exc) or "The original ZIP is unavailable or failed its integrity check.") from exc
+    return FileResponse(
+        stream, content_type="application/zip", as_attachment=True,
+        filename=job.delivery.filename,
+    )
 
 
 def get_pdf_report(request, job_uuid):

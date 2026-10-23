@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; User management</div>{% endblock %}
+{% block content %}
+<div class="qc-admin-home">
+  <header class="qc-admin-intro"><div><h1>User management</h1><p class="qc-admin-intro__description">Create accounts and manage their roles, permissions and product access.</p></div></header>
+  <div class="qc-admin-management{% if single_panel %} qc-admin-management--single{% endif %}">
+    {% if show_users_panel %}
+    <section class="qc-admin-panel" aria-labelledby="user-accounts-heading">
+      <div class="qc-admin-panel__heading"><span class="qc-admin-icon"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#users"></use></svg></span><h2 id="user-accounts-heading">User accounts</h2></div>
+      <p>Review profiles and access. Deactivate an account to keep its QC history.</p>
+      {% if user_actions %}<div class="qc-admin-management-actions">
+        {% for action in user_actions %}{% if maintenance.enabled and action.write %}<button type="button" class="btn-qc-secondary" disabled title="Account changes are paused during maintenance.">{{ action.label }}</button>{% else %}<a class="{% if action.write %}btn-qc-primary{% else %}btn-qc-secondary{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% endif %}{% endfor %}
+      </div>{% endif %}
+      {% if can_transfer_users %}
+      <h3>Import and export profiles</h3><p>Choose users and review matches. Passwords and access credentials are excluded.</p>
+      <div class="qc-admin-link-list">
+        {% include "admin/includes/task_link.html" with url=users_import_url label="Import users" description="Add inactive users or review matching profiles" icon="upload" only %}
+        {% include "admin/includes/task_link.html" with url=users_export_url label="Export users" description="Export all profiles or select specific users" icon="download" only %}
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+    {% if access_actions %}
+    <section class="qc-admin-panel" aria-labelledby="user-access-heading">
+      <div class="qc-admin-panel__heading"><span class="qc-admin-icon qc-admin-icon--violet"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg></span><h2 id="user-access-heading">Roles and access</h2></div>
+      <p>Assign responsibilities and product scope. QC Tool's built-in roles stay protected.</p>
+      <div class="qc-admin-link-list">
+        {% for action in access_actions %}{% if maintenance.enabled and action.write %}<button type="button" class="btn-qc-secondary" disabled title="Account changes are paused during maintenance.">{{ action.label }}</button>{% else %}{% include "admin/includes/task_link.html" with url=action.url label=action.label description=action.description icon="settings" only %}{% endif %}{% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

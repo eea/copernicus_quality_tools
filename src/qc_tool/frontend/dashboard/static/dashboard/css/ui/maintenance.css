@@ -1,0 +1,58 @@
+[data-maintenance-banner][hidden] { display: none; }
+
+/* Persistent application status belongs to the header, not the message stack. */
+.qc-maintenance-notice {
+    border-bottom: 1px solid #f1d2a8;
+    color: var(--qc-color-warning-dark);
+    background: var(--qc-color-warning-soft);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.qc-maintenance-notice__content {
+    display: grid;
+    min-height: 44px;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 28px;
+}
+
+.qc-maintenance-notice .ui-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.qc-maintenance-notice__reload {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.qc-maintenance-notice__reload:hover,
+.qc-maintenance-notice__reload:focus {
+    color: var(--qc-color-warning-dark);
+}
+
+@media (max-width: 767px) {
+    .qc-maintenance-notice__content {
+        grid-template-columns: 18px minmax(0, 1fr);
+        align-items: start;
+        gap: 4px 10px;
+        padding: 10px 16px;
+    }
+
+    .qc-maintenance-notice .ui-icon { margin-top: 1px; }
+    .qc-maintenance-notice__reload { grid-column: 2; justify-self: start; }
+}
+
+.qc-maintenance-fields { display: contents; min-width: 0; margin: 0; padding: 0; border: 0; }
+/* Bootstrap disables anchor buttons inside fieldsets; browsing stays enabled. */
+.qc-maintenance-fields[disabled] a:not([data-maintenance-write]) { pointer-events: auto; opacity: 1; cursor: pointer; }
+[data-maintenance-disabled="true"] { cursor: not-allowed; }
+a[data-maintenance-disabled="true"] { opacity: .55; }

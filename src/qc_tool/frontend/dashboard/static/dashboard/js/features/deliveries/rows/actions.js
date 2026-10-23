@@ -27,8 +27,9 @@
             "aria-label": ariaLabel
         }).attr({
             "data-delivery-id": String(row.id),
-            "data-delivery-filename": String(row.filename || "")
-        }), symbol, text);
+            "data-delivery-filename": String(row.filename || ""),
+            "data-maintenance-write": ""
+        }).prop("disabled", Boolean(window.qcMaintenance && window.qcMaintenance.isActive())), symbol, text);
     }
 
     function appendResult($container, row, filename, primary) {

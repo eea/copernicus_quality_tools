@@ -74,6 +74,7 @@ class StartupAccountCommandTests(TestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.check_password("admin"))
+        self.assertEqual(user.email, "")
         self.assertEqual(
             set(user.groups.values_list("name", flat=True)),
             {Role.DEFAULT.value, Role.ADMIN.value},
@@ -94,6 +95,7 @@ class StartupAccountCommandTests(TestCase):
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
         self.assertTrue(user.check_password("guest"))
+        self.assertEqual(user.email, "")
         self.assertEqual(
             set(user.groups.values_list("name", flat=True)),
             {Role.DEFAULT.value},
@@ -118,6 +120,7 @@ class StartupAccountCommandTests(TestCase):
         self.assertTrue(user.is_staff)
         self.assertFalse(user.is_superuser)
         self.assertTrue(user.check_password("product_manager"))
+        self.assertEqual(user.email, "")
         self.assertEqual(
             set(user.groups.values_list("name", flat=True)),
             {Role.DEFAULT.value, Role.PRODUCT_MANAGER.value},

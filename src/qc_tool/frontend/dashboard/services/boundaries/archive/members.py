@@ -27,7 +27,8 @@ def _validate_name(info: ZipInfo, limits: BoundaryPackageLimits) -> ValidatedMem
     if not raw_name or "\x00" in raw_name or "\\" in raw_name:
         raise BoundaryPackageUnsafe("ZIP entry has an unsafe filename")
     if len(raw_name.encode("utf-8")) > limits.max_path_length:
-        raise BoundaryPackageLimitExceeded("ZIP entry path is too long")
+        raise BoundaryPackageLimitExceeded("ZIP entry path is too long", limit="path_bytes",
+                                           actual=len(raw_name.encode("utf-8")), maximum=limits.max_path_length)
 
     normalized_name = unicodedata.normalize("NFC", raw_name)
     if normalized_name.startswith("/"):
@@ -43,13 +44,16 @@ def _validate_name(info: ZipInfo, limits: BoundaryPackageLimits) -> ValidatedMem
     lexical_name = normalized_name[:-1] if normalized_name.endswith("/") else normalized_name
     parts = tuple(lexical_name.split("/"))
     if not parts or len(parts) > limits.max_path_depth:
-        raise BoundaryPackageLimitExceeded("ZIP entry path is too deep")
+        raise BoundaryPackageLimitExceeded("ZIP entry path is too deep", limit="path_depth",
+                                           actual=len(parts), maximum=limits.max_path_depth)
     if any(part in ("", ".", "..") for part in parts):
         raise BoundaryPackageUnsafe("relative ZIP path components are not accepted")
     if any(
         len(part.encode("utf-8")) > limits.max_path_component_bytes for part in parts
     ):
-        raise BoundaryPackageLimitExceeded("ZIP path component is too long")
+        raise BoundaryPackageLimitExceeded("ZIP path component is too long", limit="component_bytes",
+                                           actual=max(len(part.encode("utf-8")) for part in parts),
+                                           maximum=limits.max_path_component_bytes)
     if any(":" in part for part in parts):
         raise BoundaryPackageUnsafe("drive-qualified or alternate-stream paths are not accepted")
     if parts[0] not in LIVE_DIRECTORY_NAMES:
@@ -83,4 +87,5 @@ def _validate_size(info: ZipInfo, limits: BoundaryPackageLimits) -> None:
     if info.file_size < 0 or info.compress_size < 0:
         raise BoundaryPackageInvalid("ZIP entry has an invalid declared size")
     if info.file_size > limits.max_member_bytes:
-        raise BoundaryPackageLimitExceeded("ZIP entry is too large")
+        raise BoundaryPackageLimitExceeded("ZIP entry is too large", limit="member_bytes",
+                                           actual=info.file_size, maximum=limits.max_member_bytes)

@@ -218,7 +218,7 @@ class ErrorPagePresentationTests(TestCase):
         )
         self.assertContains(
             response,
-            '<form method="post" action="{}">'.format(reverse("logout")),
+            '<form method="post" action="{}" data-maintenance-write>'.format(reverse("logout")),
             status_code=404,
         )
         self.assertContains(response, "Log out", status_code=404)

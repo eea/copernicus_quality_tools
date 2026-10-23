@@ -100,6 +100,9 @@
                 chunkSize: 5 * 1024 * 1024,
                 simultaneousUploads: Number(root.dataset.simultaneousUploads) || 1,
                 testChunks: true, throttleProgressCallbacks: 1,
+                // A missing acknowledgement can follow a committed delivery.
+                // Stop on failure; explicit Retry recovers the same receipt.
+                maxChunkRetries: 0,
                 generateUniqueIdentifier: function() { return entry.meta.uploadIdentifier; }
             });
             function update() {
@@ -156,7 +159,13 @@
                 else {
                     var payload;
                     try { payload = JSON.parse(message); } catch (_error) { payload = {}; }
+                    if (!payload || typeof payload !== "object") payload = {};
+                    if (window.qcMaintenance) window.qcMaintenance.observePayload(payload);
                     if (typeof payload.message === "string") error.message = payload.message;
+                    if (["upload_storage_unavailable", "upload_storage_error", "upload_storage_full", "unsafe_upload_storage", "unsafe_upload_staging"].indexOf(payload.code) !== -1) {
+                        error.stopBatch = true;
+                        error.message += " Retry after server storage is available.";
+                    }
                     if (["delivery_exists", "overwrite_target_changed", "overwrite_not_allowed", "correction_not_available"].indexOf(payload.code) !== -1) {
                         error.recheck = true;
                         error.url = root.dataset.deliveriesUrl;

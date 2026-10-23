@@ -3,6 +3,7 @@
 
     var form = document.getElementById("boundary-upload-form");
     if (!form || !window.qcUpload) return;
+    if (window.qcMaintenance && window.qcMaintenance.isActive()) return;
     if (!window.XMLHttpRequest || !window.FormData) {
         form.querySelector("[data-boundary-unsupported]").hidden = false;
         return;
@@ -19,22 +20,53 @@
     var row = null;
     var request = null;
     var redirecting = false;
+    var limitValue = form.dataset.maxArchiveBytes || "";
+    var archiveLimit = /^[0-9]+$/.test(limitValue) ? Number(limitValue) : 0;
+    if (!Number.isSafeInteger(archiveLimit) || archiveLimit <= 0) archiveLimit = 0;
     var picker = window.qcUpload.createPicker(pickerRoot, {
         extensions: ["zip"],
+        maxBytes: archiveLimit || undefined,
         onSelect: selectFile,
-        onInvalid: function () {
-            if (!selected) return;
-            selected = null;
-            row = null;
-            list.replaceChildren();
-            picker.setSelected(false);
-            submit.disabled = true;
-        }
+        onInvalid: invalidSelection
     });
     submit.disabled = true;
 
+    function invalidSelection(message) {
+        if (!selected) {
+            if (!row) showResult("danger", message);
+            return;
+        }
+        selected = null;
+        row = null;
+        list.replaceChildren();
+        picker.setSelected(false);
+        submit.disabled = true;
+        showResult("danger", message);
+    }
+
+    function storageError(file) {
+        var value = form.dataset.availableUploadBytes;
+        var available = typeof value === "string" && /^[0-9]+$/.test(value) ? Number(value) : null;
+        if (!Number.isSafeInteger(available) || available < 0 || file.size <= available) return "";
+        return "Not enough server storage to receive this ZIP. " +
+            "Space available for receiving uploads: " + window.qcUpload.formatSize(available) + ". " +
+            "Free space on the server, then reload this page before retrying.";
+    }
+
+    function rejectStorage(message) {
+        picker.clear();
+        picker.showError(message);
+        invalidSelection(message);
+    }
+
     function selectFile(files) {
+        if (window.qcMaintenance && window.qcMaintenance.isActive()) return;
         if (request || redirecting) return;
+        var capacityError = storageError(files[0]);
+        if (capacityError) {
+            rejectStorage(capacityError);
+            return;
+        }
         selected = files[0];
         picker.setSelected(true);
         list.replaceChildren();
@@ -64,20 +96,30 @@
     }
 
     function setBusy(busy) {
+        busy = busy || Boolean(window.qcMaintenance && window.qcMaintenance.isActive());
         picker.setBusy(busy || redirecting);
         submit.disabled = busy || !selected || redirecting;
         submit.textContent = busy ? "Uploading and validating…" : "Upload and activate";
     }
 
-    function showResult(tone, message) {
+    function showResult(tone, message, reviewCurrent) {
         window.qcUpload.feedback(results, {
             tone: tone, message: message,
-            href: tone === "success" ? form.dataset.successUrl : undefined,
+            href: tone === "success" || reviewCurrent ? form.dataset.successUrl : undefined,
             label: "View boundaries"
         });
     }
 
+    function payloadMessage(payload) {
+        return typeof payload.message === "string" && payload.message.trim()
+            ? payload.message.trim().slice(0, 2000) : "";
+    }
+
     function responsePayload(xhr) {
+        if (window.qcAuth && window.qcAuth.responsePayload) {
+            var decoded = window.qcAuth.responsePayload(xhr);
+            return decoded && typeof decoded === "object" ? decoded : {};
+        }
         if (xhr.response && typeof xhr.response === "object") return xhr.response;
         try {
             var payload = JSON.parse(xhr.responseText || "{}");
@@ -87,12 +129,51 @@
         }
     }
 
-    function finishFailure(xhr, message) {
+    function finishFailure(xhr, message, reviewCurrent) {
         if (request !== xhr) return;
         request = null;
         setBusy(false);
-        row.update({state: "failed", label: "Upload failed", percent: null, error: message});
-        showResult("danger", "Activation could not be confirmed. Review the file message before retrying.");
+        row.update({state: "failed", label: reviewCurrent ? "Activation not confirmed" : "Upload failed", percent: null, error: message});
+        showResult("danger", message, reviewCurrent);
+    }
+
+    function failureResponse(xhr, payload) {
+        var status = xhr.status;
+        var message = payloadMessage(payload);
+        var knownRejection = message && payload.is_valid === false && [
+            "boundary_package_insufficient_space", "boundary_upload_insufficient_space",
+            "boundary_package_configuration_error", "boundary_upload_unavailable"
+        ].indexOf(payload.code) !== -1;
+        var reviewCurrent = !knownRejection && (status === 0 || status === 408 || status >= 500);
+        if (message && (payload.is_valid === false || (status >= 400 && payload.is_valid !== true))) {
+            if (reviewCurrent) message += " Check Boundaries before retrying.";
+            return {message: message, reviewCurrent: reviewCurrent};
+        }
+        if (status === 413) {
+            message = "The server or proxy rejected the upload as too large (HTTP 413). " +
+                "Check the displayed ZIP size limit and the server or proxy upload limit before retrying.";
+        } else if (status === 401) {
+            message = "Your sign-in could not be confirmed (HTTP 401). Reload this page and sign in before retrying.";
+        } else if (status === 403) {
+            message = "The upload was refused (HTTP 403). Reload this page to refresh your sign-in and security token before retrying.";
+        } else if (status === 408) {
+            message = "The server timed out receiving the boundary package (HTTP 408). Check Boundaries before retrying.";
+        } else if (status === 502 || status === 504) {
+            message = "The server or proxy did not return an activation confirmation (HTTP " + status + "). " +
+                "Check Boundaries before retrying; activation may still have completed.";
+        } else if (status === 503) {
+            message = "The service is temporarily unavailable (HTTP 503). Check Boundaries and maintenance status before retrying.";
+        } else if (status >= 500) {
+            message = "The server could not confirm boundary activation (HTTP " + status + "). Check Boundaries before retrying.";
+        } else if (status === 0) {
+            message = "The boundary upload connection ended without a server response. Check Boundaries before retrying.";
+        } else if (status >= 200 && status < 300 && payload.is_valid !== false) {
+            message = "The server returned an unexpected response instead of an activation confirmation. Check Boundaries before retrying.";
+            reviewCurrent = true;
+        } else {
+            message = "The server rejected the boundary package (HTTP " + status + "). Check the ZIP package requirements before retrying.";
+        }
+        return {message: message, reviewCurrent: reviewCurrent};
     }
 
     function completeUpload(xhr) {
@@ -111,13 +192,15 @@
             picker.clear();
             setBusy(false);
             row.update({state: "completed", label: "Boundary package activated", percent: 100, error: ""});
-            showResult("success", typeof payload.message === "string" ? payload.message : "Boundary package activated.");
+            showResult("success", payloadMessage(payload) || "Boundary package activated.");
             return;
         }
-        finishFailure(xhr, typeof payload.message === "string" ? payload.message : "The boundary package could not be uploaded.");
+        var failure = failureResponse(xhr, payload);
+        finishFailure(xhr, failure.message, failure.reviewCurrent);
     }
 
     function upload() {
+        if (window.qcMaintenance && window.qcMaintenance.isActive()) return;
         if (request || redirecting) return;
         var error = picker.validate(picker.files());
         if (error) {
@@ -125,6 +208,11 @@
             return;
         }
         if (!selected || !row) return;
+        var capacityError = storageError(selected);
+        if (capacityError) {
+            rejectStorage(capacityError);
+            return;
+        }
         var xhr = new window.XMLHttpRequest();
         var data = new window.FormData();
         data.append("file", selected);
@@ -152,13 +240,13 @@
             });
             xhr.addEventListener("load", function () { completeUpload(xhr); });
             xhr.addEventListener("error", function () {
-                finishFailure(xhr, "The boundary upload connection failed. Check Boundaries before retrying if the transfer had finished.");
+                finishFailure(xhr, "The boundary upload connection failed. Check Boundaries before retrying; activation may still have completed.", true);
             });
             xhr.addEventListener("timeout", function () {
-                finishFailure(xhr, "The upload response timed out. Check Boundaries to see whether activation completed before retrying.");
+                finishFailure(xhr, "The upload response timed out. Check Boundaries to see whether activation completed before retrying.", true);
             });
             xhr.addEventListener("abort", function () {
-                finishFailure(xhr, "The upload was interrupted. Check Boundaries if the transfer had finished before trying again.");
+                finishFailure(xhr, "The upload was interrupted. Check Boundaries before retrying if the transfer had finished.", true);
             });
             xhr.send(data);
         } catch (_error) {

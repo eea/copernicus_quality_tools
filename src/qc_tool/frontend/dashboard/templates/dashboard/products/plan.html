@@ -8,7 +8,8 @@
 {% block page_subtitle %}<p>Define the product units users must deliver for {{ product.name }} and who will review their submissions.</p>{% endblock %}
 {% block page_actions %}<a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">Back to product</a>{% endblock %}
 {% block page_content %}
-<form method="post" class="workspace-card review-form">
+<form method="post" class="workspace-card review-form" data-maintenance-write>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
     {% csrf_token %}{{ form.expected_release_id }}{{ form.expected_manager_digest }}
     <header class="workspace-card__header"><div><h2>Required product units</h2><p>{{ required_unit_count }} product units in the current plan. Approval opens this product for submissions.</p></div></header>
     <div class="workspace-card__body">
@@ -28,5 +29,6 @@
         <p>Changing the expected product units creates a new plan revision. Existing submissions and approvals remain in their original plan and do not count towards the new plan. Changing only the assigned managers keeps the current plan and its progress.</p>
         <div class="review-actions"><button class="btn btn-primary btn-qc-primary" type="submit">Approve and activate plan</button><a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">Cancel</a></div>
     </div>
+</fieldset>
 </form>
 {% endblock %}

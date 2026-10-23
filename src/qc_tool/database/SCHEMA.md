@@ -24,7 +24,33 @@ the stored fact independently of the Python package or UI that displays it.
 These prefixes group tables within one database. They do not create separate
 PostgreSQL schemas, services or release procedures. Django app labels remain
 framework identities for model discovery, content types and permissions;
-`accounts` and `dashboard` share one models-only initialization workflow.
+`accounts`, `dashboard` and `qc_database` share one models-only initialization workflow.
+
+### Database administration
+
+The central [`qc_database` app](models.py) owns administrative transfer evidence.
+It shares the same models-only initialization/readiness workflow as every other
+component; it has no separate schema upgrade path.
+
+| Table | Model | Stored facts |
+| --- | --- | --- |
+| `qc_database_transfer_receipt` | [TransferReceipt](models.py) | Unique imported package/operation identities, package and reviewed-plan digests, importing actor snapshot and committed counts/identity mappings |
+
+The receipt is inserted atomically with its imported graph. Private operation
+journals and the maintenance ownership pin remain outside SQL so a crashed
+runner can reconcile its SQL commit with staged files. Imported packages exclude
+source transfer receipts and framework authentication state; the target creates
+its own receipt after explicit review. Additive application imports preserve
+existing rows, translate new integer business IDs, retain job/submission UUIDs
+and original bytes, and map users explicitly. Versioned source/local provenance
+uses the existing receipt JSON; this change adds no schema. Account-only imports create inactive identities and do not apply
+source authority. See [administrative data transfer](README.md#administrative-data-transfer).
+
+This model was added during `draft` schema development. Existing earlier draft
+databases are refused by readiness checks; create a fresh disposable database
+for development verification. Do not repair them or generate migration/baseline
+history to add this feature. Production schema adoption remains a separate
+reviewed release decision.
 
 ### Accounts
 

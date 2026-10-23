@@ -1,0 +1,6 @@
+{% load static %}
+<a class="qc-admin-task" href="{{ url }}">
+  <svg class="qc-admin-task__icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#{{ icon }}"></use></svg>
+  <span class="qc-admin-task__content"><span class="qc-admin-task__label">{{ label }}</span>{% if description %}<span class="qc-admin-task__description">{{ description }}</span>{% endif %}</span>
+  <svg class="qc-admin-task__arrow" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg>
+</a>

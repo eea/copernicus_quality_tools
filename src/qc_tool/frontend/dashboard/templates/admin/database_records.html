@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}">{% endblock %}
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; <a href="{{ records_home_url }}">{{ records_home_label }}</a> &rsaquo; {{ resource.label }}</div>{% endblock %}
+{% block content %}
+<div class="qc-admin-home database-page">
+  <header class="qc-admin-intro"><div><a class="database-back" href="{{ records_home_url }}">&larr; {{ records_home_label }}</a><h1>{{ resource.label }}</h1><code>{{ resource.table }}</code></div>{% include "admin/includes/database_actions.html" %}</header>
+  <section class="qc-admin-panel">
+    <p class="database-policy">{{ resource.description }}</p>
+    {% if maintenance.enabled %}<p class="database-muted">Record changes are paused during maintenance.</p>{% endif %}
+    {% if record_error %}<p class="errornote" role="alert">{{ record_error }}</p>{% else %}
+    {% if resource.search %}<form method="get" class="database-search database-search--records" role="search"><div><label for="record-search">Search records</label><input id="record-search" name="q" type="search" value="{{ query }}" placeholder="Search {{ resource.label|lower }}"></div>{% if related_field %}<input type="hidden" name="related_field" value="{{ related_field }}"><input type="hidden" name="related_value" value="{{ related_value }}">{% endif %}<button type="submit" class="btn-qc-secondary">Search</button></form>{% endif %}
+    {% if related_field %}<p class="database-filter">Showing linked records. <a href="{% url 'admin_database_records' resource.table %}">Show all {{ resource.label|lower }}</a></p>{% endif %}
+    <div class="database-scroll"><table class="database-records"><caption>{{ page.paginator.count }} record{{ page.paginator.count|pluralize }}</caption><thead><tr>{% for column in columns %}<th scope="col">{{ column }}</th>{% endfor %}{% if resource.detail %}<th scope="col"><span class="visually-hidden">Details</span></th>{% endif %}</tr></thead><tbody>
+      {% for row in rows %}<tr>{% for cell in row.cells %}<td>{% if cell.url %}<a href="{{ cell.url }}">{{ cell.value|truncatechars:140 }}</a>{% else %}{{ cell.value|truncatechars:140 }}{% endif %}</td>{% endfor %}{% if resource.detail %}<td><a class="database-open-record" href="{{ row.url }}">View record<span class="visually-hidden"> {{ row.cells.0.value }}</span> &rarr;</a></td>{% endif %}</tr>{% empty %}<tr><td colspan="20" class="database-empty">{% if query or related_field %}No records match these filters.{% else %}There are no records in this table.{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if page.has_other_pages %}<nav class="database-pagination" aria-label="Record pages">{% if page.has_previous %}<a class="btn-qc-secondary" href="?{{ pagination_query }}&amp;page={{ page.previous_page_number }}">Previous</a>{% endif %}<span>Records {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>{% if page.has_next %}<a class="btn-qc-secondary" href="?{{ pagination_query }}&amp;page={{ page.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -21,6 +21,9 @@ copernicus_quality_tools/
 │   ├── frontend/
 │   │   ├── accounts/         # Identity, roles, permissions, grants, admin
 │   │   ├── dashboard/        # Deliveries, jobs, UI, route and object access
+│   │   ├── admin_config.py   # Selects QCAdminSite through Django AdminConfig
+│   │   ├── admin_site.py     # Account/database administration navigation
+│   │   ├── templates/admin/ # Shared Admin shell, sign-in and error pages
 │   │   ├── settings.py       # Environment-driven Django configuration
 │   │   ├── urls.py           # Root URL composition
 │   │   └── wsgi.py           # Gunicorn/Django entrypoint
@@ -46,7 +49,7 @@ owning packages under `src/qc_tool/`.
 
 ```text
 frontend/accounts/
-├── admin/             # User, role, product, and region Admin composition
+├── admin/             # User/group administration and account-access inlines
 ├── authentication/    # Login backend and API credential authentication
 ├── authorization/     # Role, permission, and per-request access facts
 ├── management/        # User provisioning management command
@@ -66,6 +69,63 @@ Rules:
 - do not import `Delivery` or `Job` into accounts;
 - use services for creation and multi-model writes;
 - keep credentials out of templates, logs, URLs, and Django Admin fields.
+
+## Administration interface
+
+Admin has four navigation sections: **Overview**, **User management**,
+**Database** and **Storage**. User management owns account creation, groups,
+permissions and profile transfers. Database owns connected-record transfers,
+full backups/recovery, schema checks, maintenance and the curated table browser.
+Storage inspects configured retained server files independently of SQL rows.
+The overview links to these three task areas; section visibility follows permissions.
+
+| Owner | Responsibility |
+| --- | --- |
+| `frontend/admin_config.py`, `admin_site.py` | Select `QCAdminSite`, derive account actions from Django model permissions, and provide permission-aware section context |
+| `frontend/templates/admin/` | Shared Admin shell, navigation, sign-in and error templates |
+| `frontend/dashboard/templates/dashboard/shared/brand.html`, `dashboard/static/dashboard/css/ui/brand.css` | Workspace identity with the Copernicus and Land Monitoring logos; Admin uses a compact text identity |
+| `frontend/dashboard/static/dashboard/css/ui/actions.css` | Shared button primitives; each shell retains its own navigation destinations |
+| `frontend/dashboard/static/dashboard/css/ui/navigation.css`, `js/shared/navigation.js` | Shared account-menu styling and native menu interaction, including Admin's Profile menu |
+| `frontend/accounts/admin/` | Existing user/group forms, permissions, product-access and token inlines |
+| `frontend/accounts/views/`, `frontend/urls.py` | Shared authentication policies and Admin-specific sign-in/logout/error presentation |
+| `frontend/dashboard/templates/admin/` | Overview and task-based user, database, maintenance and storage pages |
+| `frontend/dashboard/views/admin_users.py` | Permission-filtered user-management landing page; reuses registered account editors and profile transfers |
+| `frontend/dashboard/views/admin_data_transfer.py` | HTTP forms and review presentation; database operations remain in `database/transfers/` |
+| `frontend/dashboard/views/admin_maintenance.py`, `dashboard/services/maintenance/` | Explicit maintenance actions, progress and shared writer admission |
+| `frontend/dashboard/services/maintenance/barrier.py` | Shared ready-state, generation and exclusive activity barrier for transfers and storage mutations |
+| `frontend/dashboard/views/admin_storage.py`, `dashboard/services/storage_admin/` | Confined file browsing/download, exact database-reference checks and reversible journaled trash/restore |
+
+`QCAdminSite` disables the general model sidebar and Django's automatic site
+link. Task navigation and automatic authentication/error recovery destinations
+stay in Admin; its brand links to the Admin overview. One explicit back-arrow
+**Back to workspace** control leads the header and lets the user deliberately
+switch interfaces. It precedes the plain **CLMS QC Tool | Admin** identity, with
+no logos in Admin. The account menu follows the workspace's menu pattern.
+Do not add other workspace shortcuts, a product/boundary setup guide, delivery
+or submission-review cards, or an unrestricted model directory. Those operational
+workflows belong to the separate QC workspace. Reuse shared navigation/button
+primitives without importing workspace operational navigation or controls into
+Admin.
+
+Filtering `get_app_list()` changes navigation only. Existing domain ModelAdmin
+registrations and direct-route permissions remain intact. Staff see only their
+granted user/group actions; the product-manager role alone exposes no account
+or database controls. Database transfers and maintenance still require the QC
+administrator role. Admin-specific templates reuse authentication and maintenance
+policies rather than implementing a second authentication system.
+
+Storage exposes only configured incoming uploads, recognized QC job namespaces
+and published submissions. Descriptor-relative opens reject traversal, symlinks,
+hard-linked files, special files and overlaps with private control/credential
+storage. Browsing does not rely on Delivery/Job rows. Historical ZIP verification
+uses exact record paths and recorded checksum/size; it never searches for a
+substitute with a similar filename. Existing job-download provenance checks are
+reused unchanged. Removing an unreferenced file requires ready maintenance and
+a reviewed file fingerprint; it moves to same-filesystem private trash with a
+durable intent journal. Restore never overwrites a destination. If incoming ZIP
+records were subsequently imported, restore verifies the private payload against
+their recorded checksum and size. Published files/specifications are immutable.
+These filesystem operations do not add schema or application database writes.
 
 ## Frontend dashboard app
 
@@ -153,8 +213,25 @@ outside raster/vector QC modules:
 
 ## Product and QC ownership
 
-`product_definitions/` and the `raster/` and `vector/` packages define domain
-behavior. Consume original specification bytes without rewriting specifications
-or uploaded snapshots. Raster/vector checks remain unchanged on this branch;
-account, deployment and generic security work must preserve their behavior.
-Use representative fixtures and the relevant domain tests to verify that contract.
+`product_definitions/` and the `raster/` and `vector/` packages define QC
+behavior. Keep raster and vector algorithms, check-specific parameters and result
+semantics with their checks. Consume original specification bytes without
+rewriting specifications or uploaded snapshots.
+
+Reusable execution infrastructure belongs outside the check packages:
+
+- `worker/inspire.py` owns the INSPIRE service client, polling deadlines and
+  metadata-validation orchestration shared by raster and vector checks;
+- `worker/documents.py` owns shared PDF discovery and readability checks;
+- `worker/archives.py` owns the shared worker archive preparation adapter.
+
+The corresponding integration entry points remain thin adapters to these shared
+services and retain their check identities and parameter contracts. Compatibility
+exports in `vector/helper.py` support existing integrations; new reusable code
+should import its owning worker module directly. Worker, frontend, database and maintenance
+infrastructure must not statically import raster/vector check implementations.
+The dispatcher may still load a configured check dynamically when executing a
+product recipe.
+
+Verify refactors with representative fixtures and the relevant domain tests.
+`test_worker_module_boundaries.py` enforces the static dependency direction.

@@ -6,7 +6,7 @@ const {webcrypto} = require("node:crypto");
 const {createDOM, addPicker} = require("./dom.cjs");
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function queuePage(feature, {authExpired = false, correction = null} = {}) {
+function queuePage(feature, {authExpired = false, correction = null, maintenance = false, realResumable = false} = {}) {
     const {window, document} = createDOM();
     function node(tag, attrs, parent) {
         const result = document.createElement(tag);
@@ -34,6 +34,17 @@ function queuePage(feature, {authExpired = false, correction = null} = {}) {
     node("div", {"data-upload-announcement": ""}, root);
     node("div", {"data-upload-feedback": ""}, root);
     window.crypto = webcrypto;
+    window.qcMaintenance = {
+        isActive: () => maintenance,
+        observePayload(payload) {
+            if (payload && (payload.error === "maintenance" || payload.code === "maintenance")) {
+                maintenance = true;
+                document.dispatchEvent({type: "qc:maintenance"});
+                return true;
+            }
+            return false;
+        }
+    };
     window.qcCsrf = {getToken: () => "csrf-fixture"};
     window.qcAuth = {handleUnauthorizedXhr: () => authExpired, redirectFromPayload: () => authExpired};
     class Events {
@@ -43,11 +54,16 @@ function queuePage(feature, {authExpired = false, correction = null} = {}) {
     }
     const requests = [];
     window.XMLHttpRequest = class extends Events {
-        constructor() { super(); this.upload = new Events(); this.headers = {}; requests.push(this); }
-        open(method, url) { this.method = method; this.url = url; }
+        constructor() { super(); this.upload = new Events(); this.headers = {}; this.readyState = 0; requests.push(this); }
+        open(method, url) { this.method = method; this.url = url; this.readyState = 1; }
         setRequestHeader(name, value) { this.headers[name] = value; }
         send(body) { this.body = body; }
-        respond(status, payload) { this.status = status; this.response = payload; this.fire("load"); }
+        abort() { this.aborted = true; this.readyState = 0; }
+        respond(status, payload) {
+            this.status = status; this.readyState = 4; this.response = payload;
+            this.responseText = payload === null || payload === undefined ? "" : typeof payload === "string" ? payload : JSON.stringify(payload);
+            this.fire("load");
+        }
     };
     window.FormData = class { constructor() { this.entries = []; } append(key, value) { this.entries.push([key, value]); } };
     const transports = [];
@@ -63,6 +79,19 @@ function queuePage(feature, {authExpired = false, correction = null} = {}) {
         success(id = 1) { this.fire("fileSuccess", this.file, JSON.stringify({status: "ok", delivery_id: id})); }
         fail(payload) { this.fire("fileError", this.file, typeof payload === "string" ? payload : JSON.stringify(payload)); }
     };
+    if (realResumable) {
+        window.setTimeout = setTimeout;
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../../static/dashboard/js/vendor/resumable.js"), "utf8"), {
+            window, document, File, Blob, FileList: class {},
+            XMLHttpRequest: window.XMLHttpRequest, FormData: window.FormData, setTimeout,
+        });
+        const Resumable = window.Resumable;
+        window.Resumable = function(options) {
+            const transport = new Resumable(options);
+            transports.push(transport);
+            return transport;
+        };
+    }
     for (const file of ["shared/uploads.js", "shared/upload-queue.js", "features/" + feature + "/upload.js"]) {
         vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../../static/dashboard/js/", file), "utf8"), {window, document});
     }

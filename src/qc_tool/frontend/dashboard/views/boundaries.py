@@ -1,12 +1,22 @@
 """Boundary catalog and package-management endpoints."""
 
+import shutil
+import tempfile
+
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
 from qc_tool.common import CONFIG
+from qc_tool.frontend.dashboard.access.routes.csrf import boundary_upload_receive_failure
 from qc_tool.frontend.dashboard.services.boundaries import BoundaryPackageError
 from qc_tool.frontend.dashboard.services.boundaries import list_boundary_files
 from qc_tool.frontend.dashboard.services.boundaries import replace_boundary_package
 from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
+from qc_tool.frontend.dashboard.services.boundaries import inspect_boundary_capacity
+from qc_tool.frontend.dashboard.services.boundaries.configuration import get_boundary_package_limits
+
+
+_UPLOAD_FREE_HEADROOM = 256 * 1024**2
 
 
 def boundaries(request):
@@ -40,7 +50,9 @@ def get_boundaries_json(request, boundary_type):
             if boundary_type == "raster"
             else generation.vector_dir
         )
-        boundary_list = list_boundary_files(directory, boundary_type)
+        boundary_list = list_boundary_files(
+            directory, boundary_type, max_entries=get_boundary_package_limits().max_members,
+        )
     except BoundaryPackageError as exc:
         return JsonResponse(
             {
@@ -60,13 +72,35 @@ def get_boundaries_json(request, boundary_type):
 def boundaries_upload_page(request):
     """Render the private boundary-upload page."""
 
-    return render(request, 'dashboard/boundaries/upload.html')
+    context = {}
+    try:
+        limits = get_boundary_package_limits()
+        capacity = inspect_boundary_capacity(CONFIG["boundary_dir"])
+        temporary_free = shutil.disk_usage(settings.FILE_UPLOAD_TEMP_DIR or tempfile.gettempdir()).free
+        context.update(
+            boundary_upload_limits=limits,
+            boundary_storage_free=capacity["free_bytes"],
+            boundary_available_upload_bytes=max(
+                0, min(temporary_free, capacity["free_bytes"]) - _UPLOAD_FREE_HEADROOM,
+            ),
+        )
+    except BoundaryPackageError as error:
+        context["boundary_configuration_error"] = error.user_message
+    except OSError:
+        context["boundary_configuration_error"] = "Temporary upload storage is unavailable. Check server storage before uploading."
+    return render(request, 'dashboard/boundaries/upload.html', context)
 
 
 def boundaries_upload(request):
     """Validate and atomically activate a private boundary package upload."""
 
-    uploaded_file = request.FILES.get("file")
+    try:
+        limits = get_boundary_package_limits()
+        uploaded_file = request.FILES.get("file")
+    except BoundaryPackageError as error:
+        return JsonResponse({"is_valid": False, "code": error.code, "message": error.user_message}, status=error.status_code)
+    except OSError as error:
+        return boundary_upload_receive_failure(error)
     if uploaded_file is None:
         return JsonResponse(
             {
@@ -81,6 +115,7 @@ def boundaries_upload(request):
         result = replace_boundary_package(
             uploaded_file,
             CONFIG["boundary_dir"],
+            limits=limits,
             lock_timeout=30,
         )
     except BoundaryPackageError as exc:
@@ -102,6 +137,7 @@ def boundaries_upload(request):
                 "archive_size": result.archive_size,
                 "file_count": result.file_count,
                 "uncompressed_size": result.uncompressed_size,
+                "generation_id": result.generation_id,
             },
         }
     )

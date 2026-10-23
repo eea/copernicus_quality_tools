@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Administration</a> &rsaquo; {{ title }}</div>
+{% endblock %}
+
+{% block content %}
+<section aria-labelledby="admin-error-heading">
+  <h2 id="admin-error-heading">{% if status_code == 403 %}You do not have access to this Admin page{% else %}This Admin page could not be found{% endif %}</h2>
+  <p>{% if status_code == 403 %}Your account does not have the required permission. Contact a QC Tool administrator if you need access.{% else %}The address may be incomplete or the record may no longer be available.{% endif %}</p>
+  <div class="qc-admin-transfer-actions">
+    <a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin:index' %}">Return to administration</a>
+    {% if not user.is_authenticated %}<a class="qc-admin-button btn-qc-secondary" href="{% url 'admin_login' %}">Sign in to administration</a>{% endif %}
+  </div>
+</section>
+{% endblock %}

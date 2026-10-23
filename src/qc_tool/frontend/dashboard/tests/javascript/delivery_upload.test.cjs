@@ -26,6 +26,37 @@ test("delivery selection checks own filenames without uploading until Add", asyn
     const upload = await start(page);
     assert.equal(page.requests.length, 2, "Check again immediately before adding.");
     assert.equal(upload.uploadCalls, 1);
+    assert.equal(upload.options.maxChunkRetries, 0);
+    assert.equal(upload.options.testChunks, true);
+});
+
+test("storage failures stop a batch and preserve pending new files and replacement choices", async () => {
+    for (const code of ["upload_storage_unavailable", "upload_storage_error", "upload_storage_full"]) {
+        const page = queuePage("deliveries");
+        page.choose([file(), file("replacement.zip"), file("later.zip")]);
+        page.checked(0); page.checked(1, true); page.checked(2); await tick();
+        page.all.click(); page.checked(3); await tick();
+        const upload = page.transports[0];
+        const identity = upload.options.generateUniqueIdentifier();
+        upload.fail({status: "error", code, message: "Upload storage is unavailable."});
+        await tick(); await tick();
+        const [failed, replacement, pending] = page.queue.entries;
+        assert.equal(failed.state, "failed");
+        assert.match(failed.message, /Upload storage is unavailable/);
+        assert.equal(replacement.state, "replaceable");
+        assert.equal(replacement.overwriteKey, 7);
+        assert.equal(replacement.availableOverwriteKey, 7);
+        assert.equal(replacement.row.element.querySelector("[data-upload-overwrite]").hidden, false);
+        assert.equal(pending.state, "selected");
+        assert.match(pending.message, /Not uploaded/);
+        assert.equal(page.transports.length, 1);
+        assert.equal(page.requests.length, 4, "No later filename check or upload starts automatically.");
+        page.click(failed, "retry"); await tick();
+        assert.equal(page.transports.length, 2);
+        assert.equal(page.transports[1].options.generateUniqueIdentifier(), identity);
+        assert.equal(replacement.state, "replaceable");
+        assert.equal(pending.state, "selected");
+    }
 });
 
 test("detected filename hints are plain text and remain visible during upload", async () => {

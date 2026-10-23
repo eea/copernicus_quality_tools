@@ -11,7 +11,7 @@ def run_check(params, status):
     from qc_tool.vector.helper import LayerDefsBuilder
     from qc_tool.vector.helper import extract_aoi_code
     from qc_tool.vector.helper import extract_epsg_code
-    from qc_tool.vector.helper import find_pdfs
+    from qc_tool.worker.documents import find_pdfs
 
 
     # Find PDF (.pdf) layers.

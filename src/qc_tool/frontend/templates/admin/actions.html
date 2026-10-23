@@ -1,0 +1,4 @@
+{% extends "admin/actions.html" %}
+{% block actions %}
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>{{ block.super }}</fieldset>
+{% endblock %}

@@ -76,9 +76,11 @@ def _extract_member(
                 member_total += len(chunk)
                 extracted_total += len(chunk)
                 if member_total > limits.max_member_bytes:
-                    raise BoundaryPackageLimitExceeded("extracted ZIP entry is too large")
+                    raise BoundaryPackageLimitExceeded("extracted ZIP entry is too large", limit="member_bytes",
+                                                       actual=member_total, maximum=limits.max_member_bytes)
                 if extracted_total > limits.max_uncompressed_bytes:
-                    raise BoundaryPackageLimitExceeded("extracted ZIP is too large")
+                    raise BoundaryPackageLimitExceeded("extracted ZIP is too large", limit="uncompressed_bytes",
+                                                       actual=extracted_total, maximum=limits.max_uncompressed_bytes)
                 output.write(chunk)
             output.flush()
             os.fsync(output.fileno())
