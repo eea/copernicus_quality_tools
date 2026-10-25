@@ -1,0 +1,10 @@
+{% load i18n static %}
+<form method="post" action="{{ logout_url }}" data-maintenance-write{% if logout_form_id %} id="{{ logout_form_id }}"{% endif %}>
+    <fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
+        {% csrf_token %}
+        <button type="submit">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#log-out"></use></svg>
+            <span class="navbar-logout-label">{% translate 'Log out' %}</span>
+        </button>
+    </fieldset>
+</form>

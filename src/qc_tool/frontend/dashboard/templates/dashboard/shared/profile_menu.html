@@ -1,0 +1,24 @@
+{% load i18n static %}
+<details class="site-nav-user" data-header-menu>
+    <summary id="profile-menu-button" class="site-nav-button" aria-controls="profile-menu">
+        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#user-circle"></use></svg>
+        {% translate 'Profile' %}
+        <svg class="ui-icon site-nav-chevron" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-down"></use></svg>
+    </summary>
+    <ul id="profile-menu" class="site-nav-dropdown-menu" aria-labelledby="profile-menu-button">
+        {% if show_identity %}
+        <li class="site-nav-identity"><span>{% translate 'Signed in as' %}</span><strong>{{ user.get_username }}</strong></li>
+        {% endif %}
+        {% if settings_url %}
+        <li>
+            <a href="{{ settings_url }}"{% if request.path == settings_url %} aria-current="page"{% endif %}>
+                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg>
+                {{ settings_label }}
+            </a>
+        </li>
+        {% endif %}
+        <li class="navbar-logout">
+            {% include "dashboard/shared/logout_form.html" %}
+        </li>
+    </ul>
+</details>

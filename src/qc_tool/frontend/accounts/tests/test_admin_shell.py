@@ -27,16 +27,36 @@ class _Links(HTMLParser):
         self.links = []
         self.elements = []
         self.text = []
+        self.linked_images = []
+        self.anchors = []
+        self.menu_elements = []
+        self.menu_depth = 0
         self.feed(response if isinstance(response, str) else response.content.decode())
 
     def handle_starttag(self, tag, attributes):
         attributes = dict(attributes)
         self.elements.append((tag, attributes))
+        if tag == "div":
+            if attributes.get("id") == "primary-navigation-menu":
+                self.menu_depth = 1
+            elif self.menu_depth:
+                self.menu_depth += 1
+        if self.menu_depth:
+            self.menu_elements.append((tag, attributes))
         if tag == "a":
+            self.anchors.append(attributes)
             href = attributes.get("href")
             if href:
                 self.hrefs.append(href)
                 self.links.append(attributes)
+        elif tag == "img":
+            self.linked_images.append((attributes, self.anchors[-1] if self.anchors else {}))
+
+    def handle_endtag(self, tag):
+        if tag == "div" and self.menu_depth:
+            self.menu_depth -= 1
+        if tag == "a" and self.anchors:
+            self.anchors.pop()
 
     def handle_data(self, text):
         if text.strip():
@@ -102,6 +122,16 @@ class AdminShellTests(TestCase):
         self.assertIsNotNone(navigation)
         return _Links(navigation.group(1))
 
+    def assert_light_admin_shell(self, response):
+        self.assertContains(
+            response, '<meta name="color-scheme" content="light">',
+            status_code=response.status_code,
+        )
+        for asset in ("admin/css/dark_mode.css", "admin/js/theme.js"):
+            self.assertNotContains(response, static(asset), status_code=response.status_code)
+        self.assertNotContains(response, "theme-toggle", status_code=response.status_code)
+        self.assertTemplateNotUsed(response, "admin/color_theme_toggle.html")
+
     def test_administrator_header_has_exactly_four_task_sections(self):
         self.client.force_login(self.administrator)
         expected = ("admin:index", "admin_user_management", "admin_data_transfer", "admin_storage")
@@ -136,19 +166,36 @@ class AdminShellTests(TestCase):
                           if link.get("aria-current") == "page"]
                 self.assertEqual(active, [reverse(owner)])
 
-    def test_admin_pages_start_with_an_accessible_return_button_and_plain_title(self):
+    def test_admin_pages_share_the_brand_header_with_an_explicit_workspace_return(self):
         self.client.force_login(self.administrator)
         for route in (
             "admin:index", "admin_login", "admin:auth_user_changelist",
             "admin_user_management", "admin_data_transfer", "admin_maintenance", "admin_storage",
+            "admin:password_change", "admin:password_change_done",
         ):
             with self.subTest(route=route):
                 response = self.client.get(reverse(route))
                 self.assertEqual(response.status_code, 200)
-                self.assertTemplateNotUsed(response, "dashboard/shared/brand.html")
+                self.assertTemplateUsed(response, "dashboard/shared/header.html")
+                self.assertTemplateUsed(response, "dashboard/shared/brand.html")
+                self.assert_light_admin_shell(response)
                 header = _Links(self.admin_header(response))
-                self.assertEqual([tag for tag, _ in header.elements if tag == "img"], [])
+                for filename in ("logo_copernicus_big.png", "logo_land_monitoring_medium.png"):
+                    with self.subTest(logo=filename):
+                        matching = [
+                            (image, anchor) for image, anchor in header.linked_images
+                            if image.get("src") == static("dashboard/img/" + filename)
+                        ]
+                        self.assertEqual(len(matching), 1)
+                        _image, anchor = matching[0]
+                        self.assertEqual(anchor.get("href"), reverse("admin:index"))
+                        self.assertIn("qc-brand", anchor.get("class", "").split())
                 self.assertIn("CLMS QC Tool | Admin", " ".join(header.text))
+                header_elements = [
+                    attributes for tag, attributes in _Links(response).elements
+                    if tag == "header" and "site-header" in attributes.get("class", "").split()
+                ]
+                self.assertEqual(len(header_elements), 1)
                 self.assertNotContains(response, 'id="user-tools"')
                 self.assertContains(response, f'href="{static("dashboard/css/ui/actions.css")}"')
                 links = [
@@ -157,7 +204,12 @@ class AdminShellTests(TestCase):
                 ]
                 self.assertEqual(len(links), 1)
                 self.assertEqual(links[0]["href"], reverse("dashboard_home"))
-                self.assertEqual(header.links[0], links[0])
+                branding = re.search(
+                    r'<div\b[^>]*\bid="branding"[^>]*>(.*?)</div>',
+                    self.admin_header(response), re.DOTALL,
+                )
+                self.assertIsNotNone(branding)
+                self.assertEqual(_Links(branding.group(1)).links[0], links[0])
                 self.assertEqual(links[0].get("aria-label"), "Back to workspace")
                 self.assertEqual(links[0].get("title"), "Back to workspace")
                 self.assertTrue({"btn-qc-icon", "btn-qc-secondary"}.issubset(links[0].get("class", "").split()))
@@ -169,12 +221,16 @@ class AdminShellTests(TestCase):
         workspace = self.client.get(reverse("dashboard_home"))
         self.assertEqual(workspace.status_code, 200)
         self.assertTemplateUsed(workspace, "dashboard/shared/brand.html")
+        self.assertTemplateUsed(workspace, "dashboard/shared/profile_menu.html")
+        self.assertTemplateUsed(workspace, "dashboard/shared/logout_form.html")
         for image in ("logo_copernicus_big.png", "logo_land_monitoring_medium.png"):
             self.assertContains(workspace, f'src="{static("dashboard/img/" + image)}"')
 
     def test_admin_profile_menu_keeps_identity_and_csrf_protected_account_actions(self):
         self.client.force_login(self.administrator)
         response = self.client.get(reverse("admin:index"))
+        self.assertTemplateUsed(response, "dashboard/shared/profile_menu.html")
+        self.assertTemplateUsed(response, "dashboard/shared/logout_form.html")
         header = self.admin_header(response)
         navigation = re.search(r'<nav\b[^>]*aria-label="Account"[^>]*>(.*?)</nav>', header, re.DOTALL)
         self.assertIsNotNone(navigation)
@@ -195,9 +251,59 @@ class AdminShellTests(TestCase):
         self.assertIn("data-maintenance-write", forms[0])
         self.assertIn('name="csrfmiddlewaretoken"', details.group(1))
         self.assertIn("Log out", details.group(1))
-        self.assertIn('class="theme-toggle"', account_menu)
-        self.assertRegex(account_menu, r'<li\b[^>]*>\s*<button class="theme-toggle"')
+        summaries = [attributes for tag, attributes in markup.elements if tag == "summary"]
+        self.assertEqual(len(summaries), 1)
+        self.assertIn("site-nav-button", summaries[0].get("class", "").split())
+        self.assert_light_admin_shell(response)
         self.assertNotContains(response, f'href="{reverse("admin:logout")}"')
+
+    def test_mobile_navigation_control_owns_account_and_administration_tasks(self):
+        self.client.force_login(self.administrator)
+        task_routes = ("admin:index", "admin_user_management", "admin_data_transfer", "admin_storage")
+        for route in (*task_routes, "admin_maintenance", "admin:auth_user_changelist"):
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "dashboard/shared/header.html")
+                header = _Links(self.admin_header(response))
+                toggles = [
+                    attributes for tag, attributes in header.elements
+                    if tag == "button" and "data-header-toggle" in attributes
+                ]
+                self.assertEqual(len(toggles), 1)
+                self.assertEqual(toggles[0].get("type"), "button")
+                self.assertEqual(toggles[0].get("aria-controls"), "primary-navigation-menu")
+                self.assertEqual(toggles[0].get("aria-expanded"), "false")
+                regions = [
+                    attributes for tag, attributes in header.elements
+                    if attributes.get("id") == "primary-navigation-menu"
+                ]
+                self.assertEqual(len(regions), 1)
+                self.assertIn("site-header__menu", regions[0].get("class", "").split())
+                self.assertEqual([
+                    attributes.get("aria-label") for tag, attributes in header.menu_elements
+                    if tag == "nav"
+                ], ["Account", "Administration"])
+                for task_route in task_routes:
+                    destination = reverse(task_route)
+                    self.assertEqual(sum(
+                        tag == "a" and attributes.get("href") == destination
+                        for tag, attributes in header.menu_elements
+                    ), 1, f"{task_route} must be in the collapsible navigation exactly once.")
+                for element_id in ("profile-menu-button", "admin-logout-form"):
+                    self.assertEqual(sum(
+                        attributes.get("id") == element_id
+                        for _tag, attributes in header.menu_elements
+                    ), 1)
+                self.assertEqual(sum(
+                    tag == "button" and "theme-toggle" in attributes.get("class", "").split()
+                    for tag, attributes in header.menu_elements
+                ), 0)
+                self.assertFalse(any(
+                    "site-header__back" in attributes.get("class", "").split()
+                    or "qc-brand" in attributes.get("class", "").split()
+                    for _tag, attributes in header.menu_elements
+                ), "The brand and workspace return must remain available when navigation closes.")
 
     def test_admin_login_uses_admin_shell_and_preserves_internal_next(self):
         destination = reverse("admin_data_transfer")
@@ -205,10 +311,26 @@ class AdminShellTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "admin/qc_tool_login.html")
+        self.assert_light_admin_shell(response)
         self.assertContains(response, "Sign in to administration")
         self.assertContains(response, "data-maintenance-exempt")
         self.assertContains(response, f'name="next" value="{destination}"')
         self.assert_admin_links(response)
+
+    def test_admin_login_hides_navigation_without_a_nonfunctional_mobile_control(self):
+        response = self.client.get(reverse("admin_login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "dashboard/shared/header.html")
+        header = _Links(self.admin_header(response))
+        self.assertFalse(any(
+            "data-header-toggle" in attributes or attributes.get("id") == "primary-navigation-menu"
+            for _tag, attributes in header.elements
+        ))
+        self.assertFalse(any(
+            tag == "nav" and attributes.get("aria-label") in ("Account", "Administration")
+            for tag, attributes in header.elements
+        ))
 
     def test_logout_returns_to_admin_login_and_removes_authentication(self):
         self.client.force_login(self.administrator)
@@ -298,6 +420,7 @@ class AdminShellTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertTemplateUsed(response, "admin/qc_tool_error.html")
+        self.assert_light_admin_shell(response)
         self.assertContains(response, "Return to administration", status_code=404)
         self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow, noarchive")
         self.assertIn("no-store", response["Cache-Control"])
@@ -309,6 +432,7 @@ class AdminShellTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertTemplateUsed(response, "admin/qc_tool_error.html")
+        self.assert_light_admin_shell(response)
         self.assert_admin_links(response)
 
     def test_prefixed_admin_errors_keep_prefixed_admin_destinations(self):

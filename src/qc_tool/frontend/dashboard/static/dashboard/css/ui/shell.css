@@ -1,4 +1,4 @@
-/* Workspace layout: header dimensions, navigation collapse, page frame and footer. */
+/* Workspace page frame and footer; shared header lives in header.css. */
 html {
   min-height: 100%;
 }
@@ -49,51 +49,6 @@ body.qc-shell {
   color: #fff;
 }
 
-.qc-shell #menucontainer {
-  position: relative;
-  min-height: 80px;
-  margin: 0;
-  border: 0;
-  border-bottom: 1px solid #dfe7f2;
-  border-radius: 0;
-  background: var(--qc-color-surface);
-  box-shadow: none;
-}
-
-.qc-shell #menucontainer > .container-fluid {
-  padding-right: 28px;
-  padding-left: 28px;
-}
-
-.qc-shell .navbar-brand {
-  display: flex;
-  height: 80px;
-  align-items: center;
-  padding: 15px 0;
-  color: var(--qc-color-text);
-  font-size: 21px;
-  font-weight: 500;
-  line-height: 1;
-}
-
-.qc-shell .navbar-brand:hover,
-.qc-shell .navbar-brand:focus {
-  color: #14243f;
-}
-
-.qc-shell .navbar-menu {
-  height: auto;
-  line-height: normal;
-}
-
-/* Workspace header dimensions; shared menu appearance lives in navigation.css. */
-.qc-shell .main-menu > li > a,
-.qc-shell .main-menu > li > .site-nav-button,
-.qc-shell .main-menu > li.navbar-logout button {
-  min-height: 80px;
-  padding: 29px 14px;
-}
-
 .qc-shell .footer {
   flex: 0 0 auto;
   padding: 28px 20px 17px;
@@ -139,94 +94,6 @@ body.qc-shell {
 .qc-shell textarea:focus {
   outline: 2px solid var(--qc-color-primary);
   outline-offset: 2px;
-}
-
-@media (max-width: 1199px) and (min-width: 992px) {
-  .qc-shell #menucontainer > .container-fluid {
-    padding-right: 18px;
-    padding-left: 18px;
-  }
-
-  .qc-shell .main-menu > li > a,
-  .qc-shell .main-menu > li > .site-nav-button,
-  .qc-shell .main-menu > li.navbar-logout button {
-    padding-right: 9px;
-    padding-left: 9px;
-    font-size: 12px;
-  }
-}
-
-/* Bootstrap 3 collapses at 768px; QC Tool needs more room for its full menu. */
-@media (max-width: 991px) {
-  .qc-shell #menucontainer {
-    min-height: 70px;
-  }
-
-  .qc-shell #menucontainer > .container-fluid {
-    padding-right: 16px;
-    padding-left: 16px;
-  }
-
-  .qc-shell .navbar-header {
-    float: none;
-  }
-
-  .qc-shell .navbar-brand {
-    height: 70px;
-    padding: 14px 0;
-  }
-
-  .qc-shell .navbar-toggle {
-    display: block;
-    margin-top: 18px;
-    margin-right: 0;
-  }
-
-  .qc-shell .navbar-collapse {
-    border-top-color: #dfe7f2;
-    background: #fff;
-    box-shadow: 0 8px 20px rgba(20, 36, 63, 0.08);
-  }
-
-  .qc-shell .navbar-collapse.collapse {
-    display: none !important;
-  }
-
-  .qc-shell .navbar-collapse.collapse.in {
-    display: block !important;
-  }
-
-  .qc-shell .navbar-nav {
-    float: none !important;
-    margin: 0 -15px;
-  }
-
-  .qc-shell .navbar-nav > li {
-    float: none;
-  }
-
-  .qc-shell .main-menu > li > a,
-  .qc-shell .main-menu > li > .site-nav-button,
-  .qc-shell .main-menu > li.navbar-logout button {
-    width: 100%;
-    min-height: 48px;
-    padding: 13px 15px;
-    text-align: left;
-  }
-
-  .qc-shell .site-nav-dropdown-menu {
-    position: static;
-    float: none;
-    width: 100%;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .qc-shell .site-nav-dropdown-menu > li > a,
-  .qc-shell .site-nav-dropdown-menu > li.navbar-logout button {
-    padding-left: 44px;
-  }
 }
 
 @media (max-width: 560px) {

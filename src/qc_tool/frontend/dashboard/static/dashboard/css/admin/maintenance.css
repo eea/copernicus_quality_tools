@@ -1,4 +1,4 @@
-/* Reuse shared actions and the Admin status card and theme variables. */
+/* Reuse shared actions and the Admin status card and palette variables. */
 .qc-maintenance { max-width: 1060px; }
 .qc-maintenance .qc-admin-service { align-items: center; }
 .qc-maintenance .qc-admin-service__actions { flex-shrink: 0; max-width: 240px; }

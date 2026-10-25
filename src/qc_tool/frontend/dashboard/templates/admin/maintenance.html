@@ -49,11 +49,11 @@
     </div>
     <div class="qc-admin-service__actions">
       {% if transfer_operation %}
-        <a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_data_transfer' %}?operation={{ transfer_operation.operation_id }}">View transfer</a>
+        <a class="btn-qc-primary" href="{% url 'admin_data_transfer' %}?operation={{ transfer_operation.operation_id }}">View transfer</a>
       {% elif maintenance_unavailable %}
-        <a class="qc-admin-button btn-qc-secondary" href="{{ request.path }}">Reload page</a>
+        <a class="btn-qc-secondary" href="{{ request.path }}">Reload page</a>
       {% else %}
-        {% if transfer_return_url and maintenance.phase == 'ready' %}<a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{{ transfer_return_url }}">{% if storage_return %}Continue to Storage{% elif database_return %}Continue to database{% else %}Continue import or export{% endif %}</a>{% endif %}
+        {% if transfer_return_url and maintenance.phase == 'ready' %}<a class="btn-qc-primary" href="{{ transfer_return_url }}">{% if storage_return %}Continue to Storage{% elif database_return %}Continue to database{% else %}Continue import or export{% endif %}</a>{% endif %}
         <form method="post" data-maintenance-exempt data-admin-pending-message="Updating maintenance. Please wait for the result." data-admin-pending-label="Updating maintenance…">
           {% csrf_token %}
           <input type="hidden" name="generation" value="{{ maintenance.generation }}">
@@ -62,10 +62,10 @@
             {% if deployment_maintenance %}
               <p class="qc-maintenance-managed">Managed by deployment settings</p>
             {% else %}
-              <button type="submit" class="qc-admin-button{% if transfer_return_url and maintenance.phase == 'ready' %} btn-qc-secondary{% else %} qc-admin-button--primary btn-qc-primary{% endif %}" name="action" value="disable"{% if maintenance.phase != 'ready' %} disabled aria-describedby="maintenance-stopping-note"{% elif maintenance_busy_waiting %} disabled aria-describedby="admin-busy-heading"{% endif %}>Turn off maintenance</button>
+              <button type="submit" class="{% if transfer_return_url and maintenance.phase == 'ready' %}btn-qc-secondary{% else %}btn-qc-primary{% endif %}" name="action" value="disable"{% if maintenance.phase != 'ready' %} disabled aria-describedby="maintenance-stopping-note"{% elif maintenance_busy_waiting %} disabled aria-describedby="admin-busy-heading"{% endif %}>Turn off maintenance</button>
             {% endif %}
           {% else %}
-            <button type="submit" class="qc-admin-button qc-admin-button--primary btn-qc-primary" name="action" value="enable"{% if maintenance_busy_waiting %} disabled aria-describedby="admin-busy-heading"{% endif %}>Turn on maintenance</button>
+            <button type="submit" class="btn-qc-primary" name="action" value="enable"{% if maintenance_busy_waiting %} disabled aria-describedby="admin-busy-heading"{% endif %}>Turn on maintenance</button>
           {% endif %}
         </form>
         {% if maintenance.enabled and maintenance.phase != 'ready' %}<p id="maintenance-stopping-note" class="qc-maintenance-action-note">Available when QC work has stopped.</p>{% endif %}
@@ -90,11 +90,11 @@
     <input type="hidden" name="generation" value="{{ maintenance.generation }}">
     <input type="hidden" name="action" value="progress">
     {% if transfer_return_url %}<input type="hidden" name="next" value="{{ transfer_return_url }}">{% endif %}
-    <noscript><p>Enable JavaScript for automatic progress, or update it here.</p><button type="submit" class="qc-admin-button btn-qc-secondary">Update progress</button></noscript>
+    <noscript><p>Enable JavaScript for automatic progress, or update it here.</p><button type="submit" class="btn-qc-secondary">Update progress</button></noscript>
   </form>
   <div class="qc-maintenance-problem" data-progress-problem hidden>
     <p role="alert" data-progress-error></p>
-    <button type="button" class="qc-admin-button btn-qc-secondary" data-progress-retry hidden>Try again</button>
+    <button type="button" class="btn-qc-secondary" data-progress-retry hidden>Try again</button>
     <a href="{{ request.get_full_path }}">Reload page</a>
   </div>
   {% endif %}

@@ -1,4 +1,4 @@
-/* Shared menu appearance; each shell owns its header dimensions and collapse. */
+/* Shared navigation appearance; header.css owns geometry and responsive layout. */
 .qc-admin {
   --qc-nav-text: var(--body-fg);
   --qc-nav-primary: var(--link-fg);
@@ -10,9 +10,7 @@
 }
 
 :is(.qc-shell, .qc-admin) .main-menu > li > a,
-:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-button,
-:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-user > .site-nav-button,
-:is(.qc-shell, .qc-admin) .main-menu > li.navbar-logout button {
+:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-user > .site-nav-button {
   display: flex;
   box-sizing: border-box;
   align-items: center;
@@ -25,50 +23,50 @@
   text-decoration: none;
 }
 
-:is(.qc-shell, .qc-admin) .main-menu > li.navbar-logout > form {
-  margin: 0;
-}
-
-:is(.qc-shell, .qc-admin) .main-menu > li > a:hover,
-:is(.qc-shell, .qc-admin) .main-menu > li > a:focus,
-:is(.qc-shell, .qc-admin) .main-menu > li > a[aria-current="page"],
-:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-button:hover,
-:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-button:focus,
-:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-user > .site-nav-button:hover,
-:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-user > .site-nav-button:focus,
+:is(.qc-shell, .qc-admin) .main-menu > li > a:is(:hover, :focus, [aria-current="page"]),
+:is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-user > .site-nav-button:is(:hover, :focus),
 :is(.qc-shell, .qc-admin) .main-menu > li > .site-nav-user[open] > .site-nav-button,
-:is(.qc-shell, .qc-admin) .main-menu > li.open > .site-nav-button,
-:is(.qc-shell, .qc-admin) .main-menu > li.site-nav-user--active > .site-nav-button,
-:is(.qc-shell, .qc-admin) .main-menu > li.navbar-logout button:hover,
-:is(.qc-shell, .qc-admin) .main-menu > li.navbar-logout button:focus {
+:is(.qc-shell, .qc-admin) .main-menu > li.site-nav-user--active > .site-nav-user > .site-nav-button {
   color: var(--qc-nav-primary, var(--qc-color-primary));
-  background: var(--qc-nav-hover, #f5f8fd);
+  background: var(--qc-nav-hover, var(--qc-color-surface-hover));
 }
 
 :is(.qc-shell, .qc-admin) .main-menu .ui-icon {
   margin-right: 8px;
-  color: var(--qc-nav-muted, #53627a);
+  color: var(--qc-nav-muted, var(--qc-color-muted));
 }
-
-:is(.qc-shell, .qc-admin) .site-nav-button .caret {
-  margin-left: 7px;
-}
-
 :is(.qc-shell, .qc-admin) .site-nav-button .site-nav-chevron {
   margin-right: 0;
   margin-left: 7px;
 }
 
-:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu {
-  min-width: 205px;
-  padding: 7px 0;
-  font-size: 14px;
-  background: var(--qc-nav-surface, var(--qc-color-surface));
-  border-color: var(--qc-nav-border, var(--qc-color-border));
-  border-radius: 8px;
-  box-shadow: 0 13px 28px rgba(20, 36, 63, 0.14);
+:is(.qc-shell, .qc-admin) .site-nav-user { position: relative; }
+:is(.qc-shell, .qc-admin) .site-nav-user > summary {
+  cursor: pointer;
+  list-style: none;
 }
-
+:is(.qc-shell, .qc-admin) .site-nav-user > summary::-webkit-details-marker { display: none; }
+:is(.qc-shell, .qc-admin) .site-nav-user > .site-nav-dropdown-menu {
+  position: absolute;
+  z-index: 1100;
+  top: 100%;
+  inset-inline-end: 0;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 205px;
+  max-width: min(360px, calc(100vw - 32px));
+  margin: 0;
+  padding: 7px 0;
+  border: 1px solid var(--qc-nav-border, var(--qc-color-border));
+  border-radius: 8px;
+  color: var(--qc-nav-text, var(--qc-color-text));
+  background: var(--qc-nav-surface, var(--qc-color-surface));
+  box-shadow: 0 13px 28px rgba(20, 36, 63, .14);
+  font-size: 14px;
+  list-style: none;
+}
+:is(.qc-shell, .qc-admin) .site-nav-user:not([open]) > .site-nav-dropdown-menu { display: none; }
+:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li { margin: 0; padding: 0; list-style: none; }
 :is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li > a,
 :is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li.navbar-logout button {
   display: flex;
@@ -79,76 +77,33 @@
   padding: 10px 16px;
   border: 0;
   color: var(--qc-nav-text, var(--qc-color-text));
-  background: var(--qc-nav-surface, #fff);
+  background: var(--qc-nav-surface, var(--qc-color-surface));
   font: inherit;
   font-weight: 400;
   line-height: 22px;
   text-align: left;
 }
-
-:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li.navbar-logout > form {
-  margin: 0;
-}
-
-:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li > a:hover,
-:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li > a:focus,
-:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li > a[aria-current="page"],
-:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li.navbar-logout button:hover,
-:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li.navbar-logout button:focus {
+:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li > a:is(:hover, :focus, [aria-current="page"]),
+:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li.navbar-logout button:is(:hover, :focus) {
   color: var(--qc-nav-primary, var(--qc-color-primary));
-  background: var(--qc-nav-menu-hover, #f3f7fd);
+  background: var(--qc-nav-menu-hover, var(--qc-color-surface-hover));
   text-decoration: none;
 }
-
-:is(.qc-shell, .qc-admin) .navbar-logout-label {
-  min-width: 0;
-  white-space: nowrap;
+:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > li.navbar-logout > form { margin: 0; }
+:is(.qc-shell, .qc-admin) .navbar-logout-label { min-width: 0; white-space: nowrap; }
+:is(.qc-shell, .qc-admin) .site-nav-dropdown-menu > .site-nav-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 16px 14px;
+  border-bottom: 1px solid var(--qc-nav-border, var(--qc-color-border));
 }
-
-/* Admin uses the shared menu with native details, without Bootstrap scripts. */
-.qc-admin .main-menu {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+:is(.qc-shell, .qc-admin) .site-nav-identity > span {
+  color: var(--qc-nav-muted, var(--qc-color-muted));
+  font-size: 12px;
 }
-
-.qc-admin .site-nav-user {
-  position: relative;
-}
-
-.qc-admin :where(.site-nav-dropdown-menu > li) {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.qc-admin .site-nav-user > summary {
-  cursor: pointer;
-  list-style: none;
-}
-
-.qc-admin .site-nav-user > summary::-webkit-details-marker {
-  display: none;
-}
-
-.qc-admin .site-nav-user > .site-nav-dropdown-menu {
-  position: absolute;
-  z-index: 1100;
-  top: 100%;
-  inset-inline-end: 0;
-  box-sizing: border-box;
-  width: max-content;
-  max-width: min(360px, calc(100vw - 32px));
-  margin: 0;
-  border: 1px solid var(--qc-nav-border);
-  list-style: none;
-}
-
-.qc-admin .site-nav-user:not([open]) > .site-nav-dropdown-menu {
-  display: none;
-}
-
-.qc-admin .main-menu :is(a, button, summary):focus-visible {
-  outline: 2px solid var(--qc-nav-primary);
-  outline-offset: 2px;
+:is(.qc-shell, .qc-admin) .site-nav-identity > strong {
+  color: var(--qc-nav-text, var(--qc-color-text));
+  font-size: 13px;
+  overflow-wrap: anywhere;
 }

@@ -1,0 +1,31 @@
+{% load static %}
+<header{% if header_id %} id="{{ header_id }}"{% endif %} class="site-header">
+    {% include "dashboard/shared/maintenance_notice.html" %}
+    <div id="menucontainer" class="site-header__main">
+        <div id="branding" class="site-header__branding">
+            {% if return_url %}
+            <a class="btn-qc-secondary btn-qc-icon site-header__back{% if return_class %} {{ return_class }}{% endif %}" href="{{ return_url }}" aria-label="Back to workspace" title="Back to workspace">
+                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
+            </a>
+            {% endif %}
+            <a class="qc-brand{% if brand_class %} {{ brand_class }}{% endif %}" href="{{ brand_url }}">
+                {% include "dashboard/shared/brand.html" with context_label=brand_context only %}
+            </a>
+        </div>
+        {% if show_navigation %}
+        <button class="site-header__toggle" type="button" data-header-toggle aria-controls="primary-navigation-menu" aria-expanded="false" aria-label="Toggle navigation">
+            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#menu"></use></svg>
+        </button>
+        <div id="primary-navigation-menu" class="site-header__menu">
+            <nav class="site-header__primary" aria-label="{{ navigation_label|default:'Primary navigation' }}">
+                <ul class="nav navbar-nav navbar-right main-menu">
+                    {% include navigation_template %}
+                </ul>
+            </nav>
+            {% if secondary_navigation_template %}
+                {% include secondary_navigation_template %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</header>

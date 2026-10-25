@@ -1,0 +1,16 @@
+{% load i18n l10n %}
+<form method="post">{% csrf_token %}
+  <div class="qc-admin-confirmation-actions">
+    {% if bulk_delete %}
+      {% for obj in queryset %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">{% endfor %}
+      <input type="hidden" name="action" value="delete_selected">
+    {% endif %}
+    <input type="hidden" name="post" value="yes">
+    {% if not bulk_delete %}
+      {% if is_popup %}<input type="hidden" name="{{ is_popup_var }}" value="1">{% endif %}
+      {% if to_field %}<input type="hidden" name="{{ to_field_var }}" value="{{ to_field }}">{% endif %}
+    {% endif %}
+    <button type="submit" class="btn-qc-danger">{% translate 'Yes, I’m sure' %}</button>
+    <a href="#" class="cancel-link btn-qc-secondary">{% translate 'No, take me back' %}</a>
+  </div>
+</form>

@@ -3,7 +3,13 @@
 
 {% block title %}Account settings | CLMS QC Tool{% endblock title %}
 {% block body_class %}account-settings-page{% endblock body_class %}
-{% block brand_url %}{% if account_access.can_view_deliveries %}{% url 'dashboard_home' %}{% else %}https://github.com/eea/copernicus_quality_tools/wiki{% endif %}{% endblock brand_url %}
+{% block header %}
+{% if account_access.can_view_deliveries %}
+{{ block.super }}
+{% else %}
+{% with header_brand_url="https://github.com/eea/copernicus_quality_tools/wiki" %}{{ block.super }}{% endwith %}
+{% endif %}
+{% endblock header %}
 
 {% block css %}
 <link rel="stylesheet" href="{% static 'accounts/css/account-settings.css' %}">

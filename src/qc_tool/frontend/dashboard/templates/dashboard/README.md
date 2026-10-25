@@ -21,6 +21,72 @@ template supplies content through these blocks:
 
 Do not reproduce the page container or header inside a feature template.
 
+## Application header
+
+`shared/header.html` owns the header frame for workspace, public API, account,
+error, and Admin pages. Both application layouts include it with an explicit
+context (`only`); feature views must not change header behavior through unrelated
+context variables. New pages inherit their area's layout rather than recreating
+header markup.
+
+| Component | Responsibility |
+| --- | --- |
+| `shared/header.html` | Maintenance notice, linked brand, optional return control, responsive menu, and optional secondary navigation |
+| `shared/brand.html` | Original Copernicus/CLMS logos, application title, and optional area label |
+| `shared/profile_menu.html` | Native Profile disclosure, optional identity/settings link, and logout action |
+| `shared/logout_form.html` | CSRF-protected POST with maintenance write protection |
+| `shared/navigation.html` | Permission-aware workspace/public navigation and account destinations |
+| `admin/includes/header_account_menu.html` and `header_navigation.html` | Admin account destinations and permitted administration tasks |
+
+The containing layout supplies the brand URL, navigation template, and visibility.
+Workspace and API brands link to `dashboard_home`; Admin brands link to
+`admin:index`. API and Admin use the same **Back to workspace** arrow and area
+label (`CLMS QC Tool | API` or `CLMS QC Tool | Admin`). The return control uses
+the canonical Dashboard URL, so it works after direct entry as well as navigation
+from the workspace. Admin keeps one workspace-return control; its other
+navigation and authentication/recovery destinations remain inside Admin.
+Admin sign-in hides account and task navigation.
+Admin always uses the shared light palette. Its base template omits Django's
+theme script and dark stylesheet, so saved theme choices and system appearance
+do not change the page. Profile, logout, back, and mobile controls keep using
+the shared components and styles used by the normal workspace and API.
+
+Standalone areas configure the shared pattern through the base layout, without
+copying header markup or adding feature-specific styles:
+
+```django
+{% block header %}
+{% url 'dashboard_home' as workspace_url %}
+{% with header_brand_context="API" header_return_url=workspace_url %}{{ block.super }}{% endwith %}
+{% endblock header %}
+```
+
+Account and error pages with a different safe return destination override the
+layout's `header` block, set `header_brand_url`, and render `block.super`:
+
+```django
+{% block header %}
+{% with header_brand_url=account_return_url %}{{ block.super }}{% endwith %}
+{% endblock header %}
+```
+
+Do not put overridable blocks inside an included component: Django includes do
+not participate in the caller's template inheritance.
+
+`ui/header.css` owns header geometry and responsive navigation, `ui/brand.css`
+owns identity presentation, and `ui/navigation.css` owns menu appearance. Admin
+maps shared color variables to its light palette in `admin/shell.css`; feature styles
+must not redefine the header. `shared/navigation.js` progressively enhances the
+mobile toggle and adds Escape/outside-click dismissal. Without JavaScript,
+navigation remains visible and Profile works through native `details`/`summary`.
+The header does not require Bootstrap JavaScript.
+
+All navigation supplied to the header, including Admin task links, belongs
+inside `#primary-navigation-menu`. The shared hamburger controls that entire
+region on small screens. The desktop layout places account links beside the
+brand and optional area links on the next row using the same component; do not
+put a second mobile menu or navigation outside the controlled region.
+
 ## Breadcrumb hierarchy
 
 `shared/breadcrumbs.html` is the breadcrumb component for every layout,
@@ -91,6 +157,18 @@ green for starting QC or another successful action, red for destructive
 actions, and a white/blue secondary button for navigation or downloads. Keep
 the Bootstrap `btn` class while the application still loads Bootstrap, and add
 the appropriate `btn-qc-*` class for the QC Tool contract.
+
+Native Django Admin model controls use those same `btn-qc-*` classes through
+the adapters in `frontend/templates/admin/`: submit rows, bulk actions, search,
+object tools, and deletion confirmations. Single and bulk deletion share
+`admin/includes/delete_confirmation_form.html`, including CSRF and explicit
+confirmation fields. Keep permissions, filters, and form semantics in these
+adapters and visual rules in `ui/actions.css`; review the adapters against the
+installed Django templates when upgrading Django. Admin layout styles may
+arrange and wrap actions, but must not recreate their button appearance.
+Upstream authentication forms keep their original markup and behavior; narrowly
+scoped native submit selectors join the same shared action rules, including the
+destructive variant for disabling password authentication.
 
 JavaScript behavior uses stable IDs, `data-*` configuration, and feature-local
 classes. Styling must not be the only JavaScript hook. New scripts belong under

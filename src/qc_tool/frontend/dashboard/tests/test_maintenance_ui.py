@@ -70,13 +70,26 @@ class MaintenanceBrowsingPresentationTests(TestCase):
         self.status = maintenance.enable(self.administrator, 0)
 
     def test_shared_notice_is_visible_across_workspace_account_and_admin_pages(self):
-        for route in ("dashboard_home", "deliveries", "products", "account_settings", "admin:index"):
-            with self.subTest(route=route):
-                response = self.client.get(reverse(route))
-                self.assertEqual(response.status_code, 200)
-                self.assertContains(response, "You can browse and download existing data.")
-                self.assertContains(response, 'name="qc-maintenance" content="on"')
-                self.assertContains(response, "dashboard/js/shared/maintenance.js", count=1)
+        for phase in ("stopping", "ready"):
+            if phase == "ready":
+                maintenance.advance(self.status["generation"])
+            for route in ("dashboard_home", "deliveries", "products", "account_settings", "admin:index"):
+                with self.subTest(phase=phase, route=route):
+                    response = self.client.get(reverse(route))
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.context["maintenance"]["phase"], phase)
+                    if route == "admin:index":
+                        notice = (
+                            "Turning on maintenance. QC work is stopping."
+                            if phase == "stopping" else
+                            "Maintenance is on. You can browse and download existing data; changes are paused."
+                        )
+                    else:
+                        notice = "You can browse and download existing data."
+                    self.assertContains(response, notice)
+                    self.assertContains(response, "data-maintenance-banner", count=1)
+                    self.assertContains(response, 'name="qc-maintenance" content="on"')
+                    self.assertContains(response, "dashboard/js/shared/maintenance.js", count=1)
 
     def test_upload_pages_remain_navigable_with_disabled_native_file_controls(self):
         for route in ("file_upload", "boundaries_upload", "product_upload"):

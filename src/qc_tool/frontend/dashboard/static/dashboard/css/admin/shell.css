@@ -1,5 +1,6 @@
 /* QC Tool's existing palette and icons, scoped to Django Admin. */
 body.qc-admin {
+  color-scheme: light;
   --primary: var(--qc-color-primary);
   --secondary: var(--qc-color-primary-dark);
   --body-bg: var(--qc-color-canvas);
@@ -39,78 +40,6 @@ body.qc-admin {
   font-family: var(--qc-font-sans);
   line-height: 1.5;
 }
-html[data-theme="dark"] body.qc-admin {
-  --primary: #8dbfff;
-  --body-bg: #0e1726;
-  --body-fg: #d8e2f2;
-  --body-loud-color: #f0f5fc;
-  --body-quiet-color: #a7b6cc;
-  --header-bg: #141f31;
-  --header-color: #d8e2f2;
-  --header-branding-color: #f0f5fc;
-  --header-link-color: #8dbfff;
-  --breadcrumbs-bg: #141f31;
-  --breadcrumbs-fg: #a7b6cc;
-  --breadcrumbs-link-fg: #8dbfff;
-  --link-fg: #8dbfff;
-  --link-hover-color: #b6d6ff;
-  --link-selected-fg: #b6d6ff;
-  --hairline-color: #25344a;
-  --border-color: #31425b;
-  --darkened-bg: #19263b;
-  --selected-bg: #1d3553;
-  --selected-row: #1d3553;
-  --button-bg: #2769bd;
-  --button-hover-bg: #347cd2;
-  --default-button-bg: #2769bd;
-  --default-button-hover-bg: #347cd2;
-  --qc-admin-surface: #141f31;
-  --qc-admin-soft: #19263b;
-  --qc-admin-blue-soft: #1c3453;
-  --qc-admin-violet-soft: #30244b;
-  --qc-admin-violet: #c3a5ff;
-  --qc-admin-green-soft: #18392f;
-  --qc-admin-green: #93dcb2;
-  --qc-admin-warning-soft: #3b2d1b;
-  --qc-admin-warning: #f6d190;
-}
-@media (prefers-color-scheme: dark) {
-  html[data-theme="auto"] body.qc-admin {
-    --primary: #8dbfff;
-    --body-bg: #0e1726;
-    --body-fg: #d8e2f2;
-    --body-loud-color: #f0f5fc;
-    --body-quiet-color: #a7b6cc;
-    --header-bg: #141f31;
-    --header-color: #d8e2f2;
-    --header-branding-color: #f0f5fc;
-    --header-link-color: #8dbfff;
-    --breadcrumbs-bg: #141f31;
-    --breadcrumbs-fg: #a7b6cc;
-    --breadcrumbs-link-fg: #8dbfff;
-    --link-fg: #8dbfff;
-    --link-hover-color: #b6d6ff;
-    --link-selected-fg: #b6d6ff;
-    --hairline-color: #25344a;
-    --border-color: #31425b;
-    --darkened-bg: #19263b;
-    --selected-bg: #1d3553;
-    --selected-row: #1d3553;
-    --button-bg: #2769bd;
-    --button-hover-bg: #347cd2;
-    --default-button-bg: #2769bd;
-    --default-button-hover-bg: #347cd2;
-    --qc-admin-surface: #141f31;
-    --qc-admin-soft: #19263b;
-    --qc-admin-blue-soft: #1c3453;
-    --qc-admin-violet-soft: #30244b;
-    --qc-admin-violet: #c3a5ff;
-    --qc-admin-green-soft: #18392f;
-    --qc-admin-green: #93dcb2;
-    --qc-admin-warning-soft: #3b2d1b;
-    --qc-admin-warning: #f6d190;
-  }
-}
 .qc-admin-home svg {
   width: 20px;
   height: 20px;
@@ -126,94 +55,6 @@ html[data-theme="dark"] body.qc-admin {
   outline: 3px solid var(--link-fg);
   outline-offset: 4px;
 }
-body.qc-admin #header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0 24px;
-  padding: 0 28px;
-  border-bottom: 1px solid var(--border-color);
-}
-body.qc-admin #branding { min-width: 0; }
-.qc-admin-branding {
-  display: flex;
-  align-items: center;
-  min-height: 80px;
-  box-sizing: border-box;
-  gap: 16px;
-  padding: 18px 0;
-}
-.qc-admin #branding .qc-admin-brand {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 9px;
-  color: var(--header-branding-color);
-  font-size: 21px;
-  font-weight: 500;
-  white-space: nowrap;
-  text-decoration: none;
-}
-.qc-admin-brand__separator { color: var(--border-color); }
-.qc-admin-brand__context { color: var(--body-quiet-color); font-size: 18px; }
-.qc-admin-workspace-link { flex-shrink: 0; }
-.qc-admin #header .qc-admin-workspace-link { text-decoration: none; }
-.qc-admin-account-menu { justify-self: end; align-self: stretch; }
-.qc-admin-account-menu .main-menu {
-  display: flex;
-  height: 100%;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.qc-admin-account-menu .main-menu > li { margin: 0; padding: 0; list-style: none; }
-.qc-admin-account-menu .site-nav-button { min-height: 80px; padding: 29px 14px; }
-.qc-admin-theme { display: flex; align-items: center; justify-content: center; }
-.qc-admin-account-menu .site-nav-identity {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 18px 14px;
-  border-bottom: 1px solid var(--hairline-color);
-}
-.qc-admin .site-nav-identity > span {
-  color: var(--body-quiet-color);
-  font-size: 12px;
-}
-.qc-admin .site-nav-identity > strong { color: var(--body-loud-color); font-size: 13px; overflow-wrap: anywhere; }
-/* Override Django's header-link ID rule so dropdowns match the shared menu. */
-.qc-admin #header .site-nav-dropdown-menu a { color: var(--body-fg); text-decoration: none; }
-.qc-admin #header .site-nav-dropdown-menu a:is(:hover, :focus) { color: var(--link-fg); }
-.qc-admin .theme-toggle {
-  display: inline-flex;
-  box-sizing: border-box;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  min-width: 42px;
-  min-height: 42px;
-  margin: 0;
-  padding: 9px;
-  border-radius: var(--qc-radius-small);
-  color: var(--body-quiet-color);
-  line-height: 1;
-}
-.qc-admin .theme-toggle:hover { background: var(--qc-admin-soft); }
-/* Django owns matching SVG/symbol dimensions; shrinking only the SVG clips it. */
-.qc-admin .theme-toggle svg { flex-shrink: 0; color: var(--header-bg); fill: var(--body-quiet-color); stroke: none; }
-.qc-admin-navigation { display: flex; flex-wrap: wrap; grid-column: 1 / -1; gap: 0 30px; }
-.qc-admin #header .qc-admin-navigation a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 47px;
-  border-bottom: 3px solid transparent;
-  color: var(--body-quiet-color);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-.qc-admin #header .qc-admin-navigation a:hover,
-.qc-admin #header .qc-admin-navigation a[aria-current] { border-bottom-color: var(--link-fg); color: var(--link-fg); }
 .qc-admin ul.messagelist[data-maintenance-banner] { margin: 0; padding: 0; }
 .qc-admin ul.messagelist[data-maintenance-banner] li.warning {
   margin: 0;
@@ -254,7 +95,7 @@ body.qc-admin-home-page #content { width: auto; min-width: 0; }
 .qc-admin-icon--violet { background: var(--qc-admin-violet-soft); color: var(--qc-admin-violet); }
 .qc-admin-icon--green { background: var(--qc-admin-green-soft); color: var(--qc-admin-green); }
 .qc-admin-panel > p { margin: 0 0 18px; color: var(--body-quiet-color); font-size: 13px; line-height: 1.65; }
-.qc-admin-panel > .qc-admin-button { align-self: flex-start; margin-top: auto; }
+.qc-admin-panel > [class*="btn-qc-"] { align-self: flex-start; margin-top: auto; }
 .qc-admin-transfer-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 14px; }
 .qc-admin .qc-admin-text-link { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; min-height: 38px; margin-top: auto; font-size: 12px; font-weight: 600; text-decoration: none; }
 .qc-admin-text-link:hover { text-decoration: underline; }
@@ -280,7 +121,6 @@ body.qc-admin-home-page #content { width: auto; min-width: 0; }
 .qc-admin-service__content > .qc-admin-service__detail { padding-top: 6px; font-weight: 600; }
 .qc-admin-service__actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: auto 0; }
 @media (max-width: 1100px) {
-  body.qc-admin #header { padding: 0 24px; }
   .qc-admin-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.qc-admin #content { padding: 28px 24px; }
   .qc-admin div.breadcrumbs { padding: 12px 24px; }
@@ -289,12 +129,6 @@ body.qc-admin-home-page #content { width: auto; min-width: 0; }
   .qc-admin-service__actions { flex-basis: 100%; flex-direction: row; flex-wrap: wrap; padding-inline-start: 58px; }
 }
 @media (max-width: 767px) {
-  body.qc-admin #header { padding: 0 18px; }
-  .qc-admin-branding { gap: 12px; padding: 14px 0; }
-  .qc-admin #branding .qc-admin-brand { gap: 7px; font-size: 18px; }
-  .qc-admin-brand__context { font-size: 16px; }
-  .qc-admin-navigation { gap: 0 22px; }
-  .qc-admin #header .qc-admin-navigation a { min-height: 43px; font-size: 12px; }
   .qc-admin ul.messagelist[data-maintenance-banner] li.warning { padding: 10px 18px; }
   body.qc-admin #content { padding: 24px 18px; }
   .qc-admin div.breadcrumbs { padding: 12px 18px; }
@@ -308,19 +142,8 @@ body.qc-admin-home-page #content { width: auto; min-width: 0; }
   .qc-admin-service > .qc-admin-icon { width: 32px; height: 32px; }
   .qc-admin-service h2 { font-size: 16px; }
   .qc-admin-service__actions { padding: 0; }
-  .qc-admin-service__actions .qc-admin-button { flex: 1 1 auto; }
+  .qc-admin-service__actions [class*="btn-qc-"] { flex: 1 1 auto; }
 }
-
-@media (max-width: 600px) {
-  body.qc-admin #header { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .qc-admin-branding { min-height: 70px; }
-  .qc-admin-account-menu .site-nav-button { min-height: 44px; padding: 11px 12px; }
-}
-
-/* Keep the text identity and return button within Django's sign-in card. */
-.qc-admin.login #branding .qc-admin-brand { gap: 7px; font-size: 18px; }
-.qc-admin.login .qc-admin-brand__context { font-size: 16px; }
-body.qc-admin.login #header { padding: 0 20px; }
 
 /* Task areas share the same cards in the overview and user-management page. */
 .qc-admin-management { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -362,3 +185,10 @@ body.qc-admin.login #header { padding: 0 20px; }
   .qc-admin-management { grid-template-columns: minmax(0, 1fr); }
   .qc-admin-management .qc-admin-panel { padding: 22px; }
 }
+
+/* Native model views opt into the shared action component; only layout lives here. */
+.qc-admin .object-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 0 0 18px; float: none; }
+.qc-admin .object-tools li { height: auto; margin: 0; float: none; }
+.qc-admin .object-tools a { float: none; }
+.qc-admin .qc-admin-confirmation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.qc-admin .qc-admin-confirmation-actions .cancel-link { margin: 0; }

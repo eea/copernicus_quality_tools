@@ -1,4 +1,18 @@
 {% extends "admin/submit_line.html" %}
+{% load i18n admin_urls %}
 {% block submit-row %}
-<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>{{ block.super }}</fieldset>
+<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
+{% if show_save %}<input type="submit" value="{% translate 'Save' %}" class="default btn-qc-primary" name="_save">{% endif %}
+{% if show_save_as_new %}<input type="submit" value="{% translate 'Save as new' %}" class="btn-qc-secondary" name="_saveasnew">{% endif %}
+{% if show_save_and_add_another %}<input type="submit" value="{% translate 'Save and add another' %}" class="btn-qc-secondary" name="_addanother">{% endif %}
+{% if show_save_and_continue %}<input type="submit" value="{% if can_change %}{% translate 'Save and continue editing' %}{% else %}{% translate 'Save and view' %}{% endif %}" class="btn-qc-secondary" name="_continue">{% endif %}
+{% if show_close %}
+  {% url opts|admin_urlname:'changelist' as changelist_url %}
+  <a href="{% add_preserved_filters changelist_url %}" class="closelink btn-qc-secondary">{% translate 'Close' %}</a>
+{% endif %}
+{% if show_delete_link and original %}
+  {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
+  <a href="{% add_preserved_filters delete_url %}" class="deletelink btn-qc-danger-outline">{% translate 'Delete' %}</a>
+{% endif %}
+</fieldset>
 {% endblock %}

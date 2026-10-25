@@ -17,6 +17,7 @@
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/navigation.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/shell.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/brand.css' %}">
+        <link rel="stylesheet" href="{% static 'dashboard/css/ui/header.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/icons.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/actions.css' %}">
         <link rel="stylesheet" href="{% static 'dashboard/css/ui/breadcrumbs.css' %}">
@@ -27,6 +28,8 @@
 
         {% block css %}{% endblock css %}
 
+        <script src="{% static 'dashboard/js/shared/navigation.js' %}" defer></script>
+
         {% block js_head %}{% endblock js_head %}
 
     </head>
@@ -34,39 +37,10 @@
         {% block skip_links %}<a class="skip-link" href="#main-content">Skip to main content</a>{% endblock skip_links %}
         <div id="wrap">
             <div id="main" class="clear-top">
-                <header class="site-header">
-                {% include "dashboard/shared/maintenance_notice.html" %}
-                <nav id="menucontainer" class="navbar navbar-default" aria-label="Primary navigation">
-                    <div class="container-fluid">
-                        <div class="navbar-header">
-                            {% url 'dashboard_home' as homepage_url %}
-                            <a class="navbar-brand qc-brand" href="{% block brand_url %}{{ homepage_url|default:'/' }}{% endblock brand_url %}">
-                                {% include "dashboard/shared/brand.html" %}
-                            </a>
-                            <button
-                                type="button"
-                                class="navbar-toggle collapsed"
-                                data-toggle="collapse"
-                                data-target="#primary-navigation-menu"
-                                aria-controls="primary-navigation-menu"
-                                aria-expanded="false"
-                            >
-                                <span class="sr-only">Toggle navigation</span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                            </button>
-                        </div>
-                        <div id="primary-navigation-menu" class="navbar-collapse collapse navbar-menu">
-                            <ul class="nav navbar-nav navbar-right main-menu">
-                                {% block menu %}
-                                {% include "dashboard/shared/navigation.html" %}
-                                {% endblock %}
-                            </ul>
-                        </div>
-                    </div>
-                </nav>
-                </header>
+                {% block header %}
+                {% url 'dashboard_home' as dashboard_url %}
+                {% include "dashboard/shared/header.html" with brand_url=header_brand_url|default:dashboard_url brand_context=header_brand_context return_url=header_return_url navigation_template="dashboard/shared/navigation.html" show_navigation=True request=request user=user account_access=account_access maintenance=maintenance csrf_token=csrf_token only %}
+                {% endblock header %}
 
                 {% block notifications %}{% include "accounts/includes/messages.html" %}{% endblock notifications %}
 

@@ -2,9 +2,13 @@
 {% load static %}
 
 {% block title %}API Access | CLMS QC Tool{% endblock title %}
-{% block brand_url %}{% url 'api_homepage' %}{% endblock brand_url %}
 {% block body_class %}api-docs-page{% endblock body_class %}
 {% block main_class %}workspace-page api-docs-main{% endblock main_class %}
+
+{% block header %}
+{% url 'dashboard_home' as workspace_url %}
+{% with header_brand_context="API" header_return_url=workspace_url %}{{ block.super }}{% endwith %}
+{% endblock header %}
 
 {% block css %}
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}">

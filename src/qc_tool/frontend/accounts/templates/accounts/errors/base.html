@@ -4,7 +4,13 @@
 {% block robots %}noindex, nofollow, noarchive{% endblock %}
 {% block body_class %}error-layout{% endblock %}
 {% block main_class %}error-page{% endblock %}
-{% block brand_url %}{% if user.is_authenticated and not account_access.can_view_deliveries %}https://github.com/eea/copernicus_quality_tools/wiki{% else %}{% url 'dashboard_home' %}{% endif %}{% endblock %}
+{% block header %}
+{% if user.is_authenticated and not account_access.can_view_deliveries %}
+{% with header_brand_url="https://github.com/eea/copernicus_quality_tools/wiki" %}{{ block.super }}{% endwith %}
+{% else %}
+{{ block.super }}
+{% endif %}
+{% endblock header %}
 {% block css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'accounts/css/errors/shell.css' %}">

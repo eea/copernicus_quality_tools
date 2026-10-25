@@ -1,0 +1,7 @@
+{% load i18n %}
+<li>
+    {% url 'admin:logout' as logout_url %}
+    {% if user.has_usable_password %}{% url 'admin:password_change' as password_url %}{% endif %}
+    {% translate 'Change password' as password_label %}
+    {% include "dashboard/shared/profile_menu.html" with settings_url=password_url settings_label=password_label logout_form_id="admin-logout-form" show_identity=True %}
+</li>

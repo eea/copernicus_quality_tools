@@ -1,4 +1,8 @@
 {% extends "admin/actions.html" %}
+{% load i18n %}
 {% block actions %}
 <fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>{{ block.super }}</fieldset>
+{% endblock %}
+{% block actions-submit %}
+<button type="submit" class="btn-qc-secondary" title="{% translate 'Run the selected action' %}" name="index" value="{{ action_index|default:0 }}">{% translate 'Go' %}</button>
 {% endblock %}

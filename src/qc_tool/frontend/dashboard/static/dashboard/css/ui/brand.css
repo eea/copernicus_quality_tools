@@ -1,4 +1,4 @@
-/* One identity for the workspace and Admin; each shell owns its destination. */
+/* Shared identity; the containing header owns its destination and page context. */
 .qc-brand {
   --qc-brand-logo-height: 43px;
   --qc-brand-logo-gap: 24px;
@@ -6,8 +6,9 @@
   --qc-brand-font-size: 21px;
   display: inline-flex;
   min-width: 0;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--qc-brand-gap);
+  gap: 6px var(--qc-brand-gap);
   text-decoration: none;
 }
 .qc-brand__logos {
@@ -30,6 +31,14 @@
   line-height: 1.2;
   white-space: nowrap;
 }
+.qc-brand__context {
+  color: var(--qc-nav-muted, var(--qc-color-muted));
+  font-size: .86em;
+}
+.qc-brand__separator {
+  margin-inline: .4em;
+  color: var(--qc-nav-border, var(--qc-color-border));
+}
 @media (max-width: 1199px) {
   .qc-brand {
     --qc-brand-logo-height: 38px;
@@ -42,7 +51,9 @@
   .qc-brand {
     --qc-brand-logo-height: 26px;
     --qc-brand-logo-gap: 10px;
-    --qc-brand-gap: 12px;
     --qc-brand-font-size: 16px;
+    flex-wrap: wrap;
+    gap: 6px;
   }
+  .qc-brand__title { flex-basis: 100%; }
 }

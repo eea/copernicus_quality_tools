@@ -83,6 +83,77 @@ class AdminOperationsTests(TestCase):
             self.assertNotContains(response, f'href="{reverse(route)}"')
         self.assertNotContains(response, "Open workspace")
 
+    def test_model_list_uses_shared_actions_and_keeps_django_action_controls(self):
+        group = Group.objects.create(name="Shared action presentation")
+        response = self.client.get(reverse("admin:auth_group_changelist"))
+        self.assertEqual(response.status_code, 200)
+        markup = _AdminMarkup(response)
+        add = markup.matching("a", href=reverse("admin:auth_group_add"))
+        self.assertEqual(len(add), 1)
+        self.assertIn("btn-qc-primary", add[0]["class"].split())
+        run = markup.matching("button", name="index")
+        self.assertTrue(run)
+        for control in run:
+            self.assertIn("btn-qc-secondary", control["class"].split())
+            self.assertEqual(control["type"], "submit")
+            self.assertEqual(control["value"], "0")
+        self.assertTrue(markup.matching("input", name="_selected_action", value=str(group.pk)))
+
+    def test_model_editor_uses_shared_save_secondary_and_delete_actions(self):
+        group = Group.objects.create(name="Shared editor presentation")
+        with patch.object(Group, "get_absolute_url", return_value="/", create=True):
+            response = self.client.get(reverse("admin:auth_group_change", args=(group.pk,)))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["has_absolute_url"])
+        self.assert_admin_links(response)
+        markup = _AdminMarkup(response)
+        for name, variant in (("_save", "btn-qc-primary"), ("_continue", "btn-qc-secondary"),
+                              ("_addanother", "btn-qc-secondary")):
+            with self.subTest(name=name):
+                controls = markup.matching("input", name=name, type="submit")
+                self.assertTrue(controls)
+                self.assertTrue(all(variant in control["class"].split() for control in controls))
+        delete = markup.matching("a", href=reverse("admin:auth_group_delete", args=(group.pk,)))
+        self.assertEqual(len(delete), 1)
+        self.assertIn("btn-qc-danger-outline", delete[0]["class"].split())
+        history = markup.matching("a", href=reverse("admin:auth_group_history", args=(group.pk,)))
+        self.assertEqual(len(history), 1)
+        self.assertIn("btn-qc-secondary", history[0]["class"].split())
+
+    def test_shared_model_search_keeps_query_and_filter_fields(self):
+        group = Group.objects.create(name="Search presentation fixture")
+        response = self.client.get(reverse("admin:auth_group_changelist"), {
+            "q": "presentation", "name__exact": group.name,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, group.name)
+        markup = _AdminMarkup(response)
+        self.assertTrue(markup.matching("form", id="changelist-search", method="get", role="search"))
+        self.assertTrue(markup.matching("input", id="searchbar", name="q", value="presentation"))
+        self.assertTrue(markup.matching("input", type="hidden", name="name__exact", value=group.name))
+        self.assertTrue(markup.matching("button", type="submit", **{"class": "btn-qc-secondary"}))
+
+    def test_shared_delete_confirmation_keeps_csrf_selection_and_explicit_confirmation(self):
+        group = Group.objects.create(name="Retained while reviewing deletion")
+        single = self.client.get(reverse("admin:auth_group_delete", args=(group.pk,)))
+        bulk = self.client.post(reverse("admin:auth_group_changelist"), {
+            "action": "delete_selected", "_selected_action": [group.pk], "index": "0",
+        })
+        for response in (single, bulk):
+            with self.subTest(template=response.templates[0].name):
+                self.assertEqual(response.status_code, 200)
+                markup = _AdminMarkup(response)
+                confirm = markup.matching("button", type="submit")
+                self.assertTrue(any("btn-qc-danger" in item.get("class", "").split() for item in confirm))
+                cancel = markup.matching("a", href="#")
+                self.assertTrue(any({"cancel-link", "btn-qc-secondary"}.issubset(item.get("class", "").split()) for item in cancel))
+                self.assertTrue(markup.matching("input", name="csrfmiddlewaretoken", type="hidden"))
+                self.assertTrue(markup.matching("input", name="post", value="yes", type="hidden"))
+        bulk_markup = _AdminMarkup(bulk)
+        self.assertTrue(bulk_markup.matching("input", name="_selected_action", value=str(group.pk), type="hidden"))
+        self.assertTrue(bulk_markup.matching("input", name="action", value="delete_selected", type="hidden"))
+        self.assertTrue(Group.objects.filter(pk=group.pk).exists())
+
     def test_administrator_finds_user_database_and_storage_sections(self):
         response = self.client.get(reverse("admin:index"))
 

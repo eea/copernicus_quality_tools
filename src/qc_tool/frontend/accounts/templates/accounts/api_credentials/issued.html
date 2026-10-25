@@ -4,7 +4,10 @@
 {% block title %}API token issued | CLMS QC Tool{% endblock title %}
 {% block robots %}noindex, nofollow, noarchive{% endblock robots %}
 {% block body_class %}account-settings-page{% endblock body_class %}
-{% block brand_url %}{% url 'account_settings' %}{% endblock brand_url %}
+{% block header %}
+{% url 'account_settings' as header_brand_url %}
+{{ block.super }}
+{% endblock header %}
 
 {% block css %}
 {{ block.super }}

@@ -1,0 +1,206 @@
+/* One header frame for the workspace, API documentation and Django Admin. */
+.site-header {
+  --qc-header-height: 80px;
+  --qc-header-gutter: 28px;
+  --qc-header-gap: 24px;
+  position: relative;
+  flex-shrink: 0;
+  min-width: 0;
+  border-bottom: 1px solid var(--qc-nav-border, var(--qc-color-border));
+  color: var(--qc-nav-text, var(--qc-color-text));
+  background: var(--qc-nav-surface, var(--qc-color-surface));
+}
+
+/* Django's header defaults assume its own branding and user-tools layout. */
+body.qc-admin #header.site-header {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  color: var(--qc-nav-text);
+  background: var(--qc-nav-surface);
+}
+
+.site-header__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--qc-header-gap);
+  min-width: 0;
+  min-height: var(--qc-header-height);
+  padding: 0 var(--qc-header-gutter);
+}
+
+.site-header__branding {
+  display: flex;
+  min-width: 0;
+  min-height: var(--qc-header-height);
+  align-items: center;
+  gap: 16px;
+  box-sizing: border-box;
+  padding: 12px 0;
+}
+
+.site-header .qc-brand,
+.qc-admin #header .qc-brand {
+  color: var(--qc-nav-text, var(--qc-color-text));
+  text-decoration: none;
+}
+
+.site-header .qc-brand:hover,
+.site-header .qc-brand:focus,
+.qc-admin #header .qc-brand:is(:hover, :focus) {
+  color: var(--qc-nav-primary, var(--qc-color-primary));
+}
+
+.site-header__back { flex-shrink: 0; }
+.qc-admin #header .site-header__back { text-decoration: none; }
+
+.site-header__menu { display: contents; }
+.site-header__primary { grid-column: 2; grid-row: 1; min-width: 0; }
+.site-header .main-menu {
+  display: flex;
+  float: none !important; /* Neutralize Bootstrap navbar-right in workspace pages. */
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.site-header .main-menu > li { float: none; margin: 0; padding: 0; list-style: none; }
+.site-header .main-menu > li > a,
+.site-header .main-menu > li > .site-nav-user > .site-nav-button {
+  min-height: var(--qc-header-height);
+  padding: calc((var(--qc-header-height) - 22px) / 2) 14px;
+}
+.site-header .main-menu > li > .site-nav-user { margin: 0; }
+.qc-admin #header .main-menu a { color: var(--qc-nav-text); text-decoration: none; }
+.qc-admin #header .main-menu a:is(:hover, :focus, [aria-current="page"]) { color: var(--qc-nav-primary); }
+
+.site-header__toggle {
+  display: none;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  border: 1px solid var(--qc-nav-border, var(--qc-color-border));
+  border-radius: var(--qc-radius-small);
+  color: var(--qc-nav-text, var(--qc-color-text));
+  background: var(--qc-nav-surface, var(--qc-color-surface));
+  cursor: pointer;
+}
+.site-header__toggle:is(:hover, [aria-expanded="true"]) {
+  color: var(--qc-nav-primary, var(--qc-color-primary));
+  background: var(--qc-nav-hover, var(--qc-color-surface-hover));
+}
+.site-header__toggle .ui-icon { width: 22px; height: 22px; margin: 0; }
+.site-header :is(a, button, summary):focus-visible {
+  outline: 2px solid var(--qc-nav-primary, var(--qc-color-primary));
+  outline-offset: 2px;
+}
+
+/* Optional area navigation shares the same controlled region as account links. */
+.site-header__sections {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  flex-wrap: wrap;
+  gap: 0 30px;
+}
+.site-header__sections > a,
+.qc-admin #header .site-header__sections > a {
+  display: inline-flex;
+  min-height: 47px;
+  align-items: center;
+  border-bottom: 3px solid transparent;
+  color: var(--qc-nav-muted, var(--qc-color-muted));
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.site-header__sections > a:is(:hover, :focus, [aria-current="page"]),
+.qc-admin #header .site-header__sections > a:is(:hover, :focus, [aria-current="page"]) {
+  border-bottom-color: var(--qc-nav-primary, var(--qc-color-primary));
+  color: var(--qc-nav-primary, var(--qc-color-primary));
+}
+@media (max-width: 1199px) and (min-width: 992px) {
+  .site-header { --qc-header-gutter: 18px; --qc-header-gap: 18px; }
+  .site-header .main-menu > li > a,
+  .site-header .main-menu > li > .site-nav-user > .site-nav-button {
+    padding-right: 9px;
+    padding-left: 9px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 991px) {
+  .site-header { --qc-header-height: 70px; --qc-header-gutter: 16px; --qc-header-gap: 12px; }
+  .site-header__menu {
+    display: block;
+    min-width: 0;
+    grid-column: 1 / -1;
+    margin-inline: calc(-1 * var(--qc-header-gutter));
+    border-top: 1px solid var(--qc-nav-border, var(--qc-color-border));
+  }
+  .site-header .main-menu { display: block; padding-block: 6px; }
+  .site-header .main-menu > li > a,
+  .site-header .main-menu > li > .site-nav-user > .site-nav-button {
+    width: 100%;
+    min-height: 48px;
+    padding: 13px var(--qc-header-gutter);
+    text-align: left;
+  }
+  .site-header .site-nav-user > .site-nav-dropdown-menu {
+    position: static;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .site-header .site-nav-dropdown-menu > li > a,
+  .site-header .site-nav-dropdown-menu > li.navbar-logout button {
+    padding-inline-start: calc(var(--qc-header-gutter) + 28px);
+  }
+  .site-header .site-nav-dropdown-menu > .site-nav-identity { padding-inline-start: calc(var(--qc-header-gutter) + 28px); }
+  .site-header[data-navigation-ready] .site-header__toggle { display: flex; }
+  .site-header[data-navigation-ready] .site-header__toggle[aria-expanded="false"] ~ .site-header__menu { display: none; }
+  .site-header__sections {
+    flex-direction: column;
+    gap: 0;
+    padding: 6px 0;
+    border-top: 1px solid var(--qc-nav-border, var(--qc-color-border));
+  }
+  .site-header__sections > a,
+  .qc-admin #header .site-header__sections > a {
+    box-sizing: border-box;
+    min-height: 48px;
+    padding: 13px var(--qc-header-gutter);
+    border-bottom: 0;
+    border-inline-start: 3px solid transparent;
+    font-size: 14px;
+  }
+  .site-header__sections > a:is(:hover, :focus, [aria-current="page"]),
+  .qc-admin #header .site-header__sections > a:is(:hover, :focus, [aria-current="page"]) {
+    border-inline-start-color: var(--qc-nav-primary, var(--qc-color-primary));
+    background: var(--qc-nav-hover, var(--qc-color-surface-hover));
+  }
+}
+
+@media (max-width: 560px) {
+  .site-header__branding { gap: 10px; }
+}
+
+/* The sign-in header uses the same frame within Django's narrow form card. */
+.qc-admin.login .site-header { --qc-header-gutter: 20px; }
+.qc-admin.login .qc-brand {
+  --qc-brand-logo-height: 26px;
+  --qc-brand-logo-gap: 10px;
+  --qc-brand-font-size: 16px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.qc-admin.login .qc-brand__title { flex-basis: 100%; }

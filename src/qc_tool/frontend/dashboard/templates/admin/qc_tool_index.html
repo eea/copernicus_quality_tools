@@ -25,7 +25,7 @@
       </div>
       <p>Create accounts and assign groups, permissions and product access.</p>
       <div class="qc-admin-management-actions">
-        <a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_user_management' %}">Open user management</a>
+        <a class="btn-qc-primary" href="{% url 'admin_user_management' %}">Open user management</a>
       </div>
       <div class="qc-admin-link-list">
         {% if admin_group_permissions.view or admin_group_permissions.change %}
@@ -45,7 +45,7 @@
       </div>
       <p>Control maintenance, transfer QC records and preserve complete database backups.</p>
       <div class="qc-admin-management-actions">
-        <a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_data_transfer' %}">Database status</a>
+        <a class="btn-qc-primary" href="{% url 'admin_data_transfer' %}">Database status</a>
       </div>
       <div class="qc-admin-link-list">
         {% url 'admin_data_transfer' as transfer_url %}
@@ -66,7 +66,7 @@
     <section id="qc-admin-storage" class="qc-admin-panel" aria-labelledby="storage-heading">
       <div class="qc-admin-panel__heading"><span class="qc-admin-icon"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg></span><h2 id="storage-heading">Storage</h2></div>
       <p>Find submitted and approved deliveries, saved specification versions and boundary packages.</p>
-      <div class="qc-admin-management-actions"><a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_storage' %}">Open storage</a></div>
+      <div class="qc-admin-management-actions"><a class="btn-qc-primary" href="{% url 'admin_storage' %}">Open storage</a></div>
       <p>Browse other server files, download retained evidence or connect a desktop SFTP client.</p>
     </section>
     {% endif %}

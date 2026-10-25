@@ -4,54 +4,8 @@
 {% block title %}{{ title }} | QC Tool Admin{% endblock %}
 {% block bodyclass %}{{ block.super }} qc-admin{% endblock %}
 
-{% block branding %}
-<div class="qc-admin-branding">
-  <a class="btn-qc-secondary btn-qc-icon qc-admin-workspace-link" href="{% url 'dashboard_home' %}" aria-label="Back to workspace" title="Back to workspace">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-  </a>
-  <a class="qc-admin-brand" href="{% url 'admin:index' %}">CLMS QC Tool <span class="qc-admin-brand__separator" aria-hidden="true">|</span> <span class="qc-admin-brand__context">Admin</span></a>
-</div>
-{% endblock %}
-
-{% block usertools %}
-{% if has_permission %}
-<nav class="qc-admin-account-menu" aria-label="Account">
-  <ul class="nav navbar-nav navbar-right main-menu">
-    <li>
-      <details class="site-nav-user" data-header-menu>
-        <summary class="site-nav-button">
-          <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#user-circle"></use></svg>
-          Profile
-          <svg class="ui-icon site-nav-chevron" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-down"></use></svg>
-        </summary>
-        <ul class="site-nav-dropdown-menu">
-          <li class="site-nav-identity"><span>Signed in as</span><strong>{{ user.get_username }}</strong></li>
-          {% if user.has_usable_password %}
-          <li><a href="{% url 'admin:password_change' %}"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg>{% translate 'Change password' %}</a></li>
-          {% endif %}
-          <li class="navbar-logout">
-            <form id="admin-logout-form" method="post" action="{% url 'admin:logout' %}" data-maintenance-write>
-              {% csrf_token %}<button type="submit"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#log-out"></use></svg>{% translate 'Log out' %}</button>
-            </form>
-          </li>
-        </ul>
-      </details>
-    </li>
-    <li class="qc-admin-theme">{% include "admin/color_theme_toggle.html" %}</li>
-  </ul>
-</nav>
-{% endif %}
-{% endblock %}
-
-{% block nav-global %}
-<nav class="qc-admin-navigation" aria-label="Administration">
-  <a href="{% url 'admin:index' %}"{% if admin_section == 'overview' %} aria-current="page"{% endif %}>Overview</a>
-  {% if admin_user_management_available %}<a href="{% url 'admin_user_management' %}"{% if admin_section == 'users' %} aria-current="page"{% endif %}>User management</a>{% endif %}
-  {% if account_access.is_administrator %}
-  <a href="{% url 'admin_data_transfer' %}"{% if admin_section == 'database' %} aria-current="page"{% endif %}>Database</a>
-  <a href="{% url 'admin_storage' %}"{% if admin_section == 'storage' %} aria-current="page"{% endif %}>Storage</a>
-  {% endif %}
-</nav>
+{% block dark-mode-vars %}
+<meta name="color-scheme" content="light">
 {% endblock %}
 
 {% block extrahead %}
@@ -59,6 +13,8 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/admin/shell.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/navigation.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/brand.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/header.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/icons.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/actions.css' %}">
 <meta name="qc-maintenance" content="{{ maintenance.enabled|yesno:'on,off' }}" data-notice="{% if maintenance.phase == 'stopping' %}Turning on maintenance. QC work is stopping.{% elif maintenance.phase == 'unavailable' %}Maintenance status is unavailable. Changes remain paused; open maintenance settings for details.{% else %}Maintenance is on. You can browse and download existing data; changes are paused.{% endif %}">
@@ -71,6 +27,7 @@
 {% endblock %}
 
 {% block header %}
-{% include "dashboard/shared/maintenance_notice.html" with admin_notice=True %}
-{{ block.super }}
+{% url 'admin:index' as admin_home_url %}
+{% url 'dashboard_home' as workspace_url %}
+{% include "dashboard/shared/header.html" with header_id="header" brand_url=admin_home_url brand_context="Admin" brand_class="qc-admin-brand" return_url=workspace_url return_class="qc-admin-workspace-link" navigation_label="Account" navigation_template="admin/includes/header_account_menu.html" secondary_navigation_template="admin/includes/header_navigation.html" show_navigation=has_permission admin_notice=True request=request user=user account_access=account_access maintenance=maintenance csrf_token=csrf_token admin_section=admin_section admin_user_management_available=admin_user_management_available only %}
 {% endblock %}
