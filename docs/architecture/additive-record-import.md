@@ -42,13 +42,12 @@ The following sections describe the resulting implementation.
 
 ## One transfer service, distinct profile contracts
 
-The transfer chooser under **Database → Import & export**
-(`/admin/database/?tab=transfers`) has two areas, **Users** and **Database records**,
-each with Import and Export actions. The Database landing page separately owns
-table browsing/validated editors and maintenance controls. Full native
-backups and restoration live under the secondary **Backups & recovery** area;
-a full backup is not the default selection. These UI areas share one transfer
-service while preserving separate record contracts:
+**Maintenance → Back up & restore** (`/admin/maintenance/backups/`) owns one
+complete native backup builder and restoration of native or supported historical
+portable packages. The Database direction owns identity/schema previews and table
+browsing; Maintenance owns pause controls and recovery. Historical account and
+application profiles retain their distinct import contracts. These areas share
+one transfer service:
 
 | Operation | Purpose | Existing information |
 | --- | --- | --- |

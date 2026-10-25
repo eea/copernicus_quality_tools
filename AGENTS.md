@@ -14,12 +14,16 @@ Preserve check identities, parameters and result semantics when changing imports
 
 # Administration boundaries
 
-The Admin interface owns users, role groups, permissions, and database import,
-export, backups and maintenance. Keep task navigation and automatic
-authentication/error recovery destinations inside Admin. Permit one explicit
-**Back to workspace** control with a back arrow to leave administration; the
-Admin brand still links to its overview. Do not add other normal-workspace links,
-product/boundary setup, QC execution or submission-review shortcuts to Admin.
+The Admin interface owns user management, role groups, permissions, boundary
+packages, notifications, database inspection, storage, backups and maintenance.
+Its overview provides these task directions without a header section-navigation
+bar. Keep task navigation and automatic authentication/error recovery destinations
+inside Admin. Permit one explicit **Back to workspace** control with a back arrow
+to leave administration; the Admin brand still links to its overview.
+Keep maintenance status visible throughout Admin through the shared shell, with
+a guarded turn-off control that returns to the current Admin page.
+Do not add other normal-workspace links,
+product setup, QC execution or submission-review shortcuts to Admin.
 
 # Database changes
 

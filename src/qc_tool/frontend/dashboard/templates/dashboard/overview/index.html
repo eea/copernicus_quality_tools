@@ -15,11 +15,6 @@
 
 {% block page_title %}Dashboard{% endblock page_title %}
 {% block page_subtitle %}<p>Overview of your QC Tool workspace.</p>{% endblock page_subtitle %}
-{% block page_header_meta %}
-{% if account_access.show_boundaries_navigation and boundary_version_available %}
-<p>Boundary package date: <strong>{{ boundary_version }}</strong> · <a href="{% url 'boundaries' %}">View boundaries</a></p>
-{% endif %}
-{% endblock page_header_meta %}
 
 {% block page_content %}
 
@@ -146,7 +141,7 @@
                 <article class="dashboard-attention-item dashboard-attention-item--neutral">
                     <span class="dashboard-attention-item__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg></span>
                     <div><h3>Boundary package unavailable</h3><p>QC jobs require an active boundary package.</p></div>
-                    {% if account_access.show_boundaries_navigation %}<a href="{% url 'boundaries' %}">View boundaries <span aria-hidden="true">→</span></a>{% else %}<p>Contact an administrator to restore the boundary package.</p>{% endif %}
+                    <p>Contact an administrator to restore the boundary package.</p>
                 </article>
                 {% endif %}
                 {% if token_count == 0 %}

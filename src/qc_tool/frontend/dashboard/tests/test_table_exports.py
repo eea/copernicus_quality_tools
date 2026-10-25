@@ -8,6 +8,7 @@ from xml.etree import ElementTree
 
 import openpyxl
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.models import Session
 from django.test import Client, TestCase, override_settings
 from django.templatetags.static import static
 from django.urls import reverse
@@ -119,18 +120,60 @@ class BrowserTableExportTests(TestCase):
 
     def test_workspace_configuration_has_the_same_ordered_formats(self):
         import re
-        configs = []
-        for page in ("deliveries", "products", "boundaries"):
+        administrator = get_user_model().objects.create_superuser(username="shared-table-components")
+        self.client.force_login(administrator)
+        for page, export_route in (
+            ("deliveries", "table_export"),
+            ("products", "table_export"),
+            ("boundaries", "boundaries_export"),
+        ):
             response = self.client.get(reverse(page))
             self.assertEqual(response.status_code, 200)
             match = re.search(r'<script id="qc-table-export-config" type="application/json">(.*?)</script>', response.content.decode())
             self.assertIsNotNone(match)
-            configs.append(json.loads(match[1]))
-        self.assertTrue(all(config == configs[0] for config in configs))
-        self.assertEqual(configs[0], {
-            "url": self.url,
-            "iconSprite": static("dashboard/icons/ui.svg"),
-            "formats": [
-                {"value": value, "label": value.upper()} for value in ("json", "csv", "xlsx", "xml")
-            ],
-        })
+            self.assertEqual(json.loads(match[1]), {
+                "url": reverse(export_route),
+                "iconSprite": static("dashboard/icons/ui.svg"),
+                "formats": [
+                    {"value": value, "label": value.upper()} for value in ("json", "csv", "xlsx", "xml")
+                ],
+            })
+
+
+@override_settings(DEBUG=False, MAINTENANCE_MODE=False)
+class BoundaryTableExportTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_superuser(username="boundary-table-export-admin")
+        self.client = Client(enforce_csrf_checks=True)
+        self.client.force_login(self.user)
+        self.url = reverse("boundaries_export")
+        self.payload = {
+            "format": "json", "filename": "boundary-files",
+            "columns": [{"field": "filename", "label": "Filename"}],
+            "rows": [{"filename": "region.tif"}],
+        }
+
+    def test_admin_catalog_export_requires_csrf_and_downloads_the_shared_projection(self):
+        denied = self.client.post(self.url, self.payload, content_type="application/json")
+        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(denied.json()["code"], "csrf_failed")
+        self.assertEqual(self.client.get(reverse("boundaries")).status_code, 200)
+        token = self.client.cookies["csrftoken"].value
+
+        response = self.client.post(self.url, self.payload, content_type="application/json", HTTP_X_CSRFTOKEN=token)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('filename="boundary-files.json"', response["Content-Disposition"])
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertEqual(json.loads(b"".join(response.streaming_content)), self.payload["rows"])
+
+    def test_expired_admin_export_session_recovers_through_admin_login_even_without_csrf(self):
+        Session.objects.filter(session_key=self.client.session.session_key).delete()
+
+        response = self.client.post(self.url, self.payload, content_type="application/json")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["code"], "authentication_required")
+        self.assertEqual(response.json()["login_url"], reverse("admin_login"))
+        self.assertEqual(response["X-Login-URL"], reverse("admin_login"))
+        self.assertEqual(response["Cache-Control"], "private, no-store")

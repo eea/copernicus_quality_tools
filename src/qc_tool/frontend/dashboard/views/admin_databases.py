@@ -100,16 +100,15 @@ def database_manager(request):
                     "generation": inventory.get("generation"), "revision": inventory.get("revision")}))
             row["deletion_open"] = row["operation_id"] == deletion_operation
         rows.append(row)
-    database_url = reverse("admin_data_transfer")
     page_title = "Review database switch" if review else "Inspect database" if inspected else "Manage databases"
     page_description = ("Compare the current and selected databases before confirming which one everyone will use."
                         if review else "Check this database's compatibility and table inventory before deciding whether to use it."
                         if inspected else "Inspect databases on this server, switch the active database or remove an unused restore.")
     response = render(request, "admin/databases.html", {
         **action_feedback, "admin_busy_refresh_url": _url(),
-        **admin.site.each_context(request), "is_nav_sidebar_enabled": False, "admin_section": "database",
+        **admin.site.each_context(request), "is_nav_sidebar_enabled": False, "admin_section": "maintenance",
         **database_page_context("databases", title=page_title, description=page_description,
-            child=bool(review or inspected), origin="databases"),
+            child=bool(review or inspected), origin="databases", workspace="maintenance"),
         "transfer_task": "databases", "maintenance_url": reverse("admin_maintenance") + "?" + urlencode({"next": _url()}),
         "inventory": inventory, "database_copies": rows, "inspected_database": inspected,
         "inspected_copy": next((row for row in rows if inspected and row["database"] == inspected["database"]), None),

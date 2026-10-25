@@ -1,5 +1,5 @@
 <form method="get" class="storage-library-filters" role="search">
-  <input type="hidden" name="tab" value="{{ library_kind }}">
+  <input type="hidden" name="tab" value="history"><input type="hidden" name="collection" value="{{ library_kind }}">
   <div class="storage-library-search"><label for="storage-library-search">{% if library_kind == 'deliveries' %}Find a delivery{% else %}Find a version{% endif %}</label><input id="storage-library-search" type="search" name="q" value="{{ query }}" placeholder="{% if library_kind == 'deliveries' %}Filename, product, unit or submitter…{% else %}Product or version ID…{% endif %}"></div>
   <div><label for="storage-library-status">{% if library_kind == 'deliveries' %}Submission status{% else %}Version status{% endif %}</label><select id="storage-library-status" name="status">{% for filter in library_filters %}<option value="{{ filter.value }}"{% if status == filter.value %} selected{% endif %}>{{ filter.label }}</option>{% endfor %}</select></div>
   <button class="btn-qc-primary" type="submit">Apply filters</button>{% if library_filtered %}<a href="{{ clear_library_url }}">Clear filters</a>{% endif %}

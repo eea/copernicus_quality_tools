@@ -20,14 +20,6 @@
                     Products
                 </a>
             </li>
-            {% if account_access.show_boundaries_navigation %}
-            <li class="workspace-sidebar__item">
-                <a class="workspace-sidebar__link" href="{% url 'boundaries' %}"{% if request.resolver_match.url_name == 'boundaries' or request.resolver_match.url_name == 'boundaries_upload' %} aria-current="page"{% endif %}>
-                    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg>
-                    Boundaries
-                </a>
-            </li>
-            {% endif %}
             <li class="workspace-sidebar__item">
                 <a class="workspace-sidebar__link" href="{% url 'api_homepage' %}"{% if request.resolver_match.url_name == 'api_homepage' %} aria-current="page"{% endif %}>
                     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#api-token"></use></svg>

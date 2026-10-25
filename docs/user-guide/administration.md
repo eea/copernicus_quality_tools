@@ -6,30 +6,37 @@ nav_order: 2
 
 # Administration
 
-The shared Admin navigation groups tasks into four sections:
+The Admin overview provides six directions:
 
 - **Overview** shows administration tasks and the maintenance status.
 - **User management** provides account creation, editing, role groups,
   permissions, product access and user-profile import/export.
-- **Database** provides connected-record import/export, full PostgreSQL backups,
-  restore and switch controls, schema checks, maintenance and a table browser.
+- **Boundaries** lists the active raster/vector boundary files and provides
+  package replacement and retained-version management.
+- **Notifications** publishes, updates or removes the announcement shown in the
+  QC workspace.
+- **Database** previews the selected database name, engine version, schema
+  readiness, tables and connected records.
 - **Storage** browses retained delivery ZIPs, QC job files and published artifacts
   directly from the server, including files without database records.
+- **Maintenance** turns maintenance on or off and owns database backups,
+  restoration, database-copy management and transfer history.
 
 Actions appear only with the required permissions. QC Tool administrators can
-use all four sections. Staff with specific account permissions see the user or
+use all six directions. Staff with specific account permissions see the user or
 group actions they have been granted; they do not gain database transfer or file
 management authority. A product-manager role alone exposes no Admin controls.
 
-The Admin header starts with the **Back to workspace** arrow, followed by the
-plain **CLMS QC Tool | Admin** name. It uses a compact text identity; the
-Copernicus and Land Monitoring logos remain in the workspace. The account menu
-follows the workspace's menu pattern, with shared button styles.
+The Admin header shares the workspace's Copernicus and Land Monitoring logos,
+**CLMS QC Tool | Admin** identity, **Profile** menu and responsive navigation
+controls. Admin always uses the light theme. The header contains account controls;
+task directions are on the overview, without a section-navigation bar. The brand
+links to the overview; the **Back to workspace** arrow returns to the QC workspace.
 
 Use the back arrow to leave administration deliberately. Admin task links,
 sign-in and automatic recovery destinations remain inside Admin.
 
-QC execution, specification uploads, boundaries and submission review belong to
+QC execution, specification uploads and submission review belong to
 the separate QC workspace. The Admin overview has no product shortcuts, setup
 guide or general model directory.
 
@@ -40,13 +47,30 @@ or start an operation.
 
 ## Maintenance mode
 
-Open **Admin → Database → Maintenance** and select **Turn on maintenance** to pause changes
-and interrupt queued/running QC jobs. During **Turning on maintenance**, the
-page automatically checks that application requests and QC work have stopped.
-Wait for **Maintenance is on** before starting your database work. There is no
-manual worker-check step. If stopping takes longer than usual, the page explains
-what is happening; **Technical details** contains the diagnostic information.
-With JavaScript disabled, use **Update progress** to complete the same checks.
+While maintenance is on, a persistent banner appears above every Admin page,
+including user and record editors. It explains that creating users, editing
+records and other changes are paused. The banner stays visible while scrolling
+and outside the mobile menu. Administrators can select **Turn off maintenance**
+there and return to the same Admin page with its filters intact.
+
+Turning off uses the same readiness, active-transfer and database checks as the
+Maintenance page. While QC work is still stopping or maintenance is enforced by
+deployment settings, the banner explains why the action is unavailable. A stale
+tab keeps editing paused until it is reloaded with the current state.
+
+Open **Admin → Maintenance** to see two sections: **Maintenance mode** and
+**Backups**. The mode shows **ON** or **OFF**, with one button to change it.
+Select **Turn on maintenance** to pause changes and interrupt queued/running
+QC jobs. While QC work stops, the page checks progress automatically and
+explains the wait. Wait until the page confirms that changes and QC jobs are
+paused before starting database work. If a connection fails, use **Try again**
+or reload the page. With JavaScript disabled, use **Update progress**.
+
+Under **Backups**, select **Create backup** to choose what to save, or
+**Restore from ZIP** to upload and review a saved backup before restoring a
+separate database copy. These are separate pages: **Create backup** contains
+export progress and **Prepared backups** ready to download. **Restore from ZIP**
+contains uploads and import tasks.
 
 Readiness covers participating QC Tool processes; it does not lock out direct
 database clients or other external writers. A running transfer holds maintenance
@@ -99,7 +123,9 @@ status.
 
 ## Manage database records
 
-Open **Admin → Database → Browse database tables** (`/admin/database/?tables=1`).
+Open **Admin → Database** to see the active database's name, engine, version,
+schema and compatibility. Choose **Tables & records** (`/admin/database/?tables=1`)
+to browse its tables.
 **Find a table** accepts its friendly
 name or PostgreSQL name, such as `account_api_token` or `catalog_product`. Filter
 by area to narrow the directory. The directory covers the 24 current managed
@@ -139,33 +165,18 @@ while maintenance blocks all ordinary record edits, creation and deletion.
 
 ## Import and export records
 
-Choose the information you need from its owning section:
+Open **Maintenance → Create backup**. A backup always preserves
+the complete native PostgreSQL database, including accounts, password hashes,
+roles and permissions; choose accompanying files in the package builder.
 
-- **User management → Import users / Export users** handles account profiles.
-  Export every profile or choose
-  specific users. During import, create a new inactive account, use an existing
-  account unchanged, **Update profile**, or skip an incoming user. The comparison
-  shows incoming and existing first name, last name and email. **Update profile**
-  changes only those three fields; passwords, activation, permissions, product
-  access and history stay unchanged.
-- **Database → Import records / Export records** handles the supported connected QC dataset:
-  products, deliveries, jobs, review history, required user profiles and available
-  local files. Import adds new records and resolves matching identities; it does
-  not merge arbitrary PostgreSQL tables or overwrite existing QC records.
-
-Uploading checks the package type. If it belongs to another section, the page
-explains the change and opens that section before any import. Review account
-identities, record conflicts and delivery-file availability, then use **Save
-choices and review**. Confirm the updated review before **Import selected users**
-or **Add records**. Export reviews and import execution require maintenance
-**ready**; packages can be uploaded beforehand.
-
-Use **Database → Full database backup** for a full native PostgreSQL backup or
-restoring a separate database. Recovery pages also provide database-switch controls. Full backups preserve stored
-credentials and permissions; the user and QC-record packages exclude them.
-A completed restore offers **Review database switch** before the separate
-**Switch active database** confirmation. **Database settings & rollback** keeps
-the active database and eligible switch-back controls available within recovery.
+The separate **Maintenance → Restore from ZIP** page accepts a native backup or a supported historical
+account/application package. A native restore creates a separate database and
+offers a reviewed switch. Historical portable imports retain their existing
+account mappings, bounded profile updates and create-only record contracts;
+they never overwrite existing QC records or merge arbitrary PostgreSQL tables.
+Review package contents, account identities, conflicts and file availability
+before confirming. Transfer previews and execution require maintenance readiness.
+See the [record transfer guide](record-transfers.md) for the complete workflow.
 
 Record imports require the supported model contract. They never alter a schema
 or silently accept version drift. See the [record transfer guide](record-transfers.md)
@@ -173,13 +184,21 @@ for selection, private packages, recovery, compatibility and backup boundaries.
 
 ## Browse retained server files
 
-Open **Admin → Storage** (`/admin/storage/`) and choose **Delivery uploads**,
+Open **Admin → Storage** (`/admin/storage/`) to **Browse files**, its default view.
+Choose a storage location, such as **Delivery uploads**,
 **QC job artifacts** or **Published submissions**. Open folders, search names in
 the current folder, then open a file to download it and inspect its database
 links. Listings read the configured server directories rather than a list of
 delivery rows, so files remain discoverable after a fresh database installation.
 Private credentials, maintenance/transfer state, symbolic links and special files
 are excluded. Published submissions are read-only.
+
+**File history** groups submitted deliveries, product specifications and boundary
+versions. These views retain recorded statuses and version information; they
+complement the physical file browser. **Connection** contains SFTP details and
+the operator setup guide. Older collection links still open the matching history
+view. File details and location-specific Trash keep the same section navigation
+and preserve the originating folder or history filters when returning.
 
 Job and delivery record details include **Server files** links to their exact
 expected locations. For a retained ZIP, **Verify ZIP against linked jobs** reads
@@ -206,7 +225,7 @@ buckets. Keep these directories mounted and backed up separately from PostgreSQL
 
 ## Check schema compatibility
 
-Use **Database → Schema & migrations → Check database schema** for a read-only
+Use **Database → Overview → Check again** for a read-only
 comparison with the current models. QC Tool v3.0.0 uses a draft, model-based
 schema; it does not offer in-place schema migrations. A partial, outdated or
 foreign schema is refused without repair. A future migration-managed release
@@ -345,13 +364,30 @@ API access is the intersection of that snapshot and the user's current access.
 Removing a live permission therefore narrows existing tokens immediately,
 while later grants require a new token.
 
+## Notifications
+
+Open **Admin → Notifications** to preview, publish or update the announcement
+shown to signed-in workspace users. **Remove announcement** clears the current
+message. This is one shared service announcement; it does not send email or
+create per-user notifications. Text is bounded to 64 KiB encoded as UTF-8 and
+HTML is displayed as plain text. Failed saves preserve the entered message for
+retry. Only QC administrators with configuration permission can publish changes;
+maintenance pauses publication. The workspace announcement page remains read-only.
+
 ## Boundary packages
 
-The **Boundaries** navigation is shown to administrators, product managers,
-and users with `manage_configuration`. Default users work through Deliveries
-without a separate boundary page in their navigation. Authenticated delivery
-viewers retain read access to the active package; replacing it requires
-`manage_configuration`.
+Open **Admin → Boundaries** to inspect the active raster/vector package, search
+its file lists, export those lists or select **Replace boundary package**.
+These pages and data operations require an active staff account with the QC
+administrator role and `manage_configuration`. Product managers and users with
+configuration permission alone do not gain access. Boundary management is absent
+from the regular workspace; QC jobs continue using the active package.
+
+The canonical page is `/admin/boundaries/`. Old `/boundaries/` and
+`/boundaries/upload/` page bookmarks redirect to Admin; old boundary data and
+upload endpoints are no longer available. Session recovery stays inside Admin.
+During maintenance, browsing and table export remain available; package
+replacement is paused with other application changes.
 
 A boundary package must be a ZIP with this logical layout:
 
@@ -369,3 +405,14 @@ published generation in place.
 
 After activation, verify both boundary lists in the UI and run a representative
 QC job. Retain older generations until no running job can reference them.
+
+**Retained versions** lists saved packages and boundary trash. An eligible unused
+generation can be reviewed and moved to private trash while maintenance is ready.
+Restoring it preserves its files and does not activate it. Updates always use a
+replacement package; published generations are not edited in place.
+
+The active package and retained database file references are protected. Historical
+jobs do not record their generation identity, so any QC job history blocks
+removal of every generation. Database selection history also blocks removal
+when usage in a retained database cannot be verified. These checks repeat when
+the action is submitted. No permanent purge is provided.

@@ -1,0 +1,7 @@
+<div id="qc-admin-service-status" class="qc-admin-database-status" aria-labelledby="service-heading">
+  <div>
+    <h3 id="service-heading">{% if admin_overview.transfer_error %}Status unavailable{% elif admin_overview.transfer_url %}A database transfer holds maintenance{% elif admin_overview.phase == 'off' %}Maintenance is off{% elif admin_overview.phase == 'ready' %}Maintenance is on{% elif admin_overview.phase == 'stopping' %}<span class="qc-admin-spinner" aria-hidden="true"></span> Turning on maintenance{% else %}Status unavailable{% endif %}</h3>
+    <p>{% if admin_overview.transfer_error or admin_overview.phase == 'unavailable' %}Open maintenance to review the problem before changing the database.{% elif admin_overview.transfer_url %}Open the transfer to see its progress and next step.{% elif admin_overview.phase == 'off' %}Turn it on before creating or restoring backups.{% elif admin_overview.phase == 'ready' %}Changes are paused. Turn it off when your maintenance work is finished.{% else %}Open maintenance to follow progress.{% endif %}</p>
+  </div>
+  {% if admin_overview.transfer_url %}<a href="{{ admin_overview.transfer_url }}">View current transfer</a>{% else %}<a href="{% url 'admin_maintenance' %}">{% if admin_overview.phase == 'stopping' %}View maintenance progress{% else %}Maintenance settings{% endif %}</a>{% endif %}
+</div>

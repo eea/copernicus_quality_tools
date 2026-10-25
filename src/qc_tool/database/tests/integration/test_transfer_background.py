@@ -92,7 +92,7 @@ class TransferRequestLifecycleTests(TransactionTestCase):
         })
         self.assertEqual(response.status_code, 303)
         operation, = service.list_operations(self.actor)
-        self.assertEqual(response["Location"], self.url + "?operation=" + operation["id"] + "#transfer-operation")
+        self.assertEqual(response["Location"], reverse("admin_backup_export") + "?operation=" + operation["id"] + "#transfer-operation")
         response.close()
         return operation
 
@@ -103,14 +103,23 @@ class TransferRequestLifecycleTests(TransactionTestCase):
 
         with patch.object(service, "run_operation") as run, \
                 patch.object(service, "recover_operation") as recover:
-            for _reload in range(2):
-                response = self.client.get(self.url, {"operation": operation["id"]})
+            away = self.client.get(reverse("admin:index"))
+            self.assertEqual(away.status_code, 200)
+            away.close()
+            returning_browser = Client()
+            returning_browser.force_login(self.actor)
+            for browser in (self.client, returning_browser):
+                response = browser.get(self.url, {"operation": operation["id"]})
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(response, "Creating your export")
+                self.assertEqual(response.context["operation"]["status"], "queued")
                 response.close()
-                status = self.client.get(reverse("admin_data_transfer_status", args=[operation["id"]]))
+                status = browser.get(reverse("admin_data_transfer_status", args=[operation["id"]]))
+                self.assertEqual(status.status_code, 200)
                 self.assertEqual(status.json()["status"], "queued")
-            self.assertEqual(self.client.get(self.url, {"tab": "history"}).status_code, 200)
+                status.close()
+                history = browser.get(self.url, {"tab": "history"})
+                self.assertEqual(history.status_code, 200)
+                history.close()
             run.assert_not_called()
             recover.assert_not_called()
 
@@ -124,8 +133,12 @@ class TransferRequestLifecycleTests(TransactionTestCase):
         # The original request is gone before the dedicated runner does its work.
         self.client = Client()
         service.run_operation(operation["id"])
+        run = self.enterContext(patch.object(service, "run_operation"))
+        recover = self.enterContext(patch.object(service, "recover_operation"))
         package = store.operation_dir(operation["id"]) / "package.zip"
         checksum = hashlib.sha256(package.read_bytes()).hexdigest()
+        journal = store.operation_dir(operation["id"]) / "operation.json"
+        original_journal = journal.read_bytes()
         download_url = reverse("admin_data_transfer_download", args=[operation["id"]])
 
         for attempt in range(3):
@@ -150,6 +163,9 @@ class TransferRequestLifecycleTests(TransactionTestCase):
 
         self.capture.assert_called_once()
         self.launch.assert_called_once()
+        run.assert_not_called()
+        recover.assert_not_called()
+        self.assertEqual(journal.read_bytes(), original_journal)
         self.assertEqual(len(service.list_operations(self.actor)), 1)
         self.assertIsNone(active_operation())
 

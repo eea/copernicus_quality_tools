@@ -50,6 +50,24 @@ class RouteAwareCsrfFailureTests(TestCase):
         self.assertEqual(response.headers["Cache-Control"], "private, no-store")
         self.assertIn("Cookie", response.headers["Vary"])
 
+    def test_expired_boundary_upload_session_recovers_through_admin_login(self):
+        response = self.client.post(reverse("boundaries_upload_data"), {"file": "package"})
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["code"], "authentication_required")
+        self.assertEqual(response.json()["login_url"], reverse("admin_login"))
+        self.assertEqual(response.headers["X-Login-URL"], reverse("admin_login"))
+        self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+
+    def test_boundary_upload_still_requires_csrf_after_admin_authentication(self):
+        user = get_user_model().objects.create_superuser(username="boundary-csrf-admin")
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("boundaries_upload_data"), {"file": "package"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "csrf_failed")
+
     def test_page_form_failure_retains_djangos_html_response(self):
         response = self.client.post(reverse("announcement_update"))
 

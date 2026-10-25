@@ -1,0 +1,15 @@
+{% extends "admin/data_transfer.html" %}
+{% block transfer_page_class %}transfer-export{% endblock %}
+{% block transfer_header_actions %}
+{% if prepared_backups and not operation and not export_review %}<a class="btn-qc-secondary" href="#prepared-backups">Prepared backups ({{ prepared_backups|length }})</a>{% endif %}
+{% endblock %}
+{% block transfer_content %}
+<ol class="transfer-steps transfer-flow" aria-label="Backup progress"><li{% if not export_review and not operation %} aria-current="step"{% endif %}><span class="transfer-step-number" aria-hidden="true">1</span>Choose contents</li><li{% if export_review %} aria-current="step"{% endif %}><span class="transfer-step-number" aria-hidden="true">2</span>Review backup</li><li{% if operation %} aria-current="step"{% endif %}><span class="transfer-step-number" aria-hidden="true">3</span>Prepare &amp; download</li></ol>
+{% if operation.kind == 'export' %}{% include "admin/includes/transfers/operation.html" %}{% endif %}
+{% include "admin/includes/transfers/export_review.html" %}
+{% if not operation and not export_review %}
+  {% include "admin/includes/transfers/export_selection.html" %}
+  {% include "admin/includes/transfers/workspace_operations.html" with operations=export_operations workspace_page_url=export_page_url history_id="backup-history" history_title="Backup tasks" %}
+  {% include "admin/includes/transfers/saved_backups.html" %}
+{% endif %}
+{% endblock %}

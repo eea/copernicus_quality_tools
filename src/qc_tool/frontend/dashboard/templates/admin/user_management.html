@@ -13,19 +13,12 @@
       {% if user_actions %}<div class="qc-admin-management-actions">
         {% for action in user_actions %}{% if maintenance.enabled and action.write %}<button type="button" class="btn-qc-secondary" disabled title="Account changes are paused during maintenance.">{{ action.label }}</button>{% else %}<a class="{% if action.write %}btn-qc-primary{% else %}btn-qc-secondary{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% endif %}{% endfor %}
       </div>{% endif %}
-      {% if can_transfer_users %}
-      <h3>Database packages</h3><p>Accounts, password hashes, roles and permissions are included in every complete database export.</p>
-      <div class="qc-admin-link-list">
-        {% include "admin/includes/task_link.html" with url=users_import_url label="Restore or import a package" description="Restore a database backup or review an older users package" icon="upload" only %}
-        {% include "admin/includes/task_link.html" with url=users_export_url label="Create backup" description="Preserve the complete database and choose additional files" icon="download" only %}
-      </div>
-      {% endif %}
     </section>
     {% endif %}
     {% if access_actions %}
     <section class="qc-admin-panel" aria-labelledby="user-access-heading">
-      <div class="qc-admin-panel__heading"><span class="qc-admin-icon qc-admin-icon--violet"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg></span><h2 id="user-access-heading">Roles and access</h2></div>
-      <p>Assign responsibilities and product scope. QC Tool's built-in roles stay protected.</p>
+      <div class="qc-admin-panel__heading"><span class="qc-admin-icon qc-admin-icon--violet"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg></span><h2 id="user-access-heading">Roles and permissions</h2></div>
+      <p>Manage group permissions and assign users to groups through their account editor. Use Product scope to assign the products a product manager can review. QC Tool's built-in roles stay protected.</p>
       <div class="qc-admin-link-list">
         {% for action in access_actions %}{% if maintenance.enabled and action.write %}<button type="button" class="btn-qc-secondary" disabled title="Account changes are paused during maintenance.">{{ action.label }}</button>{% else %}{% include "admin/includes/task_link.html" with url=action.url label=action.label description=action.description icon="settings" only %}{% endif %}{% endfor %}
       </div>

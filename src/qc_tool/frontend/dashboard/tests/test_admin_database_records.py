@@ -1,6 +1,7 @@
 """Curated database inspection preserves secrets, permissions and write fences."""
 
 from hashlib import sha256
+from html.parser import HTMLParser
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -26,6 +27,34 @@ from qc_tool.frontend.dashboard.models import Delivery, Job, S3Info
 from qc_tool.frontend.dashboard.services import maintenance
 from qc_tool.frontend.dashboard.services.database_admin.presentation import record_url
 from qc_tool.frontend.dashboard.services.database_admin.resources import resource_for, resources
+
+
+class _DatabaseSections(HTMLParser):
+    def __init__(self, response):
+        super().__init__()
+        self.active = False
+        self.link = None
+        self.links = []
+        self.feed(response.content.decode(response.charset))
+
+    def handle_starttag(self, tag, attributes):
+        attributes = dict(attributes)
+        if tag == "nav" and attributes.get("aria-label") == "Database sections":
+            self.active = True
+        elif tag == "a" and self.active:
+            self.link = {**attributes, "text": ""}
+
+    def handle_data(self, value):
+        if self.link is not None:
+            self.link["text"] += value
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self.link is not None:
+            self.link["text"] = " ".join(self.link["text"].split())
+            self.links.append(self.link)
+            self.link = None
+        elif tag == "nav":
+            self.active = False
 
 
 class DatabaseResourcePolicyTests(SimpleTestCase):
@@ -59,6 +88,19 @@ class DatabaseResourcePolicyTests(SimpleTestCase):
 
 @override_settings(MAINTENANCE_MODE=False)
 class AdminDatabaseRecordTests(TestCase):
+    def test_database_identity_still_renders_when_version_query_is_unavailable(self):
+        from django.template import Context, Template
+        from django.utils.html import escape
+        from qc_tool.frontend.dashboard.views.admin_database import _database_metadata
+
+        with patch("django.db.connection.cursor", side_effect=DatabaseError("Database unavailable")):
+            metadata = _database_metadata()
+        self.assertEqual(metadata["version"], "Unavailable")
+        self.assertEqual(metadata["schema"], "Unavailable")
+        identity = Template("{{ active_database|default:database_metadata.name }}")
+        self.assertEqual(identity.render(Context({"active_database": "qc_live", "database_metadata": metadata})), "qc_live")
+        self.assertEqual(identity.render(Context({"active_database": "", "database_metadata": metadata})), escape(metadata["name"]))
+
     def setUp(self):
         directory = Path(self.enterContext(TemporaryDirectory(prefix="qc-database-browser-")))
         self.enterContext(override_settings(QC_TOOL_MAINTENANCE_DIR=directory / "maintenance",
@@ -93,45 +135,59 @@ class AdminDatabaseRecordTests(TestCase):
                 self.assertIn("no-store", response["Cache-Control"])
                 self.assertIn("private", response["Cache-Control"])
 
-    def test_home_checks_schema_once_and_discovers_tables_without_probing_backup_tools(self):
+    def test_overview_checks_schema_once_without_rendering_the_catalog_or_probing_backup_tools(self):
         with (patch.object(service, "schema_readiness", return_value={"ready": True, "message": "Schema matches."}) as schema,
               patch.object(service, "database_availability") as tools):
-            response = self.client.get(reverse("admin_data_transfer"))
+            response = self.client.get(reverse("admin_database"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["table_count"], 24)
         for resource in resources():
-            self.assertContains(response, f'href="{reverse("admin_database_records", args=(resource.table,))}"')
+            self.assertNotContains(response, f'href="{reverse("admin_database_records", args=(resource.table,))}"')
+        self.assertContains(response, f'href="{reverse("admin_database")}?tables=1"')
         schema.assert_called_once_with()
         tools.assert_not_called()
 
     def test_home_search_and_category_filter_only_classified_tables(self):
-        response = self.client.get(reverse("admin_data_transfer"), {"q": "execution_job"})
+        response = self.client.get(reverse("admin_database"), {"q": "execution_job"})
         grouped = list(response.context["table_groups"])
         self.assertEqual([item["resource"].table for _category, items in grouped for item in items], ["execution_job"])
-        response = self.client.get(reverse("admin_data_transfer"), {"category": "Publication & history"})
+        self.assertEqual(response.context["matching_table_count"], 1)
+        self.assertContains(response, "1 table")
+        response = self.client.get(reverse("admin_database"), {"category": "Publication & history"})
         self.assertTrue(list(response.context["table_groups"]))
         self.assertTrue(all(category == "Publication & history" for category, _items in response.context["table_groups"]))
+        self.assertEqual(response.context["matching_table_count"], 4)
+        self.assertContains(response, "4 tables")
+        empty = self.client.get(reverse("admin_database"), {"q": "no-such-database-table"})
+        self.assertEqual(empty.context["matching_table_count"], 0)
+        self.assertContains(empty, "0 tables")
 
-    def test_home_prioritizes_records_backups_schema_check_and_maintenance(self):
-        response = self.client.get(reverse("admin_data_transfer"))
+    def test_overview_shows_identity_and_compatibility_while_tables_mode_owns_the_catalog(self):
+        response = self.client.get(reverse("admin_database"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<h1>Database status</h1>", html=True)
-        for identifier in ("database-transfers-heading",
-                           "database-schema-heading", "database-maintenance-heading"):
+        self.assertContains(response, "<h1>Database</h1>", html=True)
+        for identifier in ("database-identity-heading", "database-schema-heading"):
             with self.subTest(identifier=identifier):
                 self.assertContains(response, f'id="{identifier}"')
-        for query in ("tab=backups", "tab=databases", "tab=activity"):
-            self.assertContains(response, f'href="{reverse("admin_data_transfer")}?{query}"')
-        self.assertContains(response, "In-place migrations are not available in v3.0.0.")
-        self.assertContains(response, f'href="{reverse("admin_data_transfer")}?schema=check#database-schema-heading"')
-        self.assertContains(response, '<details class="database-table-tools">')
+        self.assertNotContains(response, 'id="database-maintenance-heading"')
+        self.assertNotContains(response, 'name="q"')
+        self.assertNotContains(response, 'name="category"')
+        self.assertContains(response, "Database details")
+        self.assertContains(response, "Version")
+        database_content = response.content.decode().partition('<main id="content-start"')[2].partition("</main>")[0]
+        self.assertTrue(database_content)
+        self.assertNotIn('name="action"', database_content)
+        self.assertNotContains(response, "Choose backup contents")
+        self.assertNotContains(response, "Choose a backup ZIP")
+        self.assertContains(response, f'href="{reverse("admin_database")}?schema=check"')
         for parameters in ({"q": "execution_job"}, {"category": "Catalog"}, {"tables": "1"}):
             with self.subTest(parameters=parameters):
-                opened = self.client.get(reverse("admin_data_transfer"), parameters)
-                self.assertContains(opened, "<h1>Browse database records</h1>", html=True)
+                opened = self.client.get(reverse("admin_database"), parameters)
+                self.assertContains(opened, "<h1>Tables &amp; records</h1>", html=True)
                 self.assertContains(opened, 'id="database-records-heading"')
-                self.assertContains(opened, "Back to Database status")
-                self.assertNotContains(opened, '<details class="database-table-tools"')
+                self.assertContains(opened, 'name="tables" value="1"')
+                self.assertContains(opened, 'name="q"')
+                self.assertContains(opened, 'name="category"')
                 self.assertNotContains(opened, 'id="database-transfers-heading"')
                 self.assertNotContains(opened, 'id="database-schema-heading"')
                 self.assertNotContains(opened, 'id="database-maintenance-heading"')
@@ -143,9 +199,9 @@ class AdminDatabaseRecordTests(TestCase):
         with (patch.object(service, "schema_readiness", return_value={"ready": True, "message": "Schema is compatible."}) as check,
               patch.object(SchemaInitializer, "apply") as initialize,
               CaptureQueriesContext(connection) as queries):
-            response = self.client.get(reverse("admin_data_transfer"), {"schema": "check"})
+            response = self.client.get(reverse("admin_database"), {"schema": "check"})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Schema matches")
+        self.assertContains(response, "Compatible")
         check.assert_called_once_with()
         initialize.assert_not_called()
         self.assertEqual([item["sql"] for item in queries if item["sql"].lstrip().upper().startswith(
@@ -159,26 +215,26 @@ class AdminDatabaseRecordTests(TestCase):
             "ready": True, "state": "ready", "message": "The database matches current models.",
             "checked_at": checked, "contract_version": "qc-records-v1",
         }) as check:
-            response = self.client.get(reverse("admin_data_transfer"))
+            response = self.client.get(reverse("admin_database"))
         check.assert_called_once_with()
-        self.assertContains(response, "Schema matches")
+        self.assertContains(response, "Compatible")
         self.assertContains(response, f'<time datetime="{checked}">')
         self.assertContains(response, "Expected contract:")
         self.assertContains(response, "qc-records-v1")
         self.assertIn("no-store", response["Cache-Control"])
 
-    def test_home_displays_actual_schema_drift_and_keeps_backup_navigation_available(self):
+    def test_overview_displays_actual_schema_drift_without_offering_repair_or_unrelated_tasks(self):
         with patch.object(service, "schema_readiness", return_value={
             "ready": False, "state": "drift", "message": "Missing column execution_job.example_field.",
             "checked_at": "2026-10-23T12:34:56+00:00", "contract_version": "qc-records-v1",
         }):
-            response = self.client.get(reverse("admin_data_transfer"))
+            response = self.client.get(reverse("admin_database"))
         self.assertContains(response, "Missing column execution_job.example_field.")
         self.assertContains(response, 'role="alert"')
-        self.assertNotContains(response, ">Schema matches</p>")
+        self.assertNotContains(response, "Compatible")
         self.assertContains(response, "qc-records-v1")
-        self.assertContains(response, f'href="{reverse("admin_data_transfer")}?tab=backups"')
-        self.assertContains(response, "Create a backup")
+        self.assertContains(response, f'href="{reverse("admin_database")}?tables=1"')
+        self.assertNotContains(response, "Open Maintenance")
         self.assertNotContains(response, 'value="repair"')
 
     def test_schema_inspection_is_limited_to_database_landing(self):
@@ -187,17 +243,41 @@ class AdminDatabaseRecordTests(TestCase):
             self.assertEqual(self.client.get(reverse("admin:index")).status_code, 200)
         check.assert_not_called()
 
+    def test_database_sections_have_one_active_destination_across_overview_catalog_and_records(self):
+        overview = reverse("admin_database")
+        tables = overview + "?tables=1"
+        for route, options, selected in (
+            (overview, {}, overview),
+            (overview, {"tables": "1"}, tables),
+            (overview, {"q": "execution_job"}, tables),
+            (overview, {"category": "Catalog"}, tables),
+            (self.table_url(Delivery), {}, tables),
+            (self.detail_url(self.delivery), {}, tables),
+        ):
+            with self.subTest(route=route, options=options):
+                response = self.client.get(route, options)
+                self.assertEqual(response.status_code, 200)
+                links = _DatabaseSections(response).links
+                self.assertEqual([link["text"] for link in links], ["Overview", "Tables & records"])
+                self.assertEqual([link["href"] for link in links], [overview, tables])
+                self.assertEqual([link["href"] for link in links if link.get("aria-current") == "page"], [selected])
+                if route == overview:
+                    self.assertEqual(response.context["database_back_url"], "")
+                if options == {"tables": "1"}:
+                    for resource in resources():
+                        self.assertContains(response, f'href="{reverse("admin_database_records", args=(resource.table,))}"')
+
     def test_table_browser_keeps_database_tasks_and_returns_to_the_table_directory(self):
         response = self.client.get(self.table_url(Delivery))
         self.assertEqual(response.context["admin_section"], "database")
-        self.assertContains(response, 'aria-label="Database tasks"')
+        self.assertContains(response, 'aria-label="Database sections"')
         self.assertEqual([item["label"] for item in response.context["database_sections"]],
-                         ["Database status", "Back up & restore", "Manage databases", "Progress & history"])
-        self.assertEqual([item["key"] for item in response.context["database_sections"] if item["current"]],
-                         ["overview"])
+                         ["Overview", "Tables & records"])
+        self.assertEqual([item["key"] for item in response.context["database_sections"] if item["active"]],
+                         ["tables"])
         self.assertEqual(response.context["database_breadcrumbs"], [
-            {"label": "Database status", "url": reverse("admin_data_transfer")},
-            {"label": "Browse records", "url": reverse("admin_data_transfer") + "?tables=1#database-records-heading"},
+            {"label": "Database", "url": reverse("admin_database")},
+            {"label": "Tables & records", "url": reverse("admin_database") + "?tables=1"},
             {"label": "Deliveries", "url": ""},
         ])
         self.assertContains(response, "Back to tables")
@@ -205,7 +285,7 @@ class AdminDatabaseRecordTests(TestCase):
 
     def test_record_detail_keeps_a_complete_path_back_to_its_table_and_database_status(self):
         response = self.client.get(self.detail_url(self.delivery))
-        self.assertContains(response, 'aria-label="Database tasks"')
+        self.assertContains(response, 'aria-label="Database sections"')
         self.assertContains(response, "Back to Deliveries")
         self.assertEqual(response.context["database_back_url"], self.table_url(Delivery))
         self.assertEqual(response.context["database_page_title"], self.delivery.filename)
@@ -220,7 +300,7 @@ class AdminDatabaseRecordTests(TestCase):
             with self.subTest(model=model):
                 response = self.client.get(self.table_url(model))
                 self.assertEqual(response.context["admin_section"], "users")
-                self.assertNotContains(response, 'aria-label="Database tasks"')
+                self.assertNotContains(response, 'aria-label="Database sections"')
                 self.assertEqual(response.context["records_home_url"], reverse("admin_user_management"))
                 self.assertEqual(response.context["database_breadcrumbs"][0], {
                     "label": "User management", "url": reverse("admin_user_management"),
@@ -228,7 +308,7 @@ class AdminDatabaseRecordTests(TestCase):
                 self.assertContains(response, "Back to user management")
         response = self.client.get(self.detail_url(self.owner))
         self.assertEqual(response.context["admin_section"], "users")
-        self.assertNotContains(response, 'aria-label="Database tasks"')
+        self.assertNotContains(response, 'aria-label="Database sections"')
         self.assertEqual(response.context["database_back_url"], self.table_url(get_user_model()))
         self.assertContains(response, "Back to Users")
 
@@ -293,7 +373,6 @@ class AdminDatabaseRecordTests(TestCase):
         self.assertFalse(any(field["value"] == self.delivery.content_sha256 for field in response.context["ordinary_fields"]))
         self.assertContains(response, '<details class="database-technical-details">')
         self.assertNotContains(response, '<details class="database-technical-details" open>')
-        self.assertContains(response, 'href="#record-connections"')
 
     def test_empty_search_explains_recovery_and_session_browser_explains_private_fields(self):
         response = self.client.get(self.table_url(Delivery), {"q": "no-such-browser-delivery"})
@@ -347,7 +426,7 @@ class AdminDatabaseRecordTests(TestCase):
                 self.assertNotContains(response, "private-database-connection-detail", status_code=503)
                 self.assertIn("no-store", response["Cache-Control"])
                 self.assertContains(response, "Back to tables", status_code=503)
-                self.assertContains(response, 'aria-label="Database tasks"', status_code=503)
+                self.assertContains(response, 'aria-label="Database sections"', status_code=503)
 
     def test_plain_staff_and_product_managers_cannot_read_global_database_records(self):
         manager = get_user_model().objects.create_user("browser-manager")
@@ -358,7 +437,7 @@ class AdminDatabaseRecordTests(TestCase):
         staff.refresh_from_db()
         for user in (manager, staff):
             self.client.force_login(user)
-            for url in (reverse("admin_data_transfer"), self.table_url(Delivery), self.detail_url(self.delivery)):
+            for url in (reverse("admin_database"), self.table_url(Delivery), self.detail_url(self.delivery)):
                 with self.subTest(user=user.username, url=url):
                     self.assertEqual(self.client.get(url).status_code, 403)
 
@@ -397,7 +476,7 @@ class AdminDatabaseRecordTests(TestCase):
         self.ready()
         with CaptureQueriesContext(connection) as queries:
             responses = [self.client.get(url) for url in (
-                reverse("admin_data_transfer"), self.table_url(Delivery), self.detail_url(self.owner),
+                reverse("admin_database"), self.table_url(Delivery), self.detail_url(self.owner),
             )]
         self.assertTrue(all(response.status_code == 200 for response in responses))
         self.assertEqual([item["sql"] for item in queries if item["sql"].lstrip().upper().startswith(

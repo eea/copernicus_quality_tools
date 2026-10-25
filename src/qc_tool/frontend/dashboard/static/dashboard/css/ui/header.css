@@ -101,30 +101,6 @@ body.qc-admin #header.site-header {
   outline-offset: 2px;
 }
 
-/* Optional area navigation shares the same controlled region as account links. */
-.site-header__sections {
-  display: flex;
-  grid-column: 1 / -1;
-  grid-row: 2;
-  flex-wrap: wrap;
-  gap: 0 30px;
-}
-.site-header__sections > a,
-.qc-admin #header .site-header__sections > a {
-  display: inline-flex;
-  min-height: 47px;
-  align-items: center;
-  border-bottom: 3px solid transparent;
-  color: var(--qc-nav-muted, var(--qc-color-muted));
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-.site-header__sections > a:is(:hover, :focus, [aria-current="page"]),
-.qc-admin #header .site-header__sections > a:is(:hover, :focus, [aria-current="page"]) {
-  border-bottom-color: var(--qc-nav-primary, var(--qc-color-primary));
-  color: var(--qc-nav-primary, var(--qc-color-primary));
-}
 @media (max-width: 1199px) and (min-width: 992px) {
   .site-header { --qc-header-gutter: 18px; --qc-header-gap: 18px; }
   .site-header .main-menu > li > a,
@@ -168,26 +144,7 @@ body.qc-admin #header.site-header {
   .site-header .site-nav-dropdown-menu > .site-nav-identity { padding-inline-start: calc(var(--qc-header-gutter) + 28px); }
   .site-header[data-navigation-ready] .site-header__toggle { display: flex; }
   .site-header[data-navigation-ready] .site-header__toggle[aria-expanded="false"] ~ .site-header__menu { display: none; }
-  .site-header__sections {
-    flex-direction: column;
-    gap: 0;
-    padding: 6px 0;
-    border-top: 1px solid var(--qc-nav-border, var(--qc-color-border));
-  }
-  .site-header__sections > a,
-  .qc-admin #header .site-header__sections > a {
-    box-sizing: border-box;
-    min-height: 48px;
-    padding: 13px var(--qc-header-gutter);
-    border-bottom: 0;
-    border-inline-start: 3px solid transparent;
-    font-size: 14px;
-  }
-  .site-header__sections > a:is(:hover, :focus, [aria-current="page"]),
-  .qc-admin #header .site-header__sections > a:is(:hover, :focus, [aria-current="page"]) {
-    border-inline-start-color: var(--qc-nav-primary, var(--qc-color-primary));
-    background: var(--qc-nav-hover, var(--qc-color-surface-hover));
-  }
+
 }
 
 @media (max-width: 560px) {

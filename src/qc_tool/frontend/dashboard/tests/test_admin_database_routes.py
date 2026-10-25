@@ -21,22 +21,27 @@ from qc_tool.frontend.dashboard.views.admin_data_transfer import (
 
 
 OPERATION_ID = "812d54c5-f69b-4f51-9e25-d4cbbd9a35da"
-ENTRY_ROUTES = ("admin_data_transfer", "admin_data_transfer_no_slash", "admin_data_transfer_legacy")
+ENTRY_ROUTES = ("admin_database", "admin_data_transfer", "admin_data_transfer_no_slash", "admin_data_transfer_legacy")
+WORKSPACE_ROUTES = ("admin_backup_export", "admin_backup_import")
 CHILD_ROUTES = (
     "admin_data_transfer_status", "admin_data_transfer_download",
     "admin_data_transfer_status_legacy", "admin_data_transfer_download_legacy",
+    "admin_data_transfer_status_database_legacy", "admin_data_transfer_download_database_legacy",
 )
 
 
 class AdminDatabaseRouteOwnershipTests(SimpleTestCase):
     def test_reverse_names_generate_the_canonical_database_paths(self):
-        self.assertEqual(reverse("admin_data_transfer"), "/admin/database/")
-        self.assertEqual(reverse("admin_data_transfer_status", args=[OPERATION_ID]), f"/admin/database/{OPERATION_ID}/status/")
-        self.assertEqual(reverse("admin_data_transfer_download", args=[OPERATION_ID]), f"/admin/database/{OPERATION_ID}/download/")
+        self.assertEqual(reverse("admin_database"), "/admin/database/")
+        self.assertEqual(reverse("admin_data_transfer"), "/admin/maintenance/backups/")
+        self.assertEqual(reverse("admin_backup_export"), "/admin/maintenance/backups/export/")
+        self.assertEqual(reverse("admin_backup_import"), "/admin/maintenance/backups/import/")
+        self.assertEqual(reverse("admin_data_transfer_status", args=[OPERATION_ID]), f"/admin/maintenance/backups/{OPERATION_ID}/status/")
+        self.assertEqual(reverse("admin_data_transfer_download", args=[OPERATION_ID]), f"/admin/maintenance/backups/{OPERATION_ID}/download/")
 
     def test_aliases_keep_the_same_handlers_and_maintenance_control_ownership(self):
         factory = RequestFactory()
-        for route in (*ENTRY_ROUTES, *CHILD_ROUTES):
+        for route in (*ENTRY_ROUTES, *WORKSPACE_ROUTES, *CHILD_ROUTES):
             with self.subTest(route=route):
                 path = reverse(route, args=[OPERATION_ID] if route in CHILD_ROUTES else [])
                 target = data_transfer_status if "status" in route else data_transfer_download if "download" in route else data_transfer
@@ -51,8 +56,9 @@ class AdminDatabaseRouteOwnershipTests(SimpleTestCase):
         previous = get_script_prefix()
         self.addCleanup(set_script_prefix, previous)
         set_script_prefix("/qc-tool/")
-        self.assertEqual(reverse("admin_data_transfer"), "/qc-tool/admin/database/")
-        for path in ("/admin/database/", "/admin/database", "/admin/data-transfer/"):
+        self.assertEqual(reverse("admin_data_transfer"), "/qc-tool/admin/maintenance/backups/")
+        for path in ("/admin/database/", "/admin/database", "/admin/data-transfer/", "/admin/maintenance/backups/",
+                     "/admin/maintenance/backups/export/", "/admin/maintenance/backups/import/"):
             request = RequestFactory().post(path, SCRIPT_NAME="/qc-tool")
             self.assertTrue(is_maintenance_control_request(request))
 
@@ -78,7 +84,7 @@ class AdminDatabaseRouteAccessTests(TestCase):
         self.enterContext(patch.object(service, "list_operations", return_value=[]))
 
     def paths(self):
-        return [reverse(route) for route in ENTRY_ROUTES] + [reverse(route, args=[OPERATION_ID]) for route in CHILD_ROUTES]
+        return [reverse(route) for route in (*ENTRY_ROUTES, *WORKSPACE_ROUTES)] + [reverse(route, args=[OPERATION_ID]) for route in CHILD_ROUTES]
 
     def test_anonymous_routes_use_admin_authentication_with_the_original_destination(self):
         client = Client()
@@ -101,7 +107,7 @@ class AdminDatabaseRouteAccessTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         client.force_login(self.administrator)
         with patch.object(service, "export_preview") as preview:
-            for route in ENTRY_ROUTES:
+            for route in (*ENTRY_ROUTES, *WORKSPACE_ROUTES):
                 with self.subTest(route=route):
                     response = client.post(reverse(route), {"action": "preview_export", "scope": "all_accounts"})
                     self.assertEqual(response.status_code, 403)
@@ -114,7 +120,7 @@ class AdminDatabaseRouteAccessTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.wsgi_request.GET["marker"], "review & keep")
                 self.assertEqual(response.wsgi_request.GET.getlist("users"), ["1", "2"])
-                self.assertContains(response, f'href="{reverse("admin_data_transfer")}"')
+                self.assertContains(response, f'href="{reverse("admin_maintenance")}"')
 
     def test_entry_aliases_keep_review_post_bodies_during_maintenance(self):
         maintenance.enable(self.administrator, expected_generation=0)
@@ -135,7 +141,7 @@ class AdminDatabaseRouteAccessTests(TestCase):
             response = self.client.get(reverse("admin_data_transfer_legacy"), {"operation": OPERATION_ID})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'data-transfer-status-url="{reverse("admin_data_transfer_status", args=[OPERATION_ID])}"')
-        self.assertContains(response, f'href="{reverse("admin_data_transfer")}?operation={OPERATION_ID}&amp;from=backups#transfer-operation"')
+        self.assertContains(response, f'href="{reverse("admin_backup_export")}?operation={OPERATION_ID}&amp;from=backups#transfer-operation"')
         operation.update(status="completed", downloadable=True, runner_active=False)
         with patch.object(service, "get_operation", return_value=operation):
             response = self.client.get(reverse("admin_data_transfer_legacy"), {"operation": OPERATION_ID})
@@ -164,5 +170,5 @@ class AdminDatabaseRouteAccessTests(TestCase):
                         self.assertEqual(b"".join(response.streaming_content), b"verified-zip")
                     else:
                         self.assertEqual(response.json()["id"], OPERATION_ID)
-            self.assertEqual(status.call_count, 2)
-            self.assertEqual(download.call_count, 2)
+            self.assertEqual(status.call_count, 3)
+            self.assertEqual(download.call_count, 3)

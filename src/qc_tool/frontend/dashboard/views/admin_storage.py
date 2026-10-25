@@ -10,7 +10,7 @@ from django.shortcuts import redirect
 from django.utils.http import content_disposition_header
 
 from qc_tool.frontend.dashboard.services.admin_feedback import busy_context
-from qc_tool.frontend.dashboard.services.storage_admin.navigation import url as _url, browse_url
+from qc_tool.frontend.dashboard.services.storage_admin.navigation import url as _url, browse_url, library_key
 from .admin_storage_shared import (authorize as _authorize, render_storage as _render, return_options,
                                    folder_title, library_url, folder_url, folder_order)
 
@@ -43,7 +43,7 @@ def storage_home(request):
     tab = request.GET.get("tab", "")
     if not tab and not request.GET.get("area") and getattr(settings, "QC_TOOL_PERSISTENT_STORAGE_ROOT", ""):
         return redirect(browse_url(area="persistent"))
-    if not request.GET.get("area") and tab not in {"files", "connection"}:
+    if not request.GET.get("area") and library_key(tab, request.GET.get("collection", "")):
         from .admin_storage_library import storage_library
         return storage_library(request)
     if request.GET.get("tab") == "connection":
@@ -91,7 +91,7 @@ def storage_home(request):
                        previous_url=_url(**options, page=int(listing["page"]) - 1),
                        next_url=_url(**options, page=int(listing["page"]) + 1),
                        archive_url=_url("admin_storage_archive", area=area, path=path, folder=path, **detail_context),
-                       trash_url=_url("admin_storage_trash", area=area, **navigation_context), **sort_urls)
+                       trash_url=_url("admin_storage_trash", area=area, path=path, **detail_context), **sort_urls)
     except files.StorageError as error:
         return _render(request, "admin/storage.html", storage_error=str(error), area=area,
                        http_status=getattr(error, "status_code", 409), **busy_context(error),
@@ -222,13 +222,22 @@ def storage_trash(request):
         return HttpResponseNotAllowed(["GET"])
     files, _references, trash = _modules()
     area = request.GET.get("area", "incoming")
+    path = request.GET.get("path", "")
+    return_context = return_options(request)
     try:
         if not files.area_info(area)["can_trash"]:
             raise files.StorageError("This location has no managed Trash.", status_code=404)
+        files._parts(area, path)
         listing = trash.list_trash(area, page=request.GET.get("page", "1"))
         for entry in listing["entries"]:
             entry["state_label"] = _TRASH_STATES.get(entry["state"], "Needs review")
-        return _render(request, "admin/storage_trash.html", area=area, trash_listing=listing, title="Trash")
+        options = {"area": area, "path": path, **return_context}
+        back_url = (_url(area=area, path=path, **return_context) if return_context.get("library")
+                    else folder_url(area, path, return_context))
+        return _render(request, "admin/storage_trash.html", area=area, path=path, trash_listing=listing, title="Trash",
+                       parent_url=back_url,
+                       trash_previous_url=_url("admin_storage_trash", **options, page=max(1, listing["page"] - 1)),
+                       trash_next_url=_url("admin_storage_trash", **options, page=listing["page"] + 1))
     except files.StorageError as error:
         return _render(request, "admin/storage.html", storage_error=str(error), area=area,
                        http_status=getattr(error, "status_code", 409))
@@ -240,6 +249,7 @@ def storage_action(request):
         return HttpResponseNotAllowed(["POST"])
     files, _references, trash = _modules()
     area, path = request.POST.get("area", ""), request.POST.get("path", "")
+    return_context = return_options(request)
     try:
         if not files.area_info(area)["can_trash"]:
             raise files.StorageError("This location is available for browsing and downloading only.")
@@ -248,16 +258,19 @@ def storage_action(request):
         except (ValueError, TypeError):
             raise files.StorageError("Maintenance changed. Reload and review this action.") from None
         if request.POST.get("action") == "quarantine":
+            return_folder = path.rpartition("/")[0]
             entry = files.inspect_entry(area, path)
             if request.POST.get("confirmed") != "on" or request.POST.get("filename_confirmation") != entry["name"]:
                 raise files.StorageError("Confirm the filename before moving this file to trash.")
             trash.quarantine(area, path, actor=request.user, generation=generation,
                              review_hash=request.POST.get("review_hash", ""))
         elif request.POST.get("action") == "restore":
+            return_folder = request.POST.get("folder", "")
+            files._parts(area, return_folder)
             trash.restore(area, request.POST.get("operation_id", ""), actor=request.user, generation=generation)
         else:
             raise files.StorageError("Choose a supported storage action.")
-        return redirect(_url("admin_storage_trash", area=area))
+        return redirect(_url("admin_storage_trash", area=area, path=return_folder, **return_context))
     except files.StorageError as error:
         return _render(request, "admin/storage.html", storage_error=str(error), area=area,
                        http_status=getattr(error, "status_code", 409), **busy_context(error),

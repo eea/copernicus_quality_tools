@@ -7,16 +7,13 @@ from qc_tool.frontend.dashboard.forms.data_transfers import DatabaseActivationFo
 
 
 class AdminDatabaseSwitchPresentationTests(SimpleTestCase):
-    def test_recovery_distinguishes_zip_files_from_the_database_in_use(self):
-        html = render_to_string("admin/includes/transfers/recovery.html", {
-            "area_import_url": "/admin/database/?tab=import",
-            "database_manager_url": "/admin/database/?tab=databases",
+    def test_database_controls_identify_the_live_copy_without_unrelated_backup_tasks(self):
+        html = render_to_string("admin/includes/transfers/database_controls.html", {
             "database_control": {"active_database": "live_database"},
         })
-        self.assertIn("A backup ZIP and a database are different things.", html)
         self.assertIn("QC Tool uses one database at a time.", html)
         self.assertIn("live_database", html)
-        self.assertIn('href="/admin/database/?tab=databases"', html)
+        self.assertNotIn("Restore from backup", html)
         self.assertNotIn('value="rollback_database"', html)
 
     def test_switch_review_labels_both_copies_without_a_database_name_typing_step(self):
@@ -27,6 +24,7 @@ class AdminDatabaseSwitchPresentationTests(SimpleTestCase):
         html = render_to_string("admin/includes/transfers/operation.html", {
             "operation": {"id": "812d54c5-f69b-4f51-9e25-d4cbbd9a35da", "kind": "import", "status": "completed"},
             "activation_form": form,
+            "rollback_form": DatabaseControlForm(prefix="rollback", destination="live_database"),
             "activation_review": {"source_database": "live_database", "target_database": "restored_database",
                                   "can_apply": True, "warnings": ["An external artifact needs separate recovery."]},
             "maintenance_ready": True,

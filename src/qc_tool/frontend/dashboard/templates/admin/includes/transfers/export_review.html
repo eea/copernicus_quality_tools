@@ -1,21 +1,32 @@
 {% load static %}
   {% if export_review %}
   <section class="module transfer-panel" id="export-review">
-    <h2>Check the contents before creating your ZIP</h2>
+    <h2>Backup contents</h2>
     <div class="transfer-panel__body">
-      <div class="transfer-assurance"><strong>{{ export_scope_label }}</strong><p>Accounts, password hashes, permissions, sessions and history are included.</p></div>
+      <p><strong>Database included:</strong> all tables and records, including accounts, permissions and history.</p>
       {% if export_review.blockers %}<div class="errornote" role="alert"><strong>The backup cannot start yet.</strong><ul>{% for blocker in export_review.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul><p><a href="{{ edit_export_url }}">Change selected sections</a>, or ask an operator to provide more backup capacity.</p></div>{% endif %}
-      {% if export_review.notes %}<ul class="transfer-warnings">{% for item in export_review.notes %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
-      {% if export_review.components %}<div class="transfer-table-wrap"><table class="transfer-summary"><caption>Package sections</caption><thead><tr><th scope="col">Section</th><th scope="col">Status</th><th scope="col">Files</th><th scope="col">Size</th></tr></thead><tbody>{% for component in export_review.components %}<tr><th scope="row">{{ component.label }}</th><td data-label="Status"><span class="transfer-badge{% if component.status == 'included' %} transfer-badge--success{% elif component.status == 'unavailable' or component.status == 'partial' %} transfer-badge--warning{% else %} transfer-badge--neutral{% endif %}">{{ component.status|capfirst }}</span></td><td data-label="Files">{{ component.files_count|default_if_none:'—' }}</td><td data-label="Size">{% if component.byte_count != None %}{{ component.byte_count|filesizeformat }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<dl class="transfer-scope-summary"><dt>Additional sections</dt><dd><ul>{% for label, selected in export_component_rows %}<li>{{ label }} — {% if selected %}Included{% else %}Excluded{% endif %}</li>{% endfor %}</ul></dd></dl>{% endif %}
-      <p class="help">Unavailable or partial sections cannot be fully backed up. Omitted sections were not selected; empty sections contain no files.</p>
+      {% if export_selection.components %}
+        {% if export_review.components %}
+          <div class="transfer-table-wrap"><table class="transfer-summary"><caption>Package sections</caption><thead><tr><th scope="col">Section</th><th scope="col">Status</th><th scope="col">Files</th><th scope="col">Size</th></tr></thead><tbody>
+            {% for component in export_review.components %}{% if component.status != 'omitted' %}
+              <tr><th scope="row">{{ component.label }}</th><td data-label="Status"><span class="transfer-badge{% if component.status == 'included' %} transfer-badge--success{% elif component.status == 'unavailable' or component.status == 'partial' %} transfer-badge--warning{% else %} transfer-badge--neutral{% endif %}">{{ component.status|capfirst }}</span></td><td data-label="Files">{{ component.files_count|default_if_none:'—' }}</td><td data-label="Size">{% if component.byte_count != None %}{{ component.byte_count|filesizeformat }}{% else %}—{% endif %}</td></tr>
+            {% endif %}{% endfor %}
+          </tbody></table></div>
+          <p class="help">Empty sections have no files. Partial or unavailable sections need attention.</p>
+        {% else %}
+          <ul>{% for label, selected in export_component_rows %}{% if selected %}<li>{{ label }}</li>{% endif %}{% endfor %}</ul>
+        {% endif %}
+      {% else %}<p>No optional files or server settings selected.</p>{% endif %}
+      {% if export_review.notes %}<ul class="transfer-review-notes">{% for item in export_review.notes %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
       {% include "admin/includes/transfers/storage_capacity.html" %}
-      <p class="transfer-note"><strong>Keep this backup private.</strong> The ZIP contains password hashes and selected secrets. Server recovery settings are saved for manual use.</p>
+      <p class="transfer-privacy">Backups contain password hashes and may contain credentials. Store the ZIP securely.</p>
       <form method="post" data-maintenance-exempt data-admin-pending-label="Starting backup…" data-admin-pending-message="Starting your backup. Keep this page open until progress appears; preparation then continues in the background.">
         {% csrf_token %}<input type="hidden" name="scope" value="database">{% for component in export_selection.components %}<input type="hidden" name="components" value="{{ component }}">{% endfor %}
         <input type="hidden" name="reviewed_hash" value="{{ export_review.review_hash }}"><input type="hidden" name="generation" value="{{ transfer_maintenance.generation }}">
         <div class="transfer-actions"><button type="submit" class="button default btn-qc-primary" name="action" value="export"{% if not transfers_ready or export_review.blockers %} disabled{% endif %}>Create backup ZIP</button><a href="{{ edit_export_url }}">&larr; Change contents</a></div>
-        <p class="help">Preparation runs on the server. You can leave and download the finished ZIP from <a href="{{ backup_files_url }}">Back up &amp; restore</a>. Check preparation in <a href="{{ transfer_history_url }}">Progress &amp; history</a>.</p>
+        <p class="help">Preparation continues in the background. The ZIP will appear in <a href="{{ backup_files_url }}">Saved backup files</a>.</p>
       </form>
+      {% if export_omitted_components %}<details class="transfer-details"><summary>Omitted contents</summary><ul>{% for label in export_omitted_components %}<li>{{ label }}</li>{% endfor %}</ul></details>{% endif %}
       {% if export_counts or export_review.file_references %}<details class="transfer-details"><summary>Record and file inventory</summary>{% if export_counts %}<table class="transfer-counts"><caption>Records to export</caption><thead><tr><th scope="col">Information</th><th scope="col">Records</th></tr></thead><tbody>{% for label, count in export_counts %}<tr><th scope="row">{{ label }}</th><td>{{ count }}</td></tr>{% endfor %}</tbody></table>{% endif %}{% include "admin/includes/transfers/file_summary.html" with file_references=export_review.file_references %}</details>{% endif %}
       {% if export_review.exclusions or source_details %}<details class="transfer-details"><summary>Export details</summary>{% if source_details %}<dl>{% for label, value in source_details %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>{% endif %}{% if export_review.exclusions %}<ul>{% for item in export_review.exclusions %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}</details>{% endif %}
     </div>

@@ -231,7 +231,7 @@ class ErrorPagePresentationTests(TestCase):
     def test_authenticated_403_uses_status_artwork_without_permission_leaks(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("boundaries_upload"))
+        response = self.client.get(reverse("product_upload"))
 
         self.assertTemplateUsed(response, "accounts/errors/403.html")
         self.assert_shared_error_page(
@@ -261,7 +261,7 @@ class ErrorPagePresentationTests(TestCase):
         self.user.user_permissions.remove(permission)
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("boundaries_upload"))
+        response = self.client.get(reverse("product_upload"))
 
         self.assert_shared_error_page(
             response,

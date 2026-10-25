@@ -185,7 +185,7 @@ copy of every Docker volume. Never advertise silent omissions as “full”.
 
 ## Export experience
 
-In **Admin → Database → Export records**, use a short sequential flow:
+In **Admin → Maintenance → Create a backup**, use a short sequential flow:
 
 1. **Choose records**: all maintained QC records by default; future selectors
    may choose products, deliveries/jobs, owners or dates. Display dependency

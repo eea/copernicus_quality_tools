@@ -49,11 +49,11 @@ class UserManagementAdminTests(TestCase):
         for url in expected:
             with self.subTest(url=url):
                 self.assertContains(response, f'href="{url}"')
-        self.assertTrue(response.context["can_transfer_users"])
-        for tab, key in (("import", "users_import_url"), ("export", "users_export_url")):
-            url = urlsplit(response.context[key])
-            self.assertEqual(url.path, reverse("admin_data_transfer"))
-            self.assertEqual(parse_qs(url.query), {"tab": [tab]})
+        self.assertContains(response, "Roles and permissions")
+        self.assertContains(response, "Product scope")
+        self.assertContains(response, "product manager")
+        self.assertNotContains(response, "Create backup")
+        self.assertNotContains(response, "Restore or import a package")
         self.assertIn("no-store", response["Cache-Control"])
         self.assertIn("private", response["Cache-Control"])
 
@@ -64,7 +64,6 @@ class UserManagementAdminTests(TestCase):
         self.assertEqual([row["url"] for row in response.context["user_actions"]],
                          [reverse("admin:auth_user_changelist")])
         self.assertEqual(response.context["access_actions"], [])
-        self.assertFalse(response.context["can_transfer_users"])
         self.assertNotContains(response, "Import users")
         self.assertNotContains(response, "Export users")
         self.assertNotContains(response, 'href="' + reverse("admin:auth_user_add") + '"')
@@ -76,7 +75,6 @@ class UserManagementAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual([row["url"] for row in response.context["user_actions"]],
                          [reverse("admin:auth_user_add")])
-        self.assertFalse(response.context["can_transfer_users"])
         self.assertEqual(response.context["access_actions"], [])
 
     def test_group_only_staff_gets_only_its_group_action(self):
@@ -87,7 +85,6 @@ class UserManagementAdminTests(TestCase):
         self.assertFalse(response.context["show_users_panel"])
         self.assertEqual([row["url"] for row in response.context["access_actions"]],
                          [reverse("admin:auth_group_changelist")])
-        self.assertFalse(response.context["can_transfer_users"])
 
     def test_managers_and_ungranted_staff_cannot_open_user_management(self):
         for user in (self.manager, self.staff):
@@ -124,7 +121,7 @@ class UserManagementAdminTests(TestCase):
         self.assertEqual(list(get_user_model().objects.values()), before)
 
     @override_settings(SESSION_SAVE_EVERY_REQUEST=True)
-    def test_maintenance_keeps_reading_and_transfers_but_disables_create_actions_without_writes(self):
+    def test_maintenance_keeps_reading_but_disables_create_actions_without_writes(self):
         generation = maintenance.enable(self.administrator, expected_generation=0)["generation"]
         maintenance.advance(expected_generation=generation)
         with CaptureQueriesContext(connection) as queries:
@@ -133,8 +130,8 @@ class UserManagementAdminTests(TestCase):
         self.assertContains(response, "Create user")
         self.assertNotContains(response, f'href="{reverse("admin:auth_user_add")}"')
         self.assertContains(response, f'href="{reverse("admin:auth_user_changelist")}"')
-        self.assertContains(response, "Restore or import a package")
-        self.assertContains(response, "Create backup")
+        self.assertNotContains(response, "Restore or import a package")
+        self.assertNotContains(response, "Create backup")
         self.assertEqual([item["sql"] for item in queries if item["sql"].lstrip().upper().startswith(
             ("INSERT ", "UPDATE ", "DELETE ", "CREATE ", "ALTER ", "DROP "))], [])
         self.assertEqual(self.client.post(self.url, {"action": "create"}).status_code, 503)

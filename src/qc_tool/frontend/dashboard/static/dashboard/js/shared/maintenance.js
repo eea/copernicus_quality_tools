@@ -5,6 +5,8 @@
     var active = Boolean(config && config.getAttribute("content") === "on");
     var notice = config && config.getAttribute("data-notice") || "Maintenance in progress. You can browse and download existing data. Changes are temporarily paused.";
     var admin = Boolean(document.querySelector('meta[name="qc-admin"]'));
+    var ended = false;
+    var endedNotice = "Maintenance has ended. Reload this page to enable changes.";
 
     function exempt(node) { return node.closest && node.closest("[data-maintenance-exempt]"); }
     function marked(node) { return node.closest && node.closest("[data-maintenance-write]"); }
@@ -28,10 +30,23 @@
     }
     function show(message) {
         document.querySelectorAll("[data-maintenance-banner]").forEach(function(node) { node.hidden = false; });
-        document.querySelectorAll("[data-maintenance-message]").forEach(function(node) { node.textContent = message || notice; });
+        document.querySelectorAll("[data-maintenance-message]").forEach(function(node) { node.textContent = message || (ended ? endedNotice : notice); });
+    }
+    function refreshAdminControls(title, explanation) {
+        // A response cannot supply a reviewed generation for this page's form.
+        // Keep stale controls unavailable until a fresh server render.
+        document.querySelectorAll("[data-maintenance-title]").forEach(function(node) { node.textContent = title; });
+        document.querySelectorAll("[data-maintenance-disable-form]").forEach(function(form) {
+            form.hidden = true;
+            form.querySelectorAll('button[type="submit"]').forEach(function(button) { button.disabled = true; });
+        });
+        document.querySelectorAll("[data-maintenance-control-note]").forEach(function(node) { node.textContent = explanation; node.hidden = false; });
+        document.querySelectorAll("[data-maintenance-refresh]").forEach(function(node) { node.hidden = false; });
     }
     function activate() {
         var changed = !active;
+        if (changed || ended) refreshAdminControls("Maintenance is on", "Reload this page to update maintenance controls.");
+        ended = false;
         active = true;
         show();
         apply();
@@ -52,7 +67,11 @@
         var header = xhr.getResponseHeader ? xhr.getResponseHeader("X-QC-Maintenance") :
             xhr.headers && xhr.headers.get("X-QC-Maintenance");
         if (header === "on") activate();
-        else if (header === "off" && active) show("Maintenance has ended. Reload this page to enable changes.");
+        else if (header === "off" && active) {
+            ended = true;
+            refreshAdminControls("Maintenance has ended", "Reload this page to restore editing controls.");
+            show(endedNotice);
+        }
         else if (xhr.status === 503) {
             if (window.qcAuth && window.qcAuth.responsePayload) {
                 observePayload(window.qcAuth.responsePayload(xhr));

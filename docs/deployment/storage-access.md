@@ -1,13 +1,13 @@
 # Storage browser and desktop connections
 
-Use **Admin → Storage** to find submitted deliveries and retained reference
-versions. Open **Browse files** for application storage locations and other
-mounted folders. The browser respects protected application
-paths and the account's administrator permissions. **Connect with SFTP**
+**Admin → Storage** opens **Browse files** for application storage locations and
+other mounted folders. **File history** groups submitted deliveries, product
+specifications and boundary versions. The browser respects protected application
+paths and the account's administrator permissions. **Connection**
 shows the deployment's SFTP connection details when an operator has configured
 them. Showing those details does not create a server or grant SSH access.
 With the EEA persistent-storage profile, Storage opens the **Persistent storage**
-folder directly; the libraries remain available in its task navigation.
+folder directly; the recorded collections remain available under **File history**.
 
 For an EEA Azure installation, use the optional
 [persistent-storage profile](eea-storage.md). **Browse files → Persistent
@@ -28,11 +28,11 @@ QC Tool does not require Finder or Windows Explorer to support SFTP themselves.
 
 | Task | Open |
 | --- | --- |
-| Find submitted deliveries | **Storage → Submitted deliveries**. Search by filename, product, unit or submitter. |
+| Find submitted deliveries | **Storage → File history → Submitted deliveries**. Search by filename, product, unit or submitter. |
 | Find approved deliveries | Choose **Approved** in the same library. Current and earlier delivery-plan approvals are identified separately. |
 | Find a submission's original files and QC evidence | Choose **Open files** or **Download ZIP** on its row. A published folder means retained evidence, not approval. |
-| Find specification history | **Product specifications** starts with current versions. Click a product name for its history or choose **All versions**; originals have direct downloads. |
-| Find boundary packages | **Boundaries** starts with the current package. Choose **All versions** or **Previous** for retained packages, with direct file browsing and ZIP downloads. |
+| Find specification history | **File history → Product specifications** starts with current versions. Click a product name for its history or choose **All versions**; originals have direct downloads. |
+| Find boundary packages | **File history → Boundary versions** starts with the current package. Choose **All versions** or **Previous** for retained packages, with direct file browsing and ZIP downloads. |
 | Find uploads with no submission, unlinked files or logs | **Browse files** opens the existing folder browser. |
 
 Historical submitted records without a publication/review receipt remain visible
@@ -108,7 +108,7 @@ To bound request work and inventory memory, one archive allows 100 selected
 paths, 10,000 inventory entries and 32 folder levels. Narrow the selection or
 use an SFTP client for larger trees. Files that change after inventory cause the
 stream to stop rather than yielding a valid incomplete archive. For a consistent
-recovery package, use **Database → Back up & restore**.
+recovery package, use **Maintenance → Back up & restore**.
 
 ## Add other server folders
 
@@ -156,7 +156,7 @@ workflow remains limited to eligible delivery uploads and QC job artifacts.
 | The host already has a managed SFTP service | Ask its operator for a restricted, read-only application share and a public-key account. Enter those details in the frontend settings below. |
 | A dedicated QC Tool share is needed | Review and use the optional standalone Compose service below. |
 | Only a few application files are needed | Download them in Admin Storage; no extra network service is needed. |
-| A database backup is needed | Use **Admin → Database → Back up & restore**. Copying a live PostgreSQL directory or SQLite file is not a consistent database backup. |
+| A database backup is needed | Use **Admin → Maintenance → Back up & restore**. Copying a live PostgreSQL directory or SQLite file is not a consistent database backup. |
 
 ## Select the share contents
 

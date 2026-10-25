@@ -8,7 +8,7 @@ from django.contrib import admin, messages
 import hashlib
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.http import HttpResponseNotAllowed, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponseBadRequest, HttpResponseNotAllowed, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.debug import sensitive_post_parameters
@@ -21,7 +21,7 @@ from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.accounts.authentication.maintenance import login_without_database_writes
 from qc_tool.frontend.dashboard.services import maintenance
 from qc_tool.frontend.dashboard.services.admin_feedback import busy_context
-from qc_tool.frontend.dashboard.services.database_navigation import database_page_context, transfer_origin
+from qc_tool.frontend.dashboard.services.database_navigation import transfer_origin, transfer_workspace_context
 from qc_tool.frontend.dashboard.services.transfer_presentation import backup_storage_summary, present_transfer, transfer_page_copy
 from qc_tool.frontend.dashboard.services.maintenance.operations import active_operation
 from qc_tool.frontend.dashboard.forms.data_transfers import (
@@ -108,8 +108,8 @@ def _count_rows(counts):
             for name, count in (counts or {}).items() if count]
 
 
-def _requested_task(request):
-    """Keep old bookmarks within the current Database section hierarchy."""
+def _requested_task(request, default="start"):
+    """Keep old bookmarks within the current Maintenance task hierarchy."""
     tab = request.GET.get("tab")
     if tab in {"history", "transfers"}:
         return "backups"
@@ -117,7 +117,7 @@ def _requested_task(request):
         return tab
     if tab in {"export", "backup"} or request.GET.get("scope"):
         return "export"
-    return "start"
+    return default
 
 
 AREA_LABELS = {"users": "Users", "records": "Database records", "recovery": "Database packages"}
@@ -125,6 +125,9 @@ PROFILE_AREAS = {"accounts": "users", "application": "records", "database": "rec
 
 
 def _transfer_url(task=None, **parameters):
+    if task in {"export", "import"}:
+        url = reverse("admin_backup_export" if task == "export" else "admin_backup_import")
+        return url + ("?" + urlencode(parameters, doseq=True) if parameters else "")
     query = {"tab": task} if task else {}
     query.update(parameters)
     return reverse("admin_data_transfer") + ("?" + urlencode(query, doseq=True) if query else "")
@@ -144,11 +147,8 @@ def _component_selection_parameters(selection):
 
 
 TASK_COPY = {
-    "start": ("Database status", "Check the active database and choose your next task."),
-    "export": ("Create a backup", "Save the complete database and selected files in a downloadable ZIP."),
-    "import": ("Restore from backup", "Upload a QC Tool backup ZIP, review its contents and restore a separate database."),
-    "backups": ("Back up & restore", "Create a backup, restore from a ZIP, or download and remove saved backup files."),
-    "activity": ("Progress & history", "Follow running transfers, continue unfinished work and review completed backups and restores."),
+    "export": ("Create a backup", "Choose what to include, then review and download your ZIP."),
+    "import": ("Restore from ZIP", "Upload a backup ZIP, review it and restore its contents."),
 }
 
 
@@ -203,20 +203,32 @@ def _compatibility_details(plan):
 
 
 @sensitive_post_parameters("activation-password", "rollback-password")
-def data_transfer(request):
+def data_transfer(request, default_task="start", workflow=None):
     """Selection → validation → review → durable asynchronous operation."""
     _authorize(request)
     if request.method not in {"GET", "POST"}:
         return HttpResponseNotAllowed(["GET", "POST"])
 
-    if _requested_task(request) == "databases":
+    requested_task = workflow or _requested_task(request, default_task)
+    if requested_task == "databases":
         from .admin_databases import database_manager
         return database_manager(request)
 
-    if (request.method == "GET" and _requested_task(request) == "start"
+    if (request.method == "GET" and requested_task == "start"
             and not _operation_id(request) and request.GET.get("tab") != "transfers"):
         from .admin_database import database_home
         return database_home(request)
+
+    if workflow and request.method == "POST":
+        export_actions = {"preview_export", "export", "release_package", "retry", "cancel"}
+        import_actions = {"upload", "review_database_switch", "activate_database", "rollback_database",
+                          "prepare_destination", "plan", "revalidate", "resolve_conflicts", "apply", "retry", "cancel"}
+        if request.POST.get("action") not in (export_actions if workflow == "export" else import_actions):
+            return HttpResponseBadRequest("Choose an action from this page.")
+    # Old backup/history bookmarks now open the export workspace, rather than
+    # a third page combining unrelated creation, restoration and database tools.
+    if requested_task in {"start", "backups", "activity"}:
+        requested_task = "export"
 
     schema_status = service.schema_readiness()
     database_status = service.database_availability()
@@ -245,7 +257,6 @@ def data_transfer(request):
     action_feedback = {}
     action_result = ""
     response_status = 200
-    requested_task = _requested_task(request)
     active_tab = requested_task
     try:
         maintenance_status = maintenance.read_status()
@@ -259,6 +270,12 @@ def data_transfer(request):
         operation_id = _operation_id(request)
         if operation_id:
             operation = service.get_operation(operation_id, actor=request.user)
+            if workflow and operation["kind"] != workflow:
+                if request.method == "POST":
+                    return HttpResponseBadRequest("Open this task from its own import or export page.")
+                return HttpResponseRedirect(_transfer_url(
+                    task=operation["kind"], operation=operation["id"], **{"from": transfer_origin(request)},
+                ) + "#transfer-operation")
             plan = operation.get("plan")
             active_tab = operation["kind"]
         if request.method == "POST":
@@ -286,7 +303,7 @@ def data_transfer(request):
                             if request.GET.get("from") in {"activity", "backups"}:
                                 redirect_parameters["from"] = transfer_origin(request)
                             response = HttpResponseRedirect(
-                                _transfer_url(**redirect_parameters) + "#transfer-operation", status=303,
+                                _transfer_url(task="export", **redirect_parameters) + "#transfer-operation", status=303,
                             )
                             response["Cache-Control"] = "no-store, private"
                             return response
@@ -510,7 +527,7 @@ def data_transfer(request):
                 action_result = "Export package released. Transfer history is retained."
                 if request.POST.get("return_to_backup_files") == "on":
                     messages.success(request, "Saved backup ZIP deleted. Databases and original files are unchanged.")
-                    response = HttpResponseRedirect(_transfer_url(task="backups") + "#backup-files", status=303)
+                    response = HttpResponseRedirect(_transfer_url(task="export") + "#prepared-backups", status=303)
                     response["Cache-Control"] = "no-store, private"
                     return response
             elif action in {"retry", "cancel"} and operation:
@@ -534,9 +551,9 @@ def data_transfer(request):
                 pass
 
     try:
-        if active_tab == "backups" and not operation:
+        if active_tab == "export" and not operation and not export_review:
             stored_operations = service.list_operations(actor=request.user, limit=None, include_storage=True)
-            recent_operations = stored_operations[:50]
+            recent_operations = stored_operations
             backup_storage = backup_storage_summary(stored_operations)
             try:
                 backup_storage["capacity"] = service.backup_storage_capacity(actor=request.user)
@@ -610,7 +627,7 @@ def data_transfer(request):
     initial_selection = _export_initial(request)
     selected_components = (export_form.cleaned_data.get("components", initial_selection["components"])
                            if export_form.is_bound else initial_selection["components"])
-    edit_parameters = {"tab": "export", **_component_selection_parameters({"components": selected_components})}
+    edit_parameters = _component_selection_parameters({"components": selected_components})
     if request.GET.get("from") in {"activity", "backups", "databases"}:
         edit_parameters["from"] = transfer_origin(request)
     if export_review:
@@ -619,21 +636,17 @@ def data_transfer(request):
                             "components": selection["components"],
                             "include_files": bool(set(selection["components"]) & set(FILE_COMPONENTS))}
         export_scope_label = "Complete database: schema and every record"
-    edit_export_url = reverse("admin_data_transfer") + "?" + urlencode(edit_parameters, doseq=True)
+    edit_export_url = _transfer_url(task="export", **edit_parameters)
     transfer_task = _transfer_task(active_tab, operation)
-    return_parameters = {"tab": transfer_task} if transfer_task != "start" else {}
+    return_parameters = {}
     if operation:
-        return_parameters["tab"] = operation["kind"]
         return_parameters["operation"] = operation["id"]
     elif transfer_task == "export":
-        return_parameters.update({key: value for key, value in edit_parameters.items() if key != "tab"})
-    origin = (transfer_task if not operation and transfer_task in {"backups", "activity"}
-              else transfer_origin(request))
+        return_parameters.update(edit_parameters)
+    origin = transfer_origin(request)
     if operation or transfer_task in {"export", "import"}:
         return_parameters["from"] = origin
-    return_url = reverse("admin_data_transfer")
-    if return_parameters:
-        return_url += "?" + urlencode(return_parameters, doseq=True)
+    return_url = _transfer_url(task=transfer_task, **return_parameters)
     maintenance_url = reverse("admin_maintenance") + "?" + urlencode({"next": return_url})
     account_blockers = {
         f"Account {row['username']}: {row['blocker']}"
@@ -680,19 +693,17 @@ def data_transfer(request):
         "is_nav_sidebar_enabled": False,
         "title": task_title, "active_tab": active_tab, "export_form": export_form,
         "transfer_task": transfer_task, "transfer_task_title": task_title,
+        "export_workflow": transfer_task == "export",
         "transfer_task_description": task_description,
         "transfer_area": transfer_area, "transfer_area_label": AREA_LABELS[transfer_area],
-        "admin_section": "database",
-        **database_page_context(
-            origin if operation or transfer_task in {"export", "import"} else
-            (transfer_task if transfer_task in {"backups", "activity"} else "overview"),
-            title=task_title, description=task_description,
-            child=bool(operation or transfer_task in {"export", "import"}), origin=origin),
-        "transfer_action_url": _transfer_url(task=transfer_task if origin == "databases" else origin, **{"from": origin}),
+        "admin_section": "maintenance",
+        **transfer_workspace_context(transfer_task, title=task_title, description=task_description, operation=bool(operation)),
+        "transfer_action_url": _transfer_url(task=transfer_task, **{"from": origin}),
         "transfer_origin": origin,
-        "operation_refresh_url": (_transfer_url(operation=operation["id"], **{"from": origin})
+        "operation_refresh_url": (_transfer_url(task=transfer_task, operation=operation["id"], **{"from": origin})
                                   + "#transfer-operation") if operation else "",
         "export_component_rows": [(label, key in selected_components) for key, label in EXPORT_COMPONENT_CHOICES],
+        "export_omitted_components": [label for key, label in EXPORT_COMPONENT_CHOICES if key not in selected_components],
         "export_selection": export_selection, "export_scope_label": export_scope_label,
         "edit_export_url": edit_export_url, "maintenance_url": maintenance_url,
         "export_counts": _count_rows((export_review or {}).get("counts")),
@@ -733,10 +744,20 @@ def data_transfer(request):
         "current_transfer": current_transfer,
         "recent_operations": [present_transfer(item) for item in recent_operations],
         "backup_storage": backup_storage,
+        "prepared_backups": [item for item in (backup_storage or {}).get("saved_exports", [])
+                             if item.get("downloadable") and item.get("saved_file_available")
+                             and not item.get("package_release_requested_at")],
+        "export_operations": [present_transfer(item) for item in recent_operations
+                              if item.get("kind") == "export" and (
+                                  item.get("status") in {"queued", "running", "recovery_required"}
+                                  or item.get("recoverable")
+                                  or (item.get("package_release_requested_at") and not item.get("payload_released_at")))],
+        "import_operations": [present_transfer(item) for item in recent_operations if item.get("kind") == "import"],
         "can_review_import": bool(operation and operation.get("kind") == "import" and operation.get("status") in {"staged", "planned"}),
         "created_accounts": created_accounts, "mapped_accounts": mapped_accounts,
     }
-    response = render(request, "admin/data_transfer.html", context, status=response_status)
+    template = "admin/backup_export.html" if transfer_task == "export" else "admin/backup_import.html"
+    response = render(request, template, context, status=response_status)
     response["Cache-Control"] = "no-store, private"
     return response
 

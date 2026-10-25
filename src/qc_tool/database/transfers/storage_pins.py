@@ -132,7 +132,10 @@ def _current_root(area_key):
     if area_key in {"published", "submissions"}:
         configured = CONFIG.get("submission_dir")
         return Path(configured) if configured else None
-    # Other Admin areas are immutable already and cannot enter quarantine.
+    if area_key == "boundaries":
+        configured = CONFIG.get("boundary_dir")
+        return Path(configured) if configured else None
+    # Other Admin areas are immutable and have no retirement workflow.
     return None
 
 

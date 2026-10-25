@@ -1,4 +1,4 @@
-"""Fail-closed access contracts for dashboard routes.
+"""Fail-closed access contracts for workspace and managed Admin routes.
 
 Visibility answers one question only: may an unregistered visitor use the
 route? Authentication, authorization, HTTP methods, and denial formatting are
@@ -15,6 +15,7 @@ from qc_tool.frontend.accounts.authentication.decorators import api_key_required
 from qc_tool.frontend.accounts.authorization.decorators import (
     account_json_permission_required,
     account_permission_required,
+    administrator_permission_required,
 )
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.dashboard.authentication import worker_token_required
@@ -45,8 +46,16 @@ class RoutePolicy:
     methods: tuple[str, ...]
     permission: AccountPermission | None = None
     denial_response: DenialResponse | None = None
+    admin_only: bool = False
 
     def __post_init__(self):
+        if self.admin_only and (
+            self.visibility is not RouteVisibility.PRIVATE
+            or self.authentication is not AuthenticationMode.SESSION
+        ):
+            raise ValueError(
+                "Admin-only routes must use private session authentication."
+            )
         if not self.methods:
             raise ValueError("Every route must declare at least one HTTP method.")
         if any(method != method.upper() for method in self.methods):
@@ -111,23 +120,25 @@ def public(*methods):
     )
 
 
-def private_session_page(permission, *methods):
+def private_session_page(permission, *methods, admin_only=False):
     return RoutePolicy(
         visibility=RouteVisibility.PRIVATE,
         authentication=AuthenticationMode.SESSION,
         methods=methods,
         permission=AccountPermission(permission),
         denial_response=DenialResponse.LOGIN_REDIRECT,
+        admin_only=admin_only,
     )
 
 
-def private_session_data(permission, *methods):
+def private_session_data(permission, *methods, admin_only=False):
     return RoutePolicy(
         visibility=RouteVisibility.PRIVATE,
         authentication=AuthenticationMode.SESSION,
         methods=methods,
         permission=AccountPermission(permission),
         denial_response=DenialResponse.JSON,
+        admin_only=admin_only,
     )
 
 
@@ -152,6 +163,11 @@ def private_worker(*methods):
 
 def _apply_private_policy(policy, method_limited_view):
     if policy.authentication is AuthenticationMode.SESSION:
+        if policy.admin_only:
+            return administrator_permission_required(
+                policy.permission,
+                json_response=policy.denial_response is DenialResponse.JSON,
+            )(method_limited_view)
         if policy.denial_response is DenialResponse.LOGIN_REDIRECT:
             return account_permission_required(policy.permission)(
                 method_limited_view

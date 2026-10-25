@@ -1,6 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/data-transfer.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}"><script src="{% static 'dashboard/js/admin/data-transfer.js' %}" defer></script>{% endblock %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/data-transfer.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/ui/section-tabs.css' %}"><script src="{% static 'dashboard/js/admin/data-transfer.js' %}" defer></script>{% endblock %}
 {% block content_title %}{% endblock %}
 {% block breadcrumbs %}{% include "admin/includes/database_breadcrumbs.html" %}{% endblock %}
 {% block content %}
@@ -10,14 +10,14 @@
   {% if not inventory %}
     <section class="qc-admin-panel"><h2>Database list unavailable</h2><p>The database server or its management information could not be read. Your database selection has not changed.</p><div class="database-actions"><a class="btn-qc-secondary" href="{{ database_manager_url }}">Try again</a><a href="{{ backup_files_url }}">View backup files</a></div></section>
   {% elif not inventory.supported %}
-    <section class="qc-admin-panel"><h2>Database management requires PostgreSQL</h2><p>{{ inventory.message }}</p><p><a href="{{ database_url }}">Back to Database status</a></p></section>
+    <section class="qc-admin-panel"><h2>Database management requires PostgreSQL</h2><p>{{ inventory.message }}</p><p><a href="{{ database_url }}">Back to Database</a></p></section>
   {% else %}
   {% if not inspected_database and not selection_review %}
   <section class="qc-admin-panel database-current" aria-labelledby="current-database-heading">
     <div class="database-section-heading"><h2 id="current-database-heading">Currently in use</h2><span class="database-badge">Active database</span></div>
     <p class="database-current__name"><code>{{ inventory.active_database }}</code></p>
     <p>All users, records and new QC work use this database. Only one database is active at a time.</p>
-    <div class="database-actions"><a class="btn-qc-secondary" href="{{ database_url }}?tables=1#database-records-heading">Browse its records</a><a href="{{ area_export_url }}">Back up this database</a></div>
+    <div class="database-actions"><a class="btn-qc-secondary" href="{{ database_tables_url }}">Browse its records</a><a href="{{ area_export_url }}">Back up this database</a></div>
   </section>
   <div class="database-explainer">
     <p><strong>Databases on this server</strong> contain accounts and records. Switching changes which database everyone uses; databases stay separate.</p>
@@ -39,7 +39,7 @@
     <p>{% if inspected_database.schema.ready %}<span class="database-badge">Compatible with this QC Tool version</span>{% else %}<span class="database-badge database-badge--warning">Needs attention</span> {{ inspected_database.schema.message }}{% endif %}</p>
     <p class="database-muted">{{ inspected_database.counts_note }} This inspection shows table structure and estimated counts. It does not select the database.</p>
     <details class="database-technical-details"><summary>Tables and estimated record counts</summary><div class="transfer-table-wrap"><table class="database-records"><thead><tr><th scope="col">Table</th><th scope="col">Estimated records</th><th scope="col">Storage</th></tr></thead><tbody>{% for table in inspected_database.tables %}<tr><th scope="row"><code>{{ table.schema }}.{{ table.name }}</code></th><td>{{ table.estimated_rows|default_if_none:'Unavailable' }}</td><td>{{ table.bytes|filesizeformat }}</td></tr>{% empty %}<tr><td colspan="3">No application tables found.</td></tr>{% endfor %}</tbody></table></div></details>
-    {% if inspected_copy.active %}<div class="database-actions"><a class="btn-qc-primary" href="{{ database_url }}?tables=1#database-records-heading">Browse this database's records</a></div>
+    {% if inspected_copy.active %}<div class="database-actions"><a class="btn-qc-primary" href="{{ database_tables_url }}">Browse this database's records</a></div>
     {% elif inspected_copy.can_review_selection or inspected_copy.can_review_switch %}
     <div class="database-next-step"><h3>Use this database?</h3><p>Review the current and proposed databases first. Switching happens only after you confirm <strong>Use this database</strong>.</p><form method="post" action="{{ database_manager_url }}#database-selection-review" data-maintenance-exempt data-admin-pending-label="Checking database…" data-admin-pending-message="Checking this database and its matching files before showing the switch review. Keep this page open.">{% csrf_token %}<input type="hidden" name="action" value="review_selection"><input type="hidden" name="target_database" value="{{ inspected_database.database }}"><button type="submit" class="btn-qc-primary"{% if not inventory.maintenance_ready %} disabled{% endif %}>Review database switch</button></form></div>
     {% endif %}
@@ -49,7 +49,7 @@
   <section class="qc-admin-panel database-selection-review" aria-labelledby="database-selection-heading">
     <h2 id="database-selection-heading">Check the database change</h2>
     <div class="transfer-review-overview"><dl class="transfer-scope-summary"><dt>In use now</dt><dd><code>{{ selection_review.source_database }}</code></dd><dt>Use after switching</dt><dd><strong><code>{{ selection_review.target_database }}</code></strong></dd></dl><p>The current database is retained. Everyone will use the selected copy after you reopen QC Tool; the two databases keep their own records.</p></div>
-    {% if selection_review.already_active %}<p>This database is already active. <a href="{{ database_url }}?tables=1#database-records-heading">Browse its records</a>.</p>{% endif %}
+    {% if selection_review.already_active %}<p>This database is already active. <a href="{{ database_tables_url }}">Browse its records</a>.</p>{% endif %}
     {% if selection_review.blockers %}<ul class="errornote" role="alert">{% for blocker in selection_review.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
     {% if selection_review.warnings %}<ul class="transfer-warnings">{% for warning in selection_review.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
     {% if selection_form %}
@@ -77,7 +77,7 @@
       <article class="database-copy{% if copy.active %} database-copy--active{% endif %}">
         <div class="database-copy__heading"><div><h3>{% if copy.can_inspect %}<a href="{{ copy.inspect_url }}" aria-label="View details of {{ copy.database }}">{% endif %}{% if copy.active %}Active database{% elif copy.configured %}Original database{% elif copy.completed_restore %}Restored database{% else %}{{ copy.label }}{% endif %}{% if copy.can_inspect %}</a>{% endif %}</h3><code>{{ copy.database }}</code>{% if copy.source_details.source_database %}<p class="database-muted">Backup from <code>{{ copy.source_details.source_database }}</code>{% if copy.exported_local %} · {{ copy.exported_local|date:"j M Y, H:i T" }}{% endif %}</p>{% endif %}{% if copy.created_local %}<p class="database-muted">Restore started {{ copy.created_local|date:"j M Y, H:i T" }}</p>{% endif %}</div><div class="database-copy__facts"><span class="database-badge{% if not copy.active %} database-badge--neutral{% endif %}">{{ copy.label }}</span><strong>{% if copy.bytes != None %}{{ copy.bytes|filesizeformat }}{% else %}Size unavailable{% endif %}</strong></div></div>
         <div class="database-actions">
-          {% if copy.active %}<a class="btn-qc-secondary" href="{{ database_url }}?tables=1#database-records-heading">Browse records</a>{% elif copy.can_review_selection or copy.can_review_switch %}<form method="post" action="{{ database_manager_url }}#database-selection-review" data-maintenance-exempt data-transfer-pending-label="Checking database…" data-transfer-pending-message="Checking the database, matching files and administrator access before the switch review. Keep this page open until the review appears.">{% csrf_token %}<input type="hidden" name="action" value="review_selection"><input type="hidden" name="target_database" value="{{ copy.database }}"><button type="submit" class="btn-qc-secondary"{% if not inventory.maintenance_ready %} disabled{% endif %}>Review switch</button><p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p></form>{% endif %}
+          {% if copy.active %}<a class="btn-qc-secondary" href="{{ database_tables_url }}">Browse records</a>{% elif copy.can_review_selection or copy.can_review_switch %}<form method="post" action="{{ database_manager_url }}#database-selection-review" data-maintenance-exempt data-transfer-pending-label="Checking database…" data-transfer-pending-message="Checking the database, matching files and administrator access before the switch review. Keep this page open until the review appears.">{% csrf_token %}<input type="hidden" name="action" value="review_selection"><input type="hidden" name="target_database" value="{{ copy.database }}"><button type="submit" class="btn-qc-secondary"{% if not inventory.maintenance_ready %} disabled{% endif %}>Review switch</button><p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p></form>{% endif %}
           {% if copy.can_complete_deletion or copy.managed and not copy.active and not copy.configured and not copy.retained and copy.present %}
           <form method="post" action="{{ database_manager_url }}" class="database-copy__delete" data-maintenance-exempt data-transfer-pending-label="Deleting database…" data-transfer-pending-message="Removing this database copy and recording the cleanup. Keep this page open until deletion finishes.">
             {% csrf_token %}<input type="hidden" name="action" value="delete_database"><input type="hidden" name="operation_id" value="{{ copy.operation_id }}">{% for field in copy.deletion_form.hidden_fields %}{{ field.errors }}{{ field }}{% endfor %}

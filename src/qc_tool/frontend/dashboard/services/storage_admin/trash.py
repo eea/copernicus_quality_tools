@@ -14,18 +14,12 @@ import os
 import stat
 from uuid import UUID, uuid4
 
-from django.contrib.auth import get_user_model
-from django.db import DatabaseError
 from django.utils.crypto import constant_time_compare
-
-from qc_tool.database.transfers import store
-from qc_tool.database.transfers.errors import TransferError
-from qc_tool.frontend.accounts.authorization import access_for
-from qc_tool.frontend.dashboard.services.maintenance import MaintenanceError
-from qc_tool.frontend.dashboard.services.maintenance.barrier import ready_barrier
 
 from . import files
 from .files import StorageError
+from .control import authorize_storage_change as _authorize, guarded_storage_change as _guard
+from .journals import private_directory as _private_directory, write_journal as _write
 
 
 _STATES = {"moving", "quarantined", "restoring", "restored", "recovery_required"}
@@ -34,33 +28,6 @@ _JOURNAL_LIMIT = 32 * 1024
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
-
-
-def _authorize(actor):
-    try:
-        current = get_user_model().objects.get(pk=actor.pk, username=actor.get_username())
-        if (not constant_time_compare(current.password, actor.password)
-                or not access_for(current).is_administrator):
-            raise ValueError
-        return current
-    except (AttributeError, ValueError, get_user_model().DoesNotExist) as error:
-        raise StorageError("Sign in as an active administrator on the current database.", status_code=403) from error
-    except DatabaseError as error:
-        raise StorageError("Administrator access could not be verified. No files were changed.", status_code=503) from error
-
-
-@contextmanager
-def _guard(actor, generation):
-    if type(generation) is not int or generation < 0:
-        raise StorageError("Maintenance changed. Reload and review this action.")
-    try:
-        with store.execution_lock(), ready_barrier(generation=generation):
-            yield _authorize(actor)
-    except (MaintenanceError, TransferError) as error:
-        raise StorageError(str(error)) from error
-    except OSError as error:
-        raise StorageError("The storage operation could not finish. Its files were retained; review Trash before retrying.",
-                           status_code=503) from error
 
 
 def _usage(area, path, *, assert_safe=False):
@@ -102,21 +69,6 @@ def _require_current_parent(area, path, parent):
             raise StorageError("This folder changed. Reload and review the file before continuing.")
 
 
-def _private_directory(parent, name, *, create=False):
-    if create:
-        try:
-            os.mkdir(name, mode=0o700, dir_fd=parent)
-            os.fsync(parent)
-        except FileExistsError:
-            pass
-    descriptor = os.open(name, files._DIRECTORY_FLAGS, dir_fd=parent)
-    status = os.fstat(descriptor)
-    if status.st_mode & 0o077 or status.st_uid != os.geteuid():
-        os.close(descriptor)
-        raise StorageError("Trash storage must be a private, application-owned real directory.")
-    return descriptor
-
-
 @contextmanager
 def _trash_directory(area, *, create=False):
     if area == "published":
@@ -144,22 +96,6 @@ def _valid_id(value):
         return value
     except (ValueError, TypeError, AttributeError) as error:
         raise StorageError("Choose a valid trash operation.", status_code=404) from error
-
-
-def _write(directory, journal):
-    journal["updated_at"] = _now()
-    payload = json.dumps(journal, ensure_ascii=False, sort_keys=True, allow_nan=False).encode()
-    if len(payload) > _JOURNAL_LIMIT:
-        raise StorageError("The trash journal exceeds its supported size.")
-    name = ".journal-" + uuid4().hex
-    descriptor = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
-                         0o600, dir_fd=directory)
-    with os.fdopen(descriptor, "wb") as handle:
-        handle.write(payload)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(name, "journal.json", src_dir_fd=directory, dst_dir_fd=directory)
-    os.fsync(directory)
 
 
 def _read(directory, area, operation_id):

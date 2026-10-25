@@ -1,4 +1,4 @@
-"""Central public/private access registry for every dashboard URL."""
+"""Central access registry for workspace and explicitly managed Admin URLs."""
 
 from qc_tool.frontend.dashboard.access.routes.policies import apply_route_policy
 from qc_tool.frontend.dashboard.access.routes.private import PRIVATE_ROUTE_POLICIES

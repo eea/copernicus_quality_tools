@@ -179,7 +179,7 @@ class AdminPhysicalStorageTests(TestCase):
                 self.assertEqual(logical.status_code, 200)
                 self.assertEqual(logical.context["storage_tab"], "specifications")
                 self.assertEqual(self.query(logical.context["parent_url"]),
-                                 {"tab": ["specifications"], "status": ["all"]})
+                                 {"tab": ["history"], "collection": ["specifications"], "status": ["all"]})
 
     def test_work_version_folder_zip_contains_original_paths_and_bytes(self):
         relative, original, payload = self.write_original()

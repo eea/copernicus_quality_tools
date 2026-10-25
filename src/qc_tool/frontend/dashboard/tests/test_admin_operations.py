@@ -77,7 +77,7 @@ class AdminOperationsTests(TestCase):
                     )
         self.assertEqual(len(workspace_links), 1)
         for route in (
-            "products", "product_upload", "boundaries",
+            "products", "product_upload",
             "announcement", "deliveries", "submission_queue",
         ):
             self.assertNotContains(response, f'href="{reverse(route)}"')
@@ -154,28 +154,40 @@ class AdminOperationsTests(TestCase):
         self.assertTrue(bulk_markup.matching("input", name="action", value="delete_selected", type="hidden"))
         self.assertTrue(Group.objects.filter(pk=group.pk).exists())
 
-    def test_administrator_finds_user_database_and_storage_sections(self):
+    def test_administrator_finds_the_six_task_directions(self):
         response = self.client.get(reverse("admin:index"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Administration")
         for route in (
-            "admin_user_management", "admin_maintenance", "admin_data_transfer", "admin_storage",
+            "admin_user_management", "admin_maintenance",
+            "admin_database", "boundaries", "admin_notifications",
         ):
             self.assertContains(response, f'href="{reverse(route)}"')
+        self.assertNotContains(response, f'href="{reverse("admin_data_transfer")}"')
+        self.assertContains(response, f'href="{reverse("admin_storage")}"')
         self.assert_admin_links(response)
 
-    def test_home_has_three_primary_panels_without_workspace_or_model_directory(self):
+    def test_home_has_six_primary_panels_without_workspace_or_model_directory(self):
         response = self.client.get(reverse("admin:index"))
         markup = _AdminMarkup(response)
 
         self.assertEqual(len(markup.matching("h1")), 1)
-        self.assertEqual(len(markup.matching("h2")), 3)
-        for panel in ("qc-admin-users", "qc-admin-database", "qc-admin-storage"):
+        self.assertEqual(len(markup.matching("h2")), 6)
+        panel_ids = [element["id"] for element in markup.matching("section")
+                     if element.get("id", "").startswith("qc-admin-")]
+        self.assertEqual(panel_ids, [
+            "qc-admin-users", "qc-admin-boundaries", "qc-admin-notifications",
+            "qc-admin-database", "qc-admin-storage", "qc-admin-maintenance",
+        ])
+        for panel in panel_ids:
             self.assertEqual(len(markup.matching("section", id=panel)), 1)
         self.assertContains(response, "User management")
         self.assertContains(response, "Database")
         self.assertContains(response, "Storage")
+        self.assertContains(response, "Boundaries")
+        self.assertContains(response, "Notifications")
+        self.assertContains(response, "Maintenance")
         self.assertContains(response, "Open user management")
         for route in ("admin:auth_user_add", "admin:auth_user_changelist"):
             self.assertNotContains(response, f'href="{reverse(route)}"')
@@ -192,23 +204,23 @@ class AdminOperationsTests(TestCase):
         self.assertNotContains(response, "Advanced administration")
         self.assertNotContains(response, 'id="recent-actions-module"')
 
-    def test_admin_pages_share_the_four_administration_sections(self):
+    def test_admin_pages_reuse_the_header_without_section_navigation(self):
         for route in (
             "admin:index", "admin:auth_user_changelist",
             "admin:auth_group_changelist", "admin_user_management",
-            "admin_data_transfer", "admin_maintenance", "admin_storage",
+            "admin_data_transfer", "admin_maintenance", "admin_storage", "boundaries", "boundaries_upload",
+            "admin_backup_export", "admin_backup_import",
+            "admin_notifications", "admin_database",
         ):
             with self.subTest(route=route):
                 response = self.client.get(reverse(route))
 
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "CLMS QC Tool")
-                for destination in (
-                    "admin:index", "admin_user_management", "admin_data_transfer", "admin_storage",
-                ):
-                    self.assertContains(
-                        response, f'href="{reverse(destination)}"',
-                    )
+                self.assertContains(response, f'href="{reverse("admin:index")}"')
+                self.assertNotContains(response, 'aria-label="Administration"')
+                self.assertNotContains(response, "qc-admin-navigation")
+                self.assertNotContains(response, "site-header__sections")
                 self.assert_admin_links(response)
 
     def test_admin_navigation_respects_a_deployment_path_prefix(self):
@@ -220,10 +232,13 @@ class AdminOperationsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         for route in (
-            "admin:index", "admin_user_management", "admin_data_transfer", "admin_storage",
+            "admin:index", "admin_user_management",
+            "admin_database", "boundaries", "admin_notifications", "admin_maintenance",
         ):
             self.assertContains(response, f'href="{reverse(route)}"')
             self.assertTrue(reverse(route).startswith("/quality/"))
+        self.assertContains(response, f'href="{reverse("admin_storage")}"')
+        self.assertNotContains(response, f'href="{reverse("admin_data_transfer")}"')
         self.assert_admin_links(response)
 
     def test_maintenance_card_distinguishes_readiness_from_stopping(self):
@@ -272,10 +287,14 @@ class AdminOperationsTests(TestCase):
         self.assertNotContains(response, 'id="qc-admin-users"')
         self.assertNotContains(response, 'id="qc-admin-database"')
         self.assertNotContains(response, 'id="qc-admin-storage"')
+        self.assertNotContains(response, 'id="qc-admin-boundaries"')
+        self.assertNotContains(response, 'id="qc-admin-notifications"')
+        self.assertNotContains(response, 'id="qc-admin-maintenance"')
         self.assert_admin_links(response)
         for route in (
             "admin_maintenance", "admin_data_transfer",
-            "admin_user_management", "admin_storage",
+            "admin_user_management", "admin_storage", "boundaries", "boundaries_upload",
+            "admin_database", "admin_notifications",
             "admin:auth_user_changelist", "admin:auth_group_changelist",
             "admin:dashboard_job_changelist",
         ):
@@ -294,9 +313,12 @@ class AdminOperationsTests(TestCase):
         self.assertNotContains(response, 'id="qc-admin-users"')
         self.assertNotContains(response, 'id="qc-admin-database"')
         self.assertNotContains(response, 'id="qc-admin-storage"')
+        self.assertNotContains(response, 'id="qc-admin-boundaries"')
+        self.assertNotContains(response, 'id="qc-admin-notifications"')
+        self.assertNotContains(response, 'id="qc-admin-maintenance"')
         self.assertNotContains(response, 'id="qc-admin-model-directory"')
         for route in (
-            "admin_maintenance", "admin_data_transfer", "admin_user_management", "admin_storage", "submission_queue",
+            "admin_maintenance", "admin_data_transfer", "admin_user_management", "admin_storage", "boundaries", "submission_queue",
         ):
             self.assertNotContains(response, f'href="{reverse(route)}"')
         self.assert_admin_links(response)
@@ -318,6 +340,7 @@ class AdminOperationsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'href="{reverse("admin_user_management")}"')
+        self.assertNotContains(response, f'href="{reverse("admin_user_management")}#user-access-heading"')
         child = self.client.get(reverse("admin_user_management"))
         self.assertContains(child, f'href="{reverse("admin:auth_user_changelist")}"')
         for route in (
@@ -338,7 +361,8 @@ class AdminOperationsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(jobs.status_code, 200)
-        self.assertContains(response, "Turning on maintenance. QC work is stopping.")
+        self.assertContains(response, "Turning on maintenance")
+        self.assertContains(response, "Creating users, editing records and other changes are paused.")
         self.assert_admin_links(response)
         self.assertEqual([
             query["sql"] for query in queries

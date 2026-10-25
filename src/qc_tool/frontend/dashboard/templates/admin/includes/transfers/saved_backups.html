@@ -1,60 +1,11 @@
-{% load static %}
-{% if active_tab == 'backups' and not operation %}
-<section class="module transfer-panel" id="saved-backups" aria-labelledby="backup-files-heading">
-  <h2 id="backup-files-heading">Download or delete saved backups</h2>
+<section class="module transfer-panel" id="prepared-backups" aria-labelledby="backup-files-heading">
+  <h2 id="backup-files-heading">Prepared backups</h2>
   <div class="transfer-panel__body">
-    <p>Download a saved ZIP to keep a copy elsewhere, or delete one to free backup storage. To restore a ZIP, use the <strong>Restore from backup</strong> task above. Deleting a ZIP keeps your databases and original application files.</p>
-    {% if backup_storage %}
-    <dl class="transfer-fact-grid" aria-label="Backup storage">
-      <div class="transfer-fact"><dt>Backups available</dt><dd>{{ backup_storage.saved_export_count }}</dd><dd class="help">ZIP file{{ backup_storage.saved_export_count|pluralize }} stored on this server</dd></div>
-      <div class="transfer-fact"><dt>Saved backup size</dt><dd>{{ backup_storage.saved_export_bytes|filesizeformat }}</dd>{% if backup_storage.unknown_size_count %}<dd class="help">Some package sizes are unavailable</dd>{% endif %}</div>
-      <div class="transfer-fact"><dt>Free backup storage</dt><dd>{% if backup_storage.capacity %}{{ backup_storage.capacity.free_bytes|filesizeformat }}{% else %}Unavailable{% endif %}</dd>{% if backup_storage.capacity %}<dd class="help">{{ backup_storage.capacity.reserve_bytes|filesizeformat }} reserved for safe transfers</dd>{% endif %}</div>
-    </dl>
+    <p>Download a prepared ZIP or delete it to free server storage. Your databases and original files are kept.</p>
     {% if backup_storage.capacity_error %}<p class="help">{{ backup_storage.capacity_error }}</p>{% endif %}
-    {% if backup_storage.retained_import_count or backup_storage.other_package_bytes %}
-    <details class="transfer-details">
-      <summary>Other files using backup storage</summary>
-      {% if backup_storage.retained_import_count %}<p>{{ backup_storage.retained_import_bytes|filesizeformat }} in {{ backup_storage.retained_import_count }} uploaded package{{ backup_storage.retained_import_count|pluralize }} kept for restore and recovery.</p>{% endif %}
-      {% if backup_storage.other_package_bytes %}<p>{{ backup_storage.other_package_bytes|filesizeformat }} in unfinished or recovery packages.</p>{% endif %}
-      <p>Open <a href="{{ transfer_history_url }}">Progress &amp; history</a> to review unfinished tasks and recovery steps.</p>
-    </details>
-    {% endif %}
-    {% else %}<p class="help">The saved backup inventory is unavailable. Open <a href="{{ transfer_history_url }}">Progress &amp; history</a> to check your recent tasks.</p>{% endif %}
   </div>
-  {% if backup_storage.saved_exports %}
-  <div class="transfer-table-wrap"><table class="transfer-history transfer-backups" aria-label="Saved backup files">
-    <colgroup><col class="transfer-backups__file"><col class="transfer-backups__source"><col class="transfer-backups__size"><col class="transfer-backups__actions"></colgroup>
-    <thead><tr><th scope="col">Backup file</th><th scope="col">Source database</th><th scope="col">ZIP size</th><th scope="col">Actions</th></tr></thead>
-    <tbody>{% for item in backup_storage.saved_exports %}
-      <tr>
-        <th scope="row" class="transfer-history__identity"><a href="{{ database_url }}?operation={{ item.id|urlencode }}&amp;from=backups#transfer-operation">{% if item.profile == 'database' %}Database backup{% elif item.profile == 'application' %}Records package{% else %}Users package{% endif %}</a><span class="transfer-secondary">{% include "admin/includes/transfers/timestamp.html" with display_value=item.display_dates.created_at %}</span></th>
-        <td data-label="Source">{% if item.backup_source_database %}<code>{{ item.backup_source_database }}</code>{% else %}<span class="help">Not recorded in this export</span>{% endif %}</td>
-        <td data-label="ZIP size">{% if item.saved_size_known %}{{ item.stored_package_bytes|filesizeformat }}{% else %}Unavailable{% endif %}{% if item.storage_issue %}<span class="transfer-secondary">{{ item.storage_issue }}</span>{% elif item.saved_size_known and not item.saved_file_available %}<span class="transfer-secondary">ZIP is missing from the server</span>{% endif %}</td>
-        <td data-label="Actions">
-          <div class="transfer-actions transfer-backup-actions">
-          {% if item.downloadable and item.saved_file_available and not item.package_release_requested_at %}<a class="btn-qc-secondary" href="{% url 'admin_data_transfer_download' item.id %}"><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>Download</a>{% endif %}
-          {% if item.releasable %}
-          <details class="transfer-backup-delete">
-            <summary class="btn-qc-danger-outline"><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>Delete</summary>
-            <div class="transfer-backup-delete__confirmation">
-            <p><strong>Delete this saved backup?</strong> Your databases and original files will stay. Its activity and checksum are kept.</p>
-            <form method="post" action="{{ database_url }}" data-maintenance-exempt data-admin-pending-label="Deleting ZIP…" data-admin-pending-message="Deleting this saved ZIP and recording the cleanup. Its activity history is kept.">
-              {% csrf_token %}<input type="hidden" name="operation_id" value="{{ item.id }}">
-              <input type="hidden" name="return_to_backup_files" value="on">
-              <p><label><input type="checkbox" name="confirmed_release" required> I saved and verified a copy elsewhere.</label></p>
-              {% if item.package_release_requested_at %}<p class="help">Deletion was started. Confirm below to finish removing this ZIP.</p>{% endif %}
-              <button type="submit" class="button btn-qc-danger" name="action" value="release_package">{% if item.package_release_requested_at %}Finish deleting ZIP{% else %}Delete saved ZIP{% if item.saved_size_known and item.saved_file_available %} · {{ item.stored_package_bytes|filesizeformat }}{% endif %}{% endif %}</button>
-            </form>
-            </div>
-          </details>
-          {% else %}<button type="button" class="btn-qc-danger-outline" disabled>Delete</button><p class="help">Finish recovery of this transfer before deleting its ZIP.</p>{% endif %}
-          </div>
-        </td>
-      </tr>
-    {% endfor %}</tbody>
-  </table></div>
-  {% elif backup_storage %}
-  <div class="transfer-panel__body"><div class="transfer-assurance"><strong>No backups saved yet</strong><p>Choose <strong>Create backup</strong> above to prepare a downloadable ZIP. Tasks whose ZIPs were deleted remain in <a href="{{ transfer_history_url }}">Progress &amp; history</a>.</p></div></div>
-  {% endif %}
+  {% if prepared_backups %}
+    {% include "admin/includes/transfers/saved_backup_table.html" with saved_backups=prepared_backups %}
+  {% elif backup_storage %}<div class="transfer-panel__body"><p>No prepared backups yet. Create a backup above; its ZIP will appear here when ready.</p></div>
+  {% else %}<div class="transfer-panel__body"><p>The prepared backup list is unavailable. Reload this page to try again.</p></div>{% endif %}
 </section>
-{% endif %}

@@ -1,0 +1,48 @@
+{% extends "admin/base_site.html" %}
+{% load static table_exports %}
+
+{% block bodyclass %}{{ block.super }} qc-admin-boundaries-page{% endblock %}
+{% block extrahead %}
+{# Load table dependencies before the shared Admin styles so Admin owns the shell. #}
+<link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.min.css' %}">
+{{ block.super }}
+<meta name="csrf-token" content="{{ csrf_token }}">
+<link rel="stylesheet" href="{% static 'dashboard/css/admin/boundaries.css' %}">
+{% block workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}">
+{% endblock workspace_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/data-table.css' %}">
+{% endblock extrahead %}
+
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Overview</a> &rsaquo;
+    {% block boundary_breadcrumbs %}Boundaries{% endblock boundary_breadcrumbs %}
+</div>
+{% endblock breadcrumbs %}
+
+{% block content %}
+<div class="qc-admin-home boundaries-admin {% block main_class %}{% endblock main_class %}">
+    <header class="qc-admin-intro">
+        <div>
+            <h1>{% block page_title %}{% endblock page_title %}</h1>
+            <div class="qc-admin-intro__description">{% block page_subtitle %}{% endblock page_subtitle %}</div>
+        </div>
+        <div class="workspace-page__actions">{% block page_actions %}{% endblock page_actions %}</div>
+    </header>
+    {% block page_content %}{% endblock page_content %}
+</div>
+
+{% block js %}
+<script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
+<script src="{% static 'dashboard/js/shared/csrf.js' %}"></script>
+<script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'dashboard/js/bootstrap-table.min.js' %}"></script>
+{% table_export_config 'boundaries_export' as table_exports_config %}
+{{ table_exports_config|json_script:"qc-table-export-config" }}
+<script src="{% static 'dashboard/js/shared/table-exports.js' %}"></script>
+<script src="{% static 'dashboard/js/shared/table-filters.js' %}"></script>
+<script src="{% static 'dashboard/js/shared/data-table-ui.js' %}"></script>
+{% endblock js %}
+{% endblock content %}

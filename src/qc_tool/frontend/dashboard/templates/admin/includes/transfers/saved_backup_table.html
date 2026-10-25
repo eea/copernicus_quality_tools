@@ -1,0 +1,33 @@
+{% load static %}
+  <div class="transfer-table-wrap"><table class="transfer-history transfer-backups" aria-label="Saved backup files">
+    <colgroup><col class="transfer-backups__file"><col class="transfer-backups__source"><col class="transfer-backups__size"><col class="transfer-backups__actions"></colgroup>
+    <thead><tr><th scope="col">Backup file</th><th scope="col">Source database</th><th scope="col">ZIP size</th><th scope="col">Actions</th></tr></thead>
+    <tbody>{% for item in saved_backups %}
+      <tr>
+        <th scope="row" class="transfer-history__identity"><a href="{{ export_page_url }}?operation={{ item.id|urlencode }}#transfer-operation">{% if item.profile == 'database' %}Database backup{% elif item.profile == 'application' %}Records package{% else %}Users package{% endif %}</a><span class="transfer-secondary">{% include "admin/includes/transfers/timestamp.html" with display_value=item.display_dates.created_at %}</span></th>
+        <td data-label="Source">{% if item.backup_source_database %}<code>{{ item.backup_source_database }}</code>{% else %}<span class="help">Not recorded in this export</span>{% endif %}</td>
+        <td data-label="ZIP size">{% if item.saved_size_known %}{{ item.stored_package_bytes|filesizeformat }}{% else %}Unavailable{% endif %}{% if item.storage_issue %}<span class="transfer-secondary">{{ item.storage_issue }}</span>{% elif item.saved_size_known and not item.saved_file_available %}<span class="transfer-secondary">ZIP is missing from the server</span>{% endif %}</td>
+        <td data-label="Actions">
+          <div class="transfer-actions transfer-backup-actions">
+          {% if item.downloadable and item.saved_file_available and not item.package_release_requested_at %}<a class="btn-qc-secondary" href="{% url 'admin_data_transfer_download' item.id %}"><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>Download</a>{% endif %}
+          <a class="btn-qc-secondary" href="{{ export_page_url }}?operation={{ item.id|urlencode }}#transfer-operation">View details</a>
+          {% if item.releasable %}
+          <details class="transfer-backup-delete">
+            <summary class="btn-qc-danger-outline"><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#trash"></use></svg>Delete</summary>
+            <div class="transfer-backup-delete__confirmation">
+            <p><strong>Delete this saved backup?</strong> Your databases and original files will stay. Its activity and checksum are kept.</p>
+            <form method="post" action="{{ export_page_url }}" data-maintenance-exempt data-admin-pending-label="Deleting ZIP…" data-admin-pending-message="Deleting this saved ZIP and recording the cleanup. Its activity history is kept.">
+              {% csrf_token %}<input type="hidden" name="operation_id" value="{{ item.id }}">
+              <input type="hidden" name="return_to_backup_files" value="on">
+              <p><label><input type="checkbox" name="confirmed_release" required> I saved and verified a copy elsewhere.</label></p>
+              {% if item.package_release_requested_at %}<p class="help">Deletion was started. Confirm below to finish removing this ZIP.</p>{% endif %}
+              <button type="submit" class="button btn-qc-danger" name="action" value="release_package">{% if item.package_release_requested_at %}Finish deleting ZIP{% else %}Delete saved ZIP{% if item.saved_size_known and item.saved_file_available %} · {{ item.stored_package_bytes|filesizeformat }}{% endif %}{% endif %}</button>
+            </form>
+            </div>
+          </details>
+          {% else %}<button type="button" class="btn-qc-danger-outline" disabled>Delete</button><p class="help">Finish recovery of this transfer before deleting its ZIP.</p>{% endif %}
+          </div>
+        </td>
+      </tr>
+    {% endfor %}</tbody>
+  </table></div>

@@ -21,6 +21,14 @@ template supplies content through these blocks:
 
 Do not reproduce the page container or header inside a feature template.
 
+Admin boundary pages live in `templates/admin/boundaries/` and compose the same
+header, table and upload components with the Admin shell. The shared upload
+layout accepts a server-owned `upload_page_base_template`; it defaults to the
+workspace layout. Boundary views supply the Admin base rather than duplicating
+the picker, upload status or feedback markup. Boundary table exports select
+`boundaries_export` through the optional route argument of `table_export_config`;
+other tables retain its default workspace endpoint.
+
 ## Application header
 
 `shared/header.html` owns the header frame for workspace, public API, account,
@@ -31,12 +39,12 @@ header markup.
 
 | Component | Responsibility |
 | --- | --- |
-| `shared/header.html` | Maintenance notice, linked brand, optional return control, responsive menu, and optional secondary navigation |
+| `shared/header.html` | Maintenance notice, linked brand, optional return control and responsive account/navigation menu |
 | `shared/brand.html` | Original Copernicus/CLMS logos, application title, and optional area label |
 | `shared/profile_menu.html` | Native Profile disclosure, optional identity/settings link, and logout action |
 | `shared/logout_form.html` | CSRF-protected POST with maintenance write protection |
 | `shared/navigation.html` | Permission-aware workspace/public navigation and account destinations |
-| `admin/includes/header_account_menu.html` and `header_navigation.html` | Admin account destinations and permitted administration tasks |
+| `admin/includes/header_account_menu.html` | Admin account destinations; task discovery belongs to the overview |
 
 The containing layout supplies the brand URL, navigation template, and visibility.
 Workspace and API brands link to `dashboard_home`; Admin brands link to
@@ -81,10 +89,18 @@ mobile toggle and adds Escape/outside-click dismissal. Without JavaScript,
 navigation remains visible and Profile works through native `details`/`summary`.
 The header does not require Bootstrap JavaScript.
 
-All navigation supplied to the header, including Admin task links, belongs
-inside `#primary-navigation-menu`. The shared hamburger controls that entire
-region on small screens. The desktop layout places account links beside the
-brand and optional area links on the next row using the same component; do not
+Admin renders the shared maintenance notice immediately before the header so it
+can remain sticky over long pages without being constrained by the header's
+height. Its exempt, CSRF-protected off form posts the current generation to the
+existing maintenance controller and uses a validated Admin return destination.
+Do not duplicate this control in individual feature templates. AJAX responses
+can reveal maintenance or explain that it ended; enabling editing and obtaining
+a current off-form generation require a new server render.
+
+All navigation supplied to the header belongs inside `#primary-navigation-menu`.
+The shared hamburger controls that region on small screens. The desktop layout
+places account links beside the brand. Admin task discovery uses the overview
+directions and page breadcrumbs; do not
 put a second mobile menu or navigation outside the controlled region.
 
 ## Breadcrumb hierarchy

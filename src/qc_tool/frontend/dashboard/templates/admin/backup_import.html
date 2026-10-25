@@ -1,0 +1,18 @@
+{% extends "admin/data_transfer.html" %}
+{% block transfer_page_class %}transfer-import{% endblock %}
+{% block transfer_content %}
+{% include "admin/includes/transfers/import_steps.html" %}
+{% if operation.kind == 'import' %}
+  {% include "admin/includes/transfers/operation.html" %}
+  {% include "admin/includes/transfers/import_review.html" %}
+{% else %}
+  {% include "admin/includes/transfers/import_upload.html" %}
+  {% include "admin/includes/transfers/workspace_operations.html" with operations=import_operations workspace_page_url=import_page_url history_id="import-history" history_title="Import tasks" %}
+{% endif %}
+{% if rollback_form %}
+<details id="database-recovery" class="transfer-recovery"{% if rollback_form.is_bound %} open{% endif %}>
+  <summary>Return to the previous database</summary>
+  <div class="transfer-recovery__body">{% include "admin/includes/transfers/database_controls.html" %}</div>
+</details>
+{% endif %}
+{% endblock %}

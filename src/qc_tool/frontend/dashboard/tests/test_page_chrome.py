@@ -689,13 +689,6 @@ class SharedPageChromeTests(TestCase):
             patches.enter_context(
                 patch(
                     "qc_tool.frontend.dashboard.views.deliveries.pages."
-                    "get_boundary_version",
-                    return_value="2026-08-27",
-                )
-            )
-            patches.enter_context(
-                patch(
-                    "qc_tool.frontend.dashboard.views.deliveries.pages."
                     "get_announcement_message",
                     return_value="",
                 )
@@ -746,24 +739,6 @@ class SharedPageChromeTests(TestCase):
                     None,
                 ),
                 (
-                    reverse("boundaries"),
-                    "Boundaries",
-                    None,
-                    (
-                        "Replace boundary package",
-                        reverse("boundaries_upload"),
-                    ),
-                ),
-                (
-                    reverse("boundaries_upload"),
-                    "Replace boundary package",
-                    (
-                        ("Boundaries", reverse("boundaries")),
-                        ("Upload", None),
-                    ),
-                    ("Back to boundaries", reverse("boundaries")),
-                ),
-                (
                     reverse("announcement"),
                     "Announcement",
                     None,
@@ -781,6 +756,41 @@ class SharedPageChromeTests(TestCase):
                     )
                     if url == reverse("dashboard_home"):
                         self.assert_dashboard_uses_shared_cards(response)
+
+    def test_boundary_management_uses_admin_chrome_and_its_own_hierarchy(self):
+        administrator = get_user_model().objects.create_superuser(username="boundary-page-chrome")
+        self.client.force_login(administrator)
+        for route, heading, hierarchy, action in (
+            (
+                "boundaries", "Boundaries", "Overview › Boundaries",
+                ("Replace boundary package", reverse("boundaries_upload")),
+            ),
+            (
+                "boundaries_upload", "Replace boundary package",
+                "Overview › Boundaries › Replace boundary package",
+                ("Back to boundaries", reverse("boundaries")),
+            ),
+        ):
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "admin/base_site.html")
+                self.assertTemplateNotUsed(response, "dashboard/layouts/workspace.html")
+                document = _DocumentParser.from_response(response)
+                headings = list(document.descendants("h1"))
+                self.assertEqual([element.text for element in headings], [heading])
+                self.assertIsNotNone(headings[0].closest("header"))
+                breadcrumbs = [element for element in document.descendants()
+                               if "breadcrumbs" in _classes(element)]
+                self.assertEqual([element.text for element in breadcrumbs], [hierarchy])
+                ancestors = list(breadcrumbs[0].descendants("a"))
+                expected = [reverse("admin:index")]
+                if route == "boundaries_upload":
+                    expected.append(reverse("boundaries"))
+                self.assertEqual([element.attrs["href"] for element in ancestors], expected)
+                action_label, action_href = action
+                self.assertTrue(any(element.text == action_label and element.attrs.get("href") == action_href
+                                    for element in document.descendants("a")))
 
     def test_delivery_job_pages_share_the_delivery_hierarchy(self):
         report = {

@@ -86,7 +86,8 @@ def csrf_failure(request, reason=""):
         user = get_user(request)
 
     if not user.is_authenticated:
-        login_url = session_login_url()
+        policy = policy_for_request(request)
+        login_url = session_login_url(admin=policy.admin_only)
         response = JsonResponse(
             {
                 "status": "error",

@@ -7,7 +7,9 @@ from django.shortcuts import render
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.services.admin_overview import overview_context
 from qc_tool.frontend.dashboard.services.storage_admin import files
-from qc_tool.frontend.dashboard.services.storage_admin.navigation import LIBRARIES, browse_url, tasks, url, locations as navigation_locations
+from qc_tool.frontend.dashboard.services.storage_admin.navigation import (
+    HISTORY_TASKS, LIBRARIES, TASKS, browse_url, history_tasks, tasks, url, locations as navigation_locations,
+)
 
 
 def authorize(request):
@@ -16,35 +18,36 @@ def authorize(request):
 
 
 def return_options(request):
-    library = request.GET.get("library", "")
-    if request.GET.get("browser") == "files" or library not in LIBRARIES:
-        if not request.GET.get("area") and request.GET.get("browser") != "files":
+    params = request.POST if request.method == "POST" else request.GET
+    library = params.get("library", "")
+    if params.get("browser") == "files" or library not in LIBRARIES:
+        if not params.get("area") and params.get("browser") != "files":
             return {}
         values = {"browser": "files"}
-        if request.GET.get("browse_query"):
-            values["browse_query"] = request.GET["browse_query"][:150]
-        if request.GET.get("browse_sort") in {"name", "modified", "size"}:
-            values["browse_sort"] = request.GET["browse_sort"]
-        if request.GET.get("browse_direction") in {"asc", "desc"}:
-            values["browse_direction"] = request.GET["browse_direction"]
+        if params.get("browse_query"):
+            values["browse_query"] = params["browse_query"][:150]
+        if params.get("browse_sort") in {"name", "modified", "size"}:
+            values["browse_sort"] = params["browse_sort"]
+        if params.get("browse_direction") in {"asc", "desc"}:
+            values["browse_direction"] = params["browse_direction"]
         try:
-            page = int(request.GET.get("browse_page", "1"))
+            page = int(params.get("browse_page", "1"))
             if 1 < page <= 1_000_000:
                 values["browse_page"] = page
         except (ValueError, TypeError):
             pass
         return values
     values = {"library": library}
-    if library == "specifications" and request.GET.get("library_sources") == "1":
+    if library == "specifications" and params.get("library_sources") == "1":
         values["library_sources"] = "1"
-    if request.GET.get("library_query"):
-        values["library_query"] = request.GET["library_query"][:150]
-    status = request.GET.get("library_status", "")
+    if params.get("library_query"):
+        values["library_query"] = params["library_query"][:150]
+    status = params.get("library_status", "")
     if status in {"all", "current", "previous", "archived", "unknown", "unavailable", "approved", "pending",
                   "conflict", "rejected", "publishing", "failed", "historical"}:
         values["library_status"] = status
     try:
-        page = int(request.GET.get("library_page", "1"))
+        page = int(params.get("library_page", "1"))
         if 1 < page <= 1_000_000:
             values["library_page"] = page
     except (ValueError, TypeError):
@@ -129,6 +132,7 @@ def render_storage(request, template, **context):
     return_context = return_options(request)
     library = return_context.get("library", "")
     active = context.get("storage_tab") or library or "files"
+    section = "history" if active in LIBRARIES else active
     task_links = tasks(active)
     try:
         locations = navigation_locations(files.storage_locations())
@@ -153,17 +157,19 @@ def render_storage(request, template, **context):
         "storage_installation_locations": [row for row in locations if row["group"] == "installation"],
         "storage_is_installation": info.get("group") == "installation",
         "storage_tasks": task_links, "storage_tab": active,
-        "storage_show_locations": active == "files",
+        "storage_history_tasks": history_tasks(active),
+        "storage_section": section, "storage_section_label": dict(TASKS).get(section, "Browse files"),
+        "storage_show_locations": active == "files" and bool(area),
         "storage_library": library,
         "storage_return_context": return_context,
         "physical_browse": not library and active == "files", "storage_path": storage_path,
         "location_path": path,
         "library_back_url": library_url(return_context),
-        "library_back_label": next((task["label"] for task in task_links if task["key"] == library), ""),
+        "library_back_label": dict(HISTORY_TASKS).get(library, ""),
         "area_info": info, "area_label": (files.location_label(area) if area and not library and info
                                            else info.get("label", "Storage")),
         "crumbs": crumbs, "connection_url": url(tab="connection"), "files_url": browse_url(),
-        "backups_url": url("admin_data_transfer", tab="backups"),
+        "backups_url": url("admin_backup_export"),
         "parent_url": parent_url,
     }
     response = render(request, template, {

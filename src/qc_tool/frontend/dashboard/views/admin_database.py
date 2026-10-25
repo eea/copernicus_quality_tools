@@ -9,14 +9,13 @@ from django.shortcuts import render
 from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
-from qc_tool.frontend.dashboard.services.admin_overview import overview_context
 from qc_tool.frontend.dashboard.services.database_admin.presentation import (
     cell, dependencies, editor_actions, field_label, query_records, record_field_groups,
     record_heading, record_rows, table_url,
 )
 from qc_tool.frontend.dashboard.services.database_admin.resources import resource_for, resources
 from qc_tool.frontend.dashboard.services.transfer_presentation import local_datetime
-from qc_tool.frontend.dashboard.services.database_navigation import database_page_context
+from qc_tool.frontend.dashboard.services.database_navigation import database_page_context, database_tables_url
 
 
 def _authorize(request):
@@ -29,9 +28,8 @@ def _authorize(request):
 def _render(request, template, context, *, status=200):
     resource = context.get("resource")
     account_records = resource and (resource.category == "Accounts & access" or resource.table == "auth_permission")
-    database_url = reverse("admin_data_transfer")
-    records_home_url = (reverse("admin_user_management") if account_records else
-                        database_url + "?tables=1#database-records-heading")
+    database_url = reverse("admin_database")
+    records_home_url = reverse("admin_user_management") if account_records else database_tables_url()
     navigation = {}
     if resource:
         record_detail = "record_pk" in context
@@ -40,9 +38,9 @@ def _render(request, template, context, *, status=200):
         if account_records:
             breadcrumbs = [{"label": "User management", "url": records_home_url}]
         else:
-            navigation = database_page_context("overview", title=heading, description=resource.description)
-            breadcrumbs = [{"label": "Database status", "url": database_url},
-                           {"label": "Browse records", "url": records_home_url}]
+            navigation = database_page_context("tables", title=heading, description=resource.description)
+            breadcrumbs = [{"label": "Database", "url": database_url},
+                           {"label": "Tables & records", "url": records_home_url}]
         breadcrumbs.append({"label": resource.label, "url": records_url if record_detail else ""})
         if record_detail:
             breadcrumbs.append({"label": "Record " + str(context["record_pk"]), "url": ""})
@@ -54,13 +52,35 @@ def _render(request, template, context, *, status=200):
         })
     response = render(request, template, {
         **admin.site.each_context(request), "is_nav_sidebar_enabled": False,
-        "database_url": database_url, "transfers_url": database_url + "?tab=backups",
+        "admin_section": "users" if account_records else "database",
+        "database_url": database_url, "transfers_url": reverse("admin_data_transfer") + "?tab=backups",
         "records_home_url": records_home_url,
-        "records_home_label": "User management" if account_records else "Browse records",
+        "records_home_label": "User management" if account_records else "Tables & records",
         "account_records": bool(account_records), **context, **navigation,
     }, status=status)
     response["Cache-Control"] = "no-store, private"
     return response
+
+
+def _database_metadata():
+    """Read public database identity without exposing connection credentials."""
+    from django.db import connection
+    from pathlib import Path
+
+    metadata = {"name": Path(str(connection.settings_dict.get("NAME") or "")).name,
+                "engine": connection.display_name, "version": "Unavailable", "schema": "Unavailable"}
+    try:
+        with connection.cursor() as cursor:
+            if connection.vendor == "postgresql":
+                cursor.execute("SELECT current_setting('server_version'), current_schema()")
+                metadata["version"], metadata["schema"] = cursor.fetchone()
+            elif connection.vendor == "sqlite":
+                cursor.execute("SELECT sqlite_version()")
+                metadata["version"] = cursor.fetchone()[0]
+                metadata["schema"] = "main"
+    except DatabaseError:
+        pass
+    return metadata
 
 
 def database_home(request):
@@ -80,8 +100,6 @@ def database_home(request):
             "resource": resource, "url": table_url(resource),
             "editable": bool(resource.editor or resource.create or resource.delete or resource.owner),
         })
-    state = getattr(request, "maintenance_status", {}) or {}
-    overview = overview_context(request)
     from qc_tool.database.policy import DatabasePolicyError, load_policy
     from qc_tool.database.transfers.service import schema_readiness
     try:
@@ -98,19 +116,17 @@ def database_home(request):
         active_database = ""
     records_mode = bool(query or category or request.GET.get("tables") == "1")
     return _render(request, "admin/database.html", {
-        **database_page_context("overview", title="Browse database records" if records_mode else "Database status",
-            description=("Choose a table in the active database, then open a record to inspect its details and connections."
+        **database_page_context("tables" if records_mode else "overview", title="Tables & records" if records_mode else "Database",
+            description=("Choose a table to browse its records."
                          if records_mode else
-                         "Check which database QC Tool uses and choose your next database task."),
-            child=records_mode, origin="overview"),
+                         "Inspect the active database and its compatibility with QC Tool.")),
         "table_groups": groups.items(), "table_count": len(inventory),
+        "matching_table_count": sum(len(tables) for tables in groups.values()),
         "categories": sorted({item.category for item in inventory}), "category": category, "query": query,
-        "database_maintenance": state, "database_overview": overview,
-        "maintenance_off": overview.get("phase") == "off",
-        "maintenance_ready": overview.get("phase") == "ready" and not overview.get("transfer_url"),
         "database_policy": policy, "database_policy_error": policy_error,
         "database_schema_status": schema_status,
         "active_database": active_database,
+        "database_metadata": _database_metadata(),
         "database_schema_checked_at": local_datetime(checked_at),
         "records_mode": records_mode,
     })

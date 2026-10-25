@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/header.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/icons.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/actions.css' %}">
-<meta name="qc-maintenance" content="{{ maintenance.enabled|yesno:'on,off' }}" data-notice="{% if maintenance.phase == 'stopping' %}Turning on maintenance. QC work is stopping.{% elif maintenance.phase == 'unavailable' %}Maintenance status is unavailable. Changes remain paused; open maintenance settings for details.{% else %}Maintenance is on. You can browse and download existing data; changes are paused.{% endif %}">
+<meta name="qc-maintenance" content="{{ maintenance.enabled|yesno:'on,off' }}" data-notice="{{ maintenance.admin_notice }}">
 <meta name="qc-admin" content="true">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/maintenance.css' %}">
 <script src="{% static 'dashboard/js/shared/maintenance.js' %}" defer></script>
@@ -29,5 +29,5 @@
 {% block header %}
 {% url 'admin:index' as admin_home_url %}
 {% url 'dashboard_home' as workspace_url %}
-{% include "dashboard/shared/header.html" with header_id="header" brand_url=admin_home_url brand_context="Admin" brand_class="qc-admin-brand" return_url=workspace_url return_class="qc-admin-workspace-link" navigation_label="Account" navigation_template="admin/includes/header_account_menu.html" secondary_navigation_template="admin/includes/header_navigation.html" show_navigation=has_permission admin_notice=True request=request user=user account_access=account_access maintenance=maintenance csrf_token=csrf_token admin_section=admin_section admin_user_management_available=admin_user_management_available only %}
+{% include "dashboard/shared/header.html" with header_id="header" brand_url=admin_home_url brand_context="Admin" brand_class="qc-admin-brand" return_url=workspace_url return_class="qc-admin-workspace-link" navigation_label="Account" navigation_template="admin/includes/header_account_menu.html" show_navigation=has_permission admin_notice=True request=request user=user account_access=account_access maintenance=maintenance csrf_token=csrf_token only %}
 {% endblock %}

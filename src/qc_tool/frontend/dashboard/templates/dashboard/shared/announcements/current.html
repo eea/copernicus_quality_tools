@@ -1,0 +1,13 @@
+{% load static %}
+{% if not announcement_available %}
+<div class="announcement-state announcement-state--error" role="status">
+    The announcement is temporarily unavailable. Please try again later.
+</div>
+{% elif announcement %}
+<div class="announcement-message">{{ announcement|linebreaksbr }}</div>
+{% else %}
+<div class="announcement-state">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>
+    <span>There is no active announcement.</span>
+</div>
+{% endif %}

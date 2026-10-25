@@ -1,7 +1,5 @@
 """A permission-filtered entry point for existing account administration."""
 
-from urllib.parse import urlencode
-
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -36,15 +34,15 @@ def user_management(request):
         raise PermissionDenied
     user_actions = _model_actions(
         request, get_user_model(), list_label="Manage users", add_label="Create user",
-        description="Profiles, activation and account access",
+        description="Update accounts, deactivate access and assign group membership",
     )
     group_actions = _model_actions(
-        request, Group, list_label="Role groups", add_label="Create group",
+        request, Group, list_label="Roles and permissions", add_label="Create group",
         description="Group membership and permission bundles",
     )
     grant_actions = _model_actions(
-        request, UserProductGrant, list_label="Product access", add_label="Assign product access",
-        description="Assign products or QC definitions to users",
+        request, UserProductGrant, list_label="Product scope", add_label="Assign product scope",
+        description="Assign products to users and product managers",
     )
     # The table browser is global and administrator-only; ordinary staff keep
     # their existing scoped ModelAdmin actions rather than unusable global links.
@@ -59,7 +57,6 @@ def user_management(request):
         raise PermissionDenied
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
-    transfers_url = reverse("admin_data_transfer")
     access_actions = [*group_actions, *grant_actions]
     if permission_action:
         access_actions.append(permission_action)
@@ -67,11 +64,8 @@ def user_management(request):
         **admin.site.each_context(request),
         "title": "User management", "is_nav_sidebar_enabled": False,
         "user_actions": user_actions, "access_actions": access_actions,
-        "can_transfer_users": access.is_administrator,
         "show_users_panel": bool(user_actions or access.is_administrator),
         "single_panel": not ((user_actions or access.is_administrator) and access_actions),
-        "users_import_url": transfers_url + "?" + urlencode({"tab": "import"}),
-        "users_export_url": transfers_url + "?" + urlencode({"tab": "export"}),
     }
     response = render(request, "admin/user_management.html", context)
     response["Cache-Control"] = "no-store, private"

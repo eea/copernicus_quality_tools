@@ -1,8 +1,0 @@
-<nav class="site-header__sections qc-admin-navigation" aria-label="Administration">
-    <a href="{% url 'admin:index' %}"{% if admin_section == 'overview' %} aria-current="page"{% endif %}>Overview</a>
-    {% if admin_user_management_available %}<a href="{% url 'admin_user_management' %}"{% if admin_section == 'users' %} aria-current="page"{% endif %}>User management</a>{% endif %}
-    {% if account_access.is_administrator %}
-    <a href="{% url 'admin_data_transfer' %}"{% if admin_section == 'database' %} aria-current="page"{% endif %}>Database</a>
-    <a href="{% url 'admin_storage' %}"{% if admin_section == 'storage' %} aria-current="page"{% endif %}>Storage</a>
-    {% endif %}
-</nav>

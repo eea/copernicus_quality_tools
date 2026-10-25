@@ -6,33 +6,33 @@ nav_order: 5
 
 # Import and export database
 
-Open **Admin → Database** (`/admin/database/`). Navigation follows the tasks you
-can perform, with the same names and return links throughout:
+Open **Admin → Maintenance** (`/admin/maintenance/`) and choose one of two pages:
 
 | Task | Use it to |
 | --- | --- |
-| **Database status** | Identify the active database, check compatibility and maintenance, or browse its records |
-| **Back up & restore** | Create a backup, restore a ZIP, or download and delete saved backup files |
-| **Manage databases** | Inspect PostgreSQL databases, review a switch or remove an unused restore |
-| **Progress & history** | Follow running transfers, continue unfinished work or review earlier results |
+| **Create backup** | Select export contents, follow backup progress and download ZIPs from **Prepared backups** |
+| **Restore from ZIP** | Upload a ZIP, review its contents and follow the import or restore |
 
-Choose **Create a backup** to select contents, review the package and prepare a
-ZIP for download. Choose **Restore from backup** to upload a ZIP, prepare a
+The pages are separate: `/admin/maintenance/backups/export/` and
+`/admin/maintenance/backups/import/`. Choose **Create backup** to select contents,
+review the package and prepare a ZIP for download. Choose **Restore from ZIP** to upload a ZIP, prepare a
 separate destination, restore it and review whether to use the restored database.
-A restore never selects that database automatically. **Manage databases** handles
-switching between databases and removing unused ones; saved ZIPs are managed in
-**Back up & restore**.
+A restore never selects that database automatically. Each page keeps its own
+task history and return links. Prepared ZIPs appear on **Create backup**, including
+older backups outside the recent task list.
 
-**Browse database records** opens a focused table directory. Open a table, then a
+Database inspection has its own **Admin → Database** direction (`/admin/database/`).
+**Tables & records** opens a focused table directory. Open a table, then a
 record to inspect its details and connected information. **Back to tables** and
 **Back to [table]** retrace that path. Account and permission records retain their
 **User management** navigation.
 
-**Back to Database status** returns to the main page. A backup or restore opened
-from **Progress & history** or **Manage databases** returns to that section.
+**Back to Maintenance** returns to maintenance controls. An open task returns to
+its export or import page.
 The title identifies its current step, such as **Backup queued**, **Review
 database restore** or **Restored database ready**. Older
-`?tab=history#backup-files` links still open saved files in **Back up & restore**.
+`/admin/database/?tab=...` and `?tab=history#backup-files` links still open the
+corresponding workflow; old combined backup/history pages open **Create backup**.
 Only QC Tool administrators can use these controls.
 
 ## Progress and waiting states
@@ -41,9 +41,9 @@ Submitting a backup, import, database switch or cleanup shows a spinner and the
 next step. Submit once and keep the page open until its result appears. Uploading
 a ZIP and reviewing large file inventories can take time. Once an export or
 restore has been queued, processing runs on the server; leaving or reloading its
-progress page does not stop it. Return through **Progress & history** to see the current
+progress page does not stop it. Return to its export or import page to see the current
 stage and processed file or byte counts, then download a finished ZIP from
-**Back up & restore**.
+**Prepared backups** on the export page.
 
 If another action owns maintenance, a waiting panel checks its status
 automatically. When it finishes, choose **Refresh this page** to review the
@@ -63,10 +63,11 @@ is actually in progress.
 QC Tool uses **one active database** for accounts, permissions and records.
 Restoring a full backup creates a separate PostgreSQL database copy. The copy
 remains separate until an administrator reviews and confirms a switch. A saved
-backup ZIP is a file, and a Progress & history entry records an import or export;
+backup ZIP is a file, and a task entry records an import or export;
 neither is another active database.
 
-Open **Admin → Database → Manage databases** to see the active name, available
+The separate advanced database manager (`/admin/maintenance/backups/?tab=databases`)
+shows the active name, available
 copies and their current database sizes. Open a database title to check compatibility
 and see its tables with PostgreSQL row estimates, without selecting it or
 changing its records. Estimates can be stale or unavailable after a restore.
@@ -90,10 +91,9 @@ as identity evidence for another retained restore are protected. Unknown or
 changed database identities and copies with connected clients cannot be removed
 through this interface. Shared application files and saved backup ZIPs remain.
 
-Open **Back up & restore** to download or delete completed export ZIPs. The page shows the
-available files, actual saved-file sizes and free space on the backup volume.
-Expand **Other files using backup storage** for retained import or recovery
-packages when present. Each backup has **Download** and **Delete** controls;
+Open **Create backup → Prepared backups** to download or delete completed export
+ZIPs. The list shows available files, their actual sizes and source databases.
+Each backup has **Download** and **Delete** controls;
 its title opens the details. **Delete** removes one saved export after confirmation;
 its history and checksum are retained. Import packages remain available for
 restore and recovery. Deleting a ZIP releases backup-file storage; deleting a
@@ -126,32 +126,34 @@ recover missing files or fetch remote S3 objects. The review distinguishes
 included, empty, omitted, partially available and unavailable sections; inspect
 its warnings before treating the package as a complete recovery copy.
 
-1. Open **Back up & restore → Create backup**. Turn on maintenance and wait for
-   **Maintenance is on**.
-2. Under **Choose package contents**, choose the additional sections and
-   **Review backup**. Options are grouped into **Files used by QC Tool** and
-   **Server recovery settings**.
+1. Open **Maintenance → Create backup**. If maintenance is off, follow the
+   prompt to turn it on and wait for QC work to stop.
+2. Choose the optional contents, then select **Review backup**. Options are
+   grouped into **Application files** and **Server recovery settings**. The
+   database is always included; clear all optional contents for a database-only ZIP.
 3. Check section availability, the destination capacity and any exclusions.
    Changing the selection requires another review.
 4. Choose **Create backup ZIP**. Progress updates automatically; use
    **Download ZIP** when preparation finishes.
 
-The page follows **Choose contents → Review backup → Download ZIP**. Detailed
-record/file inventories, folder structure and technical metadata are expandable.
+The page follows **Choose contents → Review backup → Prepare & download**.
+Section navigation and recovery tools stay outside this flow. Detailed
+record/file inventories, capacity limits and technical metadata are expandable.
 Missing or partially available sections remain visible in the review.
 
 Package creation runs on the server after confirmation. Reloading, using Back,
-opening another Admin page or closing the browser does not stop it. Return through
-**Progress & history** or bookmark the operation's link. The page reads saved
+opening another Admin page or closing the browser does not stop it. Return to
+**Create backup** or bookmark the operation's link. The page reads saved
 progress, including the current stage and available byte/file counts; returning
 to it does not start another export. Temporary status-connection failures do not
 cancel package creation.
 
 When complete, **Download ZIP** links to the prepared ZIP. The same
-link remains available in **Back up & restore** until an administrator explicitly
-releases the package. Downloading reads that existing file; it does not run the
-export again. A compatible browser or download client can resume an interrupted
-download from this link while signed in as an administrator.
+link remains available in **Prepared backups** until an administrator explicitly
+deletes the ZIP. Closing or interrupting a download leaves the saved file
+available; downloading it again does not run the export again. A compatible
+browser or download client can resume from this link while signed in as an
+administrator.
 
 Completion separates **Backup notes**, including unavailable-file warnings,
 from **Not included in this ZIP**, which lists items requiring separate backup.
@@ -247,7 +249,7 @@ for the separate restored database, indexes and transaction work. A small
 compressed ZIP does not imply a small restored installation. QC Tool never
 silently omits selected sections or deletes older backups to make a new one fit.
 
-After verifying an independent copy, open **Back up & restore** and choose **Delete**
+After verifying an independent copy, open **Create backup → Prepared backups** and choose **Delete**
 for the file. Confirm the copy and choose **Delete saved ZIP**. This removes the
 server download while preserving completed status, checksum and audit history. Imported packages,
 restore journals and retained database files follow their separate recovery and
@@ -255,7 +257,7 @@ retention procedures.
 
 ## Import
 
-1. Choose **Database → Back up & restore → Restore from backup**. Select a QC Tool package from an
+1. Choose **Maintenance → Restore from ZIP**. Select a QC Tool package from an
    administrator you trust, then **Upload and review**. QC Tool identifies its
    type, including account or additive-record packages exported by earlier
    versions. New packages contain the full database. Under **Include the
@@ -452,7 +454,7 @@ Maintenance stays on after a transfer. Review the result and any required local
 account or storage setup, then use **Turn off maintenance** on the maintenance page.
 Interrupted QC jobs must be submitted again.
 
-**Progress & history** reopens previous transfers. While a transfer is running, its status
+Each export or import page reopens its own tasks. While a transfer is running, its status
 updates automatically and competing actions are blocked. Closing the browser
 does not stop its runner. Files are copied and checksummed in bounded chunks;
 PostgreSQL streams its dump directly into the ZIP. Only one transfer executes

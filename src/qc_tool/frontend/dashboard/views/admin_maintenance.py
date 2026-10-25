@@ -1,19 +1,20 @@
 """Administrator controls for the application-wide maintenance barrier."""
 
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from django.conf import settings
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseNotAllowed, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from qc_tool.database.transfers.errors import TransferError
 from qc_tool.frontend.accounts.authorization import access_for_request
-from qc_tool.frontend.dashboard.context_processors import MAINTENANCE_NOTICE
+from qc_tool.frontend.dashboard.context_processors import maintenance_context
 from qc_tool.frontend.dashboard.services import maintenance
 from qc_tool.frontend.dashboard.services.admin_feedback import busy_context
+from qc_tool.frontend.dashboard.services.database_navigation import maintenance_task_urls
 from qc_tool.frontend.dashboard.services.maintenance.operations import active_operation
 
 
@@ -38,7 +39,8 @@ def _transfer_return_url(request):
         or parsed.netloc
         or parsed.fragment
         or parsed.path not in {
-            reverse("admin_data_transfer"), reverse("admin_user_management"),
+            reverse("admin_data_transfer"), reverse("admin_database"), reverse("admin_user_management"),
+            reverse("admin_backup_export"), reverse("admin_backup_import"),
             reverse("admin_storage"), reverse("admin_storage_file"), reverse("admin_storage_trash"),
         }
     ):
@@ -46,10 +48,52 @@ def _transfer_return_url(request):
     return value
 
 
+def _admin_return_url(request):
+    """Return an Admin page after its explicit, shared maintenance-off form."""
+
+    value = request.POST.get("next", "")
+    fallback = reverse("admin:index")
+    if (
+        len(value) > 2048
+        or not value.startswith("/")
+        or value.startswith("//")
+        or "\\" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        return fallback
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return fallback
+    if parsed.scheme or parsed.netloc or parsed.fragment:
+        return fallback
+    # reverse includes any deployment script prefix. Reject path encodings that
+    # browsers, proxies or the server could normalize outside that Admin root.
+    admin_root = reverse("admin:index")
+    path = parsed.path
+    for _ in range(3):
+        if (
+            not path.startswith(admin_root)
+            or "\\" in path
+            or any(segment in {".", ".."} for segment in path.split("/"))
+            or any(ord(character) < 32 or ord(character) == 127 for character in path)
+        ):
+            return fallback
+        decoded = unquote(path)
+        if decoded == path:
+            return value
+        path = decoded
+    return fallback
+
+
 def maintenance_control(request):
     """Keep state changes explicit, CSRF protected and administrator-only."""
 
-    if not access_for_request(request).is_administrator:
+    if not (
+        getattr(request.user, "is_active", False)
+        and getattr(request.user, "is_staff", False)
+        and access_for_request(request).is_administrator
+    ):
         raise PermissionDenied
     if request.method not in {"GET", "POST"}:
         return HttpResponseNotAllowed(["GET", "POST"])
@@ -89,9 +133,13 @@ def maintenance_control(request):
                 elif action == "disable":
                     from qc_tool.database.transfers.service import validate_resume_database
                     validate_resume_database(request.user)
-                    maintenance.disable(
+                    disabled = maintenance.disable(
                         request.user, expected_generation=generation,
                     )
+                    if request.POST.get("return_to_page") == "1":
+                        request.maintenance_status = disabled
+                        request.maintenance_active = disabled["enabled"]
+                        return redirect(_admin_return_url(request))
                     action_result = "Maintenance mode disabled. Users can submit new work."
                 else:
                     action_error = "Choose a valid maintenance action."
@@ -141,11 +189,24 @@ def maintenance_control(request):
         if action_busy or control_busy:
             response["Retry-After"] = "3"
         return response
+    notice_context = maintenance_context(request)["maintenance"]
+    if transfer_operation or action_busy or control_busy:
+        notice_context["can_disable"] = False
+        notice_context["resume_blocked_reason"] = (
+            "A database transfer owns maintenance. Complete or recover it before turning maintenance off."
+            if transfer_operation else
+            "Another administrator action is still running. Wait for it to finish before turning maintenance off."
+        )
     context = {
         **admin.site.each_context(request),
-        "title": "Maintenance mode",
-        "maintenance": {**status, "phase": "unavailable" if maintenance_unavailable else status["phase"],
-                        "notice": MAINTENANCE_NOTICE},
+        **maintenance_task_urls(),
+        "title": "Maintenance",
+        "maintenance_page_description": "Turn maintenance on or off, create backups and restore saved ZIPs.",
+        "admin_section": "maintenance",
+        "maintenance": {
+            **status, **notice_context,
+            "phase": "unavailable" if maintenance_unavailable else status["phase"],
+        },
         "deployment_maintenance": deployment_maintenance,
         "action_result": action_result,
         "action_error": action_error,
@@ -158,10 +219,6 @@ def maintenance_control(request):
         "maintenance_unavailable": maintenance_unavailable,
         "transfer_operation": transfer_operation,
         "transfer_return_url": _transfer_return_url(request),
-        "database_return": _transfer_return_url(request) == reverse("admin_data_transfer"),
-        "storage_return": urlsplit(_transfer_return_url(request)).path in {
-            reverse("admin_storage"), reverse("admin_storage_file"), reverse("admin_storage_trash"),
-        },
         "progress_pending": progress_pending,
     }
     # Render the result directly: redirects/messages would introduce avoidable

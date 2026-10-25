@@ -4,9 +4,6 @@ from django.conf import settings
 from django.shortcuts import render
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.common import CONFIG
-from qc_tool.frontend.dashboard.services.boundaries.presentation import (
-    get_boundary_version,
-)
 from qc_tool.frontend.dashboard.services.configuration.presentation import (
     get_announcement_message,
 )
@@ -45,7 +42,6 @@ def deliveries(request):
         "submission_enabled": settings.SUBMISSION_ENABLED,
         "announcement": get_announcement_message(),
         "delivery_actions_enabled": delivery_actions_enabled,
-        "boundary_version": get_boundary_version(),
         "delivery_workflow_tabs": delivery_workflow_tabs(delivery_status_counts),
         "delivery_workflow_config": WORKFLOW_CONFIG,
         "delivery_action_groups": ACTION_GROUPS,

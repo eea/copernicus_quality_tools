@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'dashboard/css/ui/workspace-content.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/features/configuration/announcement.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/admin/notifications.css' %}">
+{% endblock %}
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Overview</a> &rsaquo; Notifications</div>{% endblock %}
+
+{% block content %}
+<div class="qc-admin-home notifications-admin">
+  <header class="qc-admin-intro">
+    <div><h1>Notifications</h1><p class="qc-admin-intro__description">Publish a service announcement for everyone using QC Tool.</p></div>
+  </header>
+
+  <section class="workspace-card announcement-card" aria-labelledby="current-announcement-title">
+    <header class="workspace-card__header"><div><h2 id="current-announcement-title">Current announcement</h2><p>This message appears in the regular workspace.</p></div></header>
+    <div class="workspace-card__body">{% include "dashboard/shared/announcements/current.html" %}</div>
+  </section>
+
+  <section class="workspace-card announcement-card announcement-editor" aria-labelledby="announcement-editor-title">
+    <header class="workspace-card__header"><div><h2 id="announcement-editor-title">Update announcement</h2><p>Changes are shown to every signed-in user. Publish an empty message or remove the announcement to clear it.</p></div></header>
+    <form method="post" action="{% url 'announcement_update' %}" data-maintenance-write data-admin-pending-message="Saving announcement. Please wait for the result." data-admin-pending-label="Saving…">
+      {% csrf_token %}
+      <fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
+        <div class="workspace-card__body">
+          {% if announcement_form.non_field_errors %}<div class="announcement-field-errors" role="alert">{{ announcement_form.non_field_errors }}</div>{% endif %}
+          <div class="notification-form__field">
+            <label for="{{ announcement_form.announcement_text.id_for_label }}">{{ announcement_form.announcement_text.label }}</label>
+            {{ announcement_form.announcement_text }}
+            {% if announcement_form.announcement_text.errors %}<div class="announcement-field-errors" role="alert">{{ announcement_form.announcement_text.errors }}</div>{% endif %}
+            <p id="{{ announcement_form.announcement_text.auto_id }}_helptext" class="help">{{ announcement_form.announcement_text.help_text }}</p>
+          </div>
+          <div class="qc-admin-management-actions">
+            <button type="submit" class="btn-qc-primary" name="action" value="publish"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#edit"></use></svg>Publish announcement</button>
+            {% if announcement or not announcement_available %}<button type="submit" class="btn-qc-danger-outline" name="action" value="clear">Remove announcement</button>{% endif %}
+          </div>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+</div>
+{% endblock %}

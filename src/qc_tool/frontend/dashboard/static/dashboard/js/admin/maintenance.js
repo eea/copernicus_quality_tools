@@ -60,7 +60,7 @@
         var requestDeadline = window.setTimeout(function() { requestController.abort(); }, 20000);
         deadline = requestDeadline;
         showProgress(passes >= 3
-            ? "Stopping work is taking longer than usual. Checks continue automatically; technical details are available below."
+            ? "Stopping work is taking longer than usual. Progress checks continue automatically."
             : "Checking that application requests and QC jobs have stopped…", true);
         try {
             var response = await window.fetch(form.action || window.location.href, {
@@ -109,14 +109,16 @@
             failures = 0;
             passes += 1;
             problem.hidden = true;
-            blockers.replaceChildren();
-            (Array.isArray(state.blockers) ? state.blockers : []).forEach(function(text) {
-                if (typeof text !== "string") return;
-                var item = document.createElement("li");
-                item.textContent = text;
-                blockers.appendChild(item);
-            });
-            blockers.hidden = !blockers.children.length;
+            if (blockers) {
+                blockers.replaceChildren();
+                (Array.isArray(state.blockers) ? state.blockers : []).forEach(function(text) {
+                    if (typeof text !== "string") return;
+                    var item = document.createElement("li");
+                    item.textContent = text;
+                    blockers.appendChild(item);
+                });
+                blockers.hidden = !blockers.children.length;
+            }
             if (checked) {
                 checked.hidden = false;
                 checked.textContent = "Last checked at " + new Date().toLocaleTimeString([], {
@@ -124,7 +126,7 @@
                 }) + ".";
             }
             showProgress(passes >= 3
-                ? "Stopping work is taking longer than usual. Checks continue automatically; technical details are available below."
+                ? "Stopping work is taking longer than usual. Progress checks continue automatically."
                 : "Waiting for work to stop. Progress checks continue automatically…", true);
             schedule(passes >= 12 ? 15000 : 5000);
         } catch (_error) {

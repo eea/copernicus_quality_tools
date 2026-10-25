@@ -48,7 +48,7 @@ class ConfigurationNavigationTests(TestCase):
             response,
             f'href="{reverse("announcement")}"',
         )
-        self.assertContains(
+        self.assertNotContains(
             response,
             f'href="{reverse("boundaries")}"',
         )
@@ -74,7 +74,7 @@ class ConfigurationNavigationTests(TestCase):
         user = self.create_user("default-only-user")
         self.client.force_login(user)
 
-        response = self.client.get(reverse("boundaries_upload"))
+        response = self.client.get(reverse("product_upload"))
 
         self.assertEqual(response.status_code, 403)
         self.assertTemplateUsed(response, "accounts/errors/403.html")
@@ -89,27 +89,48 @@ class ConfigurationNavigationTests(TestCase):
             status_code=403,
         )
 
-    def test_default_user_can_review_boundaries_but_cannot_replace_them(self):
+    def test_boundary_pages_and_data_are_only_available_to_administrators(self):
         user = self.create_user("boundary-viewer")
+        configuration_editor = self.create_user("boundary-configuration-editor")
+        self.grant_configuration_permission(configuration_editor)
+        manager = self.create_user("boundary-product-manager")
+        manager.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
+        staff = self.create_user("boundary-staff")
+        get_user_model().objects.filter(pk=staff.pk).update(is_staff=True)
+        staff.refresh_from_db()
+
+        for principal in (user, configuration_editor, manager, staff):
+            self.client.force_login(principal)
+            for route_name in ("boundaries", "boundaries_upload"):
+                with self.subTest(user=principal.username, route=route_name):
+                    response = self.client.get(reverse(route_name))
+                    self.assertEqual(response.status_code, 403)
+                    self.assertTemplateUsed(response, "admin/qc_tool_error.html")
+                    self.assertContains(response, "Return to administration", status_code=403)
+                    self.assertContains(
+                        response, f'href="{reverse("dashboard_home")}"', count=1, status_code=403,
+                    )
+                    self.assertContains(response, "qc-admin-workspace-link", count=1, status_code=403)
+                    self.assertNotContains(response, "Go to homepage", status_code=403)
+            for route_name, args, method in (
+                ("boundaries_json", ("raster",), "get"),
+                ("boundaries_upload_data", (), "post"),
+                ("boundaries_export", (), "post"),
+            ):
+                with self.subTest(user=principal.username, route=route_name):
+                    response = getattr(self.client, method)(reverse(route_name, args=args))
+                    self.assertEqual(response.status_code, 403)
+                    self.assertEqual(response.json()["code"], "permission_denied")
+
+    def test_administrator_can_review_the_current_boundary_catalog(self):
+        user = self.create_user("boundary-administrator")
+        user.groups.add(Group.objects.get(name=Role.ADMIN.value))
         self.client.force_login(user)
-
         page_response = self.client.get(reverse("boundaries"))
-
         self.assertEqual(page_response.status_code, 200)
-        self.assertTemplateUsed(page_response, "dashboard/boundaries/index.html")
-        self.assertNotContains(
-            page_response,
-            f'href="{reverse("boundaries_upload")}"',
-        )
-        self.assertNotContains(page_response, "Replace boundary package")
-        self.assertContains(
-            page_response,
-            "No raster boundary files are currently available.",
-        )
-        self.assertNotContains(
-            page_response,
-            "Replace the boundary package to add them.",
-        )
+        self.assertTemplateUsed(page_response, "admin/boundaries/index.html")
+        self.assertContains(page_response, f'href="{reverse("boundaries_upload")}"')
+        self.assertContains(page_response, "Replace boundary package")
 
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -143,9 +164,9 @@ class ConfigurationNavigationTests(TestCase):
             ],
         )
 
-    def test_configuration_editor_can_open_boundary_replacement(self):
+    def test_administrator_can_open_boundary_replacement_inside_admin(self):
         user = self.create_user("boundary-editor")
-        self.grant_configuration_permission(user)
+        user.groups.add(Group.objects.get(name=Role.ADMIN.value))
         self.client.force_login(user)
 
         page_response = self.client.get(reverse("boundaries"))
@@ -164,12 +185,10 @@ class ConfigurationNavigationTests(TestCase):
         self.assertEqual(upload_response.status_code, 200)
         self.assertTemplateUsed(
             upload_response,
-            "dashboard/layouts/workspace.html",
+            "admin/base_site.html",
         )
-        self.assertContains(
-            upload_response,
-            'href="{}" aria-current="page"'.format(reverse("boundaries")),
-        )
+        self.assertTemplateNotUsed(upload_response, "dashboard/layouts/workspace.html")
+        self.assertContains(upload_response, f'href="{reverse("boundaries")}"')
 
 
 class AuthenticationUrlTests(SimpleTestCase):

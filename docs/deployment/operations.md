@@ -170,7 +170,7 @@ the application already reports ready.
 Back up the frontend database and required shared volumes as one coherent
 system. The database references files under incoming, work and publication storage.
 
-**Admin → Database → Export database** always preserves the complete PostgreSQL
+**Admin → Maintenance → Back up & restore → Create a backup** always preserves the complete PostgreSQL
 schema, data, credential hashes and database metadata. Its optional sections all
 start selected: specifications, boundaries, delivery ZIPs, QC artifacts,
 publications, PostgreSQL globals and supported deployment configuration with

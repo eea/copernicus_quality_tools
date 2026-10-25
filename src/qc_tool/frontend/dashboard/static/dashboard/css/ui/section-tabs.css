@@ -16,6 +16,9 @@
 .qc-section-tabs__list > li {
     min-width: 0;
     max-width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .qc-section-tabs__end {

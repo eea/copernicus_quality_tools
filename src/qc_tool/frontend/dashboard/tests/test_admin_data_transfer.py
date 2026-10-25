@@ -15,8 +15,10 @@ from django.db import connection
 from django.test import Client, TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils.html import escape
 
 from qc_tool.database.transfers import service
+from qc_tool.database.transfers.components import EXPORT_COMPONENT_CHOICES
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.authentication.maintenance import (
     ORIGIN_DATABASE, cookie_session, login_without_database_writes,
@@ -44,6 +46,8 @@ class AdminDataTransferTests(TestCase):
         self.other = get_user_model().objects.create_user(username="other-account")
         self.client.force_login(self.administrator)
         self.url = reverse("admin_data_transfer")
+        self.export_url = reverse("admin_backup_export")
+        self.import_url = reverse("admin_backup_import")
         self.operation_id = "812d54c5-f69b-4f51-9e25-d4cbbd9a35da"
         self.plan = {
             "profile": "accounts", "plan_hash": "a" * 64,
@@ -107,22 +111,22 @@ class AdminDataTransferTests(TestCase):
         return maintenance.read_status()["generation"]
 
     def test_administrator_discovers_one_import_and_one_export_workflow(self):
-        self.assertContains(self.client.get(reverse("admin:index")), f'href="{self.url}"')
-        response = self.client.get(self.url, {"tab": "transfers"})
-        self.assertContains(response, f'{self.url}?tab=export')
-        self.assertContains(response, f'{self.url}?tab=import')
+        self.assertContains(self.client.get(reverse("admin:index")), f'href="{reverse("admin_maintenance")}"')
+        response = self.client.get(reverse("admin_maintenance"))
+        self.assertContains(response, self.export_url)
+        self.assertContains(response, self.import_url)
         self.assertNotContains(response, "Export records")
         self.assertNotContains(response, "Export users")
         self.assertNotContains(response, 'name="scope"')
         self.assertNotContains(response, 'name="package"')
 
-    def test_unknown_task_opens_database_records_without_starting_a_transfer(self):
+    def test_unknown_task_opens_export_without_starting_a_transfer(self):
         preview = self.patch("export_preview")
         stage = self.patch("stage_import")
         response = self.client.get(self.url, {"tab": "not-a-transfer-task"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["table_count"], 24)
-        self.assertNotContains(response, 'value="preview_export"')
+        self.assertEqual(response.context["transfer_task"], "export")
+        self.assertContains(response, 'value="preview_export"')
         self.assertNotContains(response, 'name="package"')
         preview.assert_not_called()
         stage.assert_not_called()
@@ -130,10 +134,10 @@ class AdminDataTransferTests(TestCase):
     def test_older_user_packages_stay_in_database_administration(self):
         self.operation_patch()
         response = self.client.get(self.url, {"operation": self.operation_id})
-        self.assertEqual(response.context["admin_section"], "database")
+        self.assertEqual(response.context["admin_section"], "maintenance")
         self.assertEqual(response.context["transfer_area"], "users")
         self.assertContains(response, "<h1>Import details</h1>", html=True)
-        self.assertContains(response, "Back to Back up &amp; restore")
+        self.assertContains(response, "Back to Restore from ZIP")
 
     def test_export_always_contains_complete_database_and_has_no_portable_scope_picker(self):
         response = self.client.get(self.url, {"tab": "export"})
@@ -141,9 +145,36 @@ class AdminDataTransferTests(TestCase):
         self.assertTrue(response.context["native_transfer"])
         self.assertEqual(response.context["export_form"]["scope"].value(), "database")
         self.assertContains(response, '<input type="hidden" name="scope" value="database" id="id_scope">', html=True)
-        self.assertContains(response, "every table and row, password hashes")
+        self.assertContains(response, "password hashes")
         self.assertNotContains(response, 'type="radio" name="scope"')
         self.assertNotContains(response, 'name="users"')
+
+    def test_export_choice_and_review_show_only_the_backup_journey(self):
+        self.ready()
+        self.native_ready()
+        self.patch("export_preview", return_value={
+            "review_hash": "c" * 64, "counts": {"tables": 20},
+        })
+        create = self.patch("create_export")
+
+        responses = (
+            self.client.get(self.url, {"tab": "export"}),
+            self.client.post(self.url, {
+                "action": "preview_export", "scope": "database", "components": ["boundaries"],
+            }),
+        )
+
+        for response in responses:
+            with self.subTest(review=bool(response.context["export_review"])):
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "data-maintenance-banner", count=1)
+                self.assertContains(response, "Maintenance is on", count=1)
+                self.assertNotContains(response, 'aria-label="Maintenance tasks"')
+                self.assertNotContains(response, 'id="database-recovery"')
+                self.assertNotContains(response, 'id="transfer-history"')
+                self.assertNotContains(response, 'id="saved-backups"')
+                self.assertNotContains(response, 'id="backup-files"')
+        create.assert_not_called()
 
     def test_every_export_bookmark_defaults_to_all_optional_package_sections(self):
         for query in ({"tab": "export"}, {"tab": "backup"},
@@ -152,8 +183,7 @@ class AdminDataTransferTests(TestCase):
                 response = self.client.get(self.url, query)
                 self.assertEqual(list(response.context["export_form"]["components"].value()), list(EXPORT_COMPONENTS))
                 self.assertEqual(response.context["transfer_task"], "export")
-                self.assertContains(response, "Additional package sections")
-                self.assertContains(response, "contains secrets")
+                self.assertContains(response, 'name="components"')
                 self.assertNotContains(response, "Records only")
 
     def test_component_selection_reaches_review_confirmation_edit_and_maintenance_links(self):
@@ -161,12 +191,29 @@ class AdminDataTransferTests(TestCase):
         preview = self.patch("export_preview", return_value={"review_hash": "c" * 64, "counts": {"tables": 20}})
         for components in (["boundaries", "artifacts"], []):
             with self.subTest(components=components):
+                preview.return_value["components"] = [
+                    {"key": key, "label": label, "selected": key in components,
+                     "status": "included" if key in components else "omitted",
+                     "files_count": 0, "byte_count": 0}
+                    for key, label in EXPORT_COMPONENT_CHOICES
+                ]
                 response = self.client.post(self.url, {"action": "preview_export", "scope": "database", "components": components})
                 self.assertEqual(response.status_code, 200)
                 preview.assert_called_with({"profile": "database", "user_ids": [], "components": components}, actor=self.administrator)
                 for value in components:
                     self.assertContains(response, f'<input type="hidden" name="components" value="{value}">', html=True)
                 self.assertEqual(response.context["export_selection"]["components"], components)
+                if not components:
+                    self.assertContains(response, "No optional files or server settings selected.")
+                    self.assertNotContains(response, '<caption>Package sections</caption>', html=True)
+                    omitted = re.search(
+                        r'<details\b([^>]*)>\s*<summary>Omitted contents</summary>(.*?)</details>',
+                        response.content.decode(response.charset), re.DOTALL,
+                    )
+                    self.assertIsNotNone(omitted)
+                    self.assertNotIn("open", omitted.group(1))
+                    for _key, label in EXPORT_COMPONENT_CHOICES:
+                        self.assertIn(label, omitted.group(2))
                 edit_query = parse_qs(urlsplit(response.context["edit_export_url"]).query)
                 self.assertEqual(edit_query.get("components", []), components)
                 self.assertEqual(edit_query["components_selected"], ["true"])
@@ -193,11 +240,23 @@ class AdminDataTransferTests(TestCase):
                 {"key": "boundaries", "label": "Boundary packages", "selected": True, "status": "unavailable", "files_count": 0, "byte_count": 0},
                 {"key": "artifacts", "label": "QC results and artifacts", "selected": False, "status": "omitted", "files_count": 0, "byte_count": 0},
                 {"key": "specifications", "label": "Original product specifications", "selected": True, "status": "included", "files_count": 2, "byte_count": 2048},
+                {"key": "deliveries", "label": "Retained delivery ZIPs", "selected": True, "status": "partial", "files_count": 1, "byte_count": 1024},
             ],
+            "notes": ["One retained ZIP is missing.", "Keep this backup private."],
         })
-        response = self.client.post(self.url, {"action": "preview_export", "scope": "database", "components": ["boundaries", "specifications"]})
-        for text in ("Package sections", "Unavailable", "Omitted", "Included", "Boundary packages", "Original product specifications"):
+        response = self.client.post(self.url, {
+            "action": "preview_export", "scope": "database",
+            "components": ["boundaries", "specifications", "deliveries"],
+        })
+        for text in (
+            "Package sections", "Unavailable", "Omitted", "Included", "Partial",
+            "Boundary packages", "Original product specifications",
+            "One retained ZIP is missing.", "Keep this backup private.",
+        ):
             self.assertContains(response, text)
+        self.assertContains(response, '<th scope="row">Retained delivery ZIPs</th>', html=True)
+        self.assertNotContains(response, '<th scope="row">QC results and artifacts</th>', html=True)
+        self.assertContains(response, '<li>QC results and artifacts</li>', html=True)
         self.assertNotContains(response, "Record-package limit")
         self.assertNotContains(response, "Review full database backup")
 
@@ -266,7 +325,7 @@ class AdminDataTransferTests(TestCase):
         response = self.client.post(self.url, {"action": "release_package", "operation_id": self.operation_id,
             "confirmed_release": "on", "return_to_backup_files": "on"})
         self.assertEqual(response.status_code, 303)
-        self.assertEqual(response["Location"], self.url + "?tab=backups#backup-files")
+        self.assertEqual(response["Location"], self.export_url + "#prepared-backups")
         self.assertIn("no-store", response["Cache-Control"])
         release.assert_called_once_with(self.operation_id, actor=self.administrator)
 
@@ -284,7 +343,7 @@ class AdminDataTransferTests(TestCase):
             "downloadable": True, "payload_released_at": "2026-10-23T10:00:00+00:00",
         }])
         response = self.client.get(self.url, {"tab": "activity"})
-        self.assertContains(response, "Complete · ZIP deleted")
+        self.assertNotContains(response, self.operation_id)
         self.assertNotContains(response, reverse("admin_data_transfer_download", args=[self.operation_id]))
 
 
@@ -312,13 +371,13 @@ class AdminDataTransferTests(TestCase):
         self.assertNotContains(response, self.database_availability.return_value["message"])
         service.activation_preview.assert_not_called()
 
-    def test_backups_omit_unrelated_schema_and_maintenance_warnings(self):
+    def test_exports_explain_native_availability_without_portable_schema_warnings(self):
         self.incompatible_schema()
         response = self.client.get(self.url, {"tab": "history"})
-        self.assertEqual(response.context["transfer_task"], "backups")
-        self.assertContains(response, '<h1>Back up &amp; restore</h1>', html=True)
+        self.assertEqual(response.context["transfer_task"], "export")
+        self.assertContains(response, '<h1>Create a backup</h1>', html=True)
         self.assertNotContains(response, "missing table qc_database_transfer_receipt")
-        self.assertNotContains(response, self.database_availability.return_value["message"])
+        self.assertContains(response, self.database_availability.return_value["message"])
         self.assertNotContains(response, "Maintenance is off")
 
     def test_operation_profile_determines_task_despite_a_conflicting_navigation_query(self):
@@ -344,14 +403,20 @@ class AdminDataTransferTests(TestCase):
     def test_failed_export_preview_preserves_selected_sections_for_edit_and_maintenance(self):
         self.native_ready()
         self.patch("export_preview", side_effect=service.TransferError("A retained file is unavailable."))
-        response = self.client.post(self.url, {"action": "preview_export", "scope": "database", "components": ["boundaries"]})
-        self.assertEqual(response.status_code, 409)
-        self.assertEqual(response.context["transfer_task"], "export")
-        self.assertEqual(response.context["export_form"]["components"].value(), ["boundaries"])
-        expected = {"tab": ["export"], "components_selected": ["true"], "components": ["boundaries"]}
-        self.assertEqual(parse_qs(urlsplit(response.context["edit_export_url"]).query), expected)
-        destination = parse_qs(urlsplit(response.context["maintenance_url"]).query)["next"][0]
-        self.assertEqual(parse_qs(urlsplit(destination).query), {**expected, "from": ["backups"]})
+        for components in (["boundaries"], []):
+            with self.subTest(components=components):
+                response = self.client.post(self.url, {
+                    "action": "preview_export", "scope": "database", "components": components,
+                })
+                self.assertEqual(response.status_code, 409)
+                self.assertEqual(response.context["transfer_task"], "export")
+                self.assertEqual(response.context["export_form"]["components"].value(), components)
+                expected = {"components_selected": ["true"]}
+                if components:
+                    expected["components"] = components
+                self.assertEqual(parse_qs(urlsplit(response.context["edit_export_url"]).query), expected)
+                destination = parse_qs(urlsplit(response.context["maintenance_url"]).query)["next"][0]
+                self.assertEqual(parse_qs(urlsplit(destination).query), {**expected, "from": ["backups"]})
 
 
     def test_export_selection_does_not_query_account_records(self):
@@ -406,8 +471,8 @@ class AdminDataTransferTests(TestCase):
         self.ready()
         with patch("qc_tool.frontend.dashboard.views.admin_data_transfer.active_operation", return_value={"operation_id": self.operation_id, "kind": "import"}):
             response = self.client.get(self.url, {"tab": "export"})
-        self.assertContains(response, "A database task holds maintenance")
-        self.assertContains(response, "View current task")
+        self.assertContains(response, "Another administrator task must finish before you can continue.")
+        self.assertNotContains(response, "View current task")
         self.assertContains(response, 'value="preview_export" disabled')
         self.assertNotContains(response, 'value="upload"')
 
@@ -421,7 +486,7 @@ class AdminDataTransferTests(TestCase):
             response = self.client.get(self.url, {"tab": "backups"})
             self.assertContains(response, "A database task is in progress")
             self.assertContains(response, 'data-transfer-status-url="' + reverse("admin_data_transfer_status", args=[self.operation_id]) + '"')
-            self.assertContains(response, 'href="' + self.url + '?tab=backups" data-transfer-refresh')
+            self.assertContains(response, 'href="' + escape(response.context["admin_busy_refresh_url"]) + '" data-transfer-refresh')
             listed.return_value = [{"id": self.operation_id, "kind": "export", "status": "running", "recoverable": True}]
             response = self.client.get(self.url, {"tab": "backups"})
         self.assertContains(response, "A database task needs recovery")
@@ -447,7 +512,7 @@ class AdminDataTransferTests(TestCase):
         create = self.patch("create_export", return_value={"id": self.operation_id, "profile": "database", "kind": "export", "status": "queued"})
         response = self.client.post(self.url, {"action": "export", "scope": "database", "components": ["boundaries"],
             "reviewed_hash": "c" * 64, "generation": generation, "records": "untrusted content", "users": [self.user.pk]})
-        self.assertRedirects(response, f"{self.url}?operation={self.operation_id}#transfer-operation",
+        self.assertRedirects(response, f"{self.export_url}?operation={self.operation_id}#transfer-operation",
                              status_code=303, fetch_redirect_response=False)
         create.assert_called_once_with({"profile": "database", "user_ids": [], "components": ["boundaries"]},
             actor=self.administrator, reviewed_hash="c" * 64, generation=generation)
@@ -455,8 +520,9 @@ class AdminDataTransferTests(TestCase):
         self.operation_patch(**create.return_value)
         for _ in range(2):
             progress = self.client.get(response.url)
-            self.assertContains(progress, "Waiting to start")
-            self.assertContains(progress, "Reload, go back or close this page; preparation continues.")
+            self.assertContains(progress, "Backup waiting to start")
+            self.assertContains(progress, "does not stop preparation")
+            self.assertContains(progress, 'href="' + self.export_url + '"')
         self.assertEqual(create.call_count, 1)
 
     def test_missing_export_review_never_starts_operation(self):
@@ -735,9 +801,9 @@ class AdminDataTransferTests(TestCase):
         self.assertEqual(download.call_count, 1)
 
     def test_recent_operations_can_be_reopened_without_posting(self):
-        service.list_operations.return_value = [{"id": self.operation_id, "kind": "export", "status": "completed"}]
+        service.list_operations.return_value = [{"id": self.operation_id, "kind": "export", "status": "queued"}]
         response = self.client.get(self.url, {"tab": "activity"})
-        self.assertContains(response, '<h1>Progress &amp; history</h1>', html=True)
+        self.assertContains(response, '<h1>Create a backup</h1>', html=True)
         self.assertContains(response, f'?operation={self.operation_id}')
 
     def test_completed_export_history_links_to_the_saved_zip_without_running_an_export(self):
@@ -747,6 +813,11 @@ class AdminDataTransferTests(TestCase):
         create = self.patch("create_export")
         response = self.client.get(self.url, {"tab": "history"})
         self.assertContains(response, f'href="{reverse("admin_data_transfer_download", args=[self.operation_id])}"')
+        self.assertContains(response,
+            'href="{}?operation={}#transfer-operation"'.format(
+                self.export_url, self.operation_id,
+            ),
+        )
         self.assertContains(response, ">Download</a>")
         create.assert_not_called()
 
@@ -769,7 +840,7 @@ class AdminDataTransferTests(TestCase):
         self.assertContains(imported, 'name="package"')
         self.assertNotContains(imported, 'name="scope"')
         history = self.client.get(self.url, {"tab": "history"})
-        self.assertNotContains(history, 'name="scope"')
+        self.assertContains(history, 'name="scope"')
         self.assertNotContains(history, 'name="package"')
 
 
@@ -1055,7 +1126,7 @@ class AdminDataTransferTests(TestCase):
 
     def test_schema_mismatch_preserves_history_download_and_discard(self):
         self.incompatible_schema()
-        self.assertContains(self.client.get(self.url, {"tab": "history"}), '<h1>Back up &amp; restore</h1>', html=True)
+        self.assertContains(self.client.get(self.url, {"tab": "history"}), '<h1>Create a backup</h1>', html=True)
         self.operation_patch(status="staged", plan=None, cancellable=True)
         recover = self.patch("recover_operation", return_value={**self.operation, "status": "cancelled"})
         response = self.client.post(self.url, {"action": "cancel", "operation_id": self.operation_id})
@@ -1085,7 +1156,7 @@ class AdminDataTransferTests(TestCase):
 
     def test_export_explains_sensitive_contents_and_manual_metadata_recovery(self):
         response = self.client.get(self.url, {"tab": "export"})
-        for text in ("password hashes", "PostgreSQL role password hashes", "contains secrets", "reviewed manual recovery", "Keep the ZIP in protected storage"):
+        for text in ("password hashes", "credentials", "manual recovery", "Store the ZIP securely"):
             self.assertContains(response, text)
         self.assertNotContains(response, "Passwords and access credentials are excluded")
 
@@ -1115,7 +1186,7 @@ class AdminDataTransferTests(TestCase):
             "action": "export", "scope": "database", "reviewed_hash": "c" * 64,
             "generation": generation, "users": self.user.pk,
         })
-        self.assertRedirects(response, f"{self.url}?operation={self.operation_id}#transfer-operation",
+        self.assertRedirects(response, f"{self.export_url}?operation={self.operation_id}#transfer-operation",
                              status_code=303, fetch_redirect_response=False)
         create.assert_called_once_with({"profile": "database", "user_ids": [], "components": []}, actor=self.administrator,
                                        reviewed_hash="c" * 64, generation=generation)
@@ -1273,7 +1344,9 @@ class AdminDataTransferTests(TestCase):
         self.assertContains(response, "Deployment secrets require separate recovery.")
         self.assertNotContains(response, "accounts created")
         service.list_operations.return_value = [{**self.operation, "profile": "database"}]
-        self.assertContains(self.client.get(self.url, {"tab": "activity"}), "Restore database copy")
+        history = self.client.get(self.import_url)
+        self.assertContains(history, "Import tasks")
+        self.assertContains(history, self.operation_id)
 
     def test_completed_native_history_stays_readable_without_maintenance_or_switch_review(self):
         self.native_plan()
@@ -1344,7 +1417,8 @@ class AdminDataTransferTests(TestCase):
                 self.assertFalse(response.context["can_review_database_switch"])
                 self.assertNotContains(response, 'value="review_database_switch"')
                 self.assertContains(response, label)
-                self.assertContains(response, 'href="' + self.url + '?tab=databases"')
+                if field == "database_deletion_requested_at":
+                    self.assertContains(response, 'href="' + self.url + '?tab=databases"')
                 service.get_operation.return_value.pop(field)
 
     def test_unverified_native_result_does_not_claim_a_selectable_complete_restore(self):
@@ -1462,11 +1536,11 @@ class AdminDataTransferTests(TestCase):
         self.assertContains(self.client.post(self.url, payload), "Complete and verify a full database restore", status_code=409)
         activate.assert_not_called()
 
-    def test_previous_database_control_remains_available_in_history_without_an_operation(self):
+    def test_previous_database_control_remains_available_in_import_without_an_operation(self):
         self.ready()
         self.control_state.update(previous_database="qc_tool_previous", revision=4, has_selection=True)
         rollback = self.patch("rollback_database", create=True)
-        response = self.client.get(self.url, {"tab": "history"})
+        response = self.client.get(self.import_url)
         self.assertContains(response, "Switch back to qc_tool_previous")
         self.assertContains(response, 'value="rollback_database"')
         self.assertNotContains(response, 'name="operation_id"')

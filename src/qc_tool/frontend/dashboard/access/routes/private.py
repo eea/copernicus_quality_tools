@@ -1,4 +1,4 @@
-"""Private dashboard routes.
+"""Private workspace and explicitly managed Admin routes.
 
 Groups do not appear here. They are reusable bundles of Django permissions;
 the same permissions may also be granted directly to a user.
@@ -39,15 +39,21 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
     "job_combined_log": private_session_page(VIEW, "GET"),
     "file_upload": private_session_page(AccountPermission.UPLOAD_DELIVERY, "GET"),
     "job_history": private_session_page(VIEW, "GET"),
-    "boundaries": private_session_page(VIEW, "GET"),
-    "boundaries_upload": private_session_page(MANAGE_CONFIGURATION, "GET"),
+    "boundaries": private_session_page(MANAGE_CONFIGURATION, "GET", admin_only=True),
+    "boundaries_upload": private_session_page(MANAGE_CONFIGURATION, "GET", admin_only=True),
+    "boundaries_retention": private_session_page(MANAGE_CONFIGURATION, "GET", admin_only=True),
+    "boundaries_retention_action": private_session_page(MANAGE_CONFIGURATION, "POST", admin_only=True),
     "setup_job": private_session_page(AccountPermission.RUN_QC, "GET"),
     "show_result": private_session_page(VIEW, "GET"),
     "get_attachment": private_session_page(VIEW, "GET"),
     "announcement": private_session_page(VIEW, "GET"),
+    "admin_notifications": private_session_page(
+        MANAGE_CONFIGURATION, "GET", admin_only=True,
+    ),
     "announcement_update": private_session_page(
         MANAGE_CONFIGURATION,
         "POST",
+        admin_only=True,
     ),
 
     # Session-backed data endpoints return structured 401/403 responses.
@@ -81,10 +87,12 @@ SESSION_PRIVATE_ROUTE_POLICIES = {
         "POST",
     ),
     "update_job": private_session_data(VIEW, "POST"),
-    "boundaries_json": private_session_data(VIEW, "GET"),
+    "boundaries_json": private_session_data(MANAGE_CONFIGURATION, "GET", admin_only=True),
+    "boundaries_export": private_session_data(MANAGE_CONFIGURATION, "POST", admin_only=True),
     "boundaries_upload_data": private_session_data(
         MANAGE_CONFIGURATION,
         "POST",
+        admin_only=True,
     ),
     "create_job": private_session_data(AccountPermission.RUN_QC, "POST"),
 }

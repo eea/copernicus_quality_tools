@@ -24,54 +24,8 @@
         </header>
 
         <div class="workspace-card__body announcement-card__body">
-        {% if not announcement_available %}
-        <div class="announcement-state announcement-state--error" role="status">
-            The announcement is temporarily unavailable. Please try again later.
-        </div>
-        {% elif announcement %}
-        <div class="announcement-message">{{ announcement|linebreaksbr }}</div>
-        {% else %}
-        <div class="announcement-state">
-            <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>
-            <span>There is no active announcement.</span>
-        </div>
-        {% endif %}
+        {% include "dashboard/shared/announcements/current.html" %}
         </div>
     </section>
 
-    {% if account_access.can_manage_configuration %}
-    <section class="workspace-card announcement-card announcement-editor" aria-labelledby="announcement-editor-title">
-        <header class="workspace-card__header announcement-card__header">
-            <div>
-                <h2 id="announcement-editor-title">Update announcement</h2>
-                <p>Changes are shown to every signed-in user. Saving an empty message removes the current announcement.</p>
-            </div>
-        </header>
-        <form method="post" action="{% url 'announcement_update' %}" data-maintenance-write>
-<fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
-            {% csrf_token %}
-            <div class="workspace-card__body announcement-card__body">
-            <div class="form-group{% if announcement_form.announcement_text.errors %} has-error{% endif %}">
-                <label for="{{ announcement_form.announcement_text.id_for_label }}">
-                    {{ announcement_form.announcement_text.label }}
-                </label>
-                {{ announcement_form.announcement_text }}
-                {% if announcement_form.announcement_text.errors %}
-                <div class="announcement-field-errors" role="alert">
-                    {{ announcement_form.announcement_text.errors }}
-                </div>
-                {% endif %}
-                <p id="{{ announcement_form.announcement_text.auto_id }}_helptext" class="help-block">
-                    {{ announcement_form.announcement_text.help_text }}
-                </p>
-            </div>
-            <button type="submit" class="btn btn-primary btn-qc-primary">
-                <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#edit"></use></svg>
-                Save announcement
-            </button>
-            </div>
-        </fieldset>
-</form>
-    </section>
-    {% endif %}
 {% endblock page_content %}

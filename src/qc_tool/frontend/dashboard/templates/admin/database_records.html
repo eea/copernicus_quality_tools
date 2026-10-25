@@ -1,6 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/ui/section-tabs.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}">{% endblock %}
 {% block content_title %}{% endblock %}
 {% block breadcrumbs %}{% include "admin/includes/database_breadcrumbs.html" %}{% endblock %}
 {% block content %}
@@ -11,7 +11,7 @@
     <div>
       <p class="database-eyebrow">User management &middot; Browse records</p>
       <h1>{{ resource.label }}</h1>
-      <p class="database-policy">{{ resource.description }}</p>
+      <p class="qc-admin-intro__description">{{ resource.description }}</p>
     </div>
     {% include "admin/includes/database_actions.html" %}
   </header>
@@ -21,9 +21,8 @@
   <section class="qc-admin-panel" aria-labelledby="database-record-list-heading">
     <div class="database-section-heading">
       <h2 id="database-record-list-heading">Records</h2>
-      <span class="database-badge database-badge--neutral">{% if maintenance.enabled %}Maintenance active{% else %}Browse records{% endif %}</span>
     </div>
-    <p class="database-read-state">{% if maintenance.enabled %}Record changes are paused during maintenance. You can still search and view records.{% elif resource.detail %}Open a record to see its details and linked information. Browsing does not change your data.{% else %}This table is read-only. Session keys and signed session data are kept private.{% endif %}</p>
+    {% if not resource.detail %}<p class="database-read-state">This table is read-only. Session keys and signed session data are kept private.</p>{% endif %}
     {% if record_error %}
       <div class="errornote" role="alert"><strong>Records are temporarily unavailable.</strong><p>{{ record_error }}</p></div>
       <a class="btn-qc-secondary" href="{{ records_home_url }}">{% if account_records %}Back to user management{% else %}Back to tables{% endif %}</a>
@@ -32,8 +31,7 @@
       <form method="get" class="database-search database-search--records" role="search">
         <div>
           <label for="record-search">Search {{ resource.label|lower }}</label>
-          <input id="record-search" name="q" type="search" value="{{ query }}" placeholder="Enter a name, reference or keyword" aria-describedby="record-search-help">
-          <span id="record-search-help" class="database-muted">Searches text fields in this table.</span>
+          <input id="record-search" name="q" type="search" value="{{ query }}" placeholder="Enter a name, reference or keyword">
         </div>
         {% if related_field %}<input type="hidden" name="related_field" value="{{ related_field }}"><input type="hidden" name="related_value" value="{{ related_value }}">{% endif %}
         <button type="submit" class="btn-qc-secondary">Search</button>

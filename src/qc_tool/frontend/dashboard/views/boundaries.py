@@ -1,11 +1,15 @@
-"""Boundary catalog and package-management endpoints."""
+"""Admin-owned boundary catalog and package-management endpoints."""
 
 import shutil
 import tempfile
 
 from django.conf import settings
+from django.contrib import admin
+from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_GET
 from qc_tool.common import CONFIG
 from qc_tool.frontend.dashboard.access.routes.csrf import boundary_upload_receive_failure
 from qc_tool.frontend.dashboard.services.boundaries import BoundaryPackageError
@@ -14,16 +18,36 @@ from qc_tool.frontend.dashboard.services.boundaries import replace_boundary_pack
 from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
 from qc_tool.frontend.dashboard.services.boundaries import inspect_boundary_capacity
 from qc_tool.frontend.dashboard.services.boundaries.configuration import get_boundary_package_limits
+from qc_tool.frontend.dashboard.services.storage_admin.navigation import url as storage_url
 
 
 _UPLOAD_FREE_HEADROOM = 256 * 1024**2
 
 
 def boundaries(request):
-    """
-    Returns a list of all boundary aoi files in the active boundary package in html format.
-    """
-    return render(request, 'dashboard/boundaries/index.html', {})
+    """Render the active boundary catalog inside Admin."""
+    context = {
+        **admin.site.each_context(request),
+        "title": "Boundaries",
+        "admin_section": "boundaries",
+        "boundary_versions_url": reverse("boundaries_retention"),
+    }
+    try:
+        generation = resolve_boundary_generation(CONFIG["boundary_dir"])
+        # Select exact immutable content. Downloading an unmanaged installation
+        # must not accidentally include retained versions or private markers.
+        path = ".boundary-generations/" + generation.generation_id if generation.managed else ""
+        context["active_boundary"] = {
+            "version_id": generation.generation_id,
+            "managed": generation.managed,
+            "files_url": storage_url(area="boundaries", path=path, library="boundaries", library_status="current"),
+            "download_url": storage_url("admin_storage_archive", area="boundaries", selection="1",
+                                        paths=[path] if generation.managed else ["raster", "vector"],
+                                        folder=path, library="boundaries", library_status="current"),
+        }
+    except BoundaryPackageError as error:
+        context["boundary_package_error"] = error.user_message
+    return render(request, 'admin/boundaries/index.html', context)
 
 
 def get_boundaries_json(request, boundary_type):
@@ -70,9 +94,14 @@ def get_boundaries_json(request, boundary_type):
 
 
 def boundaries_upload_page(request):
-    """Render the private boundary-upload page."""
+    """Render the Admin upload page without changing storage or database state."""
 
-    context = {}
+    context = {
+        **admin.site.each_context(request),
+        "title": "Upload boundary package",
+        "admin_section": "boundaries",
+        "upload_page_base_template": "admin/boundaries/base.html",
+    }
     try:
         limits = get_boundary_package_limits()
         capacity = inspect_boundary_capacity(CONFIG["boundary_dir"])
@@ -88,7 +117,20 @@ def boundaries_upload_page(request):
         context["boundary_configuration_error"] = error.user_message
     except OSError:
         context["boundary_configuration_error"] = "Temporary upload storage is unavailable. Check server storage before uploading."
-    return render(request, 'dashboard/boundaries/upload.html', context)
+    return render(request, 'admin/boundaries/upload.html', context)
+
+
+@login_not_required
+@require_GET
+def legacy_boundaries_redirect(request, *, route_name):
+    """Keep old bookmarks useful without retaining workspace management views.
+
+    Only GET requests redirect; an old form cannot replay an upload in Admin.
+    The destination is always a server-owned route, never a supplied URL.
+    """
+    destination = reverse(route_name)
+    query = request.META.get("QUERY_STRING", "")
+    return redirect(f"{destination}?{query}" if query else destination)
 
 
 def boundaries_upload(request):

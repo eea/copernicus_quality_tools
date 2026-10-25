@@ -93,15 +93,26 @@ class MaintenanceBrowsingTests(TestCase):
         payload = {"format": "json", "filename": "browse", "columns": [{"field": "name", "label": "Name"}], "rows": [{"name": "Existing data"}]}
         client = Client(enforce_csrf_checks=True)
         client.force_login(self.user)
-        url = reverse("table_export")
-        self.assertEqual(client.post(url, payload, content_type="application/json").status_code, 403)
-        client.get(reverse("deliveries"))
-        token = client.cookies["csrftoken"].value
-        response = self.without_writes(lambda: client.post(url, payload, content_type="application/json", HTTP_X_CSRFTOKEN=token))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Existing data", b"".join(response.streaming_content))
-        # Django's test-client iterator closes the response on exhaustion.
-        self.assertTrue(response.closed)
+        for route, page in (("table_export", "deliveries"), ("boundaries_export", "boundaries")):
+            with self.subTest(route=route):
+                url = reverse(route)
+                self.assertEqual(client.post(url, payload, content_type="application/json").status_code, 403)
+                client.get(reverse(page))
+                token = client.cookies["csrftoken"].value
+                response = self.without_writes(lambda: client.post(url, payload, content_type="application/json", HTTP_X_CSRFTOKEN=token))
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(b"Existing data", b"".join(response.streaming_content))
+                # Django's test-client iterator closes the response on exhaustion.
+                self.assertTrue(response.closed)
+
+    def test_boundary_export_keeps_admin_authorization_during_maintenance(self):
+        viewer = get_user_model().objects.create_user(username="maintenance-boundary-export-viewer")
+        self.client.force_login(viewer)
+        response = self.without_writes(lambda: self.client.post(
+            reverse("boundaries_export"), {}, content_type="application/json",
+        ))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "permission_denied")
 
     def test_get_upload_probe_and_every_mutating_method_stay_blocked(self):
         for method, url in (("get", reverse("resumable_upload")), ("post", reverse("create_job")), ("post", reverse("product_upload")), ("post", reverse("logout")), ("post", reverse("account_settings")), ("post", reverse("api_token_create")), ("post", reverse("admin:index")), ("delete", "/_maintenance/read-stream/")):

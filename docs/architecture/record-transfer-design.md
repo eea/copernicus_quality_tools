@@ -15,8 +15,9 @@ rehearsal remain operator work. The
 The central `qc_tool.database.transfers` package owns native PostgreSQL backups
 and typed portable transfers, validation, archive handling and execution.
 Django Admin provides selection, review, explicit confirmation and operation
-history through **Database → Export database / Import package** (`/admin/database/`).
-The Database landing page owns the curated table browser and maintenance card;
+history through **Maintenance → Back up & restore** (`/admin/maintenance/backups/`).
+The Database landing page owns database identity/schema previews and the curated
+table browser; Maintenance owns pause controls, backup and restoration workflows;
 ordinary record editors retain their own Admin mutation routes and maintenance
 fence. All new exports use the complete native PostgreSQL profile. Its builder
 always includes schema, all rows and database metadata, with explicit additional
@@ -261,7 +262,7 @@ uploaded snapshots are never rewritten.
 
 ## Review and maintenance ownership
 
-**Database → Export database** opens one complete-database package builder.
+**Maintenance → Back up & restore → Create a backup** opens one complete-database package builder.
 **Import package** accepts native and supported historical portable packages and
 uses the profile identified from their validated contents. Transfer history
 retains earlier operations. Legacy GET links open the unified builder, while old

@@ -20,6 +20,8 @@ from qc_tool.frontend.accounts.services.api_tokens import (
     issue_personal_access_token,
 )
 from qc_tool.frontend.dashboard import urls as dashboard_urls
+from qc_tool.frontend.dashboard.urls.boundaries import urlpatterns as boundary_patterns
+from qc_tool.frontend.dashboard.urls.notifications import urlpatterns as notification_patterns
 from qc_tool.frontend.dashboard.access.routes import PRIVATE_ROUTE_POLICIES
 from qc_tool.frontend.dashboard.access.routes import PUBLIC_ROUTE_POLICIES
 from qc_tool.frontend.dashboard.access.routes import ROUTE_POLICIES
@@ -52,6 +54,7 @@ STATUS_ONLY = DenialResponse.STATUS_ONLY
 # decision in both implementation and tests.
 EXPECTED_POLICIES = {
     "table_export": (PRIVATE, SESSION, ("POST",), VIEW, JSON),
+    "boundaries_export": (PRIVATE, SESSION, ("POST",), MANAGE_CONFIGURATION, JSON),
     "dashboard_home": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "deliveries": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "products": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
@@ -92,7 +95,7 @@ EXPECTED_POLICIES = {
         PRIVATE,
         SESSION,
         ("GET",),
-        VIEW,
+        MANAGE_CONFIGURATION,
         LOGIN_REDIRECT,
     ),
     "boundaries_upload": (
@@ -102,10 +105,19 @@ EXPECTED_POLICIES = {
         MANAGE_CONFIGURATION,
         LOGIN_REDIRECT,
     ),
+    "boundaries_retention": (
+        PRIVATE, SESSION, ("GET",), MANAGE_CONFIGURATION, LOGIN_REDIRECT,
+    ),
+    "boundaries_retention_action": (
+        PRIVATE, SESSION, ("POST",), MANAGE_CONFIGURATION, LOGIN_REDIRECT,
+    ),
     "setup_job": (PRIVATE, SESSION, ("GET",), RUN_QC, LOGIN_REDIRECT),
     "show_result": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "get_attachment": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
     "announcement": (PRIVATE, SESSION, ("GET",), VIEW, LOGIN_REDIRECT),
+    "admin_notifications": (
+        PRIVATE, SESSION, ("GET",), MANAGE_CONFIGURATION, LOGIN_REDIRECT,
+    ),
     "announcement_update": (
         PRIVATE,
         SESSION,
@@ -142,7 +154,7 @@ EXPECTED_POLICIES = {
         PRIVATE,
         SESSION,
         ("GET",),
-        VIEW,
+        MANAGE_CONFIGURATION,
         JSON,
     ),
     "boundaries_upload_data": (
@@ -285,6 +297,15 @@ class RoutePolicyValidationTests(TestCase):
         )
         self.assertIs(policy.authentication, WORKER_TOKEN)
 
+    def test_admin_routes_require_private_session_authentication(self):
+        for overrides in (
+            {"visibility": PUBLIC, "authentication": NONE, "permission": None, "denial_response": None},
+            {"authentication": API_KEY, "denial_response": JSON},
+            {"authentication": WORKER_TOKEN, "permission": None, "denial_response": STATUS_ONLY},
+        ):
+            with self.subTest(overrides=overrides), self.assertRaises(ValueError):
+                self.make_policy(admin_only=True, **overrides)
+
     def test_authentication_modes_reject_incompatible_denial_formats(self):
         for authentication, permission, denial_response in (
             (API_KEY, VIEW, LOGIN_REDIRECT),
@@ -331,8 +352,13 @@ class RoutePolicyRegistryTests(TestCase):
             reverse("product_detail", args=("sample-product",)),
             "/products/sample-product/",
         )
-        self.assertEqual(reverse("boundaries"), "/boundaries/")
-        self.assertEqual(reverse("boundaries_upload"), "/boundaries/upload/")
+        self.assertEqual(reverse("boundaries"), "/admin/boundaries/")
+        self.assertEqual(reverse("boundaries_upload"), "/admin/boundaries/upload/")
+        self.assertEqual(reverse("boundaries_upload_data"), "/admin/boundaries/upload/data/")
+        self.assertEqual(reverse("boundaries_json", args=("raster",)), "/admin/boundaries/data/raster/")
+        self.assertEqual(reverse("boundaries_export"), "/admin/boundaries/export/")
+        self.assertEqual(reverse("admin_notifications"), "/admin/notifications/")
+        self.assertEqual(reverse("announcement_update"), "/admin/notifications/update/")
         self.assertEqual(reverse("file_upload"), "/deliveries/upload/")
         self.assertEqual(reverse("setup_job"), "/deliveries/jobs/new/")
         self.assertEqual(
@@ -355,13 +381,15 @@ class RoutePolicyRegistryTests(TestCase):
             "/job_history/7/", "/deliveries/job_history/7/",
             f"/result/{job_uuid}", f"/deliveries/result/{job_uuid}",
             "/data/product_list/",
+            "/data/boundaries/raster/", "/data/boundaries/vector/",
+            "/data/boundaries/upload/",
         )
         for path in paths:
             with self.subTest(path=path), self.assertRaises(Resolver404):
                 resolve(path)
 
     def test_registry_is_an_explicit_policy_for_all_dashboard_routes(self):
-        self.assertEqual(len(EXPECTED_POLICIES), 58)
+        self.assertEqual(len(EXPECTED_POLICIES), 62)
         self.assertEqual(set(ROUTE_POLICIES), set(EXPECTED_POLICIES))
 
         for route_name, expected in EXPECTED_POLICIES.items():
@@ -375,6 +403,15 @@ class RoutePolicyRegistryTests(TestCase):
                     policy.denial_response,
                 )
                 self.assertEqual(actual, expected)
+                self.assertEqual(
+                    policy.admin_only,
+                    route_name in {
+                        "boundaries", "boundaries_upload", "boundaries_json",
+                        "boundaries_upload_data", "boundaries_export",
+                        "boundaries_retention", "boundaries_retention_action",
+                        "admin_notifications", "announcement_update",
+                    },
+                )
 
     def test_public_and_private_registries_are_disjoint_and_complete(self):
         self.assertFalse(set(PUBLIC_ROUTE_POLICIES) & set(PRIVATE_ROUTE_POLICIES))
@@ -394,7 +431,7 @@ class RoutePolicyRegistryTests(TestCase):
     def test_every_named_dashboard_url_is_wired_through_its_policy(self):
         named_patterns = {
             pattern.name: pattern
-            for pattern in dashboard_urls.urlpatterns
+            for pattern in [*dashboard_urls.urlpatterns, *boundary_patterns, *notification_patterns]
             if getattr(pattern, "name", None) is not None
         }
         self.assertEqual(set(named_patterns), set(EXPECTED_POLICIES))
@@ -437,6 +474,29 @@ class SubmissionQueueSlashRedirectTests(TestCase):
         self.assertEqual(response.status_code, 301)
         self.assertEqual(location.path, reverse("submission_queue"))
         self.assertEqual(parse_qs(location.query), {"product": ["example"]})
+
+
+class BoundaryWorkspaceCompatibilityTests(TestCase):
+    def test_old_boundary_page_links_return_to_the_admin_route_with_query(self):
+        for old_path, route_name in (
+            ("/boundaries/", "boundaries"),
+            ("/boundaries/upload/", "boundaries_upload"),
+        ):
+            with self.subTest(path=old_path):
+                response = self.client.get(old_path + "?tab=vector&filter=region")
+                self.assertIn(response.status_code, (301, 302))
+                target = urlsplit(response["Location"])
+                self.assertEqual(target.path, reverse(route_name))
+                self.assertEqual(parse_qs(target.query), {"tab": ["vector"], "filter": ["region"]})
+
+    def test_old_page_and_data_paths_cannot_accept_a_package(self):
+        for path in (
+            "/boundaries/", "/boundaries/upload/",
+            "/data/boundaries/upload/", "/data/boundaries/raster/",
+        ):
+            with self.subTest(path=path):
+                response = self.client.post(path, {"file": "not a package"})
+                self.assertIn(response.status_code, (404, 405))
 
 
 class RoutePolicyAuthorizationOrderTests(TestCase):
@@ -547,7 +607,6 @@ class AnonymousRoutePolicyTests(TestCase):
         ]
 
     def test_private_session_pages_redirect_with_the_exact_return_path(self):
-        login_path = reverse("login")
         route_names = self.route_names_for(
             authentication=SESSION,
             denial_response=LOGIN_REDIRECT,
@@ -555,6 +614,7 @@ class AnonymousRoutePolicyTests(TestCase):
 
         for route_name in route_names:
             with self.subTest(route_name=route_name):
+                login_path = reverse("admin_login" if ROUTE_POLICIES[route_name].admin_only else "login")
                 target = route_url(route_name)
                 response = request_route(self.client, route_name, "GET")
                 location = urlsplit(response["Location"])
@@ -564,7 +624,6 @@ class AnonymousRoutePolicyTests(TestCase):
                 self.assertEqual(parse_qs(location.query), {"next": [target]})
 
     def test_private_session_data_routes_return_a_structured_401(self):
-        login_path = reverse("login")
         route_names = self.route_names_for(
             authentication=SESSION,
             denial_response=JSON,
@@ -574,6 +633,7 @@ class AnonymousRoutePolicyTests(TestCase):
             policy = ROUTE_POLICIES[route_name]
             method = policy.methods[0]
             with self.subTest(route_name=route_name, method=method):
+                login_path = reverse("admin_login" if policy.admin_only else "login")
                 response = request_route(self.client, route_name, method)
 
                 self.assertEqual(response.status_code, 401)

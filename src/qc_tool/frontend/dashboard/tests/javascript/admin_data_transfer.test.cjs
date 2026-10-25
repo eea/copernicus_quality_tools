@@ -7,7 +7,7 @@ const vm = require("node:vm");
 
 const script = fs.readFileSync(path.join(__dirname, "../../static/dashboard/js/admin/data-transfer.js"), "utf8");
 const operationId = "812d54c5-f69b-4f51-9e25-d4cbbd9a35da";
-const canonicalUrl = "https://qc.example.test/admin/database/?operation=" + operationId + "#transfer-operation";
+const canonicalUrl = "https://qc.example.test/admin/maintenance/backups/export/?operation=" + operationId + "#transfer-operation";
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function response(values = {}, options = {}) {
@@ -19,7 +19,7 @@ function response(values = {}, options = {}) {
     };
 }
 
-function page({withOperation = true, withImport = false, reviewBlocked = false, statusUrl = "/admin/database/" + operationId + "/status/", refreshUrl = canonicalUrl, fetchResponse = response()} = {}) {
+function page({withOperation = true, withImport = false, reviewBlocked = false, statusUrl = "/admin/maintenance/backups/" + operationId + "/status/", refreshUrl = canonicalUrl, fetchResponse = response()} = {}) {
     const importEvents = {}, resumeEvents = {}, windowEvents = {}, documentEvents = {};
     const apply = {disabled: reviewBlocked}, dirtyMessage = {hidden: true};
     const updateReview = {hidden: !reviewBlocked}, confirmation = {hidden: reviewBlocked};
@@ -279,7 +279,7 @@ test("BFCache restoration ignores late old responses while a fresh status read i
     assert.equal(p.timers.size, 1);
 });
 
-test("leaving aborts an in-flight status read without showing an error or restarting polling", async () => {
+test("leaving aborts only the status read without cancelling the backup or restarting polling", async () => {
     const p = page({fetchResponse: (_url, options) => new Promise((_resolve, reject) => {
         options.signal.addEventListener("abort", () => reject(new Error("Aborted")));
     })});
@@ -289,6 +289,8 @@ test("leaving aborts an in-flight status read without showing an error or restar
     assert.equal(signal.aborted, true);
     assert.equal(p.timers.size, 0);
     await flush();
+    assert.equal(p.requests.length, 1, "Leaving must never send a cancellation request");
+    assert.equal(p.requests[0].options.method, "GET");
     assert.equal(p.timers.size, 0);
     assert.deepEqual(p.navigations, []);
     assert.equal(p.message.textContent, "Progress updates automatically.");

@@ -1,8 +1,8 @@
-{% extends "dashboard/layouts/workspace_page.html" %}
+{% extends "admin/boundaries/base.html" %}
 {% load static %}
 
-{% block title %}Boundaries | CLMS QC Tool{% endblock title %}
-{% block main_class %}workspace-page boundaries-page{% endblock main_class %}
+{% block title %}Boundaries | QC Tool Admin{% endblock title %}
+{% block main_class %}boundaries-page{% endblock main_class %}
 
 {% block workspace_css %}
 {{ block.super }}
@@ -11,19 +11,35 @@
 {% endblock workspace_css %}
 
 {% block page_title %}Boundaries{% endblock page_title %}
-{% block page_subtitle %}<p>Review the raster and vector AOI files in the active boundary package.</p>{% endblock page_subtitle %}
+{% block page_subtitle %}<p>Preview the active AOI files, update the boundary package and inspect retained versions.</p>{% endblock page_subtitle %}
 {% block page_actions %}
-{% if account_access.can_manage_configuration %}
+{% if account_access.can_manage_boundaries %}
 <a href="{% url 'boundaries_upload' %}" class="btn btn-primary btn-qc-primary">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg>
     Replace boundary package
 </a>
 {% endif %}
+<a href="{{ boundary_versions_url }}" class="btn-qc-secondary">Retained versions</a>
 {% endblock page_actions %}
 
 {% block page_content %}
 
-    <section class="workspace-card boundary-catalog" aria-labelledby="boundary-catalog-title">
+    <section class="qc-admin-panel boundary-package-summary" aria-labelledby="boundary-package-summary-title">
+        <div class="qc-admin-panel__heading"><h2 id="boundary-package-summary-title">Package management</h2></div>
+        {% if active_boundary %}
+        <p>The active package is used by new QC jobs. Upload a replacement ZIP to update its files; each update creates a separate version.</p>
+        <div class="qc-admin-management-actions">
+            <a class="btn-qc-secondary" href="{{ active_boundary.files_url }}">Browse active files</a>
+            <a class="btn-qc-secondary" href="{{ active_boundary.download_url }}">Download active package</a>
+        </div>
+        <details><summary>Active version ID</summary><code>{{ active_boundary.version_id }}</code></details>
+        {% else %}
+        <p role="status">{{ boundary_package_error|default:'No active boundary package is available.' }} Upload a replacement to supply the boundary files used by QC jobs.</p>
+        {% endif %}
+        <p class="boundary-package-summary__retention">Use <a href="{{ boundary_versions_url }}">Retained versions</a> to review unused packages for removal or restore a package from boundary trash. Active packages and versions needed by QC history or recovery databases remain protected.</p>
+    </section>
+
+    <section class="workspace-card qc-data-table-card boundary-catalog" aria-labelledby="boundary-catalog-title">
         <header class="workspace-card__header">
             <div>
                 <h2 id="boundary-catalog-title">Active boundary package</h2>
@@ -35,7 +51,7 @@
             <section aria-labelledby="raster-boundaries-title">
                 <h3 id="raster-boundaries-title">Raster AOI boundaries</h3>
                 <div class="boundary-table-wrap qc-data-table-region">
-                    <table id="tbl-boundaries-raster" class="table qc-data-table" data-sort-name="filename" data-sort-order="asc" data-url="{% url 'boundaries_json' boundary_type='raster' %}" data-empty-message="{% if account_access.can_manage_configuration %}No raster boundary files are available. Replace the boundary package to add them.{% else %}No raster boundary files are currently available.{% endif %}">
+                    <table id="tbl-boundaries-raster" class="table qc-data-table" data-sort-name="filename" data-sort-order="asc" data-url="{% url 'boundaries_json' boundary_type='raster' %}" data-empty-message="No raster boundary files are available. Replace the boundary package to add them.">
                         <caption class="sr-only">Raster AOI boundary files in the active package</caption>
                         <thead>
                             <tr>
@@ -51,7 +67,7 @@
             <section aria-labelledby="vector-boundaries-title">
                 <h3 id="vector-boundaries-title">Vector AOI boundaries</h3>
                 <div class="boundary-table-wrap qc-data-table-region">
-                    <table id="tbl-boundaries-vector" class="table qc-data-table" data-sort-name="filename" data-sort-order="asc" data-url="{% url 'boundaries_json' boundary_type='vector' %}" data-empty-message="{% if account_access.can_manage_configuration %}No vector boundary files are available. Replace the boundary package to add them.{% else %}No vector boundary files are currently available.{% endif %}">
+                    <table id="tbl-boundaries-vector" class="table qc-data-table" data-sort-name="filename" data-sort-order="asc" data-url="{% url 'boundaries_json' boundary_type='vector' %}" data-empty-message="No vector boundary files are available. Replace the boundary package to add them.">
                         <caption class="sr-only">Vector AOI boundary files in the active package</caption>
                         <thead>
                             <tr>

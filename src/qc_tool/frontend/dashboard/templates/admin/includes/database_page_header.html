@@ -4,4 +4,4 @@
   <div><h1{% if record_pk %} class="database-record-heading"{% endif %}>{{ database_page_title }}</h1><p class="qc-admin-intro__description">{{ database_page_description }}</p></div>
   {% include "admin/includes/database_actions.html" %}
 </header>
-{% include "admin/includes/database_navigation.html" %}
+{% if not hide_database_navigation %}{% include "admin/includes/database_navigation.html" %}{% endif %}

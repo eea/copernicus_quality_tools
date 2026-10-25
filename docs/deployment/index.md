@@ -287,8 +287,8 @@ Create the first superuser interactively:
 qc_compose exec frontend python3 -m qc_tool.frontend.manage createsuperuser
 ```
 
-Sign in, create named operator accounts, and activate an operator-supplied
-boundary package before the first QC job. Never enable
+Sign in, create named operator accounts, and use **Admin → Boundaries** to
+activate an operator-supplied boundary package before the first QC job. Never enable
 `QC_TOOL_BOOTSTRAP_DEMO_USERS` or `QC_TOOL_DEV_SERVER` in production.
 
 Continue with the [security checklist](security-checklist.md),

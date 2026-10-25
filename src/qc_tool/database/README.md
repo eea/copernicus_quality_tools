@@ -67,7 +67,8 @@ digests, sessions, receipts and fields/tables outside the portable model
 contract. Source schema drift does not prevent a native backup. It never alters
 that source or upgrades the restored schema.
 
-**Admin → Database → Export database** is one package builder. Every new export
+**Admin → Maintenance → Create backup** opens the export page and prepared ZIP downloads.
+**Restore from ZIP** opens the separate import page. Every new export
 preserves all SQL schema and rows, plus separate schema SQL and PostgreSQL
 source/inventory/database metadata. Optional sections, all selected initially,
 cover original specifications, boundaries, retained delivery ZIPs, QC artifacts,

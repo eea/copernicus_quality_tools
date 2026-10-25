@@ -130,13 +130,10 @@ class AccountAccess:
         )
 
     @property
-    def show_boundaries_navigation(self):
-        """Keep package navigation in the management workspace."""
+    def can_manage_boundaries(self):
+        """Boundary packages are maintained by QC administrators in Admin."""
 
-        return self.is_authenticated and (
-            self.is_administrator or self.is_product_manager
-            or self.can_manage_configuration
-        )
+        return self.is_authenticated and self.is_administrator
 
     @property
     def can_view_product_deliveries(self):

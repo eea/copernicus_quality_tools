@@ -14,8 +14,8 @@ sidebar provides **Deliveries**, **Products**, and the public **API Access**
 reference. Default users track submitted deliveries under **Deliveries → In
 review** and open individual submissions there to read feedback. Managers and
 administrators open **Submission review** from **Products**, where a warning
-shows products awaiting review. They also see **Boundaries** in the sidebar.
-Boundary navigation is also available to users granted configuration management.
+shows products awaiting review. Administrators manage boundary packages through
+**Admin → Boundaries**. QC jobs use the active package automatically.
 
 The normal delivery workflow is:
 

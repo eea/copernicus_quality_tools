@@ -17,7 +17,7 @@ Boundary packages retain their explicit **Upload and activate** operation.
 
 | Source | Responsibility |
 | --- | --- |
-| [Upload layout][layout] | Workspace shell, shared assets and accessible announcements |
+| [Upload layout][layout] | Selected application shell, shared assets and accessible announcements |
 | [Queue layout][queue-layout] | Loads the queue controller after the shared upload helpers |
 | [Picker template][picker] | Native file input, chooser, format guidance and field errors |
 | [Queue template][queue-template] | File list, ready/completed counts, batch action and pending guidance |
@@ -32,6 +32,13 @@ Shared components do not contain feature endpoints, permissions or publication
 rules. Adapters translate server responses into presentation states. Client
 validation gives early feedback; the server independently enforces permissions,
 CSRF, safe filenames, content limits, archive safety and domain rules.
+
+The upload layout defaults to the workspace page. Boundary management supplies
+the server-owned `upload_page_base_template` value `admin/boundaries/base.html`
+to compose the same picker, progress and feedback with the Admin shell. Do not
+copy the upload components into an Admin-specific implementation. Its endpoints,
+success destination and authentication recovery all remain under
+`/admin/boundaries/` or `/admin/login/`.
 
 ## Add another queue-based page
 

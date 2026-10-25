@@ -9,7 +9,7 @@ const {createDOM} = require("./helpers/dom.cjs");
 const {queuePage, tick} = require("./helpers/queue-page.cjs");
 const source = fs.readFileSync(path.join(__dirname, "../../static/dashboard/js/shared/maintenance.js"), "utf8");
 
-function page({active = true, admin = false} = {}) {
+function page({active = true, admin = false, phase = "ready"} = {}) {
     const dom = createDOM();
     const {window, document} = dom;
     const node = (tag, attributes = {}, parent = document.body) => {
@@ -18,11 +18,16 @@ function page({active = true, admin = false} = {}) {
         parent.append(result);
         return result;
     };
-    node("meta", {name: "qc-maintenance", content: active ? "on" : "off", "data-notice": "Maintenance: browsing and downloads remain available."});
+    const notice = admin ? "Creating users, editing records and other changes are paused. Browsing and downloads remain available." :
+        "Maintenance: browsing and downloads remain available.";
+    node("meta", {name: "qc-maintenance", content: active ? "on" : "off", "data-notice": notice});
     if (admin) node("meta", {name: "qc-admin", content: "true"});
-    const banner = node("div", {"data-maintenance-banner": ""});
+    const banner = node("div", {"data-maintenance-banner": "", ...(admin ? {"data-maintenance-admin": ""} : {})});
     banner.hidden = !active;
+    const title = admin ? node("strong", {"data-maintenance-title": ""}, banner) : null;
+    if (title) title.textContent = phase === "stopping" ? "Turning on maintenance" : "Maintenance is on";
     const message = node("span", {"data-maintenance-message": ""}, banner);
+    message.textContent = notice;
     const write = node("form", {method: "post", "data-maintenance-write": ""});
     const mutate = node("button", {type: "submit"}, write);
     const detail = node("a", {href: "/deliveries/1/"}, write);
@@ -30,11 +35,17 @@ function page({active = true, admin = false} = {}) {
     const applyFilter = node("button", {type: "submit"}, filter);
     const exportForm = node("form", {method: "post"});
     const exportButton = node("button", {type: "submit"}, exportForm);
-    const controls = node("form", {method: "post", "data-maintenance-exempt": ""});
+    const controls = node("form", {method: "post", "data-maintenance-exempt": "",
+        ...(admin ? {"data-maintenance-disable-form": "", action: "/admin/maintenance/"} : {})}, admin ? banner : document.body);
+    const generation = node("input", {type: "hidden", name: "generation", value: "7"}, controls);
     const maintenanceAction = node("button", {type: "submit"}, controls);
+    if (admin) maintenanceAction.disabled = !active || phase !== "ready";
+    const controlNote = admin ? node("span", {"data-maintenance-control-note": "", hidden: ""}, banner) : null;
+    const refresh = admin ? node("a", {"data-maintenance-refresh": "", href: "", hidden: ""}, banner) : null;
     window.CustomEvent = class { constructor(type) { this.type = type; } };
     vm.runInNewContext(source, {window, document});
-    return {...dom, banner, message, write, mutate, detail, filter, applyFilter, exportForm, exportButton, maintenanceAction,
+    return {...dom, banner, title, message, write, mutate, detail, filter, applyFilter, exportForm, exportButton,
+        controls, generation, maintenanceAction, controlNote, refresh,
         dispatch(type, target) {
             const event = {type, target, stopImmediatePropagation() { this.stopped = true; }};
             document.dispatchEvent(event);
@@ -60,7 +71,59 @@ test("native admin mutations are disabled while maintenance controls stay usable
     assert.equal(ui.exportButton.disabled, true); // Ordinary native admin POST.
     assert.equal(ui.maintenanceAction.disabled, false);
     assert.equal(ui.dispatch("click", ui.maintenanceAction).defaultPrevented, undefined);
+    assert.equal(ui.dispatch("submit", ui.controls).defaultPrevented, undefined);
     assert.equal(ui.applyFilter.disabled, false);
+});
+
+test("shared script preserves the Admin stopping status and reviewed ready controls", () => {
+    const stopping = page({admin: true, phase: "stopping"});
+    assert.equal(stopping.title.textContent, "Turning on maintenance");
+    assert.match(stopping.message.textContent, /Creating users, editing records/);
+    assert.equal(stopping.maintenanceAction.disabled, true);
+
+    const ready = page({admin: true});
+    ready.window.qcMaintenance.observeXhr({status: 200, getResponseHeader: () => "on"});
+    assert.equal(ready.controls.hidden, false);
+    assert.equal(ready.maintenanceAction.disabled, false);
+    assert.equal(ready.generation.getAttribute("value"), "7");
+});
+
+test("maintenance ending retires the Admin off form until a fresh page supplies its state", () => {
+    const ui = page({admin: true});
+
+    ui.window.qcMaintenance.observeResponse({status: 200, headers: {get: () => "off"}});
+
+    assert.equal(ui.title.textContent, "Maintenance has ended");
+    assert.match(ui.message.textContent, /ended.*Reload/);
+    assert.equal(ui.controls.hidden, true);
+    assert.equal(ui.maintenanceAction.disabled, true);
+    assert.equal(ui.refresh.hidden, false);
+    assert.equal(ui.controlNote.hidden, false);
+    assert.equal(ui.mutate.disabled, true);
+    assert.equal(ui.dispatch("submit", ui.write).defaultPrevented, true);
+    assert.match(ui.message.textContent, /ended.*Reload/);
+
+    ui.window.qcMaintenance.observeResponse({status: 200, headers: {get: () => "on"}});
+
+    assert.equal(ui.title.textContent, "Maintenance is on");
+    assert.equal(ui.controls.hidden, true);
+    assert.equal(ui.maintenanceAction.disabled, true);
+    assert.match(ui.controlNote.textContent, /Reload/);
+});
+
+test("Admin tabs learning about maintenance show its impact without offering a stale off form", () => {
+    const ui = page({active: false, admin: true});
+
+    ui.window.qcMaintenance.observeXhr({status: 503, responseJSON: {error: "maintenance"}});
+
+    assert.equal(ui.banner.hidden, false);
+    assert.equal(ui.title.textContent, "Maintenance is on");
+    assert.match(ui.message.textContent, /Creating users, editing records/);
+    assert.equal(ui.controls.hidden, true);
+    assert.equal(ui.maintenanceAction.disabled, true);
+    assert.equal(ui.generation.getAttribute("value"), "7");
+    assert.equal(ui.refresh.hidden, false);
+    assert.equal(ui.mutate.disabled, true);
 });
 
 test("an existing tab learns maintenance from the next AJAX response and waits for reload after it ends", () => {

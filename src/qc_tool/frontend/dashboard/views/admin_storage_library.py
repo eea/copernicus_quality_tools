@@ -4,9 +4,10 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from datetime import datetime
 
 from django.http import HttpResponseNotAllowed
+from django.urls import reverse
 
 from qc_tool.frontend.dashboard.services.storage_admin import files
-from qc_tool.frontend.dashboard.services.storage_admin.navigation import url
+from qc_tool.frontend.dashboard.services.storage_admin.navigation import library_key, url
 from .admin_storage_shared import authorize, render_storage
 
 
@@ -22,7 +23,9 @@ def _with_library(address, return_context):
         return ""
     parts = urlsplit(address)
     # All links are built by our inventories; keep return context local and fixed.
-    if parts.scheme or parts.netloc or not parts.path.startswith("/admin/storage/"):
+    storage_root = reverse("admin_storage")
+    if (parts.scheme or parts.netloc or not parts.path.startswith(storage_root)
+            or any(part in {".", ".."} for part in parts.path.split("/"))):
         return address
     values = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if not key.startswith("library")]
     return urlunsplit(("", "", parts.path, urlencode([*values, *return_context.items()]), parts.fragment))
@@ -32,9 +35,7 @@ def storage_library(request):
     authorize(request)
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
-    tab = request.GET.get("tab", "deliveries")
-    if tab not in _PAGES:
-        tab = "deliveries"
+    tab = library_key(request.GET.get("tab", ""), request.GET.get("collection", "")) or "deliveries"
     query = request.GET.get("q", "")[:150]
     include_sources = tab == "specifications" and request.GET.get("include_sources") == "1"
     status = request.GET.get("status", "all" if tab == "deliveries" else "current")

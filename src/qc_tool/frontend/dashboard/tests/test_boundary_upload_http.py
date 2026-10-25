@@ -10,7 +10,7 @@ from unittest.mock import PropertyMock, patch
 from zipfile import ZipFile
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadhandler import FileUploadHandler
 from django.db import connection
@@ -20,8 +20,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from qc_tool.common import CONFIG
-from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
-from qc_tool.frontend.accounts.services.role_permissions import capability_content_type
+from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.dashboard.services import maintenance
 from qc_tool.frontend.dashboard.services.boundaries import (
     replace_boundary_package,
@@ -89,10 +88,7 @@ class BoundaryUploadHttpTests(TestCase):
         self.enterContext(patch.dict(CONFIG, {"boundary_dir": self.root}))
         self.active = replace_boundary_package(io.BytesIO(_archive()), self.root)
         self.user = get_user_model().objects.create_user(username="boundary-http-editor")
-        self.user.user_permissions.add(Permission.objects.get(
-            content_type=capability_content_type(),
-            codename=AccountPermission.MANAGE_CONFIGURATION.value,
-        ))
+        self.user.groups.add(Group.objects.get(name=Role.ADMIN.value))
         self.client.force_login(self.user)
         # Initialize only the isolated fixture's admission files before checking
         # that opening the upload page cannot create/update application state.
@@ -314,7 +310,7 @@ class BoundaryUploadReceptionFailureTests(SimpleTestCase):
     def test_disk_full_or_quota_error_during_multipart_parsing_returns_safe_507(self):
         for error_number in (errno.ENOSPC, errno.EDQUOT):
             with self.subTest(error_number=error_number):
-                request = RequestFactory().post("/data/boundaries/upload/", {})
+                request = RequestFactory().post(reverse("boundaries_upload_data"), {})
                 with patch.object(type(request), "FILES", new_callable=PropertyMock,
                                   side_effect=OSError(error_number, "/private/secret-spool")):
                     with patch.object(boundary_views, "replace_boundary_package") as replace:
@@ -327,7 +323,7 @@ class BoundaryUploadReceptionFailureTests(SimpleTestCase):
                 replace.assert_not_called()
 
     def test_other_multipart_storage_error_returns_safe_unavailable_response(self):
-        request = RequestFactory().post("/data/boundaries/upload/", {})
+        request = RequestFactory().post(reverse("boundaries_upload_data"), {})
         with patch.object(type(request), "FILES", new_callable=PropertyMock,
                           side_effect=OSError(errno.EIO, "/private/secret-spool")):
             with patch.object(boundary_views, "replace_boundary_package") as replace:

@@ -1,0 +1,15 @@
+{% if operations %}
+<section class="module transfer-panel" id="{{ history_id }}" aria-labelledby="{{ history_id }}-heading">
+  <h2 id="{{ history_id }}-heading">{{ history_title }}</h2>
+  <div class="transfer-table-wrap"><table class="transfer-history" aria-label="{{ history_title }}">
+    <thead><tr><th scope="col">Started</th><th scope="col">Status</th><th scope="col">Next step</th></tr></thead>
+    <tbody>{% for item in operations %}
+      <tr>
+        <th scope="row">{% include "admin/includes/transfers/timestamp.html" with display_value=item.display_dates.created_at %}</th>
+        <td data-label="Status"><span class="transfer-badge{% if item.kind == 'export' and item.package_release_requested_at and not item.payload_released_at %} transfer-badge--warning{% elif item.recoverable or item.status == 'failed' or item.status == 'recovery_required' %} transfer-badge--warning{% elif item.status == 'completed' %} transfer-badge--success{% elif item.status == 'queued' or item.status == 'running' %} transfer-badge--progress{% else %} transfer-badge--neutral{% endif %}">{% if item.kind == 'export' and item.package_release_requested_at and not item.payload_released_at %}Needs attention{% elif item.recoverable or item.status == 'failed' or item.status == 'recovery_required' %}Needs attention{% elif item.status == 'completed' %}Complete{% elif item.status == 'staged' %}Uploaded{% elif item.status == 'planned' %}Ready to review{% elif item.status == 'queued' %}Waiting to start{% elif item.status == 'running' %}In progress{% else %}{{ item.status|capfirst }}{% endif %}</span></td>
+        <td data-label="Next step"><a href="{{ workspace_page_url }}?operation={{ item.id|urlencode }}#transfer-operation">{% if item.kind == 'export' and item.package_release_requested_at and not item.payload_released_at %}Finish deleting ZIP{% elif item.recoverable or item.status == 'failed' or item.status == 'recovery_required' %}Review issue{% elif item.status == 'queued' or item.status == 'running' %}View progress{% elif item.status == 'staged' or item.status == 'planned' %}{% if item.kind == 'export' %}Review backup{% else %}Continue import{% endif %}{% else %}View details{% endif %} &rarr;</a></td>
+      </tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}

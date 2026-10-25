@@ -19,7 +19,7 @@ function response(state = {}, options = {}) {
     };
 }
 
-function page({phase = "stopping", withForm = phase === "stopping", fetchResponse = response()} = {}) {
+function page({phase = "stopping", withForm = phase === "stopping", withBlockers = true, fetchResponse = response()} = {}) {
     const dom = createDOM();
     const {window, document} = dom;
     const node = (tag, attributes = {}, parent = document.body) => {
@@ -36,7 +36,7 @@ function page({phase = "stopping", withForm = phase === "stopping", fetchRespons
     const problem = node("div", {"data-progress-problem": "", hidden: ""}, root);
     const error = node("p", {"data-progress-error": ""}, problem);
     const retry = node("button", {"data-progress-retry": "", type: "button", hidden: ""}, problem);
-    const blockers = node("ul", {"data-progress-blockers": "", hidden: ""}, root);
+    const blockers = withBlockers ? node("ul", {"data-progress-blockers": "", hidden: ""}, root) : null;
     let form;
     if (withForm) {
         form = node("form", {"data-maintenance-progress": "", method: "post"}, root);
@@ -211,6 +211,20 @@ test("blockers are rendered as text and stale blockers disappear after a success
     await ui.tick(5000);
     assert.equal(ui.blockers.children.length, 0);
     assert.equal(ui.blockers.hidden, true);
+});
+
+test("the simple maintenance page checks progress without a technical blocker list", async () => {
+    const ui = page({withBlockers: false, fetchResponse: response({blockers: ["Waiting for workers."]})});
+
+    await ui.tick();
+
+    assert.equal(ui.problem.hidden, true);
+    assert.equal(ui.indicator.hidden, false);
+    assert.match(ui.message.textContent, /Waiting for work to stop/);
+    assert.deepEqual([...ui.timers.values()].map(timer => timer.delay), [5000]);
+    await ui.tick(5000);
+    assert.equal(ui.requests.length, 2);
+    assert.equal(ui.problem.hidden, true);
 });
 
 test("a stalled request is aborted before bounded retrying", async () => {

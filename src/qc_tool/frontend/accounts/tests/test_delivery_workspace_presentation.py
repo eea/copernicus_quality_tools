@@ -217,11 +217,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
         configuration_response = self.client.get(reverse("deliveries"))
         configuration_sidebar = self.workspace_sidebar(configuration_response)
-        self.assertEqual(len(self.workspace_links(configuration_response)), 5)
-        self.assertIn(
-            (reverse("boundaries"), "Boundaries", False),
-            self.workspace_links(configuration_response),
-        )
+        self.assertEqual(len(self.workspace_links(configuration_response)), 4)
+        self.assertNotIn(reverse("boundaries"), configuration_sidebar)
         self.assertNotIn(
             'href="{}"'.format(reverse("admin:index")),
             configuration_sidebar,
@@ -241,7 +238,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
             self.workspace_links(administrator_response)[-1],
             (reverse("admin:index"), "Admin panel", False),
         )
-        self.assertEqual(len(self.workspace_links(administrator_response)), 6)
+        self.assertEqual(len(self.workspace_links(administrator_response)), 5)
+        self.assertNotIn(reverse("boundaries"), administrator_sidebar)
         self.assertNotIn(reverse("submission_queue"), administrator_sidebar)
         self.assertIn('role="separator"', administrator_sidebar)
 
@@ -264,20 +262,15 @@ class DeliveryWorkspacePresentationTests(TestCase):
 
     def test_managers_review_submissions_inside_products_navigation(self):
         self.user.groups.add(Group.objects.get(name=Role.PRODUCT_MANAGER.value))
-        for route_name in ("submission_queue", "boundaries"):
-            with self.subTest(route_name=route_name):
-                response = self.client.get(reverse(route_name))
-                self.assertEqual(response.status_code, 200)
-                links = self.workspace_links(response)
-                self.assertNotIn(reverse("submission_queue"), self.workspace_sidebar(response))
-                self.assertIn(
-                    (reverse("boundaries"), "Boundaries", route_name == "boundaries"),
-                    links,
-                )
-                self.assertEqual(
-                    [href for href, _label, current in links if current],
-                    [reverse("products" if route_name == "submission_queue" else route_name)],
-                )
+        response = self.client.get(reverse("submission_queue"))
+        self.assertEqual(response.status_code, 200)
+        links = self.workspace_links(response)
+        self.assertNotIn(reverse("submission_queue"), self.workspace_sidebar(response))
+        self.assertNotIn(reverse("boundaries"), self.workspace_sidebar(response))
+        self.assertEqual(
+            [href for href, _label, current in links if current],
+            [reverse("products")],
+        )
 
     def test_products_page_lists_catalog_values_with_html_escaping(self):
         unsafe_description = "<script>alert('catalog')</script>"
@@ -451,9 +444,8 @@ class DeliveryWorkspacePresentationTests(TestCase):
             "dashboard/js/features/deliveries/rows/actions.js"
         )
 
-        self.assertIn(":is(.qc-shell, .qc-admin) .btn-qc-primary", stylesheet)
-        self.assertIn(":is(.qc-shell, .qc-admin) .btn-qc-quiet", stylesheet)
-        self.assertIn(":is(.qc-shell, .qc-admin) .btn-qc--compact", stylesheet)
+        for component in ("btn-qc-primary", "btn-qc-quiet", "btn-qc--compact"):
+            self.assertRegex(stylesheet, r":is\(\.qc-shell, (?:body)?\.qc-admin\) \." + component)
 
         for predicate, action_class in (
             ("canRunQc(row)", "delivery-row-qc"),

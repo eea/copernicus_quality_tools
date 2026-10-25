@@ -1,6 +1,7 @@
 """The Admin storage workflow keeps files recoverable and record-bound."""
 
 from hashlib import sha256
+from html.parser import HTMLParser
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -25,6 +26,46 @@ from qc_tool.frontend.dashboard.services.maintenance.operations import pin_opera
 from qc_tool.frontend.dashboard.services.maintenance.state import file_lock
 from qc_tool.frontend.dashboard.services.storage_admin import downloads, files, references, trash
 from qc_tool.frontend.dashboard.views import admin_storage as views
+
+
+class _StorageNavigation(HTMLParser):
+    def __init__(self, response, label):
+        super().__init__()
+        self.label = label
+        self.active = False
+        self.links = []
+        self.feed(response.content.decode(response.charset))
+
+    def handle_starttag(self, tag, attributes):
+        attributes = dict(attributes)
+        if tag == "nav" and attributes.get("aria-label") == self.label:
+            self.active = True
+        elif tag == "a" and self.active:
+            self.links.append(attributes)
+
+    def handle_endtag(self, tag):
+        if tag == "nav":
+            self.active = False
+
+
+class _StorageForms(HTMLParser):
+    def __init__(self, response):
+        super().__init__()
+        self.forms = []
+        self.current = None
+        self.feed(response.content.decode(response.charset))
+
+    def handle_starttag(self, tag, attributes):
+        attributes = dict(attributes)
+        if tag == "form":
+            self.current = {}
+            self.forms.append(self.current)
+        elif tag == "input" and self.current is not None and attributes.get("name"):
+            self.current[attributes["name"]] = attributes.get("value", "")
+
+    def handle_endtag(self, tag):
+        if tag == "form":
+            self.current = None
 
 
 class AdminStorageTests(TestCase):
@@ -120,13 +161,126 @@ class AdminStorageTests(TestCase):
         )]
         self.assertEqual(writes, [])
 
+    @override_settings(QC_TOOL_PERSISTENT_STORAGE_ROOT="")
+    def test_default_and_unknown_sections_browse_files_without_querying_record_libraries(self):
+        with (
+            patch("qc_tool.frontend.dashboard.services.storage_admin.deliveries.inventory") as deliveries,
+            patch("qc_tool.frontend.dashboard.services.storage_admin.versions.list_versions") as versions,
+        ):
+            for options in ({}, {"tab": "files"}, {"tab": "unknown-section"}):
+                with self.subTest(options=options):
+                    response = self.client.get(reverse("admin_storage"), options)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.context["storage_tab"], "files")
+                    self.assertEqual(response.context["storage_section"], "files")
+                    self.assertContains(response, "<h1>Browse files</h1>", html=True)
+                    self.assertNotContains(response, 'name="status"')
+        deliveries.assert_not_called()
+        versions.assert_not_called()
+
+    def test_shared_section_navigation_is_consistent_and_resets_unrelated_filters(self):
+        storage_url = reverse("admin_storage")
+        requests = [
+            (storage_url, {"tab": "files"}, "files", None),
+            (storage_url, {"area": "incoming", "path": "preinstalled-owner", "q": "original"}, "files", None),
+            (reverse("admin_storage_file"), {"area": "incoming", "path": self.relative_path}, "files", None),
+            (reverse("admin_storage_trash"), {"area": "incoming"}, "files", None),
+            (storage_url, {"tab": "connection", "q": "unrelated"}, "connection", None),
+        ]
+        requests.extend((storage_url, {"tab": "history", "collection": collection}, "history", collection)
+                        for collection in ("deliveries", "specifications", "boundaries"))
+        requests.extend((storage_url, {"tab": collection}, "history", collection)
+                        for collection in ("deliveries", "specifications", "boundaries"))
+        expected = [{"tab": ["files"]}, {"tab": ["history"]},
+                    {"tab": ["connection"]}]
+        for route, options, section, collection in requests:
+            with self.subTest(route=route, options=options):
+                response = self.client.get(route, options)
+                self.assertEqual(response.status_code, 200)
+                links = _StorageNavigation(response, "Storage sections").links
+                self.assertEqual([parse_qs(urlsplit(link["href"]).query) for link in links], expected)
+                self.assertTrue(all(urlsplit(link["href"]).path == storage_url for link in links))
+                current = [link for link in links if link.get("aria-current") == "page"]
+                self.assertEqual(len(current), 1)
+                self.assertEqual(parse_qs(urlsplit(current[0]["href"]).query)["tab"], [section])
+                history = _StorageNavigation(response, "File history collections").links
+                if collection:
+                    self.assertEqual([parse_qs(urlsplit(link["href"]).query) for link in history], [
+                        {"tab": ["history"], "collection": [key]}
+                        for key in ("deliveries", "specifications", "boundaries")
+                    ])
+                    active_history = [link for link in history if link.get("aria-current") == "page"]
+                    self.assertEqual(len(active_history), 1)
+                    self.assertEqual(parse_qs(urlsplit(active_history[0]["href"]).query)["collection"], [collection])
+                else:
+                    self.assertEqual(history, [])
+
+    def test_quarantine_trash_and_restore_keep_the_original_filtered_folder(self):
+        for index in range(52):
+            self.write_file("incoming", f"preinstalled-owner/original-extra-{index:02d}.zip",
+                            self.payload + b"x" * (index + 1))
+        self.ready()
+        folder = self.client.get(reverse("admin_storage"), {
+            "tab": "files", "area": "incoming", "path": "preinstalled-owner",
+            "q": "original", "sort": "size", "direction": "desc", "page": 2,
+        })
+        row = next(entry for entry in folder.context["listing"]["entries"] if entry["path"] == self.relative_path)
+        detail = self.client.get(row["url"])
+        payload = next(form for form in _StorageForms(detail).forms if form.get("action") == "quarantine")
+        response = self.client.post(reverse("admin_storage_action"), {
+            **payload, "filename_confirmation": "original.zip", "confirmed": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(self.original.exists())
+        expected = {
+            "area": ["incoming"], "path": ["preinstalled-owner"], "browser": ["files"],
+            "browse_query": ["original"], "browse_sort": ["size"],
+            "browse_direction": ["desc"], "browse_page": ["2"],
+        }
+        self.assertEqual(parse_qs(urlsplit(response["Location"]).query), expected)
+        trashed = self.client.get(response["Location"])
+        self.assertEqual(parse_qs(urlsplit(trashed.context["parent_url"]).query), {
+            "tab": ["files"], "area": ["incoming"], "path": ["preinstalled-owner"],
+            "q": ["original"], "sort": ["size"], "direction": ["desc"], "page": ["2"],
+        })
+        restore = next(form for form in _StorageForms(trashed).forms if form.get("action") == "restore")
+        restored = self.client.post(reverse("admin_storage_action"), restore)
+        self.assertEqual(restored.status_code, 302)
+        self.assertEqual(parse_qs(urlsplit(restored["Location"]).query), expected)
+        self.assertEqual(self.original.read_bytes(), self.payload)
+
+    def test_trash_pagination_retains_the_originating_browse_or_history_context(self):
+        origins = (
+            {"browser": "files", "browse_query": "original", "browse_sort": "size",
+             "browse_direction": "desc", "browse_page": "2"},
+            {"library": "deliveries", "library_query": "original", "library_status": "approved", "library_page": "2"},
+        )
+        for origin in origins:
+            with self.subTest(origin=origin), patch.object(trash, "list_trash", return_value={
+                "entries": [], "page": 2, "has_previous": True, "has_next": True,
+            }):
+                options = {"area": "incoming", "path": "preinstalled-owner", **origin}
+                response = self.client.get(reverse("admin_storage_trash"), {**options, "page": 2})
+                self.assertEqual(response.status_code, 200)
+                links = _StorageNavigation(response, "Trash pages").links
+                self.assertEqual(len(links), 2)
+                for link, page in zip(links, ("1", "3")):
+                    self.assertEqual(parse_qs(urlsplit(link["href"]).query), {
+                        **{key: [value] for key, value in options.items()}, "page": [page],
+                    })
+                if "library" in origin:
+                    self.assertEqual(response.context["storage_section"], "history")
+                    self.assertEqual(parse_qs(urlsplit(response.context["parent_url"]).query), {
+                        key: [value] for key, value in options.items()
+                    })
+
     def test_filesystem_browsing_and_orphan_zip_inspection_need_no_delivery_or_job_rows(self):
         self.assertEqual((Delivery.objects.count(), Job.objects.count()), (0, 0))
         home = self.client.get(reverse("admin_storage"), {"tab": "files"})
         self.assertContains(home, "<h1>Browse files</h1>", html=True)
-        self.assertContains(home, "Locations")
+        self.assertTrue(home.context["storage_locations"])
         self.assertContains(home, "Browse files")
-        self.assertContains(home, "Connect with SFTP")
+        self.assertContains(home, "Connection")
         self.assertContains(home, "Delivery uploads")
         self.assertNotContains(home, "QC job artifacts")
         self.assertContains(home, str(self.work))

@@ -1,0 +1,14 @@
+/* Keep the shared table and upload components inside the light Admin shell. */
+html { font-size: 16px; }
+
+body.qc-admin-boundaries-page { font-size: 14px; }
+.boundaries-admin { min-width: 0; }
+.boundaries-admin .qc-admin-intro > div { min-width: 0; }
+.boundaries-admin .qc-admin-intro__description p { margin: 0; }
+.boundaries-admin .qc-upload fieldset { min-width: 0; }
+.boundaries-admin .qc-upload-list { list-style: none; }
+.boundaries-admin .qc-upload-list > li { list-style: none; }
+
+@media (max-width: 767px) {
+  .boundaries-admin .workspace-page__actions { width: 100%; }
+}

@@ -190,9 +190,8 @@ class AdminRoleTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_staff)
 
-    def test_role_picker_only_offers_canonical_groups(self):
-        Group.objects.create(name="legacy-group")
-        Group.objects.get_or_create(name="region_manager")
+    def test_role_picker_offers_canonical_roles_and_custom_groups(self):
+        extra_group = Group.objects.create(name="Notification operators")
         groups_field = self.user_model._meta.get_field("groups")
 
         form_field = self.user_admin.formfield_for_manytomany(
@@ -202,12 +201,11 @@ class AdminRoleTests(TestCase):
 
         self.assertEqual(
             set(form_field.queryset.values_list("name", flat=True)),
-            set(Role.values()),
+            {*Role.values(), extra_group.name},
         )
-        self.assertNotIn(
-            "region_manager",
-            form_field.queryset.values_list("name", flat=True),
-        )
+        self.assertEqual(form_field.label, "Roles and groups")
+        self.assertIn("additional permission groups", form_field.help_text)
+        self.assertIn("every account keeps the default role", form_field.help_text)
 
     def test_permission_picker_only_offers_qc_capabilities(self):
         permissions_field = self.user_model._meta.get_field("user_permissions")
@@ -290,19 +288,20 @@ class AdminRoleTests(TestCase):
 
         self.assertIn("groups", form_class.base_fields)
         self.assertIn("user_permissions", form_class.base_fields)
-        self.assertEqual(form_class.base_fields["groups"].label, "Roles")
+        self.assertEqual(form_class.base_fields["groups"].label, "Roles and groups")
         self.assertEqual(
             form_class.base_fields["user_permissions"].label,
             "Additional QC permissions",
         )
 
-    def test_admin_add_view_assigns_role_and_direct_qc_permission(self):
+    def test_admin_add_view_assigns_role_group_and_direct_qc_permission(self):
         group_admin = self.user_model.objects.create_user(
             username="add-view-admin",
             password="password",
         )
         group_admin.groups.add(self.admin_group)
         product_manager = Group.objects.get(name=Role.PRODUCT_MANAGER.value)
+        extra_group = Group.objects.create(name="Additional QC operators")
         qc_permission = Permission.objects.get(
             content_type=ContentType.objects.get_for_model(
                 AccountCapability,
@@ -323,7 +322,7 @@ class AdminRoleTests(TestCase):
                 "username": "admin-created-user",
                 "password1": "sufficient-password",
                 "password2": "sufficient-password",
-                "groups": [str(product_manager.pk)],
+                "groups": [str(product_manager.pk), str(extra_group.pk)],
                 "user_permissions": [str(qc_permission.pk)],
                 "personal_access_tokens-TOTAL_FORMS": "0",
                 "personal_access_tokens-INITIAL_FORMS": "0",
@@ -341,12 +340,51 @@ class AdminRoleTests(TestCase):
         created = self.user_model.objects.get(username="admin-created-user")
         self.assertEqual(
             set(created.groups.values_list("name", flat=True)),
-            {Role.DEFAULT.value, Role.PRODUCT_MANAGER.value},
+            {Role.DEFAULT.value, Role.PRODUCT_MANAGER.value, extra_group.name},
         )
         self.assertEqual(
             set(created.user_permissions.values_list("codename", flat=True)),
             {AccountPermission.RUN_QC.value},
         )
+
+    def test_admin_change_view_adds_and_removes_custom_group_without_changing_roles(self):
+        operator = self.user_model.objects.create_user(username="group-editor", password="password")
+        operator.groups.add(self.admin_group)
+        target = self.user_model.objects.create_user(username="custom-group-target")
+        extra_group = Group.objects.create(name="Configuration operators")
+        extra_group.permissions.add(Permission.objects.get(
+            content_type=ContentType.objects.get_for_model(AccountCapability, for_concrete_model=False),
+            codename=AccountPermission.MANAGE_CONFIGURATION.value,
+        ))
+        self.client.force_login(operator)
+        url = reverse("admin:auth_user_change", args=(target.pk,))
+        form_data = {
+            "first_name": "", "last_name": "", "email": "", "is_active": "on",
+            "personal_access_tokens-TOTAL_FORMS": "0",
+            "personal_access_tokens-INITIAL_FORMS": "0",
+            "product_grants-TOTAL_FORMS": "0", "product_grants-INITIAL_FORMS": "0",
+            "_save": "Save",
+        }
+        response = self.client.get(url)
+        self.assertContains(response, extra_group.name)
+
+        response = self.client.post(url, {**form_data, "groups": [str(extra_group.pk)]})
+
+        self.assertEqual(response.status_code, 302)
+        target = self.user_model.objects.get(pk=target.pk)
+        self.assertEqual(set(target.groups.values_list("name", flat=True)),
+                         {Role.DEFAULT.value, extra_group.name})
+        self.assertTrue(access_for(target).can_manage_configuration)
+        self.assertFalse(access_for(target).is_administrator)
+        self.assertFalse(target.is_staff)
+
+        response = self.client.post(url, {**form_data, "groups": []})
+
+        self.assertEqual(response.status_code, 302)
+        target = self.user_model.objects.get(pk=target.pk)
+        self.assertEqual(set(target.groups.values_list("name", flat=True)), {Role.DEFAULT.value})
+        self.assertFalse(access_for(target).can_manage_configuration)
+        self.assertFalse(target.is_staff)
 
     def test_admin_user_page_shows_status_without_rendering_digest(self):
         target = self.user_model.objects.create_user(username="api-target")

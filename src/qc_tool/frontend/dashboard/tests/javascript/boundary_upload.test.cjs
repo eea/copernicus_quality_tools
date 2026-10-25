@@ -19,15 +19,15 @@ function boundaryPage({unauthorized = false, openingFails = false, maxArchiveByt
         parent.appendChild(node);
         return node;
     }
-    const form = element("form", {id: "boundary-upload-form", "data-success-url": "/boundaries/"});
+    const form = element("form", {id: "boundary-upload-form", "data-success-url": "/admin/boundaries/"});
     if (maxArchiveBytes !== null) form.setAttribute("data-max-archive-bytes", maxArchiveBytes);
     if (availableUploadBytes !== null) form.setAttribute("data-available-upload-bytes", availableUploadBytes);
-    form.action = "/boundaries/upload/data/";
+    form.action = "/admin/boundaries/upload/data/";
     const nativePicker = addPicker(document, form, {id: "boundary-upload"});
     const {input, error} = nativePicker;
     element("ul", {"data-upload-list": ""}, form);
     const submit = element("button", {"data-boundary-submit": ""}, form);
-    const cancel = element("a", {"data-upload-idle": "", href: "/boundaries/"}, form);
+    const cancel = element("a", {"data-upload-idle": "", href: "/admin/boundaries/"}, form);
     const pending = element("p", {"data-upload-pending": "", "data-boundary-hint": "", hidden: ""}, form);
     const result = element("div", {id: "upload-result"}, form);
     element("div", {"data-upload-announcement": ""});
@@ -118,7 +118,7 @@ test("selection waits for explicit activation and sends one CSRF-protected multi
     assert.equal(page.requests.length, 1);
     const xhr = page.requests[0];
     assert.equal(xhr.method, "POST");
-    assert.equal(xhr.url, "/boundaries/upload/data/");
+    assert.equal(xhr.url, "/admin/boundaries/upload/data/");
     assert.equal(xhr.headers["X-CSRFToken"], "csrf-fixture");
     assert.equal(xhr.headers.Accept, "application/json");
     assert.equal(xhr.timeout, 30 * 60 * 1000);
@@ -208,7 +208,7 @@ test("network error, timeout and abort recover controls without claiming server 
         assert.match(page.row().state.error, /Check Boundaries/);
         assert.equal(page.tone(), "danger");
         assert.equal(page.message(), page.row().state.error);
-        assert.equal(page.feedbackLink().href, "/boundaries/");
+        assert.equal(page.feedbackLink().href, "/admin/boundaries/");
         assert.equal(page.row().state.label, "Activation not confirmed");
         assert.equal(page.cancel.hidden, false);
         assert.equal(page.pending.hidden, true);
@@ -365,7 +365,7 @@ test("unexpected successful HTTP payloads remain unconfirmed and offer the curre
         page.upload();
         page.requests[0].respond(200, payload);
         assert.match(page.message(), /unexpected response instead of an activation confirmation/);
-        assert.equal(page.feedbackLink().href, "/boundaries/");
+        assert.equal(page.feedbackLink().href, "/admin/boundaries/");
         assert.equal(page.row().state.state, "failed");
     }
 });

@@ -55,16 +55,6 @@ body.qc-admin {
   outline: 3px solid var(--link-fg);
   outline-offset: 4px;
 }
-.qc-admin ul.messagelist[data-maintenance-banner] { margin: 0; padding: 0; }
-.qc-admin ul.messagelist[data-maintenance-banner] li.warning {
-  margin: 0;
-  padding: 10px 40px;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--qc-admin-warning);
-  background: var(--qc-admin-warning-soft);
-  font-size: 12px;
-  line-height: 1.6;
-}
 .qc-admin [data-maintenance-reload] { margin-inline-start: 10px; color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 body.qc-admin #content { padding: 30px 40px; }
 body.qc-admin-home-page #content { width: auto; min-width: 0; }
@@ -124,12 +114,10 @@ body.qc-admin-home-page #content { width: auto; min-width: 0; }
   .qc-admin-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.qc-admin #content { padding: 28px 24px; }
   .qc-admin div.breadcrumbs { padding: 12px 24px; }
-  .qc-admin ul.messagelist[data-maintenance-banner] li.warning { padding: 10px 24px; }
   .qc-admin-service { flex-wrap: wrap; }
   .qc-admin-service__actions { flex-basis: 100%; flex-direction: row; flex-wrap: wrap; padding-inline-start: 58px; }
 }
 @media (max-width: 767px) {
-  .qc-admin ul.messagelist[data-maintenance-banner] li.warning { padding: 10px 18px; }
   body.qc-admin #content { padding: 24px 18px; }
   .qc-admin div.breadcrumbs { padding: 12px 18px; }
   .qc-admin-intro { align-items: flex-start; gap: 16px; flex-direction: column; margin-bottom: 22px; }
@@ -179,7 +167,7 @@ body.qc-admin-home-page #content { width: auto; min-width: 0; }
 .qc-admin-status-inline { display: inline-flex; align-items: center; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { .qc-admin-spinner { animation: none; border-style: dotted; } }
 @media (max-width: 1100px) {
-  .qc-admin-management--overview { grid-template-columns: minmax(0, 1fr); }
+  .qc-admin-management--overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
   .qc-admin-management { grid-template-columns: minmax(0, 1fr); }

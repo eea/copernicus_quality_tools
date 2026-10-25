@@ -116,12 +116,6 @@ class AdminShellTests(TestCase):
         self.assertIsNotNone(header, "Admin pages need their header landmark.")
         return header.group(1)
 
-    def admin_navigation(self, response):
-        navigation = re.search(r'<nav\b[^>]*aria-label="Administration"[^>]*>(.*?)</nav>',
-                               self.admin_header(response), re.DOTALL)
-        self.assertIsNotNone(navigation)
-        return _Links(navigation.group(1))
-
     def assert_light_admin_shell(self, response):
         self.assertContains(
             response, '<meta name="color-scheme" content="light">',
@@ -132,45 +126,52 @@ class AdminShellTests(TestCase):
         self.assertNotContains(response, "theme-toggle", status_code=response.status_code)
         self.assertTemplateNotUsed(response, "admin/color_theme_toggle.html")
 
-    def test_administrator_header_has_exactly_four_task_sections(self):
+    def test_admin_header_has_account_controls_without_task_sections(self):
         self.client.force_login(self.administrator)
-        expected = ("admin:index", "admin_user_management", "admin_data_transfer", "admin_storage")
-        for route in (*expected, "admin_maintenance", "admin:auth_user_changelist"):
+        for route in ("admin:index", "admin_user_management", "admin_database",
+                      "admin_data_transfer", "admin_storage", "admin_maintenance",
+                      "admin_backup_export", "admin_backup_import",
+                      "admin_notifications", "boundaries", "admin:auth_user_changelist"):
             with self.subTest(route=route):
                 response = self.client.get(reverse(route))
                 self.assertEqual(response.status_code, 200)
-                navigation = self.admin_navigation(response)
-                self.assertEqual(navigation.text, ["Overview", "User management", "Database", "Storage"])
-                self.assertEqual(navigation.hrefs, [reverse(item) for item in expected])
+                header = self.admin_header(response)
+                self.assertNotIn("site-header__sections", header)
+                self.assertNotIn("qc-admin-navigation", header)
+                self.assertNotIn('aria-label="Administration"', header)
+                self.assertIn('aria-label="Account"', header)
+                self.assertIn('id="profile-menu-button"', header)
 
-    def test_header_marks_only_the_section_owning_the_current_task(self):
+    def test_context_identifies_the_area_owning_each_task(self):
         self.client.force_login(self.administrator)
         cases = (
-            (reverse("admin:index"), "admin:index"),
-            (reverse("admin_user_management"), "admin_user_management"),
-            (reverse("admin:auth_user_changelist"), "admin_user_management"),
-            (reverse("admin:auth_group_changelist"), "admin_user_management"),
-            (reverse("admin_database_records", args=["auth_permission"]), "admin_user_management"),
-            (reverse("admin_data_transfer") + "?section=users&tab=import", "admin_data_transfer"),
-            (reverse("admin_data_transfer") + "?section=users&tab=export", "admin_data_transfer"),
-            (reverse("admin_data_transfer"), "admin_data_transfer"),
-            (reverse("admin_database_records", args=["execution_job"]), "admin_data_transfer"),
-            (reverse("admin_maintenance"), "admin_data_transfer"),
-            (reverse("admin_storage"), "admin_storage"),
+            (reverse("admin:index"), "overview"),
+            (reverse("admin_user_management"), "users"),
+            (reverse("admin:auth_user_changelist"), "users"),
+            (reverse("admin:auth_group_changelist"), "users"),
+            (reverse("admin_database_records", args=["auth_permission"]), "users"),
+            (reverse("admin_data_transfer"), "maintenance"),
+            (reverse("admin_backup_export"), "maintenance"),
+            (reverse("admin_backup_import"), "maintenance"),
+            (reverse("admin_database"), "database"),
+            (reverse("admin_database_records", args=["execution_job"]), "database"),
+            (reverse("admin_maintenance"), "maintenance"),
+            (reverse("admin_storage"), "storage"),
+            (reverse("admin_notifications"), "notifications"),
+            (reverse("boundaries"), "boundaries"),
         )
         for url, owner in cases:
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
-                active = [link["href"] for link in self.admin_navigation(response).links
-                          if link.get("aria-current") == "page"]
-                self.assertEqual(active, [reverse(owner)])
+                self.assertEqual(response.context["admin_section"], owner)
 
     def test_admin_pages_share_the_brand_header_with_an_explicit_workspace_return(self):
         self.client.force_login(self.administrator)
         for route in (
             "admin:index", "admin_login", "admin:auth_user_changelist",
             "admin_user_management", "admin_data_transfer", "admin_maintenance", "admin_storage",
+            "admin_backup_export", "admin_backup_import",
             "admin:password_change", "admin:password_change_done",
         ):
             with self.subTest(route=route):
@@ -257,9 +258,10 @@ class AdminShellTests(TestCase):
         self.assert_light_admin_shell(response)
         self.assertNotContains(response, f'href="{reverse("admin:logout")}"')
 
-    def test_mobile_navigation_control_owns_account_and_administration_tasks(self):
+    def test_mobile_navigation_control_owns_only_account_controls(self):
         self.client.force_login(self.administrator)
-        task_routes = ("admin:index", "admin_user_management", "admin_data_transfer", "admin_storage")
+        task_routes = ("admin:index", "admin_user_management", "admin_data_transfer", "admin_storage",
+                       "admin_backup_export", "admin_backup_import")
         for route in (*task_routes, "admin_maintenance", "admin:auth_user_changelist"):
             with self.subTest(route=route):
                 response = self.client.get(reverse(route))
@@ -283,13 +285,13 @@ class AdminShellTests(TestCase):
                 self.assertEqual([
                     attributes.get("aria-label") for tag, attributes in header.menu_elements
                     if tag == "nav"
-                ], ["Account", "Administration"])
+                ], ["Account"])
                 for task_route in task_routes:
                     destination = reverse(task_route)
                     self.assertEqual(sum(
                         tag == "a" and attributes.get("href") == destination
                         for tag, attributes in header.menu_elements
-                    ), 1, f"{task_route} must be in the collapsible navigation exactly once.")
+                    ), 0, f"{task_route} must not appear as a task section.")
                 for element_id in ("profile-menu-button", "admin-logout-form"):
                     self.assertEqual(sum(
                         attributes.get("id") == element_id
@@ -356,7 +358,8 @@ class AdminShellTests(TestCase):
                     self.assertNotIn(SESSION_KEY, self.client.session)
 
     def test_anonymous_custom_admin_routes_redirect_to_admin_login(self):
-        for route in ("admin_user_management", "admin_maintenance", "admin_data_transfer", "admin_storage", "admin_logout"):
+        for route in ("admin_user_management", "admin_maintenance", "admin_data_transfer", "admin_storage", "admin_logout",
+                      "admin_backup_export", "admin_backup_import"):
             with self.subTest(route=route):
                 destination = reverse(route)
                 response = self.client.get(destination)
@@ -382,13 +385,18 @@ class AdminShellTests(TestCase):
                 self.assertRedirects(response, reverse("admin:index"), fetch_redirect_response=False)
 
     def test_admin_login_preserves_admin_next_after_authentication(self):
-        destination = reverse("admin_data_transfer") + "?tab=history"
-        response = self.client.post(reverse("admin_login"), {
-            "username": self.administrator.username,
-            "password": self.password,
-            "next": destination,
-        })
-        self.assertRedirects(response, destination, fetch_redirect_response=False)
+        for destination in (
+            reverse("admin_data_transfer") + "?tab=history",
+            reverse("admin_backup_export"),
+            reverse("admin_backup_import"),
+        ):
+            with self.subTest(destination=destination):
+                response = Client().post(reverse("admin_login"), {
+                    "username": self.administrator.username,
+                    "password": self.password,
+                    "next": destination,
+                })
+                self.assertRedirects(response, destination, fetch_redirect_response=False)
 
     def test_prefixed_admin_login_next_stays_within_prefixed_admin(self):
         original_prefix = get_script_prefix()
@@ -396,6 +404,8 @@ class AdminShellTests(TestCase):
         set_script_prefix("/qc-tool/")
         for destination, expected in (
             (reverse("admin_data_transfer"), reverse("admin_data_transfer")),
+            (reverse("admin_backup_export"), reverse("admin_backup_export")),
+            (reverse("admin_backup_import"), reverse("admin_backup_import")),
             ("/qc-tool/", reverse("admin:index")),
             ("/admin/data-transfer/", reverse("admin:index")),
         ):
@@ -414,6 +424,15 @@ class AdminShellTests(TestCase):
         self.assertEqual(client.post(reverse("admin_logout")).status_code, 403)
         self.assertIn(SESSION_KEY, client.session)
 
+    def test_transfer_workspaces_require_csrf_before_processing_actions(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.administrator)
+        for route, action in (("admin_backup_export", "preview_export"),
+                              ("admin_backup_import", "upload")):
+            with self.subTest(route=route):
+                self.assertEqual(client.post(reverse(route), {"action": action}).status_code, 403)
+        self.assertIn(SESSION_KEY, client.session)
+
     def test_admin_not_found_uses_admin_recovery(self):
         self.client.force_login(self.administrator)
         response = self.client.get(reverse("admin:index") + "missing-page/")
@@ -428,12 +447,13 @@ class AdminShellTests(TestCase):
 
     def test_admin_denial_uses_admin_recovery_without_granting_manager_access(self):
         self.client.force_login(self.manager)
-        response = self.client.get(reverse("admin_maintenance"))
-
-        self.assertEqual(response.status_code, 403)
-        self.assertTemplateUsed(response, "admin/qc_tool_error.html")
-        self.assert_light_admin_shell(response)
-        self.assert_admin_links(response)
+        for route in ("admin_maintenance", "admin_backup_export", "admin_backup_import"):
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assertEqual(response.status_code, 403)
+                self.assertTemplateUsed(response, "admin/qc_tool_error.html")
+                self.assert_light_admin_shell(response)
+                self.assert_admin_links(response)
 
     def test_prefixed_admin_errors_keep_prefixed_admin_destinations(self):
         original_prefix = get_script_prefix()

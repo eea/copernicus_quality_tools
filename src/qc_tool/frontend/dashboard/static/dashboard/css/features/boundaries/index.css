@@ -1,9 +1,51 @@
 /* Active boundary catalog; shared page and card primitives live in ui/. */
+.boundary-package-summary {
+  margin-bottom: 24px;
+}
+
+.boundary-package-summary details {
+  margin-bottom: 18px;
+}
+
+.boundary-package-summary code {
+  overflow-wrap: anywhere;
+}
+
+.boundary-package-summary > .boundary-package-summary__retention {
+  margin-bottom: 0;
+}
+
+.boundary-version-list { margin: 0; padding: 0; list-style: none; }
+.boundary-version-list > li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; }
+.boundary-version-list > li + li { border-top: 1px solid var(--border-color); }
+.boundary-version-list > li > div { min-width: 0; }
+.boundary-version-list code { display: block; overflow-wrap: anywhere; }
+.boundary-version-list p { margin: 6px 0; }
+.boundary-version-status { margin-left: 10px; color: var(--body-quiet-color); }
+.boundary-version-list form { margin: 0; }
+
+@media (max-width: 767px) {
+  .boundary-version-list > li { align-items: flex-start; flex-direction: column; }
+}
+
 .boundary-groups {
   display: grid;
   padding: 22px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
+}
+
+/* Allow each shared table shell and its native search field to shrink inside
+   narrow Admin cards; wide filenames scroll in the shared table body. */
+.boundary-groups > section,
+.boundary-table-wrap .bootstrap-table,
+.boundary-table-wrap .fixed-table-toolbar,
+.boundary-table-wrap .fixed-table-toolbar .search {
+  min-width: 0;
+}
+
+.boundary-table-wrap .fixed-table-toolbar .search .form-control {
+  max-width: 100%;
 }
 
 .boundary-groups h3 {
@@ -31,7 +73,7 @@
 
 @media (max-width: 991px) {
   .boundary-groups {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

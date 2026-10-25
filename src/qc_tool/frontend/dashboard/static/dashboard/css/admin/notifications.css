@@ -1,0 +1,25 @@
+/* Notification fields use shared cards, actions and announcement previews. */
+.notifications-admin { max-width: var(--qc-content-width-narrow); }
+.notifications-admin .notification-form__field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--body-loud-color);
+  font-weight: 600;
+}
+.notifications-admin .notification-form__field textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--qc-radius-small);
+  color: var(--body-fg);
+  background: var(--qc-admin-surface);
+  font: inherit;
+  line-height: 1.6;
+}
+.notifications-admin .notification-form__field .help { margin: 8px 0 18px; }
+.notifications-admin .qc-admin-management-actions { margin-bottom: 0; }
+.notifications-admin .announcement-field-errors { margin-bottom: 12px; }
+.notifications-admin textarea:focus-visible { outline: 3px solid var(--link-fg); outline-offset: 2px; }

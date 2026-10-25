@@ -83,12 +83,15 @@ The overview links to these three task areas; section visibility follows permiss
 | --- | --- |
 | `frontend/admin_config.py`, `admin_site.py` | Select `QCAdminSite`, derive account actions from Django model permissions, and provide permission-aware section context |
 | `frontend/templates/admin/` | Shared Admin shell, navigation, sign-in and error templates |
-| `frontend/dashboard/templates/dashboard/shared/brand.html`, `dashboard/static/dashboard/css/ui/brand.css` | Workspace identity with the Copernicus and Land Monitoring logos; Admin uses a compact text identity |
+| `frontend/dashboard/templates/dashboard/shared/brand.html`, `dashboard/static/dashboard/css/ui/brand.css` | Shared workspace/API/Admin identity with the Copernicus and Land Monitoring logos |
 | `frontend/dashboard/static/dashboard/css/ui/actions.css` | Shared button primitives; each shell retains its own navigation destinations |
 | `frontend/dashboard/static/dashboard/css/ui/navigation.css`, `js/shared/navigation.js` | Shared account-menu styling and native menu interaction, including Admin's Profile menu |
 | `frontend/accounts/admin/` | Existing user/group forms, permissions, product-access and token inlines |
 | `frontend/accounts/views/`, `frontend/urls.py` | Shared authentication policies and Admin-specific sign-in/logout/error presentation |
-| `frontend/dashboard/templates/admin/` | Overview and task-based user, database, maintenance and storage pages |
+| `frontend/dashboard/templates/admin/` | Six-direction overview and user, boundary, notification, database, storage and maintenance pages |
+| `frontend/dashboard/services/admin_navigation.py`, `templates/admin/includes/direction_card.html` | Permission-aware overview directions and one reusable card; task links are absent from the header |
+| `frontend/dashboard/views/admin_notifications.py` | Administrator management of the existing file-backed workspace announcement |
+| `frontend/dashboard/urls/boundaries.py`, `dashboard/views/boundaries.py` | Admin-only boundary catalog, replacement, data and export routes; reuse shared boundary services and UI components |
 | `frontend/dashboard/views/admin_users.py` | Permission-filtered user-management landing page; reuses registered account editors and profile transfers |
 | `frontend/dashboard/views/admin_data_transfer.py` | HTTP forms and review presentation; database operations remain in `database/transfers/` |
 | `frontend/dashboard/views/admin_maintenance.py`, `dashboard/services/maintenance/` | Explicit maintenance actions, progress and shared writer admission |
@@ -99,9 +102,11 @@ The overview links to these three task areas; section visibility follows permiss
 link. Task navigation and automatic authentication/error recovery destinations
 stay in Admin; its brand links to the Admin overview. One explicit back-arrow
 **Back to workspace** control leads the header and lets the user deliberately
-switch interfaces. It precedes the plain **CLMS QC Tool | Admin** identity, with
-no logos in Admin. The account menu follows the workspace's menu pattern.
-Do not add other workspace shortcuts, a product/boundary setup guide, delivery
+switch interfaces. It precedes the shared logos and **CLMS QC Tool | Admin**
+identity. The account menu follows the workspace's menu pattern; Admin uses the
+light theme. Its responsive menu holds account controls; the overview owns task
+discovery. Boundary package and notification management belong to Admin.
+Do not add other workspace shortcuts, a product setup guide, delivery
 or submission-review cards, or an unrestricted model directory. Those operational
 workflows belong to the separate QC workspace. Reuse shared navigation/button
 primitives without importing workspace operational navigation or controls into

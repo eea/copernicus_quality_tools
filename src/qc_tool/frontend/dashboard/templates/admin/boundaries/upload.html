@@ -1,13 +1,10 @@
 {% extends "dashboard/layouts/upload_page.html" %}
 {% load static %}
 
-{% block title %}Replace boundary package | Boundaries | CLMS QC Tool{% endblock title %}
-{% block main_class %}workspace-page boundary-upload-page{% endblock main_class %}
+{% block title %}Replace boundary package | QC Tool Admin{% endblock title %}
+{% block main_class %}boundary-upload-page{% endblock main_class %}
 
-{% block page_breadcrumbs %}
-{% url 'boundaries' as boundaries_url %}
-{% include "dashboard/shared/breadcrumbs.html" with parent_label="Boundaries" parent_url=boundaries_url current_label="Upload" only %}
-{% endblock page_breadcrumbs %}
+{% block boundary_breadcrumbs %}<a href="{% url 'boundaries' %}">Boundaries</a> &rsaquo; Replace boundary package{% endblock boundary_breadcrumbs %}
 
 {% block page_title %}Replace boundary package{% endblock page_title %}
 {% block page_subtitle %}<p>Choose a ZIP containing the raster and vector boundaries used for quality checks.</p>{% endblock page_subtitle %}

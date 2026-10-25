@@ -1,4 +1,4 @@
-"""Administration navigation owns accounts and guarded database operations."""
+"""Permission-aware task discovery and shared administration context."""
 
 from django.contrib.admin import AdminSite
 from django.contrib.auth import get_user_model
@@ -48,19 +48,35 @@ class QCAdminSite(AdminSite):
         context["admin_group_permissions"] = model_permissions.get(("auth", "Group"), {})
         route = getattr(getattr(request, "resolver_match", None), "url_name", "") or ""
         section = "overview"
-        if route.startswith(("admin_data_transfer", "admin_database")) or route == "admin_maintenance":
+        if route.startswith("admin_database"):
             section = "database"
-        if route == "admin_user_management" or (
-                route.startswith("admin_data_transfer")
-                and (request.GET.get("section") or request.POST.get("section")) == "users"):
+        if route.startswith(("admin_data_transfer", "admin_maintenance", "admin_backup_")):
+            section = "maintenance"
+        if route == "admin_user_management":
             section = "users"
         if route.startswith("admin_storage"):
             section = "storage"
+        if route in {
+            "boundaries", "boundaries_upload", "boundaries_upload_data",
+            "boundaries_json", "boundaries_export", "boundaries_retention",
+            "boundaries_retention_action",
+        }:
+            section = "boundaries"
+        if route in {"admin_notifications", "announcement_update"}:
+            section = "notifications"
         context["admin_user_management_available"] = any(
             any(perms.values()) for (label, name), perms in model_permissions.items()
             if (label, name) in {("auth", "User"), ("auth", "Group"),
                                  ("accounts", "UserProductGrant"), ("accounts", "PersonalAccessToken")}
         )
+        if route == "index":
+            from qc_tool.frontend.accounts.authorization import access_for_request
+            from qc_tool.frontend.dashboard.services.admin_navigation import overview_directions
+            context["admin_directions"] = overview_directions(
+                request, can_manage_users=context["admin_user_management_available"],
+                can_manage_access=(any(context["admin_group_permissions"].values())
+                                   or access_for_request(request).is_administrator),
+            )
         for model in self._registry:
             prefix = f"{model._meta.app_label}_{model._meta.model_name}_"
             if route.startswith(prefix):
@@ -71,7 +87,7 @@ class QCAdminSite(AdminSite):
                     context["database_table_url"] = table_url(resource)
                     context["database_table_label"] = resource.label
                     section = "users" if model._meta.app_label in {"auth", "accounts"} else "database"
-                    context["database_table_home_url"] = reverse("admin_user_management" if section == "users" else "admin_data_transfer")
+                    context["database_table_home_url"] = reverse("admin_user_management" if section == "users" else "admin_database")
                     context["database_table_home_label"] = "User management" if section == "users" else "Database"
                 break
         table = getattr(getattr(request, "resolver_match", None), "kwargs", {}).get("table")

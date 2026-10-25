@@ -1,5 +1,5 @@
 {% extends "admin/base_site.html" %}
-{% load i18n static %}
+{% load static %}
 {% block extrahead %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'dashboard/css/admin/data-transfer.css' %}">
@@ -10,81 +10,28 @@
 {% block content_title %}{% endblock %}
 {% block breadcrumbs %}{% include "admin/includes/database_breadcrumbs.html" %}{% endblock %}
 {% block content %}
-<div class="qc-admin-home transfer-page database-workspace"{% if operation %} id="transfer-operation"{% elif active_tab == 'backups' %} id="backup-files"{% endif %}>
-  {% include "admin/includes/database_page_header.html" %}
+<div class="qc-admin-home transfer-page {% block transfer_page_class %}{% endblock %}"{% if operation %} id="transfer-operation"{% endif %}>
+  {% if database_back_url %}<a class="database-back-link" href="{{ database_back_url }}"><span aria-hidden="true">&larr;</span> {{ database_back_label }}</a>{% endif %}
+  <header class="qc-admin-intro database-page-header">
+    <div><h1>{{ title }}</h1><p class="qc-admin-intro__description">{{ transfer_task_description }}</p></div>
+    {% block transfer_header_actions %}{% endblock %}
+  </header>
   {% if admin_busy %}{% include "admin/includes/action_busy.html" %}{% elif action_error %}<div class="qc-admin-feedback qc-admin-feedback--error" role="alert"><h2>This action could not finish</h2><p>{{ action_error }}</p><p>Review the information below before trying again.</p></div>{% endif %}
   {% if action_result %}<ul class="messagelist"><li class="success" role="status">{{ action_result }}</li></ul>{% endif %}
-  {% if transfer_operation %}
-  {% include "admin/includes/transfers/current_transfer.html" %}
-  {% elif transfer_task != 'start' and transfer_task != 'backups' and transfer_task != 'activity' %}
-    {% if maintenance_ready %}<p class="transfer-ready"><span class="qc-admin-state-dot" aria-hidden="true"></span>Maintenance is on. <a href="{{ maintenance_url }}">Maintenance settings</a></p>
-    {% elif transfer_maintenance.phase == 'stopping' %}<div class="transfer-maintenance" role="status"><span><span class="qc-admin-spinner" aria-hidden="true"></span> <strong>QC work is still stopping.</strong> Wait before starting a transfer.</span><a href="{{ maintenance_url }}">View maintenance progress</a></div>
+  {% if transfer_operation and transfer_operation.operation_id != operation.id %}
+    {% if current_transfer.kind == transfer_task %}
+      {% include "admin/includes/transfers/current_transfer.html" %}
+    {% else %}
+      <div class="transfer-maintenance" role="status"><span>Another administrator task must finish before you can continue.</span><a href="{{ maintenance_url }}">Maintenance settings</a></div>
+    {% endif %}
+  {% elif not transfer_operation and not maintenance_ready %}
+    {% if transfer_maintenance.phase == 'stopping' %}<div class="transfer-maintenance" role="status"><span><span class="qc-admin-spinner" aria-hidden="true"></span> <strong>QC work is still stopping.</strong> Wait before starting a transfer.</span><a href="{{ maintenance_url }}">View maintenance progress</a></div>
     {% elif transfer_maintenance.enabled %}<div class="transfer-maintenance" role="status"><span><strong>Maintenance status needs attention.</strong> Check its status before starting a transfer.</span><a href="{{ maintenance_url }}">View maintenance status</a></div>
     {% else %}<div class="transfer-maintenance" role="status"><span><strong>Turn on maintenance to continue.</strong>{% if transfer_task == 'import' %} You can upload your package first.{% else %} Uploads and QC jobs will be paused during the transfer.{% endif %}</span><a href="{{ maintenance_url }}">Turn on maintenance</a></div>{% endif %}
   {% endif %}
-  {% if transfer_task != 'start' and transfer_task != 'backups' and transfer_task != 'activity' %}
-    {% if not transfer_schema.ready and not native_transfer %}{% if transfer_task != 'import' or operation %}<section class="transfer-issue" data-transfer-profile-warning="records" role="alert"><h2>Record transfers are unavailable</h2><p>{{ transfer_schema.message }}</p><details><summary>Technical guidance</summary><p>Inspect the schema with <code>python3 -m qc_tool.frontend.manage database check</code>. This page cannot upgrade an existing database. Preserve it separately before preparing a supported installation.</p></details></section>{% endif %}{% endif %}
-    {% if not transfer_database.ready and native_transfer %}<p class="errornote" role="alert" data-transfer-profile-warning="database">{{ transfer_database.message }}</p>{% endif %}
-    {% if transfer_task == 'import' and not operation and not upload_available and not transfer_operation %}<p class="errornote" role="alert">{{ transfer_schema.message }} {{ transfer_database.message }}</p>{% endif %}
-  {% endif %}
-  {% if transfer_task == 'start' %}
-  <section class="qc-admin-panel"><h2>Save your data or recover a backup</h2><p>Create a ZIP with the complete PostgreSQL database and your selected files, or restore a saved backup into a separate database before choosing whether to use it.</p><div class="transfer-actions"><a class="btn-qc-primary" href="{{ area_export_url }}">Create backup</a><a class="btn-qc-secondary" href="{{ area_import_url }}">Restore from backup</a></div></section>
-  {% endif %}
-  {% if transfer_task == 'backups' and not operation %}
-  <div class="transfer-task-grid">
-    <section class="qc-admin-panel transfer-task-card" aria-labelledby="create-backup-heading"><h2 id="create-backup-heading">Create a backup</h2><p>Save the complete database schema and every record, including accounts and permissions, with your choice of accompanying files in one ZIP.</p><a class="btn-qc-primary" href="{{ area_export_url }}">Create backup &rarr;</a><p class="help">Prepared in the background. Download it when it is ready.</p></section>
-    <section class="qc-admin-panel transfer-task-card" aria-labelledby="restore-backup-heading"><h2 id="restore-backup-heading">Restore from backup</h2><p>Upload a saved ZIP and restore it into a separate database. Review the restored data before choosing whether to use it in QC Tool.</p><a class="btn-qc-secondary" href="{{ area_import_url }}">Choose backup ZIP &rarr;</a><p class="help">Your active database stays in use until you confirm a switch.</p></section>
-  </div>
-  <p class="help">Already started a task? Open <a href="{{ transfer_history_url }}">Progress &amp; history</a> to follow it or continue where you left off.</p>
-  {% endif %}
-  {% if transfer_task == 'export' %}
-  <ol class="transfer-steps transfer-flow" aria-label="Backup progress"><li{% if not export_review and not operation %} aria-current="step"{% endif %}><span class="transfer-step-number" aria-hidden="true">1</span>Choose contents</li><li{% if export_review %} aria-current="step"{% endif %}><span class="transfer-step-number" aria-hidden="true">2</span>Review backup</li><li{% if operation %} aria-current="step"{% endif %}><span class="transfer-step-number" aria-hidden="true">3</span>Prepare &amp; download</li></ol>
-  {% elif native_import %}
-  <ol class="transfer-steps transfer-restore-flow" aria-label="Database restore progress"><li>Upload backup</li><li{% if native_restore_step == 'prepare' %} aria-current="step"{% endif %}>Prepare destination</li><li{% if native_restore_step == 'restore' or operation.status == 'completed' and not operation.result.verified %} aria-current="step"{% endif %}>Restore database</li><li{% if native_restore_step == 'verify' and operation.result.verified and not operation.recoverable and not operation_database_active and not operation.database_deleted_at and not operation.database_deletion_requested_at %} aria-current="step"{% endif %}>Use restored database{% if operation_database_active and not operation.database_deleted_at and not operation.database_deletion_requested_at %}<span class="transfer-secondary">In use</span>{% endif %}</li></ol>
-  {% elif additive_import %}
-  <ol class="transfer-steps" aria-label="Record import progress"><li>Upload package</li><li{% if can_review_import and additive_review_step == 'review' %} aria-current="step"{% endif %}>Review records &amp; files</li>{% if plan.record_conflicts or account_blocker_count %}<li{% if can_review_import and additive_review_step == 'resolve' %} aria-current="step"{% endif %}>Resolve matches</li>{% endif %}<li{% if operation.status == 'queued' or operation.status == 'running' or operation.status == 'completed' %} aria-current="step"{% endif %}>Add records</li></ol>
-  {% elif transfer_task == 'import' and not operation %}
-  <ol class="transfer-steps transfer-restore-flow" aria-label="Database restore progress"><li aria-current="step">Upload backup</li><li>Prepare destination</li><li>Restore database</li><li>Use restored database</li></ol>
-  {% endif %}
-  {% include "admin/includes/transfers/operation.html" %}
-  {% include "admin/includes/transfers/import_review.html" %}
-  {% include "admin/includes/transfers/export_review.html" %}
-  {% if not operation and not export_review %}
-    {% if transfer_task == 'export' %}
-    <section class="module transfer-panel"><h2>What should the backup contain?</h2><div class="transfer-panel__body">
-      <div class="transfer-assurance"><strong>Complete database · always included</strong><p>Schema, every table and row, password hashes, accounts, permissions, sessions and database metadata.</p></div>
-      <p>Select the files and recovery settings to save alongside your database. All sections start selected; clear any you do not need.</p>
-      <form method="post" data-maintenance-exempt data-transfer-pending-label="Checking contents…" data-transfer-pending-message="Checking your selected contents and available space. This can take a while for large backups. Keep this page open until the review appears.">{% csrf_token %}{{ export_form.scope }}{{ export_form.non_field_errors }}{{ export_form.scope.errors }}
-        <fieldset class="transfer-scopes"><legend>Additional package sections</legend>{{ export_form.components.errors }}
-          <div class="transfer-option-groups">
-            <div class="transfer-option-group"><h3>Files used by QC Tool</h3><p class="help">Include these to keep the database and its local files together.</p>{% for checkbox in export_form.components %}{% if checkbox.data.value != 'postgresql_globals' and checkbox.data.value != 'deployment_configuration' %}{% include "admin/includes/transfers/export_option.html" %}{% endif %}{% endfor %}</div>
-            <div class="transfer-option-group"><h3>Server recovery settings</h3><p class="help">Saved for reviewed manual recovery by an operator.</p>{% for checkbox in export_form.components %}{% if checkbox.data.value == 'postgresql_globals' or checkbox.data.value == 'deployment_configuration' %}{% include "admin/includes/transfers/export_option.html" %}{% endif %}{% endfor %}<p class="help">Remote storage objects need a separate backup.</p></div>
-          </div>
-        </fieldset>
-        <p class="transfer-note"><strong>Keep this backup private.</strong> It contains password hashes and can contain credentials. Keep the ZIP in protected storage.</p>
-        <details class="transfer-details"><summary>ZIP folder structure</summary><pre>database/
-  schema/schema.sql            Readable schema, ownership and permissions
-  data/database.dump           Restorable schema and all database rows
-  metadata/                    Source, inventory and restore information
-configuration/                 Selected application settings and credential files
-specifications/                Original specification files
-boundaries/                    Boundary packages
-deliveries/                    Retained delivery ZIPs
-artifacts/                     QC outputs and reports
-publications/                  Published submissions and receipts</pre><p class="help">Selected sections have an inventory and checksums. The native database dump is the authoritative restore source; schema.sql is a readable reference.</p></details>
-        <div class="transfer-actions"><button type="submit" class="button default btn-qc-primary" name="action" value="preview_export"{% if not database_backup_ready %} disabled{% endif %}>Review backup &rarr;</button><span class="help">Check contents and available space before creating the ZIP.</span></div>
-        <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
-      </form>
-    </div></section>
-    {% elif transfer_task == 'import' %}
-    <section class="module transfer-panel"><h2>Choose your backup ZIP</h2><div class="transfer-panel__body">
-      <p>Upload a backup created by QC Tool. We will check it before you restore anything. A full backup restores into a separate database; your active database stays in use until you explicitly switch.</p>
-      <form method="post" enctype="multipart/form-data" data-maintenance-exempt data-transfer-pending-label="Uploading package…" data-transfer-pending-message="Uploading and checking your package. Keep this page open until the review appears; leaving now can interrupt the upload.">{% csrf_token %}{{ upload_form.non_field_errors }}<div class="form-row transfer-upload">{{ upload_form.package.errors }}{{ upload_form.package.label_tag }}{{ upload_form.package }}<p class="help">{{ upload_form.package.help_text }}</p></div>{% include "admin/includes/transfers/file_options.html" with file_field=upload_form.include_files file_action="import" %}<div class="transfer-actions"><button type="submit" class="button default btn-qc-primary" name="action" value="upload"{% if not upload_available %} disabled{% endif %}>Upload and review</button><span class="help">Next: check the contents and restore destination.</span></div><p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p></form>
-      <details class="transfer-details"><summary>Restoring an older records or users package?</summary><p>You can upload older QC Tool packages here too. They follow a separate review to add selected records or users to the active database. They do not create a separate database. Existing records and access credentials are preserved; any user profile changes need your review.</p></details>
-    </div></section>
-    {% endif %}
-  {% endif %}
-  {% include "admin/includes/transfers/history.html" %}
-  {% include "admin/includes/transfers/recovery.html" %}
+  {% if not transfer_schema.ready and not native_transfer %}{% if transfer_task != 'import' or operation %}<section class="transfer-issue" data-transfer-profile-warning="records" role="alert"><h2>Record transfers are unavailable</h2><p>{{ transfer_schema.message }}</p><details><summary>Technical guidance</summary><p>Inspect the schema with <code>python3 -m qc_tool.frontend.manage database check</code>. This page cannot upgrade an existing database. Preserve it separately before preparing a supported installation.</p></details></section>{% endif %}{% endif %}
+  {% if not transfer_database.ready and native_transfer %}<p class="errornote" role="alert" data-transfer-profile-warning="database">{{ transfer_database.message }}</p>{% endif %}
+  {% if transfer_task == 'import' and not operation and not upload_available and not transfer_operation %}<p class="errornote" role="alert">{{ transfer_schema.message }} {{ transfer_database.message }}</p>{% endif %}
+  {% block transfer_content %}{% endblock %}
 </div>
 {% endblock %}

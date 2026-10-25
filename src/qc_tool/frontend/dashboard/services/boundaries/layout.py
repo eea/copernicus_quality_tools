@@ -12,6 +12,7 @@ from .errors import BoundaryPackageConfigurationError
 
 
 GENERATIONS_DIRECTORY_NAME = ".boundary-generations"
+TRASH_DIRECTORY_NAME = ".qc-tool-boundary-trash"
 CURRENT_POINTER_NAME = ".boundary-current"
 LEGACY_BACKUPS_DIRECTORY_NAME = ".boundary-legacy-backups"
 

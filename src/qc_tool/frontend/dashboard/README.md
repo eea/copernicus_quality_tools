@@ -16,7 +16,7 @@ templates, browser assets, and services:
 | Workspace overview | `urls/overview.py` | `views/overview.py` | `templates/dashboard/overview/` | `css/features/overview/` | `services/overview/` |
 | Deliveries | `urls/deliveries.py` | `views/deliveries/` | `templates/dashboard/deliveries/` | `*/features/deliveries/` | `services/deliveries/`, `services/uploads/`, `services/submissions/` |
 | Products | `urls/products.py` | `views/products/` | `templates/dashboard/products/` | `*/features/products/` | `services/products/`, `services/catalog/` |
-| Boundaries | `urls/boundaries.py` | `views/boundaries.py` | `templates/dashboard/boundaries/` | `*/features/boundaries/` | `services/boundaries/` |
+| Admin boundaries | `urls/boundaries.py`, mounted under Admin | `views/boundaries.py` | `templates/admin/boundaries/` | `*/features/boundaries/`, `css/admin/boundaries.css` | `services/boundaries/` |
 | QC jobs | `urls/deliveries.py`, `urls/jobs.py` | `views/jobs/` | `templates/dashboard/jobs/` | `*/features/jobs/` | `services/jobs/`, `services/product_units/`, `services/catalog/definitions.py` |
 | API access | `urls/api_access.py` | `views/api_access/` | `templates/dashboard/api_access/` | `*/features/api_access/` | `services/api/`, `services/s3/` |
 | Configuration | `urls/configuration.py` | `views/configuration.py` | `templates/dashboard/configuration/` | `*/features/configuration/` | `services/configuration/` |
@@ -44,7 +44,7 @@ Django app-module layout. Canonical page URLs use a trailing slash:
 /products/
   list/                    authenticated JSON
   <product_ident>/         HTML product detail
-/boundaries/
+/admin/boundaries/
   upload/
 /api/
 ```
@@ -58,11 +58,14 @@ multiple valid release series are never collapsed into one arbitrary record.
 
 This hierarchy applies to human-facing pages. Stable transport, `/data/*`,
 artifact, mutation, worker, and operational `/api/*` contracts keep their
-existing paths and authentication behavior. Do not move an internal endpoint
-just to make it resemble a page URL.
+existing paths and authentication behavior. Boundary management is Admin-owned:
+its catalog, replacement, file-list data and export endpoints all live under
+`/admin/boundaries/` and use administrator authorization and recovery.
 
 Templates and application code reverse canonical route names. Superseded
-browser paths and the old product-list data alias are not registered.
+browser paths and the old product-list data alias are not registered, except
+for GET-only redirects from the former boundary catalog/upload pages. Old
+boundary data and mutation URLs are not registered.
 
 ## Catalog and submission lifecycle map
 

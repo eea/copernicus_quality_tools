@@ -8,9 +8,6 @@ registry.
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 from qc_tool.frontend.dashboard.urls.api_access import urlpatterns as api_patterns
-from qc_tool.frontend.dashboard.urls.boundaries import (
-    urlpatterns as boundary_patterns,
-)
 from qc_tool.frontend.dashboard.urls.configuration import (
     urlpatterns as configuration_patterns,
 )
@@ -36,7 +33,6 @@ urlpatterns = [
     *product_patterns,
     *table_patterns,
     *job_patterns,
-    *boundary_patterns,
     *configuration_patterns,
     *api_patterns,
     *worker_patterns,

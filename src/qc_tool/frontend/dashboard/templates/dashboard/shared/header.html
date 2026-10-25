@@ -1,6 +1,7 @@
 {% load static %}
+{% if admin_notice %}{% include "dashboard/shared/maintenance_notice.html" %}{% endif %}
 <header{% if header_id %} id="{{ header_id }}"{% endif %} class="site-header">
-    {% include "dashboard/shared/maintenance_notice.html" %}
+    {% if not admin_notice %}{% include "dashboard/shared/maintenance_notice.html" %}{% endif %}
     <div id="menucontainer" class="site-header__main">
         <div id="branding" class="site-header__branding">
             {% if return_url %}
@@ -22,9 +23,6 @@
                     {% include navigation_template %}
                 </ul>
             </nav>
-            {% if secondary_navigation_template %}
-                {% include secondary_navigation_template %}
-            {% endif %}
         </div>
         {% endif %}
     </div>

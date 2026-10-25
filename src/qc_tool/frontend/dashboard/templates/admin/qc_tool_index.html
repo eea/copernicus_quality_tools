@@ -1,5 +1,4 @@
 {% extends "admin/index.html" %}
-{% load i18n static %}
 
 {% block title %}Administration | QC Tool Admin{% endblock %}
 {% block coltype %}colM{% endblock %}
@@ -10,67 +9,10 @@
 {% block content %}
 <div class="qc-admin-home">
   <header class="qc-admin-intro">
-    <div>
-      <h1>Administration</h1>
-      <p class="qc-admin-intro__description">Manage users, the database and retained server files.</p>
-    </div>
+    <div><h1>Administration</h1><p class="qc-admin-intro__description">Choose an area to manage QC Tool.</p></div>
   </header>
-
   <div class="qc-admin-management{% if account_access.is_administrator %} qc-admin-management--overview{% else %} qc-admin-management--single{% endif %}">
-    {% if admin_user_permissions.add or admin_user_permissions.view or admin_user_permissions.change or admin_group_permissions.add or admin_group_permissions.view or admin_group_permissions.change %}
-    <section id="qc-admin-users" class="qc-admin-panel" aria-labelledby="users-heading">
-      <div class="qc-admin-panel__heading">
-        <span class="qc-admin-icon"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#users"></use></svg></span>
-        <h2 id="users-heading">User management</h2>
-      </div>
-      <p>Create accounts and assign groups, permissions and product access.</p>
-      <div class="qc-admin-management-actions">
-        <a class="btn-qc-primary" href="{% url 'admin_user_management' %}">Open user management</a>
-      </div>
-      <div class="qc-admin-link-list">
-        {% if admin_group_permissions.view or admin_group_permissions.change %}
-          {% url 'admin:auth_group_changelist' as groups_url %}{% include "admin/includes/task_link.html" with url=groups_url label="Role groups" description="View roles, permissions and membership" icon="settings" only %}
-        {% elif admin_group_permissions.add %}
-          {% url 'admin:auth_group_add' as groups_url %}{% include "admin/includes/task_link.html" with url=groups_url label="Create group" description="Define an additional permission group" icon="settings" only %}
-        {% endif %}
-      </div>
-    </section>
-    {% endif %}
-
-    {% if account_access.is_administrator %}
-    <section id="qc-admin-database" class="qc-admin-panel" aria-labelledby="database-heading">
-      <div class="qc-admin-panel__heading">
-        <span class="qc-admin-icon qc-admin-icon--violet"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg></span>
-        <h2 id="database-heading">Database</h2>
-      </div>
-      <p>Control maintenance, transfer QC records and preserve complete database backups.</p>
-      <div class="qc-admin-management-actions">
-        <a class="btn-qc-primary" href="{% url 'admin_data_transfer' %}">Database status</a>
-      </div>
-      <div class="qc-admin-link-list">
-        {% url 'admin_data_transfer' as transfer_url %}
-        {% with records_url=transfer_url|add:'?tables=1#database-records-heading' %}{% include "admin/includes/task_link.html" with url=records_url label="Records by table" description="Browse records, relationships and validated editors" icon="folder" only %}{% endwith %}
-        {% with maintenance_url=transfer_url|add:'#database-maintenance-heading' %}{% include "admin/includes/task_link.html" with url=maintenance_url label="Maintenance" description="Pause changes or reopen the service" icon="settings" only %}{% endwith %}
-        {% with transfers_url=transfer_url|add:'?tab=import' %}{% include "admin/includes/task_link.html" with url=transfers_url label="Restore from backup" description="Review a complete database package or an older records export" icon="upload" only %}{% endwith %}
-        {% with backups_url=transfer_url|add:'?tab=backups' %}{% include "admin/includes/task_link.html" with url=backups_url label="Back up & restore" description="Create, download and delete saved backup ZIPs" icon="download" only %}{% endwith %}
-        {% with activity_url=transfer_url|add:'?tab=activity' %}{% include "admin/includes/task_link.html" with url=activity_url label="Progress & history" description="Follow imports, exports and recovery" icon="history" only %}{% endwith %}
-      </div>
-      <div id="qc-admin-service-status" class="qc-admin-database-status" aria-labelledby="service-heading">
-        <div>
-          <h3 id="service-heading">{% if admin_overview.transfer_error %}Status unavailable{% elif admin_overview.transfer_url %}A database transfer holds maintenance{% elif admin_overview.phase == 'off' %}Maintenance is off{% elif admin_overview.phase == 'ready' %}Maintenance is on{% elif admin_overview.phase == 'stopping' %}<span class="qc-admin-spinner" aria-hidden="true"></span> Turning on maintenance{% else %}Status unavailable{% endif %}</h3>
-          <p>{% if admin_overview.transfer_error or admin_overview.phase == 'unavailable' %}Open maintenance to review the problem before changing the database.{% elif admin_overview.transfer_url %}Open the transfer to see its progress and next step.{% elif admin_overview.phase == 'off' %}Turn it on before importing or exporting.{% elif admin_overview.phase == 'ready' %}Changes are paused. Turn it off when your database work is finished.{% else %}Open maintenance to follow progress.{% endif %}</p>
-        </div>
-        {% if admin_overview.transfer_url %}<a href="{{ admin_overview.transfer_url }}">View current transfer</a>{% else %}<a href="{% url 'admin_maintenance' %}">{% if admin_overview.phase == 'stopping' %}View maintenance progress{% else %}Maintenance settings{% endif %}</a>{% endif %}
-      </div>
-    </section>
-    <section id="qc-admin-storage" class="qc-admin-panel" aria-labelledby="storage-heading">
-      <div class="qc-admin-panel__heading"><span class="qc-admin-icon"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg></span><h2 id="storage-heading">Storage</h2></div>
-      <p>Find submitted and approved deliveries, saved specification versions and boundary packages.</p>
-      <div class="qc-admin-management-actions"><a class="btn-qc-primary" href="{% url 'admin_storage' %}">Open storage</a></div>
-      <p>Browse other server files, download retained evidence or connect a desktop SFTP client.</p>
-    </section>
-    {% endif %}
+    {% for direction in admin_directions %}{% include "admin/includes/direction_card.html" with direction=direction admin_overview=admin_overview only %}{% empty %}<p class="qc-admin-empty">This account has no administration tasks available.</p>{% endfor %}
   </div>
-  {% if not account_access.is_administrator and not admin_user_permissions and not admin_group_permissions %}<p class="qc-admin-empty">This account has no user or database administration permissions.</p>{% endif %}
 </div>
 {% endblock %}

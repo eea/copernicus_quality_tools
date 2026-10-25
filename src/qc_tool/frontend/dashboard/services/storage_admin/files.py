@@ -18,6 +18,7 @@ import unicodedata
 from django.conf import settings
 
 from qc_tool.common import CONFIG
+from qc_tool.frontend.dashboard.services.boundaries.layout import TRASH_DIRECTORY_NAME as BOUNDARY_TRASH_DIRECTORY
 
 
 MAX_SCAN_ENTRIES = 10_000
@@ -133,7 +134,7 @@ def _control_locations():
     locations = [root / ".state", root / ".upload.lock"]
     if CONFIG.get("boundary_dir"):
         boundary = Path(CONFIG["boundary_dir"])
-        locations.extend(boundary / name for name in (".boundary-current", ".boundary-package.lock"))
+        locations.extend(boundary / name for name in (".boundary-current", ".boundary-package.lock", BOUNDARY_TRASH_DIRECTORY))
     return tuple(Path(os.path.abspath(str(value))) for value in locations)
 
 

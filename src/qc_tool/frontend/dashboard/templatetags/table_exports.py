@@ -1,4 +1,4 @@
-"""Expose the application export contract once per workspace page."""
+"""Expose the shared export contract for each page's authorized endpoint."""
 
 from django import template
 from django.templatetags.static import static
@@ -11,9 +11,9 @@ register = template.Library()
 
 
 @register.simple_tag
-def table_export_config():
+def table_export_config(route_name="table_export"):
     return {
-        "url": reverse("table_export"),
+        "url": reverse(route_name),
         "formats": EXPORT_FORMAT_OPTIONS,
         "iconSprite": static("dashboard/icons/ui.svg"),
     }

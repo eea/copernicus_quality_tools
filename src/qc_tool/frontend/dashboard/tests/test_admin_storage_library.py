@@ -127,8 +127,8 @@ class AdminStorageLibraryTests(TestCase):
             (self.boundaries / ".boundary-current").symlink_to(".boundary-generations/" + ident)
         return ident
 
-    def library(self, tab=None, **options):
-        return self.client.get(reverse("admin_storage"), {**({"tab": tab} if tab else {}), **options})
+    def library(self, tab="deliveries", **options):
+        return self.client.get(reverse("admin_storage"), {"tab": "history", "collection": tab, **options})
 
     @staticmethod
     def query(url):
@@ -138,7 +138,7 @@ class AdminStorageLibraryTests(TestCase):
         self.assertIn("no-store", response["Cache-Control"])
         self.assertIn("private", response["Cache-Control"])
 
-    def test_root_defaults_to_submitted_deliveries_and_separates_approval_from_stored_files(self):
+    def test_submitted_delivery_history_separates_approval_from_stored_files(self):
         pending = self.receipt(filename="awaiting-decision.zip")
         approved = self.receipt(review="accepted", filename="approved-delivery.zip")
         self.receipt(publication="failed", filename="failed-publication.zip")
@@ -154,7 +154,6 @@ class AdminStorageLibraryTests(TestCase):
         self.assertFalse(entries[str(pending.pk)]["is_approved"])
         self.assertTrue(entries[str(approved.pk)]["is_approved"])
         self.assert_private(response)
-        self.assertEqual(self.library("invalid-tab").context["storage_tab"], "deliveries")
 
     def test_delivery_links_open_exact_retained_files_and_download_original_zip_members(self):
         receipt = self.receipt(review="accepted")
@@ -196,7 +195,7 @@ class AdminStorageLibraryTests(TestCase):
         listing = first.context["library_listing"]
         self.assertEqual((listing["total"], len(listing["entries"])), (27, 25))
         next_url = first.context["library_next_url"]
-        self.assertEqual(self.query(next_url), {"tab": ["deliveries"], "status": ["approved"],
+        self.assertEqual(self.query(next_url), {"tab": ["history"], "collection": ["deliveries"], "status": ["approved"],
                                                "q": ["regional-batch"], "page": ["2"]})
         second = self.client.get(next_url)
         self.assertEqual(len(second.context["library_listing"]["entries"]), 2)
@@ -237,7 +236,7 @@ class AdminStorageLibraryTests(TestCase):
         self.assertEqual(response.context["library_listing"]["total"], 52)
         self.assertEqual(len(response.context["library_listing"]["entries"]), 50)
         self.assertEqual(self.query(response.context["library_next_url"]), {
-            "tab": ["specifications"], "q": ["test-product"], "status": ["previous"], "page": ["2"],
+            "tab": ["history"], "collection": ["specifications"], "q": ["test-product"], "status": ["previous"], "page": ["2"],
         })
         second = self.client.get(response.context["library_next_url"])
         self.assertEqual(len(second.context["library_listing"]["entries"]), 2)
@@ -247,7 +246,7 @@ class AdminStorageLibraryTests(TestCase):
         for key, value in expected_return.items():
             self.assertEqual(self.query(detail_url)[key], value)
         detail = self.client.get(detail_url)
-        expected_library = {"tab": ["specifications"], "q": ["test-product"],
+        expected_library = {"tab": ["history"], "collection": ["specifications"], "q": ["test-product"],
                             "status": ["previous"], "page": ["2"]}
         self.assertEqual(self.query(detail.context["library_back_url"]), expected_library)
         self.assertEqual(self.query(detail.context["parent_url"]), expected_library)
@@ -277,7 +276,7 @@ class AdminStorageLibraryTests(TestCase):
         entry, = specifications.context["library_listing"]["entries"]
         self.assertEqual(entry["version_id"], current)
         self.assertEqual(self.query(entry["history_url"]), {
-            "tab": ["specifications"], "q": ["test-product"], "status": ["all"],
+            "tab": ["history"], "collection": ["specifications"], "q": ["test-product"], "status": ["all"],
         })
         self.assertContains(specifications, 'aria-label="Version history for Test product"')
         history = self.client.get(entry["history_url"])
@@ -358,7 +357,7 @@ class AdminStorageLibraryTests(TestCase):
         for field in ("download_url", "verify_url", "parent_url"):
             self.assertEqual(self.query(detail.context[field])["library"], ["deliveries"])
         self.assertContains(detail, 'name="library" value="deliveries"')
-        self.assertEqual(self.query(detail.context["library_back_url"]), {"tab": ["deliveries"], "status": ["all"]})
+        self.assertEqual(self.query(detail.context["library_back_url"]), {"tab": ["history"], "collection": ["deliveries"], "status": ["all"]})
 
     def test_invalid_library_context_is_discarded_and_cannot_create_an_external_return_link(self):
         receipt = self.receipt()
@@ -379,7 +378,7 @@ class AdminStorageLibraryTests(TestCase):
             "library": "specifications", "library_query": "x" * 150,
         })
         self.assertEqual(self.query(response.context["library_back_url"]), {
-            "tab": ["specifications"], "q": ["x" * 150],
+            "tab": ["history"], "collection": ["specifications"], "q": ["x" * 150],
         })
         for page in ("not-a-page", "-5", "0"):
             with self.subTest(page=page):
@@ -398,7 +397,7 @@ class AdminStorageLibraryTests(TestCase):
                 self.assertEqual(self.client.post(reverse("admin_storage"), {"tab": tab}).status_code, 405)
                 parser = Links(response.content.decode())
                 forbidden_paths = {reverse(route) for route in (
-                    "product_upload", "boundaries_upload", "submission_queue", "file_upload",
+                    "product_upload", "submission_queue", "file_upload",
                 )}
                 self.assertFalse(forbidden_paths & {urlsplit(address).path for address in parser.anchors})
                 self.assertFalse(any(form.get("method", "get").lower() == "post" and

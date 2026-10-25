@@ -12,7 +12,7 @@ function page({maintenance = false} = {}) {
     const {window, document} = createDOM();
     window.jQuery = undefined;
     const redirects = [];
-    const current = new URL("http://localhost:8000/boundaries/upload/?tab=package#upload");
+    const current = new URL("http://localhost:8000/admin/boundaries/upload/?tab=package#upload");
     window.location = {
         href: current.href, protocol: current.protocol, host: current.host,
         pathname: current.pathname, search: current.search, hash: current.hash,
@@ -51,7 +51,7 @@ test("native JSON authentication responses redirect without reading responseText
     })), true);
     const target = new URL(ui.redirects[0], ui.window.location.href);
     assert.equal(target.pathname, "/accounts/login/");
-    assert.equal(target.searchParams.get("next"), "/boundaries/upload/?tab=package#upload");
+    assert.equal(target.searchParams.get("next"), "/admin/boundaries/upload/?tab=package#upload");
 });
 
 test("empty or malformed native JSON authentication responses remain recoverable", () => {

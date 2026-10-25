@@ -5,12 +5,15 @@ from django.urls import resolve
 
 
 CONTROL_ROUTE_NAMES = frozenset({"admin_maintenance", "worker_maintenance", "admin_data_transfer",
-                               "admin_data_transfer_status", "admin_data_transfer_download",
+                               "admin_backup_export", "admin_backup_import",
+                               "boundaries_retention_action",
+                               "admin_data_transfer_status", "admin_data_transfer_download", "admin_database",
+                               "admin_data_transfer_status_database_legacy", "admin_data_transfer_download_database_legacy",
                                "admin_data_transfer_no_slash", "admin_data_transfer_legacy", "admin_storage_action",
                                "admin_data_transfer_status_legacy", "admin_data_transfer_download_legacy"})
 # These POST endpoints inspect/convert data. Their handlers explicitly avoid
 # incidental refresh writes while maintenance is active.
-READ_POST_ROUTE_NAMES = frozenset({"table_export", "update_job", "delivery_upload_check"})
+READ_POST_ROUTE_NAMES = frozenset({"table_export", "boundaries_export", "update_job", "delivery_upload_check"})
 # A resumable GET probe creates registration locks on shared storage.
 WRITE_ROUTE_NAMES = frozenset({"resumable_upload", "pull_job"})
 LOGIN_ROUTE_NAMES = frozenset({"login", "admin_login"})

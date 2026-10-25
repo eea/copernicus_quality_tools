@@ -1,0 +1,47 @@
+{% extends "admin/boundaries/base.html" %}
+{% load static %}
+{% block title %}Retained boundary versions | QC Tool Admin{% endblock %}
+{% block workspace_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/features/boundaries/index.css' %}">{% endblock %}
+{% block boundary_breadcrumbs %}<a href="{% url 'boundaries' %}">Boundaries</a> &rsaquo; Retained versions{% endblock %}
+{% block page_title %}Retained boundary versions{% endblock %}
+{% block page_subtitle %}<p>Review saved packages, remove eligible unused versions and restore packages from boundary trash.</p>{% endblock %}
+{% block page_actions %}<a class="btn-qc-secondary" href="{% url 'boundaries' %}">Active boundaries</a><a class="btn-qc-secondary" href="{% url 'admin_storage' %}?tab=boundaries&amp;status=all">Browse version files</a>{% endblock %}
+{% block page_content %}
+{% if boundary_retention_error %}<section class="qc-admin-feedback qc-admin-feedback--error" role="alert"><h2>Boundary action unavailable</h2><p>{{ boundary_retention_error }}</p></section>{% endif %}
+{% if boundary_retention_reason %}<section class="qc-admin-feedback" role="status"><h2>Retained versions are protected</h2><p>{{ boundary_retention_reason }}</p></section>{% endif %}
+{% if boundary_maintenance.phase != 'ready' %}<section class="qc-admin-feedback"><h2>Maintenance is required for file changes</h2><p>Turn on maintenance and wait for readiness before moving a package to trash or restoring it.</p><p><a href="{% url 'admin_maintenance' %}">Open maintenance</a></p></section>{% endif %}
+{% if boundary_removal_review %}
+<section class="qc-admin-panel boundary-package-summary" aria-labelledby="boundary-removal-heading">
+  <div class="qc-admin-panel__heading"><h2 id="boundary-removal-heading">Review package removal</h2></div>
+  <p><code>{{ boundary_removal_review.generation_id }}</code> contains {{ boundary_removal_review.file_count }} files ({{ boundary_removal_review.size_bytes|filesizeformat }}). The whole version will move to private boundary trash and remain restorable. The active package will stay selected.</p>
+  <form method="post" action="{% url 'boundaries_retention_action' %}">{% csrf_token %}
+    <input type="hidden" name="action" value="remove"><input type="hidden" name="generation_id" value="{{ boundary_removal_review.generation_id }}"><input type="hidden" name="review_hash" value="{{ boundary_removal_review.review_hash }}"><input type="hidden" name="maintenance_generation" value="{{ boundary_maintenance.generation }}">
+    <button class="btn-qc-danger" type="submit"{% if boundary_maintenance.phase != 'ready' %} disabled{% endif %}>Move package to trash</button>
+    <a class="btn-qc-secondary" href="{% url 'boundaries_retention' %}">Cancel</a>
+  </form>
+</section>
+{% endif %}
+<section class="qc-admin-panel boundary-package-summary" aria-labelledby="boundary-versions-heading">
+  <div class="qc-admin-panel__heading"><h2 id="boundary-versions-heading">Saved versions</h2></div>
+  {% for warning in boundary_versions.warnings %}<p role="status">{{ warning }}</p>{% endfor %}
+  <ul class="boundary-version-list">
+  {% for entry in boundary_versions.entries %}<li>
+    <div><strong>{{ entry.version_label }}</strong><span class="boundary-version-status">{{ entry.status_label }}</span><code>{{ entry.version_id }}</code>{% if entry.message %}<p>{{ entry.message }}</p>{% endif %}</div>
+    {% if entry.can_review_removal %}<a class="btn-qc-secondary" href="{{ entry.review_url }}" aria-label="Review removal of {{ entry.version_id }}">Review removal</a>{% elif entry.status == 'current' %}<span>Active package is protected</span>{% endif %}
+  </li>{% empty %}<li>No boundary versions can be listed.</li>{% endfor %}
+  </ul>
+  <div class="qc-admin-management-actions">{% if boundary_versions.has_previous %}<a class="btn-qc-secondary" href="?page={{ boundary_versions.page|add:'-1' }}">Previous versions</a>{% endif %}{% if boundary_versions.has_next %}<a class="btn-qc-secondary" href="?page={{ boundary_versions.page|add:'1' }}">More versions</a>{% endif %}</div>
+</section>
+<section class="qc-admin-panel boundary-package-summary" aria-labelledby="boundary-trash-heading">
+  <div class="qc-admin-panel__heading"><h2 id="boundary-trash-heading">Boundary trash</h2></div>
+  <p>Removed packages remain here for recovery. Restoring a version preserves its exact files and does not activate it. No permanent purge is provided.</p>
+  {% for warning in boundary_trash.warnings %}<p role="status">{{ warning }}</p>{% endfor %}
+  <ul class="boundary-version-list">
+  {% for entry in boundary_trash.entries %}<li>
+    <div><code>{{ entry.generation_id }}</code><p>{{ entry.message }}</p><span>{{ entry.file_count }} files · {{ entry.size_bytes|filesizeformat }}</span></div>
+    {% if entry.can_restore %}<form method="post" action="{% url 'boundaries_retention_action' %}">{% csrf_token %}<input type="hidden" name="action" value="restore"><input type="hidden" name="operation_id" value="{{ entry.id }}"><input type="hidden" name="maintenance_generation" value="{{ boundary_maintenance.generation }}"><button class="btn-qc-secondary" type="submit" aria-label="Restore {{ entry.generation_id }}"{% if boundary_maintenance.phase != 'ready' %} disabled{% endif %}>Restore package</button></form>{% endif %}
+  </li>{% empty %}<li>{% if boundary_trash.warnings %}No readable boundary trash entries are available.{% else %}Boundary trash is empty.{% endif %}</li>{% endfor %}
+  </ul>
+  <div class="qc-admin-management-actions">{% if boundary_trash.has_previous %}<a class="btn-qc-secondary" href="?trash_page={{ boundary_trash.page|add:'-1' }}">Previous trash entries</a>{% endif %}{% if boundary_trash.has_next %}<a class="btn-qc-secondary" href="?trash_page={{ boundary_trash.page|add:'1' }}">More trash entries</a>{% endif %}</div>
+</section>
+{% endblock %}

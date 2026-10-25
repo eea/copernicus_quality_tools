@@ -1,6 +1,17 @@
 /* Scoped layout for reviewed Admin transfers and forms. */
 .transfer-page { max-width: 1100px; }
 .transfer-page [hidden] { display: none !important; }
+.transfer-export .transfer-export-selection > .transfer-panel__body { padding-top: 20px; }
+.transfer-export .transfer-database-included { padding: 4px 0 18px; border-bottom: 1px solid var(--hairline-color); }
+.transfer-database-included > span { margin-inline-start: 12px; color: var(--body-quiet-color); font-size: 12px; }
+.transfer-export .transfer-database-included p { margin: 6px 0 0; color: var(--body-quiet-color); line-height: 1.6; }
+.transfer-export .transfer-option-group h2 { margin: 0 0 10px; padding: 0; color: var(--body-fg); background: transparent; font-size: 14px; }
+.transfer-export .transfer-scope { gap: 10px; margin: 0; padding: 12px 8px; border: 0; border-radius: 0; background: transparent; }
+.transfer-export .transfer-scope:has(input:checked) { background: transparent; }
+.transfer-export .transfer-scope:focus-within { outline: 2px solid var(--primary); outline-offset: -2px; border-radius: 4px; }
+.transfer-export .transfer-privacy { margin: 20px 0 0; color: var(--body-quiet-color); font-size: 12px; line-height: 1.6; }
+.transfer-export .transfer-review-notes { padding-inline-start: 18px; margin: 16px 0; color: var(--body-quiet-color); font-size: 12px; }
+.transfer-review-notes li { margin: 6px 0; line-height: 1.6; }
 .transfer-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0 0 20px; padding: 0; list-style-position: inside; }
 .transfer-steps li { padding: 12px; border-bottom: 3px solid var(--hairline-color); color: var(--body-quiet-color); }
 .transfer-steps li[aria-current="step"] { color: var(--body-fg); border-bottom-color: var(--primary); font-weight: 600; }

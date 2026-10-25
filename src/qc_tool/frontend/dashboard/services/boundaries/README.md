@@ -4,6 +4,18 @@ The package keeps HTTP concerns outside the boundary-domain workflow. Callers
 should import the stable operations and typed failures from `boundaries` rather
 than reaching into implementation modules.
 
+HTTP package management is owned by Admin at `/admin/boundaries/` and requires
+the QC administrator role. The domain services remain shared: QC readers pin
+the active generation through the resolver independently of management pages
+and administrator sessions.
+
+The Django adapter `services/boundary_retention.py` owns guarded reversible
+removal of unused generations. It reuses the maintenance/storage guards and
+private journals, leaving archive validation and activation independent. Active
+generations, historical QC usage and retained database references fail closed.
+Removal moves a whole reviewed immutable generation to private trash; restore
+does not activate it or overwrite an existing generation.
+
 - `service.py` orchestrates one locked validate/publish/activate operation.
 - `archive/` owns bounded copying, ZIP metadata validation, and safe extraction.
 - `storage/` owns trusted-root checks, locking, immutable generation publication,

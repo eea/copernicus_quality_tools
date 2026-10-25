@@ -161,8 +161,8 @@ class AccountUserAdmin(BaseUserAdmin):
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.remote_field.model is Group:
-            kwargs["queryset"] = Group.objects.filter(
-                name__in=Role.values(),
+            kwargs["queryset"] = Group.objects.using(
+                kwargs.get("using") or "default",
             ).order_by("name")
         elif db_field.name == "user_permissions":
             kwargs["queryset"] = capability_permissions(
@@ -175,12 +175,17 @@ class AccountUserAdmin(BaseUserAdmin):
             **kwargs,
         )
         if db_field.remote_field.model is Group:
-            field.label = "Roles"
+            field.label = "Roles and groups"
+            field.help_text = (
+                "Assign built-in QC Tool roles and additional permission groups. "
+                "Built-in role permissions are managed by QC Tool, and every "
+                "account keeps the default role. Assign product-manager scope separately."
+            )
         elif db_field.name == "user_permissions":
             field.label = "Additional QC permissions"
             field.help_text = (
                 "Optional QC Tool capabilities granted directly in addition "
-                "to role permissions."
+                "to role and group permissions."
             )
         return field
 

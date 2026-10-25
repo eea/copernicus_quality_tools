@@ -80,10 +80,11 @@ class MaintenanceBrowsingPresentationTests(TestCase):
                     self.assertEqual(response.context["maintenance"]["phase"], phase)
                     if route == "admin:index":
                         notice = (
-                            "Turning on maintenance. QC work is stopping."
+                            "Turning on maintenance"
                             if phase == "stopping" else
-                            "Maintenance is on. You can browse and download existing data; changes are paused."
+                            "Maintenance is on"
                         )
+                        self.assertContains(response, "Creating users, editing records and other changes are paused.")
                     else:
                         notice = "You can browse and download existing data."
                     self.assertContains(response, notice)
@@ -134,14 +135,14 @@ class MaintenanceBrowsingPresentationTests(TestCase):
         self.assertTrue(all(saves))
         controls_response = self.client.get(reverse("admin_maintenance"))
         controls = Controls(controls_response)
-        actions = {attributes.get("value"): disabled for attributes, disabled, form in controls.fields if attributes.get("name") == "action" and form and "data-maintenance-exempt" in form}
+        actions = {attributes.get("value"): disabled for attributes, disabled, form in controls.fields if attributes.get("name") == "action" and form and "data-maintenance-exempt" in form and "data-maintenance-disable-form" not in form}
         # The controls bypass the generic read-only presentation, but resuming
         # still waits for the application's stopping barrier to complete.
         self.assertEqual(actions, {"disable": True, "progress": False})
 
         maintenance.advance(self.status["generation"])
         ready_controls = Controls(self.client.get(reverse("admin_maintenance")))
-        ready_actions = [disabled for attributes, disabled, form in ready_controls.fields if attributes.get("name") == "action" and form and "data-maintenance-exempt" in form]
+        ready_actions = [disabled for attributes, disabled, form in ready_controls.fields if attributes.get("name") == "action" and form and "data-maintenance-exempt" in form and "data-maintenance-disable-form" not in form]
         self.assertEqual(ready_actions, [False])
 
     def test_returning_to_normal_mode_restores_native_upload_controls(self):

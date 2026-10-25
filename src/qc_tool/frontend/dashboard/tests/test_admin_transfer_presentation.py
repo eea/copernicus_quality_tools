@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from qc_tool.frontend.dashboard.services.transfer_presentation import (
-    local_datetime, present_transfer, transfer_page_copy,
+    backup_storage_summary, local_datetime, present_transfer, transfer_page_copy,
 )
 
 
@@ -86,16 +86,18 @@ class AdminTransferPresentationTests(SimpleTestCase):
 
     def test_history_dates_have_readable_local_time_and_a_machine_readable_instant(self):
         with timezone.override("Europe/Prague"):
-            html = render_to_string("admin/includes/transfers/history.html", {
-                "active_tab": "activity",
-                "recent_operations": [present_transfer({
+            html = render_to_string("admin/includes/transfers/workspace_operations.html", {
+                "history_id": "backup-history", "history_title": "Backup tasks",
+                "workspace_page_url": reverse("admin_backup_export"),
+                "operations": [present_transfer({
                     "id": self.operation_id, "kind": "export", "profile": "database",
                     "status": "completed", "created_at": "2026-10-23T12:30:00+00:00",
                 })],
             })
         self.assertIn('datetime="2026-10-23T14:30:00+02:00"', html)
         self.assertIn("23 Oct 2026, 14:30 CEST", html)
-        for label in ("Status", "Started", "Next step"):
+        self.assertIn('<th scope="col">Started</th>', html)
+        for label in ("Status", "Next step"):
             self.assertIn('data-label="' + label + '"', html)
 
     def test_backup_exclusions_are_labelled_without_reclassifying_missing_file_warnings(self):
@@ -163,8 +165,8 @@ class AdminTransferPresentationTests(SimpleTestCase):
             "runner_active": False, "recoverable": False, "cancellable": True,
         }
         html = render_to_string("admin/includes/transfers/operation.html", {"operation": operation})
-        self.assertIn("Waiting to start", html)
-        self.assertIn("waiting for the background worker", html)
+        self.assertIn("waiting to start", html.lower())
+        self.assertIn("Your request is saved and waiting to start.", html)
         self.assertIn('data-transfer-running-indicator aria-hidden="true"', html)
         self.assertNotIn('role="progressbar"', html, "Unknown progress must not imply a percentage")
         operation["recoverable"] = True
@@ -175,22 +177,23 @@ class AdminTransferPresentationTests(SimpleTestCase):
         self.assertIn('name="action" value="retry"', html)
 
     def test_activity_does_not_animate_a_recoverable_transfer_as_running(self):
-        html = render_to_string("admin/includes/transfers/activity_log.html", {
-            "active_tab": "activity", "recent_operations": [{
+        html = render_to_string("admin/includes/transfers/workspace_operations.html", {
+            "history_id": "backup-history", "history_title": "Backup tasks",
+            "workspace_page_url": reverse("admin_backup_export"), "operations": [{
                 "id": self.operation_id, "kind": "export", "profile": "database",
                 "status": "running", "recoverable": True,
             }],
         })
         self.assertIn("Needs attention", html)
-        self.assertIn("Review recovery", html)
+        self.assertIn("Review issue", html)
         self.assertNotIn("qc-admin-spinner", html)
 
     def test_cancelled_and_failed_transfers_explain_the_next_step_without_a_spinner(self):
-        for status, expected in (("cancelled", "choose another backup ZIP"), ("failed", "available recovery actions")):
+        for status, expected in (("cancelled", "Create another backup"), ("failed", "available recovery actions")):
             with self.subTest(status=status):
                 html = render_to_string("admin/includes/transfers/operation.html", {
                     "operation": {"id": self.operation_id, "kind": "export", "status": status},
-                    "backup_files_url": "/admin/database/?tab=backups",
+                    "export_page_url": reverse("admin_backup_export"),
                 })
                 self.assertIn(expected, html)
                 self.assertNotIn("qc-admin-spinner", html)
@@ -209,11 +212,13 @@ class AdminTransferPresentationTests(SimpleTestCase):
         html = render_to_string("admin/includes/transfers/operation.html", {"operation": operation})
         self.assertNotIn(download_url, html)
         self.assertIn("b" * 64, html)
-        history = render_to_string("admin/includes/transfers/history.html", {
-            "active_tab": "activity", "recent_operations": [{**operation, "profile": "database"}],
+        summary = backup_storage_summary([{**operation, "profile": "database"}])
+        history = render_to_string("admin/includes/transfers/saved_backups.html", {
+            "backup_storage": summary, "prepared_backups": summary["saved_exports"],
+            "export_page_url": reverse("admin_backup_export"),
         })
         self.assertNotIn(download_url, history)
-        self.assertIn("ZIP deleted", history)
+        self.assertNotIn(self.operation_id, history)
 
     def test_completed_export_without_a_download_explains_recovery_without_promising_ready(self):
         operation = {

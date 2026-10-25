@@ -1,0 +1,13 @@
+{% load static %}
+<section id="qc-admin-{{ direction.key }}" class="qc-admin-panel" aria-labelledby="{{ direction.key }}-heading">
+  <div class="qc-admin-panel__heading">
+    <span class="qc-admin-icon{% if direction.tone %} qc-admin-icon--{{ direction.tone }}{% endif %}"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#{{ direction.icon }}"></use></svg></span>
+    <h2 id="{{ direction.key }}-heading">{{ direction.label }}</h2>
+  </div>
+  <p>{{ direction.description }}</p>
+  <div class="qc-admin-management-actions"><a class="btn-qc-primary" href="{{ direction.url }}">{{ direction.action_label }}</a></div>
+  {% if direction.tasks %}<div class="qc-admin-link-list">
+    {% for task in direction.tasks %}{% include "admin/includes/task_link.html" with url=task.url label=task.label description=task.description icon=task.icon only %}{% endfor %}
+  </div>{% endif %}
+  {% if direction.key == 'maintenance' %}{% include "admin/includes/maintenance_summary.html" with admin_overview=admin_overview only %}{% endif %}
+</section>

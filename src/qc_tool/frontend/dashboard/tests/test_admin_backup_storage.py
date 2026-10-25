@@ -18,12 +18,13 @@ class AdminBackupStorageTests(SimpleTestCase):
         }
 
     def backups(self, operations):
-        return render_to_string("admin/includes/transfers/history.html", {
-            "active_tab": "backups", "recent_operations": operations,
-            "backup_storage": backup_storage_summary(operations, {
-                "free_bytes": 4096, "reserve_bytes": 1024,
-            }),
-            "database_url": "/admin/database/", "area_export_url": "/admin/database/?tab=export",
+        summary = backup_storage_summary(operations, {"free_bytes": 4096, "reserve_bytes": 1024})
+        return render_to_string("admin/includes/transfers/saved_backups.html", {
+            "backup_storage": summary,
+            "prepared_backups": [item for item in summary["saved_exports"]
+                                 if item.get("downloadable") and item.get("saved_file_available")
+                                 and not item.get("package_release_requested_at")],
+            "export_page_url": reverse("admin_backup_export"),
         })
 
     def test_storage_totals_use_current_files_and_separate_imports_released_and_pending_exports(self):
@@ -46,13 +47,14 @@ class AdminBackupStorageTests(SimpleTestCase):
 
     def test_backup_list_explains_database_boundary_and_confirms_only_one_saved_file(self):
         html = self.backups([self.export(source_details={"source_database": "qc_tool_current"})])
-        for text in ("Download or delete saved backups", "qc_tool_current", ">Download</a>", ">Delete</summary>", "Delete saved ZIP", "2.0",
-                     "Deleting a ZIP keeps your databases and original application files"):
+        for text in ("Prepared backups", "qc_tool_current", ">Download</a>", ">Delete</summary>", "Delete saved ZIP", "2.0",
+                     "Your databases and original files are kept"):
             self.assertIn(text, html)
         self.assertIn('name="operation_id" value="' + self.operation_id + '"', html)
         self.assertIn('name="confirmed_release" required', html)
         self.assertIn('name="return_to_backup_files" value="on"', html)
         self.assertIn(reverse("admin_data_transfer_download", args=[self.operation_id]), html)
+        self.assertIn('action="' + reverse("admin_backup_export") + '"', html)
         self.assertNotIn(">Details</a>", html)
         self.assertNotIn('id="transfer-history"', html)
 
@@ -65,17 +67,20 @@ class AdminBackupStorageTests(SimpleTestCase):
                 self.assertEqual(summary["saved_export_count"], 0)
                 html = self.backups([operation])
                 self.assertNotIn(reverse("admin_data_transfer_download", args=[self.operation_id]), html)
-                self.assertIn("Not recorded in this export", html)
+                self.assertNotIn(self.operation_id, html)
+                self.assertIn("No prepared backups yet", html)
 
     def test_import_recovery_packages_have_no_delete_control(self):
         html = self.backups([self.export(kind="import")])
         self.assertNotIn('value="release_package"', html)
-        self.assertIn("kept for restore and recovery", html)
+        self.assertNotIn(self.operation_id, html)
 
     def test_operation_describes_export_as_saved_zip_and_deletion_preserves_database(self):
         operation = self.export()
         html = render_to_string("admin/includes/transfers/operation.html", {"operation": operation})
-        self.assertIn("Restoring the ZIP later creates a separate database for review", html)
+        self.assertIn("Your ZIP is saved on this server", html)
+        self.assertIn("Keep downloaded copies private", html)
+        self.assertNotIn("Import another ZIP", html)
         self.assertIn("Your databases, original files, transfer history and checksum are kept", html)
         operation["payload_released_at"] = "2026-10-23T10:00:00Z"
         html = render_to_string("admin/includes/transfers/operation.html", {"operation": operation})
