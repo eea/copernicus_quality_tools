@@ -10,7 +10,7 @@ from django.db import DatabaseError, transaction
 from qc_tool.common import CONFIG, JOB_ERROR, JOB_RUNNING, JOB_WAITING, WORKER_PORT
 from qc_tool.worker_auth import InvalidWorkerUrl, worker_maintenance_url
 
-from .state import MaintenanceError, file_lock, read_status, stamp, write_status
+from .state import MaintenanceBusy, MaintenanceError, file_lock, read_status, stamp, write_status
 from .workers import request_worker_state as _worker_state
 from .operations import require_no_operation
 
@@ -29,7 +29,7 @@ def enable(actor, expected_generation):
     # Already-admitted uploads may finish; the durable flag refuses new work.
     with file_lock("control", blocking=False) as acquired:
         if not acquired:
-            raise MaintenanceError("Another maintenance action is in progress. Retry shortly.")
+            raise MaintenanceBusy("Another maintenance action is in progress. Retry shortly.")
         require_no_operation()
         state = read_status()
         _check_generation(state, expected_generation)
@@ -95,7 +95,7 @@ def advance(expected_generation, *, stopping_only=False):
 
     with file_lock("control", blocking=False) as acquired:
         if not acquired:
-            raise MaintenanceError("Another maintenance action is in progress. Retry shortly.")
+            raise MaintenanceBusy("Another maintenance action is in progress. Retry shortly.")
         require_no_operation()
         state = read_status()
         _check_generation(state, expected_generation)
@@ -141,7 +141,7 @@ def advance(expected_generation, *, stopping_only=False):
 def disable(actor, expected_generation):
     with file_lock("control", blocking=False) as acquired:
         if not acquired:
-            raise MaintenanceError("Another maintenance action is in progress. Retry shortly.")
+            raise MaintenanceBusy("Another maintenance action is in progress. Retry shortly.")
         require_no_operation()
         state = read_status()
         _check_generation(state, expected_generation)
@@ -164,7 +164,7 @@ def retire_worker(worker_url, actor, expected_generation, *, verified_stopped=Fa
         raise MaintenanceError("Retiring a worker requires its address and explicit verification that all its processes are stopped.")
     with file_lock("control", blocking=False) as acquired:
         if not acquired:
-            raise MaintenanceError("Another maintenance action is in progress. Retry shortly.")
+            raise MaintenanceBusy("Another maintenance action is in progress. Retry shortly.")
         require_no_operation()
         state = read_status()
         _check_generation(state, expected_generation)

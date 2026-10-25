@@ -1,0 +1,58 @@
+# Optional, standalone desktop access to an operator-reviewed share.
+# Read docs/deployment/storage-access.md before supplying paths or starting it.
+# Do not merge this with an application Compose project: application volumes are
+# deliberately absent, and no service is started by the normal application stack.
+name: qc-tool-storage-access
+
+services:
+  storage-sftp:
+    profiles: [storage-access]
+    build:
+      context: ./storage-sftp
+      args:
+        DEBIAN_IMAGE: "${QC_TOOL_SFTP_BASE_IMAGE:-debian:trixie-slim}"
+    image: "${QC_TOOL_SFTP_IMAGE:-qc-tool-storage-sftp:local}"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [SYS_CHROOT, SETUID, SETGID]
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.5
+    ports:
+      - "${QC_TOOL_SFTP_BIND_ADDRESS:-127.0.0.1}:${QC_TOOL_SFTP_PORT:-2222}:2222"
+    tmpfs:
+      - /run:rw,noexec,nosuid,nodev,size=4m,mode=0755
+    volumes:
+      - type: bind
+        source: "${QC_TOOL_SFTP_EXPORT_ROOT:?Set an absolute dedicated reviewed export directory, never the complete application volume}"
+        target: /srv/qc-storage/files
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${QC_TOOL_SFTP_AUTHORIZED_KEYS:?Set the absolute maintainer public authorized_keys file}"
+        target: /etc/qc-storage/authorized_keys
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${QC_TOOL_SFTP_HOST_KEY:?Set the absolute persistent server Ed25519 private host key}"
+        target: /etc/qc-storage/host_key
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD, /usr/sbin/sshd, -t, -f, /etc/ssh/sshd_config]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+

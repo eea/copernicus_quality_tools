@@ -3,7 +3,7 @@
 from contextlib import contextmanager
 
 from .operations import active_operation, require_no_operation
-from .state import MaintenanceError, file_lock, read_status
+from .state import MaintenanceBusy, MaintenanceError, file_lock, read_status
 
 
 @contextmanager
@@ -15,7 +15,7 @@ def ready_barrier(generation=None, *, owner=None):
     """
     with file_lock("control", blocking=False) as controlled:
         if not controlled:
-            raise MaintenanceError("Another maintenance action is in progress. Retry shortly.")
+            raise MaintenanceBusy("Another maintenance action is in progress. Retry shortly.")
         state = read_status()
         if not state["enabled"] or state["phase"] != "ready":
             raise MaintenanceError("Enable maintenance and wait for readiness before continuing.")

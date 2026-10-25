@@ -31,8 +31,9 @@ class RecoveryFileTests(SimpleTestCase):
         (self.roots["work"] / "maintenance").mkdir()
         (self.roots["work"] / "maintenance" / "state.json").write_bytes(b"private control")
 
-    def package(self):
-        inventory, entries, _fingerprint, _size = recovery_files.snapshot(limits=ArchiveLimits(), roots=self.roots)
+    def package(self, *, components=None):
+        inventory, entries, _fingerprint, _size = recovery_files.snapshot(
+            limits=ArchiveLimits(), roots=self.roots, components=components)
         dump = self.root / "database.dump"
         dump.write_bytes(b"PGDMPfixture")
         path = self.root / "bundle.zip"
@@ -82,6 +83,13 @@ class RecoveryFileTests(SimpleTestCase):
         with self.assertRaises(TransferError):
             recovery_files.collect(roots=self.roots)
 
+    def test_zip_symbolic_link_to_an_existing_directory_is_also_rejected(self):
+        outside = self.root / "outside-directory"
+        outside.mkdir()
+        (self.roots["incoming"] / "old-owner" / "evil.zip").symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(TransferError):
+            recovery_files.collect(roots=self.roots)
+
     def test_reviewed_hash_is_enforced_before_archive_publication(self):
         inventory, entries, _fingerprint, _size = recovery_files.snapshot(limits=ArchiveLimits(), roots=self.roots)
         inventory.sources[0].path.write_bytes(b"changed after review")
@@ -94,12 +102,85 @@ class RecoveryFileTests(SimpleTestCase):
         with self.assertRaisesMessage(TransferError, "inventory limit"):
             recovery_files.collect(roots=self.roots, limits=ArchiveLimits(max_members=3))
 
+    def test_file_components_are_selected_independently_without_opening_omitted_storage(self):
+        definitions = self.roots["work"] / "product_definitions"
+        definitions.mkdir()
+        original = b'{"description": "Original spacing and bytes"}\n'
+        (definitions / "example.json").write_bytes(original)
+        # An omitted unsafe payload must not prevent exporting specifications.
+        (self.roots["incoming"] / "old-owner" / "unsafe.zip").symlink_to(self.root / "outside")
+        inventory = recovery_files.collect(roots=self.roots, components=["specifications"])
+        self.assertEqual([(source.root, source.key) for source in inventory.sources],
+                         [("work", "product_definitions/example.json")])
+        self.assertEqual(inventory.sources[0].path.read_bytes(), original)
+        contract = inventory.storage["recovery_files"]
+        self.assertEqual(contract["selected_components"], ["specifications"])
+        self.assertEqual(contract["omitted_components"], ["boundaries", "deliveries", "artifacts", "publications"])
+        self.assertEqual(contract["component_summary"]["deliveries"]["status"], "omitted")
+
+    def test_unavailable_selected_storage_is_explicit_and_not_reported_as_complete(self):
+        roots = {name: path for name, path in self.roots.items() if name != "submissions"}
+        inventory = recovery_files.collect(roots=roots, components=["deliveries", "publications"])
+        contract = inventory.storage["recovery_files"]
+        self.assertEqual(contract["unavailable_components"], ["publications"])
+        self.assertEqual(contract["unavailable_roots"], ["submissions"])
+        self.assertEqual(contract["component_summary"]["publications"], {
+            "status": "unavailable", "files": 0, "directories": 0, "unavailable_roots": ["submissions"]})
+        self.assertTrue(inventory.warnings)
+        roots["product-0"] = self.root / "missing-product-specifications"
+        inventory = recovery_files.collect(roots=roots, components=["specifications", "artifacts"])
+        contract = inventory.storage["recovery_files"]
+        self.assertEqual(contract["component_summary"]["specifications"]["status"], "unavailable")
+        self.assertEqual(contract["component_summary"]["artifacts"]["status"], "included")
+
+    def test_no_file_selection_still_carries_an_explicit_inventory(self):
+        archive = self.package(components=[])
+        self.assertEqual(len(archive.entries), 1)
+        contract = archive.storage["recovery_files"]
+        self.assertEqual(contract["selected_components"], [])
+        self.assertEqual(contract["omitted_components"], list(recovery_files.COMPONENTS))
+        self.assertFalse(contract["unavailable_components"])
+        postgres._native_metadata(archive)
+
+    def test_storage_selection_and_file_counts_are_verified_during_restore(self):
+        archive = self.package(components=["deliveries"])
+        contract = archive.storage["recovery_files"]
+        changed = {**contract, "component_summary": {**contract["component_summary"], "deliveries": {
+            "status": "empty", "files": 0, "directories": 0, "unavailable_roots": []}}}
+        with self.assertRaisesMessage(TransferError, "summary"):
+            recovery_files.validate(replace(archive, storage={"recovery_files": changed}))
+        unrelated = {**archive.entries[1], "root": "work", "key": "job_" + "a" * 32 + "/report.html"}
+        with self.assertRaisesMessage(TransferError, "omitted"):
+            recovery_files.validate(replace(archive, entries=(archive.entries[0], unrelated)))
+
+    def test_old_native_file_contract_remains_readable(self):
+        archive = self.package()
+        contract = archive.storage["recovery_files"]
+        legacy = {key: contract[key] for key in ("scope", "unavailable_roots", "exclusions")}
+        legacy["version"] = 1
+        legacy["exclusions"] = list(recovery_files.LEGACY_EXCLUSIONS)
+        recovery_files.validate(replace(archive, storage={"recovery_files": legacy}))
+
+    def test_invalid_component_selection_is_rejected(self):
+        for selection in ("deliveries", ["everything"], ["deliveries", "deliveries"], [True]):
+            with self.subTest(selection=selection), self.assertRaises(TransferError):
+                recovery_files.collect(roots=self.roots, components=selection)
+
+    def test_readable_archive_paths_preserve_component_and_source_storage_identity(self):
+        self.assertEqual(recovery_files.archive_path("database", "schema.sql"), "database/schema.sql")
+        self.assertEqual(recovery_files.archive_path("boundaries", "raster/original.bin"),
+                         "boundaries/raster/original.bin")
+        self.assertEqual(recovery_files.archive_path("incoming", "owner/input.zip"),
+                         "deliveries/incoming/owner/input.zip")
+        self.assertEqual(recovery_files.archive_path("work", "product_definitions/example.json"),
+                         "specifications/work/product_definitions/example.json")
+
     def test_export_capacity_reports_limits_and_free_space_before_queueing(self):
         with patch.object(service, "_limits", return_value=ArchiveLimits(max_archive_bytes=10)), \
                 patch.object(service, "_require_space", side_effect=TransferError("low space")):
             blockers = service._export_capacity(11)
         self.assertEqual(len(blockers), 2)
-        self.assertTrue(all("records only" in message for message in blockers))
+        self.assertTrue(all("optional file sections" in message for message in blockers))
 
     def test_legacy_boundaries_and_specifications_restore_without_activation(self):
         for name in ("raster", "vector"):

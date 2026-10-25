@@ -1,8 +1,8 @@
 <fieldset class="transfer-scopes transfer-file-options">
-  <legend>Include files?</legend>
+  <legend>Include the package's files?</legend>
   {{ file_field.errors }}
   {% for radio in file_field %}
-  <label class="transfer-scope">{{ radio.tag }}<span><strong>{{ radio.choice_label }}</strong><span class="transfer-secondary">{% if radio.data.value == 'true' %}{% if file_action == 'import' %}Use verified files from the package and matching files already on this server.{% elif native_transfer %}Include retained local delivery ZIPs and QC artifacts, including unlinked ZIPs in managed storage.{% else %}Include available delivery ZIPs and related local artifacts. Submitted files do not need approval.{% endif %}{% else %}{% if file_action == 'import' %}Add records without copying package files. Existing verified files can still be linked.{% else %}Keep file identities and links in the records; do not copy file contents.{% endif %}{% endif %}</span></span></label>
+  <label class="transfer-scope">{{ radio.tag }}<span><strong>{{ radio.choice_label }}</strong><span class="transfer-secondary">{% if radio.data.value == 'true' %}Copy verified package files, such as boundaries, deliveries and reports. Matching files already on this server can be reused.{% else %}Import the database contents without copying package files. Matching files already on this server can still be used.{% endif %}</span></span></label>
   {% endfor %}
-  <p class="help">Missing files do not prevent record transfer. {% if native_transfer %}Remote objects, temporary work, logs, deployment secrets and files outside managed storage are not copied.{% else %}Remote storage, deployment secrets and unregistered server files are not copied.{% endif %}</p>
+  <p class="help">This choice changes files only. A full database restore still includes all database records. You will review missing files before confirming.</p>
 </fieldset>

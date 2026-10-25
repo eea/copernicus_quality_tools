@@ -1,0 +1,23 @@
+/* One layout and navigation pattern for all Database administration sections. */
+.qc-admin-home.database-workspace { max-width: 1280px; }
+.database-workspace { scroll-margin-top: 20px; }
+.database-back-link { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.database-workspace .database-page-header { margin-bottom: 22px; gap: 24px; }
+.database-page-header > div:first-child { min-width: 0; }
+.database-header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.database-header-actions svg { width: 16px; height: 16px; }
+.database-sections { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 18px; margin: 0 0 28px; border-bottom: 1px solid var(--hairline-color); }
+.database-sections a { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 5px; min-height: 58px; padding: 10px 8px 13px; border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; font-weight: 600; text-decoration: none; }
+.database-section-name { line-height: 1.4; }
+.database-section-hint { color: var(--body-quiet-color); font-size: 11px; font-weight: 400; line-height: 1.5; }
+.database-sections a[aria-current="page"] { color: var(--body-fg); border-bottom-color: var(--primary); }
+.database-sections a:hover { background: var(--qc-admin-soft); border-bottom-color: var(--border-color); }
+.database-sections a[aria-current="page"]:hover { border-bottom-color: var(--primary); }
+.database-sections a:focus-visible { outline: 2px solid var(--link-fg); outline-offset: 3px; }
+@media (max-width: 767px) {
+  .database-workspace .database-page-header { flex-direction: column; align-items: stretch; gap: 18px; }
+  .database-header-actions > a { flex: 1; justify-content: center; text-align: center; }
+  .database-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin-bottom: 22px; }
+  .database-sections a { min-height: 64px; padding: 9px 5px; font-size: 13px; }
+  .database-section-hint { font-size: 10px; }
+}

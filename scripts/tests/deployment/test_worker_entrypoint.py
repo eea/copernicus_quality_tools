@@ -25,7 +25,14 @@ class WorkerEntrypointTests(unittest.TestCase):
         # The runtime gate is separately exercised against the real worker image.
         # Leave Python itself real for the argument serialization under test.
         self.executable("python3", "#!/bin/bash\n"
-                        'if [[ "$1" == */docker/check_worker_runtime.py ]]; then exit 0; fi\n'
+                        'if [[ "$*" == "-m qc_tool.storage check" ]]; then\n'
+                        '  printf "%s\\n" "$*" >> "$QC_WORKER_TEST_COMMAND_LOG"\n'
+                        '  exit "${QC_WORKER_TEST_STORAGE_FAILURE:-0}"\n'
+                        'fi\n'
+                        'if [[ "$1" == */docker/check_worker_runtime.py ]]; then\n'
+                        '  printf "%s\\n" runtime-check >> "$QC_WORKER_TEST_COMMAND_LOG"\n'
+                        '  exit 0\n'
+                        'fi\n'
                         f"exec {shlex.quote(sys.executable)} \"$@\"\n")
         self.executable("chown", "#!/bin/sh\nexit 0\n")
         source = (self.repository / "docker/inspire/docker-entrypoint.sh").read_text()
@@ -47,8 +54,11 @@ class WorkerEntrypointTests(unittest.TestCase):
             "HTTPS_PROXY_HOST": "none", "HTTPS_PROXY_PORT": "3129",
             "HTTPS_PROXY_USERNAME": "", "HTTPS_PROXY_PASSWORD": "",
             "RUN_INSPIRE_VALIDATOR": "yes",
+            "QC_WORKER_TEST_COMMAND_LOG": str(self.root / "commands.log"),
         }
         self.environment.pop("JAVA_OPTIONS", None)
+        self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ROOT", None)
+        self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ID", None)
 
     def executable(self, name, source):
         path = self.bin / name
@@ -80,6 +90,36 @@ class WorkerEntrypointTests(unittest.TestCase):
         result, options = self.capture_options(JAVA_MAX_MEM="2048", HTTP_PROXY_HOST="none")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(shlex.split(options), ["-server", "-Xms1g", "-Xmx2097152k"])
+
+    def test_storage_guard_precedes_runtime_imports_and_validator_writes(self):
+        result, options = self.capture_options(
+            QC_TOOL_PERSISTENT_STORAGE_ROOT="/mnt",
+            QC_TOOL_PERSISTENT_STORAGE_ID="test-installation",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNotNone(options)
+        self.assertEqual((self.root / "commands.log").read_text().splitlines(), [
+            "-m qc_tool.storage check", "runtime-check",
+        ])
+
+    def test_bad_storage_stops_before_runtime_and_private_files_are_created(self):
+        for configuration in (
+            {"QC_TOOL_PERSISTENT_STORAGE_ROOT": "/mnt"},
+            {"QC_TOOL_PERSISTENT_STORAGE_ID": "test-installation"},
+            {"QC_TOOL_PERSISTENT_STORAGE_ROOT": ""},
+        ):
+            with self.subTest(configuration=configuration):
+                (self.root / "commands.log").unlink(missing_ok=True)
+                result, options = self.capture_options(
+                    **configuration, QC_WORKER_TEST_STORAGE_FAILURE="1",
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIsNone(options)
+                self.assertEqual((self.root / "commands.log").read_text().splitlines(), [
+                    "-m qc_tool.storage check",
+                ])
+                self.assertFalse((self.root / "qc-tool-wgetrc").exists())
+                self.assertFalse((self.root / "etf").exists())
 
     def test_invalid_budget_refuses_startup_before_exec(self):
         for value in ("512", "not-a-number"):

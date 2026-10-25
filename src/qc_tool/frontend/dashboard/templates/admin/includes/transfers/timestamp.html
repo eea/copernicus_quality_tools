@@ -1,0 +1,1 @@
+{% if display_value %}<time datetime="{{ display_value|date:'c' }}">{{ display_value|date:"j M Y, H:i T" }}</time>{% else %}<span class="transfer-secondary">Date unavailable</span>{% endif %}

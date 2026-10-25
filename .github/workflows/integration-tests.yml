@@ -30,9 +30,12 @@ jobs:
           QC_TOOL_WORKER_IMAGE: qc-tool-worker-ci:${{ github.sha }}
           QC_TOOL_POSTGRES_PASSWORD: ci-only-configuration-check-password
           DJANGO_SECRET_KEY: ci-only-configuration-check-secret
+          QC_TOOL_PERSISTENT_ROOT: /srv/qc-tool-ci-configuration-only
+          QC_TOOL_PERSISTENT_STORAGE_ID: ci-only-storage-identity
         run: |
           docker compose -f docker/compose.local.yaml config --quiet
           docker compose -f docker/docker-compose.eea.yml config --quiet
+          docker compose -f docker/docker-compose.eea.yml -f docker/compose.eea-storage.yaml config --quiet
           docker compose -f docker/docker-compose.service_provider.yml config --quiet
       - name: Build the supported worker runtime from this checkout
         run: >-
@@ -78,6 +81,7 @@ jobs:
           qc_tool.test.test_worker_maintenance
           qc_tool.test.test_worker_scheduler
           qc_tool.test.test_worker_service_auth
+          qc_tool.test.test_storage_guard
 
   tooling:
     name: Maintainer tools (offline)

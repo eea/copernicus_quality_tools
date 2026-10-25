@@ -1,7 +1,7 @@
 {% load static %}
 {% if admin_notice %}
 <ul class="messagelist" data-maintenance-banner role="status" aria-live="polite" aria-atomic="true"{% if not maintenance.enabled %} hidden{% endif %}>
-  <li class="warning"><span data-maintenance-message>{{ maintenance.notice }}</span> <a href="" data-maintenance-reload>Reload page</a></li>
+  <li class="warning">{% if maintenance.phase == 'stopping' %}<span class="qc-admin-spinner" aria-hidden="true"></span> {% endif %}<span data-maintenance-message>{% if maintenance.phase == 'stopping' %}Turning on maintenance. QC work is stopping.{% elif maintenance.phase == 'unavailable' %}Maintenance status is unavailable. Changes remain paused; open maintenance settings for details.{% else %}Maintenance is on. You can browse and download existing data; changes are paused.{% endif %}</span> {% if account_access.is_administrator %}<a href="{% url 'admin_maintenance' %}">{% if maintenance.phase == 'stopping' %}View progress{% else %}Maintenance settings{% endif %}</a>{% else %}<a href="" data-maintenance-reload>Reload page</a>{% endif %}</li>
 </ul>
 {% else %}
 <div class="qc-maintenance-notice" data-maintenance-banner{% if not maintenance.enabled %} hidden{% endif %} role="status" aria-live="polite" aria-atomic="true">

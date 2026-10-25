@@ -31,6 +31,14 @@ persistent storage. For application updates, follow [Operations](operations.md#u
 | --- | --- | --- | --- |
 | `docker-compose.service_provider.yml` | SQLite on one named volume | one `qc_tool_volume` | one frontend, simple self-hosted installation |
 | `docker-compose.eea.yml` | PostgreSQL 14 | separate DB/boundary/incoming/work/submission volumes | managed installation with external user DB lifecycle |
+| EEA + `compose.eea-storage.yaml` | PostgreSQL 14 on a private persistent path | one mounted application tree plus separate private frontend/database folders | Linux Azure VM with operator-managed persistent storage |
+
+For Azure production, follow [EEA persistent storage](eea-storage.md) to mount
+and verify the filesystem, configure startup identity checks and expose its real
+application folders in Admin's file browser. This optional override preserves
+the current container paths and does not move existing named-volume contents.
+Use the same base/override file set for every command; the single-file examples
+below must be adapted when that profile is selected.
 
 Both profiles support multiple worker replicas. Keep one frontend process and
 one frontend container for now: the WSGI module owns a background status-refresh

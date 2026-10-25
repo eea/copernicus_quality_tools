@@ -4,7 +4,8 @@
 .qc-maintenance .qc-admin-service__actions { flex-shrink: 0; max-width: 240px; }
 .qc-maintenance .qc-admin-service__actions form { margin: 0; }
 .qc-maintenance .qc-maintenance-progress { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; color: var(--qc-admin-warning); }
-.qc-maintenance-progress__dot { flex-shrink: 0; width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: currentColor; }
+.qc-maintenance-progress .qc-admin-spinner { flex-shrink: 0; margin-top: 3px; }
+.qc-maintenance .qc-maintenance-check-time { margin: 6px 0 0 25px; color: var(--body-quiet-color); font-size: 12px; }
 .qc-maintenance-effects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 24px 0 20px; }
 .qc-maintenance-effects h3 { margin: 0 0 6px; color: var(--body-loud-color); font-size: 13px; }
 .qc-maintenance-effects p { margin: 0; color: var(--body-quiet-color); font-size: 13px; line-height: 1.65; }

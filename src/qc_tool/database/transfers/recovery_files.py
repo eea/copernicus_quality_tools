@@ -13,19 +13,63 @@ import re
 
 from qc_tool.common import JOB_INPUT_DIRNAME, JOB_TMP_DIRNAME
 
-from .archive import ArtifactSource, ArchiveLimits, TransferArchiveError, _hash, open_regular, validate_key
+from .archive import ArtifactSource, ArchiveLimits, CompressionCounter, TransferArchiveError, _hash, open_regular, validate_key
 from .artifacts import ArtifactInventory, ArtifactRestorePlan, _safe_directory, storage_roots
+from .components import FILE_COMPONENTS, COMPONENT_LABELS as _COMPONENT_LABELS
 from .contracts import digest
 
 
-VERSION = 1
+VERSION = 2
+COMPONENTS = FILE_COMPONENTS
+COMPONENT_LABELS = {key: _COMPONENT_LABELS[key] for key in COMPONENTS}
 _JOB = re.compile(r"^job_[0-9a-f]{32}$")
-EXCLUSIONS = (
+LEGACY_EXCLUSIONS = (
     "PostgreSQL cluster roles, deployment configuration and encryption keys",
     "Private maintenance, transfer, credential and storage-trash journals",
     "Partial uploads, worker input/scratch directories and diagnostic logs",
     "Remote objects, files outside configured business storage and active configuration pointers",
 )
+EXCLUSIONS = (
+    "Private maintenance, transfer and storage-trash journals",
+    "Partial uploads, worker input/scratch directories and diagnostic logs",
+    "Remote objects and files outside configured application storage and selected deployment configuration",
+)
+
+
+def normalize_components(components=None):
+    """Use a stable order for explicit selections and their review fingerprints."""
+    if components is None:
+        return COMPONENTS
+    if (not isinstance(components, (list, tuple, set, frozenset))
+            or any(not isinstance(item, str) or item not in COMPONENTS for item in components)
+            or len(set(components)) != len(components)):
+        raise TransferArchiveError("Choose supported backup file components without duplicates.")
+    return tuple(item for item in COMPONENTS if item in components)
+
+
+def component_for(root, key):
+    """Classify storage identities without querying the source database."""
+    validate_key(key)
+    if root == "work":
+        first = Path(key).parts[0]
+        if first == "product_definitions":
+            return "specifications"
+        if _JOB.fullmatch(first):
+            return "artifacts"
+    if re.fullmatch(r"product-[0-9]+", root):
+        return "specifications"
+    return {"boundaries": "boundaries", "incoming": "deliveries", "submissions": "publications"}.get(root)
+
+
+def archive_path(root, key):
+    """Readable ZIP paths remain separate from immutable restoration identities."""
+    validate_key(key)
+    if root == "database":
+        return "database/" + key
+    component = component_for(root, key)
+    if component is None:
+        raise TransferArchiveError("The backup contains an unsupported file component.")
+    return component + "/" + ("" if root == "boundaries" else root + "/") + key
 
 
 def allowed(root, key, directory=False):
@@ -56,16 +100,23 @@ def allowed(root, key, directory=False):
     return False
 
 
-def collect(*, roots=None, limits=None):
-    """Inventory all retained business files, including unlinked legacy ZIPs."""
-    roots = roots or storage_roots()
+def collect(*, roots=None, limits=None, components=None, report=None):
+    """Inventory selected retained files, including unlinked historical ZIPs."""
+    roots = storage_roots() if roots is None else roots
     limits = limits or ArchiveLimits()
+    selected = normalize_components(components)
     sources, directories, unavailable = [], [], []
     visited = 0
+    if report is not None:
+        report("scan_files", processed_items=0)
 
     def visit(root_name, root, key):
         nonlocal visited
+        if component_for(root_name, key) not in selected:
+            return
         visited += 1
+        if report is not None and visited % 256 == 0:
+            report("scan_files", processed_items=visited)
         if visited > limits.max_members * 4 or len(sources) + len(directories) >= limits.max_members - 2:
             raise TransferArchiveError("Retained storage exceeds the configured backup inventory limit.")
         target = root / key
@@ -73,10 +124,12 @@ def collect(*, roots=None, limits=None):
         # original immutable generations are copied independently below.
         if root_name == "boundaries" and key in {"raster", "vector"} and target.is_symlink():
             return
+        if target.is_symlink():
+            if allowed(root_name, key) or allowed(root_name, key, True):
+                raise TransferArchiveError("Recovery storage contains a symbolic link in a retained namespace.")
+            return
         if not allowed(root_name, key, target.is_dir()):
             return
-        if target.is_symlink():
-            raise TransferArchiveError("Recovery storage contains a symbolic link in a retained namespace.")
         if target.is_dir():
             if not allowed(root_name, key, True):
                 return
@@ -89,7 +142,21 @@ def collect(*, roots=None, limits=None):
                 pass
             sources.append(ArtifactSource(root_name, key, target, root))
 
-    for name, configured in roots.items():
+    candidates = dict(roots)
+    # An unconfigured publication root is unavailable, rather than proof that a
+    # selected publication component has been copied completely.
+    required = {"specifications": "work", "boundaries": "boundaries", "deliveries": "incoming",
+                "artifacts": "work", "publications": "submissions"}
+    for component in selected:
+        if required[component] not in candidates:
+            candidates[required[component]] = None
+    for name, configured in candidates.items():
+        root_components = {component_for(name, "product_definitions"), component_for(name, "job_" + "0" * 32)}
+        if not root_components.intersection(selected):
+            continue
+        if configured is None:
+            unavailable.append(name)
+            continue
         root = Path(configured)
         if _safe_directory(root, required=False) is None:
             unavailable.append(name)
@@ -97,20 +164,44 @@ def collect(*, roots=None, limits=None):
         with os.scandir(root) as children:
             for entry in children:
                 visit(name, root, entry.name)
+    summary = {}
+    for component in COMPONENTS:
+        missing = sorted(name for name in unavailable if component in {
+            component_for(name, "product_definitions"), component_for(name, "job_" + "0" * 32)})
+        files = sum(component_for(item.root, item.key) == component for item in sources)
+        folders = sum(component_for(item["root"], item["key"]) == component for item in directories)
+        status = ("omitted" if component not in selected else "partial" if missing and (files or folders)
+                  else "unavailable" if missing else "included" if files or folders else "empty")
+        summary[component] = {"status": status, "files": files, "directories": folders, "unavailable_roots": missing}
+    if report is not None:
+        report("scan_files", processed_items=visited, total_items=visited)
     return ArtifactInventory(tuple(sorted(sources, key=lambda item: (item.root, item.key))),
         tuple(sorted(directories, key=lambda item: (item["root"], item["key"]))),
         {"recovery_files": {"version": VERSION, "scope": "retained_business_storage",
+                            "selected_components": list(selected),
+                            "omitted_components": [item for item in COMPONENTS if item not in selected],
+                            "unavailable_components": [item for item in selected if summary[item]["unavailable_roots"]],
+                            "component_summary": summary,
                             "unavailable_roots": sorted(unavailable), "exclusions": list(EXCLUSIONS)}},
         tuple("Storage area {} is unavailable; its files are not included.".format(name) for name in unavailable))
 
 
-def snapshot(*, limits, roots=None):
-    inventory = collect(roots=roots, limits=limits)
-    entries, total = [], 0
-    for source in inventory.sources:
+def snapshot(*, limits, roots=None, components=None, report=None):
+    inventory = collect(roots=roots, limits=limits, components=components, report=report)
+    entries, sources, total = [], [], 0
+    if report is not None:
+        report("hash_files", processed_bytes=0, processed_items=0, total_items=len(inventory.sources))
+    for index, source in enumerate(inventory.sources):
+        def progress(size):
+            if report is not None:
+                report("hash_files", processed_bytes=total + size,
+                       processed_items=index, total_items=len(inventory.sources))
+
+        counter = CompressionCounter()
         with open_regular(source.path, storage_root=source.storage_root) as stream:
             before = os.fstat(stream.fileno())
-            checksum, size = _hash(stream, limits.max_member_bytes)
+            checksum, size = _hash(stream, limits.max_member_bytes, counter,
+                                   report=progress if report is not None else None)
             after = os.fstat(stream.fileno())
         if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
                 after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
@@ -118,9 +209,13 @@ def snapshot(*, limits, roots=None):
         total += size
         if total > limits.max_total_bytes or len(entries) >= limits.max_members - 2:
             raise TransferArchiveError("The retained files exceed the configured backup limits.")
+        sources.append(replace(source, compression=counter.finish(checksum, size, limits=limits)))
         entries.append({"root": source.root, "key": source.key, "sha256": checksum, "size": size})
+        if report is not None:
+            report("hash_files", processed_bytes=total, processed_items=index + 1,
+                   total_items=len(inventory.sources))
     fingerprint = digest({"entries": entries, "directories": inventory.directories, "storage": inventory.storage})
-    return inventory, entries, fingerprint, total
+    return replace(inventory, sources=tuple(sources)), entries, fingerprint, total
 
 
 def validate(archive):
@@ -131,21 +226,58 @@ def validate(archive):
         if set(archive.storage) - {"compatibility"}:
             raise TransferArchiveError("The native backup storage contract is unsupported.")
         return
-    if (not isinstance(contract, dict) or set(contract) != {"version", "scope", "unavailable_roots", "exclusions"}
-            or type(contract["version"]) is not int or contract["version"] != VERSION
+    base_keys = {"version", "scope", "unavailable_roots", "exclusions"}
+    selection_keys = {"selected_components", "omitted_components", "unavailable_components", "component_summary"}
+    if (not isinstance(contract, dict) or type(contract.get("version")) is not int
+            or contract["version"] not in {1, VERSION}
+            or set(contract) != (base_keys if contract["version"] == 1 else base_keys | selection_keys)
             or contract["scope"] != "retained_business_storage"
-            or contract["exclusions"] != list(EXCLUSIONS)
+            or contract["exclusions"] != list(LEGACY_EXCLUSIONS if contract["version"] == 1 else EXCLUSIONS)
             or not isinstance(contract["unavailable_roots"], list)
             or len(contract["unavailable_roots"]) > 1000
             or any(not isinstance(name, str) or len(name) > 40 for name in contract["unavailable_roots"])
             or set(archive.storage) - {"recovery_files", "compatibility"}):
         raise TransferArchiveError("The native backup file contract is unsupported.")
+    selected = COMPONENTS
+    if contract["version"] == VERSION:
+        selected = normalize_components(contract["selected_components"])
+        if (list(selected) != contract["selected_components"]
+                or contract["omitted_components"] != [item for item in COMPONENTS if item not in selected]
+                or not isinstance(contract["component_summary"], dict)
+                or set(contract["component_summary"]) != set(COMPONENTS)):
+            raise TransferArchiveError("The native backup file selection is invalid.")
     for is_directory, items in ((False, archive.entries), (True, archive.directories)):
         for item in items:
             if item["root"] == "database" and not is_directory:
                 continue
             if not allowed(item["root"], item["key"], is_directory):
                 raise TransferArchiveError("The backup contains a file outside retained business storage.")
+            if component_for(item["root"], item["key"]) not in selected:
+                raise TransferArchiveError("The backup contains an omitted file component.")
+    if contract["version"] == VERSION:
+        missing = contract["unavailable_roots"]
+        if (missing != sorted(set(missing))
+                or any(not {component_for(name, "product_definitions"), component_for(name, "job_" + "0" * 32)}
+                       .intersection(selected) for name in missing)
+                or contract["unavailable_components"] != [component for component in selected if any(
+                    component in {component_for(name, "product_definitions"), component_for(name, "job_" + "0" * 32)}
+                    for name in missing)]):
+            raise TransferArchiveError("The native backup file availability is invalid.")
+        for component in COMPONENTS:
+            detail = contract["component_summary"][component]
+            if (not isinstance(detail, dict) or type(detail.get("files")) is not int
+                    or type(detail.get("directories")) is not int):
+                raise TransferArchiveError("The native backup file summary is invalid.")
+            files = sum(entry["root"] != "database" and component_for(entry["root"], entry["key"]) == component
+                        for entry in archive.entries)
+            folders = sum(component_for(entry["root"], entry["key"]) == component for entry in archive.directories)
+            unavailable = [name for name in missing if component in {
+                component_for(name, "product_definitions"), component_for(name, "job_" + "0" * 32)}]
+            status = ("omitted" if component not in selected else "partial" if unavailable and (files or folders)
+                      else "unavailable" if unavailable else "included" if files or folders else "empty")
+            if contract["component_summary"][component] != {
+                    "status": status, "files": files, "directories": folders, "unavailable_roots": unavailable}:
+                raise TransferArchiveError("The native backup file summary does not match its payloads.")
 
 
 def plan_restore(archive, *, journal_path, include_files=True, roots=None):

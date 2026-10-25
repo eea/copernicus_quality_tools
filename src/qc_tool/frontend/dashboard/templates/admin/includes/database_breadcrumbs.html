@@ -1,0 +1,1 @@
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Admin</a>{% for crumb in database_breadcrumbs %} &rsaquo; {% if crumb.url %}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{% else %}{{ crumb.label }}{% endif %}{% endfor %}</div>

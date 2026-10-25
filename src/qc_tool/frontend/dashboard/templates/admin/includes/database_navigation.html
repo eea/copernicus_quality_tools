@@ -1,0 +1,3 @@
+<nav class="database-sections" aria-label="Database tasks">
+  {% for section in database_sections %}<a href="{{ section.url }}" aria-label="{{ section.label }}" aria-describedby="database-nav-{{ section.key }}"{% if section.current %} aria-current="page"{% endif %}><span class="database-section-name">{{ section.label }}</span><span class="database-section-hint" id="database-nav-{{ section.key }}">{{ section.hint }}</span></a>{% endfor %}
+</nav>

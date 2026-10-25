@@ -33,7 +33,7 @@ def submission_detail_presentation(
     has_open_conflict = conflict is not None and conflict.state == "open"
 
     return {
-        "status": _status(
+        "status": submission_status(
             submission, can_review=can_review, storage_available=storage_available,
         ),
         "decision": {
@@ -47,7 +47,8 @@ def submission_detail_presentation(
     }
 
 
-def _status(submission, *, can_review, storage_available):
+def submission_status(submission, *, can_review=False, storage_available=False):
+    """Describe a loaded receipt without queries, actions or URL assumptions."""
     publication = submission.publication_state
     if publication != "published":
         label, tone, message = {

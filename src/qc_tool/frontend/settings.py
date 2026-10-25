@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 
 import math
+import json
 import os.path
 from os import environ
 
@@ -339,6 +340,21 @@ SHOW_LOGO = CONFIG["show_logo"]
 # Maintenance mode setting.
 MAINTENANCE_MODE = CONFIG["maintenance_mode"]
 
+# Additional file-browser roots are reviewed deployment mounts, never paths
+# supplied by an HTTP request. They are exposed read-only.
+QC_TOOL_PERSISTENT_STORAGE_ROOT = environ.get("QC_TOOL_PERSISTENT_STORAGE_ROOT", "").strip()
+QC_TOOL_PERSISTENT_STORAGE_ID = environ.get("QC_TOOL_PERSISTENT_STORAGE_ID", "").strip()
+try:
+    QC_TOOL_STORAGE_ROOTS = json.loads(environ.get("QC_TOOL_STORAGE_ROOTS", "[]"))
+except (ValueError, TypeError) as error:
+    raise ImproperlyConfigured("QC_TOOL_STORAGE_ROOTS must be a JSON list of configured storage locations.") from error
+if not isinstance(QC_TOOL_STORAGE_ROOTS, list) or len(QC_TOOL_STORAGE_ROOTS) > 16:
+    raise ImproperlyConfigured("QC_TOOL_STORAGE_ROOTS must contain at most 16 configured storage locations.")
+QC_TOOL_STORAGE_SFTP_HOST = environ.get("QC_TOOL_STORAGE_SFTP_HOST", "").strip()
+QC_TOOL_STORAGE_SFTP_PORT = _environment_integer("QC_TOOL_STORAGE_SFTP_PORT", 2222, minimum=1, maximum=65535)
+QC_TOOL_STORAGE_SFTP_USERNAME = environ.get("QC_TOOL_STORAGE_SFTP_USERNAME", "qcstorage").strip()
+QC_TOOL_STORAGE_SFTP_ROOT = environ.get("QC_TOOL_STORAGE_SFTP_ROOT", "/files").strip()
+
 # Bounded administrator data packages. Journals and private staging share the
 # persistent WORK_DIR with the maintenance locks across every frontend.
 QC_TOOL_TRANSFER_DIR = environ.get("QC_TOOL_TRANSFER_DIR", str(CONFIG["work_dir"] / "data-transfer"))
@@ -349,6 +365,10 @@ QC_TOOL_TRANSFER_ARCHIVE_LIMITS = {
     "max_archive_bytes": _environment_integer("QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES", 16 * 1024**3, minimum=1024, maximum=1024**4),
     "max_total_bytes": _environment_integer("QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES", 64 * 1024**3, minimum=1024, maximum=4 * 1024**4),
 }
+QC_TOOL_TRANSFER_ARCHIVE_LIMITS["max_member_bytes"] = _environment_integer(
+    "QC_TOOL_TRANSFER_MAX_MEMBER_BYTES", QC_TOOL_TRANSFER_ARCHIVE_LIMITS["max_archive_bytes"],
+    minimum=1024, maximum=1024**4,
+)
 QC_TOOL_TRANSFER_MIN_FREE_BYTES = _environment_integer(
     "QC_TOOL_TRANSFER_MIN_FREE_BYTES", 512 * 1024**2, minimum=1024**2, maximum=1024**4,
 )

@@ -2,6 +2,12 @@
 
 set -e
 
+# This stdlib-only guard runs before runtime imports, tokens, logs or validator
+# scratch directories can be created on a missing/wrong persistent mount.
+if [[ -n "${QC_TOOL_PERSISTENT_STORAGE_ROOT+x}" || -n "${QC_TOOL_PERSISTENT_STORAGE_ID+x}" ]]; then
+    python3 -m qc_tool.storage check
+fi
+
 # A source bind mount must not make an old runtime appear to be a current
 # worker. Refuse unsupported Python/driver combinations before starting work.
 python3 /usr/local/src/copernicus_quality_tools/docker/check_worker_runtime.py

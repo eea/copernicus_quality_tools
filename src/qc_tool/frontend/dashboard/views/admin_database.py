@@ -7,14 +7,16 @@ from django.db import DatabaseError
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import render
 from django.urls import reverse
-from django.utils.dateparse import parse_datetime
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.services.admin_overview import overview_context
 from qc_tool.frontend.dashboard.services.database_admin.presentation import (
-    cell, dependencies, editor_actions, field_label, query_records, record_rows, table_url,
+    cell, dependencies, editor_actions, field_label, query_records, record_field_groups,
+    record_heading, record_rows, table_url,
 )
 from qc_tool.frontend.dashboard.services.database_admin.resources import resource_for, resources
+from qc_tool.frontend.dashboard.services.transfer_presentation import local_datetime
+from qc_tool.frontend.dashboard.services.database_navigation import database_page_context
 
 
 def _authorize(request):
@@ -27,14 +29,35 @@ def _authorize(request):
 def _render(request, template, context, *, status=200):
     resource = context.get("resource")
     account_records = resource and (resource.category == "Accounts & access" or resource.table == "auth_permission")
+    database_url = reverse("admin_data_transfer")
+    records_home_url = (reverse("admin_user_management") if account_records else
+                        database_url + "?tables=1#database-records-heading")
+    navigation = {}
+    if resource:
+        record_detail = "record_pk" in context
+        heading = context.get("record_heading", resource.label)
+        records_url = context.get("records_url", table_url(resource))
+        if account_records:
+            breadcrumbs = [{"label": "User management", "url": records_home_url}]
+        else:
+            navigation = database_page_context("overview", title=heading, description=resource.description)
+            breadcrumbs = [{"label": "Database status", "url": database_url},
+                           {"label": "Browse records", "url": records_home_url}]
+        breadcrumbs.append({"label": resource.label, "url": records_url if record_detail else ""})
+        if record_detail:
+            breadcrumbs.append({"label": "Record " + str(context["record_pk"]), "url": ""})
+        navigation.update({
+            "database_breadcrumbs": breadcrumbs,
+            "database_back_url": records_url if record_detail else records_home_url,
+            "database_back_label": ("Back to " + resource.label if record_detail else
+                                    "Back to user management" if account_records else "Back to tables"),
+        })
     response = render(request, template, {
         **admin.site.each_context(request), "is_nav_sidebar_enabled": False,
-        "database_url": reverse("admin_data_transfer"),
-        "transfers_url": reverse("admin_data_transfer") + "?tab=transfers",
-        "records_home_url": (reverse("admin_user_management") if account_records else
-                             reverse("admin_data_transfer") + "?tables=1#database-records-heading"),
-        "records_home_label": "User management" if account_records else "Database",
-        **context,
+        "database_url": database_url, "transfers_url": database_url + "?tab=backups",
+        "records_home_url": records_home_url,
+        "records_home_label": "User management" if account_records else "Browse records",
+        "account_records": bool(account_records), **context, **navigation,
     }, status=status)
     response["Cache-Control"] = "no-store, private"
     return response
@@ -68,16 +91,28 @@ def database_home(request):
         policy, policy_error = {}, str(error)
     schema_status = schema_readiness()
     checked_at = schema_status.get("checked_at")
+    from qc_tool.database.selection import current_database, DatabaseSelectionError
+    try:
+        active_database = current_database()
+    except DatabaseSelectionError:
+        active_database = ""
+    records_mode = bool(query or category or request.GET.get("tables") == "1")
     return _render(request, "admin/database.html", {
-        "title": "Database", "table_groups": groups.items(), "table_count": len(inventory),
+        **database_page_context("overview", title="Browse database records" if records_mode else "Database status",
+            description=("Choose a table in the active database, then open a record to inspect its details and connections."
+                         if records_mode else
+                         "Check which database QC Tool uses and choose your next database task."),
+            child=records_mode, origin="overview"),
+        "table_groups": groups.items(), "table_count": len(inventory),
         "categories": sorted({item.category for item in inventory}), "category": category, "query": query,
         "database_maintenance": state, "database_overview": overview,
         "maintenance_off": overview.get("phase") == "off",
         "maintenance_ready": overview.get("phase") == "ready" and not overview.get("transfer_url"),
         "database_policy": policy, "database_policy_error": policy_error,
         "database_schema_status": schema_status,
-        "database_schema_checked_at": parse_datetime(checked_at) if isinstance(checked_at, str) else None,
-        "tables_open": bool(query or category or request.GET.get("tables") == "1"),
+        "active_database": active_database,
+        "database_schema_checked_at": local_datetime(checked_at),
+        "records_mode": records_mode,
     })
 
 
@@ -101,12 +136,20 @@ def database_records(request, table):
         }, status=503)
     parameters = request.GET.copy()
     parameters.pop("page", None)
+    search_parameters = parameters.copy()
+    search_parameters.pop("q", None)
+    relation_parameters = parameters.copy()
+    relation_parameters.pop("related_field", None)
+    relation_parameters.pop("related_value", None)
     return _render(request, "admin/database_records.html", {
         "title": resource.label, "resource": resource, "page": page, "rows": rows,
         "columns": [field_label(resource, field) for field in resource.columns],
         "query": query, "pagination_query": parameters.urlencode(),
         "related_field": request.GET.get("related_field", ""),
         "related_value": request.GET.get("related_value", ""),
+        "related_label": field_label(resource, request.GET["related_field"]) if request.GET.get("related_field") else "",
+        "clear_search_url": table_url(resource) + ("?" + search_parameters.urlencode() if search_parameters else ""),
+        "clear_relation_url": table_url(resource) + ("?" + relation_parameters.urlencode() if relation_parameters else ""),
         "record_actions": editor_actions(resource, request),
     })
 
@@ -122,6 +165,7 @@ def database_record(request, table, pk):
         queryset, _query = query_records(resource, {})
         obj = queryset.get(pk=pk)
         fields = [cell(resource, obj, field) for field in resource.fields]
+        ordinary_fields, technical_fields = record_field_groups(resource, fields)
         actions = editor_actions(resource, request, obj)
         connected = dependencies(resource, obj)
         from qc_tool.frontend.dashboard.services.storage_admin.references import record_storage_links
@@ -137,6 +181,9 @@ def database_record(request, table, pk):
         "title": f"{resource.label} · {pk}", "resource": resource, "record_pk": pk,
         "records_url": table_url(resource),
         "record_fields": fields, "record_actions": actions,
+        "record_heading": record_heading(resource, obj),
+        "ordinary_fields": ordinary_fields, "technical_fields": technical_fields,
         "record_dependencies": connected,
+        "record_dependency_count": sum(item["count"] for item in connected),
         "record_storage_links": stored_files,
     })

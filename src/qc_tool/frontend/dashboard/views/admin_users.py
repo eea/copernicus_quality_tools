@@ -70,8 +70,8 @@ def user_management(request):
         "can_transfer_users": access.is_administrator,
         "show_users_panel": bool(user_actions or access.is_administrator),
         "single_panel": not ((user_actions or access.is_administrator) and access_actions),
-        "users_import_url": transfers_url + "?" + urlencode({"section": "users", "tab": "import"}),
-        "users_export_url": transfers_url + "?" + urlencode({"section": "users", "tab": "export"}),
+        "users_import_url": transfers_url + "?" + urlencode({"tab": "import"}),
+        "users_export_url": transfers_url + "?" + urlencode({"tab": "export"}),
     }
     response = render(request, "admin/user_management.html", context)
     response["Cache-Control"] = "no-store, private"

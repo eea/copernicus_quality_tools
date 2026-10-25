@@ -1,52 +1,88 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}">{% endblock %}
 {% block content_title %}{% endblock %}
-{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; Database</div>{% endblock %}
+{% block breadcrumbs %}{% include "admin/includes/database_breadcrumbs.html" %}{% endblock %}
 {% block content %}
-<div class="qc-admin-home database-page">
-  <header class="qc-admin-intro"><div><h1>Database</h1><p class="qc-admin-intro__description">Manage QC records, backups, schema readiness and maintenance.</p></div><a href="{{ database_url }}?tab=history">Transfer history</a></header>
-  <div class="database-layout">
-    <div class="database-tools">
-    <section class="qc-admin-panel" aria-labelledby="database-transfers-heading"><h2 id="database-transfers-heading">Import and export records</h2><p>Add connected QC records to this database, or export them. Choose records only or include available files.</p><div class="database-actions"><a class="btn-qc-primary" href="{{ database_url }}?section=records&amp;tab=import">Import records</a><a class="btn-qc-secondary" href="{{ database_url }}?section=records&amp;tab=export">Export records</a></div></section>
-    <section class="qc-admin-panel" aria-labelledby="database-backups-heading"><h2 id="database-backups-heading">Full database backup</h2><p>Preserve every PostgreSQL table, including stored credentials. Optionally include retained local files. Restore into a separate database before an explicit switch.</p><div class="database-actions"><a class="btn-qc-primary" href="{{ database_url }}?section=recovery&amp;tab=backup">Create full backup</a><a class="btn-qc-secondary" href="{{ database_url }}?section=recovery&amp;tab=import">Restore a backup</a></div><p class="database-muted">Browse retained ZIPs and artifacts in <a href="{% url 'admin_storage' %}">Storage</a>. External storage and deployment secrets require separate backups.</p></section>
-    <section class="qc-admin-panel" aria-labelledby="database-schema-heading"><h2 id="database-schema-heading">Schema &amp; migrations</h2>
-      {% if database_policy_error %}<p class="errornote" role="alert">{{ database_policy_error }}</p>{% else %}<p>This release uses a model-based schema. In-place migrations are not available in v3.0.0.</p>{% endif %}
-      {% if database_schema_status.ready %}<p class="database-state" role="status"><span class="database-state-dot" aria-hidden="true"></span>Schema matches</p>{% else %}<p class="errornote" role="alert">{{ database_schema_status.message }}</p>{% endif %}
-      <p class="database-muted">{% if database_schema_checked_at %}Checked <time datetime="{{ database_schema_status.checked_at }}">{{ database_schema_checked_at|date:"j M Y, H:i:s T" }}</time>. {% endif %}{% if database_schema_status.contract_version %}Expected contract: <code>{{ database_schema_status.contract_version }}</code>.{% endif %}</p>
-      <a class="btn-qc-secondary" href="{{ database_url }}?schema=check#database-schema-heading">Check database schema</a><p class="database-muted">Checks compatibility without changing tables or records.</p>
+<div class="qc-admin-home database-page database-workspace"{% if records_mode %} id="database-records-heading"{% endif %}>
+  {% include "admin/includes/database_page_header.html" %}
+  {% if not records_mode %}
+  <div class="database-active-overview"><div><strong>Database currently in use</strong>{% if active_database %}<code>{{ active_database }}</code>{% else %}<span class="database-muted">Open Manage databases to check the current selection.</span>{% endif %}</div><span class="database-muted">All users and QC work use this database</span><a href="{{ database_manager_url }}">Manage databases &rarr;</a></div>
+  <section class="database-start" aria-labelledby="database-transfers-heading">
+    <h2 id="database-transfers-heading" class="database-section-title">Choose a database task</h2>
+    <div class="database-task-grid database-task-grid--four">
+      <article class="qc-admin-panel database-task database-task--primary">
+        <span class="database-task__icon" aria-hidden="true"><svg><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg></span>
+        <h3>Create a backup</h3><p>Save the schema, every database record and selected files in a downloadable ZIP.</p>
+        <a class="btn-qc-primary" href="{{ area_export_url }}">Choose backup contents<span aria-hidden="true"> &rarr;</span></a>
+        <p class="database-task__note">Choose contents &rarr; Review &rarr; Download.</p>
+      </article>
+      <article class="qc-admin-panel database-task">
+        <span class="database-task__icon" aria-hidden="true"><svg><use href="{% static 'dashboard/icons/ui.svg' %}#upload"></use></svg></span>
+        <h3>Restore from backup</h3><p>Upload a saved ZIP and restore a separate database before choosing whether to use it.</p>
+        <a class="btn-qc-secondary" href="{{ area_import_url }}">Choose a backup ZIP<span aria-hidden="true"> &rarr;</span></a>
+        <p class="database-task__note">Upload &rarr; Restore &rarr; Review a switch.</p>
+      </article>
+      <article class="qc-admin-panel database-task">
+        <span class="database-task__icon" aria-hidden="true"><svg><use href="{% static 'dashboard/icons/ui.svg' %}#package"></use></svg></span>
+        <h3>Switch or remove a database</h3><p>Inspect restored databases, change which one QC Tool uses, or remove an unused copy.</p>
+        <a class="btn-qc-secondary" href="{{ database_manager_url }}">Manage databases<span aria-hidden="true"> &rarr;</span></a>
+        <p class="database-task__note">One active database. Other databases stay separate.</p>
+      </article>
+      <article class="qc-admin-panel database-task">
+        <span class="database-task__icon" aria-hidden="true"><svg><use href="{% static 'dashboard/icons/ui.svg' %}#columns"></use></svg></span>
+        <h3>Browse database records</h3><p>Choose a table in the active database, inspect records and follow their connections.</p>
+        <a class="btn-qc-secondary" href="{{ database_url }}?tables=1#database-records-heading">Browse records<span aria-hidden="true"> &rarr;</span></a>
+        <p class="database-task__note">{{ table_count }} tables, grouped by area.</p>
+      </article>
+    </div>
+    <p class="database-start-note">Already started a backup or restore? Open <a href="{{ transfer_history_url }}">Progress &amp; history</a> to continue. To download or delete a saved ZIP, open <a href="{{ backup_files_url }}">Back up &amp; restore</a>.</p>
+  </section>
+  <div class="database-status-grid">
+    <section class="qc-admin-panel database-health" aria-labelledby="database-schema-heading">
+      <div class="database-section-heading"><h2 id="database-schema-heading">Database compatibility</h2>{% if database_schema_status.ready %}<span class="database-badge">Schema matches</span>{% endif %}</div>
+      {% if database_schema_status.ready %}<p>The database structure matches this version of QC Tool.</p>{% else %}<p class="errornote" role="alert">{{ database_schema_status.message }}</p>{% endif %}
+      {% if database_policy_error %}<p class="errornote" role="alert">{{ database_policy_error }}</p>{% endif %}
+      <div class="database-actions"><a href="{{ database_url }}?schema=check#database-schema-heading">Check compatibility again</a>{% if database_schema_checked_at %}<span class="database-muted">Checked <time datetime="{{ database_schema_status.checked_at }}">{{ database_schema_checked_at|date:"j M Y, H:i:s T" }}</time></span>{% endif %}</div>
+      <details class="database-health-details"><summary>What does this check do?</summary><p>Checks compatibility without changing tables or records. This release uses a model-based schema. In-place migrations are not available in v3.0.0.</p>{% if database_schema_status.contract_version %}<p>Expected contract: <code>{{ database_schema_status.contract_version }}</code>.</p>{% endif %}</details>
     </section>
-    <details class="database-table-tools"{% if tables_open %} open{% endif %}><summary>Browse database tables <span class="database-muted">({{ table_count }})</span></summary>
-    <section class="qc-admin-panel database-directory" aria-labelledby="database-records-heading">
-      <div class="database-section-heading"><h2 id="database-records-heading">Records</h2><span class="database-muted">{{ table_count }} tables</span></div>
-      <p>Choose a table to view records, follow connections and see its available actions.</p>
+    <aside class="qc-admin-panel database-maintenance" aria-labelledby="database-maintenance-heading">
+      <div class="database-section-heading"><h2 id="database-maintenance-heading">Maintenance</h2><span class="database-badge{% if not maintenance_off %} database-badge--warning{% endif %}">{% if maintenance_off %}Off{% elif database_overview.phase == 'ready' %}On{% elif database_overview.phase == 'stopping' %}Turning on{% else %}Status unavailable{% endif %}</span></div>
+      <p>{% if maintenance_off %}Uploads and QC jobs are available. Export and import will guide you through pausing them when needed.{% elif database_overview.transfer_url %}Maintenance is reserved for a database transfer. Open its status to check progress or recovery.{% elif maintenance_ready %}Uploads, QC jobs and record edits are paused. Browsing remains available.{% elif database_overview.phase == 'stopping' %}<span class="qc-admin-spinner" aria-hidden="true"></span> QC work is stopping. Open maintenance to follow progress.{% else %}Open maintenance to check the problem before changing data.{% endif %}</p>
+      <div class="database-actions">
+      {% if database_overview.transfer_url %}<a class="btn-qc-secondary" href="{{ database_overview.transfer_url }}">View current transfer</a>{% else %}<a href="{% url 'admin_maintenance' %}?next={{ database_url|urlencode }}">{% if database_overview.phase == 'stopping' %}View progress{% else %}Maintenance details{% endif %}</a>{% endif %}
+      {% if maintenance_off or maintenance_ready %}
+      <form method="post" action="{% url 'admin_maintenance' %}" data-maintenance-exempt data-admin-pending-label="Updating maintenance…" data-admin-pending-message="Updating maintenance and checking whether work can continue. Please wait for the current status.">
+        {% csrf_token %}<input type="hidden" name="generation" value="{{ database_maintenance.generation }}"><input type="hidden" name="next" value="{{ database_url }}">
+        <button class="btn-qc-secondary" type="submit" name="action" value="{% if maintenance_off %}enable{% else %}disable{% endif %}">{% if maintenance_off %}Turn on maintenance{% else %}Turn off maintenance{% endif %}</button>
+      </form>
+      {% endif %}
+      </div>
+    </aside>
+  </div>
+  {% else %}
+  <p class="database-record-source">Browsing the active database{% if active_database %}: <code>{{ active_database }}</code>{% endif %}. <a href="{{ database_manager_url }}">Manage databases</a></p>
+  {% endif %}
+  <div class="database-tools">
+    {% if not records_mode %}<details class="database-table-tools"><summary>Browse database tables <span class="database-muted">({{ table_count }})</span></summary>{% endif %}
+    <section class="qc-admin-panel database-directory" aria-labelledby="{% if records_mode %}database-table-directory-heading{% else %}database-records-heading{% endif %}">
+      <div class="database-section-heading"><h2 id="{% if records_mode %}database-table-directory-heading{% else %}database-records-heading{% endif %}">Find a table</h2><span class="database-muted">{{ table_count }} tables</span></div>
+      <p>Tables are grouped by their role in QC Tool. Open a table to browse its records; user and permission changes have their own management screens.</p>
       <form method="get" class="database-search" role="search">
+        <input type="hidden" name="tables" value="1">
         <div><label for="database-search">Find a table</label><input id="database-search" name="q" type="search" value="{{ query }}" placeholder="Name or PostgreSQL table"></div>
         <div><label for="database-category">Area</label><select id="database-category" name="category"><option value="">All areas</option>{% for value in categories %}<option{% if value == category %} selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
-        <button type="submit" class="btn-qc-secondary">Find tables</button>{% if query or category %}<a href="{{ database_url }}">Clear</a>{% endif %}
+        <button type="submit" class="btn-qc-secondary">Find tables</button>{% if query or category %}<a href="{{ database_url }}?tables=1#database-records-heading">Clear filters</a>{% endif %}
       </form>
       <div class="database-table-groups">
       {% for category, tables in table_groups %}
         <section class="database-table-group" aria-label="{{ category }}"><h3>{{ category }}</h3><ul>
           {% for row in tables %}<li><a href="{{ row.url }}"><span><strong>{{ row.resource.label }}</strong><code>{{ row.resource.table }}</code></span><span class="database-table-mode">{% if row.editable %}Manage{% else %}View{% endif %}<span aria-hidden="true"> &rarr;</span></span></a></li>{% endfor %}
         </ul></section>
-      {% empty %}<p class="database-empty">No tables match this search. <a href="{{ database_url }}">Show all tables</a></p>{% endfor %}
+      {% empty %}<p class="database-empty">No tables match this search. Try a different name or area, or <a href="{{ database_url }}?tables=1#database-records-heading">show all tables</a>.</p>{% endfor %}
       </div>
     </section>
-    </details>
-    </div>
-    <aside class="qc-admin-panel database-maintenance" aria-labelledby="database-maintenance-heading">
-      <h2 id="database-maintenance-heading">Maintenance</h2>
-      <p class="database-state"><span class="database-state-dot{% if not maintenance_off %} database-state-dot--paused{% endif %}" aria-hidden="true"></span>{% if maintenance_off %}Off{% elif database_overview.phase == 'ready' %}On{% elif database_overview.phase == 'stopping' %}Turning on{% else %}Status unavailable{% endif %}</p>
-      <p>{% if maintenance_off %}Users can upload data and run QC. Turn on maintenance before a backup or database transfer.{% elif database_overview.transfer_url %}A transfer is in progress. Maintenance stays on until it finishes or is recovered.{% elif maintenance_ready %}Uploads, QC jobs and record edits are paused. Browsing remains available.{% elif database_overview.phase == 'stopping' %}QC work is stopping. Open maintenance to follow progress.{% else %}Open maintenance to check the problem before changing data.{% endif %}</p>
-      {% if maintenance_off or maintenance_ready %}
-      <form method="post" action="{% url 'admin_maintenance' %}" data-maintenance-exempt>
-        {% csrf_token %}<input type="hidden" name="generation" value="{{ database_maintenance.generation }}"><input type="hidden" name="next" value="{{ database_url }}">
-        <button class="btn-qc-primary" type="submit" name="action" value="{% if maintenance_off %}enable{% else %}disable{% endif %}">{% if maintenance_off %}Turn on maintenance{% else %}Turn off maintenance{% endif %}</button>
-      </form>
-      {% endif %}
-      {% if database_overview.transfer_url %}<a class="btn-qc-secondary" href="{{ database_overview.transfer_url }}">View current transfer</a>{% else %}<a href="{% url 'admin_maintenance' %}?next={{ database_url|urlencode }}">{% if database_overview.phase == 'stopping' %}View progress{% else %}Maintenance details{% endif %}</a>{% endif %}
-    </aside>
+    {% if not records_mode %}</details>{% endif %}
   </div>
 </div>
 {% endblock %}

@@ -1,9 +1,8 @@
 """Database administration routes preserve reviewed requests and authority."""
 
 import inspect
-import io
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, TemporaryFile
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
@@ -119,15 +118,15 @@ class AdminDatabaseRouteAccessTests(TestCase):
 
     def test_entry_aliases_keep_review_post_bodies_during_maintenance(self):
         maintenance.enable(self.administrator, expected_generation=0)
-        payload = {"section": "users", "action": "preview_export", "scope": "all_accounts", "marker": "review & keep"}
+        payload = {"section": "users", "action": "preview_export", "scope": "database", "marker": "review & keep"}
         for route in ENTRY_ROUTES:
             with self.subTest(route=route), patch.object(
                 service, "export_preview", side_effect=service.TransferError("Reviewed request reached the export service."),
-            ) as preview:
+            ) as preview, patch.object(service, "database_availability", return_value={"ready": True, "message": ""}):
                 response = self.client.post(reverse(route), payload)
                 self.assertEqual(response.status_code, 409)
                 self.assertEqual(response.wsgi_request.POST["marker"], payload["marker"])
-                preview.assert_called_once_with({"profile": "accounts", "user_ids": [], "include_files": False}, actor=self.administrator)
+                preview.assert_called_once_with({"profile": "database", "user_ids": [], "components": []}, actor=self.administrator)
 
     def test_legacy_entry_generates_canonical_progress_and_download_links(self):
         operation = {"id": OPERATION_ID, "kind": "export", "profile": "accounts", "status": "running",
@@ -136,7 +135,7 @@ class AdminDatabaseRouteAccessTests(TestCase):
             response = self.client.get(reverse("admin_data_transfer_legacy"), {"operation": OPERATION_ID})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'data-transfer-status-url="{reverse("admin_data_transfer_status", args=[OPERATION_ID])}"')
-        self.assertContains(response, f'href="{reverse("admin_data_transfer")}?operation={OPERATION_ID}#transfer-operation"')
+        self.assertContains(response, f'href="{reverse("admin_data_transfer")}?operation={OPERATION_ID}&amp;from=backups#transfer-operation"')
         operation.update(status="completed", downloadable=True, runner_active=False)
         with patch.object(service, "get_operation", return_value=operation):
             response = self.client.get(reverse("admin_data_transfer_legacy"), {"operation": OPERATION_ID})
@@ -146,9 +145,15 @@ class AdminDatabaseRouteAccessTests(TestCase):
         maintenance.enable(self.administrator, expected_generation=0)
         operation = {"id": OPERATION_ID, "kind": "export", "status": "completed", "downloadable": True,
                      "runner_active": False, "recoverable": False, "cancellable": False}
+        def retained_package(*args, **kwargs):
+            handle = self.enterContext(TemporaryFile())
+            handle.write(b"verified-zip")
+            handle.seek(0)
+            return handle, {"filename": "backup.zip"}
+
         with (
             patch.object(service, "get_operation", return_value=operation) as status,
-            patch.object(service, "download_operation", side_effect=lambda *args, **kwargs: (io.BytesIO(b"verified-zip"), {"filename": "backup.zip"})) as download,
+            patch.object(service, "download_operation", side_effect=retained_package) as download,
         ):
             for route in CHILD_ROUTES:
                 with self.subTest(route=route):

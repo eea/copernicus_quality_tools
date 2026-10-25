@@ -5,6 +5,13 @@ class TransferError(ValueError):
     """An operation cannot satisfy the supported transfer contract."""
 
 
+class TransferBusy(TransferError):
+    """Temporary admission contention, distinct from an invalid package."""
+
+    code = "maintenance_busy"
+    status_code = 409
+
+
 class RecordLimitError(TransferError):
     """A portable graph exceeds the reviewed in-memory processing capacity."""
 

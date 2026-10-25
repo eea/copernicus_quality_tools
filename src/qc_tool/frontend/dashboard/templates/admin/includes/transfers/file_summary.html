@@ -1,6 +1,6 @@
 {% if file_references %}
-<section class="transfer-file-summary" aria-labelledby="file-summary-heading">
-  <h3 id="file-summary-heading">Files in this package</h3>
+<details class="transfer-file-summary transfer-details"{% if file_references.missing or file_references.unverified %} open{% endif %}>
+  <summary id="file-summary-heading">Files in this package · {{ file_references.included }} included{% if file_references.missing %} · {{ file_references.missing }} missing at source{% endif %}{% if file_references.unverified %} · {{ file_references.unverified }} not verified{% endif %}</summary>
   <dl class="transfer-account-summary" aria-label="File reference summary">
     <div><dt>File references</dt><dd>{{ file_references.total }}</dd></div>
     <div><dt>Files included</dt><dd>{{ file_references.included }}</dd></div>
@@ -9,6 +9,7 @@
     <div><dt>Not verified</dt><dd>{{ file_references.unverified }}</dd></div>
     <div><dt>Remote files</dt><dd>{{ file_references.remote }}</dd></div>
   </dl>
-  <p class="help">Records keep their file identities even when bytes are unavailable. Importing files does not approve a delivery or change its QC result.</p>
-</section>
+  <p class="help"><strong>Not included</strong> means the package contains a reference without the file itself. <strong>Missing at source</strong> means the file was unavailable when the export was made. <strong>Remote files</strong> require a separate storage backup.</p>
+  <p class="help">Records keep their file identities when files are unavailable. Importing files does not approve a delivery or change its QC result.</p>
+</details>
 {% endif %}

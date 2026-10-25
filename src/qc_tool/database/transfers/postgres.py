@@ -9,6 +9,7 @@ Nothing drops, clears, repairs or switches an existing database.
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
+import io
 import os
 from pathlib import Path
 import re
@@ -25,19 +26,34 @@ from uuid import UUID
 from django.conf import settings
 from django.db import connection
 
-from .archive import ArchiveLimits, _hash, _sync_directory, open_regular
+from .archive import ArchiveLimits, BLOCK_SIZE, _hash, _json, _sync_directory, canonical_json, open_regular
 from .contracts import canonical_bytes, digest
 from .errors import TransferError
 
 
 FORMAT = "qc-tool-postgresql"
-VERSION = 1
+VERSION = 2
+LEGACY_VERSION = 1
 ARTIFACT_ROOT = "database"
-ARTIFACT_KEY = "archive.dump"
+ARTIFACT_KEY = "data/database.dump"
+LEGACY_ARTIFACT_KEY = "archive.dump"
+REQUIRED_SECTIONS = frozenset(("schema/schema.sql", "metadata/source.json", "metadata/inventory.json",
+                               "metadata/database.json", "metadata/restore-policy.json"))
+OPTIONAL_SECTIONS = frozenset(("metadata/globals.sql", "metadata/deployment.json", "metadata/selection.json"))
+_CREDENTIAL_SECTION = re.compile(r"credentials/(?:s3/[0-9a-f]{32}\.json|worker\.token|postgresql/(?:sslcert|sslkey|sslrootcert|sslcrl))\Z")
+RESTORE_POLICY = {
+    "version": 1,
+    "database_archive": "data/database.dump",
+    "automatic_restore": "Separate empty database; a single SQL transaction; explicit activation afterwards.",
+    "ownership": "Source ownership, privileges and tablespaces are retained for operator review; UI restore remaps them to the deployment account and storage.",
+    "globals": "Cluster roles, passwords, memberships and tablespaces are operator-only recovery material; never executed by UI restore.",
+    "schema": "Readable schema is reference material; the complete custom archive is authoritative for restoration.",
+}
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _DATABASE = re.compile(r"[A-Za-z_][A-Za-z0-9_$-]{0,62}\Z")
 _MAX_DIAGNOSTIC_BYTES = 4 * 1024**2
 _MAX_SCHEMA_BYTES = 32 * 1024**2
+_CATALOG_BATCH_SIZE = 256
 _SYSTEM_NAMESPACE = "n.nspname NOT IN ('pg_catalog', 'information_schema') AND n.nspname !~ '^pg_(toast|temp)'"
 _VARCHAR_LITERAL = rb"'(?:''|[^'])*'::character varying(?:\([0-9]+\))?"
 _LITERAL_TEXT_ARRAY = re.compile(rb"\(ARRAY\[(?P<items>" + _VARCHAR_LITERAL + rb"(?:,\s*" + _VARCHAR_LITERAL + rb")*)\]\)::text\[\]")
@@ -69,11 +85,14 @@ def _basic_environment():
     return result
 
 
-def _run_tool(arguments, *, environment=None, output=None, max_bytes=None, label="PostgreSQL tool"):
+def _run_tool(arguments, *, environment=None, output=None, output_stream=None, max_bytes=None,
+              label="PostgreSQL tool", report=None, phase=None):
     """Drain bounded diagnostics, bound elapsed time/file size, kill children."""
+    if output is not None and output_stream is not None:
+        raise ValueError("Choose a file descriptor or a streaming output destination.")
     process = None
     result = bytearray()
-    diagnostics = 0
+    diagnostics = streamed_bytes = 0
     try:
         from .store import execution_lease_descriptor
 
@@ -83,6 +102,8 @@ def _run_tool(arguments, *, environment=None, output=None, max_bytes=None, label
             env=environment or _basic_environment(), close_fds=True, start_new_session=True,
             pass_fds=() if lease is None else (lease,))
         started = time.monotonic()
+        if report is not None and phase is not None:
+            report(phase, processed_bytes=0)
         with selectors.DefaultSelector() as selector:
             selector.register(process.stderr, selectors.EVENT_READ, "error")
             if output is None:
@@ -99,13 +120,22 @@ def _run_tool(arguments, *, environment=None, output=None, max_bytes=None, label
                     if not block:
                         selector.unregister(key.fileobj)
                     elif key.data == "output":
-                        result.extend(block)
-                        if len(result) > _MAX_DIAGNOSTIC_BYTES:
-                            raise TransferError(f"{label} produced too much metadata. Use the reviewed operator restore procedure.")
+                        if output_stream is not None:
+                            streamed_bytes += len(block)
+                            if max_bytes is not None and streamed_bytes > max_bytes:
+                                raise TransferError(f"{label} exceeds the configured file limit.")
+                            if output_stream.write(block) != len(block):
+                                raise TransferError(f"{label} could not write its complete output.")
+                        else:
+                            result.extend(block)
+                            if len(result) > _MAX_DIAGNOSTIC_BYTES:
+                                raise TransferError(f"{label} produced too much metadata. Use the reviewed operator restore procedure.")
                     else:
                         diagnostics += len(block)
                         if diagnostics > _MAX_DIAGNOSTIC_BYTES:
                             raise TransferError(f"{label} produced too many diagnostics. Inspect database privileges and compatibility.")
+                if report is not None and phase is not None:
+                    report(phase, processed_bytes=os.fstat(output.fileno()).st_size if output is not None else streamed_bytes)
             code = process.wait()
         if code:
             # Tool stderr can contain credentials, stored values or malicious SQL.
@@ -129,25 +159,25 @@ def _run_tool(arguments, *, environment=None, output=None, max_bytes=None, label
                     stream.close()
 
 
-def _toolchain(major):
+def _client_tool(name, major):
     if type(major) is not int or not 14 <= major <= 18:
         raise TransferError("Native UI transfers support PostgreSQL 14 through 18. Use the reviewed operator procedure for another server version.")
+    candidates = [f"/usr/lib/postgresql/{major}/bin/{name}", shutil.which(name)]
+    for candidate in dict.fromkeys(item for item in candidates if item):
+        if not os.path.isfile(candidate) or not os.access(candidate, os.X_OK):
+            continue
+        version = _run_tool([candidate, "--version"], label=name).decode("ascii", "replace").strip()
+        match = re.search(r"\(PostgreSQL\)\s+(\d+)(?:\.|\s|$)", version)
+        if match and int(match[1]) == major:
+            return candidate, version
+    raise TransferError(f"Install the PostgreSQL {major} {name} client. Native UI transfers require the same client/server major version.")
+
+
+def _toolchain(major):
     result = {}
     for name in ("pg_dump", "pg_restore"):
-        candidates = [f"/usr/lib/postgresql/{major}/bin/{name}", shutil.which(name)]
-        selected = None
-        for candidate in dict.fromkeys(item for item in candidates if item):
-            if not os.path.isfile(candidate) or not os.access(candidate, os.X_OK):
-                continue
-            version = _run_tool([candidate, "--version"], label=name).decode("ascii", "replace").strip()
-            match = re.search(r"\(PostgreSQL\)\s+(\d+)(?:\.|\s|$)", version)
-            if match and int(match[1]) == major:
-                selected = (candidate, version)
-                break
-        if selected is None:
-            raise TransferError(f"Install PostgreSQL {major} pg_dump and pg_restore clients. Native UI transfers require the same client/server major version.")
-        result[name] = selected[0]
-        result[name + "_version"] = selected[1]
+        path, version = _client_tool(name, major)
+        result[name], result[name + "_version"] = path, version
     return result
 
 
@@ -265,25 +295,42 @@ def _tool_environment(params):
 
 
 class _RowDigest:
-    def __init__(self):
+    def __init__(self, report=None):
         self.digest = hashlib.sha256()
-        self.rows = 0
+        self.rows = self.size = 0
+        self.reported_size = 0
+        self.report = report
 
     def write(self, block):
         if isinstance(block, str):
             block = block.encode("utf-8")
         self.digest.update(block)
         self.rows += block.count(b"\n")
+        self.size += len(block)
+        if self.report is not None and self.size - self.reported_size >= BLOCK_SIZE:
+            self.report(self.size)
+            self.reported_size = self.size
+
+
+def _catalog_rows(handle, statement):
+    """Fetch catalogue identities in bounded batches in the same snapshot.
+
+    A named cursor keeps libpq from buffering all identities while another
+    cursor reads each relation, sequence or large object in turn.
+    """
+    with handle.cursor(name="qc_backup_" + secrets.token_hex(8)) as cursor:
+        cursor.itersize = _CATALOG_BATCH_SIZE
+        cursor.execute(statement)
+        while batch := cursor.fetchmany(_CATALOG_BATCH_SIZE):
+            yield from batch
 
 
 def _sequences(handle):
     from psycopg2 import sql
 
     with handle.cursor() as cursor:
-        cursor.execute(f"SELECT n.nspname, c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='S' AND {_SYSTEM_NAMESPACE} ORDER BY n.nspname, c.relname")
-        names = cursor.fetchall()
         result = []
-        for schema, name in names:
+        for schema, name in _catalog_rows(handle, f"SELECT n.nspname, c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='S' AND {_SYSTEM_NAMESPACE} ORDER BY n.nspname, c.relname"):
             cursor.execute(sql.SQL("SELECT last_value, is_called FROM {}.{}").format(sql.Identifier(schema), sql.Identifier(name)))
             value, called = cursor.fetchone()
             result.append({"schema": schema, "name": name, "last_value": value, "is_called": called})
@@ -320,22 +367,31 @@ def _canonical_constraint_line(line):
     return _LITERAL_TEXT_ARRAY.sub(distribute, line)
 
 
-def _inventory(handle, params, tools, snapshot):
+def _inventory(handle, params, tools, snapshot, *, report=None):
     from psycopg2 import sql
 
-    tables = []
+    tables, hashed_bytes = [], 0
+    if report is not None:
+        report("inventory_database", processed_bytes=0, processed_items=0)
     with handle.cursor() as cursor:
         cursor.execute("SET LOCAL search_path = pg_catalog")
-        cursor.execute(f"SELECT c.oid, n.nspname, c.relname, c.relkind, c.relispopulated FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p','m') AND {_SYSTEM_NAMESPACE} ORDER BY n.nspname, c.relname")
-        relations = cursor.fetchall()
-        for oid, schema, name, kind, populated in relations:
+        # Stable row reconciliation sorts complete JSON rows. Bound its sort
+        # memory and parallelism; PostgreSQL can spill large sorts to disk.
+        cursor.execute("SET LOCAL work_mem = '16MB'")
+        cursor.execute("SET LOCAL max_parallel_workers_per_gather = 0")
+        for oid, schema, name, kind, populated in _catalog_rows(handle, f"SELECT c.oid, n.nspname, c.relname, c.relkind, c.relispopulated FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p','m') AND {_SYSTEM_NAMESPACE} ORDER BY n.nspname, c.relname"):
             cursor.execute("""SELECT a.attname, format_type(a.atttypid,a.atttypmod), a.attnotnull,
                 a.attidentity, a.attgenerated FROM pg_attribute a WHERE a.attrelid=%s AND
                 a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum""", [oid])
             columns = [{"name": name, "type": datatype, "nullable": not not_null,
                         "identity": identity, "generated": generated}
                        for name, datatype, not_null, identity, generated in cursor.fetchall()]
-            row_digest = _RowDigest()
+            def progress(size):
+                if report is not None:
+                    report("inventory_database", processed_bytes=hashed_bytes + size,
+                           processed_items=len(tables))
+
+            row_digest = _RowDigest(progress if report is not None else None)
             # ONLY prevents counting inherited/partitioned rows twice. Sorting
             # complete rows gives stable hashes even without a primary key.
             only = sql.SQL("") if kind == "m" else sql.SQL("ONLY ")
@@ -344,16 +400,22 @@ def _inventory(handle, params, tools, snapshot):
                 cursor.copy_expert(statement, row_digest)
             tables.append({"schema": schema, "name": name, "kind": kind, "columns": columns,
                            "populated": populated, "rows": row_digest.rows, "sha256": row_digest.digest.hexdigest()})
-        cursor.execute("SELECT oid FROM pg_largeobject_metadata ORDER BY oid")
+            hashed_bytes += row_digest.size
+            if report is not None:
+                report("inventory_database", processed_bytes=hashed_bytes, processed_items=len(tables))
         large_objects = []
-        for (oid,) in cursor.fetchall():
+        for (oid,) in _catalog_rows(handle, "SELECT oid FROM pg_largeobject_metadata ORDER BY oid"):
             large_object = handle.lobject(oid, "rb")
             try:
                 hasher, size = hashlib.sha256(), 0
                 for chunk in iter(lambda: large_object.read(1024**2), b""):
                     hasher.update(chunk)
                     size += len(chunk)
+                    if report is not None:
+                        report("inventory_database", processed_bytes=hashed_bytes + size,
+                               processed_items=len(tables) + len(large_objects))
                 large_objects.append({"oid": oid, "size": size, "sha256": hasher.hexdigest()})
+                hashed_bytes += size
             finally:
                 large_object.close()
     return {"tables": tables, "sequences": _sequences(handle), "large_objects": large_objects,
@@ -390,11 +452,168 @@ def availability():
                 "The configured PostgreSQL account needs CREATEDB permission to create a fresh restore database. Ask the database administrator to enable this capability.")}
 
 
-def preview():
+def preview(*, include_globals=False):
     params = _params()
     with _database(params, snapshot=True) as (handle, info):
         tools = _toolchain(info["server_major"])
-        return _review(info, tools, _inventory(handle, params, tools, info["snapshot"]))
+        result = _review(info, tools, _inventory(handle, params, tools, info["snapshot"]))
+        sections = _supplemental_sections(handle, params, tools, info, result, include_globals=include_globals)
+        _with_preservation(result, sections)
+        if include_globals:
+            _with_globals(result, sections["metadata/globals.sql"])
+        result["section_estimates"] = [
+            {"key": key, "sha256": hashlib.sha256(payload).hexdigest(), "size": len(payload)}
+            for key, payload in sections.items()]
+        with handle.cursor() as cursor:
+            cursor.execute("SELECT pg_database_size(current_database())")
+            result["estimated_dump_bytes"] = cursor.fetchone()[0]
+        return result
+
+
+def _database_metadata(handle):
+    """Retain database attributes that the deployment-safe UI restore remaps."""
+    with handle.cursor() as cursor:
+        cursor.execute("""SELECT pg_get_userbyid(d.datdba), d.datacl::text, t.spcname,
+            d.datconnlimit, d.datistemplate, d.datallowconn, shobj_description(d.oid,'pg_database')
+            FROM pg_database d JOIN pg_tablespace t ON t.oid=d.dattablespace
+            WHERE d.datname=current_database()""")
+        owner, acl, tablespace, limit, template, allowed, comment = cursor.fetchone()
+        cursor.execute("""SELECT CASE WHEN s.setrole=0 THEN NULL ELSE pg_get_userbyid(s.setrole) END,
+            s.setconfig FROM pg_db_role_setting s
+            WHERE s.setdatabase=(SELECT oid FROM pg_database WHERE datname=current_database())
+            ORDER BY s.setrole""")
+        configuration = [{"role": role, "settings": settings} for role, settings in cursor.fetchall()]
+        cursor.execute("""SELECT e.extname, e.extversion, n.nspname, pg_get_userbyid(e.extowner)
+            FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace ORDER BY e.extname""")
+        extensions = [{"name": name, "version": version, "schema": schema, "owner": role}
+                      for name, version, schema, role in cursor.fetchall()]
+        cursor.execute("""SELECT provider,label FROM pg_shseclabel
+            WHERE classoid='pg_database'::regclass AND objoid=(
+                SELECT oid FROM pg_database WHERE datname=current_database()) ORDER BY provider""")
+        labels = [{"provider": provider, "label": label} for provider, label in cursor.fetchall()]
+    return {"version": 1, "owner": owner, "acl": acl, "tablespace": tablespace,
+            "connection_limit": limit, "is_template": template, "allow_connections": allowed,
+            "comment": comment, "configuration": configuration, "extensions": extensions,
+            "security_labels": labels}
+
+
+class _BoundedMetadata:
+    def __init__(self, limit):
+        self.output, self.limit = io.BytesIO(), limit
+
+    def write(self, block):
+        if self.output.tell() + len(block) > self.limit:
+            raise TransferError("PostgreSQL supplementary metadata exceeds its configured file limit.")
+        return self.output.write(block)
+
+    def value(self):
+        return self.output.getvalue()
+
+
+def _supplemental_sections(handle, params, tools, info, metadata, *, include_globals, report=None):
+    schema = _BoundedMetadata(min(_MAX_SCHEMA_BYTES, _limits().max_member_bytes))
+    with _tool_environment(params) as environment:
+        # Unlike the comparison-only schema hash, this readable original keeps
+        # ownership, privileges, comments and tablespace assignments intact.
+        _run_tool([tools["pg_dump"], "--no-password", "--schema-only", "--snapshot=" + info["snapshot"]],
+                  environment=environment, output_stream=schema,
+                  max_bytes=schema.limit, label="PostgreSQL readable schema export",
+                  report=report, phase="readable_schema")
+    sections = {"schema/schema.sql": schema.value(),
+                "metadata/source.json": canonical_json(metadata["source"]),
+                "metadata/inventory.json": canonical_json(metadata["inventory"]),
+                "metadata/database.json": canonical_json(_database_metadata(handle)),
+                "metadata/restore-policy.json": canonical_json(RESTORE_POLICY)}
+    if include_globals:
+        sections["metadata/globals.sql"] = _globals_output(params, info, report=report)
+    return sections
+
+
+def _globals_output(params, info, *, report=None):
+    tool, _version = _client_tool("pg_dumpall", info["server_major"])
+    output = _BoundedMetadata(min(_MAX_SCHEMA_BYTES, _limits().max_member_bytes))
+    with _tool_environment(params) as environment:
+        _run_tool([tool, "--no-password", "--globals-only", "--database=service=qc_transfer"],
+                  environment=environment, output_stream=output, max_bytes=output.limit,
+                  label="Selected PostgreSQL cluster roles, passwords and tablespaces export",
+                  report=report, phase="postgresql_globals")
+    return output.value()
+
+
+def _globals_hash(payload):
+    hasher = hashlib.sha256()
+    for line in payload.splitlines(keepends=True):
+        # Restriction tokens and optional tool timestamps change on each run;
+        # SQL values, role comments, grants and passwords remain authoritative.
+        if line.startswith((b"\\restrict ", b"\\unrestrict ", b"-- Started on ", b"-- Completed on ",
+                            b"-- Dumped from database version ", b"-- Dumped by pg_dumpall version ")):
+            continue
+        hasher.update(line)
+    return hasher.hexdigest()
+
+
+def _schema_reference_hash(payload):
+    hasher = hashlib.sha256()
+    for line in payload.splitlines(keepends=True):
+        if line.startswith((b"\\restrict ", b"\\unrestrict ", b"-- Dumped from database version ", b"-- Dumped by pg_dump version ")):
+            continue
+        hasher.update(line)
+    return hasher.hexdigest()
+
+
+def _review_fingerprint(metadata):
+    return digest({name: metadata[name] for name in (
+        "source", "inventory", "preservation", "globals_sha256") if name in metadata})
+
+
+def _with_preservation(metadata, sections):
+    metadata["preservation"] = {
+        "schema_sha256": _schema_reference_hash(sections["schema/schema.sql"]),
+        "database_sha256": hashlib.sha256(sections["metadata/database.json"]).hexdigest(),
+    }
+    metadata["review_hash"] = _review_fingerprint(metadata)
+
+
+def _with_globals(metadata, payload):
+    metadata.update(globals_sha256=_globals_hash(payload), globals_bytes=len(payload))
+    metadata["review_hash"] = _review_fingerprint(metadata)
+
+
+def capture_stream(stream, *, include_globals=False, report=None):
+    """Stream the complete custom dump without allocating an intermediate file."""
+    params = _params()
+    with _database(params, snapshot=True) as (handle, info):
+        tools = _toolchain(info["server_major"])
+        inventory = _inventory(handle, params, tools, info["snapshot"], report=report)
+        hasher, size = hashlib.sha256(), 0
+
+        class Output:
+            def write(self, block):
+                nonlocal size
+                written = stream.write(block)
+                if written != len(block):
+                    raise TransferError("Complete PostgreSQL backup could not write its complete output.")
+                hasher.update(block)
+                size += written
+                return written
+
+        with _tool_environment(params) as environment:
+            _run_tool([tools["pg_dump"], "--no-password", "--format=custom", "--snapshot=" + info["snapshot"]],
+                      environment=environment, output_stream=Output(), max_bytes=_limits().max_member_bytes,
+                      label="Complete PostgreSQL backup", report=report, phase="database_dump")
+        result = _review(info, tools, inventory)
+        result["_package_sections"] = _supplemental_sections(
+            handle, params, tools, info, result, include_globals=include_globals, report=report)
+        _with_preservation(result, result["_package_sections"])
+        if include_globals:
+            payload = result["_package_sections"]["metadata/globals.sql"]
+            _with_globals(result, payload)
+            if result["globals_sha256"] != _globals_hash(_globals_output(params, info, report=report)):
+                raise TransferError("PostgreSQL cluster metadata changed during backup. Isolate role and tablespace changes and retry.")
+        if inventory["sequences"] != _sequences(handle):
+            raise TransferError("Database sequences changed during backup. Isolate external writers and retry.")
+    result.update(dump_sha256=hasher.hexdigest(), dump_bytes=size)
+    return result
 
 
 def dump_to(path):
@@ -428,6 +647,9 @@ def dump_to(path):
             if inventory["sequences"] != _sequences(handle):
                 raise TransferError("Database sequences changed during backup. Isolate external writers and retry.")
             result = _review(info, tools, inventory)
+            # The standalone helper preserves the original native contract;
+            # enriched v2 packages are created by capture_stream + ZIP writer.
+            result["version"] = LEGACY_VERSION
         with open_regular(path) as source:
             sha, size = _hash(source, _limits().max_member_bytes)
         _sync_directory(path.parent)
@@ -455,7 +677,12 @@ def _native_metadata(verified):
 def _validate_native_metadata(verified):
     data = verified.records
     required = {"format", "version", "created_at", "source", "inventory", "review_hash", "dump_sha256", "dump_bytes", "counts", "source_details"}
-    if not isinstance(data, dict) or set(data) != required or data.get("format") != FORMAT or type(data.get("version")) is not int or data["version"] != VERSION:
+    if not isinstance(data, dict) or data.get("format") != FORMAT or type(data.get("version")) is not int or data["version"] not in (LEGACY_VERSION, VERSION):
+        raise TransferError("Unsupported native PostgreSQL backup metadata.")
+    if data["version"] == VERSION:
+        required |= {"sections", "preservation"}
+    globals_fields = {"globals_sha256", "globals_bytes"} if "globals_sha256" in data else set()
+    if set(data) != required | globals_fields or (globals_fields and data["version"] != VERSION):
         raise TransferError("Unsupported native PostgreSQL backup metadata.")
     created = datetime.fromisoformat(data["created_at"])
     if created.utcoffset() is None:
@@ -524,16 +751,103 @@ def _validate_native_metadata(verified):
                 or type(item["size"]) is not int or item["size"] < 0 or not _SHA256.fullmatch(str(item["sha256"]))):
             raise TransferError("The native PostgreSQL large-object inventory is invalid.")
         large_ids.add(item["oid"])
-    if (not isinstance(data["review_hash"], str) or data["review_hash"] != digest({"source": source, "inventory": inventory})
+    fingerprint = {"source": source, "inventory": inventory}
+    if data["version"] == VERSION:
+        preservation = data["preservation"]
+        if (not isinstance(preservation, dict) or set(preservation) != {"schema_sha256", "database_sha256"}
+                or any(not isinstance(value, str) or not _SHA256.fullmatch(value) for value in preservation.values())):
+            raise TransferError("The PostgreSQL schema and database metadata fingerprint is invalid.")
+        fingerprint["preservation"] = preservation
+    if globals_fields:
+        if not _SHA256.fullmatch(str(data["globals_sha256"])) or type(data["globals_bytes"]) is not int or data["globals_bytes"] < 1:
+            raise TransferError("The PostgreSQL globals fingerprint is invalid.")
+        fingerprint["globals_sha256"] = data["globals_sha256"]
+    if (not isinstance(data["review_hash"], str) or data["review_hash"] != digest(fingerprint)
             or not _SHA256.fullmatch(str(data["dump_sha256"])) or type(data["dump_bytes"]) is not int or data["dump_bytes"] < 5):
         raise TransferError("The native PostgreSQL inventory fingerprint is invalid.")
     database_entries = [entry for entry in verified.entries if entry["root"] == ARTIFACT_ROOT]
-    if (len(database_entries) != 1 or database_entries[0]["key"] != ARTIFACT_KEY
-            or database_entries[0]["sha256"] != data["dump_sha256"] or database_entries[0]["size"] != data["dump_bytes"]):
+    dumps = [entry for entry in database_entries if entry["key"] in {ARTIFACT_KEY, LEGACY_ARTIFACT_KEY}]
+    if (len(dumps) != 1 or dumps[0]["sha256"] != data["dump_sha256"] or dumps[0]["size"] != data["dump_bytes"]):
         raise TransferError("A native PostgreSQL package must contain exactly its complete database archive.")
+    if data["version"] == LEGACY_VERSION:
+        if len(database_entries) != 1:
+            raise TransferError("The original PostgreSQL backup contract does not support supplemental sections.")
+    else:
+        if dumps[0]["key"] != ARTIFACT_KEY:
+            raise TransferError("The PostgreSQL archive does not use its declared data layout.")
+        _validate_sections(verified, data, database_entries)
     from .recovery_files import validate
     validate(verified)
     return data
+
+
+def _section_json(verified, entry):
+    with verified.open_artifact(entry) as stream:
+        payload = stream.read(min(verified.limits.max_records_bytes, verified.limits.max_member_bytes) + 1)
+    if len(payload) != entry["size"]:
+        raise TransferError("The PostgreSQL supplemental metadata exceeds its supported size.")
+    return _json(payload)
+
+
+def _validate_sections(verified, data, database_entries):
+    sections = data["sections"]
+    if not isinstance(sections, list):
+        raise TransferError("The PostgreSQL supplemental inventory is invalid.")
+    indexed = {}
+    for entry in sections:
+        if (not isinstance(entry, dict) or set(entry) != {"key", "sha256", "size"}
+                or not isinstance(entry["key"], str) or entry["key"] in indexed
+                or not _SHA256.fullmatch(str(entry["sha256"])) or type(entry["size"]) is not int or entry["size"] < 0
+                or (entry["key"] not in REQUIRED_SECTIONS | OPTIONAL_SECTIONS
+                    and not _CREDENTIAL_SECTION.fullmatch(entry["key"]))):
+            raise TransferError("The PostgreSQL supplemental inventory is invalid.")
+        indexed[entry["key"]] = entry
+    if not REQUIRED_SECTIONS <= indexed.keys():
+        raise TransferError("The PostgreSQL backup is missing required schema or metadata sections.")
+    actual = {entry["key"]: entry for entry in database_entries if entry["key"] != ARTIFACT_KEY}
+    if set(actual) != set(indexed) or any(
+            (entry["sha256"], entry["size"]) != (actual[key]["sha256"], actual[key]["size"])
+            for key, entry in indexed.items()):
+        raise TransferError("The PostgreSQL supplemental files disagree with their inventory.")
+    for key, expected in (("metadata/source.json", data["source"]),
+                          ("metadata/inventory.json", data["inventory"])):
+        if _section_json(verified, actual[key]) != expected:
+            raise TransferError("The PostgreSQL readable metadata disagrees with its authoritative inventory.")
+    policy = _section_json(verified, actual["metadata/restore-policy.json"])
+    if (not isinstance(policy, dict) or set(policy) != set(RESTORE_POLICY)
+            or type(policy["version"]) is not int or policy["version"] != 1
+            or policy["database_archive"] != ARTIFACT_KEY
+            or any(not isinstance(value, str) or len(value) > 4096 for key, value in policy.items() if key != "version")):
+        raise TransferError("The PostgreSQL restore policy metadata is unsupported.")
+    database = _section_json(verified, actual["metadata/database.json"])
+    if not isinstance(database, dict) or database.get("version") != 1:
+        raise TransferError("The PostgreSQL database configuration metadata is unsupported.")
+    if actual["metadata/database.json"]["sha256"] != data["preservation"]["database_sha256"]:
+        raise TransferError("The PostgreSQL database settings and ownership changed after review.")
+    schema = actual["schema/schema.sql"]
+    if schema["size"] > _MAX_SCHEMA_BYTES:
+        raise TransferError("The PostgreSQL readable schema exceeds its supported size.")
+    with verified.open_artifact(schema) as stream:
+        if _schema_reference_hash(stream.read(_MAX_SCHEMA_BYTES + 1)) != data["preservation"]["schema_sha256"]:
+            raise TransferError("The PostgreSQL readable schema ownership and privileges disagree with their review.")
+    globals_entry = actual.get("metadata/globals.sql")
+    if (globals_entry is not None) != ("globals_sha256" in data):
+        raise TransferError("The PostgreSQL globals section has no matching fingerprint.")
+    if globals_entry is not None:
+        if globals_entry["size"] != data["globals_bytes"] or globals_entry["size"] > _MAX_SCHEMA_BYTES:
+            raise TransferError("The PostgreSQL globals section has an invalid size.")
+        with verified.open_artifact(globals_entry) as stream:
+            if _globals_hash(stream.read(_MAX_SCHEMA_BYTES + 1)) != data["globals_sha256"]:
+                raise TransferError("The PostgreSQL globals section disagrees with its fingerprint.")
+    credentials = any(_CREDENTIAL_SECTION.fullmatch(key) for key in indexed)
+    if credentials and "metadata/deployment.json" not in indexed:
+        raise TransferError("Credential files require the deployment configuration inventory.")
+    if "metadata/deployment.json" in indexed:
+        from . import configuration
+        configuration.validate(verified)
+    if "metadata/selection.json" in indexed:
+        from . import components
+        components.validate(verified)
 
 
 @contextmanager
@@ -541,7 +855,7 @@ def _native_file(verified):
     # Keep large temporary copies on the private persistent transfer filesystem,
     # whose capacity is configured, rather than on the container's /tmp layer.
     directory = verified.path.parent
-    entry = next(item for item in verified.entries if item["root"] == ARTIFACT_ROOT and item["key"] == ARTIFACT_KEY)
+    entry = next(item for item in verified.entries if item["root"] == ARTIFACT_ROOT and item["key"] in {ARTIFACT_KEY, LEGACY_ARTIFACT_KEY})
     _require_space(directory, entry["size"])
     with tempfile.NamedTemporaryFile(dir=directory, prefix=".qc-postgres-archive-", suffix=".dump") as output:
         class CheckedOutput:

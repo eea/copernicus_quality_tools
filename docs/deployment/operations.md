@@ -6,6 +6,11 @@ nav_order: 2
 
 # Operations
 
+For file browsing, folder ZIP downloads, additional mounted locations and optional
+desktop SFTP access, see [Storage browser and desktop connections](storage-access.md).
+For the Azure VM mount layout, startup identity guard, filesystem probe and
+deliberate move from existing volumes, see [EEA persistent storage](eea-storage.md).
+
 ## Deployment command setup
 
 Use the same Compose project name, env file, and Compose-file set for every
@@ -27,6 +32,10 @@ qc_compose() {
 ```
 
 Adapt this once for the deployment; do not commit the secret env file.
+When using `compose.eea-storage.yaml`, add it as a second `-f` argument in this
+function and use that same file set for every operation. Its mount replacement
+requires Compose 2.24.4 or later. Adding the override to a running installation
+does not move its existing files or database.
 
 ## Health and logs
 
@@ -46,6 +55,15 @@ Monitor:
 - incoming, work, boundary, and static storage capacity;
 - repeated authentication/authorization failures;
 - S3 upstream failures by stable error code.
+
+For the EEA persistent-storage profile, also monitor the real host mount and
+the configured storage identity. The container guard refuses missing or wrong
+storage at startup; host mount dependencies and monitoring must prevent and
+detect later mount failures. Do not repair an outage by creating empty local
+folders or replacing the identity marker. Run `python3 -m qc_tool.storage check`
+and the explicit `probe` against the mounted target after provisioning or
+changing its filesystem. A probe does not prove Azure crash recovery or replace
+a backup/restore exercise.
 
 Docker health status is an observation, not an automatic recovery mechanism.
 Alert on unhealthy services and replace the complete worker container after a
@@ -85,6 +103,42 @@ rename and durable file/directory synchronization. Set resource limits only afte
 measuring representative exports/imports; image health and synthetic CI tests do
 not establish production throughput or maximum package capacity.
 
+The supplied Compose files pass these frontend settings through. Values are
+bytes unless stated otherwise:
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `QC_TOOL_TRANSFER_DIR` | `WORK_DIR/data-transfer` | Private persistent package and journal storage |
+| `QC_TOOL_TRANSFER_MAX_RECORDS` | 250,000 | Portable record graph limit |
+| `QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES` | 17,179,869,184 (16 GiB) | Complete ZIP limit |
+| `QC_TOOL_TRANSFER_MAX_MEMBER_BYTES` | Configured archive limit | One included file, including the native dump |
+| `QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES` | 68,719,476,736 (64 GiB) | Total expanded package contents |
+| `QC_TOOL_TRANSFER_MIN_FREE_BYTES` | 536,870,912 (512 MiB) | Free-space reserve |
+| `QC_TOOL_UPLOAD_TEMP_DIR` | System temporary directory | Browser multipart spool storage |
+| `QC_TOOL_POSTGRES_TOOL_TIMEOUT` | 3,600 seconds | Native tool deadline |
+
+Defaults keep transfer journals on the existing mounted work volume. A custom
+transfer or upload-temporary path must be a private container path backed by a
+sized mounted volume; a host pathname in an environment file does not create a
+mount. Preserve transfer storage across frontend replacements. Recreate the
+frontend after changing its environment, then inspect the rendered Compose
+configuration and repeat the capacity review. Coordinate archive, member,
+expanded, ingress and physical-storage limits; increasing one alone is insufficient.
+
+For a large existing package, bypass browser/proxy buffering by copying it onto
+private mounted operator storage and staging it in the frontend container:
+
+```bash
+qc_compose exec -T frontend python3 -m qc_tool.frontend.manage \
+  data_transfer stage-file /private/backups/package.zip --actor administrator --records-only
+```
+
+Use the actual active administrator's username and a container-visible source
+path. The result identifies a staged operation for Admin review; it does not
+apply records, initialize a schema or switch databases. Omit `--records-only`
+only to include the package's available files. Server staging still validates
+the complete package and checks storage limits.
+
 Never log Authorization headers, S3 secrets, raw delivery contents, session
 records, or one-time API credentials.
 
@@ -115,6 +169,52 @@ the application already reports ready.
 
 Back up the frontend database and required shared volumes as one coherent
 system. The database references files under incoming, work and publication storage.
+
+**Admin → Database → Export database** always preserves the complete PostgreSQL
+schema, data, credential hashes and database metadata. Its optional sections all
+start selected: specifications, boundaries, delivery ZIPs, QC artifacts,
+publications, PostgreSQL globals and supported deployment configuration with
+private S3 credentials, the available worker token, referenced PostgreSQL TLS
+files and inert specification/boundary activation metadata.
+Review the selected/omitted/unavailable statuses;
+missing source bytes cannot become a complete backup merely through selection.
+The ZIP groups database schema, data and metadata separately from the file
+categories. Global cluster SQL and deployment credentials are retained for
+operator review and manual recovery; import never applies them automatically.
+
+For large installations, operators can deselect file categories and coordinate
+an independent storage backup with the mandatory complete database package.
+Retained delivery ZIPs are already compressed; bundling them into every export
+repeatedly copies those bytes. Use your
+storage backup system's incremental or deduplicated snapshots and record the
+database archive checksum, image identity and matching storage snapshot together.
+Preserve original specifications byte-for-byte. Rehearse restoration into a fresh
+database with the matching files before treating a backup as verified.
+
+For frequent recovery of a large production database, operate tested PostgreSQL
+base backups with continuous WAL archiving and point-in-time recovery at the
+database layer. Keep logical exports for portable copies and pre-update recovery
+points; they do not supply WAL-based recovery. PostgreSQL describes these separate
+approaches in its [backup guide](https://www.postgresql.org/docs/14/backup.html) and
+[continuous archiving guide](https://www.postgresql.org/docs/14/continuous-archiving.html).
+This Admin refactor does not configure that infrastructure or its schedules.
+
+The capacity review shows selected file bytes,
+record metadata, estimated database/package size, free space and the reserve.
+Native capture streams into the final ZIP without a second standalone dump.
+Estimates are advisory; actual archive/member/expanded limits and free space
+remain enforced during capture. Omitting optional files still needs capacity for
+the complete database archive and metadata. It does not bypass package limits.
+
+After verifying independent copies, use **Transfer history → Release this export
+package from server storage** to remove old completed export payloads. The
+operation's completed state, checksum and journal remain. Retention is explicit:
+there is no automatic deletion of backups. Do not remove the transfer directory
+to free space; it also owns database selection, recovery journals and file pins.
+Imports and restored databases are excluded from this cleanup action.
+Export retries and payload release also reclaim private scratch packages left
+by a killed writer in that same operation directory; shared files, import
+recovery data and other operations are never swept.
 
 For PostgreSQL, a logical dump can be captured from the database service:
 

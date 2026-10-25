@@ -25,7 +25,7 @@ from qc_tool.frontend.dashboard.views.admin_maintenance import maintenance_contr
 from qc_tool.frontend.dashboard.views.admin_database import database_record, database_records
 from qc_tool.frontend.dashboard.views.admin_users import user_management
 from qc_tool.frontend.dashboard.views.admin_storage import (
-    storage_home, storage_file, storage_download, storage_trash, storage_action,
+    storage_home, storage_file, storage_download, storage_trash, storage_action, storage_archive, storage_connection_guide,
 )
 from qc_tool.frontend.dashboard.views.admin_data_transfer import (
     data_transfer, data_transfer_download, data_transfer_status,
@@ -62,6 +62,8 @@ urlpatterns = [
     path('admin/storage/', admin.site.admin_view(storage_home), name='admin_storage'),
     path('admin/storage/file/', admin.site.admin_view(storage_file), name='admin_storage_file'),
     path('admin/storage/download/', admin.site.admin_view(storage_download), name='admin_storage_download'),
+    path('admin/storage/archive/', admin.site.admin_view(storage_archive), name='admin_storage_archive'),
+    path('admin/storage/connection-guide/', admin.site.admin_view(storage_connection_guide), name='admin_storage_connection_guide'),
     path('admin/storage/trash/', admin.site.admin_view(storage_trash), name='admin_storage_trash'),
     path('admin/storage/action/', admin.site.admin_view(storage_action), name='admin_storage_action'),
     path('admin/database/records/<str:table>/', admin.site.admin_view(database_records), name='admin_database_records'),

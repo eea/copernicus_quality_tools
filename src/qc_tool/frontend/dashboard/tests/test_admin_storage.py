@@ -1,12 +1,14 @@
 """The Admin storage workflow keeps files recoverable and record-bound."""
 
 from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
+from zipfile import ZipFile
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -21,7 +23,7 @@ from qc_tool.frontend.dashboard.models import Delivery, Job
 from qc_tool.frontend.dashboard.services import maintenance
 from qc_tool.frontend.dashboard.services.maintenance.operations import pin_operation
 from qc_tool.frontend.dashboard.services.maintenance.state import file_lock
-from qc_tool.frontend.dashboard.services.storage_admin import files, trash
+from qc_tool.frontend.dashboard.services.storage_admin import downloads, files, references, trash
 from qc_tool.frontend.dashboard.views import admin_storage as views
 
 
@@ -57,7 +59,9 @@ class AdminStorageTests(TestCase):
         maintenance.read_status()
 
     def write_file(self, area, path, payload):
-        root = {"incoming": self.incoming, "jobs": self.work, "published": self.published}[area]
+        root = {"incoming": self.incoming, "jobs": self.work, "work": self.work, "published": self.published,
+                "boundaries": self.boundaries, "spec-0": self.definitions,
+                "uploaded-specifications": self.work / "product_definitions"}[area]
         destination = root / path
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)
@@ -83,7 +87,7 @@ class AdminStorageTests(TestCase):
         return {"action": "quarantine", "area": area, "path": path,
                 "generation": maintenance.read_status()["generation"] if generation is None else generation,
                 "filename_confirmation": path.rsplit("/", 1)[-1], "confirmed": "on",
-                "review_hash": review["review_hash"]}
+                "review_hash": review.get("review_hash", "")}
 
     def quarantine(self):
         response = self.client.post(reverse("admin_storage_action"), self.quarantine_data())
@@ -118,9 +122,14 @@ class AdminStorageTests(TestCase):
 
     def test_filesystem_browsing_and_orphan_zip_inspection_need_no_delivery_or_job_rows(self):
         self.assertEqual((Delivery.objects.count(), Job.objects.count()), (0, 0))
-        home = self.client.get(reverse("admin_storage"))
+        home = self.client.get(reverse("admin_storage"), {"tab": "files"})
+        self.assertContains(home, "<h1>Browse files</h1>", html=True)
+        self.assertContains(home, "Locations")
+        self.assertContains(home, "Browse files")
+        self.assertContains(home, "Connect with SFTP")
         self.assertContains(home, "Delivery uploads")
-        self.assertContains(home, "QC job artifacts")
+        self.assertNotContains(home, "QC job artifacts")
+        self.assertContains(home, str(self.work))
         self.assertContains(home, "Published submissions")
         owner = self.client.get(reverse("admin_storage"), {"area": "incoming", "path": "preinstalled-owner"})
         self.assertContains(owner, "original.zip")
@@ -149,6 +158,200 @@ class AdminStorageTests(TestCase):
         self.assertIn("no-store", response["Cache-Control"])
         self.assertIn("private", response["Cache-Control"])
         self.assertEqual(b"".join(response.streaming_content), self.payload)
+
+    def test_download_head_and_byte_ranges_allow_resuming_without_reading_the_whole_file(self):
+        url, query = reverse("admin_storage_download"), {"area": "incoming", "path": self.relative_path}
+        head = self.client.head(url, query)
+        self.assertEqual(head.status_code, 200)
+        self.assertEqual(head.content, b"")
+        self.assertEqual(head["Content-Length"], str(len(self.payload)))
+        self.assertEqual(head["Accept-Ranges"], "bytes")
+        self.assertEqual(head["Content-Type"], "application/octet-stream")
+        partial = self.client.get(url, query, HTTP_RANGE="bytes=4-11")
+        self.assertEqual(partial.status_code, 206)
+        self.assertEqual(partial["Content-Range"], f"bytes 4-11/{len(self.payload)}")
+        self.assertEqual(b"".join(partial.streaming_content), self.payload[4:12])
+        suffix = self.client.get(url, query, HTTP_RANGE="bytes=-5")
+        self.assertEqual(suffix.status_code, 206)
+        self.assertEqual(b"".join(suffix.streaming_content), self.payload[-5:])
+        invalid = self.client.get(url, query, HTTP_RANGE=f"bytes={len(self.payload)}-")
+        self.assertEqual(invalid.status_code, 416)
+        self.assertEqual(invalid.content, b"")
+        self.assertEqual(invalid["Content-Range"], f"bytes */{len(self.payload)}")
+
+    def test_folders_can_be_opened_sorted_filtered_and_downloaded_as_an_original_byte_zip(self):
+        self.write_file("work", "operator-files/October/notes.txt", b"operator notes\n")
+        self.write_file("work", "operator-files/October/data.bin", bytes(range(256)))
+        opened = self.client.get(reverse("admin_storage"), {"area": "work", "path": "operator-files/October",
+                                                            "sort": "size", "direction": "desc"})
+        self.assertEqual(opened.status_code, 200)
+        self.assertEqual(opened.context["title"], "October")
+        self.assertEqual([entry["name"] for entry in opened.context["listing"]["entries"]], ["data.bin", "notes.txt"])
+        self.assertEqual(parse_qs(urlsplit(opened.context["parent_url"]).query),
+                         {"area": ["work"], "path": ["operator-files"], "tab": ["files"],
+                          "sort": ["size"], "direction": ["desc"]})
+        self.assertEqual([item["label"] for item in opened.context["crumbs"]],
+                         ["All locations", "work", "operator-files", "October"])
+        self.assertContains(opened, 'aria-label="Up to parent folder"')
+        self.assertContains(opened, "Download folder ZIP")
+        self.assertContains(opened, "Download selected ZIP")
+        searched = self.client.get(reverse("admin_storage"), {"area": "work", "path": "operator-files/October", "q": "notes"})
+        self.assertEqual([entry["name"] for entry in searched.context["listing"]["entries"]], ["notes.txt"])
+        downloaded = self.client.get(reverse("admin_storage_archive"), {"area": "work", "path": "operator-files/October"})
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded["Content-Type"], "application/zip")
+        self.assertIn("attachment;", downloaded["Content-Disposition"])
+        self.assertEqual(downloaded["X-QC-Storage-Excluded-Entries"], "0")
+        with ZipFile(BytesIO(b"".join(downloaded.streaming_content))) as archive:
+            self.assertEqual(archive.read("files/operator-files/October/notes.txt"), b"operator notes\n")
+            self.assertEqual(archive.read("files/operator-files/October/data.bin"), bytes(range(256)))
+            self.assertIsNone(archive.testzip())
+            self.assertIn("not a database backup", archive.read(downloads.REPORT_NAME).decode())
+        self.assertEqual((self.work / "operator-files/October/notes.txt").read_bytes(), b"operator notes\n")
+
+    def test_selected_files_download_keeps_only_requested_paths_and_rejects_invalid_selection(self):
+        self.write_file("work", "reports/a.txt", b"selected A")
+        self.write_file("work", "reports/b.txt", b"unselected B")
+        self.write_file("work", "other.txt", b"selected other")
+        response = self.client.get(reverse("admin_storage_archive"), {
+            "area": "work", "selection": "1", "paths": ["reports/a.txt", "other.txt"], "folder": "reports",
+        })
+        self.assertEqual(response.status_code, 200)
+        with ZipFile(BytesIO(b"".join(response.streaming_content))) as archive:
+            self.assertEqual(archive.read("files/reports/a.txt"), b"selected A")
+            self.assertEqual(archive.read("files/other.txt"), b"selected other")
+            self.assertNotIn("files/reports/b.txt", archive.namelist())
+        for paths in ([], [""], ["../outside"], ["worker.token"], ["/etc/passwd"]):
+            with self.subTest(paths=paths):
+                invalid = self.client.get(reverse("admin_storage_archive"), {
+                    "area": "work", "selection": "1", "paths": paths, "folder": "reports",
+                })
+                self.assertIn(invalid.status_code, {400, 404})
+                self.assertNotEqual(invalid["Content-Type"], "application/zip")
+                self.assertFalse(invalid.streaming)
+
+    def test_area_folder_download_excludes_private_content_with_an_explicit_report(self):
+        self.write_file("work", "normal/folder/result.txt", b"downloadable result")
+        self.write_file("work", "worker.token", b"secret worker token")
+        self.write_file("work", "maintenance/state.json", b"secret maintenance state")
+        response = self.client.get(reverse("admin_storage_archive"), {"area": "work", "path": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["X-QC-Storage-Excluded-Entries"], "2")
+        zipped_bytes = b"".join(response.streaming_content)
+        self.assertNotIn(b"secret worker token", zipped_bytes)
+        self.assertNotIn(b"secret maintenance state", zipped_bytes)
+        with ZipFile(BytesIO(zipped_bytes)) as archive:
+            self.assertEqual(archive.read("files/normal/folder/result.txt"), b"downloadable result")
+            self.assertNotIn("files/worker.token", archive.namelist())
+            self.assertNotIn("files/maintenance/state.json", archive.namelist())
+            report = archive.read(downloads.REPORT_NAME).decode()
+            self.assertIn("Excluded entries: 2", report)
+            self.assertIn("worker.token", report)
+
+    def test_read_only_locations_open_and_download_without_database_usage_checks(self):
+        for area in ("work", "boundaries", "spec-0", "uploaded-specifications"):
+            self.write_file(area, "original.json", b'{ "original": "unaltered" }\n')
+            with self.subTest(area=area), patch.object(references, "describe_references", side_effect=AssertionError(
+                    "Read-only locations do not need SQL usage checks")), patch.object(
+                    trash, "preview_quarantine", side_effect=AssertionError("Read-only locations cannot be quarantined")):
+                response = self.detail(area=area, path="original.json", verify=True)
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(response.context["review"]["can_quarantine"])
+                self.assertEqual(response.context["evidence"]["sha256"], sha256(b'{ "original": "unaltered" }\n').hexdigest())
+                self.assertNotContains(response, 'name="filename_confirmation"')
+                download = self.client.get(reverse("admin_storage_download"), {"area": area, "path": "original.json"})
+                self.assertEqual(download.status_code, 200)
+                self.assertEqual(b"".join(download.streaming_content), b'{ "original": "unaltered" }\n')
+
+    def test_operator_configured_mount_displays_its_actual_server_path_without_accepting_arbitrary_roots(self):
+        mounted = self.definitions.parent / "mounted-extra"
+        mounted.mkdir()
+        (mounted / "sample.txt").write_bytes(b"extra mounted bytes")
+        with override_settings(QC_TOOL_STORAGE_ROOTS=[{
+                "key": "shared-results", "label": "Shared results", "path": str(mounted)}]):
+            listed = self.client.get(reverse("admin_storage"), {"area": "extra-shared-results"})
+            self.assertEqual(listed.status_code, 200)
+            self.assertEqual(listed.context["area_label"], "mounted-extra")
+            self.assertEqual(listed.context["listing"]["entries"][0]["name"], "sample.txt")
+            self.assertContains(listed, str(mounted))
+            detailed = self.detail(area="extra-shared-results", path="sample.txt")
+            self.assertEqual(detailed.status_code, 200)
+            self.assertFalse(detailed.context["review"]["can_quarantine"])
+            downloaded = self.client.get(reverse("admin_storage_download"), {"area": "extra-shared-results", "path": "sample.txt"})
+            self.assertEqual(b"".join(downloaded.streaming_content), b"extra mounted bytes")
+        unavailable = self.client.get(reverse("admin_storage"), {"area": "extra-shared-results"})
+        self.assertEqual(unavailable.status_code, 404)
+        arbitrary = self.client.get(reverse("admin_storage"), {"area": str(mounted)})
+        self.assertEqual(arbitrary.status_code, 404)
+
+    def test_untrusted_names_are_escaped_in_file_browser_and_file_details(self):
+        name = 'notes"><img src=x onerror=alert(1)>.txt'
+        self.write_file("work", name, b"an ordinary filename containing markup characters")
+        for url, query in ((reverse("admin_storage"), {"area": "work"}),
+                           (reverse("admin_storage_file"), {"area": "work", "path": name})):
+            with self.subTest(url=url):
+                response = self.client.get(url, query)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, '<img src=x onerror=alert(1)>')
+                self.assertContains(response, "&lt;img src=x onerror=alert(1)&gt;")
+
+    def test_zip_inventory_limit_has_recoverable_error_before_download_headers(self):
+        self.write_file("work", "folder/first.txt", b"first")
+        self.write_file("work", "folder/second.txt", b"second")
+        with patch.object(downloads, "MAX_ARCHIVE_ENTRIES", 1):
+            response = self.client.get(reverse("admin_storage_archive"), {"area": "work", "path": "folder", "folder": "folder"})
+        self.assertContains(response, "Choose a smaller folder", status_code=413)
+        self.assertNotEqual(response["Content-Type"], "application/zip")
+        self.assertFalse(response.streaming)
+        self.assertEqual(response.context["path"], "folder")
+
+    @override_settings(QC_TOOL_STORAGE_SFTP_HOST="")
+    def test_connection_page_explains_when_sftp_is_not_configured(self):
+        response = self.client.get(reverse("admin_storage"), {"tab": "connection"})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["connection"]["configured"])
+        self.assertContains(response, "SFTP")
+        self.assertContains(response, "Not set up yet")
+        self.assertContains(response, reverse("admin_storage_connection_guide"))
+
+    @override_settings(QC_TOOL_STORAGE_SFTP_HOST="files.example.test", QC_TOOL_STORAGE_SFTP_PORT=2222,
+                       QC_TOOL_STORAGE_SFTP_USERNAME="qc-reader", QC_TOOL_STORAGE_SFTP_ROOT="/files/project data")
+    def test_connection_page_displays_configured_connection_without_connecting_or_changing_files(self):
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.get(reverse("admin_storage"), {"tab": "connection"})
+        self.assertEqual(response.status_code, 200)
+        details = response.context["connection"]
+        self.assertEqual(details["address"], "sftp://qc-reader@files.example.test:2222/files/project%20data")
+        self.assertEqual(details["command"], "sftp -P 2222 qc-reader@files.example.test")
+        self.assertContains(response, "files.example.test")
+        self.assertContains(response, "qc-reader")
+        self.assertContains(response, "/files/project data")
+        self.assert_no_sql_writes(captured)
+        self.assertEqual(self.original.read_bytes(), self.payload)
+
+    def test_invalid_connection_settings_cannot_inject_markup_or_connection_destinations(self):
+        for settings in ({"QC_TOOL_STORAGE_SFTP_HOST": '<script>alert("host")</script>'},
+                         {"QC_TOOL_STORAGE_SFTP_HOST": "https://foreign.example.test"},
+                         {"QC_TOOL_STORAGE_SFTP_HOST": "files.example.test", "QC_TOOL_STORAGE_SFTP_USERNAME": "reader;touch-file"},
+                         {"QC_TOOL_STORAGE_SFTP_HOST": "files.example.test", "QC_TOOL_STORAGE_SFTP_ROOT": "/files/../private"}):
+            with self.subTest(settings=settings), override_settings(**settings):
+                response = self.client.get(reverse("admin_storage"), {"tab": "connection"})
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(response.context["connection"]["configured"])
+                self.assertTrue(response.context["connection"]["configuration_error"])
+                self.assertNotContains(response, '<script>alert("host")</script>')
+                self.assertNotContains(response, "https://foreign.example.test")
+
+    def test_connection_guide_is_a_fixed_administrator_attachment_not_a_requested_host_path(self):
+        response = self.client.get(reverse("admin_storage_connection_guide"), {"path": "/etc/passwd", "area": "../private"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Disposition"], 'attachment; filename="qc-tool-storage-access.md"')
+        self.assertIn("text/markdown", response["Content-Type"])
+        content = b"".join(response.streaming_content).decode()
+        self.assertTrue(content.startswith("# Storage browser and desktop connections"))
+        self.assertIn("SFTP", content)
+        self.assertNotIn("root:x:", content)
+        self.assertIn("no-store", response["Cache-Control"])
 
     def test_explicit_verification_proves_the_exact_linked_job_checksum_and_size(self):
         delivery, job = self.linked_records()
@@ -240,7 +443,8 @@ class AdminStorageTests(TestCase):
 
     def test_all_storage_routes_keep_anonymous_visitors_in_admin_login(self):
         self.client.logout()
-        for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_trash", "admin_storage_action"):
+        for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_archive",
+                     "admin_storage_connection_guide", "admin_storage_trash", "admin_storage_action"):
             with self.subTest(route=name):
                 response = self.client.get(reverse(name), {"area": "incoming", "path": self.relative_path})
                 self.assertEqual(response.status_code, 302)
@@ -256,7 +460,8 @@ class AdminStorageTests(TestCase):
         staff.refresh_from_db()
         for user in (manager, staff):
             self.client.force_login(user)
-            for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_trash", "admin_storage_action"):
+            for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_archive",
+                         "admin_storage_connection_guide", "admin_storage_trash", "admin_storage_action"):
                 with self.subTest(user=user.username, route=name):
                     response = self.client.get(reverse(name), {"area": "incoming", "path": self.relative_path})
                     self.assertEqual(response.status_code, 403)
@@ -278,12 +483,14 @@ class AdminStorageTests(TestCase):
 
     def test_storage_http_methods_preserve_the_maintenance_write_fence(self):
         self.assertEqual(self.client.get(reverse("admin_storage_action")).status_code, 405)
-        for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_trash"):
+        for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_archive",
+                     "admin_storage_connection_guide", "admin_storage_trash"):
             with self.subTest(route=name, phase="off"):
                 self.assertEqual(self.client.post(reverse(name)).status_code, 405)
         self.ready()
         self.assertEqual(self.client.get(reverse("admin_storage_action")).status_code, 405)
-        for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_trash"):
+        for name in ("admin_storage", "admin_storage_file", "admin_storage_download", "admin_storage_archive",
+                     "admin_storage_connection_guide", "admin_storage_trash"):
             with self.subTest(route=name, phase="ready"):
                 self.assertEqual(self.client.post(reverse(name)).status_code, 503)
 
@@ -421,6 +628,29 @@ class AdminStorageTests(TestCase):
             self.assertEqual(response.status_code, 302)
         self.assert_no_sql_writes(captured)
         self.assertEqual(self.original.read_bytes(), self.payload)
+
+    @override_settings(SESSION_SAVE_EVERY_REQUEST=True, QC_TOOL_STORAGE_SFTP_HOST="")
+    def test_new_read_workflows_stay_available_without_sql_writes_in_ready_maintenance(self):
+        self.write_file("work", "operator-files/notes.txt", b"maintenance download")
+        self.write_file("boundaries", "source.json", b'{"original":"boundary"}')
+        self.ready()
+        with CaptureQueriesContext(connection) as captured:
+            listed = self.client.get(reverse("admin_storage"), {"area": "work", "path": "operator-files"})
+            self.assertEqual(listed.status_code, 200)
+            detailed = self.detail(area="boundaries", path="source.json")
+            self.assertEqual(detailed.status_code, 200)
+            zipped = self.client.get(reverse("admin_storage_archive"), {"area": "work", "path": "operator-files"})
+            self.assertEqual(zipped.status_code, 200)
+            with ZipFile(BytesIO(b"".join(zipped.streaming_content))) as archive:
+                self.assertEqual(archive.read("files/operator-files/notes.txt"), b"maintenance download")
+            head = self.client.head(reverse("admin_storage_download"), {"area": "work", "path": "operator-files/notes.txt"})
+            self.assertEqual(head.status_code, 200)
+            connected = self.client.get(reverse("admin_storage"), {"tab": "connection"})
+            self.assertEqual(connected.status_code, 200)
+            guide = self.client.get(reverse("admin_storage_connection_guide"))
+            self.assertEqual(guide.status_code, 200)
+            self.assertIn(b"SFTP", b"".join(guide.streaming_content))
+        self.assert_no_sql_writes(captured)
 
     def test_job_record_details_link_exact_storage_locations_without_workspace_redirects(self):
         _delivery, job = self.linked_records()

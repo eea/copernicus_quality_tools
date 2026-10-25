@@ -13,6 +13,7 @@ import logging
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 from uuid import uuid4
@@ -34,16 +35,20 @@ from qc_tool.frontend.dashboard.services.maintenance.operations import (
     active_operation, pin_operation, require_no_operation, unpin_operation,
 )
 
-from .archive import ArtifactSource, ArchiveLimits, inspect_archive, open_regular, write_archive
+from .archive import (
+    ArchiveLimits, artifact_path, canonical_json, compressed_sizes, inspect_archive,
+    open_regular, write_archive, write_native_archive,
+)
 from .artifacts import collect_artifacts, plan_artifact_restore
 from .contracts import digest, require_uuid, record_limit
-from .errors import RecordLimitError, TransferError
+from .components import EXPORT_COMPONENTS as BACKUP_COMPONENTS, COMPONENT_LABELS as BACKUP_LABELS
+from .errors import RecordLimitError, TransferBusy, TransferError
 from .records import (
     RESOURCE_FIELDS, apply_records, export_record_counts, export_records,
     plan_records, validate_records, verify_records,
 )
 from .plan_storage import public_result, verify_rebuilt_plan
-from . import postgres, recovery_files, store
+from . import configuration, postgres, progress, recovery_files, store
 
 logger = logging.getLogger(__name__)
 TERMINAL = {"completed", "cancelled", "failed"}
@@ -140,6 +145,32 @@ def database_control_status(actor):
     return status(actor)
 
 
+def database_inventory(actor):
+    """Read-only database names, sizes and the permitted management actions."""
+    from .databases import inventory
+    return inventory(actor)
+
+
+def delete_restore_database(operation_id, actor, **confirmation):
+    from .databases import delete
+    return delete(operation_id, actor, **confirmation)
+
+
+def database_details(database, actor):
+    from .databases import details
+    return details(database, actor)
+
+
+def review_database_selection(database, actor):
+    from .control import review_selection
+    return review_selection(database, actor)
+
+
+def select_database(database, actor, **confirmation):
+    from .control import select
+    return select(database, actor, **confirmation)
+
+
 def activation_preview(operation_id, actor):
     from .control import preview
     return preview(operation_id, actor)
@@ -171,6 +202,8 @@ def _require_space(path, byte_count):
     while not path.exists():
         path = path.parent
     reserve = getattr(settings, "QC_TOOL_TRANSFER_MIN_FREE_BYTES", 512 * 1024**2)
+    if type(reserve) is not int or reserve < 0:
+        raise TransferError("QC_TOOL_TRANSFER_MIN_FREE_BYTES must be a nonnegative integer.")
     if shutil.disk_usage(path).free < byte_count + reserve:
         raise TransferError("Transfer storage has insufficient free space including its configured reserve. Free space before retrying.")
 
@@ -199,20 +232,31 @@ def _ready_guard(generation=None, *, owner=None):
 
 
 def _selection(selection):
-    if not isinstance(selection, dict) or set(selection) not in ({"profile", "user_ids"}, {"profile", "user_ids", "include_files"}):
+    if (not isinstance(selection, dict) or not {"profile", "user_ids"} <= set(selection)
+            or set(selection) - {"profile", "user_ids", "include_files", "components"}):
         raise TransferError("Choose a supported export scope.")
     profile, ids = selection["profile"], selection["user_ids"]
     if not isinstance(profile, str) or profile not in {"accounts", "application", "database"} or not isinstance(ids, list) or any(type(pk) is not int or pk <= 0 for pk in ids):
         raise TransferError("Choose a supported export scope and account identities.")
     if len(set(ids)) != len(ids) or (profile in {"application", "database"} and ids):
         raise TransferError("Application exports require the complete connected dataset.")
-    include_files = selection.get("include_files", profile == "application")
+    if "components" in selection:
+        components = selection["components"]
+        if (profile != "database" or not isinstance(components, list)
+                or any(not isinstance(key, str) or key not in BACKUP_COMPONENTS for key in components)
+                or len(set(components)) != len(components)):
+            raise TransferError("Choose supported backup components without duplicates.")
+        components = [key for key in BACKUP_COMPONENTS if key in components]
+        return {"profile": "database", "user_ids": [], "components": components,
+                "include_files": bool(set(components) & set(recovery_files.COMPONENTS))}
+    include_files = selection.get("include_files", False)
     if type(include_files) is not bool:
         raise TransferError("Choose whether to include files in the export.")
     return {"profile": profile, "user_ids": sorted(ids), "include_files": include_files if profile != "accounts" else False}
 
 
 def _snapshot(selection):
+    from .archive import CompressionCounter
     from .compatibility import producer_metadata
 
     payload = export_records(selection["profile"], selection["user_ids"] or None,
@@ -220,21 +264,31 @@ def _snapshot(selection):
                              **({"include_unreferenced_accounts": False} if selection["profile"] == "application" else {}))
     inventory = collect_artifacts(payload, include_files=selection["include_files"])
     inventory = replace(inventory, storage={**inventory.storage, "compatibility": producer_metadata(selection["profile"])})
-    files, byte_count = [], 0
+    files, sources, byte_count = [], [], 0
+    limits = _limits()
     for source in inventory.sources:
         hasher, size = hashlib.sha256(), 0
+        counter = CompressionCounter()
         with open_regular(source.path, storage_root=source.storage_root) as handle:
+            before = os.fstat(handle.fileno())
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):
                 size += len(chunk)
                 byte_count += len(chunk)
-                if size > _limits().max_member_bytes or byte_count > _limits().max_total_bytes:
+                if size > limits.max_member_bytes or byte_count > limits.max_total_bytes:
                     raise TransferError("The selected files exceed the configured transfer limits.")
                 hasher.update(chunk)
-        files.append({"root": source.root, "key": source.key, "size": size, "sha256": hasher.hexdigest()})
+                counter.write(chunk)
+            after = os.fstat(handle.fileno())
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+            raise TransferError("A selected file changed during backup review. Isolate external writers and retry.")
+        checksum = hasher.hexdigest()
+        sources.append(replace(source, compression=counter.finish(checksum, size, limits=limits)))
+        files.append({"root": source.root, "key": source.key, "size": size, "sha256": checksum})
     stable_payload = {key: value for key, value in payload.items() if key != "created_at"}
     review_hash = digest({"records": stable_payload, "files": files,
                           "directories": inventory.directories, "storage": inventory.storage})
-    return payload, inventory, review_hash, byte_count, files
+    return payload, replace(inventory, sources=tuple(sources)), review_hash, byte_count, files
 
 
 def _file_reference_counts(storage):
@@ -258,26 +312,124 @@ def _file_reference_counts(storage):
 
 
 def _native_snapshot(selection):
-    native = postgres.preview()
+    components = selection.get("components")
+    native = postgres.preview(include_globals="postgresql_globals" in components) if components is not None else postgres.preview()
+    if components is not None:
+        inventory, entries, file_hash, byte_count = recovery_files.snapshot(
+            limits=_limits(), components=[key for key in components if key in recovery_files.COMPONENTS])
+        config = configuration.snapshot() if "deployment_configuration" in components else None
+        review_hash = _backup_review_hash(native["review_hash"], file_hash, selection, config)
+        return native, inventory, entries, review_hash, byte_count, config
     if not selection["include_files"]:
-        return native, None, [], native["review_hash"], 0
+        return native, None, [], native["review_hash"], 0, None
     inventory, entries, file_hash, byte_count = recovery_files.snapshot(limits=_limits())
     review_hash = digest({"database": native["review_hash"], "files": file_hash})
-    return native, inventory, entries, review_hash, byte_count
+    return native, inventory, entries, review_hash, byte_count, None
+
+
+def _backup_review_hash(database_hash, file_hash, selection, config):
+    return digest({"database": database_hash, "files": file_hash,
+                   "components": selection["components"],
+                   "configuration": config.fingerprint if config else None})
+
+
+def _component_review(selection, native, inventory, entries, config):
+    selected = selection.get("components", list(recovery_files.COMPONENTS) if selection["include_files"] else [])
+    summary = ((inventory.storage.get("recovery_files") or {}).get("component_summary", {}) if inventory else {})
+    rows = []
+    for key in BACKUP_COMPONENTS:
+        values = [entry for entry in entries if recovery_files.component_for(entry["root"], entry["key"]) == key]
+        row = {"key": key, "label": BACKUP_LABELS[key], "selected": key in selected,
+               "status": summary.get(key, {}).get("status", "included" if key in selected else "omitted"),
+               "files_count": len(values), "byte_count": sum(entry["size"] for entry in values)}
+        if key == "deployment_configuration" and config:
+            row.update(files_count=config.files_count, byte_count=config.byte_count)
+        elif key == "postgresql_globals" and key in selected:
+            row.update(files_count=1, byte_count=native.get("globals_bytes", 0))
+        rows.append(row)
+    return rows
+
+
+def _selection_metadata(rows):
+    return canonical_json({"format": "qc-tool-backup-selection", "version": 1,
+                           "selected_components": [row["key"] for row in rows if row["selected"]],
+                           "omitted_components": [row["key"] for row in rows if not row["selected"]],
+                           "components": rows})
 
 
 def _export_capacity(byte_count):
     """Report known file-capacity blockers before pinning a long export."""
     blockers = []
     if byte_count > _limits().max_archive_bytes:
-        blockers.append("The selected file contents exceed the configured package size limit. Choose records only or have an operator increase the transfer limit and backup capacity.")
+        blockers.append("The selected package contents exceed the configured package size limit. Deselect optional file sections, or increase the transfer limit with sufficient backup capacity.")
     try:
         _require_space(store._directory_path(), byte_count)
     except TransferError:
-        blockers.append("Backup storage has insufficient free space for the selected files and its reserve. Choose records only or provide more backup storage before exporting files.")
+        blockers.append("Backup storage has insufficient free space for the selected package and its reserve. Deselect optional file sections, release completed export packages, or provide more backup storage.")
     except OSError:
         blockers.append("Backup storage availability could not be checked. Check its mount and permissions before exporting.")
     return blockers
+
+
+def _compressed_file_bytes(entries, sources, *, format_version=1):
+    sizes = compressed_sizes(sources, format_version=format_version)
+    return sum(sizes.get(artifact_path(entry["root"], entry["key"], format_version=format_version), entry["size"])
+               for entry in entries)
+
+
+def _capacity_review(manifest, records, entries, *, directories=(), storage=None, database_bytes=None,
+                     format_version=1, compressed_sources=()):
+    """Size planned ZIP bytes separately from expanded recovery contents.
+
+    PostgreSQL's physical database size includes indexes and bloat, whereas its
+    custom dump is compressed. Never refuse a backup solely on that estimate.
+    The streaming writer enforces actual package limits and free-space reserve.
+    """
+    from .archive import estimate_archive_size
+
+    limits = _limits()
+    compression = compressed_sizes(compressed_sources, format_version=format_version)
+    sizes = estimate_archive_size(manifest, records, entries, directories=directories,
+                                 storage=storage, limits=limits, validate_limits=False,
+                                 format_version=format_version, compressed_sizes=compression)
+    blockers = _export_capacity(sizes["archive_bytes"])
+    if sizes["expanded_bytes"] > limits.max_total_bytes:
+        blockers.append("The package's files and metadata exceed the expanded size limit.")
+    if (sizes["records_bytes"] > min(limits.max_records_bytes, limits.max_member_bytes)
+            or sizes["manifest_bytes"] > min(limits.max_manifest_bytes, limits.max_member_bytes)):
+        blockers.append("The package metadata exceeds its configured limit. Use a native database backup or a smaller selection.")
+    if any(entry["size"] > limits.max_member_bytes for entry in entries):
+        blockers.append("A selected file exceeds the configured member size limit. Deselect that file section or increase QC_TOOL_TRANSFER_MAX_MEMBER_BYTES with sufficient storage.")
+    if len(entries) + 2 > limits.max_members or sizes["central_directory_bytes"] > limits.max_central_directory_bytes:
+        blockers.append("The package inventory exceeds its configured member or ZIP directory limit.")
+    path = Path(store._directory_path())
+    while not path.exists():
+        path = path.parent
+    try:
+        free = shutil.disk_usage(path).free
+    except OSError:
+        free = None
+    reserve = getattr(settings, "QC_TOOL_TRANSFER_MIN_FREE_BYTES", 512 * 1024**2)
+    estimated_package = sizes["archive_bytes"] + (database_bytes or 0)
+    file_bytes = sum(entry["size"] for entry in entries)
+    compressed_file_bytes = sum(compression.get(artifact_path(entry["root"], entry["key"],
+                                    format_version=format_version), entry["size"]) for entry in entries)
+    capacity = {"file_bytes": file_bytes, "compressed_file_bytes": compressed_file_bytes,
+                "compression_saved_bytes": file_bytes - compressed_file_bytes,
+                "records_bytes": sizes["records_bytes"], "estimated_database_bytes": database_bytes,
+                "estimated_package_bytes": estimated_package,
+                "required_free_bytes": estimated_package + reserve,
+                "free_bytes": free, "reserve_bytes": reserve,
+                "max_archive_bytes": limits.max_archive_bytes,
+                "max_member_bytes": limits.max_member_bytes, "max_total_bytes": limits.max_total_bytes}
+    notes = []
+    if compression:
+        notes.append("File compression preserves the original contents. ZIP size uses compressed files; restoring them requires space for the original contents.")
+    if database_bytes is not None:
+        notes.append("Database bytes are estimated from PostgreSQL storage, including indexes. The compressed dump can differ; actual limits and free space are checked while writing.")
+        if estimated_package > limits.max_archive_bytes or (free is not None and estimated_package + reserve > free):
+            notes.append("The estimated database backup may exceed available storage or the package limit. Use a larger private backup volume or review the configured limit before starting.")
+    return blockers, capacity, notes
 
 
 def _counts(payload):
@@ -295,12 +447,39 @@ def export_preview(selection, actor):
     selection = _selection(selection)
     with _ready_guard():
         if selection["profile"] == "database":
-            native, inventory, entries, review_hash, byte_count = _native_snapshot(selection)
+            native, inventory, entries, review_hash, byte_count, config = _native_snapshot(selection)
+            manifest = {"format": "qc-tool-postgresql", "version": 1, "profile": "database",
+                        "package_id": "0" * 36, "created_at": native["created_at"],
+                        "contract": "postgresql-native-v2"}
+            metadata = {key: value for key, value in native.items() if key not in {"estimated_dump_bytes", "section_estimates"}}
+            metadata.update(dump_sha256="0" * 64, dump_bytes=0)
+            additional = [{"root": "database", **entry} for entry in native.get("section_estimates", [])]
+            additional.extend({"root": "database", "key": key, "size": len(raw),
+                           "sha256": hashlib.sha256(raw).hexdigest()}
+                          for key, raw in (config.sections.items() if config else ()))
+            if "postgresql_globals" in selection.get("components", []) and not any(item["key"] == "metadata/globals.sql" for item in additional):
+                additional.append({"root": "database", "key": "metadata/globals.sql",
+                                   "size": native.get("globals_bytes", 0), "sha256": "0" * 64})
+            component_rows = _component_review(selection, native, inventory, entries, config)
+            selection_bytes = _selection_metadata(component_rows)
+            additional.append({"root": "database", "key": "metadata/selection.json",
+                               "size": len(selection_bytes), "sha256": hashlib.sha256(selection_bytes).hexdigest()})
+            metadata["sections"] = [{key: entry[key] for key in ("key", "sha256", "size")} for entry in additional]
+            from .compatibility import producer_metadata
+            blockers, storage_capacity, capacity_notes = _capacity_review(
+                manifest, metadata,
+                [{"root": "database", "key": "data/database.dump", "sha256": "0" * 64, "size": 0}, *additional, *entries],
+                directories=inventory.directories if inventory else (),
+                storage={**(inventory.storage if inventory else {}), "compatibility": producer_metadata("database")},
+                database_bytes=native.get("estimated_dump_bytes"), format_version=2,
+                compressed_sources=inventory.sources if inventory else ())
             return {**native, "review_hash": review_hash, "profile": "database", "selection": selection,
-                    "blockers": _export_capacity(byte_count), "files_count": len(entries), "byte_count": byte_count,
+                    "blockers": blockers, "storage_capacity": storage_capacity,
+                    "components": component_rows,
+                    "files_count": len(entries), "byte_count": byte_count,
                     "exclusions": list(recovery_files.EXCLUSIONS) if inventory else [
                         "Files outside PostgreSQL, deployment secrets and PostgreSQL cluster roles"],
-                    "notes": ["Includes every database table and field, stored credentials, permissions and sessions."]
+                    "notes": ["Includes every database table and field, stored credentials, permissions and sessions.", *capacity_notes]
                              + (list(inventory.warnings) if inventory else [])}
         _schema_ready()
         capacity = _record_capacity(selection)
@@ -310,14 +489,20 @@ def export_preview(selection, actor):
                     "capacity": {"code": "record_limit", "record_count": error.count, "record_limit": error.limit},
                     "review_hash": "", "blockers": [str(error)], "files_count": 0, "byte_count": 0,
                     "file_references": {}, "notes": [], "exclusions": []}
-        payload, inventory, review_hash, byte_count, _files = _snapshot(selection)
+        payload, inventory, review_hash, byte_count, files = _snapshot(selection)
+        manifest = {"format": "qc-tool-data", "version": 1, "package_id": "0" * 36,
+                    "created_at": payload["created_at"], "profile": payload["profile"], "contract": payload["contract"]}
+        blockers, storage_capacity, capacity_notes = _capacity_review(
+            manifest, payload, files, directories=inventory.directories, storage=inventory.storage,
+            compressed_sources=inventory.sources)
     counts = _counts(payload)
     return {"selection": selection, "review_hash": review_hash, "counts": counts,
             "total_records": sum(counts.values()), "record_limit": capacity["record_limit"],
-            "files_count": len(inventory.sources), "byte_count": byte_count, "blockers": _export_capacity(byte_count),
+            "files_count": len(inventory.sources), "byte_count": byte_count, "blockers": blockers,
+            "storage_capacity": storage_capacity,
             "file_references": _file_reference_counts(inventory.storage),
             "exclusions": ["Passwords, API keys, sessions and infrastructure secrets", "Automatic roles and product grants"],
-            "notes": list(inventory.warnings) + list(inventory.external_requirements)}
+            "notes": list(inventory.warnings) + list(inventory.external_requirements) + capacity_notes}
 
 
 def _new(kind, actor, **values):
@@ -425,6 +610,26 @@ def stage_import(upload, actor, *, include_files=None):
     return _public(operation)
 
 
+def stage_import_path(path, actor, *, include_files=None):
+    """Operator-side staging avoids HTTP and multipart temporary copies.
+
+    Keep the supplied original unchanged. The private staged copy receives the
+    same bounded validation and subsequent explicit Admin review as an upload.
+    """
+    _authorize(actor)
+    with open_regular(Path(path)) as source:
+        size = os.fstat(source.fileno()).st_size
+        if size > _limits().max_archive_bytes:
+            raise TransferError("The supplied package exceeds the configured transfer limit.")
+        _require_space(store._directory_path(), size)
+
+        class LocalPackage:
+            def chunks(self):
+                yield from iter(lambda: source.read(1024 * 1024), b"")
+
+        return stage_import(LocalPackage(), actor, include_files=include_files)
+
+
 def _validate_manifest(verified, *, validate_payload=True):
     manifest = verified.manifest
     if set(manifest) != {"format", "version", "package_id", "created_at", "profile", "contract"} or type(manifest["version"]) is not int or manifest["version"] != 1:
@@ -433,8 +638,9 @@ def _validate_manifest(verified, *, validate_payload=True):
     if not isinstance(manifest["profile"], str) or manifest["profile"] not in {"accounts", "application", "database"}:
         raise TransferError("Unsupported application transfer profile.")
     if manifest["profile"] == "database":
-        if (manifest["format"] != "qc-tool-postgresql" or manifest["contract"] != "postgresql-native-v1"
+        if (manifest["format"] != "qc-tool-postgresql" or manifest["contract"] not in {"postgresql-native-v1", "postgresql-native-v2"}
                 or not isinstance(verified.records, dict)
+                or manifest["contract"] != "postgresql-native-v" + str(verified.records.get("version"))
                 or manifest["created_at"] != verified.records.get("created_at")):
             raise TransferError("Unsupported PostgreSQL backup manifest.")
         return
@@ -686,8 +892,12 @@ def _public(operation, *, pin=_UNSET, execution_busy=None):
             recoverable = False
     public = {key: value for key, value in operation.items() if key not in {"core_plan", "version", "actor_id"}}
     public["result"] = public_result(public.get("result"))
+    public["progress"] = progress.read(operation)
     return public | {
-        "downloadable": operation["kind"] == "export" and operation["status"] == "completed",
+        "downloadable": operation["kind"] == "export" and operation["status"] == "completed"
+                        and not operation.get("package_release_requested_at"),
+        "releasable": operation["kind"] == "export" and operation["status"] == "completed"
+                      and not owned and not operation.get("payload_released_at"),
         "maintenance_owned": owned, "runner_active": runner_active, "recoverable": recoverable,
         "cancellable": not runner_active and operation["status"] not in {"completed", "cancelled"} and (
             operation["kind"] == "export" or operation.get("safe_to_cancel", False)
@@ -700,7 +910,13 @@ def get_operation(operation_id, actor):
     return _public(store.read_operation(operation_id))
 
 
-def list_operations(actor):
+def list_operations(actor, *, limit=50, include_storage=False):
+    """Read transfer journals, optionally inventorying their saved ZIP sizes.
+
+    The default remains the recent audit feed. Storage management requests all
+    journals so an older, large backup is never hidden behind that feed's limit.
+    File inspection uses no-follow metadata only; archive contents are not read.
+    """
     _authorize(actor)
     try:
         pin = active_operation()
@@ -711,22 +927,82 @@ def list_operations(actor):
     for path in store.directory().iterdir():
         if path.is_dir() and not path.is_symlink():
             try:
-                values.append(_public(store.read_operation(path.name), pin=pin, execution_busy=execution_busy))
+                operation = _public(store.read_operation(path.name), pin=pin, execution_busy=execution_busy)
+                if include_storage:
+                    try:
+                        package = (store.operation_dir(operation["id"]) / "package.zip").lstat()
+                        if stat.S_ISREG(package.st_mode):
+                            operation["stored_package_bytes"] = package.st_size
+                        else:
+                            operation.update(stored_package_bytes=None, storage_issue="Saved ZIP storage is unsafe.")
+                    except FileNotFoundError:
+                        operation["stored_package_bytes"] = 0
+                    except OSError:
+                        operation.update(stored_package_bytes=None, storage_issue="Saved ZIP size is unavailable.")
+                values.append(operation)
             except TransferError:
                 continue
-    return sorted(values, key=lambda value: value["created_at"], reverse=True)[:50]
+    values.sort(key=lambda value: value["created_at"], reverse=True)
+    return values if limit is None else values[:limit]
+
+
+def backup_storage_capacity(actor):
+    """Report the backup volume without exposing private storage paths."""
+    _authorize(actor)
+    reserve = getattr(settings, "QC_TOOL_TRANSFER_MIN_FREE_BYTES", 512 * 1024**2)
+    if type(reserve) is not int or reserve < 0:
+        raise TransferError("QC_TOOL_TRANSFER_MIN_FREE_BYTES must be a nonnegative integer.")
+    try:
+        capacity = shutil.disk_usage(store.directory())
+    except OSError as error:
+        raise TransferError("Backup volume capacity is unavailable.") from error
+    return {"free_bytes": capacity.free, "total_bytes": capacity.total, "reserve_bytes": reserve}
 
 
 def download_operation(operation_id, actor):
     _authorize(actor)
     operation = store.read_operation(operation_id)
+    if operation.get("package_release_requested_at"):
+        raise TransferError("This export package has been released from local storage. Its audit history remains available.")
     original_import = operation["kind"] == "import" and operation.get("package_sha256") and operation["status"] != "cancelled"
     if not original_import and (operation["kind"] != "export" or operation["status"] != "completed"):
         raise TransferError("This export is not ready to download.")
     path = store.operation_dir(operation_id) / "package.zip"
     with open_regular(path) as source:
         handle = os.fdopen(os.dup(source.fileno()), "rb")
-    return handle, {"filename": "qc-tool-{}-{}.zip".format(operation["profile"], operation["id"])}
+    return handle, {"filename": "qc-tool-{}-{}.zip".format(operation["profile"], operation["id"]),
+                    "sha256": operation.get("package_sha256"), "bytes": os.fstat(handle.fileno()).st_size}
+
+
+def release_export_package(operation_id, actor):
+    """Explicitly reclaim a completed export's payload, retaining all journals.
+
+    Imports may still need their original package for receipt/file recovery or
+    database activation. They never enter this cleanup path. Persist intent
+    before unlinking so a crash cannot advertise a download that was removed.
+    """
+    _authorize(actor)
+    try:
+        with store.execution_lock(), file_lock("control", blocking=False) as acquired:
+            if not acquired:
+                raise TransferBusy("Another maintenance action is in progress.")
+            operation = store.read_operation(operation_id)
+            pin = active_operation()
+            if operation["kind"] != "export" or operation["status"] != "completed":
+                raise TransferError("Only a completed export package can be released. Imports and recovery packages must be retained.")
+            if pin and pin["operation_id"] == operation["id"]:
+                raise TransferError("Recover this transfer's maintenance pin before releasing its package.")
+            if not operation.get("payload_released_at"):
+                operation.setdefault("package_release_requested_at", store.now())
+                operation["package_released_by"] = actor.get_username()
+                store.save_operation(operation)
+                _discard_package(operation_id)
+                operation.update(payload_released_at=store.now(),
+                                 message="Export package released from local storage. Audit history retained.")
+                store.save_operation(operation)
+    except MaintenanceError as error:
+        raise TransferError(str(error)) from error
+    return _public(operation)
 
 
 def _begin_artifact_restore(operation):
@@ -936,45 +1212,72 @@ def _apply_native_files(verified, operation):
 
 
 def _run_database_export(operation):
+    report = progress.Reporter(operation["id"])
+    report("validating")
+    _discard_export_scratch(operation["id"])
     directory = store.operation_dir(operation["id"])
-    dump = directory / "database.dump"
     temporary = directory / "package.partial"
-    dump.unlink(missing_ok=True)
     temporary.unlink(missing_ok=True)
-    try:
-        from .compatibility import producer_metadata
-        selection = _selection(operation["selection"])
-        inventory, entries, file_hash, byte_count = (None, [], None, 0)
-        if selection["include_files"]:
-            inventory, entries, file_hash, byte_count = recovery_files.snapshot(limits=_limits())
-        metadata = postgres.dump_to(dump)
-        review_hash = digest({"database": metadata["review_hash"], "files": file_hash}) if inventory else metadata["review_hash"]
+    from .compatibility import producer_metadata
+    selection = _selection(operation["selection"])
+    inventory, entries, file_hash, byte_count = (None, [], None, 0)
+    components = selection.get("components")
+    if components is not None:
+        inventory, entries, file_hash, byte_count = recovery_files.snapshot(
+            limits=_limits(), components=[key for key in components if key in recovery_files.COMPONENTS], report=report)
+    elif selection["include_files"]:
+        inventory, entries, file_hash, byte_count = recovery_files.snapshot(limits=_limits(), report=report)
+    config = configuration.snapshot() if components and "deployment_configuration" in components else None
+    _require_space(directory, _compressed_file_bytes(entries, inventory.sources if inventory else (), format_version=2))
+    captured = {}
+
+    def capture(output):
+        metadata = (postgres.capture_stream(output, include_globals="postgresql_globals" in components, report=report)
+                    if components is not None else postgres.capture_stream(output, report=report))
+        review_hash = (_backup_review_hash(metadata["review_hash"], file_hash, selection, config)
+                       if components is not None else
+                       digest({"database": metadata["review_hash"], "files": file_hash}) if inventory else metadata["review_hash"])
         if review_hash != operation["reviewed_hash"]:
             raise TransferError("The database changed since review. Cancel and review the backup again.")
-        _require_space(directory, dump.stat().st_size + byte_count)
-        manifest = {"format": "qc-tool-postgresql", "version": 1, "profile": "database",
-                    "package_id": operation["package_id"], "created_at": metadata["created_at"],
-                    "contract": "postgresql-native-v1"}
-        checksum = write_archive(temporary, manifest, metadata,
-            (ArtifactSource("database", "archive.dump", dump), *(inventory.sources if inventory else ())),
-            directories=inventory.directories if inventory else (),
-            storage={**(inventory.storage if inventory else {}), "compatibility": producer_metadata("database")},
-            expected_artifacts=[{"root": "database", "key": "archive.dump", "sha256": metadata["dump_sha256"],
-                                 "size": metadata["dump_bytes"]}, *entries], limits=_limits())
-        os.replace(temporary, directory / "package.zip")
-        store.sync_directory(directory)
-        operation.update(package_sha256=checksum,
-                         result={"counts": metadata.get("counts", {}),
-                                 "include_files": selection["include_files"], "files_count": len(entries),
-                                 "warnings": ["Contains stored credentials. Keep this backup private.",
-                                              *list(inventory.warnings if inventory else ()),
-                                              *(list(recovery_files.EXCLUSIONS) if inventory else [
-                                                  "Files outside PostgreSQL and deployment secrets require separate backups."])]})
-    finally:
-        dump.unlink(missing_ok=True)
+        if config:
+            if configuration.snapshot().fingerprint != config.fingerprint:
+                raise TransferError("Application configuration or credential files changed during backup. Review the selection again.")
+            metadata.setdefault("_package_sections", {}).update(config.sections)
+        if metadata["version"] == 2:
+            rows = _component_review(selection, metadata, inventory, entries, config)
+            metadata.setdefault("_package_sections", {})["metadata/selection.json"] = _selection_metadata(rows)
+        captured.update({key: value for key, value in metadata.items() if key != "_package_sections"})
+        manifest["created_at"] = metadata["created_at"]
+        manifest["contract"] = "postgresql-native-v" + str(metadata["version"])
+        return metadata
+
+    manifest = {"format": "qc-tool-postgresql", "version": 1, "profile": "database",
+                "package_id": operation["package_id"], "created_at": store.now(),
+                "contract": "postgresql-native-v2"}
+    checksum = write_native_archive(temporary, manifest, capture,
+        inventory.sources if inventory else (),
+        directories=inventory.directories if inventory else (),
+        storage={**(inventory.storage if inventory else {}), "compatibility": producer_metadata("database")},
+        expected_artifacts=entries, limits=_limits(),
+        check_space=lambda growth: _require_space(directory, growth), report=report)
+    report("publishing")
+    os.replace(temporary, directory / "package.zip")
+    store.sync_directory(directory)
+    operation.update(package_sha256=checksum, package_bytes=(directory / "package.zip").stat().st_size,
+                     source_details=captured.get("source_details", {}),
+                     result={"counts": captured.get("counts", {}),
+                             "include_files": selection["include_files"], "files_count": len(entries),
+                             "components": selection.get("components"),
+                             "warnings": ["Contains stored credentials. Keep this backup private.",
+                                          *list(inventory.warnings if inventory else ()),
+                                          *(list(recovery_files.EXCLUSIONS) if inventory else [
+                                              "Files outside PostgreSQL and deployment secrets require separate backups."])]})
 
 
 def _run_export(operation):
+    report = progress.Reporter(operation["id"])
+    report("validating")
+    _discard_export_scratch(operation["id"])
     payload, inventory, review_hash, byte_count, files = _snapshot(operation["selection"])
     if review_hash != operation["reviewed_hash"]:
         raise TransferError("The export contents changed since review. Cancel and preview the selection again.")
@@ -990,17 +1293,45 @@ def _run_export(operation):
     path = store.operation_dir(operation["id"]) / "package.zip"
     temporary = path.with_suffix(".partial")
     temporary.unlink(missing_ok=True)
-    _require_space(path.parent, byte_count)
+    _require_space(path.parent, _compressed_file_bytes(files, inventory.sources))
     manifest = {"format": "qc-tool-data", "version": 1, "package_id": operation["package_id"],
                 "created_at": payload["created_at"], "profile": payload["profile"], "contract": payload["contract"]}
     sha = write_archive(temporary, manifest, payload, inventory.sources,
-                        directories=inventory.directories, storage=inventory.storage, limits=_limits(), expected_artifacts=files)
+                        directories=inventory.directories, storage=inventory.storage, limits=_limits(), expected_artifacts=files,
+                        check_space=lambda growth: _require_space(path.parent, growth), report=report)
+    report("publishing")
     os.replace(temporary, path)
     store.sync_directory(path.parent)
-    operation.update(package_sha256=sha, result={"counts": _counts(payload), "warnings": list(inventory.warnings),
+    operation.update(package_sha256=sha, package_bytes=path.stat().st_size,
+                     result={"counts": _counts(payload), "warnings": list(inventory.warnings),
                                                "include_files": operation["selection"]["include_files"],
                                                "file_references": _file_reference_counts(inventory.storage),
                                                "external_requirements": list(inventory.external_requirements)})
+
+
+def _discard_export_scratch(operation_id):
+    """Reclaim killed writers' private scratch under the execution lock.
+
+    These files are confined to one export's 0700 journal directory. Never
+    sweep shared artifact roots, imports, or another operation's recovery data.
+    """
+    operation = store.read_operation(operation_id)
+    if operation["kind"] != "export":
+        return
+    directory = store.operation_dir(operation_id)
+    try:
+        paths = [*directory.glob(".transfer-*.pending"), directory / "database.dump"]
+        for path in paths:
+            try:
+                status = path.lstat()
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISREG(status.st_mode) or status.st_nlink != 1 or status.st_mode & 0o077:
+                raise TransferError("Export scratch storage is unsafe. Preserve the operation for operator inspection.")
+            path.unlink()
+        store.sync_directory(directory)
+    except OSError as error:
+        raise TransferError("Interrupted export scratch could not be reclaimed. Retry after checking private storage.") from error
 
 
 def _discard_package(operation_id):
@@ -1011,6 +1342,7 @@ def _discard_package(operation_id):
     """
     directory = store.operation_dir(operation_id)
     try:
+        _discard_export_scratch(operation_id)
         for name in ("package.zip", "package.partial", "database.dump"):
             (directory / name).unlink(missing_ok=True)
         store.sync_directory(directory)
@@ -1065,7 +1397,7 @@ def recover_operation(operation_id, actor, action):
                     raise TransferError("This import has a committed receipt. Retry verification; committed imports cannot be cancelled.")
             with file_lock("control", blocking=False) as acquired:
                 if not acquired:
-                    raise TransferError("Another maintenance action is in progress.")
+                    raise TransferBusy("Another maintenance action is in progress.")
                 pin = active_operation()
                 if pin and pin["operation_id"] != str(operation_id):
                     raise TransferError("A different operation owns maintenance.")

@@ -53,7 +53,7 @@ class UserManagementAdminTests(TestCase):
         for tab, key in (("import", "users_import_url"), ("export", "users_export_url")):
             url = urlsplit(response.context[key])
             self.assertEqual(url.path, reverse("admin_data_transfer"))
-            self.assertEqual(parse_qs(url.query), {"section": ["users"], "tab": [tab]})
+            self.assertEqual(parse_qs(url.query), {"tab": [tab]})
         self.assertIn("no-store", response["Cache-Control"])
         self.assertIn("private", response["Cache-Control"])
 
@@ -133,8 +133,8 @@ class UserManagementAdminTests(TestCase):
         self.assertContains(response, "Create user")
         self.assertNotContains(response, f'href="{reverse("admin:auth_user_add")}"')
         self.assertContains(response, f'href="{reverse("admin:auth_user_changelist")}"')
-        self.assertContains(response, "Import users")
-        self.assertContains(response, "Export users")
+        self.assertContains(response, "Restore or import a package")
+        self.assertContains(response, "Create backup")
         self.assertEqual([item["sql"] for item in queries if item["sql"].lstrip().upper().startswith(
             ("INSERT ", "UPDATE ", "DELETE ", "CREATE ", "ALTER ", "DROP "))], [])
         self.assertEqual(self.client.post(self.url, {"action": "create"}).status_code, 503)

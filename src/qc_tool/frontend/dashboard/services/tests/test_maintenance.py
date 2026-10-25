@@ -117,7 +117,7 @@ class MaintenanceProgressTests(TestCase):
     def test_ready_noop_still_serializes_with_other_control_actions(self):
         ready = self.ready()
         with state.file_lock("control"), self.assertRaisesMessage(
-            state.MaintenanceError, "Another maintenance action is in progress",
+            state.MaintenanceBusy, "Another maintenance action is in progress",
         ):
             control.advance(ready["generation"], stopping_only=True)
 
@@ -145,6 +145,33 @@ class MaintenanceAdmissionTests(SimpleTestCase):
         with state.file_lock("control"):
             state.write_status(status)
         return status
+
+    def test_control_status_probe_does_not_create_a_missing_lock(self):
+        lock = self.root / "control.lock"
+        self.assertFalse(lock.exists())
+        self.assertFalse(state.control_active())
+        self.assertFalse(lock.exists())
+
+    def test_control_status_probe_does_not_create_missing_storage(self):
+        missing = self.root / "not-created"
+        with override_settings(QC_TOOL_MAINTENANCE_DIR=missing):
+            self.assertFalse(state.control_active())
+        self.assertFalse(missing.exists())
+
+    def test_control_status_probe_observes_admission_without_changing_state(self):
+        before = (self.root / "state.json").read_bytes()
+        with state.file_lock("control"):
+            self.assertTrue(state.control_active())
+        self.assertFalse(state.control_active())
+        self.assertEqual((self.root / "state.json").read_bytes(), before)
+
+    def test_control_status_probe_refuses_an_unsafe_lock(self):
+        target = self.root / "not-a-lock"
+        target.write_text("preserve this")
+        (self.root / "control.lock").symlink_to(target)
+        with self.assertRaises(state.MaintenanceError):
+            state.control_active()
+        self.assertEqual(target.read_text(), "preserve this")
 
     def test_transition_survives_fresh_reads_and_refuses_new_work(self):
         self.persist(enabled=True, phase="stopping", generation=7)

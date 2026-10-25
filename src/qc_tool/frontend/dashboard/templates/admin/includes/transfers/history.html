@@ -1,11 +1,2 @@
-{% load static %}
-  {% if active_tab == 'history' and not operation %}
-  <section class="module transfer-panel">
-    <h2>Transfer history</h2>
-    {% if recent_operations %}
-    <div class="transfer-table-wrap"><table class="transfer-history"><thead><tr><th scope="col">Transfer</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead><tbody>
-      {% for item in recent_operations %}<tr><th scope="row"><a href="{% url 'admin_data_transfer' %}?operation={{ item.id|urlencode }}">{{ item.kind|capfirst }} · {% if item.profile == 'database' %}Full backup{% elif item.profile == 'application' %}Database records{% else %}Users{% endif %}</a></th><td>{% if item.status == 'completed' %}Complete{% elif item.status == 'planned' %}Ready to review{% elif item.status == 'staged' %}Uploaded{% elif item.status == 'recovery_required' or item.status == 'failed' %}Needs attention{% elif item.status == 'running' or item.status == 'queued' %}In progress{% else %}{{ item.status|capfirst }}{% endif %}</td><td>{{ item.created_at }}</td><td>{% if item.downloadable %}<a href="{% url 'admin_data_transfer_download' item.id %}">Download ZIP</a>{% else %}<a href="{% url 'admin_data_transfer' %}?operation={{ item.id|urlencode }}">{% if item.status == 'staged' or item.status == 'planned' %}Continue{% else %}View{% endif %}</a>{% endif %}</td></tr>{% endfor %}
-    </tbody></table></div>
-    {% else %}<div class="transfer-panel__body"><p>No transfers yet. <a href="{{ database_url }}">Choose users or database records</a> to start an import or export.</p></div>{% endif %}
-  </section>
-  {% endif %}
+{% include "admin/includes/transfers/saved_backups.html" %}
+{% include "admin/includes/transfers/activity_log.html" %}

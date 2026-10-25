@@ -18,6 +18,9 @@ python3 -m unittest discover -s scripts/tests/testing -t . -v
 The **Maintainer tools (offline)** CI job collects this directory explicitly.
 `testing/` covers the worker evidence runner's input,
 classification and source-provenance contracts.
+`deployment/` also renders the optional EEA persistent-storage Compose override
+when Docker Compose 2.24.4 or later is installed. These checks use synthetic
+settings and `config` only; they start no services and access no deployment data.
 Private legacy-conversion archives are outside this suite and the maintained
 codebase.
 

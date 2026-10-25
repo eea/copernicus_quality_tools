@@ -15,14 +15,14 @@ rehearsal remain operator work. The
 The central `qc_tool.database.transfers` package owns native PostgreSQL backups
 and typed portable transfers, validation, archive handling and execution.
 Django Admin provides selection, review, explicit confirmation and operation
-history through **Database → Import & export** (`/admin/database/?tab=transfers`).
+history through **Database → Export database / Import package** (`/admin/database/`).
 The Database landing page owns the curated table browser and maintenance card;
 ordinary record editors retain their own Admin mutation routes and maintenance
-fence. In the transfer chooser, **Users** and **Database records** are the two
-areas, each with Import and Export actions.
-**Backups & recovery** is a secondary, expandable area for native database copies,
-activation and rollback. No backup profile is selected by default on the landing
-page.
+fence. All new exports use the complete native PostgreSQL profile. Its builder
+always includes schema, all rows and database metadata, with explicit additional
+section choices. All optional sections are selected initially. Historical
+account/application packages retain their typed import readers and operation
+history; there are no separate reduced database or account export controls.
 
 Native restores reproduce archived schema and rows in a separate empty database.
 Portable imports use validated records and explicit account decisions. They do
@@ -30,13 +30,13 @@ not replace an occupied database, repair its schema or provide an arbitrary SQL
 editor. Native imports can allocate a fresh destination; activation and
 same-window rollback are separate reviewed Admin actions.
 
-Three profiles keep backup fidelity and selective-transfer rules explicit:
+The shared importer keeps the three package profiles explicit:
 
 | Profile | Export selection | Import behavior |
 | --- | --- | --- |
-| Users / accounts (portable) | Selected account profiles or explicitly all profiles | Create inactive accounts, reuse existing identities unchanged, skip incoming users, or explicitly update only first name, last name and email on a matching identity |
-| Database records / application (portable) | Complete supported QC business graph, its required FK account dependencies and retained local files | Add new records to the current database, translate integer identities, reuse compatible records and explicitly exclude conflicting branches; keep job/submission UUIDs |
-| Full database backup (secondary recovery task) | All database schema and rows, including unmanaged fields/tables, password hashes, API credential digests, sessions and receipts | Prepare a unique empty database and restore the complete archive; separately review activation; no account mapping |
+| Users / accounts (historical portable packages) | Account profiles previously selected by their exporter | Create inactive accounts, reuse existing identities unchanged, skip incoming users, or explicitly update only first name, last name and email on a matching identity |
+| Database records / application (historical portable packages) | The supported QC graph and retained files included in the original package | Add new records to the current database, translate integer identities, reuse compatible records and explicitly exclude conflicting branches; keep job/submission UUIDs |
+| Complete database package (all new exports) | Mandatory full database schema and rows, including unmanaged fields/tables, password hashes, API credential digests, sessions and receipts; explicit optional file, PostgreSQL-global and deployment sections | Prepare a unique empty database and restore the complete archive; separately review activation; no account mapping; supplemental cluster SQL and deployment secrets are manual-only |
 
 A portable application package includes products, original QC definition revisions,
 releases and their definition links, expected product units, remote-source
@@ -50,10 +50,10 @@ rows or replace approvals. The distinct Users profile permits the bounded
 profile update described below. Neither profile offers arbitrary table/SQL
 import. Per-delivery export selection is not yet supported.
 
-Application exports derive required accounts from every included foreign key to
+Historical application exports derive required accounts from every included foreign key to
 the user model, including owners, requesters, approvers and reviewers. They do
-not include unrelated account profiles. Administrators use the separate Users
-export to select profiles independently of QC history.
+not include unrelated account profiles. New complete database exports preserve
+every account and its stored credentials without an ORM projection.
 
 Portable accounts use source keys only inside the package. Existing target users require
 explicit mapping; equal email addresses or usernames never authorize an identity
@@ -84,13 +84,53 @@ import packages.
 
 ## Native PostgreSQL archive
 
-The **Full database backup** ZIP contains a versioned manifest and
-`archive.dump` produced by `pg_dump` in custom format. Native capture preserves
+The unified database ZIP contains a versioned manifest and
+`database/data/database.dump` produced by `pg_dump` in custom format. Native capture preserves
 the actual database schema and all row fields, including relations outside the
 portable model contract. Model drift does not block this read-only backup or
-cause the source to be initialized or repaired. It is one database's logical
-backup; PostgreSQL cluster roles/tablespaces, files, S3 objects and environment
-secrets require separate protected backups.
+cause the source to be initialized or repaired. A separate
+`database/schema/schema.sql` supports inspection; `database/metadata/` retains
+the source identity, table/sequence/large-object inventory, database settings and
+restore policy. The custom dump remains authoritative and contains schema and
+data together. Both are captured from the same database snapshot.
+
+The existing ZIP64 container and manifest versions also support losslessly
+compressed file members. File review hashes original bytes and measures raw
+DEFLATE at level 1 in the same bounded read pass. An ephemeral compression plan
+is attached to each source; it never changes the manifest's original size/hash,
+storage identities or reviewed fingerprint. The writer uses DEFLATE only when
+it saves bytes and meets the reader's per-member expansion-ratio bound
+(1000 by default); otherwise it uses `ZIP_STORED`. The native custom dump and
+supplementary metadata remain stored members. Existing stored packages remain
+readable, and completed output uses the same resource checks as imported ZIPs.
+
+Optional filesystem categories use stable identities: `specifications`,
+`boundaries`, `deliveries`, `artifacts`, and `publications`. They map to readable
+top-level ZIP folders while retaining original root/key identities in the
+manifest. The version-2 retained-storage contract records selected and omitted
+categories, missing roots, availability status and exact per-category counts.
+Readers also support the unchanged version-1 storage contract. Collection and
+validation never query ORM models, so preservation survives model drift. Missing
+selected roots produce explicit unavailable/partial status and warnings, never
+a claim that all files were copied. Omitted trees are not opened.
+
+The optional `postgresql_globals` section preserves roles, role-password
+verifiers, memberships and tablespace definitions in
+`database/metadata/globals.sql`. The optional `deployment_configuration` section
+preserves supported runtime configuration, original private S3 credential files,
+the available worker token and referenced PostgreSQL TLS files under
+`configuration/`. Its deployment JSON also carries inert activation evidence:
+known boundary link target strings are read without following them, and original
+specification `.state/*.json` bytes are base64 encoded with exact sizes and
+SHA-256 digests. Missing state is explicit. Only known relative boundary targets
+are accepted; arbitrary symlinks, traversal, source changes, state files above
+1 MiB and the configuration's 32 MiB total bound are refused.
+These are sensitive manual-recovery materials.
+The application never executes the global SQL, applies deployment settings or
+replaces credential files during import. Capturing a selected section must
+succeed; a privilege error cannot silently produce an incomplete global backup.
+Remote objects, arbitrary host files, worker scratch/logs and private
+maintenance/transfer control journals remain outside the package.
 
 The frontend image packages reviewed PostgreSQL 14 clients from the signed PGDG
 Trixie repository for AMD64 and ARM64. Native operations require client/server
@@ -123,15 +163,18 @@ remain administrator-authorized, non-cacheable and protected by the deployment's
 HTTPS ingress. Native ZIPs contain sensitive authentication state and are not
 encrypted by the application; retain them in approved encrypted external
 storage. Preserve the original `DJANGO_SECRET_KEY` and required credential files
-separately where restored sessions or integrations depend on them. Native
+through the selected configuration section or a coordinated protected external
+backup where restored sessions or integrations depend on them. Native
 restore does not perform schema conversion.
 
 ## Explicit activation and rollback
 
 Restoration does not change the active database. A separate reviewed Admin
 action verifies the full restored inventory, runtime schema, connected business
-records, local artifact bytes and administrator access. The operator must type
-the displayed target and acknowledge storage/credential compatibility. A changed
+records, local artifact bytes and administrator access. The operator reviews
+the displayed target and acknowledges storage/credential compatibility. The
+request carries a hidden destination validated against the current review;
+manual name entry is not required. A changed
 administrator credential requires explicit target-administrator authentication;
 raw passwords never enter journals.
 
@@ -156,6 +199,32 @@ The reviewed **Switch back** action is available only while the same maintenance
 generation remains on. Once normal work resumes, automatic rollback is refused:
 the databases may have diverged. Both databases remain intact; no restore,
 activation or rollback deletes their data.
+
+The database manager also supports a **new reviewed selection** after the
+same-window recovery period has ended. This never relaxes quick rollback's
+original evidence. The configured original is eligible only with a durable
+same-deployment physical-identity record captured before leaving it, or with
+the matching retained source OID in an existing private selection pointer.
+Managed restored copies need the exact creation OID/owner/unguessable marker
+and an explicit first activation approved against the original full archive.
+That approval is persisted in a separate private per-operation record before
+changing the pointer, so later selections do not depend on retained ZIP bytes.
+Unrelated cluster databases and copies with a deletion intent are ineligible.
+
+Every new selection requires ready maintenance, a serialized execution lease,
+an unchanged pointer revision, target isolation, current model/record/file
+validation and current administrator access. Its review hash includes both
+databases' full current native snapshots and linked file evidence. Changes
+after review require a new review. Selection preserves both copies and their
+divergent records; it does not merge SQL or restore additional files. The
+manager distinguishes these database copies from independently removable
+saved ZIP files.
+
+An eligible database copy has a direct **Delete** action without name entry or
+an acknowledgement checkbox. Its hidden destination is checked against the
+server-owned inventory before the exact name is passed to the central deletion
+service. Maintenance generation, selection revision, ownership and protected-copy
+checks remain enforced; omitting manual typing does not broaden deletion targets.
 
 ## Portable archive contract and original evidence
 
@@ -192,18 +261,16 @@ uploaded snapshots are never rewritten.
 
 ## Review and maintenance ownership
 
-The transfer chooser at **Database → Import & export**
-(`/admin/database/?tab=transfers`) separates **Users** from **Database records**. Users
-export offers all profiles or selected profiles through the searchable native
-Admin picker. **Database records** export fixes the scope to the supported connected
-application graph. The expandable **Backups & recovery** area offers a fixed
-full-database scope, separate restoration and database controls. Transfer history
-reopens each operation in the area identified by its profile. Legacy deep links
-remain supported.
+**Database → Export database** opens one complete-database package builder.
+**Import package** accepts native and supported historical portable packages and
+uses the profile identified from their validated contents. Transfer history
+retains earlier operations. Legacy GET links open the unified builder, while old
+reduced-scope export submissions are rejected instead of silently broadening
+their consent to include credentials. Full restoration and database activation
+retain separate reviewed steps.
 
-Uploading identifies the package profile. A package opened from another area's
-upload form moves to its matching area with an explicit notice before import;
-it never becomes a silent database restore. Record counts and the next action
+Uploading identifies the package profile. The page explains the corresponding
+restore or additive-import behavior before any execution. Record counts and the next action
 stay in the main flow; hashes and operation diagnostics are expandable details.
 
 Users import compares incoming and existing names/email and offers the allowed
@@ -218,11 +285,19 @@ Choice saves carry `expected_plan_hash`. `service.plan_import` checks it against
 the stored plan while holding the execution lock, preventing a concurrent
 administrator's newer choices from being overwritten by an older page. Saved
 user choices persist in the operation's core plan; revalidation and execution
-reuse them. The typed confirmation names the actual destination. Known stale
+reuse them. These portable imports retain typed confirmation of the actual
+destination. Native restore uses a hidden destination validated against its
+review instead, alongside the trusted-source acknowledgement. Known stale
 plans are rejected before queueing or pinning.
 
-Progress uses bounded, same-origin GET polling. Status changes navigate to a
-canonical GET operation URL, so a rendered POST response is never resubmitted.
+Export confirmation redirects immediately to its canonical GET operation URL.
+Reloading or returning to this URL never resubmits export creation. Progress uses
+bounded, same-origin GET polling over saved server progress; status requests do
+not execute, retry or cancel an operation. The runner records its current stage
+and available byte/item counts in private operation storage, with throttled
+updates rather than a journal write for every I/O chunk. Polling resumes after
+browser Back/Forward restoration and transient connection failures. Terminal
+status changes navigate to the canonical GET operation URL.
 Recovery is offered only after the runner lock is free; a startup grace avoids
 mistaking a newly queued process for an interrupted one. The maintenance page
 preserves a validated local return link to the current transfer.
@@ -244,6 +319,13 @@ worker retirement cannot change that generation. A dedicated background
 maintenance barrier. It does not use the paused QC worker pool. Closing the
 browser does not terminate the operation. Multiple frontends must share the same
 private persistent work directories and working POSIX locks.
+
+The detached process owns no HTTP response or browser connection. Server/container
+termination can still stop it; saved ownership does not automatically launch a
+replacement runner. Explicit recovery checks the recorded operation and retained
+state, and an incomplete export can rebuild its ZIP. This does not promise that
+the PostgreSQL snapshot or a partly written archive resumes at its old byte offset.
+Completed packages remain on persistent storage until explicit release.
 
 A process exit, image restart or elapsed time never releases maintenance. Admin
 shows the active transfer and provides retry/cancel controls; CLI recovery uses
@@ -334,22 +416,65 @@ separate change. See the [database policy](../../src/qc_tool/database/README.md)
 
 ## Resource bounds and operation
 
-Defaults cap portable records at 250,000, compressed archives at 16 GiB and
+Defaults cap portable records at 250,000, complete archives at 16 GiB and
 expanded files at 64 GiB. Native capture preserves all rows rather than
 truncating to a portable record limit. ZIP member, metadata and
 decompression-ratio bounds also apply. Record
 and major byte limits are configurable; the service reserves free disk space
-before staging or restoration. One transfer executes at a time. Account mapping
-is paginated and export selection uses the existing searchable Admin widget.
-The export review counts the complete graph in SQL before serializing records,
-using the same account-dependency selection as the snapshot. Over-limit reviews
-show exact counts and offer an explicit link to review a full backup in Admin,
-preserving the file choice. This never silently changes an additive record
-transfer into a database restore. Creation and execution recheck capacity.
-For larger recovery datasets, use the native PostgreSQL backup workflow in
-Admin. Additive packages require capacity reviewed for their in-memory record
+before staging or restoration. One transfer executes at a time. Historical
+account mapping remains paginated. Native capture has no portable record-count
+ceiling and does not construct the complete SQL dataset in application memory.
+Creation and execution recheck selected-file and native-package capacity.
+Historical additive packages require capacity reviewed for their in-memory record
 and plan processing; increasing the configurable row cap does not relax any
-field, schema, graph, archive or byte-size checks.
+field, schema, graph, archive or byte-size checks. New full exports default to
+all additional sections selected. Administrators can deselect large retained
+file categories and coordinate independent storage snapshots to avoid repeated
+copies. The full SQL database and its metadata remain mandatory. Native packages
+remain subject to the configured byte limits and physical capacity.
+
+`QC_TOOL_TRANSFER_MAX_MEMBER_BYTES` defaults to the configured archive cap, so
+increasing the package cap does not leave a hidden 16 GiB limit on a native dump
+or delivery ZIP. The export review exposes record/file bytes, native database
+and complete-package estimates, measured compressed file bytes, free space,
+reserve and all major byte limits. Known file capacity uses measured ZIP payload
+sizes and ZIP overhead; the native dump contribution remains an advisory
+estimate from PostgreSQL's physical database size. Expanded-total and member
+limits continue to use original bytes. Compression does not bypass these bounds
+or omit any selected contents. Execution rechecks actual ZIP output growth and
+the free-space reserve before writes. Native capture writes the custom
+archive directly into its ZIP member rather than keeping a duplicate dump on
+the backup volume. The dedicated runner and maintenance fence still own capture.
+
+Native-tool output is drained in 64 KiB blocks; file hashing/copying uses 1 MiB
+blocks. PostgreSQL table reconciliation streams COPY output to its digest rather
+than constructing a row list, and native capture does not start parallel dump
+jobs. Inventory metadata and archive limits remain bounded separately. This
+limits application buffers without weakening snapshot or checksum verification.
+
+The download endpoint opens only a completed retained package and never calls
+export creation or execution. It serves authenticated GET/HEAD responses with
+the package's checksum validator and bounded support for a single byte range, allowing
+an interrupted client to request the remaining bytes. Closing a response releases
+that response's file handle; it does not remove the package or alter its journal.
+Repeated downloads therefore read the same immutable ZIP until explicit release.
+
+Operators may stage an existing local package through `data_transfer stage-file`
+with an explicit administrator identity, avoiding HTTP temporary-file buffering.
+The same package validation, limits, Admin review and apply confirmation follow.
+This is transport staging, not a database-schema conversion path.
+
+Completed export packages can be explicitly released after a verified copy is
+stored elsewhere. Release removes only that operation's private payload,
+preserves its completed journal/checksum and blocks downloads once release has
+begun. An interrupted release can be finished idempotently. Imported packages,
+restore-file pins, receipts, provenance and database-selection state remain
+outside this cleanup action; maintenance and execution ownership are checked
+before release. Nothing automatically expires or deletes backup data.
+Retry, cancellation and release can reclaim a killed export writer's private
+`.transfer-*.pending` files and older `database.dump` scratch under the execution
+lock. Cleanup is confined to the export's own private operation directory and
+refuses links or non-private files; it never sweeps import recovery storage.
 
 The private operation journal keeps additive replay decisions and the included
 recovery graph, with a digest of the complete reviewed core plan. It does not
@@ -373,7 +498,12 @@ and preserve SQL receipts and the operation journal as the audit trail.
 
 The private-file reserve does not certify capacity on the PostgreSQL server.
 Provision the separate native target for restored data, indexes, transaction
-space and its normal database reserve before starting restoration.
+space and its normal database reserve before starting restoration. File restore
+capacity uses expanded original sizes, including files that compress well in the
+ZIP; retain enough space for staging and recovery alongside them. Compression
+cannot guarantee that arbitrary source data fits a deployment's physical volume
+or configured archive limit. Selected sections and saved backups are never
+silently removed to satisfy capacity.
 
 ## Verification and supporting guidance
 

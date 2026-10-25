@@ -1,0 +1,12 @@
+{% load static %}
+<article class="storage-location">
+  <svg class="storage-location__icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
+  <div>
+    <h3><a href="{{ location.url }}">{{ location.label }}</a></h3>
+    {% if location.purpose_label %}<p class="storage-location__purpose">{{ location.purpose_label }}</p>{% endif %}
+    {% if location.storage_path %}<code class="storage-location__path">{{ location.storage_path }}</code>{% endif %}
+    <p>{{ location.description }}</p>
+    {% if not location.available %}<p class="storage-location__notice">{{ location.message }}</p>{% endif %}
+  </div>
+  <a class="storage-location__open" href="{{ location.url }}" aria-label="Open {{ location.label }}{% if location.purpose_label %}: {{ location.purpose_label }}{% endif %}"><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#chevron-right"></use></svg></a>
+</article>

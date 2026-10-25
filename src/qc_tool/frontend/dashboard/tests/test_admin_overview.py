@@ -103,8 +103,9 @@ class AdminOverviewTests(TestCase):
         self.assertIn(reverse("admin_storage"), links.links)
         self.assertIn(f"{endpoint}?tables=1#database-records-heading", links.links)
         self.assertIn(f"{endpoint}#database-maintenance-heading", links.links)
-        self.assertIn({"section": ["records"], "tab": ["import"]}, links.transfer_destinations())
-        self.assertIn({"tab": ["history"]}, links.transfer_destinations())
+        self.assertIn({"tab": ["import"]}, links.transfer_destinations())
+        self.assertIn({"tab": ["backups"]}, links.transfer_destinations())
+        self.assertIn({"tab": ["activity"]}, links.transfer_destinations())
         self.assertNotContains(response, "Restore database")
 
     def test_maintenance_status_uses_plain_language_and_one_settings_destination(self):

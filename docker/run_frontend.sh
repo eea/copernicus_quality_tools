@@ -3,6 +3,13 @@ set -eu
 
 cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend
 
+# Check operator-provisioned persistent storage before Django imports can create
+# WORK_DIR, logs, maintenance state or database-selection files. Local deployments
+# without this explicit contract retain their existing volume behavior.
+if [ -n "${QC_TOOL_PERSISTENT_STORAGE_ROOT+x}" ] || [ -n "${QC_TOOL_PERSISTENT_STORAGE_ID+x}" ]; then
+    python3 -m qc_tool.storage check
+fi
+
 # Validate runtime topology before touching schema or static storage. Multiple
 # WSGI processes duplicate the application-owned refresh loop; scaling requires
 # moving that service out of WSGI first.

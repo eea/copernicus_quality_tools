@@ -67,22 +67,49 @@ digests, sessions, receipts and fields/tables outside the portable model
 contract. Source schema drift does not prevent a native backup. It never alters
 that source or upgrades the restored schema.
 
-Admin record exports and imports explicitly choose **Records only** or
-**Records and available files**. Portable record-only packages retain file
-identities, digests and availability metadata rather than pretending missing
-bytes were copied. Available local files may include submitted or unapproved
-deliveries: transfer does not grant approval or change QC results. Account-only
-packages contain no files. A full native backup always preserves all SQL content;
-its optional file inventory covers configured retained business storage,
-including unlinked delivery ZIPs, without requiring a current-model source
-database. It excludes remote objects, temporary work/logs, deployment credentials
-and files outside those managed roots. It does not replace independent backups
-of deployment secrets, PostgreSQL globals or remote storage.
+**Admin → Database → Export database** is one package builder. Every new export
+preserves all SQL schema and rows, plus separate schema SQL and PostgreSQL
+source/inventory/database metadata. Optional sections, all selected initially,
+cover original specifications, boundaries, retained delivery ZIPs, QC artifacts,
+publications, PostgreSQL globals and supported deployment configuration with
+private S3 credentials, the available worker token, referenced PostgreSQL TLS
+files and inert specification/boundary activation metadata. Files use logical
+folders in the ZIP while retaining
+their original storage identities in the manifest. Selected, omitted, empty,
+partial and unavailable components are explicit; missing bytes are never
+reported as copied. Original specification bytes remain unchanged. The inventory
+does not query ORM models and preserves unlinked historical ZIPs even when the
+source schema differs from the installed models.
+
+File review hashes original bytes and measures lossless DEFLATE level-1 output in
+one bounded read pass. Beneficial compression is used only within the importer's
+expansion-ratio bound; other files, the already compressed native dump and
+supplementary metadata use stored ZIP members. The ZIP64 container and manifest
+versions are unchanged, with original file sizes, SHA-256 hashes and restoration
+identities preserved. All selected contents remain included. Export capacity
+uses measured compressed file bytes plus ZIP overhead and an advisory database
+size estimate. Actual output limits and the free-space reserve are enforced
+while writing; original sizes still govern expanded/member limits. No backup or
+section is automatically removed to make room. Physical storage must accommodate
+the resulting package; import additionally needs staging and expanded-file
+space, while PostgreSQL needs room for the separate database, indexes and
+transaction work.
+
+**Import package** also accepts supported older account/application packages
+with their existing additive-import contracts. Available local files may include
+submitted or unapproved deliveries: transfer does not grant approval or change
+QC results. A complete database always contains stored password hashes and
+credential digests; selected deployment recovery material can contain plaintext
+secrets. Protect the ZIP in encrypted external storage. PostgreSQL-global SQL,
+deployment configuration and private credential files are manual recovery
+material and never applied automatically. Remote objects, runtime scratch/logs,
+private maintenance/transfer journals and arbitrary host files require coordinated
+independent backups.
 
 Native restoration uses a unique, per-operation empty database created through
 the Admin panel on the configured PostgreSQL cluster. The connection identity
 needs database-creation permission. `QC_TOOL_RESTORE_DATABASE` is an optional
-operator fallback naming a separately provisioned empty target. No operation
+operator fallback naming a separately provisioned empty target. Restoration never
 drops, resets or overwrites an existing database. Do not initialize the
 destination from models before restoring an archive that contains its schema. Restore
 uses a single transaction and explicit deployment ownership/ACL/tablespace
@@ -93,6 +120,32 @@ deployment-bound selection pointer. Maintenance stays on; the previous database
 is retained. Admin rollback is limited to that same maintenance generation before
 reopening, so it cannot discard subsequently accepted work. See
 [MANUAL_RESTORE.md](MANUAL_RESTORE.md).
+
+**Manage databases** distinguishes the one active database, the configured
+original, the previous recovery database, operation-owned restore copies and
+other databases on the same cluster. Read-only inspection shows current schema
+readiness, table names, database sizes and explicitly approximate PostgreSQL
+row statistics; it never reveals credentials or scans every record just to browse.
+Saved backup ZIPs are a separate inventory and consume backup-file storage.
+
+An explicit deletion can reclaim an unused operation-owned restore database
+without deleting its ZIP, shared application files or audit history. It requires
+ready maintenance, exclusive transfer admission, the current selection revision
+and a request bound to the exact database copy. Admin provides a direct **Delete**
+button without manual name entry or an acknowledgement checkbox; the hidden
+destination is validated against the server-owned inventory before calling the
+deletion service. The configured, active and previous recovery
+databases, unknown copies, connected clients and prepared transactions are
+protected. Ownership is bound to the original private creation journal, cluster
+fingerprint, PostgreSQL owner/OID and unguessable database comment; a replaced
+database is never adopted by name. A managed source copy is also retained while
+another present restore copy depends on its source identity; remove unused child
+copies first. Durable deletion intent resolves a lost
+acknowledgement without dropping a replacement copy. PostgreSQL deletion uses
+neither `FORCE` nor session termination and is never automatic. See PostgreSQL's
+[DROP DATABASE behavior](https://www.postgresql.org/docs/14/sql-dropdatabase.html),
+[database-size privileges](https://www.postgresql.org/docs/14/functions-admin.html#FUNCTIONS-ADMIN-DBSIZE)
+and [catalog row estimates](https://www.postgresql.org/docs/14/catalog-pg-class.html).
 
 Portable profiles own dependency validation, explicit account mappings and
 create-only additive application imports. Selective accounts exclude credentials,

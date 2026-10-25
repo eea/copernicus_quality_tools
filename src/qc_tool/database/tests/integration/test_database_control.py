@@ -41,10 +41,13 @@ class DatabaseControlAuthorizationTests(TestCase):
             calls = (
                 lambda: service.database_control_status(actor),
                 lambda: service.activation_preview("untrusted-operation", actor),
+                lambda: service.review_database_selection("untrusted-database", actor),
                 lambda: service.prepare_restore_destination("untrusted-operation", actor),
                 lambda: service.activate_database("untrusted-operation", actor,
                     review_hash="", generation=0, revision=0, destination_confirmation=""),
                 lambda: service.rollback_database(actor, generation=0, revision=0, destination_confirmation=""),
+                lambda: service.select_database("untrusted-database", actor,
+                    review_hash="", generation=0, revision=0, destination_confirmation=""),
                 lambda: service.validate_resume_database(actor),
             )
             for action in calls:
@@ -141,7 +144,7 @@ class PostgreSQLDatabaseControlTests(TransactionTestCase):
         from psycopg2 import sql
 
         self.assertIn(database, {self.source, *self.targets})
-        self.assertIn(field, {"first_name", "is_active"})
+        self.assertIn(field, {"first_name", "is_active", "last_login"})
         handle = psycopg2.connect(**{**postgres._params(), "dbname": database})
         try:
             with handle.cursor() as cursor:
@@ -204,6 +207,139 @@ class PostgreSQLDatabaseControlTests(TransactionTestCase):
                         "revision": preview["revision"], "destination_confirmation": target,
                         "confirmed_storage": True, **overrides}
         return service.activate_database(operation["id"], self.actor, **confirmation)
+
+    def select(self, target, preview=None, **overrides):
+        preview = preview or service.review_database_selection(target, self.actor)
+        return service.select_database(target, self.actor, review_hash=preview["review_hash"],
+            generation=self.generation, revision=preview["revision"], destination_confirmation=target,
+            confirmed_storage=True, **overrides)
+
+    def reopen_maintenance(self):
+        service.validate_resume_database(self.actor)
+        off = maintenance.disable(self.actor, self.generation)
+        enabled = maintenance.enable(self.actor, off["generation"])
+        self.generation = enabled["generation"]
+        self.assertEqual(maintenance.advance(self.generation)["phase"], "ready")
+
+    def test_manager_can_first_select_a_fresh_restore_after_another_copy_became_active(self):
+        first, first_target, _report = self.completed_restore()
+        second, second_target, _report = self.completed_restore()
+        first_review = self.no_model_writes(lambda: service.review_database_selection(first_target, self.actor))
+        self.assertFalse(first_review["previously_reviewed"])
+        self.no_model_writes(lambda: self.select(first_target, first_review))
+        second_review = self.no_model_writes(lambda: service.review_database_selection(second_target, self.actor))
+        self.assertFalse(second_review["previously_reviewed"])
+        self.assertEqual(second_review["source_database"], first_target)
+        self.no_model_writes(lambda: self.select(second_target, second_review))
+        self.assertEqual(self.current_database(), second_target)
+        self.assertEqual(selection.read_state()["previous"], first_target)
+
+    def test_explicit_selection_can_return_to_original_then_used_copy_in_new_maintenance(self):
+        operation, target, _report = self.completed_restore()
+        self.select(target)
+        self.external_user_change(target, "first_name", "new work in selected copy")
+        self.reopen_maintenance()
+        self.assertTrue(service.database_control_status(self.actor)["rollback_blockers"])
+        original_review = self.no_model_writes(lambda: service.review_database_selection(self.source, self.actor))
+        self.assertEqual(original_review["target_kind"], "configured")
+        self.no_model_writes(lambda: self.select(self.source, original_review))
+        self.assertEqual(self.current_database(), self.source)
+        # The original ZIP can be removed independently after this copy's
+        # deliberate first activation. Later selection reviews current data.
+        with patch.object(service, "_verified", side_effect=AssertionError("Used-copy selection reopened its old ZIP")):
+            used_review = self.no_model_writes(lambda: service.review_database_selection(target, self.actor))
+            self.assertTrue(used_review["previously_reviewed"])
+            self.no_model_writes(lambda: self.select(target, used_review))
+        self.assertEqual(self.current_database(), target)
+        self.assertEqual(get_user_model().objects.get(pk=self.actor.pk).first_name, "new work in selected copy")
+        self.assertTrue(maintenance.read_status()["enabled"])
+
+    def test_changed_current_contents_require_fresh_selection_review(self):
+        operation, target, _report = self.completed_restore()
+        self.select(target)
+        self.select(self.source)
+        preview = service.review_database_selection(target, self.actor)
+        self.external_user_change(target, "first_name", "changed after selection review")
+        with self.assertRaisesMessage(TransferError, "changed"):
+            self.select(target, preview)
+        self.assertEqual(self.current_database(), self.source)
+
+    def test_sql_values_outside_portable_records_invalidate_selection_review(self):
+        from qc_tool.database.transfers import control
+
+        operation, target, _report = self.completed_restore()
+        self.select(target)
+        self.select(self.source)
+        preview = service.review_database_selection(target, self.actor)
+        before = control._application_snapshot(target)
+        self.external_user_change(target, "last_login", timezone.now())
+        self.assertEqual(control._application_snapshot(target), before,
+                         "last_login is intentionally outside the portable account projection")
+        with self.assertRaisesMessage(TransferError, "changed"):
+            self.select(target, preview)
+        self.assertEqual(self.current_database(), self.source)
+
+    def test_selection_rejects_changed_owned_identity_and_deletion_journals(self):
+        operation, target, _report = self.completed_restore()
+        self.select(target)
+        self.select(self.source)
+        path = store.operation_dir(operation["id"]) / "database-activation.json"
+        approved = store.read_json(path)
+        changed = deepcopy(approved)
+        changed["identity"]["oid"] += 1
+        store.write_json(path, changed)
+        with self.assertRaisesMessage(TransferError, "saved selection identity changed"):
+            service.review_database_selection(target, self.actor)
+        store.write_json(path, approved)
+        store.write_json(path.parent / "database-deletion.json", {"status": "requested"})
+        with self.assertRaisesMessage(TransferError, "selected for deletion"):
+            service.review_database_selection(target, self.actor)
+        self.assertEqual(self.current_database(), self.source)
+
+    def test_configured_selection_refuses_changed_original_identity_and_other_databases(self):
+        operation, target, _report = self.completed_restore()
+        self.select(target)
+        path = store.directory() / "configured-database.json"
+        receipt = store.read_json(path)
+        receipt["identity"]["oid"] += 1
+        store.write_json(path, receipt)
+        with self.assertRaisesMessage(TransferError, "saved selection identity changed"):
+            service.review_database_selection(self.source, self.actor)
+        with self.assertRaisesMessage(TransferError, "Other PostgreSQL databases cannot be selected"):
+            service.review_database_selection("postgres", self.actor)
+        self.assertEqual(self.current_database(), target)
+
+    def test_retained_origin_authentication_read_does_not_block_selection_isolation(self):
+        operation, target, _report = self.completed_restore()
+        self.select(target)
+        origin_alias = self.allow_alias(self.source)
+        retained_actor = get_user_model().objects.using(origin_alias).get(pk=self.actor.pk)
+        self.assertIsNotNone(connections[origin_alias].connection)
+        preview = self.no_model_writes(lambda: service.review_database_selection(self.source, retained_actor))
+        self.assertTrue(preview["can_apply"])
+        # Authentication middleware reopens this alias on every HTTP request.
+        get_user_model().objects.using(origin_alias).get(pk=self.actor.pk)
+        self.no_model_writes(lambda: service.select_database(self.source, retained_actor,
+            review_hash=preview["review_hash"], generation=self.generation, revision=preview["revision"],
+            destination_confirmation=self.source, confirmed_storage=True))
+        self.assertEqual(self.current_database(), self.source)
+
+    def test_selection_keeps_external_target_clients_connected_and_refuses_switch_review(self):
+        import psycopg2
+
+        operation, target, _report = self.completed_restore()
+        self.select(target)
+        self.select(self.source)
+        external = psycopg2.connect(**{**postgres._params(), "dbname": target})
+        try:
+            with self.assertRaisesMessage(TransferError, "another connected client"):
+                service.review_database_selection(target, self.actor)
+            with external.cursor() as cursor:
+                cursor.execute("SELECT current_database()")
+                self.assertEqual(cursor.fetchone()[0], target)
+            self.assertEqual(self.current_database(), self.source)
+        finally:
+            external.close()
 
     @override_settings(QC_TOOL_TRANSFER_MAX_RECORDS=1)
     def test_no_environment_restore_activation_and_rollback_retain_both_databases_without_row_writes(self):

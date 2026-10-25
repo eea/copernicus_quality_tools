@@ -2,11 +2,14 @@
 
 from pathlib import Path
 from hashlib import sha256
+from io import BytesIO
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import uuid4
+from zipfile import ZipFile
 import os
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db import connection
@@ -67,6 +70,363 @@ class StorageFilesTests(StorageFixture, SimpleTestCase):
         self.assertTrue(listing["has_previous"] and listing["has_next"])
         with patch.object(files, "MAX_SCAN_ENTRIES", 2):
             self.assertTrue(files.list_entries("incoming", "alice")["scan_limited"])
+
+    def test_work_browser_opens_arbitrary_normal_folders_without_sql_or_job_layout(self):
+        directory = self.work / "operator-reports" / "October"
+        directory.mkdir(parents=True)
+        original = directory / "notes.txt"
+        original.write_bytes(b"retained operator notes")
+        (self.work / "frontend.log").write_bytes(b"application log")
+        listing = files.list_entries("work")
+        self.assertIn("operator-reports", [entry["name"] for entry in listing["entries"]])
+        self.assertIn("frontend.log", [entry["name"] for entry in listing["entries"]])
+        self.assertTrue(listing["read_only"])
+        self.assertFalse(listing["can_trash"])
+        nested = files.list_entries("work", "operator-reports/October")
+        self.assertEqual(nested["parent_path"], "operator-reports")
+        self.assertEqual((nested["folder_count"], nested["file_count"], nested["visible_bytes"]),
+                         (0, 1, len(original.read_bytes())))
+        with files.open_file("work", "operator-reports/October/notes.txt") as stream:
+            self.assertEqual(stream.read(), b"retained operator notes")
+        self.assertTrue(files.quarantine_reason("work", "operator-reports/October/notes.txt",
+                                               files.inspect_entry("work", "operator-reports/October/notes.txt")))
+        self.assertIsNone(files.list_entries("work")["parent_path"])
+
+    def test_physical_locations_show_real_root_names_and_paths_without_a_virtual_job_location(self):
+        uploaded = self.work / "product_definitions"
+        installed = self.root / "installed-products"
+        for directory in (uploaded, installed):
+            directory.mkdir()
+        with patch.dict(CONFIG, product_dirs=[installed]):
+            areas = {area["key"]: area for area in files.storage_areas()}
+            locations = {location["key"]: location for location in files.storage_locations()}
+            self.assertNotIn("jobs", locations)
+            expected = {"work": self.work, "incoming": self.incoming, "published": self.published,
+                        "boundaries": self.boundaries, "spec-0": installed}
+            self.assertEqual(set(locations), set(expected))
+            for area, directory in expected.items():
+                with self.subTest(area=area):
+                    location = locations[area]
+                    self.assertEqual(location["label"], directory.name)
+                    self.assertTrue(location["purpose_label"])
+                    self.assertEqual(location["storage_path"], str(directory))
+                    self.assertTrue(location["available"])
+                    self.assertNotIn("storage_path", files.area_info(area))
+            self.assertNotIn(str(self.root), str(areas))
+
+    def test_display_path_is_confined_to_a_configured_root_and_valid_relative_path(self):
+        self.assertEqual(files.storage_path("work"), str(self.work))
+        self.assertEqual(files.storage_path("work", "reports/October/notes.txt"),
+                         str(self.work / "reports/October/notes.txt"))
+        for path in ("../outside", "/etc/passwd", "reports/../../outside", "worker.token",
+                     "maintenance/state.json", "product_definitions/.state/example.json"):
+            with self.subTest(path=path), self.assertRaises(files.StorageError):
+                files.storage_path("work", path)
+        with self.assertRaises(files.StorageError):
+            files.storage_path(str(self.work))
+
+    def test_configured_and_uploaded_specifications_and_boundaries_remain_original_read_only_bytes(self):
+        product_root = self.root / "deployed-products"
+        product_root.mkdir()
+        uploaded_root = self.work / "product_definitions"
+        uploaded_root.mkdir()
+        original = b'{ "untouched": "original bytes" }\n'
+        for root in (product_root, uploaded_root, self.boundaries):
+            (root / "original.json").write_bytes(original)
+        with patch.dict(CONFIG, product_dirs=[product_root]):
+            areas = {area["key"]: area for area in files.storage_areas()}
+            for area in ("spec-0", "uploaded-specifications", "boundaries"):
+                self.assertTrue(areas[area]["available"])
+                self.assertTrue(areas[area]["read_only"])
+                self.assertFalse(areas[area]["can_trash"])
+                entry = files.inspect_entry(area, "original.json")
+                self.assertTrue(files.quarantine_reason(area, "original.json", entry))
+                with files.open_file(area, "original.json") as stream:
+                    self.assertEqual(stream.read(), original)
+            self.assertNotIn(str(self.root), str(areas))
+            self.assertNotIn("root", files.area_info("spec-0"))
+            with self.assertRaises(files.StorageError):
+                files.open_file("spec-1", "original.json")
+        for root in (product_root, uploaded_root, self.boundaries):
+            self.assertEqual((root / "original.json").read_bytes(), original)
+
+    def test_general_work_browser_hides_private_children_and_refuses_direct_downloads(self):
+        for name in ("maintenance", "data-transfer", "s3_credentials"):
+            directory = self.work / name
+            directory.mkdir()
+            (directory / "secret.json").write_text("private")
+        (self.work / "worker.token").write_text("private")
+        ordinary = self.work / "normal" / "nested"
+        ordinary.mkdir(parents=True)
+        private = ordinary / "custom-control"
+        private.mkdir()
+        (private / "state.json").write_text("private state")
+        with override_settings(QC_TOOL_MAINTENANCE_DIR=private):
+            listing = files.list_entries("work")
+            self.assertFalse({"maintenance", "data-transfer", "s3_credentials", "worker.token"}
+                             & {entry["name"] for entry in listing["entries"]})
+            self.assertEqual(listing["skipped_count"], 4)
+            self.assertEqual(files.list_entries("work", "normal/nested")["entries"], [])
+            for path in ("worker.token", "maintenance/secret.json", "data-transfer/secret.json",
+                         "s3_credentials/secret.json", "normal/nested/custom-control/state.json"):
+                with self.subTest(path=path), self.assertRaises(files.StorageError):
+                    files.open_file("work", path)
+            with self.assertRaises(files.StorageError):
+                files.list_entries("work", "normal/nested/custom-control")
+
+    def test_database_private_upload_staging_and_tls_files_are_not_normal_work_files(self):
+        database = self.work / "frontend.sqlite3"
+        for suffix in ("", "-wal", "-shm", "-journal"):
+            Path(str(database) + suffix).write_bytes(b"private database")
+        staging = self.work / "upload-staging"
+        staging.mkdir()
+        (staging / "part.zip").write_bytes(b"private multipart upload")
+        key = self.work / "client.key"
+        key.write_bytes(b"private client key")
+        with patch.dict(CONFIG, frontend_db_path=database), override_settings(FILE_UPLOAD_TEMP_DIR=staging):
+            with patch.dict(settings.DATABASES["default"].setdefault("OPTIONS", {}), sslkey=str(key)):
+                listing = files.list_entries("work")
+                self.assertFalse({"frontend.sqlite3", "frontend.sqlite3-wal", "frontend.sqlite3-shm",
+                                  "frontend.sqlite3-journal", "upload-staging", "client.key"}
+                                 & {entry["name"] for entry in listing["entries"]})
+                for path in ("frontend.sqlite3", "frontend.sqlite3-wal", "client.key", "upload-staging/part.zip"):
+                    with self.subTest(path=path), self.assertRaises(files.StorageError):
+                        files.open_file("work", path)
+
+    def test_browse_sort_keeps_folders_first_and_reports_filtered_totals(self):
+        (self.work / "z-folder").mkdir()
+        (self.work / "a.txt").write_bytes(b"a")
+        (self.work / "b.txt").write_bytes(b"bbbb")
+        os.utime(self.work / "a.txt", (1000, 1000))
+        os.utime(self.work / "b.txt", (2000, 2000))
+        for sort in ("name", "size", "modified"):
+            with self.subTest(sort=sort):
+                listing = files.list_entries("work", sort=sort, descending=True)
+                self.assertEqual([row["kind"] for row in listing["entries"][:2]], ["directory", "directory"])
+                self.assertEqual([row["name"] for row in listing["entries"][2:]], ["b.txt", "a.txt"])
+        listing = files.list_entries("work", query=".txt", page_size=1)
+        self.assertEqual((listing["total"], listing["file_count"], listing["folder_count"], listing["visible_bytes"]),
+                         (2, 2, 0, 5))
+        self.assertTrue(listing["has_next"])
+        self.assertEqual(files.list_entries("work", sort="unsupported")["sort"], "name")
+
+    def test_new_roots_cannot_be_repointed_to_private_storage_or_broader_work_root(self):
+        for key in ("boundary_dir", "product_dirs"):
+            configured = {key: [self.work] if key == "product_dirs" else self.work}
+            with patch.dict(CONFIG, **configured), self.assertRaises(files.StorageError):
+                files.list_entries("spec-0" if key == "product_dirs" else "boundaries")
+        private = self.root / "private"
+        private.mkdir()
+        with patch.dict(CONFIG, boundary_dir=private), override_settings(QC_TOOL_TRANSFER_DIR=private):
+            with self.assertRaises(files.StorageError):
+                files.list_entries("boundaries")
+        with override_settings(S3_CREDENTIALS_DIR=self.work):
+            with self.assertRaises(files.StorageError):
+                files.list_entries("work")
+
+    def test_missing_mount_has_recoverable_area_metadata(self):
+        with patch.dict(CONFIG, boundary_dir=self.root / "missing-boundaries"):
+            area = next(area for area in files.storage_areas() if area["key"] == "boundaries")
+        self.assertFalse(area["available"])
+        self.assertTrue(area["message"])
+        self.assertIn("boundary", area["description"])
+
+    def test_boundary_generation_content_can_be_browsed_without_following_activation_links(self):
+        relative = ".boundary-generations/gen-" + "a" * 32 + "/vector/original.gpkg"
+        original = self.boundaries / relative
+        original.parent.mkdir(parents=True)
+        original.write_bytes(b"original immutable boundary bytes")
+        (self.boundaries / ".boundary-package.lock").write_bytes(b"private lock")
+        (self.boundaries / ".boundary-current").symlink_to(".boundary-generations/gen-" + "a" * 32)
+        (self.boundaries / "vector").symlink_to(".boundary-current/vector")
+        listing = files.list_entries("boundaries")
+        self.assertEqual([entry["name"] for entry in listing["entries"]], [".boundary-generations"])
+        self.assertEqual(listing["skipped_count"], 3)
+        nested = files.list_entries("boundaries", relative.rpartition("/")[0])
+        self.assertEqual([entry["name"] for entry in nested["entries"]], ["original.gpkg"])
+        with files.open_file("boundaries", relative) as stream:
+            self.assertEqual(stream.read(), b"original immutable boundary bytes")
+        for path in (".boundary-current/vector/original.gpkg", "vector/original.gpkg", ".boundary-package.lock"):
+            with self.subTest(path=path), self.assertRaises(files.StorageError):
+                files.open_file("boundaries", path)
+        self.assertEqual(original.read_bytes(), b"original immutable boundary bytes")
+
+    def test_uploaded_specification_versions_open_with_state_and_locks_still_hidden(self):
+        uploaded = self.work / "product_definitions"
+        relative = ".versions/example-product/" + "b" * 64 + ".json"
+        original = uploaded / relative
+        original.parent.mkdir(parents=True)
+        original.write_bytes(b'{ "unchanged": "original specification" }\n')
+        (uploaded / ".state").mkdir()
+        (uploaded / ".state/example-product.json").write_bytes(b"private activation state")
+        (uploaded / ".upload.lock").write_bytes(b"private lock")
+        self.assertEqual([entry["name"] for entry in files.list_entries("uploaded-specifications")["entries"]], [".versions"])
+        self.assertEqual(files.list_entries("uploaded-specifications", ".versions/example-product")["entries"][0]["path"], relative)
+        with files.open_file("uploaded-specifications", relative) as stream:
+            self.assertEqual(stream.read(), b'{ "unchanged": "original specification" }\n')
+        for path in (".state/example-product.json", ".upload.lock", ".versions/example-product/.private.json"):
+            with self.subTest(path=path), self.assertRaises(files.StorageError):
+                files.open_file("uploaded-specifications", path)
+        self.assertEqual(original.read_bytes(), b'{ "unchanged": "original specification" }\n')
+
+    def test_content_namespace_exceptions_do_not_enable_other_hidden_paths_or_unsafe_links(self):
+        uploaded = self.work / "product_definitions"
+        uploaded.mkdir()
+        for area, root, name in (("boundaries", self.boundaries, ".boundary-generations"),
+                                  ("uploaded-specifications", uploaded, ".versions")):
+            (root / name).write_bytes(b"this namespace must be a directory")
+            with self.subTest(area=area):
+                self.assertEqual(files.list_entries(area)["entries"], [])
+                with self.assertRaises(files.StorageError):
+                    files.open_file(area, name)
+            (root / name).unlink()
+            (root / name).symlink_to(self.owner_directory, target_is_directory=True)
+            with self.subTest(area=area):
+                self.assertEqual(files.list_entries(area)["entries"], [])
+                with self.assertRaises(files.StorageError):
+                    files.list_entries(area, name)
+        for area, path in (("work", ".versions"), ("work", ".boundary-generations"),
+                           ("incoming", ".versions"), ("published", ".boundary-generations"),
+                           ("boundaries", ".versions"), ("uploaded-specifications", ".boundary-generations")):
+            with self.subTest(area=area, path=path), self.assertRaises(files.StorageError):
+                files.list_entries(area, path)
+
+    def test_canonical_originals_are_accessible_through_work_and_extra_root_folder_paths(self):
+        from qc_tool.frontend.dashboard.services.storage_admin import downloads
+
+        uploaded = self.work / "product_definitions"
+        boundary_parent = self.work / "geodata"
+        boundaries = boundary_parent / "boundaries"
+        spec_relative = ".versions/example/" + "c" * 64 + ".json"
+        boundary_relative = ".boundary-generations/gen-" + "d" * 32 + "/vector/original.gpkg"
+        spec_file = uploaded / spec_relative
+        boundary_file = boundaries / boundary_relative
+        spec_bytes = b'{ "preserved": "original specification bytes" }\n'
+        boundary_bytes = b"original immutable boundary bytes\x00\xff"
+        for original, payload in ((spec_file, spec_bytes), (boundary_file, boundary_bytes)):
+            original.parent.mkdir(parents=True)
+            original.write_bytes(payload)
+            (original.parent / ".private-state").write_bytes(b"private nested state")
+        configured = [{"key": "spec-originals", "label": "Saved specifications", "path": str(uploaded)},
+                      {"key": "geodata", "label": "Geospatial storage", "path": str(boundary_parent)}]
+        with patch.dict(CONFIG, boundary_dir=boundaries), override_settings(QC_TOOL_STORAGE_ROOTS=configured):
+            aliases = (("uploaded-specifications", spec_relative, spec_bytes),
+                       ("work", "product_definitions/" + spec_relative, spec_bytes),
+                       ("extra-spec-originals", spec_relative, spec_bytes),
+                       ("boundaries", boundary_relative, boundary_bytes),
+                       ("work", "geodata/boundaries/" + boundary_relative, boundary_bytes),
+                       ("extra-geodata", "boundaries/" + boundary_relative, boundary_bytes))
+            for area, relative, payload in aliases:
+                with self.subTest(area=area, relative=relative):
+                    parent = relative.rpartition("/")[0]
+                    listing = files.list_entries(area, parent)
+                    self.assertEqual([row["path"] for row in listing["entries"]], [relative])
+                    self.assertEqual(listing["skipped_count"], 1)
+                    self.assertEqual(files.inspect_entry(area, relative)["size_bytes"], len(payload))
+                    with files.open_file(area, relative) as stream:
+                        self.assertEqual(stream.read(), payload)
+                    plan = downloads.prepare_zip(area, [parent])
+                    self.assertEqual(plan.file_count, 1)
+                    self.assertEqual(plan.excluded_count, 1)
+                    with ZipFile(BytesIO(b"".join(downloads.stream_zip(plan)))) as archive:
+                        self.assertEqual(archive.read("files/" + relative), payload)
+                        self.assertIsNone(archive.testzip())
+        self.assertEqual(spec_file.read_bytes(), spec_bytes)
+        self.assertEqual(boundary_file.read_bytes(), boundary_bytes)
+
+    def test_content_namespace_permission_does_not_follow_same_named_folders_elsewhere(self):
+        from qc_tool.frontend.dashboard.services.storage_admin import downloads
+
+        fake = self.work / "operator-files"
+        for namespace in (".versions", ".boundary-generations"):
+            original = fake / namespace / "retained/original.bin"
+            original.parent.mkdir(parents=True)
+            original.write_bytes(b"hidden unrelated content")
+        configured = [{"key": "operator-files", "label": "Operator files", "path": str(fake)}]
+        with override_settings(QC_TOOL_STORAGE_ROOTS=configured):
+            for area, prefix in (("work", "operator-files/"), ("extra-operator-files", "")):
+                self.assertEqual(files.list_entries(area, prefix.rstrip("/"))["entries"], [])
+                for namespace in (".versions", ".boundary-generations"):
+                    relative = prefix + namespace + "/retained/original.bin"
+                    for action in (files.inspect_entry, files.open_file):
+                        with self.subTest(area=area, relative=relative, action=action.__name__), self.assertRaises(files.StorageError):
+                            action(area, relative)
+                    with self.subTest(area=area, relative=relative), self.assertRaises(files.StorageError):
+                        downloads.prepare_zip(area, [relative])
+
+    def test_direct_configured_roots_cannot_bypass_private_specification_or_boundary_controls(self):
+        uploaded = self.work / "product_definitions"
+        controls = (uploaded / ".state", uploaded / ".upload.lock",
+                    self.boundaries / ".boundary-current", self.boundaries / ".boundary-package.lock")
+        for control in controls:
+            control.mkdir(parents=True)
+            (control / "secret.json").write_bytes(b"private application control")
+        for control in controls:
+            with self.subTest(control=control.name), patch.dict(CONFIG, product_dirs=[control]), override_settings(
+                QC_TOOL_STORAGE_ROOTS=[{"key": "unsafe", "label": "Unsafe alias", "path": str(control)}]
+            ):
+                for area in ("spec-0", "extra-unsafe"):
+                    with self.subTest(area=area), self.assertRaises(files.StorageError):
+                        files.list_entries(area)
+                    with self.subTest(area=area), self.assertRaises(files.StorageError):
+                        files.open_file(area, "secret.json")
+        self.assertTrue(all((control / "secret.json").read_bytes() == b"private application control"
+                            for control in controls))
+
+    def test_folder_zip_uses_same_content_visibility_and_keeps_runtime_controls_excluded(self):
+        from qc_tool.frontend.dashboard.services.storage_admin import downloads
+
+        uploaded = self.work / "product_definitions"
+        uploaded.mkdir()
+        for area, root, namespace in (("boundaries", self.boundaries, ".boundary-generations"),
+                                     ("uploaded-specifications", uploaded, ".versions")):
+            relative = namespace + "/retained/original.bin"
+            original = root / relative
+            original.parent.mkdir(parents=True)
+            original.write_bytes(b"original retained content")
+            (root / ".private-control").write_bytes(b"private control bytes")
+            (original.parent / ".private-state").write_bytes(b"private nested state")
+            with self.subTest(area=area):
+                plan = downloads.prepare_zip(area, [""])
+                self.assertEqual({entry.path for entry in plan.entries if entry.kind == "file"}, {relative})
+                self.assertEqual(plan.excluded_count, 2)
+                zipped = b"".join(downloads.stream_zip(plan))
+                self.assertNotIn(b"private control bytes", zipped)
+                self.assertNotIn(b"private nested state", zipped)
+                with ZipFile(BytesIO(zipped)) as archive:
+                    self.assertEqual(archive.read("files/" + relative), b"original retained content")
+                    self.assertIsNone(archive.testzip())
+                with self.assertRaises(files.StorageError):
+                    downloads.prepare_zip(area, [".private-control"])
+
+    def test_extra_roots_are_operator_configured_read_only_and_cannot_be_selected_by_path(self):
+        mounted = self.root / "operator-mounted-data"
+        mounted.mkdir()
+        (mounted / "sample.bin").write_bytes(b"external configured mount")
+        configured = [{"key": "project-data", "label": "Project files", "path": str(mounted)}]
+        with override_settings(QC_TOOL_STORAGE_ROOTS=configured):
+            info = files.area_info("extra-project-data")
+            self.assertEqual(info["label"], "Project files")
+            self.assertTrue(info["read_only"])
+            self.assertFalse(info["can_trash"])
+            self.assertEqual(files.list_entries("extra-project-data")["file_count"], 1)
+            with files.open_file("extra-project-data", "sample.bin") as stream:
+                self.assertEqual(stream.read(), b"external configured mount")
+            with self.assertRaises(files.StorageError):
+                files.list_entries(str(mounted))
+        with self.assertRaises(files.StorageError):
+            files.list_entries("extra-project-data")
+
+    def test_extra_root_configuration_rejects_duplicate_keys_relative_paths_and_private_overlap(self):
+        for configured in ([{"key": "../bad", "label": "Bad", "path": str(self.root)}],
+                           [{"key": "relative", "label": "Bad", "path": "relative"}],
+                           [{"key": "same", "label": "One", "path": str(self.root)}] * 2):
+            with override_settings(QC_TOOL_STORAGE_ROOTS=configured), self.assertRaises(files.StorageError):
+                files.storage_areas()
+        with override_settings(QC_TOOL_STORAGE_ROOTS=[
+                {"key": "private", "label": "Private", "path": str(self.root / "transfers")}]):
+            with self.assertRaises(files.StorageError):
+                files.list_entries("extra-private")
 
     def test_traversal_absolute_hidden_and_unreviewed_work_paths_are_rejected(self):
         for path in ("../outside", "/etc/passwd", "alice/../orphan.zip", "alice//orphan.zip",
@@ -154,6 +514,25 @@ class StorageTrashTests(StorageFixture, TestCase):
 
     def payload(self, operation):
         return self.incoming / files.TRASH_DIRECTORY / operation["id"] / "payload"
+
+    def test_new_read_only_areas_reject_even_direct_quarantine_requests_without_creating_trash(self):
+        uploaded = self.work / "product_definitions"
+        uploaded.mkdir()
+        specs = self.root / "specifications"
+        specs.mkdir()
+        extra = self.root / "extra"
+        extra.mkdir()
+        with patch.dict(CONFIG, product_dirs=[specs]), override_settings(QC_TOOL_STORAGE_ROOTS=[
+                {"key": "archive", "label": "Archive", "path": str(extra)}]):
+            for area, directory in (("work", self.work), ("boundaries", self.boundaries),
+                                    ("uploaded-specifications", uploaded), ("spec-0", specs),
+                                    ("extra-archive", extra)):
+                original = directory / "unlinked.zip"
+                original.write_bytes(b"unchanged original")
+                with self.subTest(area=area), self.assertRaisesMessage(files.StorageError, "browsing and downloading"):
+                    trash.quarantine(area, "unlinked.zip", self.actor, self.generation, "")
+                self.assertEqual(original.read_bytes(), b"unchanged original")
+                self.assertFalse((directory / files.TRASH_DIRECTORY).exists())
 
     def test_preview_does_not_write_and_missing_trash_is_an_empty_listing(self):
         with CaptureQueriesContext(connection) as queries:

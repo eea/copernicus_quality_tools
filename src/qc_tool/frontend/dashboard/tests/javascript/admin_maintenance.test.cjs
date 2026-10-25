@@ -29,7 +29,10 @@ function page({phase = "stopping", withForm = phase === "stopping", fetchRespons
         return result;
     };
     const root = node("section", {"data-maintenance-control": "", "data-phase": phase, "data-generation": "5"});
-    const message = node("p", {"data-progress-message": ""}, root);
+    const progress = node("p", {"data-progress-status": ""}, root);
+    const indicator = node("span", {"data-progress-indicator": ""}, progress);
+    const message = node("span", {"data-progress-message": ""}, progress);
+    const checked = node("p", {"data-progress-checked": ""}, root);
     const problem = node("div", {"data-progress-problem": "", hidden: ""}, root);
     const error = node("p", {"data-progress-error": ""}, problem);
     const retry = node("button", {"data-progress-retry": "", type: "button", hidden: ""}, problem);
@@ -64,7 +67,7 @@ function page({phase = "stopping", withForm = phase === "stopping", fetchRespons
     };
     vm.runInNewContext(source, {window, document});
     return {
-        ...dom, requests, navigations, timers, message, problem, error, retry, blockers,
+        ...dom, requests, navigations, timers, message, indicator, progress, checked, problem, error, retry, blockers,
         get reloads() { return reloads; },
         async tick(delay = 1000) {
             const entry = [...timers].find(([, value]) => value.delay === delay);
@@ -127,6 +130,8 @@ test("three failed connections stop automatic retries and offer a working retry 
     assert.equal(ui.timers.size, 0);
     assert.equal(ui.problem.hidden, false);
     assert.equal(ui.retry.hidden, false);
+    assert.equal(ui.indicator.hidden, true);
+    assert.equal(ui.progress.getAttribute("data-progress-active"), "false");
     assert.match(ui.error.textContent, /Maintenance stays on/);
     ui.retry.click();
     await flush();
@@ -217,6 +222,67 @@ test("a stalled request is aborted before bounded retrying", async () => {
     await ui.tick();
     await ui.tick(20000);
     assert.equal(signal.aborted, true);
+    assert.equal(ui.problem.hidden, false);
+    assert.deepEqual([...ui.timers.values()].map(timer => timer.delay), [10000]);
+});
+
+test("busy contention keeps waiting without consuming the connection failure budget", async () => {
+    const ui = page({fetchResponse: response({busy: true}, {ok: false, status: 409})});
+    await ui.tick();
+    for (let pass = 0; pass < 4; pass++) await ui.tick(3000);
+    assert.equal(ui.requests.length, 5);
+    assert.equal(ui.problem.hidden, true);
+    assert.equal(ui.indicator.hidden, false);
+    assert.match(ui.message.textContent, /Another maintenance action is finishing/);
+    assert.deepEqual([...ui.timers.values()].map(timer => timer.delay), [3000]);
+});
+
+test("a non-busy rejected check stops with an actionable explanation and no spinner", async () => {
+    const ui = page({fetchResponse: response({error: "Reload and review maintenance."}, {ok: false, status: 409})});
+    await ui.tick();
+    assert.equal(ui.timers.size, 0);
+    assert.equal(ui.indicator.hidden, true);
+    assert.equal(ui.retry.hidden, true);
+    assert.equal(ui.error.textContent, "Reload and review maintenance.");
+});
+
+test("returning to a visible tab checks immediately without counting its aborted request as a failure", async () => {
+    const ui = page({fetchResponse: (_url, options) => new Promise((_resolve, reject) => {
+        options.signal.addEventListener("abort", () => reject(new Error("aborted")));
+    })});
+    await ui.tick();
+    ui.document.hidden = true;
+    ui.document.dispatchEvent({type: "visibilitychange"});
+    assert.equal(ui.requests[0].options.signal.aborted, true);
+    await flush();
+    assert.equal(ui.problem.hidden, true);
+    assert.equal(ui.timers.size, 0);
+    ui.document.hidden = false;
+    ui.document.dispatchEvent({type: "visibilitychange"});
+    assert.equal(ui.requests.length, 2);
+});
+
+test("back navigation restarts progress while an old response remains harmless", async () => {
+    let finish;
+    let pass = 0;
+    const ui = page({fetchResponse: () => ++pass === 1
+        ? new Promise(resolve => { finish = resolve; }) : Promise.resolve(response())});
+    await ui.tick();
+    ui.window.dispatchEvent({type: "pagehide"});
+    ui.window.dispatchEvent({type: "pageshow", persisted: true});
+    await ui.tick(0);
+    assert.equal(ui.requests.length, 2);
+    finish(response({phase: "ready"}));
+    await flush();
+    assert.deepEqual(ui.navigations, []);
+    assert.equal(ui.problem.hidden, true);
+    assert.deepEqual([...ui.timers.values()].map(timer => timer.delay), [5000]);
+});
+
+test("an incomplete status response retries without navigating to an unverified state", async () => {
+    const ui = page({fetchResponse: response({generation: null})});
+    await ui.tick();
+    assert.deepEqual(ui.navigations, []);
     assert.equal(ui.problem.hidden, false);
     assert.deepEqual([...ui.timers.values()].map(timer => timer.delay), [10000]);
 });

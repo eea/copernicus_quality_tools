@@ -1,30 +1,33 @@
 {% load static %}
   {% if database_control.active_database %}
-  <details class="transfer-database-settings"{% if rollback_form.errors %} open{% endif %}>
-    <summary>Database settings{% if database_control.previous_database %} &amp; rollback{% endif %}</summary>
-    <h3 id="active-database-heading">Active database</h3>
+  <section class="transfer-database-settings" aria-labelledby="active-database-heading">
+    <h3 id="active-database-heading">Current{% if database_control.previous_database %} and previous{% endif %} database</h3>
     <div class="transfer-panel__body">
-      <p><strong>{{ database_control.active_database }}</strong>{% if database_control.previous_database %} · Previous database retained: {{ database_control.previous_database }}{% endif %}</p>
+      <p>QC Tool uses one database at a time. The active database provides the accounts, permissions and records you see throughout the application.</p>
+      <dl class="transfer-scope-summary"><dt>Currently in use</dt><dd><strong>{{ database_control.active_database }}</strong> · active</dd>{% if database_control.previous_database %}<dt>Previous database</dt><dd><strong>{{ database_control.previous_database }}</strong> · kept separately after the last switch</dd>{% endif %}</dl>
       {% if rollback_form %}
       <details class="transfer-details"{% if rollback_form.errors %} open{% endif %}>
         <summary>Switch back to {{ database_control.previous_database }}</summary>
+        <p>Return QC Tool to <strong>{{ database_control.previous_database }}</strong>. Its accounts and records will become the ones in use. The current database stays on the server.</p>
+        <p class="help">This quick recovery is available only during the same maintenance session, before you reopen QC Tool to changes. It does not merge records or copy files between databases.</p>
+        {% if database_manager_url %}<p class="help">To choose a retained database after that session ends, open <a href="{{ database_manager_url }}">Manage databases</a> and review a new switch. You will check its current contents before confirming.</p>{% endif %}
         {% if database_control.rollback_blockers %}<ul class="errornote" role="alert">{% for blocker in database_control.rollback_blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
-        <form method="post" action="{% url 'admin_data_transfer' %}" class="transfer-control-form" data-maintenance-exempt>
+        <form method="post" action="{{ transfer_action_url }}" class="transfer-control-form" data-maintenance-exempt data-transfer-pending-label="Checking and switching back…" data-transfer-pending-message="Rechecking the retained database and matching files before switching back. Keep this page open.">
           {% csrf_token %}<input type="hidden" name="action" value="rollback_database">
-          {% for field in rollback_form.hidden_fields %}{{ field }}{% endfor %}
+          {% for field in rollback_form.hidden_fields %}{{ field.errors }}{{ field }}{% endfor %}
           <fieldset{% if not maintenance_ready or database_control.rollback_blockers %} disabled{% endif %}>
-            <legend>Confirm switch back</legend>
+            <legend>Confirm the database you want to use</legend>
             {{ rollback_form.non_field_errors }}
-            <div class="form-row">{{ rollback_form.destination_confirmation.errors }}{{ rollback_form.destination_confirmation.label_tag }}{{ rollback_form.destination_confirmation }}<p class="help">{{ rollback_form.destination_confirmation.help_text }}</p></div>
             {% if rollback_form.requires_credentials %}<p>Verify administrator access on the previous database.</p><div class="form-row">{{ rollback_form.username.errors }}{{ rollback_form.username.label_tag }}{{ rollback_form.username }}</div><div class="form-row">{{ rollback_form.password.errors }}{{ rollback_form.password.label_tag }}{{ rollback_form.password }}</div>{% endif %}
             <div class="form-row transfer-checkbox">{{ rollback_form.confirmed_storage.errors }}{{ rollback_form.confirmed_storage }}{{ rollback_form.confirmed_storage.label_tag }}</div>
-            <div class="transfer-actions"><button type="submit" class="button btn-qc-secondary">Switch back</button></div>
+            <div class="transfer-actions"><button type="submit" class="button btn-qc-secondary">Switch back to previous database</button></div>
           </fieldset>
-          {% if not maintenance_ready %}<p class="help">Enable maintenance before switching databases.</p>{% endif %}
+          {% if not maintenance_ready %}<p class="help">Maintenance must be ready before switching databases.{% if maintenance_url %} <a href="{{ maintenance_url }}">Open maintenance settings</a>.{% endif %}</p>{% endif %}
+          <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
         </form>
       </details>
       {% endif %}
     </div>
-  </details>
+  </section>
   {% endif %}
 

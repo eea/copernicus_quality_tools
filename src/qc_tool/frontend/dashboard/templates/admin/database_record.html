@@ -1,17 +1,54 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}">{% endblock %}
 {% block content_title %}{% endblock %}
-{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; <a href="{{ records_home_url }}">{{ records_home_label }}</a> &rsaquo; <a href="{{ records_url }}">{{ resource.label }}</a> &rsaquo; {{ record_pk }}</div>{% endblock %}
+{% block breadcrumbs %}{% include "admin/includes/database_breadcrumbs.html" %}{% endblock %}
 {% block content %}
-<div class="qc-admin-home database-page">
-  <header class="qc-admin-intro"><div><a class="database-back" href="{{ records_url }}">&larr; {{ resource.label }}</a><h1>Record {{ record_pk }}</h1><code>{{ resource.table }}</code></div>{% include "admin/includes/database_actions.html" %}</header>
-  <section class="qc-admin-panel"><h2>Record details</h2><p class="database-policy">{{ resource.description }}</p>{% if maintenance.enabled %}<p class="database-muted">Record changes are paused during maintenance.</p>{% endif %}
-    <dl class="database-record-detail">{% for field in record_fields %}<div><dt>{{ field.label }}</dt><dd>{% if field.url %}<a href="{{ field.url }}">{{ field.value }}</a>{% else %}{{ field.value }}{% endif %}</dd></div>{% endfor %}</dl>
+<div class="qc-admin-home database-page{% if not account_records %} database-workspace{% endif %}">
+  {% if account_records %}
+  <a class="database-back-link" href="{{ database_back_url }}"><span aria-hidden="true">&larr;</span> {{ database_back_label }}</a>
+  <header class="qc-admin-intro">
+    <div>
+      <p class="database-eyebrow">User management &middot; {{ resource.label }} &middot; Record {{ record_pk }}</p>
+      <h1 class="database-record-heading">{{ record_heading }}</h1>
+      <p class="database-policy">{{ resource.description }}</p>
+    </div>
+    {% include "admin/includes/database_actions.html" %}
+  </header>
+  {% else %}
+  {% include "admin/includes/database_page_header.html" %}
+  <p class="database-eyebrow">{{ resource.label }} &middot; Record {{ record_pk }}</p>
+  {% endif %}
+  <nav class="database-inline-nav" aria-label="Record sections">
+    <a href="#record-details">Details</a>
+    <a href="#record-connections">Linked records <span>({{ record_dependency_count }})</span></a>
+    {% if record_storage_links %}<a href="#record-files">Server files</a>{% endif %}
+  </nav>
+  <section class="qc-admin-panel" aria-labelledby="record-details">
+    <div class="database-section-heading">
+      <h2 id="record-details">Record details</h2>
+      <span class="database-badge database-badge--neutral">{% if maintenance.enabled %}Changes paused{% elif record_actions %}View record{% else %}Read-only{% endif %}</span>
+    </div>
+    <p class="database-read-state">{% if maintenance.enabled %}Maintenance is active. You can view this record and follow its links; editing is paused.{% elif record_actions %}Use the actions above to make permitted changes. Linked information is available below.{% else %}This record is protected. You can inspect its details and follow related records.{% endif %}</p>
+    {% include "admin/includes/database_record_fields.html" with fields=ordinary_fields %}
+    <details class="database-technical-details">
+      <summary>Technical details{% if technical_fields %} <span class="database-muted">({{ technical_fields|length }} field{{ technical_fields|length|pluralize }})</span>{% endif %}</summary>
+      <p class="database-muted">Database table: <code>{{ resource.table }}</code> &middot; Record ID: <code>{{ record_pk }}</code></p>
+      {% if technical_fields %}<p class="database-muted">Raw metadata, checksums and stored evidence. Long values are shown as bounded previews.</p>{% include "admin/includes/database_record_fields.html" with fields=technical_fields %}{% endif %}
+    </details>
   </section>
-  {% if record_storage_links %}<section class="qc-admin-panel database-connected"><h2>Server files</h2><p>Open the recorded storage location. Historical ZIP downloads require the run's recorded checksum; a matching filename alone is insufficient.</p><ul>{% for link in record_storage_links %}<li><a href="{{ link.url }}">{{ link.label }} &rarr;</a></li>{% endfor %}</ul></section>{% endif %}
-  <section class="qc-admin-panel database-connected"><h2>Connected records</h2><p>Follow relationships before making changes. Protected history and dependent records stay linked.</p>
-    <ul>{% for row in record_dependencies %}<li><a href="{{ row.url }}"><span><strong>{{ row.label }}</strong><span class="database-muted">{{ row.field }}</span></span><span>{{ row.count }} record{{ row.count|pluralize }} &rarr;</span></a></li>{% empty %}<li class="database-muted">No records refer to this record.</li>{% endfor %}</ul>
+  <section class="qc-admin-panel database-connected" aria-labelledby="record-connections">
+    <h2 id="record-connections">Linked records</h2>
+    <p>Records that refer to this one. Choose a group to see only its linked records.</p>
+    <ul>{% for row in record_dependencies %}<li><a href="{{ row.url }}"><span><strong>{{ row.label }}</strong><span class="database-muted">Linked by {{ row.field }}</span></span><span>{{ row.count }} record{{ row.count|pluralize }} &rarr;</span></a></li>{% empty %}<li class="database-empty">No other records refer to this record.</li>{% endfor %}</ul>
   </section>
+  {% if record_storage_links %}
+  <section class="qc-admin-panel database-connected" aria-labelledby="record-files">
+    <h2 id="record-files">Server files</h2>
+    <p>Inspect the file locations associated with this record.</p>
+    <ul>{% for link in record_storage_links %}<li><a href="{{ link.url }}">{{ link.label }} &rarr;</a></li>{% endfor %}</ul>
+    <details class="database-technical-details"><summary>How historical downloads are verified</summary><p>Historical ZIP downloads require the run's recorded checksum; a matching filename alone is insufficient.</p></details>
+  </section>
+  {% endif %}
 </div>
 {% endblock %}

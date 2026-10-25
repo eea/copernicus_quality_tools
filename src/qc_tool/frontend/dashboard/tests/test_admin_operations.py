@@ -267,7 +267,7 @@ class AdminOperationsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(jobs.status_code, 200)
-        self.assertContains(response, "Maintenance in progress.")
+        self.assertContains(response, "Turning on maintenance. QC work is stopping.")
         self.assert_admin_links(response)
         self.assertEqual([
             query["sql"] for query in queries

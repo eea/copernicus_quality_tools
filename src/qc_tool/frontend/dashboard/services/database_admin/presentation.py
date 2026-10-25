@@ -87,6 +87,29 @@ def cell(resource, obj, name):
     return {"value": display_value(value), "url": url, "label": field_label(resource, name)}
 
 
+def record_heading(resource, obj):
+    """Use an already-allowlisted label, without reading related or secret data."""
+    for name in ("username", "name", "filename", "product_unit_code", "release_key", "product_ident", "object_repr"):
+        if name in resource.fields:
+            value = getattr(obj, name, None)
+            if value:
+                return str(value)[:180]
+    return f"Record {obj.pk}"
+
+
+def record_field_groups(resource, fields):
+    """Keep relationships and ordinary metadata visible; tuck raw evidence away."""
+    technical, ordinary = [], []
+    raw_fields = {"document", "provenance", "source_path", "change_message", "skip_steps",
+                  "permission_snapshot", "role_snapshot", "product_idents_snapshot", "ready_scope_digest"}
+    for name, item in zip(resource.fields, fields):
+        field = model_field(resource, name)
+        is_raw = (name in raw_fields or "sha256" in name or "digest" in name or
+                  (field and field.get_internal_type() == "JSONField") or len(item["value"]) > 400)
+        (technical if is_raw else ordinary).append(item)
+    return ordinary, technical
+
+
 def record_rows(resource, objects):
     return [{"url": record_url(resource, obj.pk),
              "cells": [cell(resource, obj, field) for field in resource.columns]}

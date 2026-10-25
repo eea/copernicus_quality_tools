@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/storage.css' %}"><script src="{% static 'dashboard/js/admin/storage.js' %}" defer></script>{% endblock %}
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Admin</a> &rsaquo; {% if area or storage_tab == 'connection' %}<a href="{{ storage_url }}">Storage</a> &rsaquo; {% if storage_tab == 'connection' %}Connect with SFTP{% else %}{{ area_label }}{% endif %}{% else %}Storage{% endif %}</div>{% endblock %}
+{% block content %}
+<div class="qc-admin-home storage-page{% if physical_browse %} storage-page--files{% endif %}">
+  <header class="qc-admin-intro"><div><h1>{{ title|default:'Storage browser' }}</h1><p class="qc-admin-intro__description">{% block storage_description %}Open a location, browse its folders and download the files you need.{% endblock %}</p></div>{% block storage_header_actions %}{% endblock %}</header>
+  <nav class="storage-tabs" aria-label="Storage tasks">{% for task in storage_tasks %}<a href="{{ task.url }}"{% if task.active %} aria-current="page"{% endif %}>{{ task.label }}</a>{% endfor %}</nav>
+  {% if library_back_url %}<p class="storage-library-back"><a href="{{ library_back_url }}">&larr; Back to {{ library_back_label|lower }}</a></p>{% endif %}
+  <div class="storage-workspace{% if not storage_show_locations %} storage-workspace--library{% endif %}">
+    {% if storage_show_locations %}<aside class="storage-sidebar" aria-label="Storage locations"><h2>Locations</h2><a class="storage-sidebar__all" href="{{ files_url }}"{% if not area %} aria-current="page"{% endif %}><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#home"></use></svg>All locations</a>
+      {% for location in storage_locations %}{% include "admin/includes/storage_location_link.html" with location=location area=area only %}{% endfor %}
+      {% if storage_installation_locations %}<details class="storage-sidebar__installation"{% if storage_is_installation %} open{% endif %}>
+        <summary>Installation files</summary>
+        {% for location in storage_installation_locations %}{% include "admin/includes/storage_location_link.html" with location=location area=area only %}{% endfor %}
+      </details>{% endif %}
+      <div class="storage-sidebar__related"><a href="{{ backups_url }}"><svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#download"></use></svg>Database backups</a><a href="{{ connection_url }}">Connect a desktop client &rarr;</a></div>
+    </aside>{% endif %}
+    <div class="storage-main">
+      {% if admin_busy %}{% include "admin/includes/action_busy.html" %}{% elif storage_error %}<section class="qc-admin-feedback qc-admin-feedback--error" role="alert"><h2>This action could not finish</h2><p>{{ storage_error }}</p><div class="qc-admin-feedback__actions"><a class="btn-qc-secondary" href="{{ parent_url }}">Back to folder</a><a href="{{ files_url }}">All storage locations</a></div></section>{% endif %}
+      {% block storage_body %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

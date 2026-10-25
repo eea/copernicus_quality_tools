@@ -59,7 +59,7 @@ class ApplicationTransferIntegrationTests(TestCase):
 
     def test_record_export_service_keeps_unrelated_profiles_in_the_users_area(self):
         get_user_model().objects.create_user("profiles-only", email="profiles@example.test")
-        records = service.export_preview({"profile": "application", "user_ids": []}, self.actor)
+        records = service.export_preview({"profile": "application", "user_ids": [], "include_files": True}, self.actor)
         users = service.export_preview({"profile": "accounts", "user_ids": []}, self.actor)
         self.assertEqual(records["counts"]["accounts"], 2)
         self.assertEqual(users["counts"]["accounts"], 3)
@@ -157,7 +157,7 @@ class ApplicationTransferIntegrationTests(TestCase):
         self.original_manifest = (self.source_config["submission_dir"] / receipt.artifact_key / "submission-manifest.json").read_bytes()
 
     def prepare_import(self, *, reuse_upload=False, initialize_target=None, plan_only=False):
-        selection = {"profile": "application", "user_ids": []}
+        selection = {"profile": "application", "user_ids": [], "include_files": True}
         preview = service.export_preview(selection, self.actor)
         operation = service.create_export(selection, self.actor, preview["review_hash"], self.generation)
         self.assertEqual(service.run_operation(operation["id"])["status"], "completed")
@@ -362,7 +362,7 @@ class ApplicationTransferIntegrationTests(TestCase):
         self.assertEqual(namespace["delivery_id"], source_delivery)
         self.assertEqual(namespace["product_release_id"], source_release)
         self.assertEqual(namespace["product_unit_id"], source_unit)
-        selection = {"profile": "application", "user_ids": []}
+        selection = {"profile": "application", "user_ids": [], "include_files": True}
         preview = service.export_preview(selection, self.actor)
         second_export = service.create_export(selection, self.actor, preview["review_hash"], self.generation)
         self.assertEqual(service.run_operation(second_export["id"])["status"], "completed")

@@ -9,9 +9,11 @@ from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 
+from qc_tool.database.transfers.errors import TransferError
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.context_processors import MAINTENANCE_NOTICE
 from qc_tool.frontend.dashboard.services import maintenance
+from qc_tool.frontend.dashboard.services.admin_feedback import busy_context
 from qc_tool.frontend.dashboard.services.maintenance.operations import active_operation
 
 
@@ -54,6 +56,7 @@ def maintenance_control(request):
 
     action_result = ""
     action_error = ""
+    action_busy = False
     response_status = 200
     deployment_maintenance = bool(getattr(settings, "MAINTENANCE_MODE", False))
     if request.method == "POST":
@@ -95,18 +98,24 @@ def maintenance_control(request):
                     response_status = 400
             except (maintenance.MaintenanceError, ValueError) as error:
                 action_error = str(error)
+                action_busy = bool(busy_context(error))
                 response_status = 409
 
     maintenance_unavailable = False
     transfer_operation = None
+    control_busy = False
     try:
         status = maintenance.read_status()
         transfer_operation = active_operation()
-    except maintenance.MaintenanceError as error:
+        if request.headers.get("Accept") == "application/json" or request.method == "GET":
+            from qc_tool.database.transfers import store
+            control_busy = maintenance.control_active() or store.execution_active()
+    except (maintenance.MaintenanceError, TransferError) as error:
         action_error = str(error)
         action_result = ""
         response_status = 503
         maintenance_unavailable = True
+        action_busy = False
         status = {"enabled": True, "phase": "stopping", "blockers": []}
     request.maintenance_status = status
     request.maintenance_active = status["enabled"]
@@ -114,24 +123,38 @@ def maintenance_control(request):
         not maintenance_unavailable and not transfer_operation
         and status["enabled"] and status["phase"] == "stopping"
     )
-    if request.method == "POST" and request.headers.get("Accept") == "application/json":
+    if request.headers.get("Accept") == "application/json":
         response = JsonResponse({
             "phase": status["phase"],
             "generation": status.get("generation"),
-            "poll": progress_pending,
+            "poll": progress_pending if request.method == "POST" else progress_pending or control_busy,
             "blockers": status["blockers"],
             "error": action_error,
+            "busy": action_busy or control_busy,
             "transfer_active": bool(transfer_operation),
+            "transfer_url": (
+                reverse("admin_data_transfer") + "?operation=" + transfer_operation["operation_id"]
+                if transfer_operation else ""
+            ),
         }, status=response_status)
         response["Cache-Control"] = "no-store, private"
+        if action_busy or control_busy:
+            response["Retry-After"] = "3"
         return response
     context = {
         **admin.site.each_context(request),
         "title": "Maintenance mode",
-        "maintenance": {**status, "notice": MAINTENANCE_NOTICE},
+        "maintenance": {**status, "phase": "unavailable" if maintenance_unavailable else status["phase"],
+                        "notice": MAINTENANCE_NOTICE},
         "deployment_maintenance": deployment_maintenance,
         "action_result": action_result,
         "action_error": action_error,
+        "action_busy": action_busy,
+        "control_busy": control_busy,
+        "maintenance_busy_waiting": (action_busy or control_busy) and not progress_pending and not transfer_operation,
+        "admin_busy_status_url": reverse("admin_maintenance"),
+        "admin_busy_refresh_url": request.get_full_path(),
+        "busy_message": action_error or "An administrator action is already using maintenance. Wait for it to finish before trying again.",
         "maintenance_unavailable": maintenance_unavailable,
         "transfer_operation": transfer_operation,
         "transfer_return_url": _transfer_return_url(request),

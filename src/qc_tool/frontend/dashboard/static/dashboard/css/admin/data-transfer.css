@@ -9,10 +9,17 @@
 .transfer-tabs [aria-current="page"] { color: var(--body-fg); border-bottom-color: var(--primary); }
 .transfer-maintenance { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; padding: 12px 16px; margin-bottom: 20px; background: var(--darkened-bg); border: 1px solid var(--hairline-color); border-radius: 4px; line-height: 1.6; }
 .transfer-maintenance > a { white-space: nowrap; }
+.transfer-current-status { display: flex; flex-basis: 100%; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding-top: 8px; border-top: 1px solid var(--border-color); font-size: 12px; }
+.transfer-current-status [data-transfer-poll-message] { flex: 1 1 250px; }
 .transfer-panel { border: 1px solid var(--hairline-color); border-radius: 4px; overflow: hidden; }
 .transfer-panel > h2 { margin: 0; padding: 12px 18px; }
 .transfer-panel__body { padding: 4px 20px 20px; }
 .transfer-panel__body > p { line-height: 1.6; }
+.transfer-task-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 0 0 28px; }
+.transfer-task-card { display: flex; flex-direction: column; align-items: flex-start; padding: 24px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--qc-admin-surface); }
+.transfer-task-card h2 { margin: 0 0 10px; color: var(--body-loud-color); font-size: 19px; }
+.transfer-task-card p { flex: 1; margin: 0 0 18px; color: var(--body-quiet-color); line-height: 1.7; }
+@media (max-width: 767px) { .transfer-task-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; } .transfer-task-card { padding: 20px; } }
 .transfer-page .transfer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin: 20px 0 0; }
 .transfer-scopes { padding: 8px 0 0; border: 0; }
 .transfer-scope { display: flex; align-items: flex-start; gap: 10px; padding: 14px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; }
@@ -60,6 +67,15 @@
 .transfer-details dt { color: var(--body-quiet-color); }
 .transfer-details dd { margin: 0; overflow-wrap: anywhere; }
 .transfer-progress { padding-left: 14px; border-left: 3px solid var(--primary); }
+.transfer-live-status { display: flex; align-items: center; gap: 10px; padding: 16px; margin: 18px 0 12px; background: var(--qc-admin-blue-soft); border-radius: 8px; }
+.transfer-live-status .transfer-progress { padding: 0; margin: 0; border: 0; }
+.transfer-live-status > .qc-admin-spinner { color: var(--link-fg); }
+.transfer-poll-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 0; border-top: 1px solid var(--hairline-color); color: var(--body-quiet-color); font-size: 12px; line-height: 1.6; }
+.transfer-poll-status p { flex: 1 1 260px; margin: 0; }
+.transfer-poll-status [data-transfer-last-checked] { display: block; }
+.transfer-badge .qc-admin-spinner { width: 12px; height: 12px; flex-basis: 12px; margin-right: 5px; vertical-align: -2px; }
+.transfer-page [data-transfer-polling-state="paused"] .transfer-poll-status,
+.transfer-page [data-transfer-polling-state="offline"] .transfer-poll-status { color: var(--qc-admin-warning); }
 .transfer-page .paginator { margin-top: 16px; }
 .transfer-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .transfer-revalidate { margin-top: 16px; }
@@ -99,7 +115,7 @@
   .transfer-conflict { padding: 12px; }
   .transfer-summary, .transfer-summary caption, .transfer-summary tbody,
   .transfer-files, .transfer-files tbody { display: block; box-sizing: border-box; width: 100%; }
-  .transfer-summary thead, .transfer-files thead { display: none; }
+  .transfer-summary thead, .transfer-files thead, .transfer-differences thead, .transfer-history thead { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .transfer-summary tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 0; border-bottom: 1px solid var(--hairline-color); }
   .transfer-summary th { grid-column: 1 / -1; text-align: left; }
   .transfer-summary td { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 8px 12px; }
@@ -109,7 +125,6 @@
   .transfer-files td:last-child { min-width: 0; }
   .transfer-files td:last-child::before { content: attr(data-label) ": "; color: var(--body-quiet-color); }
   .transfer-differences, .transfer-differences caption, .transfer-differences tbody { display: block; box-sizing: border-box; width: 100%; min-width: 0; }
-  .transfer-differences thead { display: none; }
   .transfer-differences tr { display: block; border-bottom: 1px solid var(--hairline-color); }
   .transfer-differences th:first-child, .transfer-differences td { display: block; box-sizing: border-box; width: 100%; }
   .transfer-differences td::before { display: block; margin-bottom: 6px; content: attr(data-label); color: var(--body-quiet-color); font-size: 11px; }
@@ -173,6 +188,70 @@
 .transfer-account-choice .errornote { margin: 10px 0; }
 .transfer-account-choice .transfer-differences { margin-bottom: 8px; }
 .transfer-account-protection { margin: 18px 0; padding: 12px 16px; border-left: 3px solid var(--primary); background: var(--darkened-bg); font-size: 13px; line-height: 1.6; }
+.transfer-flow { grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; gap: 8px; }
+.transfer-flow li { display: flex; align-items: center; gap: 10px; padding: 12px 0; font-size: 13px; }
+.transfer-step-number { display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--qc-admin-soft); color: var(--body-quiet-color); font-size: 12px; font-weight: 600; }
+.transfer-flow li[aria-current="step"] .transfer-step-number { background: var(--button-bg); color: var(--button-fg); }
+.transfer-assurance, .transfer-review-overview { padding: 16px 18px; margin: 8px 0 20px; border: 1px solid var(--hairline-color); border-radius: 8px; background: var(--qc-admin-blue-soft); line-height: 1.6; }
+.transfer-assurance > strong { font-size: 14px; }
+.transfer-assurance p { margin: 6px 0 0; color: var(--body-quiet-color); font-size: 13px; }
+.transfer-review-overview > p:first-child { margin-top: 0; }
+.transfer-review-overview > :last-child { margin-bottom: 0; }
+.transfer-review-overview .transfer-scope-summary { margin-bottom: 0; font-size: 13px; }
+.transfer-option-groups { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 26px; margin-top: 18px; }
+.transfer-option-group { min-width: 0; }
+.transfer-option-group h3 { margin: 0 0 6px; font-size: 14px; }
+.transfer-option-group > .help { margin: 0 0 16px; line-height: 1.6; }
+.transfer-option-group .transfer-scope { padding: 14px; }
+.transfer-option-group .transfer-scope strong { font-size: 13px; }
+.transfer-option-group .transfer-secondary { font-size: 12px; }
+.transfer-note, .transfer-next-step { padding: 12px 16px; margin: 20px 0; background: var(--qc-admin-soft); border-left: 3px solid var(--primary); border-radius: 0 6px 6px 0; color: var(--body-quiet-color); font-size: 12px; line-height: 1.65; }
+.transfer-next-step { background: var(--qc-admin-warning-soft); border-left-color: var(--qc-admin-warning); color: var(--body-fg); }
+.transfer-fact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+.transfer-fact { padding: 16px; border: 1px solid var(--hairline-color); border-radius: 8px; }
+.transfer-fact dt { color: var(--body-quiet-color); font-size: 12px; }
+.transfer-fact dd { margin: 8px 0 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.transfer-badge { display: inline-flex; align-items: center; padding: 5px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; line-height: 1.4; }
+.transfer-badge--success { background: var(--qc-admin-green-soft); color: var(--qc-admin-green); }
+.transfer-badge--warning { background: var(--qc-admin-warning-soft); color: var(--qc-admin-warning); }
+.transfer-badge--neutral { background: var(--qc-admin-soft); color: var(--body-quiet-color); }
+.transfer-badge--progress { background: var(--qc-admin-blue-soft); color: var(--primary); }
+.transfer-history__identity { text-align: left; font-weight: 600; }
+.transfer-history__identity .transfer-secondary { font-size: 11px; }
+.transfer-history td { white-space: normal; }
+.transfer-history time { display: block; min-width: 130px; color: var(--body-quiet-color); font-size: 12px; line-height: 1.6; }
+.transfer-completion { padding: 18px; margin: 20px 0; border: 1px solid var(--hairline-color); border-radius: 8px; background: var(--qc-admin-green-soft); }
+.transfer-completion > p:first-child { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 0; }
+.transfer-completion .transfer-actions { margin-top: 12px; }
+.transfer-completion > p:last-child { margin-bottom: 0; line-height: 1.6; }
+.transfer-page .transfer-upload { margin: 20px 0; padding: 20px; border: 1px dashed var(--border-color); border-radius: 8px; background: var(--qc-admin-soft); }
+.transfer-upload input[type="file"] { display: block; box-sizing: border-box; width: 100%; padding: 4px 0; font-size: 13px; }
+.transfer-upload input[type="file"]::file-selector-button { margin-inline-end: 14px; min-height: 40px; padding: 8px 14px; color: var(--link-fg); background: var(--qc-admin-surface); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font: inherit; font-weight: 600; }
+.transfer-upload input[type="file"]::file-selector-button:hover { border-color: var(--primary); }
+.transfer-upload .help { margin-bottom: 0; line-height: 1.6; }
+.transfer-details pre { max-width: 100%; overflow-x: auto; font-size: 12px; line-height: 1.7; }
+.transfer-page form[data-transfer-pending="true"] button[aria-disabled="true"] { opacity: .7; cursor: wait; }
+.transfer-page [data-transfer-pending-status] { background: var(--qc-admin-blue-soft); border-left-color: var(--primary); }
+.transfer-fact dd.help { margin-top: 6px; font-size: 12px; font-weight: 400; color: var(--body-quiet-color); line-height: 1.5; }
+.transfer-page .transfer-backup-actions { display: flow-root; margin: 0; }
+.transfer-backup-actions > a { float: left; margin-inline-end: 10px; }
+.transfer-backup-delete { margin: 0; }
+.transfer-backup-delete > summary { display: inline-flex; list-style: none; }
+.transfer-backup-delete > summary::-webkit-details-marker { display: none; }
+.transfer-backup-delete__confirmation { clear: both; margin-top: 14px; padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--qc-admin-soft); overflow-wrap: anywhere; }
+.transfer-backup-delete__confirmation p { margin: 0 0 12px; white-space: normal; font-size: 12px; line-height: 1.6; }
+.transfer-backup-delete__confirmation button { margin-top: 4px; }
+.transfer-backups { width: 100%; table-layout: fixed; }
+.transfer-backups__file { width: 25%; }
+.transfer-backups__source { width: 30%; }
+.transfer-backups__size { width: 12%; }
+.transfer-backups__actions { width: 33%; }
+#backup-files .transfer-fact-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.transfer-backups th, .transfer-backups td { padding: 14px 16px; text-align: left; vertical-align: top; }
+.transfer-backups code { overflow-wrap: anywhere; font-size: 11px; }
+.transfer-database-result { padding: 18px; margin-bottom: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--qc-admin-blue-soft); }
+.transfer-database-result .transfer-scope-summary { margin-top: 0; }
+.transfer-database-result > p:last-child { margin-bottom: 0; }
 @media (max-width: 767px) {
   .transfer-tabs { gap: 0 20px; }
   .transfer-tabs a { font-size: 12px; }
@@ -186,4 +265,24 @@
   .transfer-recovery__body { padding: 0 16px 18px; }
   .transfer-account-choice { padding: 14px; }
   .transfer-account-choice__fields { gap: 0; }
+  .transfer-option-groups { grid-template-columns: 1fr; gap: 20px; }
+  .transfer-flow { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .transfer-flow li { align-items: flex-start; flex-direction: column; gap: 8px; font-size: 11px; }
+  .transfer-assurance, .transfer-review-overview { padding: 14px; }
+  .transfer-fact-grid { gap: 10px; }
+  .transfer-fact { padding: 12px; }
+  .transfer-fact dd { font-size: 17px; overflow-wrap: anywhere; }
+  .transfer-history, .transfer-history tbody { display: block; box-sizing: border-box; width: 100%; }
+  .transfer-history tr { display: block; padding: 12px 16px; border-top: 1px solid var(--hairline-color); }
+  .transfer-history th, .transfer-history td { display: block; padding: 6px 0; border: 0; white-space: normal; }
+  .transfer-history td[data-label]::before { display: inline-block; min-width: 58px; margin-inline-end: 10px; content: attr(data-label); color: var(--body-quiet-color); font-size: 11px; }
+  .transfer-history time { display: inline; min-width: 0; }
+  .transfer-history td:last-child { padding-top: 10px; }
+  .transfer-completion { padding: 14px; }
+  .transfer-backups, .transfer-backups tbody { display: block; width: 100%; }
+  .transfer-backups thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .transfer-backups tr { display: block; padding: 12px 16px; border-top: 1px solid var(--hairline-color); }
+  .transfer-backups th, .transfer-backups td { display: block; padding: 6px 0; border: 0; overflow-wrap: anywhere; }
+  .transfer-backups td[data-label]::before { content: attr(data-label) ": "; color: var(--body-quiet-color); font-size: 11px; }
+  #backup-files .transfer-fact-grid { grid-template-columns: 1fr; }
 }

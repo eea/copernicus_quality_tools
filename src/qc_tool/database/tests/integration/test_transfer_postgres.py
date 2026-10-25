@@ -23,7 +23,7 @@ from django.test import SimpleTestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from qc_tool.database.transfers import postgres
-from qc_tool.database.transfers.archive import ArtifactSource, inspect_archive, write_archive
+from qc_tool.database.transfers.archive import ArtifactSource, canonical_json, inspect_archive, write_archive, write_native_archive
 from qc_tool.database.transfers.contracts import digest
 from qc_tool.database.transfers.errors import TransferError
 from qc_tool.frontend.accounts.models import PersonalAccessToken
@@ -57,6 +57,85 @@ class NativePostgresSafetyTests(SimpleTestCase):
         path = self.directory / (uuid4().hex + ".zip")
         write_archive(path, {}, records or metadata(data), (ArtifactSource("database", "archive.dump", dump),))
         return inspect_archive(path)
+
+    def enriched_package(self, *, change_sections=None, change_metadata=None):
+        dump = b"PGDMPfixture"
+        records = {**metadata(dump), "version": 2}
+        sections = {"schema/schema.sql": b"CREATE TABLE example (value text);\nALTER TABLE example OWNER TO source_owner;\n",
+                    "metadata/source.json": canonical_json(records["source"]),
+                    "metadata/inventory.json": canonical_json(records["inventory"]),
+                    "metadata/database.json": canonical_json({"version": 1, "owner": "source_owner"}),
+                    "metadata/restore-policy.json": canonical_json(postgres.RESTORE_POLICY)}
+        postgres._with_preservation(records, sections)
+        if change_sections:
+            change_sections(sections)
+        if change_metadata:
+            change_metadata(records)
+
+        def capture(stream):
+            stream.write(dump)
+            return {**records, "_package_sections": sections}
+
+        path = self.directory / (uuid4().hex + ".zip")
+        write_native_archive(path, {}, capture)
+        return inspect_archive(path)
+
+    def test_enriched_backup_preserves_separate_readable_schema_and_complete_data(self):
+        verified = self.enriched_package()
+        self.assertEqual(postgres._native_metadata(verified), verified.records)
+        self.assertEqual({entry["path"] for entry in verified.entries}, {
+            "database/data/database.dump", "database/schema/schema.sql",
+            "database/metadata/source.json", "database/metadata/inventory.json",
+            "database/metadata/database.json", "database/metadata/restore-policy.json"})
+        with postgres._native_file(verified) as path:
+            self.assertEqual(path.read_bytes(), b"PGDMPfixture")
+
+    def test_enriched_backup_requires_each_schema_and_metadata_section(self):
+        verified = self.enriched_package(change_sections=lambda sections: sections.pop("schema/schema.sql"))
+        with self.assertRaisesMessage(TransferError, "missing required schema"):
+            postgres._native_metadata(verified)
+
+    def test_readable_inventory_cannot_disagree_with_authoritative_metadata(self):
+        verified = self.enriched_package(change_sections=lambda sections: sections.update({
+            "metadata/source.json": canonical_json({"database": "different-source"})}))
+        with self.assertRaisesMessage(TransferError, "disagrees with its authoritative inventory"):
+            postgres._native_metadata(verified)
+
+    def test_owner_privileges_and_database_settings_cannot_change_after_review(self):
+        changes = (
+            {"schema/schema.sql": b"CREATE TABLE example (value text);\nALTER TABLE example OWNER TO different_owner;\n"},
+            {"metadata/database.json": canonical_json({"version": 1, "owner": "different_owner"})},
+        )
+        for changed in changes:
+            with self.subTest(section=next(iter(changed))):
+                verified = self.enriched_package(change_sections=lambda sections: sections.update(changed))
+                with self.assertRaises(TransferError):
+                    postgres._native_metadata(verified)
+
+    def test_enriched_backup_rejects_undeclared_supplemental_sections(self):
+        verified = self.enriched_package(change_sections=lambda sections: sections.update({"metadata/unreviewed.sql": b"ALTER ROLE operator SUPERUSER;"}))
+        with self.assertRaisesMessage(TransferError, "supplemental inventory"):
+            postgres._native_metadata(verified)
+
+    def test_credentials_require_a_deployment_inventory(self):
+        verified = self.enriched_package(change_sections=lambda sections: sections.update({
+            "credentials/s3/" + "a" * 32 + ".json": b'{"password":"synthetic-only"}'}))
+        with self.assertRaisesMessage(TransferError, "require the deployment configuration inventory"):
+            postgres._native_metadata(verified)
+
+    def test_globals_require_a_matching_canonical_fingerprint(self):
+        payload = b"CREATE ROLE source_owner;\nALTER ROLE source_owner PASSWORD 'synthetic-hash';\n"
+
+        def globals_metadata(records):
+            postgres._with_globals(records, payload)
+
+        verified = self.enriched_package(
+            change_sections=lambda sections: sections.update({"metadata/globals.sql": payload}),
+            change_metadata=globals_metadata)
+        self.assertEqual(postgres._native_metadata(verified)["globals_sha256"], postgres._globals_hash(payload))
+        changed = self.enriched_package(change_sections=lambda sections: sections.update({"metadata/globals.sql": payload}))
+        with self.assertRaisesMessage(TransferError, "no matching fingerprint"):
+            postgres._native_metadata(changed)
 
     def test_sqlite_explains_native_support_without_falling_back_to_partial_export(self):
         with patch.object(postgres, "_params", side_effect=TransferError("Complete native database copies require PostgreSQL.")):
@@ -235,7 +314,11 @@ class NativePostgresRoundTripTests(TransactionTestCase):
         with connection.cursor() as cursor:
             cursor.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(self.target)))
 
-    def make_package(self):
+    def make_package(self, *, streamed=False):
+        if streamed:
+            path = self.directory / (uuid4().hex + ".zip")
+            write_native_archive(path, {}, postgres.capture_stream)
+            return inspect_archive(path)
         dump = self.directory / (uuid4().hex + ".dump")
         records = postgres.dump_to(dump)
         path = self.directory / (uuid4().hex + ".zip")
@@ -448,7 +531,7 @@ class NativePostgresRoundTripTests(TransactionTestCase):
             large_object.write(b"complete large object bytes\x00\xff")
             large_object.close()
         self.addCleanup(self.remove_large_object, oid)
-        verified = self.make_package()
+        verified = self.make_package(streamed=True)
         preview = postgres.plan_restore(verified)
         self.assertTrue(preview["can_apply"], preview["blockers"])
         result = postgres.restore(verified, preview["target_fingerprint"])
@@ -539,7 +622,14 @@ class NativePostgresRoundTripTests(TransactionTestCase):
     def test_real_service_preserves_complete_database_with_optional_unlinked_zip(self):
         self.service_round_trip(include_files=True)
 
-    def service_round_trip(self, *, include_files=False):
+    def test_all_selected_components_preserve_original_files_and_secrets_without_applying_configuration(self):
+        self.service_round_trip(include_files=True, all_components=True)
+
+    def test_compressed_full_backup_restores_all_sections_under_the_same_archive_limit(self):
+        with override_settings(QC_TOOL_TRANSFER_ARCHIVE_LIMITS={"max_archive_bytes": 1024**2}):
+            self.service_round_trip(include_files=True, all_components=True, compressed_boundary=True)
+
+    def service_round_trip(self, *, include_files=False, all_components=False, compressed_boundary=False):
         from qc_tool.database.transfers import service
         from qc_tool.common import CONFIG
 
@@ -549,11 +639,25 @@ class NativePostgresRoundTripTests(TransactionTestCase):
         ))
         self.enterContext(patch.object(service, "_launch"))
         actor = get_user_model().objects.create_superuser("native-service-operator", "operator@example.test", "operator-password")
+        if all_components:
+            credential_store = self.directory / "private-credentials"
+            credential_store.mkdir(mode=0o700)
+            credential_file = credential_store / ("f" * 32 + ".json")
+            credential_bytes = b'{"access_key":"synthetic-access-key", "secret_key":"original-synthetic-secret"}\n'
+            credential_file.write_bytes(credential_bytes)
+            credential_file.chmod(0o600)
+            self.enterContext(override_settings(S3_CREDENTIALS_DIR=credential_store, SECRET_KEY="original-synthetic-deployment-secret"))
+            token = PersonalAccessToken.objects.create(user=actor, name="all-components-token", secret_digest="sha256:" + "e" * 64,
+                token_hint="fixture", permission_snapshot=["run_quality_control"], role_snapshot=["Admin"],
+                product_idents_snapshot=[], is_administrator_snapshot=True)
+            Session.objects.create(session_key="all-components-session", session_data="original-synthetic-session", expire_date=timezone.now())
         enabled = maintenance.enable(actor, 0)
         generation = enabled["generation"]
         self.assertEqual(maintenance.advance(generation)["phase"], "ready")
         original = postgres.preview()
         selection = {"profile": "database", "user_ids": [], "include_files": include_files}
+        if all_components:
+            selection["components"] = list(service.BACKUP_COMPONENTS)
         if include_files:
             source = {name: self.directory / ("source-" + name) for name in (
                 "work_dir", "incoming_dir", "submission_dir", "boundary_dir")}
@@ -564,14 +668,63 @@ class NativePostgresRoundTripTests(TransactionTestCase):
             owner = source["incoming_dir"] / "retained-owner"
             owner.mkdir()
             (owner / "retained.zip").write_bytes(b"original retained input")
+            if all_components:
+                boundary_bytes = (b"original boundary feature\n" * 200_000 if compressed_boundary
+                                  else b"original boundary bytes")
+                extra_files = {
+                    "work_dir": {"product_definitions/fixture-product.json": b'{"original":"specification bytes"}\n',
+                                 "job_" + "a" * 32 + "/evidence.bin": b"original QC artifact bytes"},
+                    "boundary_dir": {"vector/fixture.gpkg": boundary_bytes},
+                    "submission_dir": {"published/receipt.json": b'{"original":"publication bytes"}\n'},
+                }
+                for root, files in extra_files.items():
+                    for key, payload in files.items():
+                        destination = source[root] / key
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        destination.write_bytes(payload)
         reviewed = service.export_preview(selection, actor)
+        self.assertFalse(reviewed.get("blockers"))
+        if compressed_boundary:
+            self.assertGreater(len(boundary_bytes), service._limits().max_archive_bytes)
+            self.assertEqual({row["key"] for row in reviewed["components"] if row["selected"]},
+                             set(service.BACKUP_COMPONENTS))
+        if all_components:
+            self.assertNotIn("original-synthetic-secret", repr(reviewed))
+            self.assertNotIn("original-synthetic-deployment-secret", repr(reviewed))
         exported = service.create_export(selection, actor, reviewed["review_hash"], generation)
         self.assertEqual(active_operation()["operation_id"], exported["id"])
         self.assertEqual(service.run_operation(exported["id"])["status"], "completed")
         self.assertIsNone(active_operation())
         stream, _download = service.download_operation(exported["id"], actor)
+        if compressed_boundary:
+            self.assertLess(_download["bytes"], service._limits().max_archive_bytes)
         with stream:
             uploaded = SimpleUploadedFile("complete-postgresql.zip", stream.read())
+        if all_components:
+            import io
+            import zipfile
+
+            with zipfile.ZipFile(io.BytesIO(uploaded.read())) as archive:
+                paths = set(archive.namelist())
+                self.assertTrue({"database/data/database.dump", "database/schema/schema.sql",
+                    "database/metadata/source.json", "database/metadata/inventory.json", "database/metadata/database.json",
+                    "database/metadata/restore-policy.json", "database/metadata/globals.sql",
+                    "configuration/deployment.json", "configuration/credentials/s3/" + credential_file.name,
+                    "specifications/work/product_definitions/fixture-product.json", "boundaries/vector/fixture.gpkg",
+                    "artifacts/work/job_" + "a" * 32 + "/evidence.bin", "publications/submissions/published/receipt.json",
+                    "deliveries/incoming/retained-owner/retained.zip"} <= paths)
+                self.assertTrue(archive.read("configuration/credentials/s3/" + credential_file.name) == credential_bytes)
+                self.assertIn(b"CREATE ROLE", archive.read("database/metadata/globals.sql"))
+                self.assertEqual(archive.read("boundaries/vector/fixture.gpkg"), boundary_bytes)
+                if compressed_boundary:
+                    member = archive.getinfo("boundaries/vector/fixture.gpkg")
+                    self.assertLess(member.compress_size, member.file_size)
+            uploaded.seek(0)
+            self.enterContext(override_settings(SECRET_KEY="current-synthetic-deployment-secret"))
+            credential_file.write_bytes(b'{"secret_key":"current-synthetic-secret"}\n')
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT rolname,rolsuper,rolcreatedb,rolcanlogin FROM pg_roles ORDER BY oid")
+                current_roles = cursor.fetchall()
         if include_files:
             target_files = {name: self.directory / ("target-" + name) for name in (
                 "work_dir", "incoming_dir", "submission_dir", "boundary_dir")}
@@ -590,6 +743,27 @@ class NativePostgresRoundTripTests(TransactionTestCase):
         self.assertEqual(postgres.preview()["review_hash"], original["review_hash"])
         self.assertIsNone(active_operation())
         self.assertTrue(maintenance.read_status()["enabled"])
+        if all_components:
+            with self.target_connection() as target, target.cursor() as cursor:
+                cursor.execute("SELECT password FROM auth_user WHERE id=%s", [actor.pk])
+                self.assertTrue(cursor.fetchone()[0] == actor.password)
+                cursor.execute("SELECT secret_digest FROM account_api_token WHERE id=%s", [token.pk])
+                self.assertTrue(cursor.fetchone()[0] == token.secret_digest)
+                cursor.execute("SELECT session_data FROM django_session WHERE session_key='all-components-session'")
+                self.assertEqual(cursor.fetchone()[0], "original-synthetic-session")
+            self.assertEqual(settings.SECRET_KEY, "current-synthetic-deployment-secret")
+            self.assertTrue(credential_file.read_bytes() == b'{"secret_key":"current-synthetic-secret"}\n')
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT rolname,rolsuper,rolcreatedb,rolcanlogin FROM pg_roles ORDER BY oid")
+                self.assertEqual(cursor.fetchall(), current_roles)
+            self.assertTrue((target_files["work_dir"] / ("job_" + "a" * 32 + "/evidence.bin")).read_bytes() == b"original QC artifact bytes")
+            self.assertTrue((target_files["submission_dir"] / "published/receipt.json").read_bytes() == b'{"original":"publication bytes"}\n')
+            boundary_versions = list((target_files["boundary_dir"] / ".boundary-generations").glob("legacy-*/vector/fixture.gpkg"))
+            self.assertEqual(len(boundary_versions), 1)
+            self.assertEqual(boundary_versions[0].read_bytes(), boundary_bytes)
+            spec_versions = list((target_files["work_dir"] / "product_definitions/.versions/fixture-product").glob("*.json"))
+            self.assertEqual(len(spec_versions), 1)
+            self.assertTrue(spec_versions[0].read_bytes() == b'{"original":"specification bytes"}\n')
         if include_files:
             restored_zip = target_files["incoming_dir"] / "retained-owner" / "retained.zip"
             self.assertEqual(restored_zip.read_bytes(), b"original retained input")

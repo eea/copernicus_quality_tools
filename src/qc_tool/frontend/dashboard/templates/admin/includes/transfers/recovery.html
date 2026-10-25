@@ -1,9 +1,11 @@
-<details id="database-recovery" class="transfer-recovery"{% if transfer_area == 'recovery' or rollback_form.errors %} open{% endif %}>
-  <summary><span>Backups &amp; recovery</span><span class="transfer-secondary">Full PostgreSQL backups and database switching</span></summary>
+<details id="database-recovery" class="transfer-recovery"{% if rollback_form.is_bound %} open{% endif %}>
+  <summary><span>Recovery options</span><span class="transfer-secondary">Restore a backup or return to a previous database</span></summary>
   <div class="transfer-recovery__body">
-    <p>A full backup includes all PostgreSQL tables and credentials. Restore it into a separate database before reviewing a switch. It does not add selected records to the active database.</p>
-    <div class="transfer-actions"><a class="btn-qc-secondary" href="{{ recovery_backup_url }}">Create full backup</a><a class="btn-qc-secondary" href="{{ recovery_import_url }}">Restore full backup</a></div>
-    <p class="help">Local files can be included when creating a backup. External storage and deployment secrets need separate backups.</p>
+    <p><strong>Recover from a saved ZIP:</strong> open <a href="{{ area_import_url }}">Restore from backup</a>. Upload the ZIP, restore it into a separate database, then review whether to use it.</p>
+    {% if database_manager_url %}<p><strong>Use a database already on this server:</strong> open <a href="{{ database_manager_url }}">Manage databases</a> to inspect it and review a switch.</p>{% endif %}
     {% include "admin/includes/transfers/database_controls.html" %}
+    <p><strong>A backup ZIP and a database are different things.</strong> A ZIP is a saved file you can download or restore. Restoring a full database backup creates a separate database on this server. It becomes active only after you review and confirm a switch.</p>
+    {% if backup_files_url %}<p>Open <a href="{{ backup_files_url }}">Back up &amp; restore</a> to download or delete saved ZIPs. Removing a ZIP frees backup storage; it does not remove any database.</p>{% endif %}
+    <p class="help">After switching, keep maintenance on while checking the restored installation. Turn maintenance off when you are ready to let users make changes again.</p>
   </div>
 </details>

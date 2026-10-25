@@ -1,0 +1,33 @@
+Port 2222
+ListenAddress 0.0.0.0
+HostKey /etc/qc-storage/host_key
+PidFile /run/sshd.pid
+
+PermitRootLogin no
+AllowUsers qcstorage
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+AuthorizedKeysFile /etc/qc-storage/authorized_keys
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+UsePAM no
+StrictModes yes
+LoginGraceTime 30
+MaxAuthTries 3
+MaxStartups 3:30:10
+MaxSessions 4
+ClientAliveInterval 60
+ClientAliveCountMax 3
+
+DisableForwarding yes
+PermitTTY no
+PermitTunnel no
+PermitUserRC no
+X11Forwarding no
+
+ChrootDirectory /srv/qc-storage
+ForceCommand internal-sftp -R -d /files -e -l INFO
+Subsystem sftp internal-sftp
+LogLevel VERBOSE
+

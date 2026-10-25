@@ -14,7 +14,7 @@ from uuid import UUID
 from django.conf import settings
 
 from qc_tool.common import CONFIG
-from .errors import TransferError
+from .errors import TransferBusy, TransferError
 
 
 MAX_JOURNAL_BYTES = 32 * 1024 * 1024
@@ -169,7 +169,7 @@ def execution_lock():
         try:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
-            raise TransferError("Another transfer is running. Wait for it to finish before retrying.") from error
+            raise TransferBusy("Another transfer is running. Wait for it to finish before retrying.") from error
         except OSError as error:
             raise TransferError("Transfer execution locking is unavailable.") from error
         token = _execution_lease.set(descriptor)

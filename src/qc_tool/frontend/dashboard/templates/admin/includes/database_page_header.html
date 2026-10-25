@@ -1,0 +1,7 @@
+{% load static %}
+{% if database_back_url %}<a class="database-back-link" href="{{ database_back_url }}"><span aria-hidden="true">&larr;</span> {{ database_back_label }}</a>{% endif %}
+<header class="qc-admin-intro database-page-header">
+  <div><h1{% if record_pk %} class="database-record-heading"{% endif %}>{{ database_page_title }}</h1><p class="qc-admin-intro__description">{{ database_page_description }}</p></div>
+  {% include "admin/includes/database_actions.html" %}
+</header>
+{% include "admin/includes/database_navigation.html" %}

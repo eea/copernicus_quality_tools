@@ -1,15 +1,45 @@
-.database-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 24px; align-items: start; }
 .database-tools { display: grid; gap: 24px; min-width: 0; }
-.database-table-tools > summary { cursor: pointer; font-weight: 600; padding: 14px 0; }
-.database-page .qc-admin-panel h2 { margin: 0 0 14px; font-size: 20px; }
-.database-section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.database-page .qc-admin-panel h2 { margin: 0 0 14px; font-size: 18px; }
+.database-section-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 14px; }
+.database-section-heading h2 { margin: 0 !important; }
 .database-muted, .database-page code { color: var(--body-quiet-color); }
 .database-page code { font-size: 12px; overflow-wrap: anywhere; }
+.database-page .help, .database-page .errornote { overflow-wrap: anywhere; }
+.database-section-title { margin: 0 0 16px; font-size: 17px; font-weight: 600; }
+.database-task-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.database-task-grid--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.database-task-grid--four .database-task { padding: 22px; }
+.database-task-grid--four .database-task h3 { font-size: 17px; line-height: 1.4; }
+.database-record-source { margin: 0 0 20px; padding: 13px 16px; border-left: 3px solid var(--primary); background: var(--qc-admin-blue-soft); border-radius: 6px; line-height: 1.7; }
+.database-next-step { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.database-next-step h3 { margin: 0 0 8px; }
+.database-task { align-items: flex-start; }
+.database-task--primary { border-top: 3px solid var(--primary); padding-top: 22px; }
+.database-task__icon { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; margin-bottom: 18px; color: var(--primary); background: var(--qc-admin-blue-soft); border-radius: 10px; }
+.database-task h3 { margin: 0 0 10px; font-size: 19px; }
+.database-task > p { flex: 1; }
+.database-task > a { margin-top: 2px; }
+.database-task > .database-task__note { flex: none; min-height: 3em; margin: 14px 0 0; font-size: 12px; line-height: 1.5; }
+.database-start-note { margin: 16px 0 26px; color: var(--body-quiet-color); font-size: 12px; line-height: 1.7; }
+.database-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 26px; }
+.database-status-grid .qc-admin-panel { padding: 20px 24px; }
+.database-health .database-actions { font-size: 12px; }
+.database-health-details { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hairline-color); }
+.database-health-details summary { width: fit-content; cursor: pointer; color: var(--link-fg); font-size: 12px; }
+.database-health-details p { color: var(--body-quiet-color); line-height: 1.6; }
+.database-badge { display: inline-flex; align-items: center; flex-shrink: 0; gap: 6px; border-radius: 20px; padding: 5px 10px; background: var(--qc-admin-green-soft); color: var(--qc-admin-green); font-size: 11px; font-weight: 600; line-height: 1.4; }
+.database-badge--warning { background: var(--qc-admin-warning-soft); color: var(--qc-admin-warning); }
+.database-badge--neutral { background: var(--qc-admin-soft); color: var(--body-quiet-color); }
+.database-table-tools > summary { cursor: pointer; width: fit-content; font-weight: 600; padding: 14px 0; }
+.database-table-tools[open] > summary { margin-bottom: 8px; }
 .database-search { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 22px 0; }
 .database-search > div { flex: 1 1 180px; }
 .database-search label { display: block; margin-bottom: 6px; font-weight: 600; }
 .database-search input, .database-search select { width: 100%; box-sizing: border-box; min-height: 40px; background: var(--body-bg); color: var(--body-fg); border: 1px solid var(--hairline-color); border-radius: 6px; padding: 8px 10px; }
 .database-search--records > div { flex: 0 1 420px; }
+.database-search--records { align-items: start; }
+.database-search--records > button, .database-search--records > a { margin-top: 26px; }
+.database-search--records .database-muted { display: block; margin-top: 6px; font-size: 12px; }
 .database-table-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
 .database-table-group h3 { margin: 0 0 8px; color: var(--body-quiet-color); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 .database-table-group ul, .database-connected ul { list-style: none; padding: 0; margin: 0; }
@@ -19,12 +49,13 @@
 .database-table-group strong, .database-table-group code, .database-connected strong, .database-connected .database-muted { display: block; }
 .database-table-group code { margin-top: 3px; font-size: 10px; }
 .database-table-mode { font-size: 11px; white-space: nowrap; color: var(--body-quiet-color); }
-.database-maintenance { position: sticky; top: 20px; }
 .database-state { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 20px; }
 .database-state-dot { width: 9px; height: 9px; border-radius: 50%; background: #278354; }
 .database-state-dot--paused { background: #af7619; }
 .database-maintenance p { line-height: 1.65; }
-.database-maintenance form { margin: 20px 0 12px; }
+.database-maintenance form { margin: 0; }
+.database-maintenance .database-actions { margin-top: auto; }
+.database-maintenance .database-actions > a { font-size: 12px; }
 .database-back { display: inline-block; margin-bottom: 12px; }
 .database-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .database-actions button:disabled { opacity: .5; cursor: not-allowed; }
@@ -45,5 +76,75 @@
 .database-record-detail dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 26rem; overflow-y: auto; }
 .database-connected { margin-top: 24px; }
 .database-connected li a > span:last-child { white-space: nowrap; }
-@media (max-width: 1250px) { .database-layout { grid-template-columns: minmax(0, 1fr); } .database-maintenance { position: static; grid-row: 1; } .database-maintenance form { display: inline-block; margin: 6px 16px 0 0; } }
-@media (max-width: 700px) { .database-table-groups { grid-template-columns: minmax(0, 1fr); } .database-record-detail > div { grid-template-columns: minmax(0, 1fr); gap: 6px; } .database-page .qc-admin-intro { align-items: start; } }
+.database-eyebrow { display: block; margin: 0 0 7px; color: var(--body-quiet-color); font-size: 12px; font-weight: 600; }
+.database-read-state { margin: 12px 0 0; color: var(--body-quiet-color); font-size: 12px; line-height: 1.6; }
+.database-record-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; padding-bottom: 14px; border-bottom: 1px solid var(--hairline-color); font-size: 13px; }
+.database-record-heading { min-width: 0; overflow-wrap: anywhere; }
+.database-page .qc-admin-intro h1.database-record-heading { font-size: 28px; line-height: 1.35; letter-spacing: -.4px; }
+.database-record-context, .database-inline-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px; color: var(--body-quiet-color); font-size: 12px; }
+.database-inline-nav { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 15px 0; margin: 0 0 20px; border-block: 1px solid var(--hairline-color); font-size: 13px; }
+.database-technical-details { margin-top: 20px; border-top: 1px solid var(--hairline-color); }
+.database-technical-details > summary { padding: 16px 0; width: fit-content; color: var(--link-fg); cursor: pointer; font-weight: 600; }
+.database-technical-details .database-record-detail { margin-top: 0; }
+.database-page :target { scroll-margin-top: 20px; }
+.database-current { margin-bottom: 20px; border-top: 3px solid var(--primary); }
+.database-page .database-current__name { margin-bottom: 12px; }
+.database-current__name code { color: var(--body-loud-color); font-size: 20px; font-weight: 600; }
+.database-explainer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 0 0 24px; }
+.database-explainer p { margin: 0; font-size: 13px; line-height: 1.7; color: var(--body-quiet-color); }
+.database-explainer strong { color: var(--body-fg); }
+.database-copy-list { display: grid; gap: 16px; }
+.database-copy { min-width: 0; border: 1px solid var(--border-color); border-radius: 10px; padding: 22px; }
+.database-copy--active { border-color: var(--primary); background: var(--qc-admin-blue-soft); }
+.database-copy__heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.database-copy__heading > div { min-width: 0; }
+.database-copy__heading h3 { margin: 0 0 7px; font-size: 17px; line-height: 1.4; }
+.database-copy__heading h3 a { text-decoration: none; }
+.database-copy__heading h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.database-copy__heading h3 a:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: 2px; }
+.database-copy__heading code { font-size: 12px; }
+.database-copy__heading p { margin: 7px 0 0; font-size: 12px; }
+.database-copy__facts { display: flex; align-items: flex-end; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.database-copy__facts > strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.database-copy .database-actions { gap: 10px; }
+.database-copy .database-actions > a:not([class]) { margin-inline: 4px; font-size: 13px; }
+.database-copy .database-actions form { margin: 0; }
+.database-copy__protection { margin: 14px 0 0; color: var(--body-quiet-color); font-size: 12px; line-height: 1.6; }
+.database-copy__notice { margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--hairline-color); color: var(--body-quiet-color); font-size: 12px; line-height: 1.65; }
+.database-copy__notice > p { margin: 0; }
+.database-copy__blockers { margin: 9px 0 0; padding-left: 18px; color: var(--error-fg); }
+.database-copy__blockers li { padding-left: 0; }
+.database-copy__notice .errorlist { margin-top: 10px; }
+.database-inspection, .database-selection-review { margin-bottom: 24px; }
+.database-selection-review .transfer-review-overview { margin-top: 4px; }
+.database-page .database-inspection > p code { font-size: 14px; }
+.database-manager-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.database-active-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 16px 20px; margin-bottom: 24px; background: var(--qc-admin-surface); border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; }
+.database-active-overview > div { flex: 1 1 320px; min-width: 0; }
+.database-active-overview strong, .database-active-overview code { display: block; }
+.database-active-overview code { margin-top: 5px; font-size: 13px; color: var(--body-fg); }
+.database-active-overview .database-muted { font-size: 12px; }
+@media (max-width: 1050px) { .database-task-grid { gap: 14px; } .database-task { padding: 20px; } .database-task h3 { font-size: 17px; } .database-status-grid { gap: 14px; } }
+@media (min-width: 768px) and (max-width: 1150px) { .database-task-grid--four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 767px) {
+  .database-task-grid, .database-status-grid, .database-table-groups { grid-template-columns: minmax(0, 1fr); }
+  .database-task__icon { margin-bottom: 14px; }
+  .database-task > a { align-self: stretch; text-align: center; }
+  .database-task > p { flex: none; }
+  .database-status-grid .qc-admin-panel { padding: 20px; }
+  .database-record-detail > div { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .database-page .qc-admin-intro { align-items: start; }
+  .database-search > div, .database-search--records > div { flex-basis: 100%; }
+  .database-search--records > button, .database-search--records > a { margin-top: 0; }
+  .database-page .qc-admin-intro h1.database-record-heading { font-size: 22px; }
+  .database-record-summary { align-items: flex-start; flex-direction: column; }
+  .database-records th, .database-records td { padding: 12px 10px; }
+  .database-explainer { grid-template-columns: 1fr; gap: 12px; }
+  .database-copy { padding: 16px; }
+  .database-copy__heading { flex-direction: column; }
+  .database-copy__facts { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+  .database-copy .database-actions { align-items: stretch; }
+  .database-copy .database-actions > form { max-width: 100%; }
+  .database-copy .database-actions > a:not([class]) { display: inline-flex; align-items: center; min-height: 40px; }
+  .database-current__name code { font-size: 17px; }
+}

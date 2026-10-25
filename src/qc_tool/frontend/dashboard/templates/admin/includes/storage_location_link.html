@@ -1,0 +1,5 @@
+{% load static %}
+<a href="{{ location.url }}" title="{{ location.storage_path }}"{% if area == location.key %} aria-current="page"{% endif %}{% if not location.available %} class="storage-sidebar__unavailable"{% endif %}>
+  <svg class="ui-icon" aria-hidden="true"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg>
+  <span>{{ location.label }}{% if location.purpose_label %}<small class="storage-sidebar__purpose">{{ location.purpose_label }}</small>{% endif %}{% if location.storage_path %}<small class="storage-sidebar__path">{{ location.storage_path }}</small>{% endif %}{% if not location.available %}<small>Unavailable</small>{% endif %}</span>
+</a>

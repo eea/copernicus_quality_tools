@@ -1,0 +1,23 @@
+{% if transfer_operation %}
+<div class="transfer-maintenance" role="status"
+  {% if not operation and current_transfer and not current_transfer.recoverable %}{% if current_transfer.status == 'running' or current_transfer.status == 'queued' %}
+    data-transfer-status-url="{% url 'admin_data_transfer_status' current_transfer.id %}"
+    data-operation-id="{{ current_transfer.id }}" data-transfer-status="{{ current_transfer.status }}"
+    data-runner-active="{{ current_transfer.runner_active|yesno:'true,false' }}"
+    data-recoverable="{{ current_transfer.recoverable|yesno:'true,false' }}"
+    data-cancellable="{{ current_transfer.cancellable|yesno:'true,false' }}"
+  {% endif %}{% endif %}>
+  <span>
+    {% if current_transfer.recoverable %}<strong>A database task needs recovery.</strong> Open its status to continue safely.
+    {% elif current_transfer.status == 'running' or current_transfer.status == 'queued' %}
+      <span class="qc-admin-spinner" data-transfer-running-indicator aria-hidden="true"></span>
+      <strong>{% if current_transfer.status == 'queued' %}A database task is waiting to start.{% else %}A database task is in progress.{% endif %}</strong> Maintenance stays on while it finishes.
+    {% else %}<strong>A database task holds maintenance.</strong> Open its status to check progress or recovery.{% endif %}
+  </span>
+  {% if transfer_operation.operation_id and transfer_operation.operation_id != operation.id %}<a href="{{ database_url }}?operation={{ transfer_operation.operation_id|urlencode }}&amp;from={{ transfer_origin }}#transfer-operation">View current task</a>
+  {% elif not transfer_operation.operation_id %}<span>Operator recovery is required.</span>{% endif %}
+  {% if not operation and current_transfer and not current_transfer.recoverable %}{% if current_transfer.status == 'running' or current_transfer.status == 'queued' %}
+  <div class="transfer-current-status"><span class="help" data-transfer-poll-message>Updates automatically.</span><button type="button" class="btn-qc-secondary" data-transfer-resume hidden>Try automatic updates again</button><a href="{{ admin_busy_refresh_url }}" data-transfer-refresh>Refresh status</a></div>
+  {% endif %}{% endif %}
+</div>
+{% endif %}

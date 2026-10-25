@@ -1,0 +1,44 @@
+# Optional Azure/EEA host-mounted persistent storage. Requires Compose 2.24.4+
+# for !override: child named volumes must not hide the shared data tree.
+# Read docs/deployment/storage-access.md before opting in. This configuration
+# neither creates the host directories nor copies existing application data.
+# Preserve the existing project name when combining with docker-compose.eea.yml.
+services:
+  userdb:
+    volumes: !override
+      - type: bind
+        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/private/postgresql"
+        target: /var/lib/postgresql/data
+        bind:
+          create_host_path: false
+
+  frontend:
+    environment:
+      QC_TOOL_PERSISTENT_STORAGE_ROOT: /mnt
+      QC_TOOL_PERSISTENT_STORAGE_ID: "${QC_TOOL_PERSISTENT_STORAGE_ID:?Set QC_TOOL_PERSISTENT_STORAGE_ID to the provisioned storage identity}"
+      S3_CREDENTIALS_DIR: "${S3_CREDENTIALS_DIR:-/mnt/qc_tool_work/work/s3_credentials}"
+      QC_TOOL_UPLOAD_TEMP_DIR: "${QC_TOOL_UPLOAD_TEMP_DIR:-/mnt/qc_tool_work/work/upload-staging}"
+      QC_TOOL_MAINTENANCE_DIR: "${QC_TOOL_MAINTENANCE_DIR:-/mnt/qc_tool_work/work/maintenance}"
+    volumes: !override
+      - type: bind
+        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/data"
+        target: /mnt
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/private/frontend"
+        target: /var/lib/qc_tool
+        bind:
+          create_host_path: false
+
+  worker:
+    environment:
+      QC_TOOL_PERSISTENT_STORAGE_ROOT: /mnt
+      QC_TOOL_PERSISTENT_STORAGE_ID: "${QC_TOOL_PERSISTENT_STORAGE_ID:?Set QC_TOOL_PERSISTENT_STORAGE_ID to the provisioned storage identity}"
+      QC_TOOL_MAINTENANCE_DIR: "${QC_TOOL_MAINTENANCE_DIR:-/mnt/qc_tool_work/work/maintenance}"
+    volumes: !override
+      - type: bind
+        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/data"
+        target: /mnt
+        bind:
+          create_host_path: false

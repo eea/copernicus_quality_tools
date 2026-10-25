@@ -28,6 +28,12 @@ class MaintenanceError(RuntimeError):
     """A safe operator-facing failure; admission remains closed on errors."""
 
 
+class MaintenanceBusy(MaintenanceError):
+    """A concurrent control action owns admission; retry status, not the action."""
+
+    code = "maintenance_busy"
+
+
 def _directory():
     directory = Path(getattr(settings, "QC_TOOL_MAINTENANCE_DIR", CONFIG["work_dir"] / "maintenance"))
     created = False
@@ -75,6 +81,34 @@ def file_lock(name, *, exclusive=True, blocking=True):
         yield acquired
     finally:
         os.close(descriptor)  # Closing also releases flock on all exit paths.
+
+
+def control_active():
+    """Read-only presentation hint; callers still acquire admission to act."""
+
+    directory = Path(getattr(settings, "QC_TOOL_MAINTENANCE_DIR", CONFIG["work_dir"] / "maintenance"))
+    try:
+        status = directory.lstat()
+        if not stat.S_ISDIR(status.st_mode) or status.st_mode & 0o022:
+            raise OSError("Unsafe maintenance directory")
+        descriptor = os.open(directory / "control.lock", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return False
+    except OSError as error:
+        raise MaintenanceError("Maintenance storage or locking is unavailable. Contact the operator.") from error
+    try:
+        status = os.fstat(descriptor)
+        if not stat.S_ISREG(status.st_mode) or status.st_nlink != 1 or status.st_mode & 0o022:
+            raise MaintenanceError("Maintenance storage or locking is unavailable. Contact the operator.")
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        except OSError as error:
+            raise MaintenanceError("Maintenance storage or locking is unavailable. Contact the operator.") from error
+        return False
+    finally:
+        os.close(descriptor)
 
 
 def _initial():

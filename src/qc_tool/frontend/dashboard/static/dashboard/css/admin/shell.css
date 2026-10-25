@@ -337,6 +337,24 @@ body.qc-admin.login #header { padding: 0 20px; }
 .qc-admin-database-status p { margin: 0; color: var(--body-quiet-color); font-size: 12px; line-height: 1.6; }
 .qc-admin-database-status > a { min-height: 36px; display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; }
 .qc-admin-empty { color: var(--body-quiet-color); }
+
+/* Shared action feedback: one visual language for waiting and recovery. */
+.qc-admin [hidden] { display: none !important; }
+.qc-admin-spinner { display: inline-block; box-sizing: border-box; width: 17px; height: 17px; flex: 0 0 17px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; vertical-align: -3px; animation: qc-admin-spin .8s linear infinite; }
+.qc-admin-spinner[hidden], .qc-admin-pending-status[hidden], .qc-admin-feedback [hidden] { display: none !important; }
+@keyframes qc-admin-spin { to { transform: rotate(360deg); } }
+.qc-admin .qc-admin-action-pending { cursor: progress; opacity: 1; }
+.qc-admin-pending-status { display: flex; flex-basis: 100%; align-items: flex-start; gap: 10px; padding: 13px 15px; margin: 16px 0 0; border: 1px solid var(--border-color); border-radius: 8px; background: var(--qc-admin-blue-soft); color: var(--body-fg); font-size: 13px; line-height: 1.65; }
+.qc-admin-pending-status .qc-admin-spinner { margin-top: 3px; color: var(--link-fg); }
+.qc-admin-feedback { padding: 20px 22px; margin: 0 0 24px; border: 1px solid var(--border-color); border-left: 4px solid var(--link-fg); border-radius: 10px; background: var(--qc-admin-blue-soft); overflow-wrap: anywhere; }
+.qc-admin-feedback h2 { margin: 0; padding: 0; color: var(--body-loud-color); font-size: 18px; background: transparent; }
+.qc-admin-feedback p { margin: 10px 0 0; line-height: 1.65; }
+.qc-admin-feedback__heading { display: flex; align-items: center; gap: 11px; }
+.qc-admin-feedback__heading .qc-admin-spinner { color: var(--link-fg); }
+.qc-admin-feedback__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 16px; }
+.qc-admin-feedback--error { border-left-color: var(--error-fg); background: var(--qc-admin-surface); }
+.qc-admin-status-inline { display: inline-flex; align-items: center; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .qc-admin-spinner { animation: none; border-style: dotted; } }
 @media (max-width: 1100px) {
   .qc-admin-management--overview { grid-template-columns: minmax(0, 1fr); }
 }

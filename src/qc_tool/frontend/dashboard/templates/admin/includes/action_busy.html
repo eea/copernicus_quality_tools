@@ -1,0 +1,7 @@
+<section class="qc-admin-feedback qc-admin-feedback--waiting" data-admin-busy-url="{{ admin_busy_status_url }}" aria-labelledby="admin-busy-heading">
+  <div class="qc-admin-feedback__heading"><span class="qc-admin-spinner" data-admin-busy-spinner aria-hidden="true"></span><h2 id="admin-busy-heading" data-admin-busy-heading>Another action is finishing</h2></div>
+  <p>{% if action_error %}{{ action_error }}{% elif storage_error %}{{ storage_error }}{% else %}{{ busy_message }}{% endif %}</p>
+  <p data-admin-busy-message role="status" aria-live="polite">Checking when maintenance becomes available. Your request will not be retried automatically.</p>
+  <div class="qc-admin-feedback__actions"><a class="btn-qc-secondary" href="{{ admin_busy_refresh_url }}" data-admin-busy-refresh>Refresh this page</a><a href="{% url 'admin_maintenance' %}" data-admin-busy-details>View maintenance status</a><button type="button" class="btn-qc-secondary" data-admin-busy-retry hidden>Check again</button></div>
+  <noscript><p>Open maintenance status to check the current action, then refresh this page before trying again.</p></noscript>
+</section>

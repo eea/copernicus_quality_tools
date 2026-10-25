@@ -45,18 +45,19 @@
       </div>
       <p>Control maintenance, transfer QC records and preserve complete database backups.</p>
       <div class="qc-admin-management-actions">
-        <a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_data_transfer' %}">Manage database</a>
+        <a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_data_transfer' %}">Database status</a>
       </div>
       <div class="qc-admin-link-list">
         {% url 'admin_data_transfer' as transfer_url %}
         {% with records_url=transfer_url|add:'?tables=1#database-records-heading' %}{% include "admin/includes/task_link.html" with url=records_url label="Records by table" description="Browse records, relationships and validated editors" icon="folder" only %}{% endwith %}
         {% with maintenance_url=transfer_url|add:'#database-maintenance-heading' %}{% include "admin/includes/task_link.html" with url=maintenance_url label="Maintenance" description="Pause changes or reopen the service" icon="settings" only %}{% endwith %}
-        {% with transfers_url=transfer_url|add:'?section=records&tab=import' %}{% include "admin/includes/task_link.html" with url=transfers_url label="Import records" description="Add connected QC history and verify retained files" icon="upload" only %}{% endwith %}
-        {% with history_url=transfer_url|add:'?tab=history' %}{% include "admin/includes/task_link.html" with url=history_url label="Transfer history" description="Downloads, progress and recovery" icon="history" only %}{% endwith %}
+        {% with transfers_url=transfer_url|add:'?tab=import' %}{% include "admin/includes/task_link.html" with url=transfers_url label="Restore from backup" description="Review a complete database package or an older records export" icon="upload" only %}{% endwith %}
+        {% with backups_url=transfer_url|add:'?tab=backups' %}{% include "admin/includes/task_link.html" with url=backups_url label="Back up & restore" description="Create, download and delete saved backup ZIPs" icon="download" only %}{% endwith %}
+        {% with activity_url=transfer_url|add:'?tab=activity' %}{% include "admin/includes/task_link.html" with url=activity_url label="Progress & history" description="Follow imports, exports and recovery" icon="history" only %}{% endwith %}
       </div>
       <div id="qc-admin-service-status" class="qc-admin-database-status" aria-labelledby="service-heading">
         <div>
-          <h3 id="service-heading">{% if admin_overview.transfer_error %}Status unavailable{% elif admin_overview.transfer_url %}A data transfer is in progress{% elif admin_overview.phase == 'off' %}Maintenance is off{% elif admin_overview.phase == 'ready' %}Maintenance is on{% elif admin_overview.phase == 'stopping' %}Turning on maintenance{% else %}Status unavailable{% endif %}</h3>
+          <h3 id="service-heading">{% if admin_overview.transfer_error %}Status unavailable{% elif admin_overview.transfer_url %}A database transfer holds maintenance{% elif admin_overview.phase == 'off' %}Maintenance is off{% elif admin_overview.phase == 'ready' %}Maintenance is on{% elif admin_overview.phase == 'stopping' %}<span class="qc-admin-spinner" aria-hidden="true"></span> Turning on maintenance{% else %}Status unavailable{% endif %}</h3>
           <p>{% if admin_overview.transfer_error or admin_overview.phase == 'unavailable' %}Open maintenance to review the problem before changing the database.{% elif admin_overview.transfer_url %}Open the transfer to see its progress and next step.{% elif admin_overview.phase == 'off' %}Turn it on before importing or exporting.{% elif admin_overview.phase == 'ready' %}Changes are paused. Turn it off when your database work is finished.{% else %}Open maintenance to follow progress.{% endif %}</p>
         </div>
         {% if admin_overview.transfer_url %}<a href="{{ admin_overview.transfer_url }}">View current transfer</a>{% else %}<a href="{% url 'admin_maintenance' %}">{% if admin_overview.phase == 'stopping' %}View maintenance progress{% else %}Maintenance settings{% endif %}</a>{% endif %}
@@ -64,9 +65,9 @@
     </section>
     <section id="qc-admin-storage" class="qc-admin-panel" aria-labelledby="storage-heading">
       <div class="qc-admin-panel__heading"><span class="qc-admin-icon"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#folder"></use></svg></span><h2 id="storage-heading">Storage</h2></div>
-      <p>Browse delivery ZIPs, QC outputs and published artifacts, including files without database records.</p>
-      <div class="qc-admin-management-actions"><a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_storage' %}">Browse storage</a></div>
-      <p>Inspect database links, verify historical ZIPs, and move eligible files to recoverable trash during maintenance.</p>
+      <p>Find submitted and approved deliveries, saved specification versions and boundary packages.</p>
+      <div class="qc-admin-management-actions"><a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{% url 'admin_storage' %}">Open storage</a></div>
+      <p>Browse other server files, download retained evidence or connect a desktop SFTP client.</p>
     </section>
     {% endif %}
   </div>

@@ -28,6 +28,9 @@ class FrontendEntrypointTests(unittest.TestCase):
         stub = (
             '#!/bin/sh\n'
             'printf "%s\\n" "$*" >> "$QC_FRONTEND_TEST_LOG"\n'
+            'if [ "$*" = "-m qc_tool.storage check" ]; then\n'
+            '    exit "${QC_FRONTEND_TEST_STORAGE_FAILURE:-0}"\n'
+            'fi\n'
             'if [ "$*" = "-m qc_tool.frontend.manage database check --allow-maintenance-recovery" ]; then\n'
             '    printf "%s\\n" ready\n'
             'fi\n'
@@ -58,6 +61,8 @@ class FrontendEntrypointTests(unittest.TestCase):
         }
         self.environment.pop("QC_TOOL_MIGRATE_ON_STARTUP", None)
         self.environment.pop("GUNICORN_CMD_ARGS", None)
+        self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ROOT", None)
+        self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ID", None)
 
     def startup(self, **environment):
         self.log.unlink(missing_ok=True)
@@ -97,6 +102,31 @@ class FrontendEntrypointTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(commands, [])
                 self.assertIn("QC_TOOL_WEB_WORKERS must be 1", result.stderr)
+
+    def test_configured_persistence_is_checked_before_django_commands(self):
+        result, commands = self.startup(
+            QC_TOOL_PERSISTENT_STORAGE_ROOT="/mnt",
+            QC_TOOL_PERSISTENT_STORAGE_ID="test-installation",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(commands[:3], [
+            "-m qc_tool.storage check",
+            "-m qc_tool.frontend.manage database check --allow-maintenance-recovery",
+            "-m qc_tool.frontend.manage collectstatic --noinput",
+        ])
+
+    def test_storage_failure_and_partial_configuration_stop_before_django(self):
+        for configuration in (
+            {"QC_TOOL_PERSISTENT_STORAGE_ROOT": "/mnt"},
+            {"QC_TOOL_PERSISTENT_STORAGE_ID": "test-installation"},
+            {"QC_TOOL_PERSISTENT_STORAGE_ROOT": ""},
+        ):
+            with self.subTest(configuration=configuration):
+                result, commands = self.startup(
+                    **configuration, QC_FRONTEND_TEST_STORAGE_FAILURE="1",
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(commands, ["-m qc_tool.storage check"])
 
     def test_existing_worker_heartbeat_override_remains_supported(self):
         result, commands = self.startup(QC_TOOL_WEB_TIMEOUT_SECONDS="240")

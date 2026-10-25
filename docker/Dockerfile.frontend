@@ -54,6 +54,7 @@ COPY product_definitions /usr/local/src/copernicus_quality_tools/product_definit
 COPY testing_data /usr/local/src/copernicus_quality_tools/testing_data
 COPY docker /usr/local/src/copernicus_quality_tools/docker
 COPY scripts /usr/local/src/copernicus_quality_tools/scripts
+COPY docs/deployment/storage-access.md /usr/local/src/copernicus_quality_tools/docs/deployment/storage-access.md
 COPY pyproject.toml README.md LICENSE /usr/local/src/copernicus_quality_tools/
 RUN mkdir -p /var/lib/qc_tool \
     && python3 -c "import sys; assert sys.version_info >= (3, 11)"

@@ -1,7 +1,7 @@
 {% if account_choice_form.rows %}
 <section class="transfer-user-review" aria-labelledby="user-choices-heading">
   <h3 id="user-choices-heading">Choose what happens to each user</h3>
-  <p>Import a new inactive user, use an existing account unchanged, update its profile, or skip it. Only the actions available for that user are offered.</p>
+  <p>For each user, choose one of the available actions. <strong>Import</strong> creates an inactive account; <strong>Use existing</strong> keeps its current profile; <strong>Update profile</strong> applies the reviewed profile fields; <strong>Skip</strong> leaves the user out.</p>
   <p class="transfer-account-protection"><strong>Update profile changes first name, last name and email only.</strong> It preserves the username, password, activation, roles, permissions, product access, tokens and history.</p>
   {{ account_choice_form.non_field_errors }}{{ account_choice_form.account_plan_hash.errors }}{{ account_choice_form.account_plan_hash }}
   <input type="hidden" name="account_choice_page" value="{{ account_choice_page.number }}">
@@ -14,7 +14,7 @@
     {% endif %}
     <div class="transfer-account-choice__fields">
       <div class="form-row">{{ row.action.errors }}{{ row.action.label_tag }}{{ row.action }}</div>
-      {% if row.source.candidate_targets %}<div class="form-row">{{ row.target.errors }}{% if row.single_target %}{{ row.target }}<p class="help">Existing user: <strong>{{ row.single_target.username }}</strong></p>{% else %}{{ row.target.label_tag }}{{ row.target }}<p class="help">Used for the existing-account or profile-update action.</p>{% endif %}</div>{% endif %}
+      {% if row.source.candidate_targets %}<div class="form-row">{{ row.target.errors }}{% if row.single_target %}{{ row.target }}<p class="help">Existing user: <strong>{{ row.single_target.username }}</strong></p>{% else %}{{ row.target.label_tag }}{{ row.target }}<p class="help">Choose the account to reuse or update. This selection is ignored when importing a new user or skipping.</p>{% endif %}</div>{% endif %}
     </div>
   </article>
   {% endfor %}

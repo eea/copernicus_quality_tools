@@ -11,6 +11,9 @@
 !docker/**
 !scripts/
 !scripts/**
+!docs/
+!docs/deployment/
+!docs/deployment/storage-access.md
 !pyproject.toml
 !README.md
 !LICENSE

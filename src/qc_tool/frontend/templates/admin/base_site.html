@@ -61,11 +61,13 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/navigation.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/icons.css' %}">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/actions.css' %}">
-<meta name="qc-maintenance" content="{{ maintenance.enabled|yesno:'on,off' }}" data-notice="{{ maintenance.notice }}">
+<meta name="qc-maintenance" content="{{ maintenance.enabled|yesno:'on,off' }}" data-notice="{% if maintenance.phase == 'stopping' %}Turning on maintenance. QC work is stopping.{% elif maintenance.phase == 'unavailable' %}Maintenance status is unavailable. Changes remain paused; open maintenance settings for details.{% else %}Maintenance is on. You can browse and download existing data; changes are paused.{% endif %}">
 <meta name="qc-admin" content="true">
 <link rel="stylesheet" href="{% static 'dashboard/css/ui/maintenance.css' %}">
 <script src="{% static 'dashboard/js/shared/maintenance.js' %}" defer></script>
 <script src="{% static 'dashboard/js/shared/navigation.js' %}" defer></script>
+<script src="{% static 'dashboard/js/admin/action-feedback.js' %}" defer></script>
+<script src="{% static 'dashboard/js/admin/busy-feedback.js' %}" defer></script>
 {% endblock %}
 
 {% block header %}

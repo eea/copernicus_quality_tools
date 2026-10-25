@@ -24,6 +24,47 @@ same shared data through compatible container paths.
 `WORK_DIR`, `BOUNDARY_DIR`, and `INCOMING_DIR` are shared contracts. Do not map
 the same setting to unrelated storage in frontend and worker.
 
+### Optional EEA persistent filesystem
+
+These values belong to the opt-in `compose.eea-storage.yaml` profile. Existing
+named-volume deployments need no new storage identity. See
+[EEA persistent storage](../deployment/eea-storage.md) before selecting the
+override; it does not copy existing data.
+
+| Variable | Default | Services | Purpose |
+| --- | --- | --- | --- |
+| `QC_TOOL_PERSISTENT_ROOT` | required by the override | Compose host substitution | Absolute host mount, for example `/srv/qc-tool`; its `data` and private subdirectories must already exist on verified persistent storage. |
+| `QC_TOOL_PERSISTENT_STORAGE_ROOT` | unset; guard disabled | frontend, worker | Absolute container root checked before application startup. The EEA override sets `/mnt` and mounts the host's `data` tree there. |
+| `QC_TOOL_PERSISTENT_STORAGE_ID` | required when the guard is enabled | frontend, worker | Expected stable, non-secret identity in `QC_TOOL_PERSISTENT_STORAGE_ROOT/.qc-tool-storage-id`; provision the marker explicitly on the intended filesystem. |
+
+The marker is never created or corrected automatically. Missing/mismatched
+storage blocks startup before application directories can be created on an
+empty fallback. Use `python3 -m qc_tool.storage check` for identity validation
+and `python3 -m qc_tool.storage probe` for an explicit temporary-files capability
+test. Configure real host mount dependencies too: a Docker bind mount alone
+does not prove that Azure storage is mounted. Probe success is local evidence,
+not a guarantee of cross-host locking or crash durability.
+
+## Admin storage browser and desktop access
+
+These frontend settings are passed through by the local, EEA and service-provider
+Compose files. They do not mount host folders or start an SFTP service.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `QC_TOOL_STORAGE_ROOTS` | `[]` | JSON list of up to 16 additional read-only browser locations, each with `key`, `label` and absolute container `path`; the path must already be mounted in the frontend. |
+| `QC_TOOL_STORAGE_SFTP_HOST` | empty | SFTP endpoint shown in **Admin → Storage → Connect with SFTP**; empty means not set up. |
+| `QC_TOOL_STORAGE_SFTP_PORT` | `2222` | Displayed SFTP port, from 1 to 65535. |
+| `QC_TOOL_STORAGE_SFTP_USERNAME` | `qcstorage` | Displayed SSH account name; no account or key is created. |
+| `QC_TOOL_STORAGE_SFTP_ROOT` | `/files` | Absolute starting folder in the SFTP share. |
+
+For example, `QC_TOOL_STORAGE_ROOTS='[{"key":"archive","label":"Archive","path":"/mnt/archive"}]'`
+adds an **Archive** location once that container directory is mounted. The browser
+excludes private application paths, hidden files and unsafe filesystem links.
+See [storage access](../deployment/storage-access.md) for mounting additional
+locations, ZIP download limits and optional key-based SFTP setup. SFTP uses its
+own approved share and does not inherit the browser's filtered path policy.
+
 ## Django environment and HTTP security
 
 | Variable | Default | Notes |
@@ -120,19 +161,30 @@ not change those infrastructure limits.
 | --- | --- | --- |
 | `QC_TOOL_TRANSFER_DIR` | `WORK_DIR/data-transfer` | Private 0700 persistent staging, journals, packages and `database-selection.json`, shared by every frontend; never expose as media. Preserve it across restarts and deployments. |
 | `QC_TOOL_TRANSFER_MAX_RECORDS` | `250000` | Combined source accounts/business rows in a portable package, configurable from 1 to 1,000,000; native PostgreSQL backups have no portable row cap |
-| `QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES` | `17179869184` (16 GiB) | Maximum uploaded/generated package size |
-| `QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES` | `68719476736` (64 GiB) | Maximum total artifact inventory size |
-| `QC_TOOL_TRANSFER_MIN_FREE_BYTES` | `536870912` (512 MiB) | Free-space reserve during upload and before archive/restore writes |
+| `QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES` | `17179869184` (16 GiB) | Maximum actual uploaded/generated ZIP size, after any file compression |
+| `QC_TOOL_TRANSFER_MAX_MEMBER_BYTES` | Configured archive limit | Maximum original expanded size of a single member, including a native database dump; coordinate with archive and expanded limits |
+| `QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES` | `68719476736` (64 GiB) | Maximum total expanded contents, including record and manifest metadata |
+| `QC_TOOL_TRANSFER_MIN_FREE_BYTES` | `536870912` (512 MiB) | Free-space reserve enforced during upload, archive creation and restore writes |
 | `QC_TOOL_POSTGRES_TOOL_TIMEOUT` | `3600` seconds | Native PostgreSQL tool timeout per invocation; integer from 1 to 86400. Timeouts retain maintenance and require recovery; they do not reset a destination. |
 | `QC_TOOL_UPLOAD_TEMP_DIR` | OS temporary directory | Optional preprovisioned private directory for Django multipart upload spooling, sized for the configured maximum uploads |
 
-Fixed reader bounds also cap individual members at 16 GiB, record JSON at
-128 MiB, metadata at 16 MiB, ZIP members at 100,000, the central directory at
+Fixed reader bounds also cap record JSON at
+128 MiB, manifest metadata at 16 MiB, ZIP members at 100,000, the central directory at
 64 MiB and decompression ratio at 1000. Raising one environment limit does not
 disable these checks. Configure proxy upload limits/timeouts and disk monitoring
 for the intended package sizes. Define private-package retention; active or
 recoverable operations must not be removed. See
 [record transfers](../user-guide/record-transfers.md).
+
+Exports measure lossless DEFLATE level-1 compression during the existing file
+hash pass. A file uses compression only when smaller and accepted by the reader's
+expansion-ratio bound; otherwise it is stored directly. The native custom dump
+and metadata use stored ZIP members. Capacity review uses measured compressed
+file bytes plus the estimated native database size and ZIP overhead. Original
+sizes still govern member/expanded limits and restore space. Actual ZIP growth
+and the free-space reserve remain enforced during writing. Raising a byte limit
+does not provide disk capacity, and no selected section or older backup is
+automatically removed to make an export fit.
 
 Portable exports count the complete selected graph before loading record
 contents. The review shows the count and configured limit. Creation and the
@@ -143,6 +195,11 @@ intended package before raising this limit. The 128 MiB record-document limit
 still applies, independently of row count. A full native backup uses PostgreSQL
 tools to stream the database and preserves all SQL rows; restoring it uses a
 separate database rather than appending to the active one.
+
+Provision import storage for the staged ZIP, expanded files and recovery data,
+plus the free-space reserve. Provision PostgreSQL separately for restored data,
+indexes and transaction work; the transfer filesystem reserve does not measure
+free space on a remote database server.
 
 The default native PostgreSQL profile preserves all database rows, including
 credential hashes and sessions; portable profiles intentionally filter them.

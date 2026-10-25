@@ -4,7 +4,9 @@ import hashlib
 from pathlib import Path
 import subprocess
 import sys
+import zipfile
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -13,6 +15,8 @@ from django.test import TransactionTestCase, override_settings
 
 from qc_tool.database.models import TransferReceipt
 from qc_tool.database.transfers import postgres, service, store
+from qc_tool.database.transfers.archive import inspect_archive
+from qc_tool.database.transfers.components import FILE_COMPONENTS
 from qc_tool.frontend.dashboard.services import maintenance
 from qc_tool.frontend.dashboard.services.maintenance.operations import active_operation
 
@@ -34,9 +38,11 @@ class NativeTransferServiceTests(TransactionTestCase):
         self.metadata = {
             "format": "qc-tool-postgresql", "version": 1, "created_at": "2026-10-21T12:00:00+00:00",
             "review_hash": "a" * 64, "counts": {"public.auth_user": 1, "public.extra_table": 2},
+            "source_details": {"source_database": "native_source", "app_version": "3.0.0",
+                               "postgresql_version": "17.6", "exported_at": "2026-10-21T12:00:00+00:00"},
         }
         self.enterContext(patch.object(postgres, "preview", return_value=self.metadata.copy()))
-        self.enterContext(patch.object(postgres, "dump_to", side_effect=self.dump))
+        self.enterContext(patch.object(postgres, "capture_stream", side_effect=self.dump))
         self.enterContext(patch.object(postgres, "inspect_native", side_effect=lambda package: package.records))
         self.target = {"database": "separate_restore", "oid": 98765}
         self.native_plan = {
@@ -50,10 +56,10 @@ class NativeTransferServiceTests(TransactionTestCase):
         }))
         self.verifier = self.enterContext(patch.object(postgres, "verify_restore", return_value=self.restorer.return_value))
 
-    def dump(self, path):
-        Path(path).write_bytes(b"PGDMP synthetic native archive")
-        return {**self.metadata, "dump_sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest(),
-                "dump_bytes": Path(path).stat().st_size}
+    def dump(self, output, **kwargs):
+        data = b"PGDMP synthetic native archive"
+        output.write(data)
+        return {**self.metadata, "dump_sha256": hashlib.sha256(data).hexdigest(), "dump_bytes": len(data)}
 
     def export(self):
         selection = {"profile": "database", "user_ids": []}
@@ -81,6 +87,7 @@ class NativeTransferServiceTests(TransactionTestCase):
         self.export()
         operation = service.list_operations(self.actor)[0]
         self.assertEqual(operation["result"]["counts"], self.metadata["counts"])
+        self.assertEqual(operation["source_details"], self.metadata["source_details"])
         self.assertFalse((store.operation_dir(operation["id"]) / "database.dump").exists())
         self.assertTrue(maintenance.read_status()["enabled"])
         self.assertFalse(TransferReceipt.objects.exists())
@@ -90,6 +97,67 @@ class NativeTransferServiceTests(TransactionTestCase):
         with patch.object(service, "_record_capacity", side_effect=AssertionError("Native SQL has no portable row cap")):
             self.export()
         self.assertEqual(service.list_operations(self.actor)[0]["result"]["counts"], self.metadata["counts"])
+
+    def test_compressed_selected_files_export_and_stage_under_the_same_archive_limits(self):
+        from qc_tool.common import CONFIG
+
+        root = store.directory().parent / "business-files"
+        configuration = {name: root / name for name in (
+            "work_dir", "incoming_dir", "submission_dir", "boundary_dir")}
+        for directory in configuration.values():
+            directory.mkdir(parents=True)
+        configuration["product_dirs"] = []
+        boundary = b"original boundary feature\n" * 200_000
+        files = {
+            ("work_dir", "product_definitions/example.json"): b'{"original":"specification bytes"}\n',
+            ("work_dir", "job_" + "a" * 32 + "/evidence.bin"): b"original QC evidence",
+            ("incoming_dir", "operator/input.zip"): b"original delivery bytes",
+            ("submission_dir", "published/receipt.json"): b'{"original":"publication bytes"}\n',
+            ("boundary_dir", "vector/complete.gpkg"): boundary,
+        }
+        for (name, key), payload in files.items():
+            path = configuration[name] / key
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(payload)
+        self.enterContext(patch.dict(CONFIG, configuration))
+        limit, free, reserve = 256 * 1024, 384 * 1024, 32 * 1024
+        self.enterContext(override_settings(
+            QC_TOOL_TRANSFER_ARCHIVE_LIMITS={"max_archive_bytes": limit},
+            QC_TOOL_TRANSFER_MIN_FREE_BYTES=reserve,
+        ))
+        selection = {"profile": "database", "user_ids": [], "components": list(FILE_COMPONENTS)}
+        self.assertGreater(len(boundary), limit)
+        self.assertGreater(len(boundary), free - reserve)
+        # Only the backup volume is constrained during creation. Restore still
+        # needs room for the original expanded files on their destination volume.
+        with patch.object(service.shutil, "disk_usage", return_value=SimpleNamespace(free=free, total=free * 2)):
+            preview = service.export_preview(selection, self.actor)
+            self.assertFalse(preview["blockers"], preview["blockers"])
+            self.assertEqual({row["key"] for row in preview["components"] if row["selected"]}, set(FILE_COMPONENTS))
+            operation = service.create_export(selection, self.actor, preview["review_hash"], self.generation)
+            result = service.run_operation(operation["id"])
+        self.assertEqual(result["status"], "completed")
+        package = store.operation_dir(operation["id"]) / "package.zip"
+        self.assertLess(package.stat().st_size, min(limit, free - reserve))
+        verified = inspect_archive(package, limits=service._limits())
+        self.assertEqual(verified.records["counts"], self.metadata["counts"])
+        identities = {"work_dir": "work", "incoming_dir": "incoming",
+                      "submission_dir": "submissions", "boundary_dir": "boundaries"}
+        entries = {(entry["root"], entry["key"]): entry for entry in verified.entries}
+        for (name, key), payload in files.items():
+            with verified.open_artifact(entries[identities[name], key]) as stream:
+                self.assertEqual(stream.read(), payload)
+            self.assertEqual((configuration[name] / key).read_bytes(), payload)
+        with zipfile.ZipFile(package) as archive:
+            member = archive.getinfo("boundaries/vector/complete.gpkg")
+            self.assertLess(member.compress_size, member.file_size)
+        with package.open("rb") as stream:
+            staged = service.stage_import(SimpleUploadedFile("complete.zip", stream.read()), self.actor)
+        planned = service.plan_import(staged["id"], self.actor)
+        self.assertTrue(staged["include_files"])
+        self.assertTrue(planned["can_apply"], planned["blockers"])
+        self.assertEqual(planned["counts"], self.metadata["counts"])
+        self.assertIsNone(active_operation())
 
     def test_native_import_uses_separate_target_without_live_sql_receipts(self):
         operation = self.queued_import()

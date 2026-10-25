@@ -1,0 +1,29 @@
+{% if export_review.storage_capacity %}
+{% with capacity=export_review.storage_capacity %}
+<dl class="transfer-fact-grid" aria-label="Export size and space">
+  <div class="transfer-fact"><dt>Estimated ZIP size</dt><dd>{% if capacity.estimated_package_bytes != None %}{{ capacity.estimated_package_bytes|filesizeformat }}{% else %}Calculated during export{% endif %}</dd></div>
+  <div class="transfer-fact"><dt>Free backup storage</dt><dd>{% if capacity.free_bytes != None %}{{ capacity.free_bytes|filesizeformat }}{% else %}Unavailable{% endif %}</dd></div>
+</dl>
+{% if capacity.compression_saved_bytes %}<p class="help">Lossless compression saves {{ capacity.compression_saved_bytes|filesizeformat }} of backup space. Original file contents are preserved.</p>{% endif %}
+{% endwith %}
+<details class="transfer-details"{% if export_review.blockers %} open{% endif %}>
+  <summary>Storage requirements and limits</summary>
+  {% with capacity=export_review.storage_capacity %}
+  <table class="transfer-counts"><caption>Capacity estimate</caption><tbody>
+    <tr><th scope="row">Original file contents</th><td>{{ capacity.file_bytes|filesizeformat }}</td></tr>
+    {% if capacity.compressed_file_bytes != None %}<tr><th scope="row">Files after ZIP compression</th><td>{{ capacity.compressed_file_bytes|filesizeformat }}</td></tr>{% endif %}
+    {% if capacity.compression_saved_bytes %}<tr><th scope="row">Space saved by compression</th><td>{{ capacity.compression_saved_bytes|filesizeformat }}</td></tr>{% endif %}
+    <tr><th scope="row">Record metadata</th><td>{{ capacity.records_bytes|filesizeformat }}</td></tr>
+    {% if native_transfer %}<tr><th scope="row">Database backup estimate</th><td>{% if capacity.estimated_database_bytes != None %}{{ capacity.estimated_database_bytes|filesizeformat }}{% else %}Checked during backup{% endif %}</td></tr>{% endif %}
+    <tr><th scope="row">Estimated package size</th><td>{% if capacity.estimated_package_bytes != None %}{{ capacity.estimated_package_bytes|filesizeformat }}{% else %}Checked during backup{% endif %}</td></tr>
+    <tr><th scope="row">Free space on backup volume</th><td>{% if capacity.free_bytes != None %}{{ capacity.free_bytes|filesizeformat }}{% else %}Unavailable{% endif %}</td></tr>
+    <tr><th scope="row">Estimated free space required, including reserve</th><td>{% if capacity.required_free_bytes != None %}{{ capacity.required_free_bytes|filesizeformat }}{% else %}Checked during backup{% endif %}</td></tr>
+    <tr><th scope="row">Free space reserve</th><td>{{ capacity.reserve_bytes|filesizeformat }}</td></tr>
+    <tr><th scope="row">Package size limit</th><td>{{ capacity.max_archive_bytes|filesizeformat }}</td></tr>
+    <tr><th scope="row">Single file limit</th><td>{{ capacity.max_member_bytes|filesizeformat }}</td></tr>
+    <tr><th scope="row">Expanded contents limit</th><td>{{ capacity.max_total_bytes|filesizeformat }}</td></tr>
+  </tbody></table>
+  <p class="help">Final size can differ. Available space and limits are checked again during export.</p>
+  {% endwith %}
+</details>
+{% endif %}

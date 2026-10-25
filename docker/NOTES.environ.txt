@@ -15,6 +15,25 @@ In order to keep the configuration simple it is recommended to use the same volu
 Then the directory configuration will be the same for every service.
 See the examples in source code at docker/docker-compose.*.yml.
 
+For EEA on an Azure Linux VM, the optional docker/compose.eea-storage.yaml
+override mounts one real persistent application tree at /mnt in both services,
+preserving existing paths. It requires Compose 2.24.4 or later and explicit
+operator provisioning; it never copies existing named volumes automatically.
+See docs/deployment/eea-storage.md before selecting this profile.
+
+  * QC_TOOL_PERSISTENT_ROOT, Compose-only absolute host mount, for example
+      /srv/qc-tool; data, private/frontend and private/postgresql must already
+      exist on the verified filesystem;
+  * QC_TOOL_PERSISTENT_STORAGE_ROOT, optional container storage guard root;
+      unset in existing profiles, /mnt in the EEA persistent-storage override;
+  * QC_TOOL_PERSISTENT_STORAGE_ID, stable non-secret expected identity in
+      ROOT/.qc-tool-storage-id, provisioned by the operator, never by startup.
+
+The frontend and worker check the configured identity before application work.
+Use python3 -m qc_tool.storage check or the explicit temporary-files probe.
+Host mount dependencies and independent backup/restore validation remain
+required; a bind mount or successful local probe does not certify Azure recovery.
+
 Data interchange directories are:
 
   * PRODUCT_DIRS;
@@ -35,6 +54,14 @@ Service qc_tool_frontend
       create no database. Explicit database apply initializes a wholly empty
       target; startup checks an existing current-model schema without upgrades.
   * SHOW_LOGO, informs the frontend server to put the Copernicus logo at web pages;
+  * QC_TOOL_TRANSFER_DIR, private persistent Admin package/journal directory (default WORK_DIR/data-transfer). Custom container paths require an explicit persistent volume mount;
+  * QC_TOOL_TRANSFER_MAX_RECORDS, maximum portable record graph size (default 250000);
+  * QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES, maximum complete package bytes (default 17179869184, 16 GiB);
+  * QC_TOOL_TRANSFER_MAX_MEMBER_BYTES, maximum bytes in one included file or native dump (default the configured archive limit);
+  * QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES, maximum expanded package contents (default 68719476736, 64 GiB);
+  * QC_TOOL_TRANSFER_MIN_FREE_BYTES, backup storage free-space reserve (default 536870912, 512 MiB);
+  * QC_TOOL_UPLOAD_TEMP_DIR, private mounted storage for multipart upload spooling (default system temporary directory);
+  * QC_TOOL_POSTGRES_TOOL_TIMEOUT, native PostgreSQL operation deadline in seconds (default 3600);
   * UPDATE_JOB_STATUSES, instructs the frontend deliveries page to auto-refresh job status info (yes or no);
   * UPDATE_JOB_STATUSES_INTERVAL, interval to refresh job statuses on frontend deliveries page (30000 miliseconds);
   * WORKER_ALIVE_TIMEOUT, timeout in seconds to wait for job status response from worker (5 seconds);

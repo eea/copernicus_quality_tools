@@ -24,6 +24,7 @@ class AdminMaintenanceTests(TestCase):
         self.addCleanup(temporary_directory.cleanup)
         settings_override = override_settings(
             QC_TOOL_MAINTENANCE_DIR=temporary_directory.name + "/maintenance",
+            QC_TOOL_TRANSFER_DIR=temporary_directory.name + "/transfers",
             MAINTENANCE_MODE=False,
         )
         settings_override.enable()
@@ -167,6 +168,102 @@ class AdminMaintenanceTests(TestCase):
         self.assertEqual(response.json()["generation"], 4)
         self.assertIn("no-store", response["Cache-Control"])
 
+    def test_get_json_status_does_not_advance_or_repeat_an_administrator_action(self):
+        with (
+            patch.object(maintenance, "advance") as advance,
+            patch.object(maintenance, "enable") as enable,
+            patch.object(maintenance, "disable") as disable,
+        ):
+            response = self.client.get(self.url, HTTP_ACCEPT="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["phase"], "off")
+        self.assertFalse(response.json()["busy"])
+        self.assertFalse(response.json()["poll"])
+        self.assertEqual(response.json()["transfer_url"], "")
+        self.assertIn("no-store", response["Cache-Control"])
+        for action in (advance, enable, disable):
+            action.assert_not_called()
+
+    def test_get_status_recognizes_each_admission_lock_as_busy(self):
+        for control_busy, execution_busy in ((True, False), (False, True)):
+            with (
+                self.subTest(control_busy=control_busy, execution_busy=execution_busy),
+                patch.object(maintenance, "control_active", return_value=control_busy),
+                patch("qc_tool.database.transfers.store.execution_active", return_value=execution_busy),
+            ):
+                response = self.client.get(self.url, HTTP_ACCEPT="application/json")
+
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()["busy"])
+            self.assertTrue(response.json()["poll"])
+            self.assertEqual(response["Retry-After"], "3")
+
+    def test_get_busy_status_links_only_to_the_owned_admin_transfer(self):
+        operation_id = "a2b12963-17de-45d0-804e-f4c35b1c4d05"
+        with patch(
+            "qc_tool.frontend.dashboard.views.admin_maintenance.active_operation",
+            return_value={"kind": "export", "operation_id": operation_id},
+        ):
+            response = self.client.get(self.url, HTTP_ACCEPT="application/json")
+
+        self.assertTrue(response.json()["transfer_active"])
+        self.assertEqual(response.json()["transfer_url"], reverse("admin_data_transfer") + "?operation=" + operation_id)
+
+    def test_busy_progress_is_distinct_from_a_failed_connection(self):
+        with (
+            patch.object(maintenance, "read_status", return_value=self.status(phase="stopping", generation=4)),
+            patch.object(maintenance, "advance", side_effect=maintenance.MaintenanceBusy("Another maintenance action is in progress. Retry shortly.")),
+        ):
+            response = self.client.post(
+                self.url, {"action": "progress", "generation": 4},
+                HTTP_ACCEPT="application/json",
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertTrue(response.json()["busy"])
+        self.assertTrue(response.json()["poll"])
+
+    def test_busy_control_has_a_live_waiting_notice_instead_of_a_plain_error(self):
+        with patch.object(maintenance, "enable", side_effect=maintenance.MaintenanceBusy("Another maintenance action is in progress. Retry shortly.")):
+            response = self.client.post(self.url, {"action": "enable", "generation": 0})
+
+        self.assertContains(response, "Another action is finishing", status_code=409)
+        self.assertContains(response, "data-admin-busy-spinner", status_code=409)
+        self.assertContains(response, 'data-admin-busy-url="{}"'.format(self.url), status_code=409)
+        self.assertContains(response, 'disabled aria-describedby="admin-busy-heading"', status_code=409)
+        self.assertNotContains(response, '<p class="errornote" role="alert">', status_code=409)
+
+    def test_status_probe_failure_is_unavailable_without_starting_a_check(self):
+        from qc_tool.database.transfers.errors import TransferError
+
+        with (
+            patch("qc_tool.database.transfers.store.execution_active", side_effect=TransferError("Transfer execution locking is unavailable.")),
+            patch.object(maintenance, "advance") as advance,
+        ):
+            response = self.client.get(self.url, HTTP_ACCEPT="application/json")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(response.json()["poll"])
+        self.assertFalse(response.json()["busy"])
+        self.assertEqual(response.json()["error"], "Transfer execution locking is unavailable.")
+        advance.assert_not_called()
+
+    def test_unavailable_status_does_not_present_stopping_work_as_known(self):
+        from qc_tool.database.transfers.errors import TransferError
+        with patch("qc_tool.database.transfers.store.execution_active", side_effect=TransferError("Locking is unavailable.")):
+            response = self.client.get(self.url)
+        self.assertContains(response, "Maintenance status is unavailable", status_code=503)
+        self.assertNotContains(response, "Turning on maintenance", status_code=503)
+
+    def test_busy_state_from_a_wrapped_transfer_error_remains_a_temporary_wait(self):
+        from qc_tool.database.transfers.errors import TransferError
+        error = TransferError("Another maintenance action is in progress.")
+        error.__cause__ = maintenance.MaintenanceBusy(str(error))
+        with patch("qc_tool.database.transfers.service.validate_resume_database", side_effect=error):
+            response = self.client.post(self.url, {"action": "disable", "generation": 0})
+        self.assertContains(response, "Another action is finishing", status_code=409)
+
     def test_automatic_progress_stops_after_readiness(self):
         with patch.object(maintenance, "advance") as advance:
             enabled = maintenance.enable(self.administrator, expected_generation=0)
@@ -293,7 +390,7 @@ class AdminMaintenanceTests(TestCase):
         response = self.render_status("stopping")
 
         self.assertContains(response, "Turning on maintenance")
-        self.assertContains(response, "checking progress automatically")
+        self.assertContains(response, "checking readiness can take a moment")
         self.assertContains(response, 'data-maintenance-progress')
         self.assertContains(response, 'disabled aria-describedby="maintenance-stopping-note"')
         self.assertNotContains(response, "Check workers")
@@ -376,7 +473,7 @@ class AdminMaintenanceTests(TestCase):
         ):
             response = self.render_status("ready")
 
-        self.assertContains(response, "Database transfer in progress")
+        self.assertContains(response, "Maintenance is reserved for a database transfer")
         self.assertContains(response, "View transfer")
         self.assertContains(
             response, reverse("admin_data_transfer") + "?operation=" + operation_id,

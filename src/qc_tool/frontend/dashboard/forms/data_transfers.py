@@ -1,103 +1,57 @@
-"""Explicit account selections and confirmations for administrator transfers."""
+"""Full database package selections and reviewed import confirmations."""
 
 from django import forms
-from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.contrib.auth import get_user_model
+
+from qc_tool.database.transfers.components import EXPORT_COMPONENT_CHOICES, EXPORT_COMPONENTS
 
 
 def _file_selection_field():
     return forms.TypedChoiceField(
-        label="Files", required=False, coerce=lambda value: value == "true", empty_value=None,
-        choices=(("false", "Records only"), ("true", "Records and available files")),
+        label="Packaged files", required=False, coerce=lambda value: value == "true", empty_value=None,
+        choices=(("true", "Include packaged files"), ("false", "Skip packaged files")),
         widget=forms.RadioSelect,
     )
-
-
-class AccountChoiceField(forms.ModelMultipleChoiceField):
-    def label_from_instance(self, user):
-        return user.get_username()
 
 
 class ExportSelectionForm(forms.Form):
     scope = forms.ChoiceField(
-        label="What to export",
-        initial="application",
-        widget=forms.RadioSelect,
-        choices=(
-            ("database", "Full database backup"),
-            ("application", "Connected QC records"),
-            ("all_accounts", "All account profiles"),
-            ("selected_accounts", "Selected account profiles"),
-        ),
+        choices=(("database", "Complete database"),), initial="database",
+        widget=forms.HiddenInput,
     )
-    users = AccountChoiceField(
-        label="Selected users", required=False,
-        queryset=get_user_model().objects.none(),
-        help_text="Choose the accounts to include.",
-        widget=FilteredSelectMultiple("users", is_stacked=False),
+    components = forms.MultipleChoiceField(
+        label="Additional package sections", required=False,
+        choices=EXPORT_COMPONENT_CHOICES, initial=EXPORT_COMPONENTS,
+        widget=forms.CheckboxSelectMultiple,
     )
-    include_files = _file_selection_field()
 
-    def __init__(self, *args, allow_user_selection=True, area=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        scope = self.data.get("scope") if self.is_bound else self.initial.get("scope", "application")
-        self.initial.setdefault("include_files", "true" if scope == "application" else "false")
-        if self.is_bound:
+        self.initial.setdefault("scope", "database")
+        self.initial.setdefault("components", list(EXPORT_COMPONENTS))
+        if self.is_bound and "scope" not in self.data:
             self.data = self.data.copy()
-            if scope not in {"application", "database"}:
-                self.data["include_files"] = "false"
-            elif "include_files" not in self.data:
-                # Retain the established defaults for bookmarked/older forms.
-                self.data["include_files"] = "true" if scope == "application" else "false"
-        if area == "users":
-            self.fields["scope"].choices = tuple(choice for choice in self.fields["scope"].choices
-                                                  if choice[0] in {"all_accounts", "selected_accounts"})
-        elif area == "records":
-            self.fields["scope"].choices = (("application", "Connected QC records"),)
-        elif area == "recovery":
-            self.fields["scope"].choices = (("database", "Full database backup"),)
-        self.fields["users"].queryset = (get_user_model().objects.order_by("username", "pk")
-                                         if allow_user_selection else get_user_model().objects.none())
-        # A single scope owns selection. Values left in a hidden picker when an
-        # administrator switches scope must not contradict or broaden that scope.
-        if self.is_bound and self.data.get("scope") != "selected_accounts":
-            self.data = self.data.copy()
-            if hasattr(self.data, "setlist"):
-                self.data.setlist("users", [])
-            else:
-                self.data["users"] = []
-
-    def clean(self):
-        cleaned = super().clean()
-        if cleaned.get("scope") == "selected_accounts" and not cleaned.get("users"):
-            self.add_error("users", "Select at least one user.")
-        return cleaned
+            self.data["scope"] = "database"
 
     def selection(self):
-        scope = self.cleaned_data["scope"]
+        selected = set(self.cleaned_data["components"])
         return {
-            "profile": scope if scope in {"database", "application"} else "accounts",
-            "user_ids": sorted(user.pk for user in self.cleaned_data["users"]),
-            "include_files": (bool(self.cleaned_data["include_files"])
-                              if scope in {"application", "database"} else False),
+            "profile": "database", "user_ids": [],
+            "components": [key for key in EXPORT_COMPONENTS if key in selected],
         }
 
 
 class UploadPackageForm(forms.Form):
     package = forms.FileField(
         label="QC Tool package (.zip)",
-        help_text="Choose a records export or a database backup created by QC Tool.",
+        help_text="Choose a QC Tool ZIP. Its format and restore destination are identified before you confirm.",
         widget=forms.ClearableFileInput(attrs={"accept": ".zip,application/zip"}),
     )
     include_files = _file_selection_field()
 
-    def __init__(self, *args, area=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.initial.setdefault("include_files", "false" if area == "users" else "true")
-        if area == "users":
-            if self.is_bound:
-                self.data = self.data.copy()
-                self.data["include_files"] = "false"
+        self.initial.setdefault("include_files", "true")
 
 
 class ReviewedActionForm(forms.Form):
@@ -118,6 +72,9 @@ class ImportConfirmationForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["destination_confirmation"].help_text = f"Type {confirmation_text} to confirm this destination."
         if profile == "database":
+            self.fields["destination_confirmation"].widget = forms.HiddenInput()
+            self.fields["destination_confirmation"].help_text = ""
+            self.initial["destination_confirmation"] = confirmation_text
             self.fields["confirmed_scope"].label = (
                 "I trust the source of this database backup and authorize restoring all records, "
                 "including credentials and permissions, by executing its SQL in this separate database."
@@ -141,7 +98,8 @@ class ImportConfirmationForm(forms.Form):
 class DatabaseControlForm(forms.Form):
     generation = forms.IntegerField(min_value=0, widget=forms.HiddenInput)
     revision = forms.IntegerField(min_value=0, widget=forms.HiddenInput)
-    destination_confirmation = forms.CharField(label="Confirm database", max_length=256)
+    destination_confirmation = forms.CharField(max_length=256, strip=False, widget=forms.HiddenInput,
+        error_messages={"required": "The selected database is missing. Reload the page and try again."})
     confirmed_storage = forms.BooleanField(
         label="I reviewed file availability and administrator access. Keep maintenance on after switching.",
     )
@@ -154,14 +112,14 @@ class DatabaseControlForm(forms.Form):
         self.destination = destination
         self.requires_credentials = requires_credentials
         super().__init__(*args, **kwargs)
-        self.fields["destination_confirmation"].help_text = f"Type {destination} to confirm this database."
+        self.initial["destination_confirmation"] = destination
         self.fields["username"].required = requires_credentials
         self.fields["password"].required = requires_credentials
 
     def clean_destination_confirmation(self):
         value = self.cleaned_data["destination_confirmation"]
         if not self.destination or value != self.destination:
-            raise forms.ValidationError("Enter the destination database exactly as displayed.")
+            raise forms.ValidationError("The selected database has changed. Reload the page and try again.")
         return value
 
 

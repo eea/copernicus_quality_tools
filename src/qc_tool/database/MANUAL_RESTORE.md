@@ -25,10 +25,12 @@ is entered in the browser. The configured identity needs database-creation
 permission. An operator may instead provision a separate empty database and set
 `QC_TOOL_RESTORE_DATABASE` as an optional fallback. Existing application or
 foreign objects block native restore even when their tables contain no rows.
-Existing databases, including the serving database, are never reset or dropped.
+Restoration never resets or drops existing databases, including the serving database.
 
 With maintenance ready, upload a complete QC Tool export ZIP, review the displayed
-destination and confirm its name. Restore runs in a single transaction with
+destination, acknowledge the trusted source and choose **Restore database**. The
+action is bound to that destination without requiring name entry. Restore runs
+in a single transaction with
 `--no-owner --no-privileges --no-tablespaces`: all row data remains present, while
 objects belong to the deployment's restore identity and database ACLs/tablespace
 placement are provisioned independently. QC Tool role and account permission
@@ -36,14 +38,43 @@ records remain database row data and are preserved.
 
 Restoration leaves the active database selected. A separate **Switch active
 database** action verifies schema/data/files and administrator access before
-updating the private deployment-bound selection pointer. Confirm the displayed
-name and external storage/credential compatibility; provide target administrator
-credentials if the current account's credentials do not match. Maintenance stays
+updating the private deployment-bound selection pointer. Review the displayed
+destination and acknowledge external storage/credential compatibility; provide
+target administrator credentials if the current account's credentials do not
+match. Maintenance stays
 on. Verify the selected copy before **Resume QC Tool** and sign in normally
 after reopening. The previous database is retained. **Switch back** is available
 only within that same uninterrupted maintenance generation; it is refused after
 reopening because new work may exist. A schema-incompatible copy cannot be
 activated; do not add tables or run an automatic repair to make it pass.
+
+**Database copies** lists the active database, the configured original and
+restore copies separately from saved backup ZIPs. After reopening, choosing a
+previously used database is a new reviewed selection, not quick recovery.
+QC Tool checks the selected copy's current schema, every SQL value, linked
+records/files and administrator access, binds that review to its retained
+physical identity, and requires a fresh confirmation in ready maintenance.
+The databases stay separate; selection does not merge their changes or copy
+additional files. A new restore's first selection must still exactly match its
+original archive. After an explicitly approved first selection, its durable
+private identity record permits later review of current contents without
+requiring the old ZIP. Keep the shared private transfer directory with the
+installation; missing, changed or foreign identity evidence is refused.
+
+To free space, distinguish saved ZIPs from PostgreSQL copies. **Database copies**
+shows current database sizes and read-only schema/table details. Its explicit
+delete control is limited to unused restore destinations whose original private
+ownership journal and PostgreSQL OID/owner/comment still match. Choose **Delete**
+on the copy to remove it; no name entry or checkbox is required. Ready maintenance,
+the current selection revision and a request bound to the exact copy are required.
+The active database, configured original and previous recovery database remain
+protected. A source copy is retained while other present restore copies depend
+on its original identity; remove unused dependent copies first. Connected clients
+or prepared transactions block deletion; QC Tool
+never forces them off. Deleting a copy keeps the transfer audit, saved ZIP and
+shared files. A deletion interrupted after PostgreSQL commits can be completed
+from the same page without deleting another database. Use **Backup files** to
+remove saved export ZIPs separately; their removal does not remove any database.
 
 The manual commands below remain available for a separately reviewed operator
 handoff or a deployment that does not use the Admin switch.

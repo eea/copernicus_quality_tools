@@ -1,0 +1,20 @@
+{% extends "admin/storage_base.html" %}
+{% block storage_description %}Use a desktop SFTP client to browse an approved server share and resume large file downloads.{% endblock %}
+{% block storage_body %}
+  <section class="storage-connection-panel qc-admin-panel">
+    <div class="storage-section-heading"><h2>Connect with SFTP</h2><span class="database-badge{% if not connection.configured %} database-badge--neutral{% endif %}">{% if connection.configured %}Details configured{% else %}Not set up yet{% endif %}</span></div>
+    <p>SFTP is an encrypted file connection. Use an SFTP client such as Cyberduck, WinSCP or FileZilla for a familiar folder browser and resumable downloads. The optional QC Tool share provides read-only file access.</p>
+    {% if connection.configured %}
+    <p class="database-muted">These connection details were supplied by the operator. Your desktop client verifies the server when you connect.</p>
+    <dl class="storage-connection-details"><div><dt>Protocol</dt><dd>SFTP (SSH File Transfer Protocol)</dd></div><div><dt>Server</dt><dd>{{ connection.host }}</dd></div><div><dt>Port</dt><dd>{{ connection.port }}</dd></div><div><dt>Username</dt><dd>{{ connection.username }}</dd></div><div><dt>Remote folder</dt><dd>{{ connection.root }}</dd></div><div><dt>Sign-in method</dt><dd>Your approved SSH key</dd></div></dl>
+    <label class="storage-code-label" for="storage-sftp-address">Connection address</label><div class="storage-copy-row"><code id="storage-sftp-address">{{ connection.address }}</code><button class="btn-qc-secondary btn-qc--compact" type="button" data-storage-copy data-storage-copy-target="storage-sftp-address">Copy address</button></div>
+    <details class="storage-download-help"><summary>Connect from a terminal</summary><div class="storage-copy-row"><code id="storage-sftp-command">{{ connection.command }}</code><button class="btn-qc-secondary btn-qc--compact" type="button" data-storage-copy data-storage-copy-target="storage-sftp-command">Copy command</button></div><p>After signing in, open <code>{{ connection.root }}</code>. Use your desktop client's download controls to copy files to your computer.</p></details>
+    {% else %}
+      {% if connection.configuration_error %}<p class="errornote" role="alert">The connection details need an operator update before they can be used.</p>{% endif %}
+      <div class="storage-connection-empty"><h3>Set up a shared folder for your team</h3><ol><li>Ask the operator to choose an approved storage folder and start the optional SFTP service.</li><li>Give the operator your public SSH key. Keep your private key on your own computer.</li><li>Use the server, port, username and folder supplied by the operator in your SFTP client.</li></ol><p>Browsing and downloading through this page works without SFTP.</p></div>
+    {% endif %}
+    <p class="storage-copy-status" data-storage-copy-status role="status" aria-live="polite" hidden></p>
+  </section>
+  <section class="storage-related-card"><div><h3>Operator setup guide</h3><p>Includes the optional Docker profile, approved share mounts, SSH key setup, connection details and verification steps. The SFTP share may contain fewer locations than this browser.</p></div><a class="btn-qc-secondary" href="{% url 'admin_storage_connection_guide' %}">Download setup guide</a></section>
+  <p class="storage-footnote">Database backups belong to the Database workflow. A file transfer does not capture a consistent PostgreSQL database snapshot.</p>
+{% endblock %}

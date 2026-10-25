@@ -1,119 +1,288 @@
 ---
-title: Import and export records
+title: Import and export database
 parent: User guide
 nav_order: 5
 ---
 
-# Import and export records
+# Import and export database
 
-Open **Admin → User management** (`/admin/users/`) for **Import users** and
-**Export users**. Open **Admin → Database** (`/admin/database/`) for **Import
-records**, **Export records**, **Create full backup** or **Restore a backup**.
-Only QC Tool administrators can use transfer controls. **Transfer history**
-reopens previous work. The previous `?tab=transfers` chooser remains supported.
+Open **Admin → Database** (`/admin/database/`). Navigation follows the tasks you
+can perform, with the same names and return links throughout:
 
-Record packages add information to an existing installation. Full PostgreSQL
-backups preserve the database for recovery into a separate destination. They
-have different review and confirmation steps.
+| Task | Use it to |
+| --- | --- |
+| **Database status** | Identify the active database, check compatibility and maintenance, or browse its records |
+| **Back up & restore** | Create a backup, restore a ZIP, or download and delete saved backup files |
+| **Manage databases** | Inspect PostgreSQL databases, review a switch or remove an unused restore |
+| **Progress & history** | Follow running transfers, continue unfinished work or review earlier results |
 
-## Export users or QC records
+Choose **Create a backup** to select contents, review the package and prepare a
+ZIP for download. Choose **Restore from backup** to upload a ZIP, prepare a
+separate destination, restore it and review whether to use the restored database.
+A restore never selects that database automatically. **Manage databases** handles
+switching between databases and removing unused ones; saved ZIPs are managed in
+**Back up & restore**.
 
-Choose **Export users** in **User management** to export **All account profiles** or
-**Selected account profiles**. The searchable user picker appears for selected
-profiles. These packages include profile information and source roles/product
-grants for review; they exclude credentials, deliveries and QC history.
+**Browse database records** opens a focused table directory. Open a table, then a
+record to inspect its details and connected information. **Back to tables** and
+**Back to [table]** retrace that path. Account and permission records retain their
+**User management** navigation.
 
-Choose **Export records** in **Database** for the supported connected
-QC dataset. Its record scope is fixed: products, definitions, delivery plans,
-deliveries, jobs, review history and required account profiles. This is the
-maintained QC record graph, not an arbitrary selection of PostgreSQL tables.
+**Back to Database status** returns to the main page. A backup or restore opened
+from **Progress & history** or **Manage databases** returns to that section.
+The title identifies its current step, such as **Backup queued**, **Review
+database restore** or **Restored database ready**. Older
+`?tab=history#backup-files` links still open saved files in **Back up & restore**.
+Only QC Tool administrators can use these controls.
 
-Choose **Records only** to keep file identities and references without copying
-their contents, or **Records and available files** to include available local
-delivery ZIPs and connected artifacts. Submitted files do not need approval to
-be preserved. Missing files are reported; they do not prevent exporting their
-records. User-profile packages never include files.
+## Progress and waiting states
 
-1. Choose the relevant section and, for users, which profiles to include. For
-   QC records, choose whether to include files.
-2. If needed, follow **Turn on maintenance**. Wait for **Maintenance is on** and
-   return to the export. The maintenance page checks progress automatically;
-   enabling it interrupts submitted QC jobs.
-3. Choose **Review users export** or **Review records export**, check the record
-   counts and file availability, then create the export package. Changing the
-   records or file choice requires another review.
-4. Progress updates automatically. Download the file when the export is ready.
+Submitting a backup, import, database switch or cleanup shows a spinner and the
+next step. Submit once and keep the page open until its result appears. Uploading
+a ZIP and reviewing large file inventories can take time. Once an export or
+restore has been queued, processing runs on the server; leaving or reloading its
+progress page does not stop it. Return through **Progress & history** to see the current
+stage and processed file or byte counts, then download a finished ZIP from
+**Back up & restore**.
 
-Portable profiles exclude passwords, API credentials, sessions and service
-credentials. Their source roles and product grants are review information;
-imports do not grant that access automatically.
+If another action owns maintenance, a waiting panel checks its status
+automatically. When it finishes, choose **Refresh this page** to review the
+current state before trying again. Status checks never repeat a failed action.
+A transfer that stopped or needs recovery is labelled **Needs attention** rather
+than shown as running. Open its details for the available recovery steps.
 
-The export review shows the total record count and portable-package limit
-(250,000 by default). Product units and catalog records count too. If the
-selection exceeds that limit, no records are dropped and no export starts.
-**Review full database backup** opens the backup workflow with your file choice
-preserved. A full backup restores into a separate database; it cannot append to
-an existing one. If you need an additive package above the current limit, ask
-the deployment operator to review frontend memory capacity and
-`QC_TOOL_TRANSFER_MAX_RECORDS`. Byte-size and integrity limits still apply.
+If a connection fails, the page labels its progress as the last reported state
+and offers **Try automatic updates again** or **Check again**. Automatic checks pause in
+hidden tabs and resume when you return. Expired sessions, unavailable status and
+repeated failures have explicit refresh or sign-in guidance. Maintenance being
+**On** means changes are paused; a spinner appears while work or status checking
+is actually in progress.
 
-## Back up the complete database
+## Databases, backup files and transfer history
 
-Open **Database** and choose **Create full backup** for a complete
-native PostgreSQL backup. This task always includes the full database; it has
-no record-selection controls. Choose **Records only** for the database archive
-alone, or **Records and available files** to include retained local storage.
+QC Tool uses **one active database** for accounts, permissions and records.
+Restoring a full backup creates a separate PostgreSQL database copy. The copy
+remains separate until an administrator reviews and confirms a switch. A saved
+backup ZIP is a file, and a Progress & history entry records an import or export;
+neither is another active database.
 
-1. Turn on maintenance and wait for QC work to stop.
-2. Choose **Review database backup** and inspect the included information.
-3. Choose **Create database backup**, then download it when preparation finishes.
+Open **Admin → Database → Manage databases** to see the active name, available
+copies and their current database sizes. Open a database title to check compatibility
+and see its tables with PostgreSQL row estimates, without selecting it or
+changing its records. Estimates can be stale or unavailable after a restore.
 
-The backup includes all database schema and rows: password hashes, API credential
-digests, sessions, transfer receipts and fields/tables outside the portable
-contract. Including files also preserves retained local delivery ZIPs, job and
-publication artifacts, original specifications and boundary files in the
-configured managed storage. It includes unlinked delivery ZIPs found there,
-including files retained from an earlier database. This inventory does not scan
-the whole server. Temporary work, logs and files outside the managed roots are
-excluded. The review reports included file counts and exclusions.
+To use another supported copy, turn on maintenance, choose **Review switch**,
+review the current and proposed database names, and confirm **Use this database**.
+The review checks the copy's identity, current SQL data, schema, shared files and
+administrator access. A newly restored copy first needs verification against its
+original imported ZIP. Previously approved copies and the original database use
+a fresh review when selected again. Switching keeps both copies and does not
+combine their records. Maintenance stays on so the administrator can check the
+selected installation before reopening it; sign-in may require an account from
+the selected database. Immediate **Switch back** remains a separate recovery
+control restricted to the same maintenance session.
 
-The complete database ZIP contains a QC Tool manifest and PostgreSQL custom
-archive (`archive.dump`). Its hashes verify the packaged bytes; they do not
-authenticate the sender. Native backup does not require the source schema to
-match today's Django models: an older draft database can be preserved without
-altering or repairing it. The installed dump client and source server must have
-the same PostgreSQL major version.
+An unused, QC Tool-owned restore copy offers **Delete**. This button permanently
+removes the displayed database copy; you do not need to type its name. QC Tool
+checks that the request still identifies that copy before deleting it.
+The active, configured original, previous recovery database and copies needed
+as identity evidence for another retained restore are protected. Unknown or
+changed database identities and copies with connected clients cannot be removed
+through this interface. Shared application files and saved backup ZIPs remain.
 
-Native backup includes stored password hashes and API credential digests, not
-recoverable plaintext passwords or previously issued raw API tokens. It also
-preserves account activation, privileges and stored sessions exactly as database
-rows. Handle the package as sensitive authentication data. Private server storage
-uses directories `0700` and files `0600`; downloads require administrator access
-and use non-cacheable responses. Deploy the application behind HTTPS. The ZIP
-itself is not encrypted. Store downloaded backups in approved encrypted storage.
+Open **Back up & restore** to download or delete completed export ZIPs. The page shows the
+available files, actual saved-file sizes and free space on the backup volume.
+Expand **Other files using backup storage** for retained import or recovery
+packages when present. Each backup has **Download** and **Delete** controls;
+its title opens the details. **Delete** removes one saved export after confirmation;
+its history and checksum are retained. Import packages remain available for
+restore and recovery. Deleting a ZIP releases backup-file storage; deleting a
+database releases PostgreSQL storage. These may be different volumes.
 
-A single-database archive excludes PostgreSQL cluster roles/tablespaces. The
-optional file inventory excludes remote S3 objects, private credential
-directories and environment secrets. Back up those separately. Preserve
-`DJANGO_SECRET_KEY` and required S3 credentials
-securely when they are needed for restored sessions and application access.
-Database rows cannot recreate absent uploads, boundaries or publication files.
+## Export a complete database package
+
+Every new export includes the complete PostgreSQL database: its native schema,
+every table and row, password hashes, API credential digests, sessions,
+permissions, transfer receipts and database metadata. There is no separate
+reduced records-export mode. Native capture also preserves fields and tables
+outside the current QC Tool model contract, so an older source schema can be
+backed up without altering or repairing it.
+
+All additional sections are selected initially. Choose which to include:
+
+| Section | Contents |
+| --- | --- |
+| Original product specifications | Original configured specifications and uploaded immutable snapshots, unchanged |
+| Boundary packages | Retained raster/vector boundary files and immutable generations |
+| Retained delivery ZIPs | Available local delivery ZIPs, including unlinked historical uploads |
+| QC results and artifacts | Retained job reports, result documents and attachments |
+| Published submissions and receipts | Retained publication trees and their original manifests |
+| PostgreSQL globals | Cluster roles, stored role-password verifiers, memberships and tablespace definitions for operator review |
+| Deployment configuration and credentials | Supported runtime settings, S3 credentials, worker token, referenced PostgreSQL TLS files and inert specification/boundary activation metadata |
+
+The database itself is mandatory. Deselecting every additional section still
+exports all SQL schema, rows and database metadata. Selecting a section cannot
+recover missing files or fetch remote S3 objects. The review distinguishes
+included, empty, omitted, partially available and unavailable sections; inspect
+its warnings before treating the package as a complete recovery copy.
+
+1. Open **Back up & restore → Create backup**. Turn on maintenance and wait for
+   **Maintenance is on**.
+2. Under **Choose package contents**, choose the additional sections and
+   **Review backup**. Options are grouped into **Files used by QC Tool** and
+   **Server recovery settings**.
+3. Check section availability, the destination capacity and any exclusions.
+   Changing the selection requires another review.
+4. Choose **Create backup ZIP**. Progress updates automatically; use
+   **Download ZIP** when preparation finishes.
+
+The page follows **Choose contents → Review backup → Download ZIP**. Detailed
+record/file inventories, folder structure and technical metadata are expandable.
+Missing or partially available sections remain visible in the review.
+
+Package creation runs on the server after confirmation. Reloading, using Back,
+opening another Admin page or closing the browser does not stop it. Return through
+**Progress & history** or bookmark the operation's link. The page reads saved
+progress, including the current stage and available byte/file counts; returning
+to it does not start another export. Temporary status-connection failures do not
+cancel package creation.
+
+When complete, **Download ZIP** links to the prepared ZIP. The same
+link remains available in **Back up & restore** until an administrator explicitly
+releases the package. Downloading reads that existing file; it does not run the
+export again. A compatible browser or download client can resume an interrupted
+download from this link while signed in as an administrator.
+
+Completion separates **Backup notes**, including unavailable-file warnings,
+from **Not included in this ZIP**, which lists items requiring separate backup.
+Check both before relying on the package for recovery.
+
+Before a ZIP becomes available to download, QC Tool reopens it with the import
+reader and verifies its complete inventory, file checksums and size limits.
+
+The installed PostgreSQL dump client and source server must have the same major
+version. This feature performs a logical backup, not a database-schema upgrade.
+
+## Package layout and credentials
+
+The ZIP separates PostgreSQL recovery material from application files. Its
+versioned manifest records the selected sections, file sizes and SHA-256 hashes;
+original specification and publication bytes are never rewritten. Schema SQL is
+provided for inspection beside the native custom-format dump used for restoration.
+Source metadata and the recovery inventory are separate JSON files. Application
+files are grouped under `specifications/`, `boundaries/`, `deliveries/`,
+`artifacts/` and `publications/`, with their original storage identities retained
+in the manifest. The native dump itself contains both schema and data; separate
+schema SQL does not need to be applied before restoring that dump.
+
+```text
+manifest.json
+records.json
+database/
+  data/database.dump
+  schema/schema.sql
+  metadata/source.json
+  metadata/inventory.json
+  metadata/database.json
+  metadata/restore-policy.json
+  metadata/globals.sql                 # when selected
+configuration/
+  deployment.json                     # when selected
+  credentials/s3/<credential-id>.json  # when selected and available
+  credentials/worker.token            # when present and selected
+  credentials/postgresql/<TLS-file>    # when referenced and selected
+specifications/<storage-root>/...
+boundaries/...
+deliveries/incoming/...
+artifacts/work/...
+publications/submissions/...
+```
+
+Stored user passwords are password hashes, and issued API tokens are credential
+digests. Export cannot reconstruct plaintext passwords or raw tokens that the
+application never retained. Selected deployment settings, S3 credential files,
+worker token and PostgreSQL TLS private keys can contain real secrets.
+PostgreSQL globals can contain role-password verifiers.
+Keep the entire ZIP in protected encrypted storage; the application does not
+encrypt it. Server package directories use `0700`, files use `0600`, and downloads
+require administrator access over the deployment's HTTPS ingress.
+
+PostgreSQL globals and deployment credentials are preserved for reviewed manual
+recovery. Import does not execute cluster SQL, change deployment settings, replace
+credential files or select source specification/boundary activation pointers.
+When configuration is selected, its deployment JSON preserves original
+specification state-file bytes as base64 and known boundary link targets as
+inert text. It never follows those links or activates their destinations.
+This prevents a source installation from reconfiguring the destination merely
+because its backup was uploaded. Files outside the supported managed roots,
+remote objects, worker scratch, partial uploads, logs and private maintenance or
+transfer journals need their own backup procedures.
+
+## Capacity and retention
+
+The review shows **Estimated ZIP size** and **Free backup storage**. Expand
+**Storage requirements and limits** for original file bytes, measured compressed
+file bytes, estimated database/package size, required free space, reserve and
+configured limits. QC Tool measures lossless file compression while checking the
+original file hashes, using bounded chunks. Files are compressed when this saves
+space and stays within the importer's expansion limits; otherwise their original
+bytes are stored directly. Compression never removes selected files or changes
+their contents.
+
+Native capture streams the already compressed custom database archive directly
+into the ZIP instead of retaining a second complete dump beside it. Its size is
+estimated from PostgreSQL storage, so the final ZIP size can differ. Execution
+checks actual output bytes and the free-space reserve throughout creation.
+Reloading the page does not interrupt the background export.
+
+If capacity blocks export, deselect large file sections and retain a coordinated
+independent storage backup, release older completed export packages after
+verifying their independent copies, or provision more backup storage. Increasing
+a limit cannot create free disk space. A package without file sections still
+requires space for the complete database archive.
+
+Import needs space for the uploaded ZIP and the files at their original,
+uncompressed sizes, plus the configured reserve. PostgreSQL also needs capacity
+for the separate restored database, indexes and transaction work. A small
+compressed ZIP does not imply a small restored installation. QC Tool never
+silently omits selected sections or deletes older backups to make a new one fit.
+
+After verifying an independent copy, open **Back up & restore** and choose **Delete**
+for the file. Confirm the copy and choose **Delete saved ZIP**. This removes the
+server download while preserving completed status, checksum and audit history. Imported packages,
+restore journals and retained database files follow their separate recovery and
+retention procedures.
 
 ## Import
 
-1. Choose **Import users** in **User management** or **Import records** in
-   **Database**. For a full PostgreSQL backup, choose **Database → Restore a
-   backup**. Select a QC Tool package from an administrator you trust,
-   then **Upload and review**. QC Tool identifies its type. If it belongs to
-   another section, the page explains the change before continuing. For records
-   and backups, choose **Records only** to skip copying package files, or
-   **Records and available files** to restore verified packaged bytes as well.
-   Uploading
-   never imports records or restores a database.
+1. Choose **Database → Back up & restore → Restore from backup**. Select a QC Tool package from an
+   administrator you trust, then **Upload and review**. QC Tool identifies its
+   type, including account or additive-record packages exported by earlier
+   versions. New packages contain the full database. Under **Include the
+   package's files?**, choose **Include packaged files** to restore verified
+   packaged bytes, or **Skip packaged files** to import database contents
+   without copying package files. A full database restore still includes all
+   database records in either mode. Uploading never imports records or restores
+   a database.
 2. Turn on maintenance and wait for **Maintenance is on**, then return to the
    package. A records package uploaded before maintenance offers **Review import**.
    A database backup offers **Create restore database**. Follow the workflow for
    the identified package type.
+
+For packages too large for a reliable browser upload, an operator can place the
+package on private mounted server storage and stage it through the command line:
+
+```sh
+python3 -m qc_tool.frontend.manage data_transfer stage-file /private/backups/package.zip \
+  --actor administrator --records-only
+```
+
+Use the actual administrator username and a path inside the frontend container.
+The command validates and stages the package; it does not apply records or switch
+databases. Open its operation in Admin to review and confirm the destination.
+Omit `--records-only` only when the package's included files should be restored.
+This avoids browser and proxy upload buffering; package limits and storage checks
+still apply.
 
 ### Complete PostgreSQL database
 
@@ -124,8 +293,9 @@ to create databases; if the deployment does not allow it, an operator can supply
 a separately provisioned empty target through `QC_TOOL_RESTORE_DATABASE`.
 Existing databases are never dropped, reset or overwritten.
 
-Review the displayed destination, type its required confirmation, acknowledge
-the trusted source and choose **Restore database**. Source archive, client and
+Review the displayed destination, acknowledge the trusted source and choose
+**Restore database**. The action is bound to that destination; no name entry is
+required. Source archive, client and
 target must have compatible supported versions; native operations require the
 client/server major to match. Restore
 uses one transaction with `--no-owner`, `--no-privileges` and `--no-tablespaces`:
@@ -156,8 +326,9 @@ Restoration leaves the active database selected. When it completes, choose
 the restored copy, current schema, connected records, available local files and
 administrator access. If your account is not an administrator with the same
 credentials in the copy, supply an active target administrator's credentials.
-Type the displayed database name, acknowledge the storage/credentials review
-and choose **Switch active database**. Maintenance stays on and the previous
+Acknowledge the storage/credentials review and choose **Use this database**.
+QC Tool checks the displayed destination against the reviewed copy automatically.
+Maintenance stays on and the previous
 database remains intact.
 
 Missing historical files remain visible warnings and do not invalidate a matching
@@ -171,10 +342,11 @@ importing selective records into a switched database, sign in with an
 administrator identity valid on that active database; import receipts belong to
 that identity.
 
-Verify the result while changes are paused. Under **Backups & recovery**, expand
-**Database settings & rollback** and **Switch back to …** for the previous database during the same maintenance
-window. Once QC Tool has resumed, switching back is blocked because new work may have been written;
-use a new reviewed backup/restore instead. Restoring an older schema does not
+Verify the result while changes are paused. Under **Database recovery**, expand
+the current database and **Switch back to …** for the previous database during the same maintenance
+window. Once QC Tool has resumed, quick recovery expires because new work may
+have been written. Use **Manage databases → Review switch** for a fresh reviewed
+selection of a supported retained copy. Restoring an older schema does not
 upgrade it; an incompatible copy cannot be activated. Do not run `database apply`
 before a full archive restore or add missing tables to retained databases. See
 the [native restore runbook](../../src/qc_tool/database/MANUAL_RESTORE.md).
@@ -241,7 +413,7 @@ passwords and require local access review before activation.
 Missing database dependencies, conflicting destination files selected for
 copying, damaged included payloads, unsupported contracts or a changed
 destination block import. Resolve
-the displayed issue and use **Package details → Refresh review** before
+the displayed issue and use **Package source, checksums and technical details → Refresh review** before
 continuing. Absent file bytes are different: their references remain in the
 records, with missing/unverified availability shown explicitly. Remote S3
 objects and credentials must be provisioned separately. Included original
@@ -268,7 +440,7 @@ unavailable rather than serving a different file with the same name. A deleted
 upload can still have a retained published original. Do not rename server folders
 or edit database IDs to repair a link.
 
-New portable exports carry stable provenance, so a later export/import can reuse
+Supported portable packages carry stable provenance, so a later import can reuse
 records already imported. Source review decisions are never forced over existing
 accepted submissions. QC definition/boundary activation and account access remain
 local administrator decisions. Unsupported schema contracts are blocked rather
@@ -280,9 +452,18 @@ Maintenance stays on after a transfer. Review the result and any required local
 account or storage setup, then use **Turn off maintenance** on the maintenance page.
 Interrupted QC jobs must be submitted again.
 
-**Transfer history** reopens previous transfers. While a transfer is running, its status
+**Progress & history** reopens previous transfers. While a transfer is running, its status
 updates automatically and competing actions are blocked. Closing the browser
-does not stop its runner.
+does not stop its runner. Files are copied and checksummed in bounded chunks;
+PostgreSQL streams its dump directly into the ZIP. Only one transfer executes
+at a time, without loading the whole database or its files into application memory.
+
+A server/container restart or a stopped transfer process can interrupt creation.
+Its saved journal and maintenance ownership remain available. Return to its
+operation and use **Recover transfer** when offered; this is separate from
+reloading a page. An unfinished export may need to create the ZIP again after
+recovery. Completed ZIPs survive restarts when transfer storage is on the
+deployment's persistent volume. Keep maintenance enabled if recovery is required.
 
 A stopped runner offers recovery when its execution lock is free. Recovery checks
 the destination and operation journal before doing anything again; portable
@@ -310,14 +491,16 @@ python3 -m qc_tool.frontend.manage data_transfer cancel <operation-uuid>
 
 Use the normal deployment configuration and shared private storage paths.
 
-Older direct links with `?tab=export&scope=database` still open the full-backup
-task. Saved operation links continue to open their own package and workflow.
+Older export links open the unified complete-database package builder. Saved
+operation links continue to open their own package and workflow.
 
 ## Database compatibility
 
-Complete PostgreSQL packages preserve database schema and rows. Portable ZIPs
-transfer the supported application graph and retained files. Neither profile
-includes every external file or secret needed for disaster recovery.
+Complete PostgreSQL packages preserve database schema and rows, together with
+the explicitly selected extra sections. Older portable ZIPs transfer their
+supported application graph and retained files. Missing files, remote objects,
+unsupported external secrets and PostgreSQL physical recovery still require
+the deployment's independent backup procedures.
 
 The portable reader checks the package format, an explicit semantic record
 contract and source metadata. A matching release label alone does not establish
@@ -330,10 +513,11 @@ this does not promise compatibility with future releases. Imports never migrate,
 initialize, reset or repair an occupied database.
 
 Every visit to **Admin → Database** checks the current database schema without
-changing it. **Schema & migrations** shows **Schema matches** or the concrete
-drift/availability issue, the check time and expected contract version. **Check
-database schema** repeats the check; it does not apply a schema change or start
-a background repair. Other pages do not run this landing-page check.
+changing it. **Database health** shows **Schema matches** or the concrete
+drift/availability issue and the check time. Expand **What does this check do?**
+for the schema policy and expected contract version. **Check database schema**
+repeats the check; it does not apply a schema change or start a background repair.
+Other pages do not run this landing-page check.
 
 Portable operations require a current matching source/destination schema. The
 panel reports concrete mismatches; the optional operator command

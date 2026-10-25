@@ -1,0 +1,5 @@
+<dl class="database-record-detail">
+  {% for field in fields %}
+  <div><dt>{{ field.label }}</dt><dd>{% if field.url %}<a href="{{ field.url }}">{{ field.value }}</a>{% else %}{{ field.value }}{% endif %}</dd></div>
+  {% endfor %}
+</dl>

@@ -18,31 +18,33 @@
   <header class="qc-admin-intro">
     <div>
       <h1>Maintenance mode</h1>
-      <p class="qc-admin-intro__description">Pause changes while you back up or maintain QC Tool.</p>
+      <p class="qc-admin-intro__description">Pause uploads, changes and QC jobs while you back up, restore or maintain QC Tool.</p>
     </div>
   </header>
 
-  {% if action_error %}<p class="errornote" role="alert">{{ action_error }}</p>{% endif %}
+  {% if maintenance_busy_waiting %}{% include "admin/includes/action_busy.html" with action_error=busy_message %}
+  {% elif action_error and not action_busy %}<p class="errornote" role="alert">{{ action_error }}</p>{% endif %}
   {% if action_result %}<ul class="messagelist"><li class="success" role="status">{{ action_result }}</li></ul>{% endif %}
 
   <section class="qc-admin-service{% if maintenance.enabled or maintenance_unavailable %} qc-admin-service--paused{% endif %}" aria-labelledby="maintenance-heading">
     <span class="qc-admin-icon"><svg aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#settings"></use></svg></span>
     <div class="qc-admin-service__content">
       <p class="qc-admin-eyebrow">CURRENT STATUS</p>
-      <h2 id="maintenance-heading">{% if maintenance_unavailable %}Maintenance status unavailable{% elif transfer_operation %}Database transfer in progress{% elif maintenance.phase == 'ready' %}Maintenance is on{% elif maintenance.enabled %}Turning on maintenance{% else %}Maintenance is off{% endif %}</h2>
+      <h2 id="maintenance-heading">{% if maintenance_unavailable %}Maintenance status unavailable{% elif transfer_operation %}Maintenance is reserved for a database transfer{% elif maintenance.phase == 'ready' %}Maintenance is on{% elif maintenance.enabled %}Turning on maintenance{% else %}Maintenance is off{% endif %}</h2>
       {% if maintenance_unavailable %}
         <p>QC Tool has paused changes because its maintenance status cannot be read. Reload this page to try again.</p>
       {% elif transfer_operation %}
-        <p>Changes stay paused until this database {{ transfer_operation.kind }} finishes or is recovered. Open the transfer to see the next step.</p>
+        <p>Changes stay paused until this database {{ transfer_operation.kind }} finishes or is recovered. Open the transfer for its current progress and next step.</p>
       {% elif maintenance.phase == 'ready' %}
-        <p>QC work has stopped. You can carry out your maintenance task, then turn maintenance off to allow changes again.</p>
+        <p>QC work has stopped. {% if transfer_return_url %}Continue your task below. Maintenance stays on while you work.{% else %}Carry out your maintenance task, then turn maintenance off to allow changes again.{% endif %}</p>
       {% elif maintenance.enabled %}
-        <p>Changes are already paused. QC Tool is stopping submitted jobs and checking progress automatically.</p>
+        <p>Changes are already paused. Stopping submitted jobs and checking readiness can take a moment.</p>
       {% else %}
         <p>Users can upload data, run QC jobs and make changes.</p>
       {% endif %}
       {% if progress_pending %}
-        <p class="qc-maintenance-progress" role="status" aria-live="polite"><span class="qc-maintenance-progress__dot" aria-hidden="true"></span><span data-progress-message>Stopping work automatically. This page will update when it is finished.</span></p>
+        <p class="qc-maintenance-progress" role="status" aria-live="polite" data-progress-status><span class="qc-admin-spinner" data-progress-indicator aria-hidden="true" hidden></span><span data-progress-message>Waiting for work to stop. Check progress below if automatic updates are unavailable.</span></p>
+        <p class="qc-maintenance-check-time" data-progress-checked hidden></p>
       {% endif %}
     </div>
     <div class="qc-admin-service__actions">
@@ -51,7 +53,8 @@
       {% elif maintenance_unavailable %}
         <a class="qc-admin-button btn-qc-secondary" href="{{ request.path }}">Reload page</a>
       {% else %}
-        <form method="post" data-maintenance-exempt>
+        {% if transfer_return_url and maintenance.phase == 'ready' %}<a class="qc-admin-button qc-admin-button--primary btn-qc-primary" href="{{ transfer_return_url }}">{% if storage_return %}Continue to Storage{% elif database_return %}Continue to database{% else %}Continue import or export{% endif %}</a>{% endif %}
+        <form method="post" data-maintenance-exempt data-admin-pending-message="Updating maintenance. Please wait for the result." data-admin-pending-label="Updating maintenance…">
           {% csrf_token %}
           <input type="hidden" name="generation" value="{{ maintenance.generation }}">
           {% if transfer_return_url %}<input type="hidden" name="next" value="{{ transfer_return_url }}">{% endif %}
@@ -59,10 +62,10 @@
             {% if deployment_maintenance %}
               <p class="qc-maintenance-managed">Managed by deployment settings</p>
             {% else %}
-              <button type="submit" class="qc-admin-button qc-admin-button--primary btn-qc-primary" name="action" value="disable"{% if maintenance.phase != 'ready' %} disabled aria-describedby="maintenance-stopping-note"{% endif %}>Turn off maintenance</button>
+              <button type="submit" class="qc-admin-button{% if transfer_return_url and maintenance.phase == 'ready' %} btn-qc-secondary{% else %} qc-admin-button--primary btn-qc-primary{% endif %}" name="action" value="disable"{% if maintenance.phase != 'ready' %} disabled aria-describedby="maintenance-stopping-note"{% elif maintenance_busy_waiting %} disabled aria-describedby="admin-busy-heading"{% endif %}>Turn off maintenance</button>
             {% endif %}
           {% else %}
-            <button type="submit" class="qc-admin-button qc-admin-button--primary btn-qc-primary" name="action" value="enable">Turn on maintenance</button>
+            <button type="submit" class="qc-admin-button qc-admin-button--primary btn-qc-primary" name="action" value="enable"{% if maintenance_busy_waiting %} disabled aria-describedby="admin-busy-heading"{% endif %}>Turn on maintenance</button>
           {% endif %}
         </form>
         {% if maintenance.enabled and maintenance.phase != 'ready' %}<p id="maintenance-stopping-note" class="qc-maintenance-action-note">Available when QC work has stopped.</p>{% endif %}
@@ -96,9 +99,9 @@
   </div>
   {% endif %}
 
-  {% if not transfer_operation %}
+  {% if not transfer_operation %}{% if not transfer_return_url or maintenance.phase != 'ready' %}
   <p class="qc-maintenance-next">{% if transfer_return_url %}<a href="{{ transfer_return_url }}">{% if storage_return %}Back to Storage{% elif database_return %}Back to database{% elif maintenance.phase == 'ready' %}Continue import or export{% else %}Back to import or export{% endif %}</a>{% else %}<a href="{% url 'admin_data_transfer' %}">Back to database</a>{% endif %}</p>
-  {% endif %}
+  {% endif %}{% endif %}
 
   <details class="qc-admin-directory qc-maintenance-details">
     <summary>Technical details</summary>
