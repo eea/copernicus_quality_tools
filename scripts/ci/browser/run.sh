@@ -10,8 +10,10 @@ smoke_temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/qc-tool-browser.XXXXXX")"
 smoke_name="qc-tool-browser-$(basename "$smoke_temp_dir" | tr '[:upper:]' '[:lower:]')"
 smoke_container_id=""
 smoke_volume_created=no
+smoke_network_created=no
 export QC_TOOL_BROWSER_ARTIFACTS_DIR="${QC_TOOL_BROWSER_ARTIFACTS_DIR:-$smoke_temp_dir/artifacts}"
 mkdir -p "$QC_TOOL_BROWSER_ARTIFACTS_DIR"
+export QC_TOOL_BROWSER_ARTIFACTS_DIR="$(cd -- "$QC_TOOL_BROWSER_ARTIFACTS_DIR" && pwd)"
 
 cleanup() {
   smoke_result=$?
@@ -23,11 +25,17 @@ cleanup() {
   if [ "$smoke_volume_created" = yes ]; then
     docker volume rm "$smoke_name" >/dev/null || true
   fi
+  if [ "$smoke_network_created" = yes ]; then
+    docker network rm "$smoke_name" >/dev/null || true
+  fi
   # Artifacts are intentionally retained outside the checkout for failure review.
   echo "Browser smoke artifacts: $QC_TOOL_BROWSER_ARTIFACTS_DIR"
   exit "$smoke_result"
 }
 trap cleanup EXIT
+
+docker network create "$smoke_name" >/dev/null
+smoke_network_created=yes
 
 if [ "$smoke_storage_mode" = volume ]; then
   docker volume create "$smoke_name" >/dev/null
@@ -41,13 +49,14 @@ fi
 # No existing host application path is mounted. INCOMING_DIR is deliberately
 # absent: uploading must provision its leaf below the already-mounted parent.
 smoke_container_id="$(docker create --init --name "$smoke_name" \
+  --network "$smoke_name" --network-alias frontend \
   --publish 127.0.0.1::8000 \
   --tmpfs /tmp/qc-tool-browser:rw,size=1g \
   --mount "$smoke_mount" \
   --env QC_TOOL_ENVIRONMENT=test \
   --env DB_ENGINE=sqlite \
   --env DJANGO_SECRET_KEY=disposable-browser-test-secret \
-  --env DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost \
+  --env DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,frontend \
   --env FRONTEND_DB_PATH=/tmp/qc-tool-browser/frontend.sqlite3 \
   --env WORK_DIR=/tmp/qc-tool-browser/work \
   --env INCOMING_DIR=/tmp/qc-tool-upload-mount/incoming \
@@ -85,5 +94,18 @@ docker exec "$smoke_container_id" test ! -e /tmp/qc-tool-upload-mount/incoming
 # docker cp cannot read every Docker tmpfs implementation (including Desktop).
 docker exec "$smoke_container_id" tar -C /tmp/qc-tool-browser -cf - fixtures | LC_ALL=C tar -C "$smoke_temp_dir" -xf -
 export QC_TOOL_BROWSER_FIXTURES="$smoke_temp_dir/fixtures"
-npm --prefix "$smoke_script_dir" test
+if [ -n "${QC_TOOL_BROWSER_TEST_IMAGE:-}" ]; then
+  # Hosted Linux runs use the locked browser image, avoiding apt downloads on
+  # every runner. The application still runs separately from the browser suite.
+  docker run --rm --init --network "$smoke_name" --shm-size=1g \
+    --mount "type=bind,source=$QC_TOOL_BROWSER_FIXTURES,target=/fixtures,readonly" \
+    --mount "type=bind,source=$QC_TOOL_BROWSER_ARTIFACTS_DIR,target=/artifacts" \
+    --env CI \
+    --env QC_TOOL_BROWSER_BASE_URL=http://frontend:8000 \
+    --env QC_TOOL_BROWSER_FIXTURES=/fixtures \
+    --env QC_TOOL_BROWSER_ARTIFACTS_DIR=/artifacts \
+    "$QC_TOOL_BROWSER_TEST_IMAGE"
+else
+  npm --prefix "$smoke_script_dir" test
+fi
 docker exec "$smoke_container_id" test -d /tmp/qc-tool-upload-mount/incoming

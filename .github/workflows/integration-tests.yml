@@ -185,6 +185,7 @@ jobs:
         storage: [volume, bind]
     env:
       STORAGE_MODE: ${{ matrix.storage }}
+      QC_TOOL_BROWSER_TEST_IMAGE: qc-tool-browser-ci:${{ github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -195,21 +196,18 @@ jobs:
           path: ${{ runner.temp }}/frontend-image
       - name: Load the exact image from the build job
         run: docker load --input "$RUNNER_TEMP/frontend-image/frontend.tar"
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: scripts/ci/browser/package-lock.json
-      - name: Install the locked browser test runtime
-        run: |
-          npm --prefix scripts/ci/browser ci
-          npx --prefix scripts/ci/browser playwright install --with-deps chromium firefox
+      - name: Prepare the pinned browser test runtime
+        run: >-
+          docker build --platform linux/amd64
+          --file scripts/ci/browser/Dockerfile
+          --tag "$QC_TOOL_BROWSER_TEST_IMAGE"
+          scripts/ci/browser
       - name: Exercise file selection and uploads in Firefox and Chromium
         env:
           QC_TOOL_BROWSER_ARTIFACTS_DIR: ${{ runner.temp }}/browser-${{ matrix.storage }}
         run: bash scripts/ci/browser/run.sh
       - name: Retain browser diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: browser-diagnostics-${{ matrix.storage }}-${{ github.run_attempt }}

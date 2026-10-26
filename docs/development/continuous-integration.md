@@ -85,11 +85,20 @@ seven days as GitHub artifacts. These contain synthetic test data. Generated
 outputs stay outside the checkout, never in committed `work/` screenshots or
 session reports.
 
+Browser jobs use a dedicated [test image](../../scripts/ci/browser/Dockerfile) based
+on the official Playwright image pinned by version and digest. It already
+contains the browser binaries and Linux dependencies, so each storage leg avoids
+installing Ubuntu packages from a runner-selected mirror. Only the locked npm
+packages and test suite are added. Fixtures are mounted read-only and diagnostics
+are writable; the test container has no Docker socket or existing application
+storage mounts. Browser and frontend containers communicate through a uniquely
+named disposable Docker network rather than relying on host networking.
+
 ## Local commands
 
-Run from the repository root. Docker, Node.js 22 and Python 3.12 are the host
-CI runtimes; application dependencies come from the built images. For example,
-with an image built from the current checkout:
+Run from the repository root. Shared host checks use Node.js 22 and Python 3.12;
+Docker runs the packaged application and browser checks. For example, with an
+application image built from the current checkout:
 
 ```bash
 bash scripts/ci/source.sh
@@ -105,8 +114,17 @@ at a developer or production database. `CI_DOCKER_NETWORK`, `POSTGRES_HOST` and
 `POSTGRES_PORT` permit an isolated local Docker network; hosted Linux CI uses
 the job's PostgreSQL service through host networking.
 
-Install the locked browser runtime once, then select fresh named-volume or
-bind-mounted upload storage:
+Build the same browser test image and select fresh named-volume or bind-mounted
+upload storage:
+
+```bash
+docker build --file scripts/ci/browser/Dockerfile --tag qc-tool-browser-ci:local scripts/ci/browser
+QC_TOOL_BROWSER_TEST_IMAGE=qc-tool-browser-ci:local TEST_IMAGE=qc-tool-frontend-ci:local STORAGE_MODE=volume bash scripts/ci/browser/run.sh
+QC_TOOL_BROWSER_TEST_IMAGE=qc-tool-browser-ci:local TEST_IMAGE=qc-tool-frontend-ci:local STORAGE_MODE=bind bash scripts/ci/browser/run.sh
+```
+
+For native browser execution, including macOS, leave
+`QC_TOOL_BROWSER_TEST_IMAGE` unset and install the locked browser runtime once:
 
 ```bash
 npm --prefix scripts/ci/browser ci
@@ -132,7 +150,9 @@ setup, caching and artifacts. Reusable check commands belong under
 Keep the full worker suite and both database suites when reorganizing jobs.
 
 Actions are pinned to reviewed commit SHAs; Dependabot proposes updates for
-Actions and the locked browser dependency. Review changes to pins, runtime
+Actions, the browser image and the locked browser dependency. Review the browser
+image version/digest and npm lock together: an offline contract check rejects
+different Playwright versions before image builds. Review changes to pins, runtime
 versions and the two supported Dockerfiles together with their relevant tests.
 The real Gunicorn/Supervisor probes run inside their respective images, with
 required dependency imports so missing runtime dependencies fail rather than
@@ -144,4 +164,5 @@ See [testing](testing.md) for suite coverage and limits and
 procedure. The implementation follows GitHub's
 [workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)
 and Docker's [shared image](https://docs.docker.com/build/ci/github-actions/share-image-jobs/)
-and [cache](https://docs.docker.com/build/ci/github-actions/cache/) contracts.
+and [cache](https://docs.docker.com/build/ci/github-actions/cache/) contracts,
+and Playwright's [Docker guidance](https://playwright.dev/docs/docker).
