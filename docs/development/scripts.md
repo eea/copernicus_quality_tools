@@ -12,6 +12,7 @@ are grouped by purpose:
 
 | Directory | Responsibility |
 | --- | --- |
+| `scripts/ci/` | Shared image checks, isolated browser journeys and protected release helpers |
 | `scripts/testing/` | Explicit integration runs that collect QC evidence |
 | `scripts/tests/` | Maintained offline tool regression tests, collected in CI |
 | `scripts/catalog/` | Manual read-only recipe diagnostics |

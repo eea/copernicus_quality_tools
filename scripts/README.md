@@ -11,6 +11,9 @@ operator actions and verification tooling; application startup must not run them
 
 ```text
 scripts/
+├── ci/                            # Reusable image, browser and release checks
+│   ├── browser/                   # Isolated Chromium/Firefox upload journeys
+│   └── release/                   # Trusted tag/artifact and registry contracts
 ├── catalog/                       # Manual, read-only recipe diagnostics
 │   ├── check_tile_codes.py
 │   └── naming_examples.py
@@ -21,6 +24,7 @@ scripts/
 │   └── legacy_qc.py
 ├── tests/                         # Offline unit tests for maintained tools
 │   ├── deployment/
+│   ├── ci/
 │   └── testing/
 └── one_off/clc2024/                # Historical product-specific preparation
     ├── generate_metadata.py
@@ -37,6 +41,7 @@ not rewrite the command paths recorded in those captures.
 
 | Purpose | Command or guide | Lifecycle and effect |
 | --- | --- | --- |
+| Run shared workflow/image/browser checks | [`ci/`](../docs/development/continuous-integration.md) | Repeatable disposable CI validation; publication is a separate explicitly enabled operator action. |
 | Run captured deliveries through an isolated worker | [`testing/legacy_qc.py`](testing/legacy_qc.py) | Repeatable manual integration verification; requires prepared inputs and a disposable worker. |
 | Check tooling regressions locally/in CI | [`tests/`](tests/README.md) | Automated offline unit tests; synthetic inputs and temporary directories. |
 | Review recipe tile identifiers or naming examples | [`catalog/`](catalog/README.md) | Manual legacy diagnostics; findings require review against current product contracts. |

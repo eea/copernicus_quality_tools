@@ -86,8 +86,8 @@ def run_check(params, status):
         mask_xres = mask_gt[1]
         mask_uly = mask_gt[3]
         mask_yres = mask_gt[5]
-        mask_lrx = ds_ulx + (mask_ds.RasterXSize * mask_xres)
-        mask_lry = ds_uly + (mask_ds.RasterYSize * mask_yres)
+        mask_lrx = mask_ulx + (mask_ds.RasterXSize * mask_xres)
+        mask_lry = mask_uly + (mask_ds.RasterYSize * mask_yres)
 
         # Check if the dataset extent intersects the mask extent.
         if (mask_ulx > ds_lrx or mask_uly < ds_lry or mask_lrx < ds_ulx or mask_lry > ds_uly):

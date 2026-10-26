@@ -1,74 +1,68 @@
 name: QC Tool integration tests
+run-name: >-
+  ${{ github.ref_type == 'tag' && format('Release tag: {0}', github.ref_name) || format('{0}: {1}', github.event_name, github.ref_name) }}
 
 on:
   push:
-    branches: ["dev", "release/**"]
+    branches: ["master", "dev", "release/**"]
     tags: ["**"]
   pull_request:
-    branches: ["dev", "release/**"]
+    branches: ["master", "dev", "release/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-integration-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  SOURCE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+  TEST_IMAGE: qc-tool-frontend-ci:${{ github.sha }}
+  TEST_WORKER_IMAGE: qc-tool-worker-ci:${{ github.sha }}
+
 jobs:
-  worker-runtime:
-    name: Supported worker image and QC regressions
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    env:
-      TEST_WORKER_IMAGE: qc-tool-worker-ci:${{ github.sha }}
-      SOURCE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+  source:
+    name: Source and shared checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: Validate deployment manifests
-        env:
-          QC_TOOL_FRONTEND_IMAGE: qc-tool-frontend-ci:${{ github.sha }}
-          QC_TOOL_WORKER_IMAGE: qc-tool-worker-ci:${{ github.sha }}
-          QC_TOOL_POSTGRES_PASSWORD: ci-only-configuration-check-password
-          DJANGO_SECRET_KEY: ci-only-configuration-check-secret
-          QC_TOOL_PERSISTENT_ROOT: /srv/qc-tool-ci-configuration-only
-          QC_TOOL_PERSISTENT_STORAGE_ID: ci-only-storage-identity
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Validate workflow syntax and shell commands
         run: |
-          docker compose -f docker/compose.local.yaml config --quiet
-          docker compose -f docker/docker-compose.eea.yml config --quiet
-          docker compose -f docker/docker-compose.eea.yml -f docker/compose.eea-storage.yaml config --quiet
-          docker compose -f docker/docker-compose.service_provider.yml config --quiet
-      - name: Build the supported worker runtime from this checkout
-        run: >-
-          docker build
-          --build-arg VERSION="$SOURCE_VERSION"
-          --build-arg SOURCE_REVISION="${{ github.sha }}"
-          --build-arg BUILD_JOBS=2
-          --file docker/Dockerfile.worker
-          --tag "$TEST_WORKER_IMAGE"
-          .
-      - name: Verify packaged worker with disposable scratch PostgreSQL
-        run: |
-          docker run --rm --init \
-            --env SKIP_INSPIRE_CHECK=yes \
-            --env RUN_INSPIRE_VALIDATOR=no \
-            --env QC_TOOL_ENVIRONMENT=test \
-            --env WORK_DIR=/tmp/qc-tool-worker-work \
-            --env INCOMING_DIR=/tmp/qc-tool-worker-incoming \
-            --env BOUNDARY_DIR=/tmp/qc-tool-worker-boundaries \
-            "$TEST_WORKER_IMAGE" sh -euc '
-              pg_ctlcluster 17 main start
-              python3 /usr/local/src/copernicus_quality_tools/docker/check_worker_runtime.py
-              python3 -m pip check
-              python3 -m unittest discover qc_tool.test -v
-            '
+          for ci_script in scripts/ci/*.sh scripts/ci/browser/run.sh; do
+            bash -n "$ci_script"
+          done
+          for ci_script in scripts/ci/browser/*.cjs; do
+            node --check "$ci_script"
+          done
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
+      - name: Verify source policy, JavaScript and deployment manifests
+        run: bash scripts/ci/source.sh
 
   worker-control:
     name: Worker admission and interruption
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
       - name: Install worker HTTP adapter
@@ -85,32 +79,75 @@ jobs:
 
   tooling:
     name: Maintainer tools (offline)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Check out the proposed source
-        uses: actions/checkout@v4
-
-      - name: Set up Python test runtime
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
-
-      - name: Verify QC evidence tooling
+      - name: Verify maintainer tools and release guards
         run: |
           python3 -m pip install supervisor==4.3.0
           python3 -m unittest discover -s scripts/tests -t . -v
 
+  frontend-build:
+    name: Packaged frontend
+    needs: [source, worker-control, tooling]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the supported frontend once
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile.frontend
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.TEST_IMAGE }}
+          build-args: |
+            VERSION=${{ env.SOURCE_VERSION }}
+            SOURCE_REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=qc-tool-frontend
+          cache-to: type=gha,scope=qc-tool-frontend,mode=max,ignore-error=true
+      - name: Verify shipped dependencies and real Gunicorn behavior
+        run: bash scripts/ci/frontend.sh runtime
+      - name: Verify production security settings
+        run: bash scripts/ci/frontend.sh deployment
+      - name: Export the verified image and provenance
+        run: |
+          mkdir -p "$RUNNER_TEMP/frontend-image"
+          docker save --output "$RUNNER_TEMP/frontend-image/frontend.tar" "$TEST_IMAGE"
+          python3 scripts/ci/release/verify.py image-metadata \
+            --component frontend --image "$TEST_IMAGE" \
+            --source-sha "$GITHUB_SHA" --source-version "$SOURCE_VERSION" \
+            --output "$RUNNER_TEMP/frontend-image/metadata.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-image
+          path: ${{ runner.temp }}/frontend-image/
+          overwrite: true
+          retention-days: 2
+          compression-level: 1
+          if-no-files-found: error
+
   frontend:
     name: Frontend (${{ matrix.database }})
-    runs-on: ubuntu-latest
+    needs: frontend-build
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         database: [sqlite, postgres]
     services:
-      # Match the PostgreSQL major used by the deployment Compose stack.
+      # Application database and native backup clients share PostgreSQL major 14.
       postgres:
         image: postgres:14
         env:
@@ -121,110 +158,123 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U qc_tool_ci -d qc_tool_schema_ci"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
+          --health-interval 5s --health-timeout 5s --health-retries 12
     env:
-      TEST_IMAGE: qc-tool-frontend-ci:${{ github.sha }}
-      SOURCE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
       DB_ENGINE: ${{ matrix.database }}
-
     steps:
-      - name: Check out the proposed source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: frontend-image
+          path: ${{ runner.temp }}/frontend-image
+      - name: Load the exact image from the build job
+        run: docker load --input "$RUNNER_TEMP/frontend-image/frontend.tar"
+      - name: Verify schema, static files and full application suite
+        run: bash scripts/ci/frontend.sh database
 
-      - name: Set up JavaScript test runtime
-        uses: actions/setup-node@v4
+  browser:
+    name: Browser uploads (${{ matrix.storage }})
+    needs: frontend-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        storage: [volume, bind]
+    env:
+      STORAGE_MODE: ${{ matrix.storage }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: frontend-image
+          path: ${{ runner.temp }}/frontend-image
+      - name: Load the exact image from the build job
+        run: docker load --input "$RUNNER_TEMP/frontend-image/frontend.tar"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
-
-      - name: Verify shared upload components and feature adapters
-        run: node --test src/qc_tool/frontend/dashboard/tests/javascript/*.test.cjs
-
-      - name: Enforce models-only application source
-        shell: bash
+          cache: npm
+          cache-dependency-path: scripts/ci/browser/package-lock.json
+      - name: Install the locked browser test runtime
         run: |
-          set -euo pipefail
-          PYTHONPATH=src python3 -m unittest qc_tool.database.tests.test_source
-          PYTHONPATH=src python3 -m qc_tool.database.checks.source
+          npm --prefix scripts/ci/browser ci
+          npx --prefix scripts/ci/browser playwright install --with-deps chromium firefox
+      - name: Exercise file selection and uploads in Firefox and Chromium
+        env:
+          QC_TOOL_BROWSER_ARTIFACTS_DIR: ${{ runner.temp }}/browser-${{ matrix.storage }}
+        run: bash scripts/ci/browser/run.sh
+      - name: Retain browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-diagnostics-${{ matrix.storage }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/browser-${{ matrix.storage }}/
+          retention-days: 7
+          if-no-files-found: ignore
 
-      - name: Build the supported frontend runtime
-        run: >-
-          docker build
-          --build-arg VERSION="$SOURCE_VERSION"
-          --build-arg SOURCE_REVISION="${{ github.sha }}"
-          --file docker/Dockerfile.frontend
-          --tag "$TEST_IMAGE"
-          .
-
-      - name: Verify runtime, schema, static files, and tests
-        shell: bash
+  worker-runtime:
+    name: Supported worker image and QC regressions
+    needs: [source, worker-control, tooling]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the supported worker runtime
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile.worker
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.TEST_WORKER_IMAGE }}
+          build-args: |
+            VERSION=${{ env.SOURCE_VERSION }}
+            SOURCE_REVISION=${{ github.sha }}
+            BUILD_JOBS=2
+          cache-from: type=gha,scope=qc-tool-worker
+          # Preserve the native compiler stages as well as the final runtime.
+          cache-to: type=gha,scope=qc-tool-worker,mode=max,ignore-error=true
+      - name: Verify runtime, Supervisor and full QC regressions
+        run: bash scripts/ci/worker.sh
+      - name: Export the tested worker for a possible manual tag release
+        if: github.event_name == 'push' && github.ref_type == 'tag'
         run: |
-          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/worker-image"
+          docker save "$TEST_WORKER_IMAGE" | gzip -1 > "$RUNNER_TEMP/worker-image/worker.tar.gz"
+          python3 scripts/ci/release/verify.py image-metadata \
+            --component worker --image "$TEST_WORKER_IMAGE" \
+            --source-sha "$GITHUB_SHA" --source-version "$SOURCE_VERSION" \
+            --output "$RUNNER_TEMP/worker-image/metadata.json"
+      - name: Retain the tested release worker
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: worker-image
+          path: ${{ runner.temp }}/worker-image/
+          overwrite: true
+          retention-days: 2
+          compression-level: 0
+          if-no-files-found: error
 
-          run_frontend() {
-            docker run --rm \
-              --network host \
-              --workdir /usr/local/src/copernicus_quality_tools \
-              --env PYTHONPATH=/usr/local/src/copernicus_quality_tools/src \
-              --env QC_TOOL_ENVIRONMENT=test \
-              --env DJANGO_SECRET_KEY=ci-only-secret \
-              --env DJANGO_ALLOWED_HOSTS=testserver,localhost \
-              --env DB_ENGINE \
-              --env POSTGRES_DB=qc_tool_schema_ci \
-              --env POSTGRES_USER=qc_tool_ci \
-              --env POSTGRES_PASSWORD=ci-only-postgres-password \
-              --env POSTGRES_HOST=127.0.0.1 \
-              --env POSTGRES_PORT=5432 \
-              --env WORK_DIR=/tmp/qc-tool-work \
-              --env FRONTEND_DB_PATH=/tmp/qc-tool-test.sqlite3 \
-              --env INCOMING_DIR=/tmp/qc-tool-incoming \
-              --env BOUNDARY_DIR=/tmp/qc-tool-boundaries \
-              --env PRODUCT_DIRS=/usr/local/src/copernicus_quality_tools/product_definitions \
-              "$TEST_IMAGE" "$@"
-          }
-
-          run_frontend python3 -c \
-            'import sys, django; assert sys.version_info[:3] == (3, 12, 14); assert django.get_version() == "5.2.17"'
-          run_frontend python3 -c '
-          import re, subprocess
-          for executable in ("pg_dump", "pg_restore"):
-              version = subprocess.check_output([executable, "--version"], text=True)
-              assert re.search(r"\(PostgreSQL\) 14\.", version), version
-          '
-          # The checker requires an empty disposable database. Keep all commands
-          # in one container so SQLite retains the verified schema between them.
-          # Create current models directly; CI never generates migration files.
-          run_frontend bash -euc '
-            python3 -m qc_tool.database.checks.schema
-            python3 -m qc_tool.frontend.manage check
-            python3 -m qc_tool.frontend.manage database check
-            python3 -m qc_tool.frontend.manage collectstatic --noinput
-            python3 -m qc_tool.frontend.manage test \
-              qc_tool.frontend.accounts.tests \
-              qc_tool.frontend.dashboard.services.tests \
-              qc_tool.frontend.dashboard.tests \
-              qc_tool.database.tests.integration \
-              qc_tool.test.test_uploaded_product_definitions \
-              --verbosity 2
-          '
-
-      - name: Verify secure deployment settings can pass Django checks
-        run: >-
-          docker run --rm
-          --env PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
-          --env QC_TOOL_ENVIRONMENT=production
-          --env DJANGO_SECRET_KEY=ci-production-only-3xJw7pL9vK2qN8mR5tY1uB6cD4eF0gHsZa
-          --env DJANGO_ALLOWED_HOSTS=qc-tool.example.test
-          --env DJANGO_SECURE_SSL_REDIRECT=yes
-          --env DJANGO_TRUST_PROXY_SSL_HEADER=yes
-          --env DJANGO_SECURE_HSTS_SECONDS=31536000
-          --env DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=yes
-          --env DJANGO_SECURE_HSTS_PRELOAD=yes
-          --env WORK_DIR=/tmp/qc-tool-work
-          --env FRONTEND_DB_PATH=/tmp/qc-tool-test.sqlite3
-          --env INCOMING_DIR=/tmp/qc-tool-incoming
-          --env BOUNDARY_DIR=/tmp/qc-tool-boundaries
-          --env PRODUCT_DIRS=/usr/local/src/copernicus_quality_tools/product_definitions
-          "$TEST_IMAGE"
-          python3 -m qc_tool.frontend.manage check --deploy --fail-level WARNING
+  ci:
+    name: CI
+    if: always()
+    needs: [source, worker-control, tooling, frontend-build, frontend, browser, worker-runtime]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require every prerequisite to succeed
+        env:
+          CI_JOB_RESULTS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/check_results.py

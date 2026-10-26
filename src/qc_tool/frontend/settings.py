@@ -181,6 +181,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Django's security.W003 recognizes only its literal canonical middleware path,
+# not our strict subclass. The required dashboard AppConfig registers deployment
+# checks qc_tool.security.E001/E002 for middleware presence and secure CSRF cookies
+# (Django's W016 also misses subclass paths). Keep all other built-in checks.
+SILENCED_SYSTEM_CHECKS = ["security.W003"]
+
 ROOT_URLCONF = 'qc_tool.frontend.urls'
 
 TEMPLATES = [

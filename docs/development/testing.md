@@ -16,7 +16,9 @@ Run both SQLite and PostgreSQL; configure PostgreSQL with `DB_ENGINE=postgres`.
 Tests never restore into or reset a retained deployment database.
 
 Run focused tests first, then the relevant full suite. The GitHub Actions
-frontend workflow is the authoritative frontend test contract.
+integration workflow is the authoritative frontend test contract. See
+[continuous integration](continuous-integration.md) for job ownership, browser
+smoke coverage, reusable commands and the required **CI** result.
 
 ## Native PostgreSQL backup and restore
 

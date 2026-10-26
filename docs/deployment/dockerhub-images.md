@@ -6,8 +6,10 @@ nav_order: 4
 
 # Build and hand off Docker Hub images
 
-The existing release path is **GitHub release tag → Docker Hub automated builds
-→ verified frontend/worker images → EEA deployment**. Keep this automation:
+The default release path is **GitHub release tag → Docker Hub automated builds
+→ verified frontend/worker images → EEA deployment**. Keep this automation until
+the explicit [GitHub Actions transition](#optional-github-actions-publication)
+below is configured:
 creating or pushing a matching Git tag triggers the existing Docker Hub build
 rules. A source change must produce a matching frontend/worker pair before the
 server selects new digests.
@@ -65,6 +67,61 @@ hook for the existing build service and plan a separately reviewed transition to
 CI that builds, tests and publishes the verified artifacts to the same registry.
 This is a build-service transition, not a requirement to change the EEA image
 registry. See [Docker's current notice](https://docs.docker.com/docker-hub/repos/manage/builds/advanced/).
+
+## Optional GitHub Actions publication
+
+[`publish-images.yml`](../../.github/workflows/publish-images.yml) is a manual,
+disabled-by-default replacement for the existing autobuild publisher. It
+publishes the actual tested images retained by a successful tag-push integration
+run, without rebuilding them. Preparing this workflow does not enable it or
+change Docker Hub/EEA settings.
+
+An operator must configure the transition before using it:
+
+1. Put the reviewed workflows and release helpers on the repository's default
+   branch. Require the integration workflow's **CI** status on maintained branches.
+2. Create the GitHub environment `dockerhub-release`. Require reviewer approval
+   and restrict deployment branches to the default branch. The environment name
+   alone does not restrict access; configure these rules explicitly.
+3. Store `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` in that environment. Grant the
+   token only the publication access needed for both official image repositories.
+4. Disable the matching Docker Hub automated build rules for **both** images.
+   Keep one publisher; the workflow cannot inspect or disable external Hub rules.
+   Configure immutable release tags in Docker Hub where available.
+5. Set the repository variable `QC_TOOL_IMAGE_PUBLISHER=github-actions` only
+   after those external settings have been verified.
+
+For each release, push a new reviewed source tag and wait for its entire
+integration run to succeed. From the default branch, manually run **Publish
+verified QC Tool images**, supplying that tag-push integration run ID, and
+approve the protected environment request. Frontend/worker image artifacts are
+retained for **two days**; expired runs cannot be published. Rerun the complete
+tag integration workflow to prepare fresh artifacts when necessary. A rebuild
+can produce different image IDs even for the same source. If one image was
+already published and its original tested artifacts have expired, prepare a new
+reviewed release tag instead of replacing the existing image.
+
+Preflight verifies the repository, workflow, successful push run, current tag
+commit, retained artifact identities, image configuration IDs, version/revision
+labels and Linux AMD64 platform. A branch run or unrelated artifact is refused.
+The workflow records the exact tag in its `Release tag: <tag>` run name; GitHub's
+REST `head_branch` can identify a branch even for tag pushes and is not tag proof.
+Publication uses trusted tooling from the dispatch commit on the default branch;
+downloaded artifacts supply image data only. Provenance is rechecked immediately
+before publication. No PR job receives registry credentials.
+
+Only the exact source tag is published to the official frontend and worker
+repositories; no `latest` tag, Git tag, GitHub release or server deployment is
+created. A different existing image under that destination tag is refused.
+An identical image can be reused on retry after a partial pair upload. Tag checks
+and two repository pushes are not atomic, so keep other publishers disabled and
+release tags immutable. If publication is interrupted, inspect both retained
+digests and retry the same verified source rather than moving an existing tag.
+
+The `published-images-<attempt>` GitHub artifact records the verified immutable digest
+pair, source and CI run for the operator handoff below. Actual registry writes
+and protected-environment behavior require operator validation after configuration;
+offline helper tests do not certify credentials or registry access.
 
 ## Verify the published artifacts
 

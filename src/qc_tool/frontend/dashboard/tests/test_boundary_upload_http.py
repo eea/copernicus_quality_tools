@@ -305,6 +305,19 @@ class BoundaryUploadHttpTests(TestCase):
         replace.assert_not_called()
         self.assert_active_unchanged()
 
+    def test_administrator_upload_without_csrf_is_rejected_before_service(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        with patch.object(boundary_views, "replace_boundary_package") as replace:
+            response = client.post(self.upload_url, {
+                "file": SimpleUploadedFile("boundaries.zip", _archive(), content_type="application/zip"),
+            })
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "csrf_failed")
+        replace.assert_not_called()
+        self.assert_active_unchanged()
+
 
 class BoundaryUploadReceptionFailureTests(SimpleTestCase):
     def test_disk_full_or_quota_error_during_multipart_parsing_returns_safe_507(self):

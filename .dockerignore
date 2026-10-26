@@ -33,3 +33,6 @@ src/**/*.dump
 src/**/*.backup
 docker/*.env
 docker/**/.env*
+scripts/ci/browser/node_modules/
+scripts/ci/browser/test-results/
+scripts/ci/browser/playwright-report/

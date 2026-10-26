@@ -10,3 +10,7 @@ class QualityControlWorkspaceConfig(AppConfig):
     name = "qc_tool.frontend.dashboard"
     label = "dashboard"
     verbose_name = "QC workspace"
+
+    def ready(self):
+        # Register project checks through Django's public application lifecycle.
+        from qc_tool.frontend.dashboard.checks import csrf  # noqa: F401

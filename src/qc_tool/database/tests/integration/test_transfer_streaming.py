@@ -51,7 +51,7 @@ class StreamingArchiveTests(SimpleTestCase):
         self.assertEqual(sum(growth), self.path.stat().st_size)
         with verified.open_artifact(verified.entries[0]) as stream:
             self.assertEqual(stream.read(), self.data)
-        self.assertEqual([item.name for item in self.root.iterdir()], [extra.name, self.path.name])
+        self.assertCountEqual([item.name for item in self.root.iterdir()], [extra.name, self.path.name])
         entries = [self.native_entry(), {"root": source.root, "key": source.key,
             "sha256": hashlib.sha256(extra.read_bytes()).hexdigest(), "size": extra.stat().st_size}]
         sizes = estimate_archive_size({"description": "native"}, self.metadata, entries,

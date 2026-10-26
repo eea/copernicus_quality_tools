@@ -56,17 +56,11 @@ ARG INSPIRE_ETS_SHA256=ea2c3994cc1fef720dabfa1a85f1fc50602032ec7b39ae038489a647f
 LABEL author=gisat.cz
 LABEL description="QC tool environment, worker service."
 
-ARG VERSION
-ARG SOURCE_REVISION=unknown
-LABEL org.opencontainers.image.source="https://github.com/eea/copernicus_quality_tools" \
-      org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.revision="${SOURCE_REVISION}"
 ARG BUILD_JOBS=2
 ARG ARROW_VERSION=17.0.0-1
 ARG GDAL_SHA256=c435a2ec08eca3d4c2bfe774081f8c433c00e56ee2f0f2f4f6494c2d078fcfb9
 
 ENV PYTHONPATH=/usr/local/src/copernicus_quality_tools/src
-ENV VERSION=${VERSION}
 ENV PATH=/opt/qc-tool/bin:$PATH
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -113,9 +107,7 @@ RUN mkdir -p /var/logs /var/log/squid /var/spool/squid /var/run/squid && \
     chmod 755 /var/run/squid
 
 # Build the initial environment with python packages (without squid).
-RUN test -n "$VERSION" \
-    && echo "$VERSION" >/etc/qc_tool_version.txt \
-    && apt-get -y update \
+RUN apt-get -y update \
     && apt-get install -y --no-install-recommends \
         software-properties-common build-essential cmake git wget curl unzip time jq \
         gnupg2 ca-certificates \
@@ -232,16 +224,6 @@ RUN sed --in-place=.orig --expression='/^# IPv4 local connections/a host  qc_too
 USER root
 RUN rm -rf /var/lib/apt/lists/* /usr/local/src/init_qc_tool_db.sql
 
-# Package the same checkout used by the frontend and CI. Never fetch mutable
-# application branches during an image build.
-COPY src /usr/local/src/copernicus_quality_tools/src
-COPY product_definitions /usr/local/src/copernicus_quality_tools/product_definitions
-COPY testing_data /usr/local/src/copernicus_quality_tools/testing_data
-COPY docker /usr/local/src/copernicus_quality_tools/docker
-COPY scripts /usr/local/src/copernicus_quality_tools/scripts
-COPY pyproject.toml README.md LICENSE /usr/local/src/copernicus_quality_tools/
-RUN python3 /usr/local/src/copernicus_quality_tools/docker/check_worker_runtime.py
-
 RUN curl --fail --show-error --location --proto '=https' --tlsv1.2 \
          "https://github.com/INSPIRE-MIF/helpdesk-validator/releases/download/v${INSPIRE_VALIDATOR_VERSION}/inspire-validator-${INSPIRE_VALIDATOR_VERSION}.zip" \
          --output /tmp/inspire-validator.zip \
@@ -321,5 +303,24 @@ COPY docker/supervisord.conf /etc/supervisord.conf
 
 # Expose the port of job scheduler.
 EXPOSE 8000
+
+# Package the same checkout used by the frontend and CI after dependencies.
+# Never fetch mutable application branches during an image build.
+COPY src /usr/local/src/copernicus_quality_tools/src
+COPY product_definitions /usr/local/src/copernicus_quality_tools/product_definitions
+COPY testing_data /usr/local/src/copernicus_quality_tools/testing_data
+COPY docker /usr/local/src/copernicus_quality_tools/docker
+COPY scripts /usr/local/src/copernicus_quality_tools/scripts
+COPY pyproject.toml README.md LICENSE /usr/local/src/copernicus_quality_tools/
+RUN python3 /usr/local/src/copernicus_quality_tools/docker/check_worker_runtime.py
+
+# Keep changing checkout provenance after dependency and application layers.
+ARG VERSION
+ARG SOURCE_REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/eea/copernicus_quality_tools" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}"
+ENV VERSION=${VERSION}
+RUN test -n "$VERSION" && echo "$VERSION" >/etc/qc_tool_version.txt
 
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]
