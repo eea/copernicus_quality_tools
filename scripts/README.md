@@ -20,21 +20,16 @@ scripts/
 ├── testing/                       # Repeatable QC evidence collection
 │   └── legacy_qc.py
 ├── tests/                         # Offline unit tests for maintained tools
+│   ├── deployment/
 │   └── testing/
-├── one_off/clc2024/                # Historical product-specific preparation
-│   ├── generate_metadata.py
-│   ├── gap_analysis.py
-│   └── delivery_list.json
-└── obsolete/wiki/                  # Retained removal candidates
-    ├── crawl_sitemap.py
-    ├── generate_sitemap.py
-    ├── sitemap.xml
-    └── sidebar.md
+└── one_off/clc2024/                # Historical product-specific preparation
+    ├── generate_metadata.py
+    └── gap_analysis.py
 ```
 
-Keep new production captures, ZIPs, database copies and generated QC reports
-outside this catalog. The retained CLC delivery list is a historical exception
-pending the removal review below, not a template for new fixtures. Ignored evidence under
+Keep production captures, ZIPs, database copies and generated QC reports
+outside this catalog. Historical diagnostics take private captures through
+explicit input paths. Ignored evidence under
 `src/qc_tool/database/backups/` remains historical evidence; moving a command does
 not rewrite the command paths recorded in those captures.
 
@@ -47,7 +42,6 @@ not rewrite the command paths recorded in those captures.
 | Review recipe tile identifiers or naming examples | [`catalog/`](catalog/README.md) | Manual legacy diagnostics; findings require review against current product contracts. |
 | Generate boundary resources | [`data_preparation/boundaries/`](data_preparation/boundaries/README.md) | Manual data preparation with explicit sources and output paths; requires GDAL/OGR. |
 | Reproduce a historical CLC2024 preparation/investigation | [`one_off/clc2024/`](one_off/clc2024/README.md) | Historical tools retained for review; not automated QC tests. |
-| Review outdated documentation tools | [`obsolete/wiki/`](obsolete/wiki/README.md) | Removal candidates; current docs use Jekyll's sitemap plugin. |
 
 Legacy database conversion is a private manual operation outside this catalog
 and the application codebase. The original operator tools are archived privately;
@@ -105,10 +99,6 @@ These files are retained in the folders below. The proposals do not delete them.
 
 | Candidate | Why removal is reasonable | Condition before removal |
 | --- | --- | --- |
-| `obsolete/wiki/crawl_sitemap.py` and `generate_sitemap.py` | Two unreferenced wiki sitemap implementations; neither builds the current docs. `docs/_config.yml` already uses `jekyll-sitemap`. | Confirm no external operator still uses the old wiki workflow, then remove both together. |
-| `obsolete/wiki/sitemap.xml` | Generated historical wiki output can be regenerated; it is not current documentation source. | Remove with the wiki generators. |
-| `obsolete/wiki/sidebar.md` | Empty historical artifact with no callers. | Remove with the obsolete wiki files. |
-| `one_off/clc2024/delivery_list.json` | Captured production delivery metadata, not a synthetic test fixture or maintained catalog. | Preserve any required investigation evidence privately; pass a private list explicitly to the diagnostic. |
 | `one_off/clc2024/generate_metadata.py` | Product-specific embedded templates and import-time file writes make it unsuitable as a general maintained command or regression test. | Confirm the historical preparation is complete and any required templates have an owning maintained workflow. |
 | `catalog/check_tile_codes.py` | Fixed product-family/step/length assumptions can drift from current product-unit validation. | Move any still-needed assertions into focused tests of the real product-unit contract before retiring this diagnostic. |
 | `catalog/naming_examples.py` | Heuristic regex substitutions and direct parsEO parsing are different from the application's naming integration. | Preserve useful explicit cases in tests of the actual naming adapter before retiring the example generator. |

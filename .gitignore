@@ -123,3 +123,8 @@ Thumbs.db
 
 # Local database backups contain account and storage credentials.
 /src/qc_tool/database/backups/
+
+# Local session scratch, screenshots, mockups and generated reports.
+/work/
+/artifacts/
+/outputs/

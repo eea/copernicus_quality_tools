@@ -4,7 +4,8 @@
 Downloads historical report attachments after interactive authentication, filters
 large gap features, and optionally separates land from ocean intersections. It
 does not submit deliveries, change QC verdicts, or run automated QC tests. The
-companion delivery_list.json is a historical snapshot, not a synthetic fixture.
+delivery list and output directory must be supplied explicitly; captures are
+private operator inputs, not synthetic fixtures.
 The default area threshold is 100000 square metres (10 hectares). Missing land
 polygons disable ocean filtering; computed areas require an appropriate CRS.
 Omit --password to keep credentials out of command-line arguments.
@@ -234,15 +235,15 @@ def main():
     parser.add_argument("--base-url", default=BASE_URL, help=f"Base URL of the QC Tool (default: {BASE_URL})")
     parser.add_argument(
         "--delivery-list",
-        default=Path(__file__).parent / "delivery_list.json",
+        required=True,
         type=Path,
-        help="Path to delivery_list.json",
+        help="Path to a private captured delivery-list JSON file",
     )
     parser.add_argument(
         "--output-dir",
-        default=Path(__file__).parent / "gap_results",
+        required=True,
         type=Path,
-        help="Directory to write output GeoPackages (created if needed)",
+        help="Private output directory for generated GeoPackages (created if needed)",
     )
     parser.add_argument(
         "--area-threshold",

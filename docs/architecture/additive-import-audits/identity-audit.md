@@ -1,4 +1,15 @@
+---
+title: Additive import identity audit
+nav_exclude: true
+search_exclude: true
+---
+
 # Additive record import: identity and consistency audit
+
+> Historical research, 21 October 2026. This appendix records the pre-change
+> implementation and proposals considered then. It does not describe current
+> behavior. See [Additive record imports](../additive-record-import.md) for the
+> implemented design and its limits.
 
 Research date: 21 October 2026. This appendix records a read-only code audit. It
 does not describe an implemented general merge engine. No application model,
@@ -31,16 +42,16 @@ meaning into a different target scope.
 
 | Area | Observed implementation | Consequence for additive import |
 | --- | --- | --- |
-| Portable model contract | [`RESOURCE_FIELDS`](../../src/qc_tool/database/transfers/records.py) explicitly allowlists every managed dashboard model and its fields; `_assert_contract_registry()` refuses an unreviewed inventory change | Extend the central contract rather than accepting uploaded Django model/table names or adding another importer |
+| Portable model contract | [`RESOURCE_FIELDS`](../../../src/qc_tool/database/transfers/records.py) explicitly allowlists every managed dashboard model and its fields; `_assert_contract_registry()` refuses an unreviewed inventory change | Extend the central contract rather than accepting uploaded Django model/table names or adding another importer |
 | Portable scope | `export_records()` exports selected accounts or the complete application graph | A selected delivery/job export needs a reviewed dependency-closure selection contract, not row filters applied after export |
 | Existing business rows | `plan_records()` blocks application import if any business resource is occupied | Present empty-target behavior is intentional; changing it requires changes to planning, apply, verification and recovery together |
 | Account mapping | Explicit source-key to target-PK mapping; distinct source accounts cannot map to one target; application mappings preserve exact usernames | Username/email equality is a suggestion for the operator, not sufficient evidence to grant an incoming identity ownership of an existing account |
 | Target review digest | `_target_fingerprint()` includes account values and business **counts**, plus destination/schema/contract identity | Counts cannot detect an edited existing release, changed delivery owner or changed review decision when row counts stay equal |
 | Apply | `apply_records()` validates again, inserts business rows with original PKs, maps only user FKs and preserves timestamps using raw inserts | Every resource needs an explicit planned identity map; arbitrary `update_or_create()` would bypass the intended no-overwrite contract |
 | Verification | `verify_records()` compares the complete actual business tables against the imported graph | Must become subset reconciliation with recorded created/reused identities and evidence that pre-existing rows stayed unchanged |
-| SQL/files recovery | [`service.run_operation()`](../../src/qc_tool/database/transfers/service.py) publishes owned immutable files, then inserts records and one `TransferReceipt` in a SQL transaction | Retain this single orchestration path; do not create a UI-only import path with weaker crash handling |
-| Repeat imports | [`TransferReceipt`](../../src/qc_tool/database/models.py) has unique package and operation UUIDs | Same-package retry can recover an uncertain commit; a new package UUID still needs stable record identities to detect records imported before |
-| Schema drift | [`schema_fingerprint()`](../../src/qc_tool/database/transfers/contracts.py) binds portable input to exact current model/validation source and timezone policy | Current drift handling fails closed; an application version label alone is not compatibility evidence |
+| SQL/files recovery | [`service.run_operation()`](../../../src/qc_tool/database/transfers/service.py) publishes owned immutable files, then inserts records and one `TransferReceipt` in a SQL transaction | Retain this single orchestration path; do not create a UI-only import path with weaker crash handling |
+| Repeat imports | [`TransferReceipt`](../../../src/qc_tool/database/models.py) has unique package and operation UUIDs | Same-package retry can recover an uncertain commit; a new package UUID still needs stable record identities to detect records imported before |
+| Schema drift | [`schema_fingerprint()`](../../../src/qc_tool/database/transfers/contracts.py) binds portable input to exact current model/validation source and timezone policy | Current drift handling fails closed; an application version label alone is not compatibility evidence |
 
 The audited source locations are functions and model definitions rather than
 frozen line numbers because the working tree is under active development.
@@ -179,7 +190,7 @@ existing row merely to satisfy a foreign key.
 
 ### Publication evidence
 
-[`artifacts._verify_receipt()`](../../src/qc_tool/database/transfers/artifacts.py)
+[`artifacts._verify_receipt()`](../../../src/qc_tool/database/transfers/artifacts.py)
 validates original manifest bytes against the submission UUID, delivery ID, job
 UUID, release ID, unit ID/code, verified code, input hash, request time and
 artifact digest. Supported manifest v1/v2 field names differ, but the identity
@@ -193,7 +204,7 @@ evidence. The same restriction applies to original product specifications and
 uploaded snapshots, whose original bytes are protected by project policy.
 
 The current download path
-[`submission_inventory()`](../../src/qc_tool/frontend/dashboard/services/submissions/artifacts.py)
+[`submission_inventory()`](../../../src/qc_tool/frontend/dashboard/services/submissions/artifacts.py)
 checks manifest digest, submission UUID and per-file inventory. It checks fewer
 identity fields than transfer export validation. Successful download alone
 therefore does **not** prove a rekeyed graph can be exported again safely.
@@ -206,7 +217,7 @@ collision merging.
 
 ### Product readiness
 
-[`_evaluate_readiness()`](../../src/qc_tool/frontend/dashboard/services/catalog/readiness.py)
+[`_evaluate_readiness()`](../../../src/qc_tool/frontend/dashboard/services/catalog/readiness.py)
 hashes product ID, readiness revision, active state and current release facts,
 including release IDs and accepted counts. Rekeying or adding accepted history
 can change the scope. Preserve source readiness as provenance; do not silently
@@ -221,7 +232,7 @@ must be visible in the plan, not an undocumented importer side effect.
 
 ### Review and conflict history
 
-[`DeliverySubmission`](../../src/qc_tool/frontend/dashboard/domain/submissions/delivery_submission.py)
+[`DeliverySubmission`](../../../src/qc_tool/frontend/dashboard/domain/submissions/delivery_submission.py)
 enforces one published/accepted submission per product unit. Its publication
 identity is immutable; only review state/version may change after publication.
 `SubmissionConflict` is one current decision per unit, and its events carry
@@ -234,7 +245,7 @@ state intact. Likewise, two independent `conflict v1` events cannot be relabeled
 as consecutive target events without changing their meaning.
 
 Reuse the existing
-[`resolve_submission_conflict()`](../../src/qc_tool/frontend/dashboard/services/submissions/conflicts/resolution.py)
+[`resolve_submission_conflict()`](../../../src/qc_tool/frontend/dashboard/services/submissions/conflicts/resolution.py)
 workflow for a **new target-domain decision**, with its actor, version check and
 reason requirements. Retain incoming historical decisions as original provenance.
 Any mode that changes incoming operational review state needs a versioned,
@@ -346,7 +357,7 @@ volume, repeated partial transfers and bidirectional interchange. It also adds
 schema, lifecycle and retention responsibilities; a polymorphic target pointer
 does not automatically provide SQL referential integrity.
 
-Under the current [draft models-only policy](../../src/qc_tool/database/README.md),
+Under the current [draft models-only policy](../../../src/qc_tool/database/README.md),
 adding such a model would require a freshly initialized disposable database for
 development/testing and an explicit reviewed deployment decision. It must not
 be added in place to the existing installation, shipped as a baseline or hidden

@@ -33,9 +33,9 @@ filename, without checking that run's input hash.
 
 Three detailed audits cover the original implementation and the requirements:
 
-- [Record identities and dependencies](../../work/additive-import-research/identity-audit.md): all twelve business resources, account identities, SQL/domain uniqueness, review history and readiness evidence.
-- [Retained ZIP and storage evidence](../../work/additive-import-research/storage-audit.md): shared volumes, safe path resolution, published manifests, retained work directories and file verification.
-- [Admin workflow and acceptance cases](../../work/additive-import-research/ux-audit.md): existing UI patterns, conflict decisions, dependency exclusions and test scenarios.
+- [Record identities and dependencies](additive-import-audits/identity-audit.md): all twelve business resources, account identities, SQL/domain uniqueness, review history and readiness evidence.
+- [Retained ZIP and storage evidence](additive-import-audits/storage-audit.md): shared volumes, safe path resolution, published manifests, retained work directories and file verification.
+- [Admin workflow and acceptance cases](additive-import-audits/ux-audit.md): existing UI patterns, conflict decisions, dependency exclusions and test scenarios.
 
 Those appendices describe the **pre-change baseline and design investigation**.
 The following sections describe the resulting implementation.

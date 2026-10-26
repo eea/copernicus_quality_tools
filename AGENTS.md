@@ -12,6 +12,17 @@ Place reusable application and worker functionality in its owning package outsid
 the check folders; extract existing shared functionality when it is needed.
 Preserve check identities, parameters and result semantics when changing imports.
 
+# Repository hygiene
+
+Keep source, required test fixtures and assets, maintained tooling/configuration,
+and durable documentation in Git. Do not commit session plans, transcripts,
+screenshots, ad hoc verification logs, UI mockups or generated site/report output.
+Store temporary session work outside the checkout or in the ignored root `work/`
+directory. Put useful design findings in the owning documentation section and
+update their links; do not keep a duplicate session report beside them.
+Check references before removing old tooling. Preserve original specifications,
+test fixtures, private backups and runtime/recovery data during artifact cleanup.
+
 # Administration boundaries
 
 The Admin interface owns user management, role groups, permissions, boundary

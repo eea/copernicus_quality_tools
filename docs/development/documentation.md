@@ -66,6 +66,16 @@ Verify file paths and heading fragments locally before adding a link. Do not
 substitute a wiki page or an assumed published URL for a missing target; find
 the owning file or document the missing procedure in the repository.
 
+## Keep session output out of source control
+
+Commit durable architecture, user/developer guides and operator procedures.
+Keep session plans, screenshots, mockups, ad hoc logs and generated reports
+outside the checkout or in the ignored root `work/`, `artifacts/` or `outputs/`
+directories. Promote useful findings into the owning documentation instead of
+linking maintained guides to scratch files. Historical design evidence retained
+in `docs/` must identify its source date and distinguish proposals from current
+behavior. Required test fixtures and maintained assets remain source inputs.
+
 ## Publishing
 
 [`docs/_config.yml`](../_config.yml) provides a Jekyll / Just the Docs

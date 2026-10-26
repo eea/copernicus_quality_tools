@@ -1,4 +1,15 @@
+---
+title: Additive import storage audit
+nav_exclude: true
+search_exclude: true
+---
+
 # Retained delivery ZIPs and additive record import: storage audit
+
+> Historical research, 21 October 2026. This appendix records the pre-change
+> implementation and proposals considered then. It does not describe current
+> behavior. See [Additive record imports](../additive-record-import.md) for the
+> implemented design and its limits.
 
 Research date: 21 October 2026. This records the repository findings before the
 additive-import implementation and distinguishes that snapshot from its proposed
@@ -37,30 +48,30 @@ and the absence of a verified historical download contract.
 
 Evidence:
 
-- [Delivery fields](../../src/qc_tool/frontend/dashboard/domain/deliveries/delivery.py#L11),
-  including [optional digest and deletion state](../../src/qc_tool/frontend/dashboard/domain/deliveries/delivery.py#L52).
-- [Job relationships](../../src/qc_tool/frontend/dashboard/domain/jobs/job.py#L14)
-  and [optional input checksum](../../src/qc_tool/frontend/dashboard/domain/jobs/job.py#L99).
-- [Submission identity and retained provenance](../../src/qc_tool/frontend/dashboard/domain/submissions/delivery_submission.py#L19).
-- [Job directory derivation](../../src/qc_tool/common.py#L468).
-- [MEDIA_ROOT uses incoming storage](../../src/qc_tool/frontend/settings.py#L313).
-- [Archive root/key contract](../../src/qc_tool/database/transfers/archive.py#L60).
+- [Delivery fields](../../../src/qc_tool/frontend/dashboard/domain/deliveries/delivery.py#L11),
+  including [optional digest and deletion state](../../../src/qc_tool/frontend/dashboard/domain/deliveries/delivery.py#L52).
+- [Job relationships](../../../src/qc_tool/frontend/dashboard/domain/jobs/job.py#L14)
+  and [optional input checksum](../../../src/qc_tool/frontend/dashboard/domain/jobs/job.py#L99).
+- [Submission identity and retained provenance](../../../src/qc_tool/frontend/dashboard/domain/submissions/delivery_submission.py#L19).
+- [Job directory derivation](../../../src/qc_tool/common.py#L468).
+- [MEDIA_ROOT uses incoming storage](../../../src/qc_tool/frontend/settings.py#L313).
+- [Archive root/key contract](../../../src/qc_tool/database/transfers/archive.py#L60).
 
 The local Compose frontend and worker use the same incoming and work paths:
-[frontend environment](../../docker/compose.local.yaml#L52) and
-[worker environment](../../docker/compose.local.yaml#L136). A fresh SQL database
+[frontend environment](../../../docker/compose.local.yaml#L52) and
+[worker environment](../../../docker/compose.local.yaml#L136). A fresh SQL database
 does not establish that these mounted directories are empty, synchronized or
 owned by the newly imported records. Shared volumes are an independent resource
 that the import plan must inspect.
 
 ## Current job-to-ZIP download behavior
 
-The [job result template](../../src/qc_tool/frontend/dashboard/templates/dashboard/jobs/result.html#L123)
+The [job result template](../../../src/qc_tool/frontend/dashboard/templates/dashboard/jobs/result.html#L123)
 shows the historical job identifier and input SHA-256, but its ZIP link is
 `download_delivery_file(delivery.id)`. It suppresses the link when
 `delivery.is_deleted` is true.
 
-The [delivery endpoint](../../src/qc_tool/frontend/dashboard/views/deliveries/files.py#L16):
+The [delivery endpoint](../../../src/qc_tool/frontend/dashboard/views/deliveries/files.py#L16):
 
 1. Loads a delivery by its local integer primary key.
 2. Applies delivery-level view authorization.
@@ -72,22 +83,22 @@ It does not compare the opened bytes to `delivery.content_sha256`,
 `delivery.size_bytes` or the historical job's `input_sha256`. A checksum shown on
 the page is not currently a checksum guarantee on that response.
 
-The [upload path resolver](../../src/qc_tool/frontend/dashboard/services/uploads/paths.py#L20)
+The [upload path resolver](../../../src/qc_tool/frontend/dashboard/services/uploads/paths.py#L20)
 already rejects another user's path, subdirectories, unsafe owner names,
 symlinked owner directories/files and nonregular/non-ZIP files. Reuse this path
-policy. The [artifact opener](../../src/qc_tool/frontend/dashboard/services/artifacts/files.py#L41)
+policy. The [artifact opener](../../../src/qc_tool/frontend/dashboard/services/artifacts/files.py#L41)
 returns an open descriptor and refuses symlinks and special files. Hash and then
 return that same descriptor rather than validating one path and reopening it.
 
 Historical downloads should use the existing
-[job authorization](../../src/qc_tool/frontend/dashboard/access/jobs.py#L6),
+[job authorization](../../../src/qc_tool/frontend/dashboard/access/jobs.py#L6),
 which checks the selected job's recorded product/release scope. It deliberately
 does not grant access to an older run solely because the delivery was rerun
 under a different product.
 
 ### Existing replacement protection
 
-The [replacement workflow](../../src/qc_tool/frontend/dashboard/services/uploads/overwrite.py#L170)
+The [replacement workflow](../../../src/qc_tool/frontend/dashboard/services/uploads/overwrite.py#L170)
 retains old bytes as a private `.previous` recovery hard link, creates a hidden
 successor delivery and marks the original deleted in a durable transaction. It
 then publishes replacement bytes. The old result page consequently shows
@@ -100,27 +111,27 @@ an appropriate namespace for an arbitrary import UI to browse.
 
 ### What job history itself retains
 
-The [worker](../../src/qc_tool/worker/dispatch.py#L123) copies the original
+The [worker](../../../src/qc_tool/worker/dispatch.py#L123) copies the original
 product specification into the job directory, hashes the original local ZIP and
 passes its path into checks. It does not copy every local input ZIP into an
-immutable per-job input archive. [Terminal metadata projection](../../src/qc_tool/frontend/dashboard/services/product_units/jobs/metadata.py#L9)
+immutable per-job input archive. [Terminal metadata projection](../../../src/qc_tool/frontend/dashboard/services/product_units/jobs/metadata.py#L9)
 copies the worker result hash into `Job.input_sha256` when available.
 
 The delivery digest can be populated from publication evidence in
-[submission finalization](../../src/qc_tool/frontend/dashboard/services/submissions/state/finalization.py#L79).
+[submission finalization](../../../src/qc_tool/frontend/dashboard/services/submissions/state/finalization.py#L79).
 Its existence must not be assumed for every old delivery or failed job. An
 absent historical job checksum cannot be reconstructed as an historical fact
 simply by hashing whatever now exists at the same filename.
 
 ## Current published-input contract and its limits
 
-[Publication](../../src/qc_tool/frontend/dashboard/services/submissions/publication/delivery_input.py#L17)
+[Publication](../../../src/qc_tool/frontend/dashboard/services/submissions/publication/delivery_input.py#L17)
 copies the original local ZIP into `input.d/<filename>`, computes size and digest,
 and compares the digest with the expected QC input. It records this file in the
 publication inventory. S3 inputs are explicitly not archived by this workflow;
 publication currently refuses them rather than inventing a retained copy.
 
-The [manifest builder](../../src/qc_tool/frontend/dashboard/services/submissions/publication/manifest.py#L25)
+The [manifest builder](../../../src/qc_tool/frontend/dashboard/services/submissions/publication/manifest.py#L25)
 binds:
 
 - Submission UUID and job UUID.
@@ -129,15 +140,15 @@ binds:
 - Historical input SHA-256, request timestamp and local/remote storage kind.
 - Every retained file's relative path, byte size and SHA-256.
 
-The [submission reader](../../src/qc_tool/frontend/dashboard/services/submissions/artifacts.py#L14)
+The [submission reader](../../../src/qc_tool/frontend/dashboard/services/submissions/artifacts.py#L14)
 verifies the manifest body's SHA-256 against both the document's stated digest
 and `submission.artifact_digest`, and checks its submission UUID against the
-local submission. [File opening](../../src/qc_tool/frontend/dashboard/services/submissions/artifacts.py#L40)
+local submission. [File opening](../../../src/qc_tool/frontend/dashboard/services/submissions/artifacts.py#L40)
 then verifies the selected member's digest and size before returning the open
 descriptor. These are strong reusable primitives.
 
 That reader does **not** by itself compare every manifest relation to the current
-job/release/unit graph. The current [transfer receipt verifier](../../src/qc_tool/database/transfers/artifacts.py#L247)
+job/release/unit graph. The current [transfer receipt verifier](../../../src/qc_tool/database/transfers/artifacts.py#L247)
 does compare that broader context. A new job-bound input resolver must verify the
 manifest's job identity, input digest and relevant local/source identity mapping;
 checking only manifest SHA-256 plus submission UUID is insufficient after
@@ -152,54 +163,54 @@ recompute its checksum to make it appear native to the destination.
 
 ### Source inventory
 
-[Delivery collection](../../src/qc_tool/database/transfers/artifacts.py#L126)
+[Delivery collection](../../../src/qc_tool/database/transfers/artifacts.py#L126)
 uses the source account username and filename. It requires a regular file,
 checks size and the delivery checksum when recorded, and rejects mismatches.
 Remote delivery objects and credentials are external requirements. Missing
 retired uploads can become warnings; a missing active local upload fails the
 portable artifact contract.
 
-[Job collection](../../src/qc_tool/database/transfers/artifacts.py#L149)
+[Job collection](../../../src/qc_tool/database/transfers/artifacts.py#L149)
 preserves job-root report/result/specification files and `output.d` artifacts.
 Missing job directories are warnings so SQL history can remain available. Worker
 input and scratch directories are deliberately excluded, as are top-level
 `.log`, `.stdout` and `.pre` files. Copying all worker state would expose secrets,
 temporary database exports or materialized remote data.
 
-[Published collection](../../src/qc_tool/database/transfers/artifacts.py#L170)
+[Published collection](../../../src/qc_tool/database/transfers/artifacts.py#L170)
 requires its original manifest and complete immutable inventory.
-[Package validation](../../src/qc_tool/database/transfers/artifacts.py#L314)
+[Package validation](../../../src/qc_tool/database/transfers/artifacts.py#L314)
 binds allowed filesystem destinations to the imported business graph, original
 specification digests and published-input inventories. Uploaded archive paths
 are not arbitrary destinations.
 
 ### Destination inventory and safe publication
 
-[Restore preflight](../../src/qc_tool/database/transfers/artifacts.py#L804)
+[Restore preflight](../../../src/qc_tool/database/transfers/artifacts.py#L804)
 classifies a package member as create or reuse. Existing bytes must pass
-[exact digest and size matching](../../src/qc_tool/database/transfers/artifacts.py#L769).
+[exact digest and size matching](../../../src/qc_tool/database/transfers/artifacts.py#L769).
 A mismatch raises a conflict; nothing may be overwritten.
 
-[File publication](../../src/qc_tool/database/transfers/artifacts.py#L616)
+[File publication](../../../src/qc_tool/database/transfers/artifacts.py#L616)
 stages complete bytes on the destination filesystem, fsyncs them, journals inode
 ownership before publication, revalidates parent directories and uses exclusive
 hard-link creation. The filesystem is durable before SQL commit.
-[Rollback](../../src/qc_tool/database/transfers/artifacts.py#L716) removes only
+[Rollback](../../../src/qc_tool/database/transfers/artifacts.py#L716) removes only
 unchanged objects whose inode ownership was recorded by this operation. Reused
 files are never its rollback property.
 
 This mechanism depends on staging and final files being on the same device.
-[Nested-mount detection](../../src/qc_tool/database/transfers/artifacts.py#L635)
+[Nested-mount detection](../../../src/qc_tool/database/transfers/artifacts.py#L635)
 currently fails safely. An import UI should identify the affected configured
 root and explain the storage prerequisite rather than provide a destructive
 fallback or silently use a nonatomic cross-device move.
 
 ### Current intentional record limitations
 
-[Account planning](../../src/qc_tool/database/transfers/records.py#L394)
+[Account planning](../../../src/qc_tool/database/transfers/records.py#L394)
 requires explicit mapping when a username exists, and application restoration
 requires preserving usernames because paths depend on them. Application import
-requires all business tables to be empty. [Record insertion](../../src/qc_tool/database/transfers/records.py#L449)
+requires all business tables to be empty. [Record insertion](../../../src/qc_tool/database/transfers/records.py#L449)
 preserves source business IDs and remaps user FKs only.
 
 Those checks are an intentional boundary, not a UI-only inconvenience. Removing
@@ -227,7 +238,7 @@ preserving immutable artifact context would make the current code unsafe.
 
 ### Strict job-tree inventory mismatch
 
-The current [_preflight_retained_trees](../../src/qc_tool/database/transfers/artifacts.py#L776)
+The current [_preflight_retained_trees](../../../src/qc_tool/database/transfers/artifacts.py#L776)
 includes both immutable submissions and ordinary job working directories. It
 requires every existing directory and file to occur in the package inventory.
 This conflicts with the deliberate omissions in the source job collector.
@@ -375,6 +386,6 @@ permissions or mount consistency of production storage; it does not claim that
 any live job currently downloads incorrect bytes. It proposes acceptance tests
 but does not run them or deliver an additive-import implementation. The existing
 fresh-target transfer integration test is useful evidence of intended
-[publication and original-byte preservation](../../src/qc_tool/database/tests/integration/test_transfer_application.py#L1),
+[publication and original-byte preservation](../../../src/qc_tool/database/tests/integration/test_transfer_application.py#L1),
 not evidence that occupied-target merging or arbitrary retained-storage reuse
 already works.

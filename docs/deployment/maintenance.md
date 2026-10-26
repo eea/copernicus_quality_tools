@@ -19,8 +19,8 @@ clients continue browsing authorized data in read-only mode. This lets an
 operator back up the application database and its files together. Maintenance
 does not run backups, migrations
 or SQL DDL, and it does not set PostgreSQL to read-only. The
-[architecture review](../architecture/maintenance-research.md) maps deployment,
-CI/CD, execution and storage ownership from the checked-in source.
+[coordinated maintenance architecture](../architecture/coordinated-maintenance.md)
+describes writer admission, worker acknowledgements and persistent recovery state.
 
 ## Requirements and deployment
 

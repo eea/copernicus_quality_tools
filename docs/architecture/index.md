@@ -6,8 +6,8 @@ has_children: true
 
 # Architecture
 
-See the [architecture, deployment and CI/CD maintenance review](maintenance-research.md)
-for the application writer inventory and the maintenance coordination design.
+See [coordinated maintenance](coordinated-maintenance.md) for writer admission,
+worker acknowledgements and persistent recovery state.
 
 QC Tool is a two-application system connected through a database, shared
 storage, and an authenticated job-polling protocol:

@@ -1,4 +1,15 @@
+---
+title: Additive import UX audit
+nav_exclude: true
+search_exclude: true
+---
+
 # Additive record transfer: Admin UX audit and implementation contract
+
+> Historical research, 21 October 2026. This appendix records the pre-change
+> implementation and proposals considered then. It does not describe current
+> behavior. See [Additive record imports](../additive-record-import.md) for the
+> implemented design and its limits.
 
 Status: researched proposal, not implemented. Reviewed against the working tree on 21 October 2026. The current full database restore remains a separate recovery operation.
 

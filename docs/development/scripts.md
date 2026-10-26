@@ -17,7 +17,6 @@ are grouped by purpose:
 | `scripts/catalog/` | Manual read-only recipe diagnostics |
 | `scripts/data_preparation/boundaries/` | Explicit generation of boundary resources |
 | `scripts/one_off/clc2024/` | Historical product preparation and investigation |
-| `scripts/obsolete/wiki/` | Old documentation tools and generated artifacts proposed for removal |
 
 Run commands from the repository root with `python3 -m scripts.<package>.<command>`.
 In containers, use the repository as the working directory. Application startup
@@ -26,10 +25,12 @@ does not run these scripts.
 Legacy database conversion is performed manually in private operator tooling,
 outside the codebase. Prepared database artifacts follow the
 [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md).
-Product-specific experiments, captured delivery lists and generated wiki outputs
-do not belong in automated QC testing. Promote useful
+Product-specific experiments and captured delivery lists do not belong in
+automated QC testing. Promote useful
 assertions into tests of the owning application contract before retiring an
-experimental diagnostic.
+experimental diagnostic. The documentation site is built from `docs/` with
+Jekyll's sitemap plugin; wiki crawlers and generated wiki outputs are not source
+assets.
 
 Use the [testing guide](testing.md) for suite commands and the
 [database guide](../../src/qc_tool/database/README.md) for persistence

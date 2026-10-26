@@ -47,7 +47,3 @@ including hidden `.versions` and `.state`, and exclude it from scratch cleanup.
 If activation fails after the database commit, restore storage access and retry
 the same original JSON. If removal cannot publish its inactive marker, restore
 storage access and repeat removal; the database product remains inactive.
-
-The [legacy editable-product Compose example](docker_compose_examples/docker-compose.editable_product.yml)
-is available for reference. Use the maintained local workflow above for startup
-commands and service names.

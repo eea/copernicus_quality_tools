@@ -43,13 +43,12 @@ processed. If the land layer is absent, ocean filtering is disabled. Server
 attachment names are treated as trusted historical inputs; this diagnostic is
 not the application's confined artifact-download API.
 
-The sibling [`delivery_list.json`](delivery_list.json) is a captured list of 101
-historical production deliveries, including 59 with a submission date. It is not
-synthetic test data or a maintained catalog. Its removal is proposed once any
-required evidence is preserved privately; future runs can use an explicit
-private `--delivery-list`.
+The required `--delivery-list` and `--output-dir` explicitly select the private
+captured input and generated output directory. Production captures are not
+synthetic test data or a maintained catalog and are kept outside the checkout.
+Only rows with a submission date are processed.
 
-The metadata generator and captured list are
-[conditional removal candidates](../../README.md#proposed-deletions). Keep gap
+The metadata generator is a
+[conditional removal candidate](../../README.md#proposed-deletions). Keep gap
 analysis only while its investigation remains useful, with reviewed sources and
 outputs outside Git.
