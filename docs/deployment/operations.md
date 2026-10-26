@@ -56,6 +56,10 @@ Monitor:
 - repeated authentication/authorization failures;
 - S3 upstream failures by stable error code.
 
+For unavailable upload storage, check the
+[incoming-directory layout, mount permissions and temporary storage](../getting-started/troubleshooting.md#delivery-uploads-report-unavailable-storage)
+before changing volume types.
+
 For the EEA persistent-storage profile, also monitor the real host mount and
 the configured storage identity. The container guard refuses missing or wrong
 storage at startup; host mount dependencies and monitoring must prevent and

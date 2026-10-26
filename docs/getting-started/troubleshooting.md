@@ -68,6 +68,106 @@ docker compose -f docker/compose.local.yaml logs --follow worker
 The worker health check requires both its internal HTTP service and the
 configured validator to answer.
 
+## Delivery uploads report unavailable storage
+
+A Docker named volume supports uploads; switching to a bind mount is not a
+requirement. Check the configured path, mount, permissions and free space first.
+Use the same Compose files, environment file and project name as the running
+stack; the commands below use the local Compose configuration.
+
+### Check the mount root and upload directory
+
+The local and EEA Compose files use this layout in both frontend and worker:
+
+```text
+/mnt/qc_tool_incoming/             # mounted volume root
+└── incoming/                     # INCOMING_DIR; Django MEDIA_ROOT
+    └── <username>/               # per-user delivery files and upload chunks
+```
+
+`qc_tool_incoming` is mounted at `/mnt/qc_tool_incoming`, while uploads go to
+`/mnt/qc_tool_incoming/incoming`. A bind mount at the same target has the same
+layout: its host source is the parent of `incoming/`. Mounting a host directory
+does not itself create this child or grant the container write access. If you
+instead mount directly at `/mnt/qc_tool_incoming/incoming`, the host source is
+already the upload root; do not add another `incoming/` inside it. Give frontend
+and worker the same persistent source and mount target. Confirm the effective
+Compose configuration:
+
+```bash
+docker compose -f docker/compose.local.yaml config
+docker compose -f docker/compose.local.yaml exec frontend \
+  sh -c 'ls -ldn /mnt/qc_tool_incoming "$INCOMING_DIR"'
+```
+
+Current QC Tool creates an absent `incoming` leaf with mode `0750` on the first
+upload POST, provided its parent already exists and is writable. Chunk-check
+GET requests create nothing; a `404` for a chunk not yet uploaded is expected.
+Missing ancestors remain a storage error.
+
+Source revision `e2e52a5` has the missing-directory bug: both chunk-check GETs
+and upload POSTs require the configured upload root to exist and otherwise
+return `503` with “Upload storage is unavailable.” Automatic leaf creation was
+added in `672e8769`. For the older revision, provision only the configured
+`incoming/` leaf on the verified volume with the frontend's runtime ownership
+and restricted permissions, or deploy an image containing the fix through the
+normal release procedure. Changing to a bind mount is unnecessary for this bug.
+
+Check the actual running image as well as the checkout revision. At `e2e52a5`,
+the EEA Compose file selects prebuilt `2.4.7rc4` frontend/worker images without
+a source-code bind mount; checking out another commit does not replace their
+application code. Local Compose binds the checkout into the containers, while
+their dependencies still come from their images. Record the effective source
+mounts and running image tag/digest when reporting the problem.
+
+For the guarded Azure/EEA layout, follow
+[EEA persistent storage](../deployment/eea-storage.md) instead: verify the real
+host mount, identity marker and preprovisioned application directories before
+startup. Do not create a missing mount parent, replace the marker or create a
+local fallback directory to bypass the guard.
+
+### Check runtime permissions and capacity
+
+Check the frontend and worker runtime UID/GID, including any Compose `user`
+override:
+
+```bash
+docker compose -f docker/compose.local.yaml exec frontend id
+docker compose -f docker/compose.local.yaml exec worker id
+docker compose -f docker/compose.local.yaml exec frontend \
+  df -h /mnt/qc_tool_incoming /tmp
+docker compose -f docker/compose.local.yaml exec frontend \
+  df -i /mnt/qc_tool_incoming /tmp
+```
+
+The frontend needs traversal access through the parent directories and write
+access to incoming storage; workers must be able to read the resulting delivery
+files. Provision ownership and restricted modes for those actual runtime
+identities. Do not use blanket `chmod 777` or recursively change database-volume
+ownership. A read-only mount also prevents uploads even when directory mode
+bits appear writable.
+
+Check free bytes, free inodes and any storage quota. Chunk staging and the
+assembled ZIP can coexist, so allow space beyond the final delivery size. Also
+check the frontend's multipart spool: `QC_TOOL_UPLOAD_TEMP_DIR` if configured,
+otherwise its operating-system temporary directory, normally `/tmp`. Replace
+`/tmp` in the checks above when using a custom spool path. Space available on
+incoming storage does not establish that the spool has room.
+
+In recent images, `upload_storage_unavailable` (`503`) identifies missing,
+inaccessible or read-only upload-root storage; `upload_storage_full` (`507`)
+identifies a space or quota failure detected there. Other chunk or assembly I/O
+failures can return `upload_storage_error`. Inspect the frontend logs for the
+underlying filesystem error rather than inferring the cause from a generic
+browser message. Keep logs and Compose output private or redact secrets before
+sharing them.
+
+Boundary ZIP uploads use `BOUNDARY_DIR` and their own validation/extraction
+workflow. If those fail while delivery uploads work, check boundary storage and
+the multipart spool separately; changing the incoming mount does not repair
+either location. See [Storage access](../deployment/storage-access.md) for the
+application's storage locations.
+
 ## Source edits do not appear
 
 Confirm the Compose project was started from the repository root and that the
