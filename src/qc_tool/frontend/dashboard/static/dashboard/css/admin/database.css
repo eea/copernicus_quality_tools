@@ -57,7 +57,7 @@
 .database-record-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; padding-bottom: 14px; border-bottom: 1px solid var(--hairline-color); font-size: 13px; }
 .database-record-heading { min-width: 0; overflow-wrap: anywhere; }
 .database-page .qc-admin-intro h1.database-record-heading { font-size: 28px; line-height: 1.35; letter-spacing: -.4px; }
-.database-record-context, .database-inline-meta { margin: 0 0 16px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px; color: var(--body-quiet-color); font-size: 12px; }
+.database-record-context { margin: 0 0 16px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px; color: var(--body-quiet-color); font-size: 12px; }
 .database-technical-details { margin-top: 20px; border-top: 1px solid var(--hairline-color); }
 .database-technical-details > summary { padding: 16px 0; width: fit-content; color: var(--link-fg); cursor: pointer; font-weight: 600; }
 .database-technical-details .database-record-detail { margin-top: 0; }
@@ -93,7 +93,6 @@
 .database-inspection, .database-selection-review { margin-bottom: 24px; }
 .database-selection-review .transfer-review-overview { margin-top: 4px; }
 .database-page .database-inspection > p code { font-size: 14px; }
-.database-manager-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 @media (max-width: 767px) {
   .database-table-groups { grid-template-columns: minmax(0, 1fr); }
   .database-record-detail > div { grid-template-columns: minmax(0, 1fr); gap: 6px; }

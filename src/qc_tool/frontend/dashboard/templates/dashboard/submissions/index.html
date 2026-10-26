@@ -88,4 +88,8 @@
     </nav>
 </section>
 {% endblock %}
-{% block js %}{{ block.super }}<script src="{% static 'dashboard/js/features/submissions/queue.js' %}"></script>{% endblock %}
+{% block js %}
+{{ block.super }}
+<script src="{% static 'dashboard/js/shared/checkbox-selection.js' %}"></script>
+<script src="{% static 'dashboard/js/features/submissions/queue.js' %}"></script>
+{% endblock %}

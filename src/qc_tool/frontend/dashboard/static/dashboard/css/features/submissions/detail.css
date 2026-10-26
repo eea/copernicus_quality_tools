@@ -10,12 +10,7 @@
 
 .submission-review-page .review-actions .btn,
 .submission-review-page .submission-feedback__next .btn {
-    display: inline-flex;
     min-height: 44px;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    white-space: normal;
 }
 
 .submission-downloads {

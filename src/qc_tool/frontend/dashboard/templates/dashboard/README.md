@@ -158,6 +158,20 @@ Cross-feature primitives live in `static/dashboard/css/ui/`:
 - `workspace-content.css`: page, card, callout, and responsive workspace composition
 - `actions.css`: primary, secondary, success, danger, danger-outline, quiet,
   icon, and compact button variants
+- `notice.css`: compact service notice palette, content grid, icon, title,
+  message and link, including mobile wrapping; shared by announcements and maintenance
+
+Use `shared/announcements/notice.html` with `announcement`, a unique heading `id`,
+and an optional `read_url` for service announcements. Dashboard, Deliveries,
+QC job setup/results, the announcement page and Admin preview share this
+component. It escapes message text and preserves line breaks. Do not add
+feature-specific announcement colors or typography. `announcements/current.html`
+also owns the empty and unavailable states for the full page and Admin preview.
+
+Maintenance uses the same `qc-notice` presentation. Its sticky Admin placement,
+controls and write-protection styles stay in `maintenance.css`. Only the
+maintenance template may attach `data-maintenance-*` hooks; announcement content
+must remain independent of maintenance activation and status updates.
 
 The shared `--qc-workspace-background` token owns the application page canvas,
 including the public API reference. Feature styles must not set a background
@@ -190,6 +204,29 @@ JavaScript behavior uses stable IDs, `data-*` configuration, and feature-local
 classes. Styling must not be the only JavaScript hook. New scripts belong under
 `static/dashboard/js/features/<feature>/`; keep executable page logic out of
 templates except for small, escaped configuration values.
+
+## Shared JavaScript behavior
+
+Reusable browser behavior lives in `static/dashboard/js/shared/`. Load a shared
+module before its feature adapter, only on pages that use it. These modules do
+not initialize page controls or register page lifecycle listeners themselves.
+
+`clipboard.js` exposes `QcClipboard.copy(text, options)`, returning a Promise.
+Call it directly from the user's copy action; the module owns browser writes,
+legacy fallback controls, and their cleanup. Callers own announcements and
+failure feedback. Accounts use `fallbackInput`, `secureOnly: true`, and
+`fallbackOnError: false` for tokens; API examples use the default legacy fallback;
+Storage sets `legacyFallback: false` and offers manual copying instead.
+
+`checkbox-selection.js` exposes `QcCheckboxSelection.create({items, all})` for
+Storage, submission review, and bulk product assignment. The bulk widget's Django
+`Media` declares this dependency before its feature script. `items` reads the
+current page's inputs; `all` is the optional master checkbox. The returned
+`items()`, `update()`, `setAll(value)`,
+and `clear()` exclude disabled inputs and keep the master checkbox's mixed state
+consistent. Updates return the available and selected inputs plus their counts.
+Callers retain change/submit/Back handling, announcements, permissions, and
+domain actions. The helper neither persists selections nor sends requests.
 
 ## Adding a browser page
 

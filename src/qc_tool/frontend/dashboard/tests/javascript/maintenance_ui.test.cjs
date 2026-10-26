@@ -9,7 +9,7 @@ const {createDOM} = require("./helpers/dom.cjs");
 const {queuePage, tick} = require("./helpers/queue-page.cjs");
 const source = fs.readFileSync(path.join(__dirname, "../../static/dashboard/js/shared/maintenance.js"), "utf8");
 
-function page({active = true, admin = false, phase = "ready"} = {}) {
+function page({active = true, admin = false, phase = "ready", announcement = false} = {}) {
     const dom = createDOM();
     const {window, document} = dom;
     const node = (tag, attributes = {}, parent = document.body) => {
@@ -28,6 +28,15 @@ function page({active = true, admin = false, phase = "ready"} = {}) {
     if (title) title.textContent = phase === "stopping" ? "Turning on maintenance" : "Maintenance is on";
     const message = node("span", {"data-maintenance-message": ""}, banner);
     message.textContent = notice;
+    const service = announcement ? node("aside", {class: "qc-notice", "aria-labelledby": "service-notice-title"}) : null;
+    const serviceTitle = service ? node("h2", {id: "service-notice-title"}, service) : null;
+    const serviceMessage = service ? node("p", {}, service) : null;
+    const serviceLink = service ? node("a", {href: "/announcement/"}, service) : null;
+    if (service) {
+        serviceTitle.textContent = "Announcement";
+        serviceMessage.textContent = "A scheduled service window.\nRead the details.";
+        serviceLink.textContent = "Read announcement";
+    }
     const write = node("form", {method: "post", "data-maintenance-write": ""});
     const mutate = node("button", {type: "submit"}, write);
     const detail = node("a", {href: "/deliveries/1/"}, write);
@@ -45,13 +54,31 @@ function page({active = true, admin = false, phase = "ready"} = {}) {
     window.CustomEvent = class { constructor(type) { this.type = type; } };
     vm.runInNewContext(source, {window, document});
     return {...dom, banner, title, message, write, mutate, detail, filter, applyFilter, exportForm, exportButton,
-        controls, generation, maintenanceAction, controlNote, refresh,
+        controls, generation, maintenanceAction, controlNote, refresh, service, serviceTitle, serviceMessage, serviceLink,
         dispatch(type, target) {
             const event = {type, target, stopImmediatePropagation() { this.stopped = true; }};
             document.dispatchEvent(event);
             return event;
         }};
 }
+
+test("service announcements remain intact and readable as maintenance starts and ends", () => {
+    for (const admin of [false, true]) {
+        const ui = page({active: false, admin, announcement: true});
+        const original = ui.serviceMessage.textContent;
+        ui.window.qcMaintenance.observeXhr({status: 200, getResponseHeader: () => "on"});
+        assert.equal(ui.banner.hidden, false);
+        assert.equal(ui.service.hidden, false);
+        assert.equal(ui.serviceTitle.textContent, "Announcement");
+        assert.equal(ui.serviceMessage.textContent, original);
+        assert.equal(ui.dispatch("click", ui.serviceLink).defaultPrevented, undefined);
+        ui.window.qcMaintenance.observeXhr({status: 200, getResponseHeader: () => "off"});
+        assert.equal(ui.service.hidden, false);
+        assert.equal(ui.serviceMessage.textContent, original);
+        assert.equal(ui.serviceLink.getAttribute("href"), "/announcement/");
+        assert.equal(ui.dispatch("click", ui.serviceLink).defaultPrevented, undefined);
+    }
+});
 
 test("maintenance disables explicit writes and keeps filtering, exports and detail navigation", () => {
     const ui = page();

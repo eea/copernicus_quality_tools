@@ -1,43 +1,5 @@
-[data-maintenance-banner][hidden] { display: none; }
-
 /* Persistent application status belongs to the header, not the message stack. */
-.qc-maintenance-notice {
-    border-bottom: 1px solid #f1d2a8;
-    color: var(--qc-color-warning-dark);
-    background: var(--qc-color-warning-soft);
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.qc-maintenance-notice__content {
-    display: grid;
-    min-height: 44px;
-    grid-template-columns: 18px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 28px;
-}
-
-.qc-maintenance-notice .ui-icon {
-    width: 18px;
-    height: 18px;
-}
-
-.qc-maintenance-notice__reload {
-    display: inline-flex;
-    min-height: 28px;
-    align-items: center;
-    color: inherit;
-    font-weight: 600;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    white-space: nowrap;
-}
-
-.qc-maintenance-notice__reload:hover,
-.qc-maintenance-notice__reload:focus {
-    color: var(--qc-color-warning-dark);
-}
+.qc-maintenance-notice { border-width: 0 0 1px; }
 
 /* Admin status stays above the scrolling header and every task workspace. */
 body.qc-admin:not(.login) #container {
@@ -54,45 +16,32 @@ body.qc-admin:not(.login) #container {
     box-shadow: var(--qc-shadow-low);
 }
 
-.qc-maintenance-notice--admin .qc-maintenance-notice__content {
-    box-sizing: border-box;
+.qc-maintenance-notice--admin .qc-notice__content {
     grid-template-columns: 24px minmax(0, 1fr) auto;
     gap: 8px 16px;
     min-height: 76px;
     padding-block: 12px;
 }
 
-.qc-maintenance-notice--admin .qc-maintenance-notice__icon {
+.qc-maintenance-notice--admin .qc-notice__icon {
     width: 24px;
     height: 24px;
 }
 
-.qc-maintenance-notice__status { min-width: 0; }
-.qc-maintenance-notice__title { display: block; font-size: 16px; line-height: 1.4; }
-.qc-maintenance-notice__status > [data-maintenance-message] { display: block; margin-top: 3px; }
+.qc-maintenance-notice--admin .qc-notice__title { font-size: 16px; line-height: 1.4; }
 .qc-maintenance-notice__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 16px; }
 .qc-maintenance-notice__actions form { margin: 0; }
 .qc-maintenance-notice__actions .qc-admin-pending-status { max-width: 340px; }
 .qc-maintenance-notice__note { grid-column: 2 / -1; font-size: 12px; }
 
 @media (max-width: 767px) {
-    .qc-maintenance-notice__content {
-        grid-template-columns: 18px minmax(0, 1fr);
-        align-items: start;
-        gap: 4px 10px;
-        padding: 10px 16px;
-    }
-
-    .qc-maintenance-notice .ui-icon { margin-top: 1px; }
-    .qc-maintenance-notice__reload { grid-column: 2; justify-self: start; }
-
-    .qc-maintenance-notice--admin .qc-maintenance-notice__content {
+    .qc-maintenance-notice--admin .qc-notice__content {
         grid-template-columns: 20px minmax(0, 1fr);
         gap: 8px 10px;
         padding: 12px 16px;
     }
 
-    .qc-maintenance-notice--admin .qc-maintenance-notice__icon { width: 20px; height: 20px; margin-top: 1px; }
+    .qc-maintenance-notice--admin .qc-notice__icon { width: 20px; height: 20px; }
     .qc-maintenance-notice__actions { grid-column: 2; justify-content: flex-start; gap: 6px 14px; }
     .qc-maintenance-notice__actions [class*="btn-qc-"] { white-space: normal; }
     .qc-maintenance-notice__note { grid-column: 2; }

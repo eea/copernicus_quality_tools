@@ -13,27 +13,23 @@
 
     if (!selectAll || !approve || !count || !clear) return;
 
-    function eligibleSelections() {
-        return Array.prototype.slice.call(form.querySelectorAll("[data-submission-select]"))
-            .filter(function (input) { return !input.disabled; });
-    }
+    var selection = window.QcCheckboxSelection.create({
+        all: selectAll,
+        items: function() { return form.querySelectorAll("[data-submission-select]"); }
+    });
 
     function update() {
-        var eligible = eligibleSelections();
-        var selected = eligible.filter(function (input) { return input.checked; }).length;
+        var selected = selection.update().count;
         count.textContent = selected + " selected";
         approve.disabled = openingReview || selected === 0 || Boolean(window.qcMaintenance && window.qcMaintenance.isActive());
         approve.textContent = openingReview ? "Opening review…" :
             "Approve selected" + (selected ? " (" + selected + ")" : "");
-        selectAll.checked = eligible.length > 0 && selected === eligible.length;
-        selectAll.indeterminate = selected > 0 && selected < eligible.length;
-        selectAll.disabled = eligible.length === 0;
         clear.hidden = selected === 0;
         return selected;
     }
 
     selectAll.addEventListener("change", function () {
-        eligibleSelections().forEach(function (input) { input.checked = selectAll.checked; });
+        selection.setAll(selectAll.checked);
         update();
     });
 
@@ -42,7 +38,7 @@
     });
 
     clear.addEventListener("click", function () {
-        eligibleSelections().forEach(function (input) { input.checked = false; });
+        selection.clear();
         update();
         selectAll.focus();
     });

@@ -288,10 +288,19 @@ Cross-user scope permissions and scope rows are independent. Both are required.
 
 ## Product grants
 
-Administrators assign products in **Admin → User management → Product access**.
-Both default users and product managers may have one or many grants, selected
-from active catalog products or their registered QC definitions. The **Product
-or QC definition** selector accepts either scope; add one row per assignment.
+Open **Admin → User management → Manage users**, choose a user, then use
+**Add product assignments**. Filter by a product family or enter an identifier
+prefix such as `clms_euhydro*` or `clms_hrlvlcc*`, then choose **Select matching**.
+**Select all existing** selects all currently available specifications. Review the
+selection count and save the user to apply it. Filtering keeps selections from
+other families; **Clear selection** clears only the pending additions. Existing
+grants remain unchanged. Bulk selection creates exact specification assignments;
+it does not include specifications added later or change the user's roles.
+
+Both default users and product managers may have one or many grants. The
+individual **Product or QC definition** selector also accepts active catalog
+products for their full scope. Up to 40 existing assignments appear in the user
+editor; **Manage all assignments** opens the complete list for editing or removal.
 An exact QC-definition assignment grants only that definition, not its sibling
 definitions. Identifiers use their canonical lowercase form; assigning one
 product does not grant other products in the same family.

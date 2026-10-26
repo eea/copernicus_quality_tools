@@ -17,7 +17,7 @@
 
   <section class="workspace-card announcement-card" aria-labelledby="current-announcement-title">
     <header class="workspace-card__header"><div><h2 id="current-announcement-title">Current announcement</h2><p>This message appears in the regular workspace.</p></div></header>
-    <div class="workspace-card__body">{% include "dashboard/shared/announcements/current.html" %}</div>
+    <div class="workspace-card__body">{% include "dashboard/shared/announcements/current.html" with announcement=announcement announcement_available=announcement_available only %}</div>
   </section>
 
   <section class="workspace-card announcement-card announcement-editor" aria-labelledby="announcement-editor-title">

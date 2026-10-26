@@ -54,11 +54,7 @@
 <fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
                         {% csrf_token %}
 
-                        {% if profile_form.non_field_errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ profile_form.non_field_errors }}
-                        </div>
-                        {% endif %}
+                        {% include "accounts/includes/form_errors.html" with form=profile_form only %}
 
                         <div class="form-group">
                             <label for="account-username">Username</label>
@@ -76,15 +72,7 @@
                         </div>
 
                         {% for field in profile_form %}
-                        <div class="form-group{% if field.errors %} has-error{% endif %}">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}
-                            <div class="account-field-errors" id="{{ field.auto_id }}-errors" role="alert">
-                                {{ field.errors }}
-                            </div>
-                            {% endif %}
-                        </div>
+                        {% include "accounts/includes/form_field.html" with field=field errors_id=field.auto_id|add:"-errors" only %}
                         {% endfor %}
 
                         <div class="account-card__actions">
@@ -136,37 +124,11 @@
 <fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
                             {% csrf_token %}
 
-                            {% if api_token_form.non_field_errors %}
-                            <div class="alert alert-danger" role="alert">
-                                {{ api_token_form.non_field_errors }}
-                            </div>
-                            {% endif %}
+                            {% include "accounts/includes/form_errors.html" with form=api_token_form only %}
 
                             <div class="account-token-create__fields">
-                                <div class="form-group{% if api_token_form.name.errors %} has-error{% endif %}">
-                                    <label for="{{ api_token_form.name.id_for_label }}">{{ api_token_form.name.label }}</label>
-                                    {{ api_token_form.name }}
-                                    {% if api_token_form.name.help_text %}
-                                    <p id="{{ api_token_form.name.auto_id }}_helptext" class="help-block">{{ api_token_form.name.help_text }}</p>
-                                    {% endif %}
-                                    {% if api_token_form.name.errors %}
-                                    <div class="account-field-errors" role="alert">
-                                        {{ api_token_form.name.errors }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                <div class="form-group{% if api_token_form.current_password.errors %} has-error{% endif %}">
-                                    <label for="{{ api_token_form.current_password.id_for_label }}">{{ api_token_form.current_password.label }}</label>
-                                    {{ api_token_form.current_password }}
-                                    {% if api_token_form.current_password.help_text %}
-                                    <p id="{{ api_token_form.current_password.auto_id }}_helptext" class="help-block">{{ api_token_form.current_password.help_text }}</p>
-                                    {% endif %}
-                                    {% if api_token_form.current_password.errors %}
-                                    <div class="account-field-errors" role="alert">
-                                        {{ api_token_form.current_password.errors }}
-                                    </div>
-                                    {% endif %}
-                                </div>
+                                {% include "accounts/includes/form_field.html" with field=api_token_form.name only %}
+                                {% include "accounts/includes/form_field.html" with field=api_token_form.current_password only %}
                             </div>
                             <div class="account-card__actions account-token-create__actions">
                                 <button class="btn btn-primary btn-qc-primary" type="submit">
@@ -343,5 +305,6 @@
 
 {% block js %}
 {{ block.super }}
+<script src="{% static 'dashboard/js/shared/clipboard.js' %}"></script>
 <script src="{% static 'accounts/js/account-settings.js' %}"></script>
 {% endblock js %}

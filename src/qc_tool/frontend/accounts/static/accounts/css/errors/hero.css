@@ -87,44 +87,16 @@
 }
 
 .error-actions .btn {
-    display: inline-flex;
     min-height: 52px;
-    align-items: center;
-    justify-content: center;
     padding: 14px 24px;
     border-radius: 7px;
     font-size: 16px;
     font-weight: 500;
     line-height: 22px;
-    text-decoration: none;
+    gap: 10px;
     transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
 }
 
-.error-actions .ui-icon {
-    margin-right: 10px;
-}
-
 .error-primary-action.btn-primary {
-    border-color: #0868d7;
-    background: #0868d7;
     box-shadow: 0 7px 18px rgba(8, 104, 215, 0.18);
-}
-
-.error-primary-action.btn-primary:hover,
-.error-primary-action.btn-primary:focus {
-    border-color: #0757b3;
-    background: #0757b3;
-}
-
-.error-secondary-action {
-    border: 1px solid #d4deeb;
-    color: #1d2d48;
-    background: #fff;
-}
-
-.error-secondary-action:hover,
-.error-secondary-action:focus {
-    border-color: #9fb5d2;
-    color: #075fc4;
-    background: #f7faff;
 }

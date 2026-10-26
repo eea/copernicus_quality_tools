@@ -4,7 +4,7 @@
     The announcement is temporarily unavailable. Please try again later.
 </div>
 {% elif announcement %}
-<div class="announcement-message">{{ announcement|linebreaksbr }}</div>
+{% include "dashboard/shared/announcements/notice.html" with announcement=announcement id="announcement-message-title" only %}
 {% else %}
 <div class="announcement-state">
     <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#check-circle"></use></svg>

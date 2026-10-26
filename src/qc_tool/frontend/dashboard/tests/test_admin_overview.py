@@ -92,20 +92,22 @@ class AdminOverviewTests(TestCase):
         self.administrator.groups.add(Group.objects.get(name=Role.ADMIN.value))
         self.client.force_login(self.administrator)
 
-    def test_overview_links_to_user_management_database_storage_and_history(self):
+    def test_overview_links_to_its_six_admin_directions(self):
         response = self.client.get(reverse("admin:index"))
 
         self.assertEqual(response.status_code, 200)
         links = _OverviewLinks(response)
-        endpoint = reverse("admin_data_transfer")
-        self.assertIn(endpoint, links.links)
-        self.assertIn(reverse("admin_user_management"), links.links)
-        self.assertIn(reverse("admin_storage"), links.links)
-        self.assertIn(f"{endpoint}?tables=1#database-records-heading", links.links)
-        self.assertIn(f"{endpoint}#database-maintenance-heading", links.links)
-        self.assertIn({"tab": ["import"]}, links.transfer_destinations())
-        self.assertIn({"tab": ["backups"]}, links.transfer_destinations())
-        self.assertIn({"tab": ["activity"]}, links.transfer_destinations())
+        for route in (
+            "admin_user_management", "boundaries", "admin_notifications",
+            "admin_database", "admin_storage", "admin_maintenance",
+        ):
+            with self.subTest(route=route):
+                self.assertIn(reverse(route), links.links)
+        self.assertIn(f'{reverse("admin_database")}?tables=1', links.links)
+        self.assertIn(f'{reverse("admin_user_management")}#user-access-heading', links.links)
+        self.assertEqual(links.transfer_destinations(), [])
+        self.assertNotIn(reverse("admin_backup_export"), links.links)
+        self.assertNotIn(reverse("admin_backup_import"), links.links)
         self.assertNotContains(response, "Restore database")
 
     def test_maintenance_status_uses_plain_language_and_one_settings_destination(self):
@@ -176,22 +178,24 @@ class AdminOverviewTests(TestCase):
         schema_readiness.assert_not_called()
         database_availability.assert_not_called()
 
-    def test_user_database_and_storage_panels_keep_maintenance_with_database_tasks(self):
+    def test_task_panels_keep_maintenance_in_its_own_direction(self):
         response = self.client.get(reverse("admin:index"))
         markup = _OverviewLinks(response)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(markup.matching("section", id="qc-admin-users")), 1)
-        self.assertEqual(len(markup.matching("section", id="qc-admin-database")), 1)
-        self.assertEqual(len(markup.matching("section", id="qc-admin-storage")), 1)
+        for direction in ("users", "boundaries", "notifications", "database", "storage", "maintenance"):
+            with self.subTest(direction=direction):
+                self.assertEqual(len(markup.matching("section", id=f"qc-admin-{direction}")), 1)
         for route in (
-            "admin_user_management", "admin:auth_group_changelist", "admin_storage",
+            "admin_user_management", "admin_database", "admin_storage", "admin_maintenance",
         ):
             with self.subTest(route=route):
                 self.assertIn(reverse(route), markup.links)
         self.assertNotIn(reverse("admin:auth_user_add"), markup.links)
         self.assertNotIn(reverse("admin:auth_user_changelist"), markup.links)
-        self.assertIn("qc-admin-database", markup.ancestors.get("qc-admin-service-status", []))
+        self.assertNotIn(reverse("admin:auth_group_changelist"), markup.links)
+        self.assertIn(f'{reverse("admin_user_management")}#user-access-heading', markup.links)
+        self.assertIn("qc-admin-maintenance", markup.ancestors.get("qc-admin-service-status", []))
         self.assertNotContains(response, 'id="qc-admin-start-here"')
         self.assertNotContains(response, "First time administering QC Tool?")
 

@@ -1,0 +1,15 @@
+{% with formset=inline_admin_formset.formset %}
+{% if formset.bulk_assignment_allowed %}
+<section class="inline-group qc-bulk-products-panel" aria-labelledby="{{ formset.prefix }}-bulk-heading">
+  <fieldset class="module"><h2 id="{{ formset.prefix }}-bulk-heading">Add product assignments</h2>
+    <div class="qc-bulk-products-panel__body">
+      <p>Select existing QC specifications to add. Existing assignments stay unchanged. Save the user to apply your selection.</p>
+      {% if formset.catalog_unavailable %}<p class="errornote">The product catalog is unavailable. Reload before adding assignments.</p>{% endif %}
+      {{ formset.bulk_form.non_field_errors }}{{ formset.bulk_form.products.errors }}{{ formset.bulk_form.products }}
+    </div>
+  </fieldset>
+</section>
+{% endif %}
+{% if formset.total_grant_count > formset.inline_limit %}<p class="qc-product-grants-limit">Showing {{ formset.inline_limit }} of {{ formset.total_grant_count }} assignments below. <a href="{{ formset.manage_grants_url }}">Manage all assignments</a> to edit or remove the others.</p>{% elif formset.manage_grants_url %}<p class="qc-product-grants-limit"><a href="{{ formset.manage_grants_url }}">Manage all assignments</a></p>{% endif %}
+{% endwith %}
+{% include "admin/edit_inline/tabular.html" %}

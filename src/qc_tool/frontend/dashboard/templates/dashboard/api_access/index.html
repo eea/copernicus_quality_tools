@@ -91,7 +91,7 @@
                 <div class="api-code-block">
                     <div class="api-code-block__header">
                         <span>Request example</span>
-                        <button type="button" class="api-copy-button" data-copy-target="quick-start-code">Copy</button>
+                        <button type="button" class="btn btn-qc-secondary btn-qc--compact api-copy-button" data-copy-target="quick-start-code">Copy</button>
                     </div>
                     <pre id="quick-start-code"><code>curl --request GET \
   --url '{{ api_url }}/delivery-list?limit=20&amp;offset=0' \
@@ -162,8 +162,8 @@
                     autocomplete="off"
                 >
                 <div class="api-reference-tools__buttons">
-                    <button type="button" class="api-quiet-button" data-api-expand>Expand all</button>
-                    <button type="button" class="api-quiet-button" data-api-collapse>Collapse all</button>
+                    <button type="button" class="btn btn-qc-secondary btn-qc--compact api-quiet-button" data-api-expand>Expand all</button>
+                    <button type="button" class="btn btn-qc-secondary btn-qc--compact api-quiet-button" data-api-collapse>Collapse all</button>
                 </div>
             </div>
         </section>
@@ -279,7 +279,7 @@
                                 <div class="api-code-block">
                                     <div class="api-code-block__header">
                                         <h3 id="{{ operation.id }}-example">cURL example</h3>
-                                        <button type="button" class="api-copy-button" data-copy-target="{{ operation.id }}-code">Copy</button>
+                                        <button type="button" class="btn btn-qc-secondary btn-qc--compact api-copy-button" data-copy-target="{{ operation.id }}-code">Copy</button>
                                     </div>
                                     <pre id="{{ operation.id }}-code"><code>{{ operation.curl_example }}</code></pre>
                                 </div>
@@ -298,5 +298,6 @@
 {% block js %}
 <script src="{% static 'dashboard/js/jquery.min.js' %}"></script>
 <script src="{% static 'dashboard/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'dashboard/js/shared/clipboard.js' %}"></script>
 <script src="{% static 'dashboard/js/features/api_access/index.js' %}"></script>
 {% endblock js %}

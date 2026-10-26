@@ -20,22 +20,12 @@
 <p>Choose a product definition and the optional checks to run for the selected delivery package{{ deliveries|length|pluralize }}.</p>
 {% endblock page_subtitle %}
 {% block page_actions %}
-<a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-    Back to deliveries
-</a>
+{% url 'deliveries' as back_url %}
+{% include "dashboard/shared/actions/back_link.html" with url=back_url label="Back to deliveries" only %}
 {% endblock page_actions %}
 
 {% block page_content %}
-{% if announcement %}
-<aside class="workspace-notice workspace-notice--warning" aria-labelledby="job-setup-announcement-title">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
-    <div>
-        <h2 id="job-setup-announcement-title">Announcement</h2>
-        <p>{{ announcement }}</p>
-    </div>
-</aside>
-{% endif %}
+{% include "dashboard/shared/announcements/notice.html" with announcement=announcement id="job-setup-announcement-title" only %}
 
 <section
     id="tool-canvas"

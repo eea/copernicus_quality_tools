@@ -16,10 +16,13 @@
 .qc-maintenance-problem a { margin-inline-start: 10px; }
 .qc-maintenance-backups { margin-top: 32px; }
 .qc-maintenance-backups > h2 { margin: 0 0 16px; color: var(--body-loud-color); font-size: 21px; font-weight: 650; }
-.qc-maintenance-backups .transfer-task-grid { margin-bottom: 8px; }
+.transfer-task-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 0 0 8px; }
+.transfer-task-card { align-items: flex-start; }
+.transfer-task-card p { flex: 1; }
 @media (max-width: 767px) {
   .qc-maintenance .qc-admin-service { flex-wrap: wrap; }
   .qc-maintenance .qc-admin-service__actions { width: 100%; max-width: none; }
   .qc-maintenance .qc-admin-service__actions form, .qc-maintenance .qc-admin-service__actions button { width: 100%; }
   .qc-maintenance-backups { margin-top: 26px; }
+  .transfer-task-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
 }

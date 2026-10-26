@@ -18,16 +18,8 @@
 
 {% block page_content %}
 
-    {% if announcement %}
-    <aside class="workspace-notice dashboard-announcement" aria-labelledby="dashboard-announcement-title">
-        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
-        <div>
-            <h2 id="dashboard-announcement-title">Announcement</h2>
-            <p>{{ announcement }}</p>
-        </div>
-        <a href="{% url 'announcement' %}">Read announcement</a>
-    </aside>
-    {% endif %}
+    {% url 'announcement' as announcement_url %}
+    {% include "dashboard/shared/announcements/notice.html" with announcement=announcement id="dashboard-announcement-title" read_url=announcement_url only %}
 
     <section class="dashboard-kpi-section" aria-labelledby="dashboard-kpi-title">
         <h2 id="dashboard-kpi-title" class="sr-only">Workspace overview</h2>

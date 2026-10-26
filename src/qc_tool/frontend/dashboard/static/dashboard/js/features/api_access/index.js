@@ -54,44 +54,15 @@
     }, 1600);
   }
 
-  function legacyCopy(text) {
-    var input = document.createElement("textarea");
-    input.value = text;
-    input.setAttribute("readonly", "");
-    input.style.position = "fixed";
-    input.style.opacity = "0";
-    document.body.appendChild(input);
-    input.select();
-    var copied = document.execCommand("copy");
-    document.body.removeChild(input);
-    return copied;
-  }
-
   function copyExample(button) {
     var targetId = button.getAttribute("data-copy-target");
     var target = targetId ? document.getElementById(targetId) : null;
     if (!target) {
       return;
     }
-    var text = target.textContent;
-    var clipboard = navigator.clipboard;
-
-    if (clipboard && typeof clipboard.writeText === "function") {
-      clipboard.writeText(text).then(
-        function () {
-          temporarilyConfirm(button);
-        },
-        function () {
-          if (legacyCopy(text)) {
-            temporarilyConfirm(button);
-          }
-        }
-      );
-      return;
-    }
-    if (legacyCopy(text)) {
+    window.QcClipboard.copy(target.textContent).then(function () {
       temporarilyConfirm(button);
-    }
+    }).catch(function () { /* Keep the example available for manual selection. */ });
   }
 
   if (search) {

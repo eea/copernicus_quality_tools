@@ -1,9 +1,13 @@
 import logging
+from urllib.parse import urlencode
 
 from django import forms
 from django.contrib import admin
 from django.forms.models import BaseInlineFormSet
+from django.urls import reverse
 
+from qc_tool.frontend.accounts.authorization import access_for_request
+from qc_tool.frontend.accounts.forms.product_grants import AssignedProductDisplay, BulkProductAssignmentForm
 from qc_tool.frontend.accounts.models import UserProductGrant
 
 
@@ -12,6 +16,30 @@ CATALOG_UNAVAILABLE_MESSAGE = (
     "changed."
 )
 logger = logging.getLogger(__name__)
+
+
+def bulk_assignment_allowed(request):
+    """Product assignments require their own authority, beyond user editing."""
+
+    return bool(
+        request.user.is_active and request.user.is_staff
+        and access_for_request(request).is_administrator
+        and request.user.has_perm("accounts.add_userproductgrant")
+    )
+
+
+def _bulk_catalog_choices():
+    from qc_tool.frontend.accounts.services.products import (
+        ProductCatalogUnavailable, available_product_descriptions,
+    )
+
+    try:
+        return tuple(sorted(
+            (ident, f"{ident} — {description}")
+            for ident, description in available_product_descriptions().items()
+        )), False
+    except ProductCatalogUnavailable:
+        return (), True
 
 
 def _catalog_choices():
@@ -38,7 +66,7 @@ class UserProductGrantForm(forms.ModelForm):
         label="Product or QC definition",
         help_text=(
             "Choose a product for its full scope, or a QC definition for only "
-            "that definition's scope. Add one row per assignment. "
+            "that definition's scope. "
             "Default users can upload deliveries, run QC, and submit their own "
             "deliveries for assigned products. Review decisions require the "
             "product-manager or administrator role."
@@ -54,6 +82,7 @@ class UserProductGrantForm(forms.ModelForm):
         *args,
         catalog_choices=None,
         catalog_unavailable=None,
+        inline_display_existing=False,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -66,32 +95,77 @@ class UserProductGrantForm(forms.ModelForm):
             choices[current] = f"{current} — unavailable product"
 
         field = self.fields["product_ident"]
-        field.choices = tuple(sorted(choices.items()))
+        field.choices = (
+            *((("", "Choose a product or QC definition"),) if not current else ()),
+            *sorted(choices.items()),
+        )
         if catalog_unavailable:
             field.help_text = CATALOG_UNAVAILABLE_MESSAGE
             field.disabled = bool(current)
+        if current and inline_display_existing:
+            field.widget = AssignedProductDisplay(label=choices[current])
 
 
 class UserProductGrantInlineFormSet(BaseInlineFormSet):
+    bulk_assignment_allowed = False
+    inline_limit = 40
+
     def __init__(self, *args, **kwargs):
         self.catalog_choices, self.catalog_unavailable = _catalog_choices()
         super().__init__(*args, **kwargs)
+        choices, unavailable = _bulk_catalog_choices()
+        self.catalog_unavailable = self.catalog_unavailable or unavailable
+        assigned = (self.model.objects.using(self.queryset.db)
+                    .filter(user=self.instance).values_list("product_ident", flat=True)
+                    if self.instance.pk else ())
+        self.bulk_form = BulkProductAssignmentForm(
+            data=self.data if self.is_bound else None,
+            prefix=f"{self.prefix}-bulk", catalog_choices=choices,
+            assigned_idents=assigned,
+            assignment_allowed=self.bulk_assignment_allowed,
+            catalog_unavailable=self.catalog_unavailable,
+        )
+        self.bulk_product_idents = ()
+        self.manage_grants_url = (
+            reverse("admin:accounts_userproductgrant_changelist") + "?"
+            + urlencode({"user__id__exact": self.instance.pk})
+            if self.instance.pk else ""
+        )
+        self.get_queryset()
+
+    def get_queryset(self):
+        if not hasattr(self, "_visible_grants"):
+            queryset = super().get_queryset()
+            self.total_grant_count = queryset.count()
+            visible = list(queryset.values_list("pk", flat=True)[:self.inline_limit])
+            self._visible_grants = queryset.filter(pk__in=visible)
+        return self._visible_grants
+
+    @property
+    def media(self):
+        return super().media + self.bulk_form.media
 
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
         kwargs.update(
             catalog_choices=self.catalog_choices,
             catalog_unavailable=self.catalog_unavailable,
+            inline_display_existing=True,
         )
         return kwargs
 
     def clean(self):
+        if not self.bulk_form.is_valid():
+            raise forms.ValidationError("Review the bulk product selection.")
+        self.bulk_product_idents = self.bulk_form.cleaned_data["products"]
         if any(self.errors):
             return super().clean()
 
         seen = set()
+        removed = set()
         for form in self.forms:
             if form.cleaned_data.get("DELETE"):
+                removed.add(form.initial.get("product_ident"))
                 continue
             product_ident = form.cleaned_data.get("product_ident")
             if not product_ident:
@@ -102,6 +176,11 @@ class UserProductGrantInlineFormSet(BaseInlineFormSet):
                 )
             seen.add(product_ident)
 
+        if removed.intersection(self.bulk_product_idents):
+            raise forms.ValidationError(
+                "Do not select an assignment for both addition and removal.",
+            )
+
         return super().clean()
 
 
@@ -110,11 +189,20 @@ class UserProductGrantInline(admin.TabularInline):
     fk_name = "user"
     form = UserProductGrantForm
     formset = UserProductGrantInlineFormSet
+    template = "accounts/admin/product_grant_inline.html"
     fields = ("product_ident", "created_at", "created_by")
     readonly_fields = ("created_at", "created_by")
     extra = 1
+    show_change_link = True
     verbose_name = "Product grant"
     verbose_name_plural = "Product grants — products and QC definitions"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("created_by")
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        formset.bulk_assignment_allowed = (
+            bulk_assignment_allowed(request) and self.has_add_permission(request, obj)
+        )
+        return formset

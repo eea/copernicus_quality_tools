@@ -1,9 +1,5 @@
 /* Dashboard-only composition. Page frame, header, cards, and tokens live in ui/. */
 
-.dashboard-announcement {
-  margin-bottom: 18px;
-}
-
 .dashboard-kpis {
   display: grid;
   margin-bottom: 18px;

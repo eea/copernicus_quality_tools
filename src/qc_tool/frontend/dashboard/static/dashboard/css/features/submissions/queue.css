@@ -13,8 +13,6 @@
 .submission-selection-toolbar strong { color: var(--qc-color-navy); font-size: 14px; }
 .submission-selection-toolbar p { margin: 5px 0 0; color: var(--qc-color-muted); font-size: 13px; line-height: 1.6; }
 .submission-selection-toolbar__actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.submission-selection-toolbar .btn,
-.submission-queue-page .review-actions .btn { min-height: 42px; white-space: normal; }
 .submission-queue-page [hidden] { display: none !important; }
 .submission-selection-notice { margin: 0; padding: 18px 24px; color: var(--qc-color-muted); font-size: 13px; line-height: 1.6; }
 .submission-queue-table { width: 100%; min-width: 950px; table-layout: fixed; margin: 0; }

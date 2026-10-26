@@ -68,20 +68,6 @@
   margin-top: 18px;
 }
 
-.account-token-create__actions .btn,
-.account-token__actions .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.account-token-create__actions .ui-icon,
-.account-token__actions .ui-icon {
-  width: 17px;
-  height: 17px;
-}
-
 .account-token-list-heading {
   margin: 28px 0 13px;
 }
@@ -277,23 +263,6 @@
 .account-token__actions .btn-qc-danger-outline {
   min-height: 38px;
   padding: 8px 13px;
-  border-color: #efb5b0;
-  border-radius: var(--qc-radius-small);
-  color: var(--qc-color-danger);
-  background: var(--qc-color-surface);
-  font-weight: 600;
-}
-
-.account-token__actions .btn-qc-danger-outline:hover,
-.account-token__actions .btn-qc-danger-outline:focus {
-  border-color: var(--qc-color-danger);
-  color: var(--qc-color-danger-dark);
-  background: var(--qc-color-danger-soft);
-}
-
-.account-token__actions .btn-qc-danger-outline[disabled] {
-  cursor: wait;
-  opacity: 0.68;
 }
 
 .account-token-empty {

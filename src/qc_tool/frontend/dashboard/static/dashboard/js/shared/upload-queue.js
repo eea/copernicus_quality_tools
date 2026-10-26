@@ -203,6 +203,10 @@
             picker.setBusy(true);
             refresh();
         });
+        // A native selection can finish before the enhancement scripts load.
+        // Stage it through the same validation as later chooser/drop events.
+        var initialFiles = picker.files();
+        if (initialFiles.length) select(initialFiles);
         refresh();
         return {picker: picker, entries: entries, add: add, overwrite: overwrite, addAll: addAll, remove: remove};
     };

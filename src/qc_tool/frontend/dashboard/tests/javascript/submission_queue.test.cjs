@@ -12,6 +12,8 @@ const source = fs.readFileSync(path.join(__dirname,
 
 function page({selections = [{}, {}, {disabled: true}], withForm = true} = {}) {
     const {document, window} = createDOM();
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname,
+        "../../static/dashboard/js/shared/checkbox-selection.js"), "utf8"), {window});
     const add = (tag, attributes, parent = document.body) => {
         const node = document.createElement(tag);
         Object.entries(attributes).forEach(([name, value]) => node.setAttribute(name, value));

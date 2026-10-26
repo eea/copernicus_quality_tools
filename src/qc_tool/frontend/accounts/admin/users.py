@@ -14,6 +14,7 @@ from qc_tool.frontend.accounts.forms.admin_users import AdminUserPasswordChangeF
 from qc_tool.frontend.accounts.models import PersonalAccessToken
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.product_grants import save_product_grant
+from qc_tool.frontend.accounts.services.product_grants import add_product_grants
 from qc_tool.frontend.accounts.services.admin_users import serialized_admin_user_change
 from qc_tool.frontend.accounts.services.role_permissions import (
     capability_permissions,
@@ -157,6 +158,14 @@ class AccountUserAdmin(BaseUserAdmin):
             deleted.delete()
         for instance in instances:
             save_product_grant(instance, created_by=request.user)
+        if formset.bulk_product_idents:
+            added = add_product_grants(
+                user=form.instance, product_idents=formset.bulk_product_idents,
+                created_by=request.user,
+            )
+            for grant in added:
+                grant.user = form.instance
+            formset.new_objects.extend(added)
         formset.save_m2m()
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):

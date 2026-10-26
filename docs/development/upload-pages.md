@@ -255,6 +255,11 @@ uses `deferValidation` so it can report invalid files individually while accepti
 valid files from the same selection. Single-file adapters keep immediate picker
 validation and clear rejected replacements through `onInvalid`.
 
+Queue initialization also stages any files already selected in the native input
+before the enhancement scripts finish loading or after browser form restoration.
+It uses the same validation and delivery preflight as later chooser/drop events;
+selecting files never starts an upload automatically.
+
 Announce state changes instead of every percentage update. Retry preserves
 keyboard focus on its file row when its button disappears; removal returns focus
 to the chooser. File rows are not extra Tab stops. Shared styles support narrow

@@ -11,7 +11,7 @@ from qc_tool.frontend.dashboard.services.configuration import (
     AnnouncementStorageError,
     write_announcement,
 )
-from qc_tool.frontend.dashboard.views.configuration import announcement_context
+from qc_tool.frontend.dashboard.services.configuration.presentation import announcement_context
 
 
 logger = logging.getLogger(__name__)

@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization.permissions import AccountPermission
 from qc_tool.frontend.accounts.services.role_permissions import capability_content_type
+from qc_tool.frontend.dashboard.services.configuration import AnnouncementStorageError
 
 
 @override_settings(DEBUG=False, MAINTENANCE_MODE=False)
@@ -23,7 +24,7 @@ class AnnouncementAccessTests(TestCase):
         ))
 
     @patch(
-        "qc_tool.frontend.dashboard.views.configuration.read_announcement",
+        "qc_tool.frontend.dashboard.services.configuration.presentation.read_announcement",
         return_value="Service window\n<script>alert(1)</script>",
     )
     def test_every_workspace_viewer_gets_a_read_only_plain_text_message(self, _read):
@@ -33,11 +34,29 @@ class AnnouncementAccessTests(TestCase):
                 response = self.client.get(reverse("announcement"))
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, "dashboard/configuration/announcement.html")
+                self.assertTemplateUsed(response, "dashboard/shared/announcements/notice.html")
                 self.assertContains(response, "Service window")
                 self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+                self.assertContains(response, "Service window<br>")
                 self.assertNotContains(response, "<script>alert(1)</script>")
                 self.assertNotContains(response, "Update announcement")
                 self.assertNotContains(response, 'name="announcement_text"')
+
+    @patch("qc_tool.frontend.dashboard.services.configuration.presentation.read_announcement", return_value="")
+    def test_empty_state_does_not_render_an_active_notice(self, _read):
+        self.client.force_login(self.viewer)
+        response = self.client.get(reverse("announcement"))
+        self.assertContains(response, "There is no active announcement.")
+        self.assertTemplateNotUsed(response, "dashboard/shared/announcements/notice.html")
+
+    @patch("qc_tool.frontend.dashboard.services.configuration.presentation.read_announcement", side_effect=AnnouncementStorageError)
+    def test_unavailable_state_is_distinct_from_an_empty_announcement(self, _read):
+        self.client.force_login(self.viewer)
+        with self.assertLogs("qc_tool.frontend.dashboard.services.configuration.presentation", level="WARNING"):
+            response = self.client.get(reverse("announcement"))
+        self.assertContains(response, "temporarily unavailable")
+        self.assertNotContains(response, "There is no active announcement.")
+        self.assertTemplateNotUsed(response, "dashboard/shared/announcements/notice.html")
 
     @patch("qc_tool.frontend.dashboard.views.admin_notifications.write_announcement")
     def test_configuration_permission_alone_cannot_publish(self, write_announcement):

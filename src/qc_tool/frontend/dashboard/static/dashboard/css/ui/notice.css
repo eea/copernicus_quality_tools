@@ -1,0 +1,58 @@
+/* Shared presentation for service announcements and maintenance notices. */
+.qc-notice {
+    border: 1px solid #f1d2a8;
+    color: var(--qc-color-warning-dark);
+    background: var(--qc-color-warning-soft);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.qc-notice[hidden], .qc-notice [hidden] { display: none; }
+.qc-notice--inline { margin: 0 0 24px; border-radius: var(--qc-radius-small); }
+.qc-notice--inline:last-child { margin-bottom: 0; }
+
+.qc-notice__content {
+    display: grid;
+    box-sizing: border-box;
+    min-height: 44px;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 28px;
+}
+
+.qc-notice__icon { width: 18px; height: 18px; }
+.qc-notice__status { min-width: 0; }
+.qc-notice__title { display: block; margin: 0; color: inherit; font: inherit; font-weight: 700; }
+.qc-notice__message { display: block; margin: 0; overflow-wrap: anywhere; }
+.qc-notice__title + .qc-notice__message { margin-top: 3px; }
+
+.qc-notice__link {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.qc-notice__link:hover,
+.qc-notice__link:focus { color: inherit; }
+
+@media (max-width: 767px) {
+    .qc-notice__content {
+        grid-template-columns: 18px minmax(0, 1fr);
+        align-items: start;
+        gap: 4px 10px;
+        padding: 10px 16px;
+    }
+
+    .qc-notice__icon { margin-top: 1px; }
+    .qc-notice__link { grid-column: 2; justify-self: start; white-space: normal; }
+}
+
+@media (forced-colors: active) {
+    .qc-notice { border: 1px solid CanvasText; }
+}

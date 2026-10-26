@@ -1,0 +1,13 @@
+{% load static %}
+{% if announcement %}
+<aside class="qc-notice qc-notice--inline" aria-labelledby="{{ id }}">
+    <div class="qc-notice__content">
+        <svg class="ui-icon qc-notice__icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
+        <div class="qc-notice__status">
+            <h2 class="qc-notice__title" id="{{ id }}">Announcement</h2>
+            <p class="qc-notice__message">{{ announcement|linebreaksbr }}</p>
+        </div>
+        {% if read_url %}<a class="qc-notice__link" href="{{ read_url }}">Read announcement</a>{% endif %}
+    </div>
+</aside>
+{% endif %}

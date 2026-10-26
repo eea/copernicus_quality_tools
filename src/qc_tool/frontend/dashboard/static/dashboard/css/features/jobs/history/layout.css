@@ -1,11 +1,4 @@
 /* Job-history composition built from the shared workspace and card primitives. */
-.job-history-page .workspace-page__header .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
 .job-history-card__icon {
     display: inline-flex;
     width: 42px;

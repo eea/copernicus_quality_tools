@@ -67,6 +67,9 @@ function page({count = 3, checked = [], disabled = [], stored = null, storageThr
         copyCommand = node("button", {type: "button", "data-storage-copy": "", "data-storage-copy-target": command.id});
         copyStatus = node("p", {"data-storage-copy-status": "", hidden: ""});
     }
+    for (const file of ["clipboard", "checkbox-selection"]) {
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../static/dashboard/js/shared/" + file + ".js"), "utf8"), {window, document, Promise});
+    }
     vm.runInNewContext(source, {window, document, Promise});
     return {
         ...dom, node, explorer, controls, listView, gridView, form, selectAll, selectionStatus, selectedDownload, clear, items, rows, keyboardHint,
@@ -384,10 +387,11 @@ test("denied, missing and synchronously failed clipboard access offers manual co
     }
 });
 
-test("browser clipboard getters that deny access also show the manual fallback", () => {
+test("browser clipboard getters that deny access also show the manual fallback", async () => {
     const ui = page();
     Object.defineProperty(ui.window.navigator, "clipboard", {get() { throw new Error("policy denied"); }});
     ui.copyAddress.click();
+    await flush();
     assert.match(ui.copyStatus.textContent, /copy it manually/);
     assert.deepEqual(ui.clipboardWrites, []);
 });

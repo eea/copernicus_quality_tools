@@ -28,6 +28,9 @@ Third-party browser code lives in `js/vendor/`; do not split or edit vendored
 files as if they were application components. The page-layout, breadcrumb,
 button, and CSS ownership contracts are documented in
 [`templates/dashboard/README.md`](templates/dashboard/README.md).
+The [UI ownership guide](../../../../docs/development/ui-components.md) maps
+shared components across workspace, account, API and Admin page groups and
+describes the iterative reuse review.
 
 ## Browser URL hierarchy
 

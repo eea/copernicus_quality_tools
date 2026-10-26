@@ -43,7 +43,7 @@ class NotFoundResponseTests(TestCase):
         )
         self.assertContains(
             response,
-            'class="btn btn-primary error-primary-action"',
+            'class="btn btn-primary btn-qc-primary error-primary-action"',
             status_code=404,
         )
         self.assertContains(response, "#home", status_code=404)

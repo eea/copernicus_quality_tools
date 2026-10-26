@@ -12,10 +12,8 @@
 {% block page_title %}Add product specifications{% endblock page_title %}
 {% block page_subtitle %}<p>Choose JSON files, review them below, then add them individually or together.</p>{% endblock page_subtitle %}
 {% block page_actions %}
-<a class="btn btn-default btn-qc-secondary" href="{% url 'products' %}">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-    Back to products
-</a>
+{% url 'products' as back_url %}
+{% include "dashboard/shared/actions/back_link.html" with url=back_url label="Back to products" only %}
 {% endblock page_actions %}
 
 {% block upload_id %}product-definition-upload-card{% endblock upload_id %}

@@ -2,8 +2,6 @@
 .storage-page { max-width: 1440px; }
 .storage-page h1 { overflow-wrap: anywhere; }
 .storage-page h2, .storage-page h3 { color: var(--body-loud-color); }
-.storage-page > .qc-section-tabs { margin: 0 0 24px; padding: 0; }
-.storage-page .qc-section-tabs__item { box-sizing: border-box; min-height: 48px; padding: 10px 0; }
 .storage-page #storage-history-collections { margin-top: -10px; border-bottom: 0; }
 .storage-page #storage-history-collections .qc-section-tabs__list { gap: 8px; }
 .storage-page #storage-history-collections .qc-section-tabs__item { min-height: 40px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--qc-radius-small); font-size: 13px; }
@@ -181,9 +179,6 @@
 .storage-copy-row code { flex: 1 1 280px; overflow-wrap: anywhere; user-select: all; font-size: 12px; }
 @media (max-width: 1100px) { .storage-workspace { grid-template-columns: 190px minmax(0, 1fr); gap: 18px; } .storage-location-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 767px) {
-  .storage-page .qc-section-tabs__list { gap: 0 18px; }
-  .storage-page .qc-section-tabs__item { min-height: 44px; font-size: 13px; }
-  .storage-page #storage-history-collections .qc-section-tabs__list { gap: 8px; }
   .storage-sort-controls { display: flex; }
   .storage-library-intro { padding: 18px; }
   [data-storage-view=list] .storage-files, [data-storage-view=list] .storage-files tbody { display: block; width: 100%; }

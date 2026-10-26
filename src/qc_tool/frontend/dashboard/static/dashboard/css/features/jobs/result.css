@@ -35,7 +35,7 @@
 .job-result-checks-heading h2 span { margin-left: 5px; color: var(--qc-color-muted); font-size: 14px; font-weight: 400; }
 .job-result-checks-heading p { margin: 6px 0 0; color: var(--qc-color-muted); font-size: 13px; line-height: 1.5; }
 .job-result-downloads { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.job-result-downloads .btn { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 7px 11px; font-size: 12px; }
+.job-result-downloads .btn { gap: 7px; min-height: 36px; padding: 7px 11px; font-size: 12px; }
 .job-result-downloads .ui-icon { width: 16px; height: 16px; }
 
 .job-result-filters { scroll-margin-top: 24px; }

@@ -72,6 +72,7 @@ function createDOM() {
             return this.children.flatMap(child => [...(matches(child, selector) ? [child] : []), ...child.querySelectorAll(selector)]);
         }
         querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+        matches(selector) { return matches(this, selector); }
         closest(selector) { return matches(this, selector) ? this : this.parentNode?.closest(selector) || null; }
         contains(child) { return child === this || this.children.some(node => node.contains(child)); }
         addEventListener(name, handler) { (this.events[name] ||= []).push(handler); }

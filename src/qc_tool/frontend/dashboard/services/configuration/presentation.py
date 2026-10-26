@@ -8,12 +8,16 @@ from qc_tool.frontend.dashboard.services.configuration import read_announcement
 logger = logging.getLogger(__name__)
 
 
-def get_announcement_message():
-    """
-    Reads announcement message from the announcement.txt file.
-    """
+def announcement_context():
+    """Read one announcement consistently for full pages and compact notices."""
     try:
-        return read_announcement(CONFIG["announcement_path"]) or None
+        message = read_announcement(CONFIG["announcement_path"])
     except AnnouncementStorageError:
         logger.warning("Announcement state could not be read safely.")
-        return None
+        return {"announcement": "", "announcement_available": False}
+    return {"announcement": message, "announcement_available": True}
+
+
+def get_announcement_message():
+    """Compact notices omit empty and unavailable messages."""
+    return announcement_context()["announcement"] or None

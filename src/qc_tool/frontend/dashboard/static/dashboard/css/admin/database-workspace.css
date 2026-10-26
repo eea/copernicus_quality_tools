@@ -4,13 +4,10 @@
 .database-back-link { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 13px; font-weight: 600; text-decoration: none; }
 .database-workspace .database-page-header { margin-bottom: 22px; gap: 24px; }
 .database-page-header > div:first-child { min-width: 0; }
-.database-workspace > .qc-section-tabs { padding: 0; margin: 0 0 24px; }
-.database-workspace .qc-section-tabs__item { box-sizing: border-box; min-height: 48px; padding: 10px 0; }
 .database-identity { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px 24px; margin: 16px 0 22px; }
 .database-identity dt { color: var(--body-quiet-color); font-size: 12px; margin-bottom: 6px; }
 .database-identity dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 767px) {
   .database-workspace .database-page-header { flex-direction: column; align-items: stretch; gap: 18px; }
-  .database-workspace .qc-section-tabs__item { min-height: 44px; font-size: 13px; }
   .database-identity { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 }

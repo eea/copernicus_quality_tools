@@ -1,11 +1,11 @@
 {% load static %}
 {% if admin_notice %}
-<div class="qc-maintenance-notice qc-maintenance-notice--admin" data-maintenance-admin data-maintenance-banner role="status" aria-label="Maintenance status" aria-live="polite" aria-atomic="true"{% if not maintenance.enabled %} hidden{% endif %}>
-  <div class="qc-maintenance-notice__content">
-    <svg class="ui-icon qc-maintenance-notice__icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
-    <div class="qc-maintenance-notice__status">
-      <strong class="qc-maintenance-notice__title" data-maintenance-title>{% if maintenance.phase == 'stopping' %}Turning on maintenance{% elif maintenance.phase == 'unavailable' %}Maintenance status unavailable{% else %}Maintenance is on{% endif %}</strong>
-      <span data-maintenance-message>{{ maintenance.admin_notice }}</span>
+<div class="qc-notice qc-maintenance-notice qc-maintenance-notice--admin" data-maintenance-admin data-maintenance-banner role="status" aria-label="Maintenance status" aria-live="polite" aria-atomic="true"{% if not maintenance.enabled %} hidden{% endif %}>
+  <div class="qc-notice__content">
+    <svg class="ui-icon qc-notice__icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+    <div class="qc-notice__status">
+      <strong class="qc-notice__title" data-maintenance-title>{% if maintenance.phase == 'stopping' %}Turning on maintenance{% elif maintenance.phase == 'unavailable' %}Maintenance status unavailable{% else %}Maintenance is on{% endif %}</strong>
+      <span class="qc-notice__message" data-maintenance-message>{{ maintenance.admin_notice }}</span>
     </div>
     <div class="qc-maintenance-notice__actions">
       {% if show_navigation and account_access.is_administrator %}
@@ -18,8 +18,8 @@
         <button class="btn-qc-primary" type="submit"{% if not maintenance.can_disable %} disabled aria-describedby="admin-maintenance-control-note"{% endif %}>Turn off maintenance</button>
       </form>
       {% endif %}
-      {% if account_access.is_administrator %}<a class="qc-maintenance-notice__reload" href="{% url 'admin_maintenance' %}">{% if maintenance.phase == 'stopping' %}View progress{% else %}Maintenance settings{% endif %}</a>{% else %}<a class="qc-maintenance-notice__reload" href="" data-maintenance-reload>Reload page</a>{% endif %}
-      {% if account_access.is_administrator %}<a class="qc-maintenance-notice__reload" href="" data-maintenance-reload data-maintenance-refresh hidden>Reload page</a>{% endif %}
+      {% if account_access.is_administrator %}<a class="qc-notice__link" href="{% url 'admin_maintenance' %}">{% if maintenance.phase == 'stopping' %}View progress{% else %}Maintenance settings{% endif %}</a>{% else %}<a class="qc-notice__link" href="" data-maintenance-reload>Reload page</a>{% endif %}
+      {% if account_access.is_administrator %}<a class="qc-notice__link" href="" data-maintenance-reload data-maintenance-refresh hidden>Reload page</a>{% endif %}
     </div>
     {% if show_navigation and account_access.is_administrator %}
     <span class="qc-maintenance-notice__note" id="admin-maintenance-control-note" data-maintenance-control-note{% if maintenance.can_disable %} hidden{% endif %}>{% if maintenance.deployment_enforced %}Maintenance is enforced by deployment settings. An operator must turn it off.{% elif maintenance.resume_blocked_reason %}{{ maintenance.resume_blocked_reason }}{% elif maintenance.phase == 'stopping' %}Turn-off becomes available after QC work has stopped. Open progress to check readiness.{% elif maintenance.phase == 'unavailable' %}The status must be available before changes can resume. Open maintenance settings.{% else %}Reload this page to update maintenance controls.{% endif %}</span>
@@ -27,11 +27,11 @@
   </div>
 </div>
 {% else %}
-<div class="qc-maintenance-notice" data-maintenance-banner{% if not maintenance.enabled %} hidden{% endif %} role="status" aria-live="polite" aria-atomic="true">
-  <div class="qc-maintenance-notice__content">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
-    <span data-maintenance-message>{{ maintenance.notice }}</span>
-    <a class="qc-maintenance-notice__reload" href="" data-maintenance-reload>Reload page</a>
+<div class="qc-notice qc-maintenance-notice" data-maintenance-banner{% if not maintenance.enabled %} hidden{% endif %} role="status" aria-live="polite" aria-atomic="true">
+  <div class="qc-notice__content">
+    <svg class="ui-icon qc-notice__icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#alert-triangle"></use></svg>
+    <span class="qc-notice__message" data-maintenance-message>{{ maintenance.notice }}</span>
+    <a class="qc-notice__link" href="" data-maintenance-reload>Reload page</a>
   </div>
 </div>
 {% endif %}

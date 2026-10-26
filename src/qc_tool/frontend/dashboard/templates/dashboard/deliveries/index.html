@@ -29,12 +29,7 @@
 
 {% block page_content %}
 
-    {% if announcement %}
-    <div class="deliveries-announcement" role="status">
-        <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
-        <span>{{ announcement }}</span>
-    </div>
-    {% endif %}
+    {% include "dashboard/shared/announcements/notice.html" with announcement=announcement id="deliveries-announcement-title" only %}
 
     <section class="workspace-card deliveries-card" aria-labelledby="deliveries-table-title">
         {% include "dashboard/shared/section_tabs.html" with tabs=delivery_workflow_tabs label="Delivery workflow" id="delivery-workflow-tabs" data_attribute="delivery-view" controls="tbl-deliveries" only %}

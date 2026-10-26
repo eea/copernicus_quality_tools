@@ -39,9 +39,16 @@
                     {% block error_message %}{% endblock %}
                 </div>
                 <div class="error-actions">
-                    {% block error_actions %}{% endblock %}
+                    {% block error_actions %}
+                    <a class="btn btn-primary btn-qc-primary error-primary-action" href="{% url 'dashboard_home' %}">
+                        <svg class="ui-icon" aria-hidden="true" focusable="false">
+                            <use href="{% static 'dashboard/icons/ui.svg' %}#home"></use>
+                        </svg>
+                        Go to homepage
+                    </a>
+                    {% endblock %}
                     <a
-                        class="btn error-secondary-action"
+                        class="btn btn-qc-secondary error-secondary-action"
                         href="{% if account_access.can_view_deliveries or not user.is_authenticated %}{% url 'dashboard_home' %}{% else %}https://github.com/eea/copernicus_quality_tools/wiki{% endif %}"
                         data-error-back
                     >

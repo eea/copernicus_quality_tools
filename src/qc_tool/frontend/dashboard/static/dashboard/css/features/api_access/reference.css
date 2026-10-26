@@ -42,25 +42,11 @@
   margin-top: 8px;
 }
 
-.api-quiet-button,
-.api-copy-button {
+.api-docs-page .api-quiet-button,
+.api-docs-page .api-copy-button {
   min-height: 36px;
   padding: 7px 11px;
-  border: 1px solid #bfd0e5;
-  border-radius: 6px;
-  color: #244466;
-  background: #fff;
   font-size: 12px;
-  font-weight: 650;
-}
-
-.api-quiet-button:hover,
-.api-quiet-button:focus,
-.api-copy-button:hover,
-.api-copy-button:focus {
-  border-color: var(--qc-color-primary);
-  color: var(--qc-color-primary-dark);
-  background: var(--qc-color-primary-soft);
 }
 
 .api-empty-state {

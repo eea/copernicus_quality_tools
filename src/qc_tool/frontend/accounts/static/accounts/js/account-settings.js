@@ -8,13 +8,6 @@
     }
   }
 
-  function fallbackCopy(input) {
-    input.focus();
-    input.select();
-    input.setSelectionRange(0, input.value.length);
-    return document.execCommand("copy");
-  }
-
   function disableSubmitButton(form, submitter) {
     var submitButton = submitter || form.querySelector('button[type="submit"]');
     if (submitButton) {
@@ -62,20 +55,9 @@
       return;
     }
 
-    var copyPromise;
-    if (navigator.clipboard && window.isSecureContext) {
-      copyPromise = navigator.clipboard.writeText(input.value);
-    } else {
-      try {
-        copyPromise = fallbackCopy(input)
-          ? Promise.resolve()
-          : Promise.reject(new Error("Copy command was rejected."));
-      } catch (error) {
-        copyPromise = Promise.reject(error);
-      }
-    }
-
-    copyPromise.then(function () {
+    window.QcClipboard.copy(input.value, {
+      fallbackInput: input, secureOnly: true, fallbackOnError: false
+    }).then(function () {
       button.textContent = "Copied";
       setCopyStatus("Token copied. Store it securely before leaving this page.");
     }).catch(function () {

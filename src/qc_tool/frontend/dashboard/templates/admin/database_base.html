@@ -1,0 +1,23 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/ui/section-tabs.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}">{% endblock %}
+{% block content_title %}{% endblock %}
+{% block breadcrumbs %}{% include "admin/includes/database_breadcrumbs.html" %}{% endblock %}
+{% block content %}
+<div class="qc-admin-home database-page{% if not account_records %} database-workspace{% endif %}"{% if records_mode %} id="database-records-heading"{% endif %}>
+  {% if account_records %}
+  <a class="database-back-link" href="{{ database_back_url }}"><span aria-hidden="true">&larr;</span> {{ database_back_label }}</a>
+  <header class="qc-admin-intro">
+    <div>
+      <p class="database-eyebrow">User management &middot; {% if record_pk %}{{ resource.label }} &middot; Record {{ record_pk }}{% else %}Browse records{% endif %}</p>
+      <h1{% if record_pk %} class="database-record-heading"{% endif %}>{% if record_pk %}{{ record_heading }}{% else %}{{ resource.label }}{% endif %}</h1>
+      <p class="qc-admin-intro__description">{{ resource.description }}</p>
+    </div>
+    {% include "admin/includes/database_actions.html" %}
+  </header>
+  {% else %}
+  {% include "admin/includes/database_page_header.html" %}
+  {% endif %}
+  {% block database_content %}{% endblock %}
+</div>
+{% endblock %}

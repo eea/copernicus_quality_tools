@@ -1,11 +1,5 @@
-{% extends "admin/base_site.html" %}
-{% load static %}
-{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/ui/section-tabs.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/database-workspace.css' %}">{% endblock %}
-{% block content_title %}{% endblock %}
-{% block breadcrumbs %}{% include "admin/includes/database_breadcrumbs.html" %}{% endblock %}
-{% block content %}
-<div class="qc-admin-home database-page database-workspace"{% if records_mode %} id="database-records-heading"{% endif %}>
-  {% include "admin/includes/database_page_header.html" %}
+{% extends "admin/database_base.html" %}
+{% block database_content %}
   {% if not records_mode %}
   <section class="qc-admin-panel" aria-labelledby="database-identity-heading">
     <h2 id="database-identity-heading">Database details</h2>
@@ -44,5 +38,4 @@
     </div>
   </section>
   {% endif %}
-</div>
 {% endblock %}

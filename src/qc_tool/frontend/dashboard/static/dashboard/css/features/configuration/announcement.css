@@ -3,17 +3,6 @@
   margin-bottom: 24px;
 }
 
-.announcement-message {
-  padding: 20px 22px;
-  border-left: 4px solid var(--qc-color-primary);
-  border-radius: 0 8px 8px 0;
-  color: var(--qc-color-text);
-  background: var(--qc-color-primary-soft);
-  font-size: 16px;
-  line-height: 1.7;
-  overflow-wrap: anywhere;
-}
-
 .announcement-state {
   display: flex;
   min-height: 72px;
@@ -61,7 +50,6 @@
 }
 
 @media (forced-colors: active) {
-  .announcement-message,
   .announcement-state {
     border: 1px solid CanvasText;
   }

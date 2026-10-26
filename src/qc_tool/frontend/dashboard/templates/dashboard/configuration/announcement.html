@@ -24,7 +24,7 @@
         </header>
 
         <div class="workspace-card__body announcement-card__body">
-        {% include "dashboard/shared/announcements/current.html" %}
+        {% include "dashboard/shared/announcements/current.html" with announcement=announcement announcement_available=announcement_available only %}
         </div>
     </section>
 

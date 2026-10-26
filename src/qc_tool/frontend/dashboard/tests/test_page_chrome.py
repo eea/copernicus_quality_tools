@@ -671,6 +671,7 @@ class SharedPageChromeTests(TestCase):
                 self.assertTemplateNotUsed(response, WORKSPACE_PAGE_TEMPLATE)
 
     def test_primary_authenticated_pages_share_page_chrome(self):
+        announcement = "A deterministic workspace announcement."
         with ExitStack() as patches:
             patches.enter_context(
                 patch(
@@ -683,14 +684,14 @@ class SharedPageChromeTests(TestCase):
                 patch(
                     "qc_tool.frontend.dashboard.views.overview."
                     "get_announcement_message",
-                    return_value="",
+                    return_value=announcement,
                 )
             )
             patches.enter_context(
                 patch(
                     "qc_tool.frontend.dashboard.views.deliveries.pages."
                     "get_announcement_message",
-                    return_value="",
+                    return_value=announcement,
                 )
             )
             patches.enter_context(
@@ -704,9 +705,9 @@ class SharedPageChromeTests(TestCase):
             )
             patches.enter_context(
                 patch(
-                    "qc_tool.frontend.dashboard.views.configuration."
+                    "qc_tool.frontend.dashboard.services.configuration.presentation."
                     "read_announcement",
-                    return_value="A deterministic workspace announcement.",
+                    return_value=announcement,
                 )
             )
 
@@ -756,6 +757,10 @@ class SharedPageChromeTests(TestCase):
                     )
                     if url == reverse("dashboard_home"):
                         self.assert_dashboard_uses_shared_cards(response)
+                    if url in {reverse("dashboard_home"), reverse("deliveries"), reverse("announcement")}:
+                        self.assertTemplateUsed(response, "dashboard/shared/announcements/notice.html")
+                        self.assertContains(response, announcement)
+                        self.assertContains(response, "data-maintenance-banner", count=1)
 
     def test_boundary_management_uses_admin_chrome_and_its_own_hierarchy(self):
         administrator = get_user_model().objects.create_superuser(username="boundary-page-chrome")
@@ -816,7 +821,11 @@ class SharedPageChromeTests(TestCase):
         ), patch(
             "qc_tool.frontend.dashboard.views.jobs.results."
             "get_announcement_message",
-            return_value="",
+            return_value="Job service announcement.",
+        ), patch(
+            "qc_tool.frontend.dashboard.views.jobs.setup."
+            "get_announcement_message",
+            return_value="Job service announcement.",
         ):
             cases = (
                 (
@@ -862,13 +871,18 @@ class SharedPageChromeTests(TestCase):
             )
             for url, heading, breadcrumbs, action in cases:
                 with self.subTest(url=url):
+                    response = self.client.get(url)
                     self.assert_page_chrome(
-                        self.client.get(url),
+                        response,
                         heading=heading,
                         breadcrumbs=breadcrumbs,
                         action=action,
                         subtitle=heading != "QC job history",
                     )
+                    if heading in {"New QC job", "QC job result"}:
+                        self.assertTemplateUsed(response, "dashboard/shared/announcements/notice.html")
+                        self.assertContains(response, "Job service announcement.")
+                        self.assertContains(response, "data-maintenance-banner", count=1)
 
     def test_product_detail_is_a_child_of_the_product_catalog(self):
         url = reverse("product_detail", args=(self.product.ident,))

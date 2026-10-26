@@ -20,19 +20,12 @@
 {% block page_title %}QC job result{% endblock page_title %}
 {% block page_subtitle %}<p>Review this run's outcome and individual checks.</p>{% endblock page_subtitle %}
 {% block page_actions %}
-<a class="btn btn-default btn-qc-secondary" href="{% url 'job_history' delivery.id %}">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-    Back to job history
-</a>
+{% url 'job_history' delivery.id as back_url %}
+{% include "dashboard/shared/actions/back_link.html" with url=back_url label="Back to job history" only %}
 {% endblock page_actions %}
 
 {% block page_content %}
-{% if announcement %}
-<aside class="workspace-notice workspace-notice--warning" aria-labelledby="job-result-announcement-title">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#bell"></use></svg>
-    <div><h2 id="job-result-announcement-title">Announcement</h2><p>{{ announcement }}</p></div>
-</aside>
-{% endif %}
+{% include "dashboard/shared/announcements/notice.html" with announcement=announcement id="job-result-announcement-title" only %}
 
 {% include "dashboard/shared/entity_summary.html" with id="job-result-delivery" summary=result_view.summary only %}
 

@@ -6,6 +6,7 @@
     var downloadStatus = document.querySelector("[data-storage-download-status]");
     var copyStatus = document.querySelector("[data-storage-copy-status]");
     var copySequence = 0;
+    var selections = new WeakMap();
 
     function clearDownloadStatus() {
         if (!downloadStatus) return;
@@ -19,27 +20,30 @@
         downloadStatus.textContent = "Your browser will start the ZIP after checking the files. Keep the download connection open until your browser finishes.";
         downloadStatus.hidden = false;
     }
+    function selection(form) {
+        if (!selections.has(form)) selections.set(form, window.QcCheckboxSelection.create({
+            all: form.querySelector("[data-storage-select-all]"),
+            items: function() {
+                return Array.prototype.slice.call(form.querySelectorAll("[data-storage-item]")).filter(function(item) {
+                    return item.getAttribute("name") === "paths" && item.getAttribute("type") === "checkbox";
+                });
+            }
+        }));
+        return selections.get(form);
+    }
     function items(form) {
-        return Array.prototype.slice.call(form.querySelectorAll("[data-storage-item]")).filter(function (item) {
-            return item.getAttribute("name") === "paths" && item.getAttribute("type") === "checkbox" && !item.disabled;
-        });
+        return selection(form).items();
     }
     function updateSelection(form) {
-        var available = items(form);
-        var count = available.filter(function (item) { return item.checked; }).length;
-        available.forEach(function (item) {
+        var state = selection(form).update();
+        var count = state.count;
+        state.items.forEach(function (item) {
             var row = item.closest("[data-storage-row]");
             if (row) row.classList.toggle("storage-row--selected", item.checked);
         });
-        var all = form.querySelector("[data-storage-select-all]");
         var status = form.querySelector("[data-storage-selection-status]");
         var download = form.querySelector("[data-storage-selected-download]");
         var clear = form.querySelector("[data-storage-clear]");
-        if (all) {
-            all.checked = available.length > 0 && count === available.length;
-            all.indeterminate = count > 0 && count < available.length;
-            all.disabled = available.length === 0;
-        }
         if (status) status.textContent = count
             ? count + " item" + (count === 1 ? "" : "s") + " selected on this page."
             : "Select files or folders to download together.";
@@ -48,7 +52,7 @@
         return count;
     }
     function clearSelection(form) {
-        items(form).forEach(function (item) { item.checked = false; });
+        selection(form).clear();
         clearDownloadStatus();
         updateSelection(form);
     }
@@ -58,7 +62,7 @@
         if (all) all.hidden = false;
         form.addEventListener("change", function (event) {
             if (event.target === all) {
-                items(form).forEach(function (item) { item.checked = all.checked; });
+                selection(form).setAll(all.checked);
             }
             clearDownloadStatus();
             updateSelection(form);
@@ -114,7 +118,7 @@
             if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey &&
                 (event.key === "a" || event.key === "A") && items(form).length) {
                 event.preventDefault();
-                items(form).forEach(function (item) { item.checked = true; });
+                selection(form).setAll(true);
                 clearDownloadStatus();
                 updateSelection(form);
             } else if (event.key === "Escape" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey &&
@@ -157,11 +161,9 @@
                 return;
             }
             try {
-                var clipboard = window.navigator && window.navigator.clipboard;
-                if (!clipboard || typeof clipboard.writeText !== "function") { manualCopy(); return; }
                 // Call directly in this user gesture, without requesting access
                 // or reading the clipboard when the page is opened.
-                var result = clipboard.writeText(target.textContent);
+                var result = window.QcClipboard.copy(target.textContent, {legacyFallback: false});
                 showCopyStatus("Copying…");
                 Promise.resolve(result).then(function () {
                     if (current === copySequence) showCopyStatus("Copied to clipboard.");

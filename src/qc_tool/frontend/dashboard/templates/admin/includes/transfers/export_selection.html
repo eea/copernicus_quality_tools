@@ -20,7 +20,7 @@
       </fieldset>
       <p class="transfer-privacy">Backups contain password hashes and may contain credentials. Store the ZIP securely.</p>
       <div class="transfer-actions"><button type="submit" class="button default btn-qc-primary" name="action" value="preview_export"{% if not database_backup_ready %} disabled{% endif %}>Review backup &rarr;</button></div>
-      <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
+      {% include "admin/includes/transfers/pending_status.html" only %}
     </form>
   </div>
 </section>

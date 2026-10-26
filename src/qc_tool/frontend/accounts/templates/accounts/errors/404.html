@@ -21,12 +21,3 @@
 </p>
 <p>Please check the address or go back to the homepage.</p>
 {% endblock %}
-
-{% block error_actions %}
-<a class="btn btn-primary error-primary-action" href="{% url 'dashboard_home' %}">
-        <svg class="ui-icon" aria-hidden="true" focusable="false">
-            <use href="{% static 'dashboard/icons/ui.svg' %}#home"></use>
-    </svg>
-    Go to homepage
-</a>
-{% endblock %}

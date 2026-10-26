@@ -1,0 +1,26 @@
+/* One reusable catalog selector; the shared Admin shell supplies its actions. */
+.qc-bulk-products-panel__body { padding: 18px 20px; }
+.qc-bulk-products-panel__body > p, .qc-product-grants-limit { color: var(--body-quiet-color); font-size: 13px; line-height: 1.65; }
+.qc-bulk-products { max-width: 1000px; }
+.qc-bulk-products [hidden] { display: none !important; }
+.qc-bulk-products__filters { display: flex; flex-wrap: wrap; gap: 12px; }
+.qc-bulk-products__filters > div { flex: 1 1 240px; min-width: 0; }
+.qc-bulk-products__filters label { display: block; width: auto !important; float: none !important; margin: 0 0 6px !important; padding: 0 !important; font-size: 12px; font-weight: 600; }
+.qc-bulk-products__filters input, .qc-bulk-products__filters select { box-sizing: border-box; width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--qc-radius-small); background: var(--body-bg); color: var(--body-fg); font: inherit; font-size: 13px; }
+.qc-bulk-products__hint { color: var(--body-quiet-color); font-size: 12px; line-height: 1.65; }
+.qc-bulk-products__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.qc-bulk-products__count { margin: 14px 0 10px; color: var(--body-quiet-color); font-size: 12px; }
+.qc-bulk-products__options { max-height: 340px; overflow-y: auto; padding: 4px 12px; border: 1px solid var(--border-color); border-radius: var(--qc-radius-small); background: var(--body-bg); }
+.qc-bulk-products .qc-bulk-products__option { display: flex; width: auto; float: none; gap: 10px; align-items: flex-start; padding: 10px 0; margin: 0; border-bottom: 1px solid var(--hairline-color); cursor: pointer; font-size: 13px; line-height: 1.6; }
+.qc-bulk-products__option:last-child { border-bottom: 0; }
+.qc-bulk-products__option > input { flex: 0 0 16px; width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--primary); }
+.qc-bulk-products__option > span { min-width: 0; overflow-wrap: anywhere; }
+.qc-bulk-products__option small { display: block; color: var(--body-quiet-color); }
+.qc-bulk-products__option:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.qc-product-grants-limit { margin: 18px 0 10px; }
+.qc-product-assignment { display: block; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .qc-bulk-products-panel__body { padding: 16px; }
+  .qc-bulk-products__options { max-height: 300px; }
+  .qc-bulk-products__actions > button { flex: 1 1 auto; }
+}

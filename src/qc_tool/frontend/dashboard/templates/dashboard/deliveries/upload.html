@@ -17,10 +17,8 @@
 {% block page_title %}{% if correction %}Upload correction{% else %}Upload delivery{% endif %}{% endblock page_title %}
 {% block page_subtitle %}<p>{% if correction %}Address the feedback and upload your corrected ZIP with the original filename.{% else %}Choose ZIP files, review the list, then upload them individually or together.{% endif %}</p>{% endblock page_subtitle %}
 {% block page_actions %}
-<a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-    Back to deliveries
-</a>
+{% url 'deliveries' as back_url %}
+{% include "dashboard/shared/actions/back_link.html" with url=back_url label="Back to deliveries" only %}
 {% endblock page_actions %}
 
 {% block upload_id %}resumable-upload{% endblock upload_id %}

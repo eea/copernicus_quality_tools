@@ -95,7 +95,7 @@ class ErrorPagePresentationTests(TestCase):
         if homepage_available:
             self.assertContains(
                 response,
-                'class="btn btn-primary error-primary-action"',
+                'class="btn btn-primary btn-qc-primary error-primary-action"',
                 status_code=status_code,
             )
             self.assertContains(response, "#home", status_code=status_code)
@@ -112,7 +112,7 @@ class ErrorPagePresentationTests(TestCase):
             )
         self.assertContains(
             response,
-            'class="btn error-secondary-action"',
+            'class="btn btn-qc-secondary error-secondary-action"',
             status_code=status_code,
         )
         back_fallback = (

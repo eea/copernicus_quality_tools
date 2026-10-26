@@ -34,16 +34,10 @@
             <form method="post" action="" data-maintenance-exempt>
             <fieldset class="qc-maintenance-fields">
                 {% csrf_token %}
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
-                {% endif %}
+                {% include "accounts/includes/form_errors.html" with form=form only %}
 
                 {% for field in form %}
-                <div class="form-group{% if field.errors %} has-error{% endif %}">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}<div class="account-field-errors" role="alert">{{ field.errors }}</div>{% endif %}
-                </div>
+                {% include "accounts/includes/form_field.html" with field=field only %}
                 {% endfor %}
 
                 <div class="account-card__actions">

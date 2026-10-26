@@ -11,7 +11,7 @@
         {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
         <button type="submit" class="button default btn-qc-primary" name="action" value="prepare_destination"{% if not can_prepare_native_destination %} disabled{% endif %}>Create restore database</button>
         {% if operation.cancellable %}<button type="submit" class="button btn-qc-secondary" name="action" value="cancel">Discard package</button>{% endif %}
-        <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
+        {% include "admin/includes/transfers/pending_status.html" only %}
       </form>
       {% if not maintenance_ready %}<p class="help">Turn on maintenance before preparing the destination.</p>{% endif %}
       {% if source_details %}<details class="transfer-details"><summary>Backup details</summary><dl>{% for label, value in source_details %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></details>{% endif %}
@@ -45,7 +45,7 @@
           {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
           <button type="submit" class="button default btn-qc-primary" name="action" value="plan"{% if not transfers_ready %} disabled{% endif %}>{% if native_transfer %}Review restore{% else %}Review import{% endif %}</button>
           {% if not transfers_ready %}<p class="help">Turn on maintenance, then return here to review this {% if native_transfer %}restore{% else %}import{% endif %}.</p>{% endif %}
-          <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
+          {% include "admin/includes/transfers/pending_status.html" only %}
         </form>
       {% endif %}
       {% if operation.downloadable and not operation.package_release_requested_at and not operation.payload_released_at %}
@@ -70,7 +70,7 @@
             <p><label><input type="checkbox" name="confirmed_release" required> I saved and verified a copy elsewhere.</label></p>
             {% if operation.package_release_requested_at %}<p class="help">Deletion was started. Its download is unavailable; retry to finish freeing its storage.</p>{% endif %}
             <button type="submit" class="button btn-qc-secondary" name="action" value="release_package">{% if operation.package_release_requested_at %}Finish deleting ZIP{% else %}Delete saved ZIP{% endif %}</button>
-            <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
+            {% include "admin/includes/transfers/pending_status.html" only %}
           </form>
         </details>
         {% endif %}
@@ -103,7 +103,7 @@
       <form method="post" class="transfer-actions" data-maintenance-exempt data-transfer-pending-label="Checking database…" data-transfer-pending-message="Checking the database, matching files and administrator access before the switch review. Keep this page open.">
         {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
         <button type="submit" class="button default btn-qc-primary" name="action" value="review_database_switch">Review database switch</button>
-        <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
+        {% include "admin/includes/transfers/pending_status.html" only %}
       </form>
       {% endif %}
       {% if activation_form and not operation_database_active %}
@@ -131,7 +131,7 @@
             <div class="transfer-actions"><button type="submit" class="button default btn-qc-primary">Use this database</button></div>
           </fieldset>
           <p class="help">Maintenance stays on after switching so you can check the installation before reopening it.{% if rollback_form %} To return immediately to the previous database, open <a href="#database-recovery">Return to the previous database</a> below. Quick recovery expires when maintenance is turned off.{% endif %}</p>
-          <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
+          {% include "admin/includes/transfers/pending_status.html" only %}
         </form>
       </div>
       {% endif %}
@@ -141,7 +141,7 @@
         {% csrf_token %}<input type="hidden" name="operation_id" value="{{ operation.id }}">
         {% if operation.recoverable %}<button type="submit" class="button btn-qc-secondary" name="action" value="retry">{% if operation.status == 'completed' or operation.status == 'cancelled' %}Finish recovery{% else %}Recover transfer{% endif %}</button>{% endif %}
         {% if operation.cancellable and not operation.runner_active %}<button type="submit" class="button btn-qc-secondary" name="action" value="cancel">{% if operation.status == 'staged' or operation.status == 'planned' %}Discard package{% else %}Cancel transfer{% endif %}</button>{% endif %}
-        <p class="transfer-next-step" data-transfer-pending-status role="status" aria-live="polite" hidden></p>
+        {% include "admin/includes/transfers/pending_status.html" only %}
       </form>
       {% endif %}
       <details class="transfer-details">

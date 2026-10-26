@@ -17,10 +17,8 @@
 {% block page_title %}Stop product{% endblock page_title %}
 {% block page_subtitle %}<p>Review the effect of stopping {{ product.name }} from active use.</p>{% endblock page_subtitle %}
 {% block page_actions %}
-<a class="btn btn-default btn-qc-secondary" href="{% url 'product_detail' product.ident %}">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-    Back to product
-</a>
+{% url 'product_detail' product.ident as back_url %}
+{% include "dashboard/shared/actions/back_link.html" with url=back_url label="Back to product" only %}
 {% endblock page_actions %}
 
 {% block page_content %}

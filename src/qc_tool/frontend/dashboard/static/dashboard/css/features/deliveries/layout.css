@@ -5,22 +5,6 @@
     padding: 11px 18px;
 }
 
-.deliveries-announcement {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 16px;
-    padding: 13px 16px;
-    border: 1px solid #f1d2a8;
-    border-radius: 9px;
-    color: #70420a;
-    background: var(--qc-color-warning-soft);
-    gap: 10px;
-}
-
-.deliveries-announcement .ui-icon {
-    margin-top: 1px;
-}
-
 .deliveries-card__body {
     min-width: 0;
 }

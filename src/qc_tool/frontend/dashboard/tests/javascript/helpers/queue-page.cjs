@@ -6,7 +6,7 @@ const {webcrypto} = require("node:crypto");
 const {createDOM, addPicker} = require("./dom.cjs");
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function queuePage(feature, {authExpired = false, correction = null, maintenance = false, realResumable = false} = {}) {
+function queuePage(feature, {authExpired = false, correction = null, maintenance = false, realResumable = false, beforeInitialize = null} = {}) {
     const {window, document} = createDOM();
     function node(tag, attrs, parent) {
         const result = document.createElement(tag);
@@ -92,6 +92,7 @@ function queuePage(feature, {authExpired = false, correction = null, maintenance
             return transport;
         };
     }
+    if (beforeInitialize) beforeInitialize({window, document, root, form, picker});
     for (const file of ["shared/uploads.js", "shared/upload-queue.js", "features/" + feature + "/upload.js"]) {
         vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../../static/dashboard/js/", file), "utf8"), {window, document});
     }

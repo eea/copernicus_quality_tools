@@ -1,0 +1,17 @@
+<div class="qc-bulk-products" data-bulk-product-selector>
+  <input type="hidden" name="{{ widget.name }}" value="{{ widget.selection_json }}" data-bulk-product-value>
+  <div class="qc-bulk-products__controls" data-bulk-product-controls hidden>
+    <div class="qc-bulk-products__filters">
+      <div><label for="{{ widget.attrs.id }}-search">Find specifications</label><input id="{{ widget.attrs.id }}-search" type="search" placeholder="Name or identifier prefix*" data-bulk-product-search aria-describedby="{{ widget.attrs.id }}-hint"></div>
+      {% if widget.families %}<div><label for="{{ widget.attrs.id }}-family">Product family</label><select id="{{ widget.attrs.id }}-family" data-bulk-product-family><option value="">All families</option>{% for family in widget.families %}<option value="{{ family.prefix }}">{{ family.prefix }}* ({{ family.count }})</option>{% endfor %}</select></div>{% endif %}
+    </div>
+    <p id="{{ widget.attrs.id }}-hint" class="qc-bulk-products__hint">A trailing * matches an identifier prefix. Selections add existing specifications only.</p>
+    <div class="qc-bulk-products__actions"><button type="button" class="btn-qc-secondary btn-qc--compact" data-bulk-product-select-matching>Select matching</button><button type="button" class="btn-qc-secondary btn-qc--compact" data-bulk-product-select-all>Select all existing</button><button type="button" class="btn-qc-quiet btn-qc--compact" data-bulk-product-clear>Clear selection</button></div>
+  </div>
+  <p class="qc-bulk-products__count" role="status" aria-live="polite" data-bulk-product-status>{{ widget.selected_count }} selected · {{ widget.assigned_count }} already assigned</p>
+  <div class="qc-bulk-products__options" data-bulk-product-options hidden>
+    {% for group, options, index in widget.optgroups %}{% for option in options %}<label class="qc-bulk-products__option" data-bulk-product-option>{% include option.template_name with widget=option %}<span>{{ option.label }}{% if option.attrs.disabled %}<small>Already assigned</small>{% endif %}</span></label>{% endfor %}{% endfor %}
+  </div>
+  <p class="qc-bulk-products__hint" data-bulk-product-empty hidden>No matching specifications.</p>
+  <noscript><p>Bulk selection needs JavaScript. Use the individual assignments below or open Manage all assignments.</p></noscript>
+</div>

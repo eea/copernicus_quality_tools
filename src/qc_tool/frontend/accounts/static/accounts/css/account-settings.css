@@ -161,13 +161,6 @@
   margin: 0;
 }
 
-.account-card__actions .btn {
-  min-height: 42px;
-  padding: 10px 17px;
-  border-radius: var(--qc-radius-small);
-  font-weight: 600;
-}
-
 .account-status {
   display: inline-flex;
   min-height: 32px;
@@ -261,10 +254,6 @@
 .account-security .btn {
   min-height: 40px;
   padding: 9px 15px;
-  border-color: #cdd9e9;
-  border-radius: var(--qc-radius-small);
-  color: var(--qc-color-primary);
-  font-weight: 600;
 }
 
 .credential-issued {

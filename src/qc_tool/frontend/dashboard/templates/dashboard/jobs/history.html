@@ -20,10 +20,8 @@
 
 {% block page_title %}QC job history{% endblock page_title %}
 {% block page_actions %}
-<a class="btn btn-default btn-qc-secondary" href="{% url 'deliveries' %}">
-    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#arrow-left"></use></svg>
-    Back to deliveries
-</a>
+{% url 'deliveries' as back_url %}
+{% include "dashboard/shared/actions/back_link.html" with url=back_url label="Back to deliveries" only %}
 {% endblock page_actions %}
 
 {% block page_content %}
