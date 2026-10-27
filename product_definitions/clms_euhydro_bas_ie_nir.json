@@ -39,7 +39,7 @@
           "BAS_L2", "BAS_L3", "BAS_L4", "BAS_L5", "BAS_L6", "BAS_L7"
         ],
         "required": {
-          "HYBAS_ID": "string",
+          "HYBAS_ID": "integer",
           "NEXT_DOWN": "string",
           "SUB_AREA_SKM": "real",
           "UPLAND_SKM": "real",

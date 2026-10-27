@@ -18,7 +18,7 @@ def run_check(params, status):
         # Prepare parameters used in sql clauses.
         sql_params = {"fid_name": layer_def["pg_fid_name"],
                       "layer_name": layer_def["pg_layer_name"],
-                      "warning_where": params["warning_where"],
+                      "warning_where": params.get("warning_where"),
                       "warning_table": "s{:02d}_{:s}_warning".format(params["step_nr"], layer_def["pg_layer_name"])}
 
         # Create table of warning items.
@@ -49,9 +49,16 @@ def run_check(params, status):
         sql = sql.format(**sql_params)
         cursor.execute(sql, {"mml": params["mml"]})
 
-        # Report warning features.
-        items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
-        if items_message is not None:
-            status.info("Layer {:s} has warning features with {:s}: {:s}."
-                        .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
-            status.add_error_table(sql_params["warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+        # Report warning or error features.
+        if line_geometry:
+            items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
+            if items_message is not None:
+                status.failed("Layer {:s} has error features (length below {mml}) with {:s}: {:s}."
+                            .format(layer_def["pg_layer_name"], params["mml"], layer_def["fid_display_name"], items_message))
+                status.add_error_table(sql_params["warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
+        else:
+            items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
+            if items_message is not None:
+                status.info("Layer {:s} has warning features  with {:s}: {:s}."
+                            .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+                status.add_error_table(sql_params["warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
