@@ -53,12 +53,10 @@ def run_check(params, status):
         if line_geometry:
             items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
             if items_message is not None:
-                status.failed("Layer {:s} has error features (length below {mml}) with {:s}: {:s}."
-                            .format(layer_def["pg_layer_name"], params["mml"], layer_def["fid_display_name"], items_message))
+                status.failed(f"Layer {layer_def['pg_layer_name']} has error features (length below {params['mml']}) with {layer_def['fid_display_name']}: {items_message}.")
                 status.add_error_table(sql_params["warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
         else:
             items_message = get_failed_items_message(cursor, sql_params["warning_table"], layer_def["pg_fid_name"])
             if items_message is not None:
-                status.info("Layer {:s} has warning features  with {:s}: {:s}."
-                            .format(layer_def["pg_layer_name"], layer_def["fid_display_name"], items_message))
+                status.info(f"Layer {layer_def['pg_layer_name']} has warning features with {layer_def['fid_display_name']}: {items_message}.")
                 status.add_error_table(sql_params["warning_table"], layer_def["pg_layer_name"], layer_def["pg_fid_name"])
