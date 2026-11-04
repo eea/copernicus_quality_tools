@@ -2,7 +2,7 @@ name: copernicus-quality-tools-local
 
 services:
   userdb:
-    image: postgres:14
+    image: postgres:17
     pull_policy: missing
     ports:
       - name: postgres-client
